@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Ethiopian Payroll Engine{% endblock %}
+
+{% block content %}
+<main class="container" style="max-width: 460px; margin-top: 4rem;">
+    <div class="text-center mb-4">
+        <h2><i class="bi bi-building"></i> Create Your Account</h2>
+        <p class="text-muted">Start managing payroll for your company</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-4">
+            <form method="POST" action="{{ url_for('auth.register') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label for="company_name" class="form-label">Company Name</label>
+                    <input type="text" class="form-control" id="company_name" name="company_name" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Admin Email</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required minlength="8">
+                    <div class="form-text">Minimum 8 characters</div>
+                </div>
+                <div class="mb-3">
+                    <label for="password2" class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control" id="password2" name="password2" required>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg">Create Account</button>
+                </div>
+            </form>
+        </div>
+        <div class="card-footer text-center bg-white">
+            <small>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></small>
+        </div>
+    </div>
+</main>
+{% endblock %}

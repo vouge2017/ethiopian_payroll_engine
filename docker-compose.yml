@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: payroll
+      POSTGRES_PASSWORD: payroll
+      POSTGRES_DB: ethiopayroll
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payroll"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      SECRET_KEY: change-me-in-production
+      DATABASE_URL: postgresql://payroll:payroll@db:5432/ethiopayroll
+      CELERY_BROKER_URL: redis://redis:***@app.config
+      UPLOAD_FOLDER: /app/uploads
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build: .
+    command: celery -A payroll_engine.celery_app.celery worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://payroll:payroll@db:5432/ethiopayroll
+      CELERY_BROKER_URL: redis://redis:***@app.config
+      UPLOAD_FOLDER: /app/uploads
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  postgres_data:

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Add Employee - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Add Employee</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('main.add_employee') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="employee_id" class="form-label">Employee ID *</label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id" required placeholder="e.g., EMP001">
+                        </div>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Full Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required placeholder="Abebe Kebede">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="basic_salary" class="form-label">Basic Salary (ETB)</label>
+                                <input type="number" class="form-control" id="basic_salary" name="basic_salary" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="allowances" class="form-label">Allowances (ETB)</label>
+                                <input type="number" class="form-control" id="allowances" name="allowances" step="0.01" min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bank_or_telebirr" class="form-label">Payment Method</label>
+                            <input type="text" class="form-control" id="bank_or_telebirr" name="bank_or_telebirr"
+                                   placeholder="telebirr:0912345678 or bank:cbe">
+                            <div class="form-text">Format: <code>telebirr:PHONE</code> or <code>bank:NAME</code> or leave empty for cash.</div>
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Employee</button>
+                            <a href="{{ url_for('main.list_employees') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

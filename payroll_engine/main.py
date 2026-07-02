@@ -20,7 +20,7 @@ from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
 from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score, get_status_message
-from payroll_engine.celery_app import process_payroll_csv
+
 
 main = Blueprint('main', __name__)
 
@@ -37,11 +37,6 @@ def role_required(*roles):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
-
-
-def company_scoped(query):
-    """Filter query to current user's company."""
-    return query.filter_by(company_id=current_user.company_id)
 
 
 # --- Dashboard ---
@@ -175,6 +170,9 @@ def payroll_upload():
 
         import os
         file_size = os.path.getsize(filepath)
+
+        # Lazy import to avoid circular import at module level
+        from payroll_engine.celery_app import process_payroll_csv
 
         # If file > 100KB, process in background
         if file_size > 100_000:

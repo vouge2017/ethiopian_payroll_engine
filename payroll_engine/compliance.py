@@ -49,7 +49,7 @@ def compute_compliance_score(
 
     # Parse dates
     try:
-        payroll_dt = datetime.strptime(pollroll_date, '%Y-%m-%d').date() if payroll_date else today
+        payroll_dt = datetime.strptime(payroll_date, '%Y-%m-%d').date() if payroll_date else today
     except (ValueError, TypeError):
         payroll_dt = today
 

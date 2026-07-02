@@ -23,6 +23,19 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
 
+    def __init__(self):
+        super().__init__()
+        if self.SECRET_KEY in ('dev-change-in-production', 'your-secret-key-here'):
+            raise ValueError(
+                "SECRET_KEY must be set to a real value in production. "
+                "Generate one with: python3 -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+        if 'sqlite' in self.SQLALCHEMY_DATABASE_URI:
+            raise ValueError(
+                "DATABASE_URL must be a PostgreSQL connection string in production, "
+                "not SQLite. Set the DATABASE_URL environment variable."
+            )
+
 
 class TestingConfig(Config):
     TESTING = True

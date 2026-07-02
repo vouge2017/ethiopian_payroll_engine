@@ -17,17 +17,32 @@ CELERY_BROKER_DEFAULT = "redis:" + chr(47) + chr(47) + "localhost:6379/0"
 
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-in-production')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+
+    # Load config based on environment
+    env = os.environ.get('FLASK_ENV', 'development')
+    if env == 'production':
+        from config import ProductionConfig
+        app.config.from_object(ProductionConfig())
+    else:
+        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-in-production')
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+        app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', CELERY_BROKER_DEFAULT)
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-    app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', CELERY_BROKER_DEFAULT)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     db.init_app(app)
     migrate.init_app(app, db)
+
+    # Register tenant-scoped models for structural isolation enforcement
+    from .models import Employee, PayrollRun, AuditLog, TenantQuery
+    TenantQuery.register_model(Employee)
+    TenantQuery.register_model(PayrollRun)
+    TenantQuery.register_model(AuditLog)
+
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
     from .main import main as main_blueprint

@@ -50,12 +50,12 @@ def index():
     recent_runs = PayrollRun.query.filter_by(company_id=company.id) \
         .order_by(PayrollRun.created_at.desc()) \
         .limit(5).all()
-    today_str = date.today().isoformat()
+    # Use the most recent payroll run date for compliance scoring
+    # Falls back to today if no runs exist
+    last_run = recent_runs[0] if recent_runs else None
+    payroll_date_str = last_run.run_date.isoformat() if last_run else date.today().isoformat()
     score, status = compute_compliance_score(
-        payroll_date=today_str,
-        pension_deadline=today_str,
-        tax_deadline=today_str,
-        disbursement_date=today_str
+        payroll_date=payroll_date_str
     )
     status_msg = get_status_message(status)
 
@@ -275,18 +275,14 @@ def employee_detail(emp_id):
 def reports():
     """Compliance and summary reports."""
     company = current_user.company
-    today_str = date.today().isoformat()
-    score, status = compute_compliance_score(
-        payroll_date=today_str,
-        pension_deadline=today_str,
-        tax_deadline=today_str,
-        disbursement_date=today_str
-    )
-    status_msg = get_status_message(status)
-
     total_employees = Employee.query.filter_by(company_id=company.id).count()
     last_run = PayrollRun.query.filter_by(company_id=company.id, status='completed') \
         .order_by(PayrollRun.created_at.desc()).first()
+    payroll_date_str = last_run.run_date.isoformat() if last_run else date.today().isoformat()
+    score, status = compute_compliance_score(
+        payroll_date=payroll_date_str
+    )
+    status_msg = get_status_message(status)
 
     return render_template(
         'reports.html',

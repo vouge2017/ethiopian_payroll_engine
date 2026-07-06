@@ -18,6 +18,7 @@ def process_payroll_csv(self, csv_path, company_id, user_id=None):
     Creates PayrollRun, Payslip entries, and AuditLog.
     """
     from payroll_engine.models import TenantQuery
+    from payroll_engine import create_app
     app = create_app()
     with app.app_context():
         # Set tenant context for background task — required by TenantQuery
@@ -63,12 +64,15 @@ def process_payroll_csv(self, csv_path, company_id, user_id=None):
                             db.session.commit()
 
                         # Calculate payroll
+                        # Deduction order: Gross → Pension → Tax → Net
+                        # Pension is deducted BEFORE calculating tax (Ethiopian tax law)
                         gross = basic + allow
-                        tax = calculate_tax(gross)
                         emp_pen = employee_pension(basic)
                         empr_pen = employer_pension(basic)
+                        taxable = gross - emp_pen
+                        tax = calculate_tax(taxable)
                         net = gross - tax - emp_pen
-                        tax_expl = explain_tax_amharic(gross)
+                        tax_expl = explain_tax_amharic(taxable)
                         intent = record_disbursement_intent(emp_id, net)
 
                         # Generate PDF
@@ -114,12 +118,9 @@ def process_payroll_csv(self, csv_path, company_id, user_id=None):
                 db.session.commit()
 
                 # Compliance
-                today_str = __import__('datetime').date.today().isoformat()
+                run_date_str = run.run_date.isoformat()
                 score, status = compute_compliance_score(
-                    payroll_date=today_str,
-                    pension_deadline=today_str,
-                    tax_deadline=today_str,
-                    disbursement_date=today_str
+                    payroll_date=run_date_str
                 )
 
                 # AuditLog

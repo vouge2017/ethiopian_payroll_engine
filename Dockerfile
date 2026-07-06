@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy app
 COPY . .
 
+# Set production environment
+ENV FLASK_ENV=production
+
 # Create uploads dir
 RUN mkdir -p /app/uploads
 

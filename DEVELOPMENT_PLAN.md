@@ -6,15 +6,17 @@
 
 ---
 
-## Current State Summary
+## Current State Summary (Updated 2026-07-06)
 
 | Metric | Count |
 |--------|-------|
-| ✅ Done | 7 / 135 |
-| ⚠️ Partial | 10 / 135 |
-| ❌ Missing | 118 / 135 |
-| 🔴 Critical bugs | 3 (deduction order, Celery import, dead code) |
-| 🆕 New features from gap analysis | 10 (overtime, severance, validation, etc.) |
+| ✅ Done | ~25 / 135 |
+| ⚠️ Partial | ~12 / 135 |
+| ❌ Missing | ~98 / 135 |
+| 🔴 Critical bugs | 0 (all fixed) |
+| 🆕 New features built | 8 / 10 (overtime, severance, validation, lifecycle, rules, ERCA, pension, compliance) |
+| 🧪 Tests | 61 |
+| 📦 Commits tonight | 5 |
 
 **The Five Final Questions (all currently NO):**
 1. Would a tax consultant find errors? → NO (deduction order wrong)
@@ -25,7 +27,72 @@
 
 ---
 
-## Phase 0: Fix What's Broken (Days 1-2)
+## Progress Tracker (Updated 2026-07-06)
+
+### ✅ COMPLETED
+- [x] 0.1 Fix deduction order bug (pension before tax)
+- [x] 0.2 Fix Celery import bug
+- [x] 0.3 Delete dead code (web/, write_app.py, fix scripts)
+- [x] 0.4 Fix security basics (CSRFProtect, FLASK_ENV)
+- [x] 0.5 Add tax bracket boundary tests (15 tests)
+- [x] 0.6 Fix compliance scoring to use actual dates
+- [x] 1.1 Configurable tax rules engine (TaxRule model, versioned)
+- [x] 1.2 Pre-processing validation engine (7 checks, BLOCK/FLAG/WARN)
+- [x] 1.3 Payroll run lifecycle (Draft → Validate → Review → Approve → Process)
+- [x] 2.1 Overtime rate calculation (1.25x/1.5x/2x/2.5x, Art. 68)
+- [x] 2.2 Severance auto-calculation (cap 12 months, Art. 40-42)
+- [x] 2.3 ERCA filing deadline tracking (8th of following month)
+- [x] 2.4 ERCA report generation (Excel download)
+- [x] 2.5 Pension report generation (Excel download)
+
+### 🔄 IN PROGRESS
+- [ ] 1.4 Expand test coverage to ≥80%
+
+### 📋 NEXT UP
+- [ ] 2.6 Mid-month salary proration
+- [ ] 3.1 Employee self-service portal
+- [ ] 3.2 Phone + OTP login
+- [ ] 3.3 Guided first-run experience
+- [ ] 3.4 Contextual help & tooltips
+- [ ] 3.5 Dashboard insights
+- [ ] 3.6 i18n architecture (Amharic + Oromo prep)
+- [ ] 3.7 Mobile-first UI redesign
+- [ ] 3.8 WhatsApp-ready payslip explanation
+
+### 📋 PHASE 4: Security
+- [ ] 4.1 Field-level encryption (salary, bank, TIN)
+- [ ] 4.2 Expanded RBAC (owner, accountant, hr, manager, employee)
+- [ ] 4.3 Soft deletes
+- [ ] 4.4 Automated backups
+- [ ] 4.5 Immutable audit trail
+- [ ] 4.6 Data export (no vendor lock-in)
+- [ ] 4.7 TLS configuration
+
+### 📋 PHASE 5: Integrations
+- [ ] 5.1 Bank transfer files (CBE, Dashen, Awash)
+- [ ] 5.2 Excel import
+- [ ] 5.3 Telebirr integration
+- [ ] 5.4 Accounting software export
+- [ ] 5.5 Push notifications + SMS fallback
+
+### 📋 PHASE 6: Advanced
+- [ ] 6.1 Anomaly detection (3.1-3.6)
+- [ ] 6.2 Leave management (1.8-1.10)
+- [ ] 6.3 Ethiopian calendar support (2.1-2.5)
+- [ ] 6.4 Public holidays (1.12)
+- [ ] 6.5 Contract storage
+- [ ] 6.6 First payroll extra confirmation
+
+### 📋 PHASE 7: Business Model
+- [ ] 7.1 Pricing & billing (ETB, per-employee)
+- [ ] 7.2 Multi-company accountant access
+- [ ] 7.3 Support channels (WhatsApp, phone, Amharic)
+- [ ] 7.4 Afaan Oromo language support
+- [ ] 7.5 Trust journey (parallel-run, undo, feedback)
+
+---
+
+## Phase 0: Fix What's Broken (Days 1-2) ✅ DONE
 
 **Goal:** No incorrect numbers. No crashes. No dead code.
 

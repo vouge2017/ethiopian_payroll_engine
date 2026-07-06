@@ -2,9 +2,9 @@
 Compliance Scoring Module
 
 Evaluates payroll compliance based on:
-  - Timeliness of pension contributions (due by the 15th of the following month)
-  - Tax filing deadlines (monthly, due by the 15th)
-  - Disbursement timeliness (net pay due within 5 days of month end)
+  - ERCA tax filing deadline: 8th of the following month
+  - Pension contribution deadline: 15th of the following month
+  - Disbursement timeliness: net pay due within 5 days of month end
 
 Score: 0-100 (percentage of deadlines met on time)
 Status: 'green' (>=80), 'yellow' (50-79), 'red' (<50)
@@ -14,8 +14,8 @@ from datetime import date, datetime
 from typing import Tuple
 
 # Deadlines (day of month)
-PENSION_DEADLINE_DAY = 15
-TAX_FILING_DEADLINE_DAY = 15
+ERCA_FILING_DEADLINE_DAY = 8   # ERCA filing due by 8th of following month
+PENSION_DEADLINE_DAY = 15      # Pension contributions due by 15th
 DISBURSEMENT_DEADLINE_DAYS_AFTER_MONTH_END = 5
 
 
@@ -62,14 +62,14 @@ def compute_compliance_score(
     else:
         pension_dl = _default_pension_deadline(payroll_dt)
 
-    # Tax filing deadline: 15th of the month following payroll
+    # ERCA tax filing deadline: 8th of the month following payroll
     if tax_deadline:
         try:
             tax_dl = datetime.strptime(tax_deadline, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            tax_dl = _default_tax_deadline(payroll_dt)
+            tax_dl = _default_erca_deadline(payroll_dt)
     else:
-        tax_dl = _default_tax_deadline(payroll_dt)
+        tax_dl = _default_erca_deadline(payroll_dt)
 
     # Disbursement date
     if disbursement_date:
@@ -100,11 +100,11 @@ def _default_pension_deadline(payroll_date: date) -> date:
     return date(payroll_date.year, payroll_date.month + 1, PENSION_DEADLINE_DAY)
 
 
-def _default_tax_deadline(payroll_date: date) -> date:
-    """Tax filing due by the 15th of the month following payroll."""
+def _default_erca_deadline(payroll_date: date) -> date:
+    """ERCA tax filing due by the 8th of the month following payroll."""
     if payroll_date.month == 12:
-        return date(payroll_date.year + 1, 1, TAX_FILING_DEADLINE_DAY)
-    return date(payroll_date.year, payroll_date.month + 1, TAX_FILING_DEADLINE_DAY)
+        return date(payroll_date.year + 1, 1, ERCA_FILING_DEADLINE_DAY)
+    return date(payroll_date.year, payroll_date.month + 1, ERCA_FILING_DEADLINE_DAY)
 
 
 def _deadline_score(deadline: date, actual: date) -> float:
@@ -158,3 +158,27 @@ def get_status_message(status: str) -> str:
         'red': 'Non-Compliant / ያለግባት — Multiple deadlines missed. Action required.',
     }
     return messages.get(status, 'Unknown / ያልታወቀ')
+
+
+def get_upcoming_deadlines(payroll_date: str = None) -> dict:
+    """
+    Get upcoming compliance deadlines for display on dashboard.
+
+    Returns:
+        Dict with erca_deadline, pension_deadline, and days_until for each.
+    """
+    today = date.today()
+    try:
+        payroll_dt = datetime.strptime(payroll_date, '%Y-%m-%d').date() if payroll_date else today
+    except (ValueError, TypeError):
+        payroll_dt = today
+
+    erca_dl = _default_erca_deadline(payroll_dt)
+    pension_dl = _default_pension_deadline(payroll_dt)
+
+    return {
+        'erca_deadline': erca_dl.isoformat(),
+        'erca_days_left': (erca_dl - today).days,
+        'pension_deadline': pension_dl.isoformat(),
+        'pension_days_left': (pension_dl - today).days,
+    }

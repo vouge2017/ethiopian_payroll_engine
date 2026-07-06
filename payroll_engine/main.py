@@ -521,6 +521,10 @@ def reports():
     )
     status_msg = get_status_message(status)
 
+    # Get upcoming deadlines
+    from payroll_engine.compliance import get_upcoming_deadlines
+    deadlines = get_upcoming_deadlines(payroll_date_str)
+
     return render_template(
         'reports.html',
         company=company,
@@ -529,5 +533,56 @@ def reports():
         status_message=status_msg,
         total_employees=total_employees,
         last_run=last_run,
+        deadlines=deadlines,
         year=date.today().year
+    )
+
+
+@main.route('/reports/erca/<int:run_id>')
+@login_required
+@role_required('admin', 'hr')
+def download_erca_report(run_id):
+    """Download ERCA tax filing report for a payroll run."""
+    from payroll_engine.reports import generate_erca_report
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=current_user.company_id
+    ).first_or_404()
+    if run.status != 'completed':
+        flash('Can only generate reports for completed payroll runs.', 'warning')
+        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+
+    company = current_user.company
+    period = run.run_date.strftime('%B %Y')
+    report_bytes = generate_erca_report(run.payslips, company.name, period)
+
+    return send_file(
+        io.BytesIO(report_bytes),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'ERCA_{company.name}_{period.replace(" ", "_")}.xlsx'
+    )
+
+
+@main.route('/reports/pension/<int:run_id>')
+@login_required
+@role_required('admin', 'hr')
+def download_pension_report(run_id):
+    """Download pension contribution report for a payroll run."""
+    from payroll_engine.reports import generate_pension_report
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=current_user.company_id
+    ).first_or_404()
+    if run.status != 'completed':
+        flash('Can only generate reports for completed payroll runs.', 'warning')
+        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+
+    company = current_user.company
+    period = run.run_date.strftime('%B %Y')
+    report_bytes = generate_pension_report(run.payslips, company.name, period)
+
+    return send_file(
+        io.BytesIO(report_bytes),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'Pension_{company.name}_{period.replace(" ", "_")}.xlsx'
     )

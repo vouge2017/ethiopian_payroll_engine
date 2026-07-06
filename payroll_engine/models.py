@@ -262,3 +262,71 @@ class AuditLog(db.Model):
     
     def __repr__(self):
         return f'<AuditLog {self.action} at {self.timestamp}>'
+
+
+class TaxRule(db.Model):
+    """Versioned tax rules — brackets, pension rates, personal relief.
+
+    Rules are fetched by effective_date so old payrolls always use
+    the rules from their period, not the current rules.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    version_name = db.Column(db.String(50), nullable=False)  # e.g., '2025-v1'
+    effective_date = db.Column(db.Date, nullable=False)
+    rules_json = db.Column(db.JSON, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='draft')  # draft / active / archived
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f'<TaxRule {self.version_name} ({self.status})>'
+
+    @staticmethod
+    def get_active_rule(for_date=None):
+        """Get the active tax rule for a given date.
+
+        Args:
+            for_date: date string (YYYY-MM-DD) or date object. Defaults to today.
+
+        Returns:
+            TaxRule instance or None
+        """
+        if for_date is None:
+            target = date.today()
+        elif isinstance(for_date, str):
+            target = datetime.strptime(for_date, '%Y-%m-%d').date()
+        else:
+            target = for_date
+
+        return TaxRule.query.filter(
+            TaxRule.status == 'active',
+            TaxRule.effective_date <= target
+        ).order_by(TaxRule.effective_date.desc()).first()
+
+    @property
+    def brackets(self):
+        """List of bracket dicts: [{min, max, rate}, ...]"""
+        return self.rules_json.get('brackets', [])
+
+    @property
+    def personal_relief(self):
+        """Personal relief amount in ETB."""
+        return self.rules_json.get('personal_relief', 0)
+
+    @property
+    def pension_employee_rate(self):
+        return self.rules_json.get('pension', {}).get('employee_rate', 0.07)
+
+    @property
+    def pension_employer_rate(self):
+        return self.rules_json.get('pension', {}).get('employer_rate', 0.11)
+
+    @property
+    def pension_deduction_order(self):
+        """'before_tax' or 'after_tax'. Ethiopian law: before_tax."""
+        return self.rules_json.get('pension', {}).get('deduction_order', 'before_tax')
+
+    @property
+    def expat_pension_exempt(self):
+        return self.rules_json.get('pension', {}).get('expat_exemption', False)

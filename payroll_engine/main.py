@@ -10,7 +10,7 @@ import os
 import uuid
 import zipfile
 import io
-from datetime import date
+from datetime import date, datetime
 
 from payroll_engine import db
 from payroll_engine.models import (
@@ -138,7 +138,13 @@ def add_employee():
     return render_template('add_employee.html', year=date.today().year)
 
 
-# --- Payroll Processing ---
+# --- Payroll Processing (Lifecycle: Draft → Validate → Review → Approve → Process) ---
+
+import csv as csv_module
+import uuid
+from payroll_engine.validation import validate_payroll_data, get_summary
+from payroll_engine.models import PayrollValidationResult
+
 
 @main.route('/payroll', methods=['GET', 'POST'])
 @login_required
@@ -146,7 +152,7 @@ def add_employee():
 def payroll_upload():
     """
     Upload CSV for payroll processing.
-    Small files processed immediately; large files queued via Celery.
+    Creates a DRAFT payroll run and runs validation before any money moves.
     """
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -168,28 +174,259 @@ def payroll_upload():
         filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        import os
-        file_size = os.path.getsize(filepath)
-
-        # Lazy import to avoid circular import at module level
-        from payroll_engine.celery_app import process_payroll_csv
-
-        # If file > 100KB, process in background
-        if file_size > 100_000:
-            process_payroll_csv.delay(filepath, current_user.company_id, current_user.id)
-            flash('File uploaded and queued for processing. You will receive a notification when complete.', 'info')
-            return redirect(url_for('main.payroll_runs'))
-
-        # Small file: process synchronously
         try:
-            result = process_payroll_csv.run(filepath, current_user.company_id, current_user.id)
-            flash(f'Payroll processed: {result["employees"]} employees, compliance {result["compliance_score"]}%.', 'success')
-            return redirect(url_for('main.payroll_run_detail', run_id=result['run_id']))
+            # --- STAGE 1: DRAFT ---
+            # Parse CSV and calculate payroll (no money moves)
+            employees_data = []
+            with open(filepath, newline='', encoding='utf-8') as f:
+                reader = csv_module.DictReader(f)
+                if not reader.fieldnames:
+                    raise ValueError('CSV file is empty or has no headers')
+                required = ['employee_id', 'name', 'basic_salary', 'allowances']
+                missing = [col for col in required if col not in reader.fieldnames]
+                if missing:
+                    raise ValueError(f'Missing required columns: {", ".join(missing)}')
+
+                for row in reader:
+                    basic = float(row.get('basic_salary', 0) or 0)
+                    allow = float(row.get('allowances', 0) or 0)
+                    gross = basic + allow
+                    emp_pen = employee_pension(basic)
+                    empr_pen = employer_pension(basic)
+                    taxable = gross - emp_pen
+                    tax = calculate_tax(taxable)
+                    net = gross - tax - emp_pen
+                    employees_data.append({
+                        'id': row.get('employee_id', '').strip(),
+                        'name': row.get('name', '').strip(),
+                        'basic': basic,
+                        'allowances': allow,
+                        'gross': gross,
+                        'taxable': taxable,
+                        'tax': tax,
+                        'pension_employee': emp_pen,
+                        'pension_employer': empr_pen,
+                        'net': net,
+                        'bank': row.get('bank_or_telebirr', '').strip(),
+                    })
+
+            if not employees_data:
+                raise ValueError('No data rows in CSV')
+
+            # --- STAGE 2: VALIDATE ---
+            # Get previous payslips for salary comparison
+            previous_payslips = {}
+            last_run = PayrollRun.query.filter_by(
+                company_id=current_user.company_id, status='completed'
+            ).order_by(PayrollRun.run_date.desc()).first()
+            if last_run:
+                for p in last_run.payslips:
+                    emp = p.employee
+                    previous_payslips[emp.employee_id] = {
+                        'basic': emp.basic_salary,
+                        'allowances': emp.allowances,
+                    }
+
+            validation_results = validate_payroll_data(
+                employees_data,
+                company_id=current_user.company_id,
+                previous_payslips=previous_payslips
+            )
+            summary = get_summary(validation_results)
+
+            # Create draft payroll run
+            run = PayrollRun(
+                company_id=current_user.company_id,
+                run_date=date.today(),
+                status='review',
+            )
+            db.session.add(run)
+            db.session.commit()
+
+            # Save validation results
+            for vr in validation_results:
+                db_vr = PayrollValidationResult(
+                    payroll_run_id=run.id,
+                    rule_code=vr.rule_code,
+                    severity=vr.severity,
+                    message=vr.message,
+                    details_json=vr.details,
+                )
+                db.session.add(db_vr)
+            db.session.commit()
+
+            # Store employees_data in session for the review page
+            import json
+            session_key = f'payroll_data_{run.id}'
+            from flask import session
+            session[session_key] = employees_data
+
+            # --- STAGE 3: REVIEW ---
+            # Show validation results and payroll summary
+            total_gross = sum(e['gross'] for e in employees_data)
+            total_tax = sum(e['tax'] for e in employees_data)
+            total_net = sum(e['net'] for e in employees_data)
+
+            return render_template(
+                'validation_results.html',
+                run_id=run.id,
+                results=validation_results,
+                summary=summary,
+                employees=employees_data,
+                total_gross=total_gross,
+                total_tax=total_tax,
+                total_net=total_net,
+                year=date.today().year,
+            )
+
         except Exception as e:
             flash(f'Error processing payroll: {e}', 'danger')
             return redirect(request.url)
 
     return render_template('payroll_upload.html', year=date.today().year)
+
+
+@main.route('/payroll/approve', methods=['POST'])
+@login_required
+@role_required('admin', 'hr')
+def approve_payroll():
+    """
+    Approve a payroll run and process it.
+    This is the final step — money moves, payslips are generated.
+    """
+    run_id = request.form.get('run_id')
+    if not run_id:
+        flash('Invalid request.', 'danger')
+        return redirect(url_for('main.payroll_runs'))
+
+    run = PayrollRun.query.filter_by(
+        id=int(run_id), company_id=current_user.company_id
+    ).first_or_404()
+
+    if run.status != 'review':
+        flash('This payroll run is not in review status.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+    # Handle FLAG overrides
+    flags = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='FLAG'
+    ).all()
+
+    for i, flag in enumerate(flags):
+        override_key = f'override_{i}'
+        reason_key = f'reason_{i}'
+        if request.form.get(override_key):
+            flag.overridden = True
+            flag.override_reason = request.form.get(reason_key, '')
+            flag.overridden_by = current_user.id
+    db.session.commit()
+
+    # Check if any BLOCK issues remain un-overridden
+    blocks = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='BLOCK'
+    ).filter(PayrollValidationResult.overridden == False).all()
+
+    if blocks:
+        flash('Cannot process: there are unresolved BLOCK issues.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+    # --- STAGE 4: APPROVE & PROCESS ---
+    run.status = 'processing'
+    run.approved_by = current_user.id
+    run.approved_at = datetime.utcnow()
+    run.approval_ip = request.remote_addr
+    db.session.commit()
+
+    # Retrieve payroll data from session
+    from flask import session
+    employees_data = session.get(f'payroll_data_{run.id}')
+    if not employees_data:
+        run.status = 'failed'
+        db.session.commit()
+        flash('Payroll data expired. Please re-upload the CSV.', 'danger')
+        return redirect(url_for('main.payroll_upload'))
+
+    try:
+        # Generate payslips and employee records
+        for emp_data in employees_data:
+            emp = Employee.query.filter_by(
+                company_id=current_user.company_id,
+                employee_id=emp_data['id']
+            ).first()
+            if not emp:
+                emp = Employee(
+                    employee_id=emp_data['id'],
+                    name=emp_data['name'],
+                    basic_salary=emp_data['basic'],
+                    allowances=emp_data['allowances'],
+                    bank_or_telebirr=emp_data.get('bank', ''),
+                    company_id=current_user.company_id,
+                )
+                db.session.add(emp)
+                db.session.flush()
+            else:
+                emp.basic_salary = emp_data['basic']
+                emp.allowances = emp_data['allowances']
+                emp.bank_or_telebirr = emp_data.get('bank', '')
+                db.session.flush()
+
+            # Generate PDF
+            pdf_path = generate_payslip(emp_data)
+
+            payslip = Payslip(
+                payroll_run_id=run.id,
+                employee_id=emp.id,
+                pdf_file_path=pdf_path,
+                gross_salary=emp_data['gross'],
+                tax=emp_data['tax'],
+                employee_pension=emp_data['pension_employee'],
+                employer_pension=emp_data['pension_employer'],
+                net_pay=emp_data['net'],
+            )
+            db.session.add(payslip)
+
+        run.status = 'completed'
+        db.session.commit()
+
+        # Compliance scoring
+        run_date_str = run.run_date.isoformat()
+        score, status = compute_compliance_score(payroll_date=run_date_str)
+
+        # Audit log
+        log = AuditLog(
+            company_id=current_user.company_id,
+            user_id=current_user.id,
+            action='payroll_run_completed',
+            details={
+                'run_id': run.id,
+                'employee_count': len(employees_data),
+                'compliance_score': score,
+                'approved_by': current_user.email,
+                'approval_ip': request.remote_addr,
+            }
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        # Clean up session data
+        session.pop(f'payroll_data_{run.id}', None)
+
+        flash(f'Payroll processed: {len(employees_data)} employees, compliance {score}%.', 'success')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+    except Exception as e:
+        run.status = 'failed'
+        db.session.commit()
+        log = AuditLog(
+            company_id=current_user.company_id,
+            user_id=current_user.id,
+            action='payroll_run_failed',
+            details={'run_id': run.id, 'error': str(e)}
+        )
+        db.session.add(log)
+        db.session.commit()
+        flash(f'Error processing payroll: {e}', 'danger')
+        return redirect(url_for('main.payroll_upload'))
 
 
 @main.route('/payroll/runs')

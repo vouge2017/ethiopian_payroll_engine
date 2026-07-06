@@ -201,11 +201,16 @@ class PayrollRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     run_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
-    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, processing, completed, failed
+    # Lifecycle: draft → validating → review → approved → processing → completed / failed
+    status = db.Column(db.String(20), nullable=False, default='draft')
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    approval_ip = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     payslips = db.relationship('Payslip', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
+    validation_results = db.relationship('PayrollValidationResult', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<PayrollRun {self.id} for {self.company_id} on {self.run_date}>'
@@ -330,3 +335,34 @@ class TaxRule(db.Model):
     @property
     def expat_pension_exempt(self):
         return self.rules_json.get('pension', {}).get('expat_exemption', False)
+
+
+class ValidationRule(db.Model):
+    """Configurable validation rules for payroll pre-processing."""
+    id = db.Column(db.Integer, primary_key=True)
+    rule_code = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    severity = db.Column(db.String(10), nullable=False)  # BLOCK / FLAG / WARN
+    enabled = db.Column(db.Boolean, default=True)
+    config_json = db.Column(db.JSON, nullable=True)  # rule-specific parameters
+
+    def __repr__(self):
+        return f'<ValidationRule {self.rule_code} ({self.severity})>'
+
+
+class PayrollValidationResult(db.Model):
+    """Results of validation checks for a payroll run."""
+    id = db.Column(db.Integer, primary_key=True)
+    payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
+    rule_code = db.Column(db.String(50), nullable=False)
+    severity = db.Column(db.String(10), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=True)
+    message = db.Column(db.Text, nullable=False)
+    details_json = db.Column(db.JSON, nullable=True)
+    overridden = db.Column(db.Boolean, default=False)
+    override_reason = db.Column(db.Text, nullable=True)
+    overridden_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<PayrollValidationResult {self.rule_code} for run {self.payroll_run_id}>'

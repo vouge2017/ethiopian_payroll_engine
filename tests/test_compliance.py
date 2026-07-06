@@ -67,23 +67,29 @@ def test_pension_constant():
 # --- Score calculation ---
 
 def test_score_perfect():
-    """All deadlines met = 100%."""
+    """All deadlines met = 100%. Use future dates so 'today' hasn't passed them."""
+    from datetime import date, timedelta
+    future = date.today() + timedelta(days=60)
+    future_str = future.isoformat()
     score, status = compute_compliance_score(
-        payroll_date='2025-07-01',
-        pension_deadline='2025-08-15',
-        tax_deadline='2025-08-08',
-        disbursement_date='2025-07-30',
+        payroll_date=future_str,
+        pension_deadline=future_str,
+        tax_deadline=future_str,
+        disbursement_date=future_str,
     )
-    assert score == 100.0
+    assert score == 100.0, f"Expected 100.0, got {score}"
     assert status == 'green'
 
 def test_score_status_thresholds():
     """Verify green/yellow/red thresholds."""
+    from datetime import date, timedelta
+    future = date.today() + timedelta(days=60)
+    future_str = future.isoformat()
     _, green = compute_compliance_score(
-        payroll_date='2025-07-01',
-        pension_deadline='2025-08-15',
-        tax_deadline='2025-08-08',
-        disbursement_date='2025-07-30',
+        payroll_date=future_str,
+        pension_deadline=future_str,
+        tax_deadline=future_str,
+        disbursement_date=future_str,
     )
     assert green == 'green'
 

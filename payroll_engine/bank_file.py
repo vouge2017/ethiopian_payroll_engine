@@ -244,9 +244,10 @@ def generate_csv(employees_data: List[Dict[str, Any]],
         # Format as TEXT — no commas, 2 decimal places
         amount = format_amount(emp.get('net', 0))
 
-        # Narrative: employee name + period
+        # Narrative: employee ID + name + period (ID disambiguates same names)
         name = emp.get('name', 'Unknown')
-        narrative = f"{period} salary - {name}" if period else f"Salary - {name}"
+        emp_id = emp.get('id', '')
+        narrative = f"{period} salary - {emp_id} {name}" if period else f"Salary - {emp_id} {name}"
 
         writer.writerow([account, amount, narrative, 'ETB'])
 
@@ -311,7 +312,8 @@ def generate_xlsx(employees_data: List[Dict[str, Any]],
         amount = emp.get('net', 0)
         total_amount += amount
         name = emp.get('name', 'Unknown')
-        narrative = f"{period} salary - {name}" if period else f"Salary - {name}"
+        emp_id = emp.get('id', '')
+        narrative = f"{period} salary - {emp_id} {name}" if period else f"Salary - {emp_id} {name}"
 
         row = 4 + i
 

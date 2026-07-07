@@ -266,12 +266,27 @@ def test_csv_currency_is_etb():
     assert 'ETB' in content
 
 
-def test_csv_narrative_includes_name():
+def test_csv_narrative_includes_id_and_name():
+    """Narrative should include employee ID to disambiguate same names."""
     employees = [{'id': 'E001', 'name': 'Abebe Kebede', 'bank': 'telebirr:0912345678', 'net': 5000}]
     csv_bytes = generate_csv(employees, period='July 2025')
     content = csv_bytes.decode('utf-8')
+    assert 'E001' in content
     assert 'Abebe Kebede' in content
     assert 'July 2025' in content
+
+
+def test_csv_same_name_different_ids():
+    """Two employees with same name but different IDs should have different narratives."""
+    employees = [
+        {'id': 'E001', 'name': 'Abebe Kebede', 'bank': 'telebirr:0912345678', 'net': 5000},
+        {'id': 'E002', 'name': 'Abebe Kebede', 'bank': 'telebirr:0987654321', 'net': 3000},
+    ]
+    csv_bytes = generate_csv(employees, period='July 2025')
+    lines = csv_bytes.decode('utf-8').strip().split('\n')
+    # Both lines should have the name, but with different IDs
+    assert 'E001 Abebe Kebede' in lines[1]
+    assert 'E002 Abebe Kebede' in lines[2]
 
 
 def test_csv_multiple_employees():

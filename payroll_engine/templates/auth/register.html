@@ -14,20 +14,27 @@
                     <form method="POST" action="{{ url_for('auth.register') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
-                            <label for="company_name" class="form-label">Company Name</label>
+                            <label for="company_name" class="form-label">Company Name *</label>
                             <input type="text" class="form-control" id="company_name" name="company_name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
+                            <label for="phone" class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="phone" name="phone"
+                                   required placeholder="0911234567">
+                            <div class="form-text">Ethio Telecom format: 09XXXXXXXX or +2519XXXXXXXX</div>
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
+                            <label for="email" class="form-label">Email <span class="text-muted">(optional)</span></label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   placeholder="you@email.com">
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password *</label>
                             <input type="password" class="form-control" id="password" name="password" required minlength="8">
                             <div class="form-text">At least 8 characters.</div>
                         </div>
                         <div class="mb-3">
-                            <label for="password2" class="form-label">Confirm Password</label>
+                            <label for="password2" class="form-label">Confirm Password *</label>
                             <input type="password" class="form-control" id="password2" name="password2" required>
                         </div>
                         <div class="d-grid">

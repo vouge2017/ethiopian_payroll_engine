@@ -1,11 +1,51 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import re
 import threading
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from payroll_engine import db
+
+
+def validate_ethiopian_phone(phone: str) -> tuple:
+    """
+    Validate Ethiopian phone number format.
+
+    Accepted formats:
+        +251911234567, 0911234567, +251 911 234 567, 0911 234 567
+
+    Returns:
+        (is_valid, normalized, error_message)
+        normalized is the number in 09XXXXXXXX format, or None if invalid.
+    """
+    if not phone:
+        return False, None, 'Phone number is required.'
+
+    # Strip all spaces
+    cleaned = phone.replace(' ', '')
+
+    # Pattern: +251 followed by 9XXXXXXXX, or 09XXXXXXXX
+    patterns = [
+        (r'^\+251(9\d{8})$', '0{}'),      # +251911234567 → 0911234567
+        (r'^(09\d{8})$', '{}'),             # 0911234567 → 0911234567
+    ]
+
+    for pattern, fmt in patterns:
+        m = re.match(pattern, cleaned)
+        if m:
+            normalized = fmt.format(m.group(1))
+            return True, normalized, None
+
+    # Provide helpful error
+    if cleaned.startswith('+251'):
+        return False, None, 'Ethiopian mobile must start with +251 9XX.'
+    if cleaned.startswith('07'):
+        return False, None, 'Use 09X prefix (Ethio Telecom), not 07X.'
+    if len(cleaned) < 10:
+        return False, None, 'Phone number too short. Use 09XXXXXXXX or +2519XXXXXXXX.'
+    return False, None, 'Invalid Ethiopian phone format. Use 09XXXXXXXX or +2519XXXXXXXX.'
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +189,8 @@ class Company(db.Model):
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)  # Optional — phone is primary
+    phone = db.Column(db.String(20), unique=True, nullable=True)   # 09XXXXXXXX format
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='employee')  # admin, hr, employee
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)

@@ -14,8 +14,11 @@
                     <form method="POST" action="{{ url_for('auth.login') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" required autofocus>
+                            <label for="login_id" class="form-label">Phone or Email</label>
+                            <input type="text" class="form-control" id="login_id" name="login_id"
+                                   required autofocus
+                                   placeholder="0911234567 or you@email.com">
+                            <div class="form-text">Use your phone number or email to sign in.</div>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>

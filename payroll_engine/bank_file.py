@@ -77,14 +77,52 @@ def validate_account_number(account: str, bank: str) -> tuple:
     return True, None
 
 
-def format_amount(amount: float) -> str:
+# Narrative template presets
+NARRATIVE_TEMPLATES = {
+    'id_name': '{period} salary - {id} {name}',
+    'name_only': '{period} salary - {name}',
+    'id_only': '{period} salary - {id}',
+    'period_name': '{period} - {name}',
+    'custom': None,  # User provides their own
+}
+
+
+def get_narrative(template_key: str, emp_id: str, name: str,
+                  period: str, custom_template: str = None) -> str:
     """
-    Format amount for bank file: no commas, forced 2 decimal places, string type.
+    Generate narrative text from a template.
+
+    Args:
+        template_key: One of NARRATIVE_TEMPLATES keys, or 'custom'
+        emp_id: Employee ID
+        name: Employee name
+        period: Pay period (e.g., 'July 2025')
+        custom_template: Custom template string (used when template_key='custom')
+            Available placeholders: {period}, {id}, {name}
+
+    Returns:
+        Formatted narrative string
+    """
+    if template_key == 'custom' and custom_template:
+        template = custom_template
+    else:
+        template = NARRATIVE_TEMPLATES.get(template_key, NARRATIVE_TEMPLATES['id_name'])
+
+    return template.format(period=period, id=emp_id, name=name)
+
+
+def format_amount(amount: float, decimals: int = 2) -> str:
+    """
+    Format amount for bank file: no commas, forced decimal places, string type.
+
+    Args:
+        amount: The amount to format
+        decimals: Number of decimal places (default 2, some banks want 0)
 
     Bad:  "12,500.50" or 12500.5
     Good: "12500.50"
     """
-    return f"{amount:.2f}"
+    return f"{amount:.{decimals}f}"
 
 
 def validate_payroll_for_bank(employees_data: List[Dict[str, Any]],
@@ -214,7 +252,10 @@ def validate_payroll_for_bank(employees_data: List[Dict[str, Any]],
 def generate_csv(employees_data: List[Dict[str, Any]],
                  bank: str = 'cbe',
                  company_name: str = '',
-                 period: str = '') -> bytes:
+                 period: str = '',
+                 narrative_template: str = 'id_name',
+                 custom_narrative: str = None,
+                 decimals: int = 2) -> bytes:
     """
     Generate a bank-ready CSV file for bulk payment upload.
 
@@ -241,13 +282,17 @@ def generate_csv(employees_data: List[Dict[str, Any]],
         if ':' in account:
             account = account.split(':', 1)[1].strip()
 
-        # Format as TEXT — no commas, 2 decimal places
-        amount = format_amount(emp.get('net', 0))
+        # Format as TEXT — no commas, configurable decimal places
+        amount = format_amount(emp.get('net', 0), decimals=decimals)
 
-        # Narrative: employee ID + name + period (ID disambiguates same names)
-        name = emp.get('name', 'Unknown')
-        emp_id = emp.get('id', '')
-        narrative = f"{period} salary - {emp_id} {name}" if period else f"Salary - {emp_id} {name}"
+        # Narrative from template
+        narrative = get_narrative(
+            narrative_template,
+            emp_id=emp.get('id', ''),
+            name=emp.get('name', 'Unknown'),
+            period=period,
+            custom_template=custom_narrative,
+        )
 
         writer.writerow([account, amount, narrative, 'ETB'])
 
@@ -257,7 +302,10 @@ def generate_csv(employees_data: List[Dict[str, Any]],
 def generate_xlsx(employees_data: List[Dict[str, Any]],
                   bank: str = 'cbe',
                   company_name: str = '',
-                  period: str = '') -> bytes:
+                  period: str = '',
+                  narrative_template: str = 'id_name',
+                  custom_narrative: str = None,
+                  decimals: int = 2) -> bytes:
     """
     Generate a bank-ready Excel file with account numbers as TEXT
     (prevents Excel scientific notation on 13-digit numbers).
@@ -313,7 +361,13 @@ def generate_xlsx(employees_data: List[Dict[str, Any]],
         total_amount += amount
         name = emp.get('name', 'Unknown')
         emp_id = emp.get('id', '')
-        narrative = f"{period} salary - {emp_id} {name}" if period else f"Salary - {emp_id} {name}"
+        narrative = get_narrative(
+            narrative_template,
+            emp_id=emp_id,
+            name=name,
+            period=period,
+            custom_template=custom_narrative,
+        )
 
         row = 4 + i
 

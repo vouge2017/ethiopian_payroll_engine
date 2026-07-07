@@ -592,8 +592,20 @@ def download_pension_report(run_id):
 @login_required
 @role_required('admin', 'hr')
 def download_bank_file(run_id):
-    """Download bank transfer file for a payroll run."""
-    from payroll_engine.bank_file import generate_csv, generate_xlsx, validate_payroll_for_bank
+    """Download bank transfer file for a payroll run.
+
+    Query params:
+        format: csv or xlsx (default xlsx)
+        bank: cbe, dashen, awash, telebirr (default cbe)
+        narrative: id_name, name_only, id_only, period_name, custom (default id_name)
+        custom_narrative: custom template string (used when narrative=custom)
+            Available placeholders: {period}, {id}, {name}
+        decimals: decimal places for amounts (default 2)
+    """
+    from payroll_engine.bank_file import (
+        generate_csv, generate_xlsx, validate_payroll_for_bank,
+        ACCOUNT_PATTERNS, NARRATIVE_TEMPLATES
+    )
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=current_user.company_id
     ).first_or_404()
@@ -603,6 +615,13 @@ def download_bank_file(run_id):
 
     company = current_user.company
     period = run.run_date.strftime('%B %Y')
+
+    # Get options from query params
+    fmt = request.args.get('format', 'xlsx')
+    bank = request.args.get('bank', 'cbe')
+    narrative = request.args.get('narrative', 'id_name')
+    custom_narrative = request.args.get('custom_narrative', None)
+    decimals = int(request.args.get('decimals', '2'))
 
     # Build employee data from payslips
     employees_data = []
@@ -645,14 +664,21 @@ def download_bank_file(run_id):
         for flag in flags:
             flash(f"Warning: {flag['name']} — {flag['error']}", 'warning')
 
-    # Get format preference (default: xlsx)
-    fmt = request.args.get('format', 'xlsx')
+    # Generate file
     if fmt == 'csv':
-        file_bytes = generate_csv(employees_data, company_name=company.name, period=period)
+        file_bytes = generate_csv(
+            employees_data, bank=bank, company_name=company.name,
+            period=period, narrative_template=narrative,
+            custom_narrative=custom_narrative, decimals=decimals
+        )
         mimetype = 'text/csv'
         filename = f'BankTransfer_{company.name}_{period.replace(" ", "_")}.csv'
     else:
-        file_bytes = generate_xlsx(employees_data, company_name=company.name, period=period)
+        file_bytes = generate_xlsx(
+            employees_data, bank=bank, company_name=company.name,
+            period=period, narrative_template=narrative,
+            custom_narrative=custom_narrative, decimals=decimals
+        )
         mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         filename = f'BankTransfer_{company.name}_{period.replace(" ", "_")}.xlsx'
 

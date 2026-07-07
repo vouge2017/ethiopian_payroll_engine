@@ -36,10 +36,23 @@
             </button>
         </div>
         <nav class="flex-column">
+            {% if current_user.role == 'employee' %}
+            <!-- Employee portal navigation -->
+            <a href="{{ url_for('main.employee_dashboard') }}" class="{% if request.endpoint == 'main.employee_dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2 me-2"></i>My Dashboard
+            </a>
+            <a href="{{ url_for('main.my_payslips') }}" class="{% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-receipt me-2"></i>My Payslips
+            </a>
+            <a href="{{ url_for('main.my_profile') }}" class="{% if request.endpoint == 'main.my_profile' %}active{% endif %}">
+                <i class="bi bi-person me-2"></i>My Profile
+            </a>
+            {% else %}
+            <!-- Owner/Accountant navigation -->
             <a href="{{ url_for('main.index') }}" class="{% if request.endpoint == 'main.index' %}active{% endif %}">
                 <i class="bi bi-speedometer2 me-2"></i>{{ _('dashboard') }}
             </a>
-            <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}">
                 <i class="bi bi-people me-2"></i>{{ _('employees') }}
             </a>
             <a href="{{ url_for('main.payroll_upload') }}" class="{% if 'payroll' in request.endpoint %}active{% endif %}">
@@ -51,6 +64,12 @@
             <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}">
                 <i class="bi bi-bar-chart me-2"></i>{{ _('reports') }}
             </a>
+            {% if current_user.role == 'owner' %}
+            <a href="{{ url_for('main.team_settings') }}" class="{% if 'team' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-gear me-2"></i>Team
+            </a>
+            {% endif %}
+            {% endif %}
         </nav>
         <div class="mt-auto p-3 text-white small border-top border-secondary">
             <!-- Language Switcher -->

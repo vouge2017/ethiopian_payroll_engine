@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}My Profile - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="mb-0">
+                    <a href="{{ url_for('main.employee_dashboard') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+                    My Profile
+                </h3>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person me-2"></i>{{ employee.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">Employee ID</div>
+                        <div class="col-md-8"><strong>{{ employee.employee_id }}</strong></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">Name</div>
+                        <div class="col-md-8">{{ employee.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">Basic Salary</div>
+                        <div class="col-md-8">ETB {{ '%.2f'|format(employee.basic_salary) }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">Allowances</div>
+                        <div class="col-md-8">ETB {{ '%.2f'|format(employee.allowances) }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">Gross Salary</div>
+                        <div class="col-md-8">ETB {{ '%.2f'|format(employee.gross_salary) }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">Bank / Telebirr</div>
+                        <div class="col-md-8">{{ masked_bank }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">TIN</div>
+                        <div class="col-md-8">{{ employee.tin or 'Not set' }}</div>
+                    </div>
+                    <hr>
+                    <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        To update your information, contact your administrator.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

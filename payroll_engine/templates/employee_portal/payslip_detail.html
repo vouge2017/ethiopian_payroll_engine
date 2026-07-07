@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Payslip - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="mb-0">
+                    <a href="{{ url_for('main.my_payslips') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+                    Payslip — {{ payslip.generated_at.strftime('%B %Y') }}
+                </h3>
+                {% if payslip.pdf_file_path %}
+                <a href="{{ url_for('main.download_payslip', payslip_id=payslip.id) }}" class="btn btn-success">
+                    <i class="bi bi-download me-1"></i>Download PDF
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Employee Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Name:</strong> {{ employee.name }}<br>
+                            <strong>ID:</strong> {{ employee.employee_id }}
+                        </div>
+                        <div class="col-6 text-end">
+                            <strong>Period:</strong> {{ payslip.generated_at.strftime('%B %Y') }}<br>
+                            <strong>Generated:</strong> {{ payslip.generated_at.strftime('%Y-%m-%d') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Earnings -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Earnings</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Basic Salary</td>
+                                <td class="text-end">ETB {{ '%.2f'|format(employee.basic_salary) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Allowances</td>
+                                <td class="text-end">ETB {{ '%.2f'|format(employee.allowances) }}</td>
+                            </tr>
+                            <tr class="table-light">
+                                <td><strong>Gross Salary</strong></td>
+                                <td class="text-end"><strong>ETB {{ '%.2f'|format(payslip.gross_salary) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Deductions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-dash-circle me-2"></i>Deductions</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Employee Pension (7%)</td>
+                                <td class="text-end">ETB {{ '%.2f'|format(payslip.employee_pension) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Income Tax</td>
+                                <td class="text-end">ETB {{ '%.2f'|format(payslip.tax) }}</td>
+                            </tr>
+                            <tr class="table-light">
+                                <td><strong>Total Deductions</strong></td>
+                                <td class="text-end"><strong>ETB {{ '%.2f'|format(payslip.tax + payslip.employee_pension) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Net Pay -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body text-center py-4" style="background: #1a5276; color: white;">
+                    <h5 class="mb-1">Net Pay</h5>
+                    <h2 class="mb-0">ETB {{ '%.2f'|format(payslip.net_pay) }}</h2>
+                </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <strong>Payment Method:</strong> {{ employee.bank_or_telebirr or 'Cash' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

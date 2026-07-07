@@ -1055,3 +1055,104 @@ def switch_company(company_id):
     company = Company.query.get(company_id)
     flash(f'Switched to {company.name}.', 'success')
     return redirect(url_for('main.index'))
+
+
+# --- Employee Self-Service Portal ---
+
+@main.route('/my/dashboard')
+@login_required
+def employee_dashboard():
+    """Employee's own dashboard — view payslips, overtime, profile."""
+    # Link user to employee: phone matches bank_or_telebirr field
+    # or employee_id matches user's phone (for phone-based IDs)
+    emp = Employee.query.filter_by(
+        company_id=current_user.company_id,
+        is_deleted=False
+    ).filter(
+        db.or_(
+            Employee.bank_or_telebirr.like(f'%{current_user.phone}%'),
+            Employee.employee_id == current_user.phone
+        )
+    ).first()
+    if not emp:
+        flash('Employee record not linked to your account. Contact your admin.', 'warning')
+        return render_template('employee_portal/dashboard.html', employee=None)
+    # Latest payslip
+    latest_payslip = Payslip.query.filter_by(employee_id=emp.id) \
+        .order_by(Payslip.generated_at.desc()).first()
+    # Overtime this month
+    from payroll_engine.models import OvertimeEntry
+    from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
+    month_start = date.today().replace(day=1)
+    ot_entries = OvertimeEntry.query.filter_by(
+        employee_id=emp.id, company_id=current_user.company_id
+    ).filter(OvertimeEntry.date >= month_start).all()
+    ot_hours = sum(e.hours for e in ot_entries)
+    ot_pay = sum(calculate_overtime_pay(emp.basic_salary, e.hours, e.overtime_type) for e in ot_entries)
+    # Recent payslips
+    recent_payslips = Payslip.query.filter_by(employee_id=emp.id) \
+        .order_by(Payslip.generated_at.desc()).limit(6).all()
+    return render_template('employee_portal/dashboard.html',
+                           employee=emp,
+                           latest_payslip=latest_payslip,
+                           ot_hours=round(ot_hours, 1),
+                           ot_pay=round(ot_pay, 2),
+                           recent_payslips=recent_payslips)
+
+
+@main.route('/my/payslips')
+@login_required
+def my_payslips():
+    """Employee's payslip history."""
+    emp = Employee.query.filter_by(
+        company_id=current_user.company_id, is_deleted=False
+    ).filter(
+        db.or_(
+            Employee.bank_or_telebirr.like(f"%{current_user.phone}%"),
+            Employee.employee_id == current_user.phone
+        )
+    ).first()
+    if not emp:
+        flash('Employee record not linked.', 'warning')
+        return render_template('employee_portal/payslips.html', employee=None, payslips=[])
+    payslips = Payslip.query.filter_by(employee_id=emp.id) \
+        .order_by(Payslip.generated_at.desc()).all()
+    return render_template('employee_portal/payslips.html', employee=emp, payslips=payslips)
+
+
+@main.route('/my/payslips/<int:payslip_id>')
+@login_required
+def my_payslip_detail(payslip_id):
+    """View a specific payslip."""
+    emp = Employee.query.filter_by(
+        company_id=current_user.company_id, is_deleted=False
+    ).filter(
+        db.or_(
+            Employee.bank_or_telebirr.like(f"%{current_user.phone}%"),
+            Employee.employee_id == current_user.phone
+        )
+    ).first_or_404()
+    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
+    return render_template('employee_portal/payslip_detail.html', employee=emp, payslip=payslip)
+
+
+@main.route('/my/profile')
+@login_required
+def my_profile():
+    """Employee's own profile (read-only)."""
+    emp = Employee.query.filter_by(
+        company_id=current_user.company_id, is_deleted=False
+    ).filter(
+        db.or_(
+            Employee.bank_or_telebirr.like(f"%{current_user.phone}%"),
+            Employee.employee_id == current_user.phone
+        )
+    ).first_or_404()
+    # Mask bank account
+    bank = emp.bank_or_telebirr or ''
+    if ':' in bank:
+        parts = bank.split(':', 1)
+        masked = parts[0] + ':' + '*' * max(0, len(parts[1]) - 4) + parts[1][-4:] if len(parts[1]) > 4 else bank
+    else:
+        masked = '*' * max(0, len(bank) - 4) + bank[-4:] if len(bank) > 4 else bank
+    return render_template('employee_portal/profile.html', employee=emp, masked_bank=masked)

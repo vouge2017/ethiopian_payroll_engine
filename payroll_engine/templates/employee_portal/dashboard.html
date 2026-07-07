@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <h3 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>My Dashboard</h3>
+
+    {% if employee %}
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Latest Net Pay</h6>
+                    {% if latest_payslip %}
+                    <h3 class="text-success">ETB {{ '%.2f'|format(latest_payslip.net_pay) }}</h3>
+                    <small class="text-muted">{{ latest_payslip.generated_at.strftime('%B %Y') }}</small>
+                    {% else %}
+                    <h3 class="text-muted">—</h3>
+                    <small class="text-muted">No payslips yet</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Overtime This Month</h6>
+                    <h3>{{ ot_hours }}h</h3>
+                    {% if ot_pay > 0 %}
+                    <small class="text-muted">ETB {{ '%.2f'|format(ot_pay) }}</small>
+                    {% endif %}
+                    {% if ot_hours > 20 %}
+                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle"></i> Over 20h limit</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Employee ID</h6>
+                    <h3>{{ employee.employee_id }}</h3>
+                    <small class="text-muted">{{ employee.name }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Payslips -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Recent Payslips</h5>
+            <a href="{{ url_for('main.my_payslips') }}" class="btn btn-sm btn-light">View All</a>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_payslips %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Period</th>
+                            <th>Gross</th>
+                            <th>Deductions</th>
+                            <th>Net Pay</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in recent_payslips %}
+                        <tr>
+                            <td>{{ p.generated_at.strftime('%B %Y') }}</td>
+                            <td>ETB {{ '%.2f'|format(p.gross_salary) }}</td>
+                            <td>ETB {{ '%.2f'|format(p.tax + p.employee_pension) }}</td>
+                            <td><strong>ETB {{ '%.2f'|format(p.net_pay) }}</strong></td>
+                            <td>
+                                <a href="{{ url_for('main.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if p.pdf_file_path %}
+                                <a href="{{ url_for('main.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <p>No payslips yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Your employee record is not linked to this account. Contact your administrator.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

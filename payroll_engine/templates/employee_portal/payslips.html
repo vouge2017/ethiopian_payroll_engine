@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}My Payslips - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <a href="{{ url_for('main.employee_dashboard') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            My Payslips
+        </h3>
+    </div>
+
+    {% if employee %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if payslips %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Period</th>
+                            <th>Gross (ETB)</th>
+                            <th>Tax (ETB)</th>
+                            <th>Pension (ETB)</th>
+                            <th>Net Pay (ETB)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payslips %}
+                        <tr>
+                            <td>{{ p.generated_at.strftime('%B %Y') }}</td>
+                            <td>{{ '%.2f'|format(p.gross_salary) }}</td>
+                            <td>{{ '%.2f'|format(p.tax) }}</td>
+                            <td>{{ '%.2f'|format(p.employee_pension) }}</td>
+                            <td><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
+                            <td>
+                                <a href="{{ url_for('main.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if p.pdf_file_path %}
+                                <a href="{{ url_for('main.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-download"></i> PDF
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-receipt" style="font-size: 3rem;"></i>
+                <p class="mt-2">No payslips yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Employee record not linked. Contact your administrator.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

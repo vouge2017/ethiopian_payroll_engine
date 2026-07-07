@@ -133,7 +133,7 @@ def test_validate_all_valid():
     """Valid employees should produce no errors."""
     employees = [
         {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000},
-        {'id': 'E002', 'name': 'Bob', 'bank': 'bank:cbe:1000123456789', 'net': 8000},
+        {'id': 'E002', 'name': 'Bob', 'bank': 'cbe:1000123456789', 'net': 8000},
     ]
     errors = validate_payroll_for_bank(employees, bank='cbe')
     assert len(errors) == 0
@@ -144,7 +144,7 @@ def test_validate_multiple_errors():
     employees = [
         {'id': 'E001', 'name': 'Alice', 'bank': '', 'net': 5000},
         {'id': 'E002', 'name': 'Bob', 'bank': 'telebirr:0912345678', 'net': -100},
-        {'id': 'E003', 'name': 'Carol', 'bank': 'telebirr:0912345678', 'net': 3000},
+        {'id': 'E003', 'name': 'Carol', 'bank': 'telebirr:0911111111', 'net': 3000},
     ]
     errors = validate_payroll_for_bank(employees)
     assert len(errors) == 2  # Alice (missing bank) + Bob (negative net)

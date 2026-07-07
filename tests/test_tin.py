@@ -49,7 +49,7 @@ def test_tin_stores_correctly(ctx):
     db.session.add(emp)
     db.session.commit()
 
-    retrieved = Employee.query.filter_by(employee_id='E001').first()
+    retrieved = Employee.query.filter_by(employee_id='E001', company_id=company.id).first()
     assert retrieved.tin == '1234567890'
 
 
@@ -65,7 +65,7 @@ def test_tin_can_be_null(ctx):
     db.session.add(emp)
     db.session.commit()
 
-    retrieved = Employee.query.filter_by(employee_id='E001').first()
+    retrieved = Employee.query.filter_by(employee_id='E001', company_id=company.id).first()
     assert retrieved.tin is None
 
 
@@ -84,7 +84,7 @@ def test_tin_can_be_updated(ctx):
     emp.tin = '0987654321'
     db.session.commit()
 
-    retrieved = Employee.query.filter_by(employee_id='E001').first()
+    retrieved = Employee.query.filter_by(employee_id='E001', company_id=company.id).first()
     assert retrieved.tin == '0987654321'
 
 
@@ -101,7 +101,7 @@ def test_tin_with_special_chars(ctx):
     db.session.add(emp)
     db.session.commit()
 
-    retrieved = Employee.query.filter_by(employee_id='E001').first()
+    retrieved = Employee.query.filter_by(employee_id='E001', company_id=company.id).first()
     assert retrieved.tin == 'TIN-123-456-789'
 
 
@@ -121,7 +121,7 @@ def test_multiple_employees_different_tins(ctx):
     db.session.add_all([emp1, emp2])
     db.session.commit()
 
-    e1 = Employee.query.filter_by(employee_id='E001').first()
-    e2 = Employee.query.filter_by(employee_id='E002').first()
+    e1 = Employee.query.filter_by(employee_id='E001', company_id=company.id).first()
+    e2 = Employee.query.filter_by(employee_id='E002', company_id=company.id).first()
     assert e1.tin == '1111111111'
     assert e2.tin == '2222222222'

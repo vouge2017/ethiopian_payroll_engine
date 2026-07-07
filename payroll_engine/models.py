@@ -226,6 +226,10 @@ class Payslip(db.Model):
     employee_pension = db.Column(db.Float, nullable=False)
     employer_pension = db.Column(db.Float, nullable=False)
     net_pay = db.Column(db.Float, nullable=False)
+    # Payment status for bank file error re-uploader workflow
+    # pending_bank_clearance → bank_rejected → corrected → paid
+    payment_status = db.Column(db.String(30), nullable=False, default='pending_bank_clearance')
+    payment_rejection_reason = db.Column(db.Text, nullable=True)
     generated_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):

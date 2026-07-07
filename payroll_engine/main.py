@@ -586,3 +586,56 @@ def download_pension_report(run_id):
         as_attachment=True,
         download_name=f'Pension_{company.name}_{period.replace(" ", "_")}.xlsx'
     )
+
+
+@main.route('/reports/bank/<int:run_id>')
+@login_required
+@role_required('admin', 'hr')
+def download_bank_file(run_id):
+    """Download bank transfer file for a payroll run."""
+    from payroll_engine.bank_file import generate_csv, generate_xlsx, validate_payroll_for_bank
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=current_user.company_id
+    ).first_or_404()
+    if run.status != 'completed':
+        flash('Can only generate bank files for completed payroll runs.', 'warning')
+        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+
+    company = current_user.company
+    period = run.run_date.strftime('%B %Y')
+
+    # Build employee data from payslips
+    employees_data = []
+    for p in run.payslips:
+        emp = p.employee
+        employees_data.append({
+            'id': emp.employee_id,
+            'name': emp.name,
+            'bank': emp.bank_or_telebirr or '',
+            'net': p.net_pay,
+        })
+
+    # Validate before generating
+    errors = validate_payroll_for_bank(employees_data)
+    if errors:
+        error_summary = '; '.join([f"{e['name']}: {e['error']}" for e in errors[:3]])
+        flash(f'Bank file has validation errors: {error_summary}', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+
+    # Get format preference (default: xlsx)
+    fmt = request.args.get('format', 'xlsx')
+    if fmt == 'csv':
+        file_bytes = generate_csv(employees_data, company_name=company.name, period=period)
+        mimetype = 'text/csv'
+        filename = f'BankTransfer_{company.name}_{period.replace(" ", "_")}.csv'
+    else:
+        file_bytes = generate_xlsx(employees_data, company_name=company.name, period=period)
+        mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        filename = f'BankTransfer_{company.name}_{period.replace(" ", "_")}.xlsx'
+
+    return send_file(
+        io.BytesIO(file_bytes),
+        mimetype=mimetype,
+        as_attachment=True,
+        download_name=filename
+    )

@@ -151,6 +151,76 @@ def test_validate_multiple_errors():
 
 
 # ---------------------------------------------------------------
+# Duplicate Detection
+# ---------------------------------------------------------------
+
+def test_validate_duplicate_employee_id():
+    """Same employee appearing twice should be caught."""
+    employees = [
+        {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000},
+        {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000},
+    ]
+    errors = validate_payroll_for_bank(employees)
+    assert any('DUPLICATE' in e['error'] and e.get('severity') == 'BLOCK' for e in errors)
+
+
+def test_validate_duplicate_bank_account():
+    """Two different employees with the same bank account should be caught."""
+    employees = [
+        {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000},
+        {'id': 'E002', 'name': 'Bob', 'bank': 'telebirr:0912345678', 'net': 3000},
+    ]
+    errors = validate_payroll_for_bank(employees)
+    assert any('DUPLICATE ACCOUNT' in e['error'] for e in errors)
+
+
+def test_validate_different_accounts_ok():
+    """Different employees with different accounts should pass."""
+    employees = [
+        {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000},
+        {'id': 'E002', 'name': 'Bob', 'bank': 'telebirr:0987654321', 'net': 3000},
+    ]
+    errors = validate_payroll_for_bank(employees)
+    assert len(errors) == 0
+
+
+def test_validate_account_change_flagged():
+    """Account number changed from previous run should be flagged (not blocked)."""
+    employees = [
+        {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0999999999', 'net': 5000},
+    ]
+    previous = {
+        'E001': {'bank': 'telebirr:0912345678', 'net': 5000},
+    }
+    errors = validate_payroll_for_bank(employees, previous_payslips=previous)
+    assert any('ACCOUNT CHANGED' in e['error'] and e.get('severity') == 'FLAG' for e in errors)
+
+
+def test_validate_account_change_not_flagged_if_same():
+    """Same account as previous run should NOT be flagged."""
+    employees = [
+        {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000},
+    ]
+    previous = {
+        'E001': {'bank': 'telebirr:0912345678', 'net': 5000},
+    }
+    errors = validate_payroll_for_bank(employees, previous_payslips=previous)
+    assert not any('ACCOUNT CHANGED' in e.get('error', '') for e in errors)
+
+
+def test_validate_new_employee_no_flag():
+    """New employee (not in previous run) should not be flagged for account change."""
+    employees = [
+        {'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000},
+    ]
+    previous = {
+        'E002': {'bank': 'telebirr:0987654321', 'net': 3000},  # Different employee
+    }
+    errors = validate_payroll_for_bank(employees, previous_payslips=previous)
+    assert not any('ACCOUNT CHANGED' in e.get('error', '') for e in errors)
+
+
+# ---------------------------------------------------------------
 # CSV Generation
 # ---------------------------------------------------------------
 

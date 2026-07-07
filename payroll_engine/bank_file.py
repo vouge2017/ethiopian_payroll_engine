@@ -88,28 +88,63 @@ def format_amount(amount: float) -> str:
 
 
 def validate_payroll_for_bank(employees_data: List[Dict[str, Any]],
-                               bank: str = 'cbe') -> List[Dict[str, Any]]:
+                               bank: str = 'cbe',
+                               previous_payslips: Dict[str, dict] = None) -> List[Dict[str, Any]]:
     """
     Pre-validate all employees before generating bank file.
 
-    Returns list of validation errors (empty if all valid).
-    Each error dict has: employee_id, name, field, error
+    Catches:
+    - Missing or invalid account numbers
+    - Duplicate employees (same ID twice in same run)
+    - Duplicate account numbers (same bank account for different employees)
+    - Account number changes from previous run (suspicious)
+    - Negative or zero net pay
+
+    Args:
+        employees_data: List of employee dicts
+        bank: Bank key (cbe, dashen, awash, telebirr)
+        previous_payslips: Dict mapping employee_id to previous payslip data
+            (used to detect account changes)
+
+    Returns:
+        List of error/warning dicts (empty if all valid)
     """
     errors = []
 
-    for emp in employees_data:
-        # Check account number
+    # --- Track duplicates within this run ---
+    seen_ids = {}      # employee_id -> first occurrence index
+    seen_accounts = {} # account_number -> first employee_id
+
+    for i, emp in enumerate(employees_data):
+        emp_id = emp.get('id', '')
+        emp_name = emp.get('name', '')
+
+        # --- CHECK 1: Duplicate employee ID ---
+        if emp_id in seen_ids:
+            errors.append({
+                'employee_id': emp_id,
+                'name': emp_name,
+                'field': 'employee_id',
+                'error': f'DUPLICATE: Employee {emp_id} appears twice in this run '
+                         f'(first at row {seen_ids[emp_id] + 1}, again at row {i + 1})',
+                'severity': 'BLOCK',
+            })
+            continue  # Skip further checks for duplicate entry
+        seen_ids[emp_id] = i
+
+        # --- CHECK 2: Missing account number ---
         account = emp.get('bank', '').strip()
         if not account:
             errors.append({
-                'employee_id': emp.get('id', ''),
-                'name': emp.get('name', ''),
+                'employee_id': emp_id,
+                'name': emp_name,
                 'field': 'bank_or_telebirr',
                 'error': 'Missing bank/Telebirr account number',
+                'severity': 'BLOCK',
             })
             continue
 
-        # Extract account number from format like "telebirr:0912345678" or "bank:cbe"
+        # Extract account number from format
         if ':' in account:
             parts = account.split(':', 1)
             account_type = parts[0].lower()
@@ -118,28 +153,59 @@ def validate_payroll_for_bank(employees_data: List[Dict[str, Any]],
             account_number = account
             account_type = bank
 
-        # Map account type to bank key
+        # --- CHECK 3: Invalid account format ---
         bank_key = account_type
         if account_type == 'bank':
             bank_key = bank
-
         is_valid, error_msg = validate_account_number(account_number, bank_key)
         if not is_valid:
             errors.append({
-                'employee_id': emp.get('id', ''),
-                'name': emp.get('name', ''),
+                'employee_id': emp_id,
+                'name': emp_name,
                 'field': 'bank_or_telebirr',
                 'error': error_msg,
+                'severity': 'BLOCK',
             })
 
-        # Check net pay
+        # --- CHECK 4: Same bank account used by different employees ---
+        if account_number in seen_accounts:
+            errors.append({
+                'employee_id': emp_id,
+                'name': emp_name,
+                'field': 'bank_or_telebirr',
+                'error': f'DUPLICATE ACCOUNT: Bank account {account_number} '
+                         f'is also assigned to employee {seen_accounts[account_number]}. '
+                         f'One account cannot receive two salaries.',
+                'severity': 'BLOCK',
+            })
+        else:
+            seen_accounts[account_number] = emp_id
+
+        # --- CHECK 5: Account number changed from previous run ---
+        if previous_payslips and emp_id in previous_payslips:
+            prev = previous_payslips[emp_id]
+            prev_account = prev.get('bank', '').strip()
+            if prev_account and ':' in prev_account:
+                prev_account = prev_account.split(':', 1)[1].strip()
+            if prev_account and account_number != prev_account:
+                errors.append({
+                    'employee_id': emp_id,
+                    'name': emp_name,
+                    'field': 'bank_or_telebirr',
+                    'error': f'ACCOUNT CHANGED: Was {prev_account} last month, '
+                             f'now {account_number}. Verify this is correct.',
+                    'severity': 'FLAG',  # Not a block, but needs confirmation
+                })
+
+        # --- CHECK 6: Negative or zero net pay ---
         net = emp.get('net', 0)
         if net <= 0:
             errors.append({
-                'employee_id': emp.get('id', ''),
-                'name': emp.get('name', ''),
+                'employee_id': emp_id,
+                'name': emp_name,
                 'field': 'net_pay',
                 'error': f'Net pay must be positive, got {net}',
+                'severity': 'BLOCK',
             })
 
     return errors

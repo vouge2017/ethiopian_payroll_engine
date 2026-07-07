@@ -615,12 +615,35 @@ def download_bank_file(run_id):
             'net': p.net_pay,
         })
 
+    # Get previous payslips for account change detection
+    previous_payslips = {}
+    last_run = PayrollRun.query.filter_by(
+        company_id=current_user.company_id, status='completed'
+    ).order_by(PayrollRun.run_date.desc()).first()
+    if last_run and last_run.id != run.id:
+        for p in last_run.payslips:
+            emp = p.employee
+            previous_payslips[emp.employee_id] = {
+                'bank': emp.bank_or_telebirr or '',
+                'net': p.net_pay,
+            }
+
     # Validate before generating
-    errors = validate_payroll_for_bank(employees_data)
-    if errors:
-        error_summary = '; '.join([f"{e['name']}: {e['error']}" for e in errors[:3]])
+    errors = validate_payroll_for_bank(
+        employees_data,
+        previous_payslips=previous_payslips
+    )
+    # Only block on BLOCK-level errors
+    blocks = [e for e in errors if e.get('severity') == 'BLOCK']
+    if blocks:
+        error_summary = '; '.join([f"{e['name']}: {e['error']}" for e in blocks[:3]])
         flash(f'Bank file has validation errors: {error_summary}', 'danger')
         return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+    # Show FLAG-level warnings but allow proceeding
+    flags = [e for e in errors if e.get('severity') == 'FLAG']
+    if flags:
+        for flag in flags:
+            flash(f"Warning: {flag['name']} — {flag['error']}", 'warning')
 
     # Get format preference (default: xlsx)
     fmt = request.args.get('format', 'xlsx')

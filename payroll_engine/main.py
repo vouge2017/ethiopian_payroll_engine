@@ -61,6 +61,10 @@ def index():
     )
     status_msg = get_status_message(status)
 
+    # Get upcoming deadlines
+    from payroll_engine.compliance import get_upcoming_deadlines
+    deadlines = get_upcoming_deadlines(payroll_date_str)
+
     return render_template(
         'dashboard.html',
         company=company,
@@ -69,6 +73,7 @@ def index():
         compliance_score=score,
         compliance_status=status,
         status_message=status_msg,
+        deadlines=deadlines,
         year=date.today().year
     )
 

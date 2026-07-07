@@ -66,6 +66,45 @@
         </div>
     </div>
 
+    <!-- Compliance Deadlines -->
+    {% if deadlines %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">ERCA Filing</h6>
+                    <h4>{{ eth_date(deadlines.erca_deadline[:10]|default(deadlines.erca_deadline, true)) if deadlines.erca_deadline else 'N/A' }}</h4>
+                    <span class="badge bg-{{ deadlines.erca_status }}">
+                        {% if deadlines.erca_days_left < 0 %}OVERDUE by {{ deadlines.erca_days_left|abs }} days{% else %}{{ deadlines.erca_days_left }} days remaining{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">PSSSA Remittance</h6>
+                    <h4>{{ eth_date(deadlines.pssa_deadline[:10]|default(deadlines.pssa_deadline, true)) if deadlines.pssa_deadline else 'N/A' }}</h4>
+                    <span class="badge bg-{{ deadlines.pssa_status }}">
+                        {% if deadlines.pssa_days_left < 0 %}OVERDUE by {{ deadlines.pssa_days_left|abs }} days{% else %}{{ deadlines.pssa_days_left }} days remaining{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pension Deadline</h6>
+                    <h4>{{ eth_date(deadlines.pension_deadline[:10]|default(deadlines.pension_deadline, true)) if deadlines.pension_deadline else 'N/A' }}</h4>
+                    <span class="badge bg-{{ deadlines.pension_status }}">
+                        {% if deadlines.pension_days_left < 0 %}OVERDUE by {{ deadlines.pension_days_left|abs }} days{% else %}{{ deadlines.pension_days_left }} days remaining{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Recent Payroll Runs -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-primary text-white">

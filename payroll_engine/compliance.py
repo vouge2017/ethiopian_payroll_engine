@@ -165,7 +165,7 @@ def get_upcoming_deadlines(payroll_date: str = None) -> dict:
     Get upcoming compliance deadlines for display on dashboard.
 
     Returns:
-        Dict with erca_deadline, pension_deadline, and days_until for each.
+        Dict with deadline dates, days remaining, and status color.
     """
     today = date.today()
     try:
@@ -175,10 +175,27 @@ def get_upcoming_deadlines(payroll_date: str = None) -> dict:
 
     erca_dl = _default_erca_deadline(payroll_dt)
     pension_dl = _default_pension_deadline(payroll_dt)
+    pssa_dl = date(payroll_dt.year, payroll_dt.month + 1, 10) if payroll_dt.month < 12 else date(payroll_dt.year + 1, 1, 10)
+
+    def _status(days_left):
+        if days_left < 0:
+            return 'danger'
+        elif days_left <= 3:
+            return 'warning'
+        return 'success'
+
+    erca_days = (erca_dl - today).days
+    pension_days = (pension_dl - today).days
+    pssa_days = (pssa_dl - today).days
 
     return {
         'erca_deadline': erca_dl.isoformat(),
-        'erca_days_left': (erca_dl - today).days,
+        'erca_days_left': erca_days,
+        'erca_status': _status(erca_days),
         'pension_deadline': pension_dl.isoformat(),
-        'pension_days_left': (pension_dl - today).days,
+        'pension_days_left': pension_days,
+        'pension_status': _status(pension_days),
+        'pssa_deadline': pssa_dl.isoformat(),
+        'pssa_days_left': pssa_days,
+        'pssa_status': _status(pssa_days),
     }

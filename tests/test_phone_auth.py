@@ -41,8 +41,9 @@ def ctx(app):
 # ---------------------------------------------------------------
 
 def test_valid_phone_formats():
-    """Valid Ethiopian phone numbers should be accepted."""
+    """Valid Ethiopian phone numbers should be accepted (Ethio Telecom + Safaricom)."""
     valid_numbers = [
+        # Ethio Telecom (09X)
         ('+251911234567', '0911234567'),
         ('0911234567', '0911234567'),
         ('+251 911 234 567', '0911234567'),
@@ -63,6 +64,15 @@ def test_valid_phone_formats():
         ('0988901234', '0988901234'),
         ('+251999012345', '0999012345'),
         ('0999012345', '0999012345'),
+        # Safaricom (07X)
+        ('+251711234567', '0711234567'),
+        ('0711234567', '0711234567'),
+        ('+251 711 234 567', '0711234567'),
+        ('0711 234 567', '0711234567'),
+        ('+251722345678', '0722345678'),
+        ('0722345678', '0722345678'),
+        ('+251733456789', '0733456789'),
+        ('0733456789', '0733456789'),
     ]
     for phone, expected in valid_numbers:
         is_valid, normalized, error = validate_ethiopian_phone(phone)
@@ -74,7 +84,6 @@ def test_invalid_phone_formats():
     """Invalid phone numbers should be rejected."""
     invalid_numbers = [
         '+1234567890',      # Not Ethiopian
-        '0711234567',       # 07X prefix (not 09X)
         '12345',            # Too short
         'abcdefghij',       # Not numbers
         '',                 # Empty
@@ -83,6 +92,7 @@ def test_invalid_phone_formats():
         '+25191123456',     # Too short after +251
         '+2519112345678',   # Too long after +251
         '0611234567',       # 06X prefix
+        '0811234567',       # 08X prefix
         '+44911234567',     # UK prefix
     ]
     for phone in invalid_numbers:

@@ -232,6 +232,24 @@ class Payslip(db.Model):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
 
 
+class PayrollDraft(db.Model):
+    """Stores computed payroll data between upload and approval.
+
+    Replaces Flask session storage which caused data loss on expiry.
+    Data is stored as JSONB (Postgres) or JSON (SQLite) for flexibility.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
+    employee_data = db.Column(db.JSON, nullable=False)  # JSONB on Postgres
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationship
+    payroll_run = db.relationship('PayrollRun', backref=db.backref('draft', uselist=False))
+
+    def __repr__(self):
+        return f'<PayrollDraft for run {self.payroll_run_id}>'
+
+
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)

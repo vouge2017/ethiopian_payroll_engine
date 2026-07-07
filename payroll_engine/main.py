@@ -14,7 +14,8 @@ from datetime import date, datetime
 
 from payroll_engine import db
 from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, Attendance, Leave, AuditLog
+    Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
+    Attendance, Leave, AuditLog
 )
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
@@ -255,11 +256,14 @@ def payroll_upload():
                 db.session.add(db_vr)
             db.session.commit()
 
-            # Store employees_data in session for the review page
-            import json
-            session_key = f'payroll_data_{run.id}'
-            from flask import session
-            session[session_key] = employees_data
+            # Store employees_data in database (not session)
+            # Session storage caused data loss when sessions expired
+            draft = PayrollDraft(
+                payroll_run_id=run.id,
+                employee_data=employees_data,
+            )
+            db.session.add(draft)
+            db.session.commit()
 
             # --- STAGE 3: REVIEW ---
             # Show validation results and payroll summary
@@ -337,14 +341,14 @@ def approve_payroll():
     run.approval_ip = request.remote_addr
     db.session.commit()
 
-    # Retrieve payroll data from session
-    from flask import session
-    employees_data = session.get(f'payroll_data_{run.id}')
-    if not employees_data:
+    # Retrieve payroll data from database (not session)
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    if not draft:
         run.status = 'failed'
         db.session.commit()
-        flash('Payroll data expired. Please re-upload the CSV.', 'danger')
+        flash('Payroll data not found. The draft may have been deleted. Please re-upload the CSV.', 'danger')
         return redirect(url_for('main.payroll_upload'))
+    employees_data = draft.employee_data
 
     try:
         # Generate payslips and employee records
@@ -408,8 +412,9 @@ def approve_payroll():
         db.session.add(log)
         db.session.commit()
 
-        # Clean up session data
-        session.pop(f'payroll_data_{run.id}', None)
+        # Clean up draft data from database
+        PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
+        db.session.commit()
 
         flash(f'Payroll processed: {len(employees_data)} employees, compliance {score}%.', 'success')
         return redirect(url_for('main.payroll_run_detail', run_id=run.id))

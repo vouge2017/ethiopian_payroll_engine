@@ -55,4 +55,17 @@ def create_app():
     @app.route('/health')
     def health():
         return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200
+
+    # Make Ethiopian calendar available in all templates
+    from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
+    from datetime import date
+
+    @app.context_processor
+    def inject_ethiopian_calendar():
+        return {
+            'eth_date': lambda d: format_dual_date(d) if d else '',
+            'eth_only': lambda d: format_ethiopian_date(d) if d else '',
+            'today_eth': format_dual_date(date.today()),
+        }
+
     return app

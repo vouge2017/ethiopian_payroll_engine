@@ -15,7 +15,7 @@ from datetime import date, datetime
 from payroll_engine import db
 from payroll_engine.models import (
     Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
-    Attendance, Leave, AuditLog
+    Attendance, Leave, AuditLog, PayrollValidationResult, OvertimeEntry
 )
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
@@ -85,7 +85,11 @@ def index():
 def list_employees():
     """List employees for the current company."""
     search = request.args.get('q', '').strip()
+    # Filter out soft-deleted employees by default
+    show_archived = request.args.get('archived', '') == '1'
     query = Employee.query.filter_by(company_id=current_user.company_id)
+    if not show_archived:
+        query = query.filter_by(is_deleted=False)
     if search:
         query = query.filter(
             db.or_(
@@ -94,7 +98,8 @@ def list_employees():
             )
         )
     employees = query.order_by(Employee.name).all()
-    return render_template('employees.html', employees=employees, search=search, year=date.today().year)
+    return render_template('employees.html', employees=employees, search=search,
+                           year=date.today().year, show_archived=show_archived)
 
 
 @main.route('/employees/add', methods=['GET', 'POST'])
@@ -299,6 +304,68 @@ def payroll_upload():
     return render_template('payroll_upload.html', year=date.today().year)
 
 
+@main.route('/payroll/<int:run_id>/confirm')
+@login_required
+@role_required('admin', 'hr')
+def payroll_confirm(run_id):
+    """Show confirmation page before approval. Password re-auth required."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=current_user.company_id
+    ).first_or_404()
+    if run.status != 'review':
+        flash('This payroll run is not in review status.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    employees_data = draft.employee_data if draft else []
+    total_gross = sum(e.get('gross', 0) for e in employees_data)
+    total_tax = sum(e.get('tax', 0) for e in employees_data)
+    total_pension = sum(e.get('pension_employee', 0) for e in employees_data)
+    total_net = sum(e.get('net', 0) for e in employees_data)
+    blocks = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='BLOCK'
+    ).filter(PayrollValidationResult.overridden == False).all()
+    flags = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='FLAG'
+    ).all()
+    return render_template('payroll_confirm.html',
+                           run=run,
+                           employee_count=len(employees_data),
+                           total_gross=round(total_gross, 2),
+                           total_tax=round(total_tax, 2),
+                           total_pension=round(total_pension, 2),
+                           total_net=round(total_net, 2),
+                           blocks=blocks, flags=flags)
+
+
+@main.route('/payroll/<int:run_id>/reject', methods=['POST'])
+@login_required
+@role_required('admin', 'hr')
+def reject_payroll(run_id):
+    """Reject a payroll run and send back to draft with reason."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=current_user.company_id
+    ).first_or_404()
+    if run.status != 'review':
+        flash('Can only reject payroll in review status.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('Please provide a reason for rejection.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    run.status = 'draft'
+    # Store rejection reason in audit log
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='payroll_rejected',
+        details={'run_id': run.id, 'reason': reason}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'Payroll rejected: {reason}', 'warning')
+    return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+
 @main.route('/payroll/approve', methods=['POST'])
 @login_required
 @role_required('admin', 'hr')
@@ -308,9 +375,15 @@ def approve_payroll():
     This is the final step — money moves, payslips are generated.
     """
     run_id = request.form.get('run_id')
+    password = request.form.get('password', '')
     if not run_id:
         flash('Invalid request.', 'danger')
         return redirect(url_for('main.payroll_runs'))
+
+    # Password re-authentication
+    if not password or not current_user.check_password(password):
+        flash('Incorrect password. Approval cancelled.', 'danger')
+        return redirect(url_for('main.payroll_confirm', run_id=int(run_id)))
 
     run = PayrollRun.query.filter_by(
         id=int(run_id), company_id=current_user.company_id
@@ -593,6 +666,52 @@ def delete_overtime(entry_id):
     db.session.commit()
     flash('Overtime entry deleted.', 'info')
     return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+
+@main.route('/employees/<int:emp_id>/deactivate', methods=['POST'])
+@login_required
+@role_required('admin', 'hr')
+def deactivate_employee(emp_id):
+    """Soft-delete an employee (deactivate). Preserves payroll history."""
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=current_user.company_id, is_deleted=False
+    ).first_or_404()
+    emp.is_deleted = True
+    emp.deleted_at = datetime.utcnow()
+    emp.deleted_by = current_user.id
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='employee_deactivated',
+        details={'employee_id': emp.employee_id, 'name': emp.name}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'{emp.name} has been deactivated. Payroll history preserved.', 'info')
+    return redirect(url_for('main.list_employees'))
+
+
+@main.route('/employees/<int:emp_id>/reactivate', methods=['POST'])
+@login_required
+@role_required('admin', 'hr')
+def reactivate_employee(emp_id):
+    """Reactivate a soft-deleted employee."""
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=current_user.company_id, is_deleted=True
+    ).first_or_404()
+    emp.is_deleted = False
+    emp.deleted_at = None
+    emp.deleted_by = None
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='employee_reactivated',
+        details={'employee_id': emp.employee_id, 'name': emp.name}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'{emp.name} has been reactivated.', 'success')
+    return redirect(url_for('main.list_employees'))
 
 
 @main.route('/reports')

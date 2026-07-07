@@ -125,6 +125,8 @@
             <form method="POST" action="{{ url_for('main.approve_payroll') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="run_id" value="{{ run_id }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="run_id" value="{{ run_id }}">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
@@ -198,13 +200,13 @@
         <a href="{{ url_for('main.payroll_upload') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> Back to Upload
         </a>
-        {% if summary.can_proceed %}
-        <button type="submit" class="btn btn-primary btn-lg" {% if summary.blocks > 0 %}disabled{% endif %}>
-            {% if summary.requires_approval %}
-                <i class="bi bi-check-circle me-1"></i> Approve Overrides & Process
-            {% else %}
-                <i class="bi bi-play-circle me-1"></i> Process Payroll
-            {% endif %}
+        {% if summary.can_proceed and not summary.blocks %}
+        <a href="{{ url_for('main.payroll_confirm', run_id=run_id) }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-shield-lock me-1"></i> Review & Confirm
+        </a>
+        {% elif summary.blocks %}
+        <button class="btn btn-secondary btn-lg" disabled>
+            <i class="bi bi-x-circle me-1"></i> Fix BLOCK issues first
         </button>
         {% endif %}
     </div>

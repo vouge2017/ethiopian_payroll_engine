@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Confirm Payroll - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-4">
+                <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}" class="text-decoration-none text-muted me-2">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h3 class="mb-0">Confirm Payroll Processing</h3>
+            </div>
+
+            <!-- Summary -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Payroll Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <h6 class="text-muted">Employees</h6>
+                            <h4>{{ employee_count }}</h4>
+                        </div>
+                        <div class="col-3">
+                            <h6 class="text-muted">Total Gross</h6>
+                            <h4>ETB {{ '%.2f'|format(total_gross) }}</h4>
+                        </div>
+                        <div class="col-3">
+                            <h6 class="text-muted">Total Tax + Pension</h6>
+                            <h4>ETB {{ '%.2f'|format(total_tax + total_pension) }}</h4>
+                        </div>
+                        <div class="col-3">
+                            <h6 class="text-muted">Total Net</h6>
+                            <h4 class="text-success">ETB {{ '%.2f'|format(total_net) }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation Status -->
+            {% if blocks %}
+            <div class="alert alert-danger mb-4">
+                <i class="bi bi-x-circle me-2"></i>
+                <strong>{{ blocks|length }} BLOCK issue(s)</strong> must be resolved before processing.
+                <ul class="mb-0 mt-2">
+                    {% for b in blocks %}
+                    <li>{{ b.message }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if flags %}
+            <div class="alert alert-warning mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>{{ flags|length }} FLAG(s)</strong> noted (overridden by reviewer).
+            </div>
+            {% endif %}
+
+            <!-- Approval Form -->
+            {% if not blocks %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Confirm & Approve</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>This cannot be undone.</strong> Payslips will be generated, bank files will be created,
+                        and payroll will be marked as completed.
+                    </div>
+
+                    <form method="POST" action="{{ url_for('main.approve_payroll') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="run_id" value="{{ run.id }}">
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label fw-bold">Enter your password to confirm</label>
+                            <input type="password" class="form-control form-control-lg" id="password"
+                                   name="password" required autofocus placeholder="Your login password">
+                            <div class="form-text">Re-authentication required for security.</div>
+                        </div>
+
+                        <div class="mb-4 form-check">
+                            <input type="checkbox" class="form-check-input" id="confirm_check" required>
+                            <label class="form-check-label" for="confirm_check">
+                                I confirm these payroll amounts are correct and approve processing.
+                            </label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}"
+                               class="btn btn-outline-secondary btn-lg flex-grow-1">
+                                <i class="bi bi-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1"
+                                    {% if blocks %}disabled{% endif %}>
+                                <i class="bi bi-check-circle me-1"></i>Confirm & Process
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center">
+                <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}" class="btn btn-secondary btn-lg">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Review
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

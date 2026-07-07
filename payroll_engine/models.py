@@ -220,6 +220,10 @@ class Employee(db.Model):
     tin = db.Column(db.String(20), nullable=True)  # Tax Identification Number for ERCA filing
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Soft delete — employee is deactivated, not removed
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     # employee_id is unique PER TENANT, not globally
     __table_args__ = (

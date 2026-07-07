@@ -34,7 +34,7 @@ def count_py_files():
 def count_test_files():
     """Count test files and lines"""
     files = list(TESTS_DIR.glob("test_*.py"))
-    total_lines = sum(f.read_text().count('\n') for f in files)
+    total_lines = sum(f.read_text(encoding='utf-8').count('\n') for f in files)
     return len(files), total_lines, [f.name for f in sorted(files)]
 
 
@@ -92,7 +92,7 @@ def check_feature_exists(description, search_paths, search_patterns):
         full_path = REPO_ROOT / path
         if full_path.exists():
             if search_patterns:
-                content = full_path.read_text()
+                content = full_path.read_text(encoding='utf-8')
                 found = all(p in content for p in search_patterns)
                 results.append({
                     'file': path,
@@ -169,7 +169,7 @@ def run_all_checks():
     )
 
     # Bank file "bank:" stripping
-    bank_content = (REPO_ROOT / 'payroll_engine' / 'bank_file.py').read_text()
+    bank_content = (REPO_ROOT / 'payroll_engine' / 'bank_file.py').read_text(encoding='utf-8')
     report['features']['bank_prefix_stripping'] = {
         'exists': "split(':', 1)" in bank_content,
         'detail': 'bank_file.py splits on ":" to strip bank: prefix from payment method'
@@ -183,7 +183,7 @@ def run_all_checks():
     )
 
     # MergedCell handling in reports
-    reports_content = (REPO_ROOT / 'payroll_engine' / 'reports.py').read_text()
+    reports_content = (REPO_ROOT / 'payroll_engine' / 'reports.py').read_text(encoding='utf-8')
     report['features']['merged_cell_handling'] = {
         'exists': 'MergedCell' in reports_content or 'merged' in reports_content.lower(),
         'detail': 'reports.py handles openpyxl MergedCell objects'
@@ -232,7 +232,7 @@ def run_all_checks():
     )
 
     # Payroll reference number
-    models_content = (REPO_ROOT / 'payroll_engine' / 'models.py').read_text()
+    models_content = (REPO_ROOT / 'payroll_engine' / 'models.py').read_text(encoding='utf-8')
     report['features']['payroll_reference'] = {
         'exists': 'reference' in models_content.lower() and 'PR-' in models_content or 'generate_reference' in models_content,
         'detail': 'PayrollRun has human-readable reference (PR-YYYY-MM-NNN)'
@@ -240,7 +240,7 @@ def run_all_checks():
 
     # 4. Read PROGRESS_TRACKER.md for comparison
     if TRACKER_PATH.exists():
-        tracker_content = TRACKER_PATH.read_text()
+        tracker_content = TRACKER_PATH.read_text(encoding='utf-8')
         report['tracker'] = {
             'exists': True,
             'path': str(TRACKER_PATH),

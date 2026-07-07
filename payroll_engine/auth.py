@@ -54,11 +54,24 @@ def register():
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
             return redirect(url_for('auth.register'))
-        company = Company.query.filter_by(name=company_name).first()
-        if not company:
-            company = Company(name=company_name)
-            db.session.add(company)
-            db.session.commit()
+        # SECURITY: Always create a new company per registration.
+        # Never auto-join an existing company — that was a privilege escalation
+        # vulnerability where any user could become admin of any company by
+        # guessing its name.
+        #
+        # TODO: Phase 2 — add invite flow so teammates can join an existing
+        # company via invite token from an admin.
+        existing_company = Company.query.filter_by(name=company_name).first()
+        if existing_company:
+            flash(
+                'A company with that name already exists. '
+                'Contact your admin for an invite, or use a different name.',
+                'danger'
+            )
+            return redirect(url_for('auth.register'))
+        company = Company(name=company_name)
+        db.session.add(company)
+        db.session.commit()
         user = User(email=email, company_id=company.id, role='admin')
         user.set_password(password)
         db.session.add(user)

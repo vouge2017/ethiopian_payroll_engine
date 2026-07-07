@@ -86,7 +86,10 @@
                     <tbody>
                         {% for run in recent_runs %}
                         <tr>
-                            <td>{{ eth_date(run.run_date) }}</td>
+                            <td>
+                                <strong>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</strong>
+                                <br><small class="text-muted">{{ eth_date(run.run_date) }}</small>
+                            </td>
                             <td>
                                 <span class="badge bg-{{ 'success' if run.status == 'completed' else 'warning' if run.status == 'processing' else 'danger' if run.status == 'failed' else 'secondary' }}">
                                     {{ run.status }}

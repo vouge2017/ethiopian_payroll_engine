@@ -244,6 +244,10 @@ def payroll_upload():
             db.session.add(run)
             db.session.commit()
 
+            # Generate human-readable reference
+            run.generate_reference()
+            db.session.commit()
+
             # Save validation results
             for vr in validation_results:
                 db_vr = PayrollValidationResult(

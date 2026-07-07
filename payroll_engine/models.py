@@ -201,6 +201,7 @@ class PayrollRun(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    reference = db.Column(db.String(20), nullable=True)  # e.g., PR-2026-07-001
     run_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     # Lifecycle: draft → validating → review → approved → processing → completed / failed
     status = db.Column(db.String(20), nullable=False, default='draft')
@@ -212,9 +213,17 @@ class PayrollRun(db.Model):
     # Relationships
     payslips = db.relationship('Payslip', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
     validation_results = db.relationship('PayrollValidationResult', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
-    
+
+    def generate_reference(self):
+        """Generate a human-readable reference number."""
+        if self.run_date:
+            month_str = self.run_date.strftime('%Y-%m')
+        else:
+            month_str = datetime.utcnow().strftime('%Y-%m')
+        self.reference = f'PR-{month_str}-{self.id:03d}'
+
     def __repr__(self):
-        return f'<PayrollRun {self.id} for {self.company_id} on {self.run_date}>'
+        return f'<PayrollRun {self.reference or self.id} for {self.company_id} on {self.run_date}>'
 
 
 class Payslip(db.Model):

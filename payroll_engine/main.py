@@ -83,6 +83,22 @@ def index():
     from payroll_engine.compliance import get_upcoming_deadlines
     deadlines = get_upcoming_deadlines(payroll_date_str)
 
+    # Overtime summary for current month
+    from payroll_engine.models import OvertimeEntry
+    from payroll_engine.overtime import MAX_OVERTIME_HOURS_MONTH
+    month_start = date.today().replace(day=1)
+    ot_entries = OvertimeEntry.query.filter_by(company_id=company.id) \
+        .filter(OvertimeEntry.date >= month_start).all()
+    ot_by_employee = {}
+    for entry in ot_entries:
+        if entry.employee_id not in ot_by_employee:
+            ot_by_employee[entry.employee_id] = {'name': entry.employee.name if entry.employee else '?', 'hours': 0}
+        ot_by_employee[entry.employee_id]['hours'] += entry.hours
+    ot_total_hours = sum(v['hours'] for v in ot_by_employee.values())
+    ot_employee_count = len(ot_by_employee)
+    ot_over_limit = [{'name': v['name'], 'hours': round(v['hours'], 1)}
+                     for v in ot_by_employee.values() if v['hours'] > MAX_OVERTIME_HOURS_MONTH]
+
     return render_template(
         'dashboard.html',
         company=company,
@@ -92,7 +108,10 @@ def index():
         compliance_status=status,
         status_message=status_msg,
         deadlines=deadlines,
-        year=date.today().year
+        year=date.today().year,
+        ot_total_hours=round(ot_total_hours, 1),
+        ot_employee_count=ot_employee_count,
+        ot_over_limit=ot_over_limit,
     )
 
 

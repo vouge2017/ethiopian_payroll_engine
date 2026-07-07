@@ -35,8 +35,8 @@ def logout():
 
 @auth.route('/language/<lang>')
 def set_language(lang):
-    """Set UI language (am=Amharic, en=English)."""
-    if lang not in ('am', 'en'):
+    """Set UI language (en=English, am=Amharic, om=Afaan Oromoo)."""
+    if lang not in ('en', 'am', 'om'):
         lang = 'en'
     from flask import session
     session['language'] = lang

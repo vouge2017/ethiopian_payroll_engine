@@ -1,12 +1,13 @@
 """
-Amharic Language Strings — Core UI Translation
+Multilingual Language Strings — Core UI Translation
 
-Only the 30 most critical strings for the payroll flow.
-Not full translation — enough to make the core flow usable.
+Supports: English (en), Amharic (am), Afaan Oromoo (om)
 
 Usage in templates:
-    {{ _('dashboard') }}  → 'ዳሽቦርድ' (Amharic) or 'Dashboard' (English)
+    {{ _('dashboard') }}  → 'ዳሽቦርድ' (Amharic) or 'Dashboard' (English) or 'Gabatee' (Afaan Oromoo)
 """
+
+from payroll_engine.i18n_om import STRINGS_OM
 
 # Amharic strings for core UI elements
 STRINGS = {
@@ -83,18 +84,22 @@ def get_string(key: str, language: str = 'en') -> str:
 
     Args:
         key: String key
-        language: 'am' for Amharic, 'en' for English
+        language: 'en' for English, 'am' for Amharic, 'om' for Afaan Oromoo
 
     Returns:
         Translated string, or key itself if not found
     """
     if language == 'am':
         return STRINGS.get(key, key)
+    if language == 'om':
+        return STRINGS_OM.get(key, key)
     return key.replace('_', ' ').title()
 
 
-def get_all_strings(language: str = 'am') -> dict:
+def get_all_strings(language: str = 'en') -> dict:
     """Get all strings for a language."""
     if language == 'am':
         return STRINGS.copy()
+    if language == 'om':
+        return STRINGS_OM.copy()
     return {k: k.replace('_', ' ').title() for k in STRINGS}

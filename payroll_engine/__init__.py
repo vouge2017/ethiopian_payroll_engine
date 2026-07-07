@@ -41,10 +41,11 @@ def create_app():
     migrate.init_app(app, db)
 
     # Register tenant-scoped models for structural isolation enforcement
-    from .models import Employee, PayrollRun, AuditLog, TenantQuery
+    from .models import Employee, PayrollRun, AuditLog, OvertimeEntry, TenantQuery
     TenantQuery.register_model(Employee)
     TenantQuery.register_model(PayrollRun)
     TenantQuery.register_model(AuditLog)
+    TenantQuery.register_model(OvertimeEntry)
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')

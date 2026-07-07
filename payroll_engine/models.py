@@ -330,6 +330,25 @@ class Leave(db.Model):
         return f'<Leave {self.leave_type} for {self.employee_id} from {self.start_date} to {self.end_date}>'
 
 
+class OvertimeEntry(db.Model):
+    """Stores individual overtime records for employees."""
+    query_class = TenantQuery
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    hours = db.Column(db.Float, nullable=False)
+    overtime_type = db.Column(db.String(20), nullable=False, default='day')  # day, night, holiday, rest_day_holiday
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationship
+    employee = db.relationship('Employee', backref=db.backref('overtime_entries', lazy=True))
+
+    def __repr__(self):
+        return f'<OvertimeEntry {self.employee_id} {self.hours}h {self.overtime_type} on {self.date}>'
+
+
 class AuditLog(db.Model):
     query_class = TenantQuery
 

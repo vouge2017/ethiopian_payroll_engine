@@ -514,13 +514,85 @@ def download_payslip(payslip_id):
 @login_required
 def employee_detail(emp_id):
     """Show employee details."""
+    from payroll_engine.models import OvertimeEntry
+    from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
     emp = Employee.query.filter_by(
         id=emp_id, company_id=current_user.company_id
     ).first_or_404()
     payslips = Payslip.query.filter_by(employee_id=emp.id) \
         .order_by(Payslip.generated_at.desc()).all()
-    years = date.today().year
-    return render_template('employee_detail.html', employee=emp, payslips=payslips, year=years)
+    # Overtime entries for current month
+    today = date.today()
+    month_start = today.replace(day=1)
+    overtime_entries = OvertimeEntry.query.filter_by(
+        employee_id=emp.id, company_id=current_user.company_id
+    ).filter(OvertimeEntry.date >= month_start) \
+     .order_by(OvertimeEntry.date.desc()).all()
+    # Calculate pay for each entry
+    overtime_data = []
+    total_ot_hours = 0
+    total_ot_pay = 0
+    for entry in overtime_entries:
+        pay = calculate_overtime_pay(emp.basic_salary, entry.hours, entry.overtime_type)
+        overtime_data.append({
+            'entry': entry,
+            'pay': pay,
+            'rate': OVERTIME_RATES.get(entry.overtime_type, 1.0),
+        })
+        total_ot_hours += entry.hours
+        total_ot_pay += pay
+    years = today.year
+    return render_template('employee_detail.html',
+                           employee=emp, payslips=payslips, year=years,
+                           overtime_data=overtime_data,
+                           total_ot_hours=round(total_ot_hours, 2),
+                           total_ot_pay=round(total_ot_pay, 2),
+                           overtime_types=list(OVERTIME_RATES.keys()))
+
+
+@main.route('/employees/<int:emp_id>/overtime', methods=['POST'])
+@login_required
+def add_overtime(emp_id):
+    """Add overtime entry for an employee."""
+    from payroll_engine.models import OvertimeEntry
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=current_user.company_id
+    ).first_or_404()
+    ot_date = request.form.get('date')
+    hours = request.form.get('hours', type=float)
+    ot_type = request.form.get('overtime_type', 'day')
+    if not ot_date or not hours or hours <= 0:
+        flash('Valid date and hours required.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    if hours > 24:
+        flash('Cannot exceed 24 hours in a single day.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    entry = OvertimeEntry(
+        company_id=current_user.company_id,
+        employee_id=emp.id,
+        date=date.fromisoformat(ot_date),
+        hours=hours,
+        overtime_type=ot_type,
+    )
+    db.session.add(entry)
+    db.session.commit()
+    flash(f'Overtime added: {hours}h {ot_type} on {ot_date}.', 'success')
+    return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+
+@main.route('/overtime/<int:entry_id>/delete', methods=['POST'])
+@login_required
+def delete_overtime(entry_id):
+    """Delete an overtime entry."""
+    from payroll_engine.models import OvertimeEntry
+    entry = OvertimeEntry.query.filter_by(
+        id=entry_id, company_id=current_user.company_id
+    ).first_or_404()
+    emp_id = entry.employee_id
+    db.session.delete(entry)
+    db.session.commit()
+    flash('Overtime entry deleted.', 'info')
+    return redirect(url_for('main.employee_detail', emp_id=emp_id))
 
 
 @main.route('/reports')

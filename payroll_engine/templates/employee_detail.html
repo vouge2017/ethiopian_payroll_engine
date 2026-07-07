@@ -53,6 +53,83 @@
         </div>
     </div>
 
+    <!-- Overtime Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Overtime (This Month)</h5>
+            {% if total_ot_hours > 0 %}
+            <span class="badge bg-light text-dark">{{ total_ot_hours }}h / ETB {{ '%.2f'|format(total_ot_pay) }}</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Add Overtime Form -->
+            <form method="POST" action="{{ url_for('main.add_overtime', emp_id=employee.id) }}" class="row g-2 mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-3">
+                    <input type="date" class="form-control" name="date" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control" name="hours" placeholder="Hours" step="0.5" min="0.5" max="24" required>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="overtime_type">
+                        {% for ot_type in overtime_types %}
+                        <option value="{{ ot_type }}">{{ ot_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus me-1"></i>Add</button>
+                </div>
+            </form>
+
+            <!-- Overtime History -->
+            {% if overtime_data %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Hours</th>
+                            <th>Type</th>
+                            <th>Rate</th>
+                            <th>Pay (ETB)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in overtime_data %}
+                        <tr>
+                            <td>{{ item.entry.date }}</td>
+                            <td>{{ item.entry.hours }}</td>
+                            <td>{{ item.entry.overtime_type }}</td>
+                            <td>{{ item.rate }}x</td>
+                            <td>{{ '%.2f'|format(item.pay) }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('main.delete_overtime', entry_id=item.entry.id) }}"
+                                      onsubmit="return confirm('Delete this overtime entry?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if total_ot_hours > 20 %}
+            <div class="alert alert-warning mt-2 mb-0">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>{{ total_ot_hours }} hours</strong> overtime this month (legal limit: 20h — Labor Proclamation Art. 89).
+            </div>
+            {% endif %}
+            {% else %}
+            <p class="text-muted mb-0">No overtime recorded this month.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Payslip History -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Payslip History</h5>

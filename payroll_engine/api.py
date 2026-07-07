@@ -31,6 +31,7 @@ def list_employees():
         'basic_salary': e.basic_salary,
         'allowances': e.allowances,
         'bank_or_telebirr': e.bank_or_telebirr,
+        'tin': e.tin,
     } for e in employees])
 
 
@@ -53,6 +54,7 @@ def create_employee():
         basic_salary=data.get('basic_salary', 0),
         allowances=data.get('allowances', 0),
         bank_or_telebirr=data.get('bank_or_telebirr', ''),
+        tin=data.get('tin'),
         company_id=current_user.company_id,
     )
     db.session.add(emp)
@@ -72,6 +74,7 @@ def get_employee(emp_id):
         'basic_salary': emp.basic_salary,
         'allowances': emp.allowances,
         'bank_or_telebirr': emp.bank_or_telebirr,
+        'tin': emp.tin,
     })
 
 
@@ -89,6 +92,8 @@ def update_employee(emp_id):
         emp.allowances = data['allowances']
     if 'bank_or_telebirr' in data:
         emp.bank_or_telebirr = data['bank_or_telebirr']
+    if 'tin' in data:
+        emp.tin = data['tin']
     db.session.commit()
     return jsonify({'id': emp.id, 'employee_id': emp.employee_id})
 

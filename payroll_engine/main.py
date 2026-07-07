@@ -103,6 +103,7 @@ def add_employee():
         basic = float(request.form.get('basic_salary', 0))
         allow = float(request.form.get('allowances', 0))
         bank = request.form.get('bank_or_telebirr', '').strip()
+        tin = request.form.get('tin', '').strip() or None
 
         if not emp_id or not name:
             flash('Employee ID and name are required.', 'danger')
@@ -121,6 +122,7 @@ def add_employee():
             basic_salary=basic,
             allowances=allow,
             bank_or_telebirr=bank,
+            tin=tin,
             company_id=current_user.company_id
         )
         db.session.add(emp)
@@ -190,6 +192,8 @@ def payroll_upload():
                     raise ValueError(f'Missing required columns: {", ".join(missing)}')
 
                 for row in reader:
+                    basic = float(row.get('basic_salary', 0) or 0)
+                    allow = float(row.get('allowances', 0) or 0)
                     # Single entry point — enforces deduction order
                     result = calculate_payroll(basic, allow)
                     employees_data.append({
@@ -204,6 +208,7 @@ def payroll_upload():
                         'pension_employer': result['pension_employer'],
                         'net': result['net'],
                         'bank': row.get('bank_or_telebirr', '').strip(),
+                        'tin': row.get('tin', '').strip(),
                     })
 
             if not employees_data:
@@ -359,6 +364,7 @@ def approve_payroll():
                     basic_salary=emp_data['basic'],
                     allowances=emp_data['allowances'],
                     bank_or_telebirr=emp_data.get('bank', ''),
+                    tin=emp_data.get('tin') or None,
                     company_id=current_user.company_id,
                 )
                 db.session.add(emp)
@@ -367,6 +373,8 @@ def approve_payroll():
                 emp.basic_salary = emp_data['basic']
                 emp.allowances = emp_data['allowances']
                 emp.bank_or_telebirr = emp_data.get('bank', '')
+                if emp_data.get('tin'):
+                    emp.tin = emp_data['tin']
                 db.session.flush()
 
             # Generate PDF

@@ -80,7 +80,7 @@ def generate_erca_report(payslips: list, company_name: str,
         ws.cell(row=row, column=1, value=i)
         ws.cell(row=row, column=2, value=emp.employee_id)
         ws.cell(row=row, column=3, value=emp.name)
-        ws.cell(row=row, column=4, value='')  # TIN placeholder
+        ws.cell(row=row, column=4, value=emp.tin or '')
         ws.cell(row=row, column=5, value=p.gross_salary)
         ws.cell(row=row, column=6, value=p.employee_pension)
         ws.cell(row=row, column=7, value=taxable)
@@ -212,7 +212,7 @@ def _generate_erca_csv(payslips, company_name, period):
     for i, p in enumerate(payslips, 1):
         emp = p.employee
         taxable = p.gross_salary - p.employee_pension
-        writer.writerow([i, emp.employee_id, emp.name, '', p.gross_salary, p.employee_pension, taxable, p.tax, p.net_pay])
+        writer.writerow([i, emp.employee_id, emp.name, emp.tin or '', p.gross_salary, p.employee_pension, taxable, p.tax, p.net_pay])
     return output.getvalue().encode('utf-8')
 
 

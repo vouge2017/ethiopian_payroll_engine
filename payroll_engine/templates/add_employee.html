@@ -35,6 +35,12 @@
                                    placeholder="telebirr:0912345678 or bank:cbe">
                             <div class="form-text">Format: <code>telebirr:PHONE</code> or <code>bank:NAME</code> or leave empty for cash.</div>
                         </div>
+                        <div class="mb-3">
+                            <label for="tin" class="form-label">TIN (Tax Identification Number)</label>
+                            <input type="text" class="form-control" id="tin" name="tin"
+                                   placeholder="1234567890">
+                            <div class="form-text">Required for ERCA tax filing. Leave empty if unknown.</div>
+                        </div>
                         <div class="d-grid gap-2 d-md-flex">
                             <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Employee</button>
                             <a href="{{ url_for('main.list_employees') }}" class="btn btn-outline-secondary">Cancel</a>

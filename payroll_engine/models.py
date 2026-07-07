@@ -189,23 +189,74 @@ class Company(db.Model):
         return f'<Company {self.name}>'
 
 
+class UserCompany(db.Model):
+    """Association between users and companies with role.
+
+    Enables multi-company for accountants:
+    - One user can belong to multiple companies
+    - Each membership has a role (owner, accountant, employee)
+    - TenantQuery still enforces isolation per company
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='employee')  # owner, accountant, employee
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('user_companies', lazy=True))
+    company = db.relationship('Company', backref=db.backref('user_companies', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'company_id', name='uq_user_company'),
+    )
+
+    def __repr__(self):
+        return f'<UserCompany user={self.user_id} company={self.company_id} role={self.role}>'
+
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=True)  # Optional — phone is primary
     phone = db.Column(db.String(20), unique=True, nullable=True)   # 09XXXXXXXX format
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='employee')  # admin, hr, employee
+    role = db.Column(db.String(20), nullable=False, default='owner')  # owner, accountant, employee
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-    
+
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-    
+
+    def get_role_for_company(self, company_id):
+        """Get user's role for a specific company."""
+        uc = UserCompany.query.filter_by(user_id=self.id, company_id=company_id).first()
+        return uc.role if uc else self.role
+
+    def can_access_company(self, company_id):
+        """Check if user can access a specific company."""
+        if self.company_id == company_id:
+            return True
+        return UserCompany.query.filter_by(user_id=self.id, company_id=company_id).first() is not None
+
+    @property
+    def companies(self):
+        """List of companies this user can access."""
+        own = [self.company]
+        extra = [uc.company for uc in self.user_companies]
+        # Deduplicate
+        seen = set()
+        result = []
+        for c in own + extra:
+            if c.id not in seen:
+                seen.add(c.id)
+                result.append(c)
+        return result
+
     def __repr__(self):
-        return f'<User {self.email}>'
+        return f'<User {self.phone or self.email}>'
 
 
 class Employee(db.Model):

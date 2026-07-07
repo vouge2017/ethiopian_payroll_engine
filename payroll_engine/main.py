@@ -30,11 +30,29 @@ main = Blueprint('main', __name__)
 # --- Decorators ---
 
 def role_required(*roles):
-    """Restrict access to users with specific roles."""
+    """Restrict access to users with specific roles.
+
+    Roles: owner, accountant, employee
+    Also checks UserCompany for multi-company accountants.
+    """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if current_user.role not in roles:
+            # Get effective role for current company
+            effective_role = current_user.get_role_for_company(current_user.company_id)
+            if effective_role not in roles:
+                flash('You do not have permission for this action.', 'danger')
+                # Log the attempt
+                from payroll_engine.models import AuditLog
+                log = AuditLog(
+                    company_id=current_user.company_id,
+                    user_id=current_user.id,
+                    action='permission_denied',
+                    details={'route': request.endpoint, 'required_roles': list(roles),
+                             'user_role': effective_role}
+                )
+                db.session.add(log)
+                db.session.commit()
                 abort(403)
             return f(*args, **kwargs)
         return decorated_function
@@ -104,7 +122,7 @@ def list_employees():
 
 @main.route('/employees/add', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def add_employee():
     """Add a new employee manually."""
     if request.method == 'POST':
@@ -162,7 +180,7 @@ from payroll_engine.models import PayrollValidationResult
 
 @main.route('/payroll', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def payroll_upload():
     """
     Upload CSV for payroll processing.
@@ -306,7 +324,7 @@ def payroll_upload():
 
 @main.route('/payroll/<int:run_id>/confirm')
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def payroll_confirm(run_id):
     """Show confirmation page before approval. Password re-auth required."""
     run = PayrollRun.query.filter_by(
@@ -339,7 +357,7 @@ def payroll_confirm(run_id):
 
 @main.route('/payroll/<int:run_id>/reject', methods=['POST'])
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def reject_payroll(run_id):
     """Reject a payroll run and send back to draft with reason."""
     run = PayrollRun.query.filter_by(
@@ -368,7 +386,7 @@ def reject_payroll(run_id):
 
 @main.route('/payroll/approve', methods=['POST'])
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner')
 def approve_payroll():
     """
     Approve a payroll run and process it.
@@ -389,9 +407,17 @@ def approve_payroll():
         id=int(run_id), company_id=current_user.company_id
     ).first_or_404()
 
-    if run.status != 'review':
-        flash('This payroll run is not in review status.', 'danger')
+    if run.status not in ('review', 'pending_approval'):
+        flash('This payroll run is not ready for approval.', 'danger')
         return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+    # Accountant submits for owner approval
+    effective_role = current_user.get_role_for_company(current_user.company_id)
+    if effective_role == 'accountant' and run.status == 'review':
+        run.status = 'pending_approval'
+        db.session.commit()
+        flash('Payroll submitted for owner approval.', 'success')
+        return redirect(url_for('main.payroll_runs'))
 
     # Handle FLAG overrides
     flags = PayrollValidationResult.query.filter_by(
@@ -670,7 +696,7 @@ def delete_overtime(entry_id):
 
 @main.route('/employees/<int:emp_id>/deactivate', methods=['POST'])
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner')
 def deactivate_employee(emp_id):
     """Soft-delete an employee (deactivate). Preserves payroll history."""
     emp = Employee.query.filter_by(
@@ -693,7 +719,7 @@ def deactivate_employee(emp_id):
 
 @main.route('/employees/<int:emp_id>/reactivate', methods=['POST'])
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner')
 def reactivate_employee(emp_id):
     """Reactivate a soft-deleted employee."""
     emp = Employee.query.filter_by(
@@ -716,7 +742,7 @@ def reactivate_employee(emp_id):
 
 @main.route('/reports')
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def reports():
     """Compliance and summary reports."""
     company = current_user.company
@@ -748,7 +774,7 @@ def reports():
 
 @main.route('/reports/erca/<int:run_id>')
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def download_erca_report(run_id):
     """Download ERCA tax filing report for a payroll run."""
     from payroll_engine.reports import generate_erca_report
@@ -773,7 +799,7 @@ def download_erca_report(run_id):
 
 @main.route('/reports/pension/<int:run_id>')
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def download_pension_report(run_id):
     """Download pension contribution report for a payroll run."""
     from payroll_engine.reports import generate_pension_report
@@ -798,7 +824,7 @@ def download_pension_report(run_id):
 
 @main.route('/reports/bank/<int:run_id>')
 @login_required
-@role_required('admin', 'hr')
+@role_required('owner', 'accountant')
 def download_bank_file(run_id):
     """Download bank transfer file for a payroll run.
 
@@ -896,3 +922,117 @@ def download_bank_file(run_id):
         as_attachment=True,
         download_name=filename
     )
+
+
+# --- Team Management ---
+
+@main.route('/settings/team')
+@login_required
+@role_required('owner')
+def team_settings():
+    """Show team members and invite form."""
+    from payroll_engine.models import UserCompany
+    # Users directly in this company
+    members = User.query.filter_by(company_id=current_user.company_id).all()
+    # Users linked via UserCompany
+    extra_links = UserCompany.query.filter_by(company_id=current_user.company_id).all()
+    extra_users = [link.user for link in extra_links if link.user.company_id != current_user.company_id]
+    return render_template('team_settings.html', members=members, extra_users=extra_users)
+
+
+@main.route('/settings/team/invite', methods=['POST'])
+@login_required
+@role_required('owner')
+def invite_team_member():
+    """Invite a team member by phone number."""
+    from payroll_engine.models import validate_ethiopian_phone, UserCompany
+    phone = request.form.get('phone', '').strip()
+    name = request.form.get('name', '').strip()
+    role = request.form.get('role', 'employee')
+    if role not in ('owner', 'accountant', 'employee'):
+        role = 'employee'
+    if not phone or not name:
+        flash('Phone number and name are required.', 'danger')
+        return redirect(url_for('main.team_settings'))
+    is_valid, normalized, error = validate_ethiopian_phone(phone)
+    if not is_valid:
+        flash(error, 'danger')
+        return redirect(url_for('main.team_settings'))
+    existing = User.query.filter_by(phone=normalized).first()
+    if existing:
+        # Link existing user to this company
+        if existing.company_id == current_user.company_id:
+            flash('This user is already a member of your company.', 'warning')
+            return redirect(url_for('main.team_settings'))
+        link = UserCompany.query.filter_by(
+            user_id=existing.id, company_id=current_user.company_id
+        ).first()
+        if link:
+            flash('This user already has access to your company.', 'warning')
+            return redirect(url_for('main.team_settings'))
+        link = UserCompany(user_id=existing.id, company_id=current_user.company_id, role=role)
+        db.session.add(link)
+        db.session.commit()
+        flash(f'{name} ({normalized}) linked to your company as {role}.', 'success')
+        return redirect(url_for('main.team_settings'))
+    # Create new user
+    temp_password = normalized[-6:] + 'Temp1!'  # Last 6 digits + Temp1!
+    user = User(
+        phone=normalized, company_id=current_user.company_id,
+        role=role, must_change_password=True
+    )
+    user.set_password(temp_password)
+    db.session.add(user)
+    db.session.commit()
+    log = AuditLog(
+        company_id=current_user.company_id, user_id=current_user.id,
+        action='team_member_invited',
+        details={'phone': normalized, 'name': name, 'role': role}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'{name} invited as {role}. Temporary password: {temp_password}', 'success')
+    return redirect(url_for('main.team_settings'))
+
+
+@main.route('/settings/team/<int:user_id>/remove', methods=['POST'])
+@login_required
+@role_required('owner')
+def remove_team_member(user_id):
+    """Remove a team member from this company."""
+    from payroll_engine.models import UserCompany
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('You cannot remove yourself.', 'danger')
+        return redirect(url_for('main.team_settings'))
+    if user.company_id == current_user.company_id:
+        # Can't remove the primary company owner
+        if user.role == 'owner':
+            flash('Cannot remove the company owner.', 'danger')
+            return redirect(url_for('main.team_settings'))
+        # Move to a different company or delete
+        user.company_id = user.id  # Hack: assign to self
+    link = UserCompany.query.filter_by(
+        user_id=user_id, company_id=current_user.company_id
+    ).first()
+    if link:
+        db.session.delete(link)
+    db.session.commit()
+    flash(f'{user.phone or user.email} removed from company.', 'info')
+    return redirect(url_for('main.team_settings'))
+
+
+# --- Company Switcher (for multi-company accountants) ---
+
+@main.route('/switch-company/<int:company_id>')
+@login_required
+def switch_company(company_id):
+    """Switch to a different company (for multi-company accountants)."""
+    if not current_user.can_access_company(company_id):
+        flash('You do not have access to that company.', 'danger')
+        return redirect(url_for('main.index'))
+    current_user.company_id = company_id
+    db.session.commit()
+    company = Company.query.get(company_id)
+    flash(f'Switched to {company.name}.', 'success')
+    return redirect(url_for('main.index'))

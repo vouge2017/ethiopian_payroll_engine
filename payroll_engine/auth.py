@@ -33,6 +33,16 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
+@auth.route('/language/<lang>')
+def set_language(lang):
+    """Set UI language (am=Amharic, en=English)."""
+    if lang not in ('am', 'en'):
+        lang = 'en'
+    from flask import session
+    session['language'] = lang
+    return redirect(request.referrer or url_for('main.index'))
+
+
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:

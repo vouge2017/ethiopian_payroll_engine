@@ -31,22 +31,30 @@
         </div>
         <nav class="flex-column">
             <a href="{{ url_for('main.index') }}" class="{% if request.endpoint == 'main.index' %}active{% endif %}">
-                <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                <i class="bi bi-speedometer2 me-2"></i>{{ _('dashboard') }}
             </a>
             <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-people me-2"></i>Employees
+                <i class="bi bi-people me-2"></i>{{ _('employees') }}
             </a>
             <a href="{{ url_for('main.payroll_upload') }}" class="{% if 'payroll' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-cloud-upload me-2"></i>Run Payroll
+                <i class="bi bi-cloud-upload me-2"></i>{{ _('run_payroll') }}
             </a>
             <a href="{{ url_for('main.payroll_runs') }}" class="{% if 'payroll_runs' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-clock-history me-2"></i>Payroll History
+                <i class="bi bi-clock-history me-2"></i>{{ _('payroll') }}
             </a>
             <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-bar-chart me-2"></i>Reports
+                <i class="bi bi-bar-chart me-2"></i>{{ _('reports') }}
             </a>
         </nav>
         <div class="mt-auto p-3 text-white small border-top border-secondary">
+            <!-- Language Switcher -->
+            <div class="mb-2">
+                <a href="{{ url_for('auth.set_language', lang='am') }}" 
+                   class="text-white-50 me-2 {% if current_language == 'am' %}text-white fw-bold{% endif %}">አማርኛ</a>
+                <span class="text-white-50">|</span>
+                <a href="{{ url_for('auth.set_language', lang='en') }}" 
+                   class="text-white-50 ms-2 {% if current_language == 'en' %}text-white fw-bold{% endif %}">English</a>
+            </div>
             <div class="d-flex align-items-center">
                 <i class="bi bi-person-circle me-2"></i>
                 <div>

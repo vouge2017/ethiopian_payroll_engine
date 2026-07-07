@@ -58,14 +58,20 @@ def create_app():
 
     # Make Ethiopian calendar available in all templates
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
+    from payroll_engine.i18n import get_string
     from datetime import date
 
     @app.context_processor
     def inject_ethiopian_calendar():
+        # Get language from session or default to English
+        from flask import session
+        lang = session.get('language', 'en')
         return {
             'eth_date': lambda d: format_dual_date(d) if d else '',
             'eth_only': lambda d: format_ethiopian_date(d) if d else '',
             'today_eth': format_dual_date(date.today()),
+            '_': lambda key: get_string(key, lang),
+            'current_language': lang,
         }
 
     return app

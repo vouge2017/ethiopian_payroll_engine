@@ -19,6 +19,7 @@ from payroll_engine.models import (
 )
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
+from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score, get_status_message
 
@@ -189,25 +190,19 @@ def payroll_upload():
                     raise ValueError(f'Missing required columns: {", ".join(missing)}')
 
                 for row in reader:
-                    basic = float(row.get('basic_salary', 0) or 0)
-                    allow = float(row.get('allowances', 0) or 0)
-                    gross = basic + allow
-                    emp_pen = employee_pension(basic)
-                    empr_pen = employer_pension(basic)
-                    taxable = gross - emp_pen
-                    tax = calculate_tax(taxable)
-                    net = gross - tax - emp_pen
+                    # Single entry point — enforces deduction order
+                    result = calculate_payroll(basic, allow)
                     employees_data.append({
                         'id': row.get('employee_id', '').strip(),
                         'name': row.get('name', '').strip(),
                         'basic': basic,
                         'allowances': allow,
-                        'gross': gross,
-                        'taxable': taxable,
-                        'tax': tax,
-                        'pension_employee': emp_pen,
-                        'pension_employer': empr_pen,
-                        'net': net,
+                        'gross': result['gross'],
+                        'taxable': result['taxable'],
+                        'tax': result['tax'],
+                        'pension_employee': result['pension_employee'],
+                        'pension_employer': result['pension_employer'],
+                        'net': result['net'],
                         'bank': row.get('bank_or_telebirr', '').strip(),
                     })
 

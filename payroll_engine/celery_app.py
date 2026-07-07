@@ -4,6 +4,7 @@ from payroll_engine import db
 from payroll_engine.models import Company, User, Employee, PayrollRun, Payslip, Attendance, Leave, AuditLog
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
+from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score, get_status_message
 from payroll_engine.disbursement import record_disbursement_intent
@@ -63,17 +64,9 @@ def process_payroll_csv(self, csv_path, company_id, user_id=None):
                             emp.bank_or_telebirr = bank
                             db.session.commit()
 
-                        # Calculate payroll
-                        # Deduction order: Gross → Pension → Tax → Net
-                        # Pension is deducted BEFORE calculating tax (Ethiopian tax law)
-                        gross = basic + allow
-                        emp_pen = employee_pension(basic)
-                        empr_pen = employer_pension(basic)
-                        taxable = gross - emp_pen
-                        tax = calculate_tax(taxable)
-                        net = gross - tax - emp_pen
-                        tax_expl = explain_tax_amharic(taxable)
-                        intent = record_disbursement_intent(emp_id, net)
+                        # Calculate payroll — single entry point enforces deduction order
+                        result = calculate_payroll(basic, allow)
+                        intent = record_disbursement_intent(emp_id, result['net'])
 
                         # Generate PDF
                         emp_dict = {
@@ -81,12 +74,12 @@ def process_payroll_csv(self, csv_path, company_id, user_id=None):
                             'name': emp.name,
                             'basic': basic,
                             'allowances': allow,
-                            'gross': gross,
-                            'tax': tax,
-                            'tax_explanation': tax_expl,
-                            'pension_employee': emp_pen,
-                            'pension_employer': empr_pen,
-                            'net': net,
+                            'gross': result['gross'],
+                            'tax': result['tax'],
+                            'tax_explanation': result['tax_explanation'],
+                            'pension_employee': result['pension_employee'],
+                            'pension_employer': result['pension_employer'],
+                            'net': result['net'],
                             'bank': bank,
                         }
                         pdf_path = generate_payslip(emp_dict)
@@ -95,11 +88,11 @@ def process_payroll_csv(self, csv_path, company_id, user_id=None):
                             payroll_run_id=run.id,
                             employee_id=emp.id,
                             pdf_file_path=pdf_path,
-                            gross_salary=gross,
-                            tax=tax,
-                            employee_pension=emp_pen,
-                            employer_pension=empr_pen,
-                            net_pay=net,
+                            gross_salary=result['gross'],
+                            tax=result['tax'],
+                            employee_pension=result['pension_employee'],
+                            employer_pension=result['pension_employer'],
+                            net_pay=result['net'],
                         )
                         db.session.add(payslip)
                         db.session.commit()
@@ -107,9 +100,9 @@ def process_payroll_csv(self, csv_path, company_id, user_id=None):
                         employees_data.append({
                             'id': emp.employee_id,
                             'name': emp.name,
-                            'gross': gross,
-                            'tax': tax,
-                            'net': net,
+                            'gross': result['gross'],
+                            'tax': result['tax'],
+                            'net': result['net'],
                             'pdf_path': pdf_path,
                         })
 

@@ -4,6 +4,8 @@ PDF Payslip Generator for Ethiopian Payroll Engine
 Uses ReportLab to generate professional payslips in PDF format.
 Output: A4-sized PDF with company header, employee details, earnings,
 deductions, and net pay summary.
+
+Font: NotoSansEthiopic for full Amharic + Latin rendering.
 """
 
 import os
@@ -16,6 +18,29 @@ from reportlab.platypus import (
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# Register NotoSansEthiopic font (covers both Ethiopic and Latin glyphs)
+_FONT_DIR = os.path.join(os.path.dirname(__file__), 'fonts')
+_FONT_PATH = os.path.join(_FONT_DIR, 'NotoSansEthiopic-Regular.ttf')
+_FONT_REGISTERED = False
+
+def _ensure_font():
+    """Register the font once. Safe to call multiple times."""
+    global _FONT_REGISTERED
+    if _FONT_REGISTERED:
+        return
+    if os.path.exists(_FONT_PATH):
+        pdfmetrics.registerFont(TTFont('NotoSansEthiopic', _FONT_PATH))
+        _FONT_REGISTERED = True
+
+# Register on module load
+_ensure_font()
+
+# Font names — use NotoSansEthiopic for everything (covers Latin + Ethiopic)
+FONT = 'NotoSansEthiopic'
+FONT_BOLD = 'NotoSansEthiopic'  # No bold variant available; same font
 
 PRIMARY = HexColor('#1a5276')
 ACCENT = HexColor('#2e86c1')
@@ -36,6 +61,8 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
     Returns:
         Absolute path to the generated PDF file
     """
+    _ensure_font()
+
     if output_dir is None:
         output_dir = os.getcwd()
     os.makedirs(output_dir, exist_ok=True)
@@ -55,18 +82,21 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         'CustomTitle', parent=styles['Title'],
-        textColor=PRIMARY, fontSize=18, spaceAfter=4
+        fontName=FONT, textColor=PRIMARY, fontSize=18, spaceAfter=4
     )
     subtitle_style = ParagraphStyle(
         'CustomSubtitle', parent=styles['Normal'],
-        textColor=ACCENT, fontSize=10, alignment=TA_CENTER, spaceAfter=12
+        fontName=FONT, textColor=ACCENT, fontSize=10,
+        alignment=TA_CENTER, spaceAfter=12
     )
     section_style = ParagraphStyle(
         'Section', parent=styles['Heading3'],
-        textColor=PRIMARY, fontSize=11, spaceBefore=10, spaceAfter=4
+        fontName=FONT, textColor=PRIMARY, fontSize=11,
+        spaceBefore=10, spaceAfter=4
     )
     normal_style = ParagraphStyle(
-        'NormalCustom', parent=styles['Normal'], fontSize=9, spaceAfter=2
+        'NormalCustom', parent=styles['Normal'],
+        fontName=FONT, fontSize=9, spaceAfter=2
     )
 
     elements = []
@@ -78,12 +108,14 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
 
     # Employee Info Table
     info_data = [
-        ['Employee ID / መለያ:', emp['id'], 'Date / ቀን:', datetime.now().strftime('%Y-%m-%d')],
-        ['Name / ስም:', emp['name'], 'Department / ክፍል:', 'General'],
+        ['Employee ID / መለያ:', emp['id'],
+         'Date / ቀን:', datetime.now().strftime('%Y-%m-%d')],
+        ['Name / ስም:', emp['name'],
+         'Department / ክፍል:', 'General'],
     ]
     info_table = Table(info_data, colWidths=[35 * mm, 50 * mm, 35 * mm, 50 * mm])
     info_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY),
         ('TEXTCOLOR', (2, 0), (2, -1), PRIMARY),
@@ -106,11 +138,10 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
     earnings_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), DARK_BG),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('BACKGROUND', (0, -1), (-1, -1), LIGHT_BG),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
@@ -124,17 +155,17 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
         ['Description / መግለጫ', 'Amount (ETB) / መጠን (ብር)'],
         ['Income Tax / የገቢ ታክስ', f"{emp['tax']:,.2f}"],
         ['Employee Pension (7%) / የሰራተኛ እቅድ', f"{emp['pension_employee']:,.2f}"],
-        ['Total Deductions / ጠቅላይ ከፊዎች', f"{emp['tax'] + emp['pension_employee']:,.2f}"],
+        ['Total Deductions / ጠቅላይ ከፊዎች',
+         f"{emp['tax'] + emp['pension_employee']:,.2f}"],
     ]
     deductions_table = Table(deductions_data, colWidths=[100 * mm, 70 * mm])
     deductions_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), DARK_BG),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 9),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('BACKGROUND', (0, -1), (-1, -1), LIGHT_BG),
-        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
@@ -149,7 +180,7 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
     net_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), PRIMARY),
         ('TEXTCOLOR', (0, 0), (-1, -1), white),
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 12),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('TOPPADDING', (0, 0), (-1, -1), 6),
@@ -169,7 +200,8 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
     # Footer
     elements.append(Paragraph(
         "This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።",
-        ParagraphStyle('Footer', parent=styles['Normal'], fontSize=7,
+        ParagraphStyle('Footer', parent=styles['Normal'],
+                       fontName=FONT, fontSize=7,
                        textColor=HexColor('#888888'), alignment=TA_CENTER)
     ))
 

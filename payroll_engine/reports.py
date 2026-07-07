@@ -30,6 +30,7 @@ def generate_erca_report(payslips: list, company_name: str,
     try:
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.cell.cell import MergedCell
     except ImportError:
         # Fallback to CSV if openpyxl not installed
         return _generate_erca_csv(payslips, company_name, period)
@@ -46,7 +47,7 @@ def generate_erca_report(payslips: list, company_name: str,
     header_fill = PatternFill(start_color="1A5276", end_color="1A5276", fill_type="solid")
 
     # Title
-    ws.merge_cells('A1:G1')
+    ws.merge_cells('A1:I1')
     ws['A1'] = f"ERCA Monthly Tax Filing Report — {company_name}"
     ws['A1'].font = Font(bold=True, size=14)
     ws['A2'] = f"Period: {period}"
@@ -102,13 +103,19 @@ def generate_erca_report(payslips: list, company_name: str,
     ws.cell(row=totals_row, column=8, value=total_tax).font = Font(bold=True)
     ws.cell(row=totals_row, column=9, value=total_net).font = Font(bold=True)
 
-    # Auto-width columns
+    # Auto-width columns — skip MergedCell objects
     for col in ws.columns:
         max_length = 0
+        col_letter = None
         for cell in col:
+            if isinstance(cell, MergedCell):
+                continue
+            if col_letter is None:
+                col_letter = cell.column_letter
             if cell.value:
                 max_length = max(max_length, len(str(cell.value)))
-        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 30)
+        if col_letter:
+            ws.column_dimensions[col_letter].width = min(max_length + 2, 30)
 
     output = io.BytesIO()
     wb.save(output)
@@ -132,6 +139,7 @@ def generate_pension_report(payslips: list, company_name: str,
     try:
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.cell.cell import MergedCell
     except ImportError:
         return _generate_pension_csv(payslips, company_name, period)
 
@@ -146,7 +154,7 @@ def generate_pension_report(payslips: list, company_name: str,
     header_fill = PatternFill(start_color="1A5276", end_color="1A5276", fill_type="solid")
 
     # Title
-    ws.merge_cells('A1:F1')
+    ws.merge_cells('A1:G1')
     ws['A1'] = f"Pension Contribution Report — {company_name}"
     ws['A1'].font = Font(bold=True, size=14)
     ws['A2'] = f"Period: {period}"
@@ -191,10 +199,16 @@ def generate_pension_report(payslips: list, company_name: str,
 
     for col in ws.columns:
         max_length = 0
+        col_letter = None
         for cell in col:
+            if isinstance(cell, MergedCell):
+                continue
+            if col_letter is None:
+                col_letter = cell.column_letter
             if cell.value:
                 max_length = max(max_length, len(str(cell.value)))
-        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 30)
+        if col_letter:
+            ws.column_dimensions[col_letter].width = min(max_length + 2, 30)
 
     output = io.BytesIO()
     wb.save(output)

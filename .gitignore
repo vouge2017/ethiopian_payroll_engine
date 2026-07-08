@@ -27,3 +27,7 @@ Thumbs.db
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# Generated PDFs
+payslip_*.pdf
+*.pdf

@@ -71,12 +71,43 @@ def create_demo_data():
     Returns:
         (company, user, employees, payroll_run)
     """
-    # 1. Create demo company
+    # 0. Cleanup old demos (older than 24 hours)
+    from datetime import datetime, timedelta
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    old_demos = Company.query.filter(
+        Company.is_demo == True,
+        Company.created_at < cutoff
+    ).all()
+    for old in old_demos:
+        # Delete employees, runs, payslips, users for this demo company
+        Payslip.query.filter(
+            Payslip.payroll_run_id.in_(
+                db.session.query(PayrollRun.id).filter_by(company_id=old.id)
+            )
+        ).delete(synchronize_session='fetch')
+        PayrollRun.query.filter_by(company_id=old.id).delete()
+        OvertimeEntry.query.filter_by(company_id=old.id).delete()
+        AuditLog.query.filter_by(company_id=old.id).delete()
+        Employee.query.filter_by(company_id=old.id).delete()
+        User.query.filter_by(company_id=old.id).delete()
+        db.session.delete(old)
+    db.session.commit()
+
+    # 1. Check if demo company already exists
+    existing = Company.query.filter_by(is_demo=True).first()
+    if existing:
+        user = User.query.filter_by(company_id=existing.id, phone='0900000000').first()
+        employees = Employee.query.filter_by(company_id=existing.id, is_deleted=False).all()
+        run = PayrollRun.query.filter_by(company_id=existing.id).order_by(PayrollRun.id.desc()).first()
+        if user and employees and run:
+            return existing, user, employees, run
+
+    # 2. Create demo company
     company = Company(name='Sample Trading PLC', is_demo=True)
     db.session.add(company)
     db.session.commit()
 
-    # 2. Create demo user
+    # 3. Create demo user
     user = User(
         phone='0900000000',
         company_id=company.id,

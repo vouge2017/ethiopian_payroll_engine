@@ -133,6 +133,7 @@ def index():
 
 @main.route('/employees')
 @login_required
+@role_required('owner', 'accountant')
 def list_employees():
     """List employees for the current company."""
     search = request.args.get('q', '').strip()

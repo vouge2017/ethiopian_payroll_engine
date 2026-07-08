@@ -12,7 +12,7 @@ from payroll_engine.i18n_om import STRINGS_OM
 def test_amharic_lookup():
     assert get_string('dashboard', 'am') == 'ዳሽቦርድ'
     assert get_string('employees', 'am') == 'ሰራተኞች'
-    assert get_string('net_pay', 'am') == 'ንፅ ደመወዝ'
+    assert get_string('net_pay', 'am') == 'የተጣራ ክፍያ'
 
 
 def test_english_lookup():
@@ -31,7 +31,7 @@ def test_all_strings_exist():
     all_en = get_all_strings('en')
     assert len(all_am) == len(STRINGS)
     assert len(all_en) == len(STRINGS)
-    assert len(all_am) > 25  # At least 25 strings
+    assert len(all_am) > 100  # At least 100 strings
 
 
 def test_critical_strings_exist():
@@ -39,7 +39,7 @@ def test_critical_strings_exist():
     critical = [
         'dashboard', 'employees', 'payroll', 'reports',
         'basic_salary', 'net_pay', 'income_tax', 'employee_pension',
-        'approve', 'download', 'save', 'cancel',
+        'confirm_approve', 'download', 'save_employee', 'cancel',
     ]
     for key in critical:
         assert key in STRINGS, f"Missing critical string: {key}"
@@ -51,11 +51,10 @@ def test_critical_strings_exist():
 
 def test_oromo_lookup():
     """Afaan Oromoo translations return correct values."""
-    assert get_string('dashboard', 'om') == 'Gabatee'
-    assert get_string('employees', 'om') == 'Hojjetaanota'
-    assert get_string('payroll', 'om') == 'Kaffaltii'
-    assert get_string('net_pay', 'om') == 'Kaffaltii xiqqaa'
-    assert get_string('welcome', 'om') == 'Baga nagaan dhuftan'
+    assert get_string('dashboard', 'om') == 'Daashboordii'
+    assert get_string('employees', 'om') == 'Hojjettoota'
+    assert get_string('payroll', 'om') == 'Kaffaltiiwwan Raawwataman'
+    assert get_string('net_pay', 'om') == 'Kaffaltii Qulqulluu'
 
 
 def test_oromo_all_keys_have_translations():
@@ -73,8 +72,8 @@ def test_oromo_no_empty_values():
 
 
 def test_oromo_has_minimum_strings():
-    """At least 50 Afaan Oromoo strings for usable coverage."""
-    assert len(STRINGS_OM) >= 50, f"Only {len(STRINGS_OM)} Afaan Oromoo strings (need 50+)"
+    """At least 100 Afaan Oromoo strings for usable coverage."""
+    assert len(STRINGS_OM) >= 100, f"Only {len(STRINGS_OM)} Afaan Oromoo strings (need 100+)"
 
 
 def test_oromo_critical_strings():
@@ -82,8 +81,8 @@ def test_oromo_critical_strings():
     critical = [
         'dashboard', 'employees', 'payroll', 'reports',
         'basic_salary', 'net_pay', 'income_tax', 'employee_pension',
-        'approve', 'download', 'save', 'cancel', 'welcome',
-        'erca_deadline', 'pension_deadline', 'payslip',
+        'confirm_approve', 'download', 'save_employee', 'cancel',
+        'erca_filing', 'pension_deadline', 'payslips',
     ]
     for key in critical:
         assert key in STRINGS_OM, f"Missing critical Afaan Oromoo string: {key}"

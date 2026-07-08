@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
             <a href="{{ url_for('main.employee_dashboard') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
-            My Payslips
+            {{ _('my_payslips') }}
         </h3>
     </div>
 
@@ -17,11 +17,11 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Period</th>
-                            <th>Gross (ETB)</th>
+                            <th>{{ _('period') }}</th>
+                            <th>{{ _('gross') }} (ETB)</th>
                             <th>Tax (ETB)</th>
                             <th>Pension (ETB)</th>
-                            <th>Net Pay (ETB)</th>
+                            <th>{{ _('net_pay') }} (ETB)</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -39,7 +39,7 @@
                                 </a>
                                 {% if p.pdf_file_path %}
                                 <a href="{{ url_for('main.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-download"></i> PDF
+                                    <i class="bi bi-download"></i> {{ _('pdf') }}
                                 </a>
                                 {% endif %}
                             </td>
@@ -51,7 +51,7 @@
             {% else %}
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-receipt" style="font-size: 3rem;"></i>
-                <p class="mt-2">No payslips yet.</p>
+                <p class="mt-2">{{ _('no_payslips') }}</p>
             </div>
             {% endif %}
         </div>

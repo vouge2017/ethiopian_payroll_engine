@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="mb-0"><i class="bi bi-clock-history me-2"></i>Payroll History</h3>
+        <h3 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('payroll_history') }}</h3>
         <a href="{{ url_for('main.payroll_upload') }}" class="btn btn-primary">
             <i class="bi bi-cloud-upload me-1"></i> New Run
         </a>
@@ -17,9 +17,9 @@
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Payslips</th>
+                            <th>{{ _('date') }}</th>
+                            <th>{{ _('status') }}</th>
+                            <th>{{ _('payslips') }}</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -52,7 +52,7 @@
             {% else %}
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                <p class="mt-2">No payroll runs yet. <a href="{{ url_for('main.payroll_upload') }}">Run your first payroll</a>.</p>
+                <p class="mt-2">{{ _('no_runs') }} <a href="{{ url_for('main.payroll_upload') }}">{{ _('run_payroll') }}</a>.</p>
             </div>
             {% endif %}
         </div>

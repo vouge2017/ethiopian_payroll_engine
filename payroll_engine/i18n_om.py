@@ -2,132 +2,195 @@
 Afaan Oromoo Language Strings — Core UI Translation
 
 Qubee (Latin script) — no special fonts needed.
-50+ core strings for the payroll flow.
+164 core strings for the payroll flow.
 
 Usage: loaded by i18n.py when language='om'.
-
-Translation notes:
-- "Kaffaltii" = salary/wage (standard business term)
-- "Hojjetaa" = worker/employee
-- "Ramaddii" = tax
-- "Hir'ina" = deduction/withholding
-- "Bal'ina" = allowance
-- Review flags marked with: # NEEDS REVIEW
 """
 
 STRINGS_OM = {
-    # --- Navigation ---
-    'dashboard': 'Gabatee',
-    'employees': 'Hojjetaanota',
-    'payroll': 'Kaffaltii',
-    'reports': 'Gabaasa',
-    'settings': 'Qindaa\'ina',
-    'logout': 'Ba\'i',
-
-    # --- Actions ---
-    'run_payroll': 'Kaffaltii kaasii',
-    'add_employee': 'Hojjetaa dabali',
-    'save': 'Olkaa\'i',
-    'cancel': 'Haquu',
-    'approve': 'Mirkaneeffadhu',
-    'download': 'Buusaa',
-    'upload': 'Olfe\'i',
+    # Navigation & Actions
+    'dashboard': 'Daashboordii',
+    'employees': 'Hojjettoota',
+    'run_payroll': 'Kaffaltii Raawwaddhu',
+    'payroll': 'Kaffaltiiwwan Raawwataman',
+    'payroll_runs': 'Kaffaltiiwwan Raawwataman',
+    'reports': 'Gabaasota',
+    'settings': 'Sajeessaa',
+    'team': 'Miseensota Garee',
+    'my_dashboard': 'Daashboordii Koo',
+    'my_payslips': 'Waraqaa Kaffaltii Koo',
+    'my_profile': 'Profaayilii Koo',
+    'logout': 'Bahii',
+    'log_in': 'Seeni',
+    'register': 'Galmaa\'i',
+    'sign_in_message': 'Kaffaltii keessan bulchuuf seeni',
+    'create_account': 'Herrega Keessan Uumaa',
+    'start_payroll_message': 'Kaffaltii dhaabbata keessanii bulchuu jalqabaa',
+    'add_employee': 'Hojjetaa Dabali',
+    'save_employee': 'Hojjetaa Olkaayi',
+    'cancel': 'Haqunu',
     'search': 'Barbaadi',
-    'view': 'Ilaali',
+    'search_placeholder': 'Maqaa ykn ID\'n barbaadi...',
+    'upload_csv': 'CSV Olfe\'i',
+    'select_csv': 'Faayila CSV Filadhu',
+    'view_all': 'Hunduma Agarsiisi',
+    'download': 'Buufadhu',
+    'add': 'Dabali',
+    'delete': 'Haqi',
+    'edit': 'Edit gochi',
+    'confirm_approve': 'Mirkaneessi & Raggaasisi',
+    'reactivate': 'Deebisii Kakassi',
+    'link': 'Walqabsiisi',
+    'terminate_employee': 'Hojjetaa Gaggeessi',
+    'add_first_employee': 'Hojjetaa keessan isa jalqabaa dabala',
+    'run_first_payroll': 'Kaffaltii keessan isa jalqabaa raawwadha',
+    'english': 'Ingiliffa',
+    'amharic_coming_soon': 'Hiikkaan Amaariffaa dhiyeenyatti ni dhufa',
+    'oromoo_coming_soon': 'Hiikkaan Afaan Oromoo dhiyeenyatti ni dhufa',
 
-    # --- Payroll ---
-    'basic_salary': 'Kaffaltii bu\'uuraa',
-    'allowances': 'Bal\'ina',
-    'gross_salary': 'Kaffaltii waliigalaa',
-    'income_tax': 'Ramaddii galii',
-    'employee_pension': 'Furtuu hojjetaa',
-    'employer_pension': 'Furtuu hirmaataa',
-    'net_pay': 'Kaffaltii xiqqaa',
-    'payment_method': 'Too\'annoo kaffaltii',
-
-    # --- Status ---
-    'completed': 'Xumurameera',
-    'processing': 'Hojii irra jira',
-    'pending': 'Eegaa jira',
-    'failed': 'Hin milkoofne',
-    'draft': 'Qormaata',
-    'review': 'Irra deebi\'a',
-
-    # --- Employee ---
-    'employee_id': 'Lakkoofsa hojjetaa',
-    'full_name': 'Maqaa guutuu',
-    'tin': 'Lakkoofsa ramaddii',
-    'bank_account': 'Herrega baankii',
-
-    # --- Reports ---
-    'erca_report': 'Gabaasa ERCA',
-    'pension_report': 'Gabaasa furtuu',
-    'bank_file': 'Fayilii baankii',
-    'compliance_score': 'Qabxii simannaa',
-
-    # --- Messages ---
-    'welcome': 'Baga nagaan dhuftan',
-    'payroll_completed': 'Kaffaltiin xumurameera',
-    'no_employees': 'Hojjetaan hin jiru',
-    'no_payslips': 'Warraagaa kaffaltii hin jiru',
-
-    # --- Validation ---
-    'required_field': 'Dirree kun dirqama',
-    'invalid_number': 'Lakkoofsa sirrii galchaa',
-    'missing_bank': 'Odeeffannoo baankii hin jiru',
-
-    # --- Compliance ---
-    'erca_deadline': 'Guyyaa dhumaa ERCA',
-    'pension_deadline': 'Guyyaa dhumaa furtuu',
-    'days_remaining': 'Guyywan hafan',
-
-    # --- Leave ---
-    'annual_leave': 'Baga guyyaa waggaa',
-    'sick_leave': 'Baga dhiibbaa',
-    'request_leave': 'Baga gaafadhu',
-    'leave_balance': 'Hanga baga',
-
-    # --- Dashboard ---
-    'total_employees': 'Hojjetaanota waliigalaa',
-    'monthly_payroll': 'Kaffaltii ji\'aa',
-    'next_payroll_date': 'Guyyaa kaffaltii itti aanu',
-    'compliance_status': 'Haala simannaa',
-
-    # --- Payslip ---
-    'payslip': 'Warraagaa kaffaltii',
-    'earnings': 'Galii',
-    'deductions': 'Hir\'ina',
-    'total_deductions': 'Hir\'ina waliigalaa',
-
-    # --- General ---
-    'delete': 'Haquu',
-    'edit': 'Gulaaluu',
-    'filter': 'Calaluu',
-    'export': 'Alergi',
-    'confirm': 'Mirkaneessi',
-
-    # --- Login ---
-    'sign_in': 'Seenii',
-    'phone_number': 'Lakkoofsa bilbila',
-    'password': 'Jecha darbii',
-    'remember_me': 'Na yaadadhu',
-    'forgot_password': 'Jecha darbii irraanfattanii',
-
-    # --- Employee Detail ---
-    'department': 'Kutaa',
-    'position': 'Iddoo',
-    'start_date': 'Guyyaa jalqabaa',
+    # Employee Fields
+    'employee_id': 'ID Hojjetaa',
+    'full_name': 'Maqaa Guutuu',
+    'name': 'Maqaa',
+    'phone': 'Bilbila',
+    'department': 'Damee',
+    'position': 'Gadi-aantummaa Hojii',
+    'start_date': 'Guyyaa Hojii Jalqabe',
+    'basic_salary': 'Mindaa Bu\'uraa',
+    'allowances': 'Aballii',
+    'gross_salary': 'Mindaa Waligalaa',
+    'bank_account': 'Herrega Baankii',
+    'payment_method': 'Mala Kaffaltii',
+    'tin': 'TIN',
+    'role': 'Gahee',
+    'joined': 'Kan Seene',
     'status': 'Haala',
+    'active': 'Kan Hojirru',
+    'deactivated': 'Kan Dhaabbate',
+    'basic_information': 'Odeeffannoo Bu\'uraa',
+    'compensation': 'Kaffaltii Beeksisaa',
+    'payment_tax': 'Kaffaltii & Ramaddii',
+    'linked_user': 'Fayyadamaa Walqabate',
 
-    # --- Overtime ---
-    'overtime': 'Sa\'aatii dabalataa',
-    'overtime_hours': 'Sa\'aatii dabalataa',
-
-    # --- Severance ---
-    'severance': 'Mallaakkii',
-
-    # --- Payroll Run ---
-    'payroll_run': 'Adeemsaa kaffaltii',
-    'reference': 'Wabiilee',
+    # Payroll
+    'payroll_summary': 'Gabaasa Kaffaltii Gabaabaa',
+    'payroll_history': 'Seenaa Kaffaltii',
     'period': 'Yeroo',
+    'date': 'Guyyaa',
+    'earnings': 'Galiiwwan',
+    'deductions': 'Hir\'ifamoota',
+    'gross': 'Waligala',
+    'income_tax': 'Gibira Galii',
+    'employee_pension': 'Furtuu Hojjetaa',
+    'employer_pension': 'Furtuu Hojjechiisaa',
+    'total_deductions': 'Total Hir\'ifamoota',
+    'net_pay': 'Kaffaltii Qulqulluu',
+    'net': 'Qulqulluu',
+    'payment': 'Kaffaltii',
+    'pdf': 'PDF',
+    'payslips': 'Waraqaa Kaffaltii',
+    'payslip_history': 'Seenaa Waraqaa Kaffaltii',
+    'no_payslips': 'Waraqaan kaffaltii ammatti hin jiru',
+    'no_runs': 'Kaffaltiin raawwatame ammatti hin jiru',
+    'recent_payroll_runs': 'Kaffaltiiwwan Dhiyoo Raawwataman',
+    'recent_payslips': 'Waraqaa Kaffaltii Dhiyoo',
+    'recent_runs': 'Raawwiiwwan dhiyoo',
+    'confirm_payroll_processing': 'Adeemsa Kaffaltii Mirkaneessi',
+    'enter_password_confirm': 'Mirkaneessuuf jecha icciitii keessan galchaa',
+    'your_login_password': 'Jecha Icciitii Seensaa',
+    'total_employees': 'Total Hojjettoota',
+    'total_gross': 'Total Waligala',
+    'total_tax': 'Total Gibira',
+    'total_net': 'Total Qulqulluu',
+
+    # Overtime
+    'overtime_this_month': 'Hojii Turee kan Addaa',
+    'total_hours': 'Total Sa\'aatii',
+    'over_limit': 'Daangaa Ol',
+    'hours': 'Sa\'aatiiwwan',
+    'type': 'Akaakuu',
+    'rate': 'Saffisa',
+
+    # Compliance & Reports
+    'compliance': 'Seera Kabajuu',
+    'compliance_score': 'Qabxii Seera Kabajuu',
+    'compliance_details': 'Tarreeffama Seera Kabajuu',
+    'erca_filing': 'ERCA Filing',
+    'tax_filing_deadline': 'Daangaa Guyyaa Gibira Beeksisuu',
+    'pension_deadline': 'Daangaa Guyyaa Furtuu Hojjetaa',
+    'pension_contribution_deadline': 'Daangaa Guyyaa Buusii Furtuu',
+    'pssa_remittance': 'PSSSA Remittance',
+    'reports_compliance': 'Gabaasa & Seera Kabajuu',
+    'total_checks': 'Total Sakatta\'iinsa',
+    'rule': 'Seera',
+    'issue': 'Rakkoo',
+    'override': 'Irra Dabalama',
+    'reason': 'Sababa',
+    'note': 'Hubachiisa',
+    'why_ok': 'Kun maaliif sirrii ta\'e?',
+
+    # Dashboard
+    'latest_net_pay': 'Kaffaltii Qulqulluu Dhumaa',
+    'last_payroll_run': 'Kaffaltii Raawwatame kan Dhumaa',
+    'quick_actions': 'Gochaawwan Ariifachiisaa',
+
+    # Termination
+    'severance_preview': 'Durgoo Gaggeessaa Dursee Argamuu',
+    'termination_reason': 'Sababa Hojii Gaggeeffamuu',
+    'last_working_day': 'Guyyaa Hojii Dhumaa',
+    'years_of_service': 'Waggoottan Tajaajilaa',
+
+    # Team & Linking
+    'current_members': 'Miseensota Ammaa',
+    'add_team_member': 'Miseensa Garee Dabali',
+    'phone_or_email': 'Bilbila ykn Email',
+    'user_account': 'Herrega Fayyadamaa',
+    'link_employee_user': 'Hojjetaa herrega fayyadamaa waliin walqabsiisi',
+
+    # Login & Registration
+    'password': 'Jecha Icciitii',
+    'remember_me': 'Na Yaadadhu',
+    'email': 'Email',
+    'yes': 'Eeyyee',
+    'no': 'Lakki',
+
+    # CSV & Format
+    'csv_format': 'Boca CSV',
+    'bank_telebirr': 'Baankii / Telebirr',
+    'example_emp': 'fkn., EMP001',
+    'finance': 'Faayinaansii',
+    'accountant': 'Herregataa',
+
+    # Flash Messages
+    'err_employee_id_name_required': 'ID hojjetaa fi maqaan ni barbaadamu.',
+    'err_phone_name_required': 'Lakkoofsi bilbilaa fi maqaan ni barbaadamu.',
+    'err_invalid_date_format': 'Boca guyyaa dogoggoraa. YYYY-MM-DD fayyadamaa.',
+    'err_invalid_date': 'Boca guyyaa dogoggoraa.',
+    'err_invalid_termination_reason': 'Sababa gaggeessaa sirrii hin taane.',
+    'err_invalid_request': 'Gaaffii sirrii hin taane.',
+    'err_csv_only': 'Faayila CSV qofatu hayyamama.',
+    'err_no_file': 'Faayilli filatame hin jiru.',
+    'err_no_payslips_run': 'Kaffaltii kanaaf waraqaan kaffaltii hin argamne.',
+    'err_pdf_not_found': 'PDF hin argamne.',
+    'err_unresolved_blocks': 'Adeemsisuun hin danda\'amu: rakkoowwan BLOCK hin bahiin jiru.',
+    'err_cannot_reject_review': 'Kaffaltii haala xiinxala irra jiru kuffisuun hin danda\'amu.',
+    'err_cannot_remove_owner': 'Abbaa dhaabbataa haquun hin danda\'amu.',
+    'err_exceed_24h': 'Guyyaa tokko keessatti sa\'aatii 24 caaluu hin danda\'amu.',
+    'err_wrong_password_approval': 'Jecha icciitii dogoggoraa; raggaasisuun haqameera.',
+    'err_wrong_password_termination': 'Jecha icciitii dogoggoraa; gaggeessuun haqameera.',
+    'err_not_in_review': 'Kaffaltiin kun haala xiinxala irra hin jiru.',
+    'err_not_ready_approval': 'Kaffaltiin kun raggaasisuuf hin qophoofne.',
+    'err_already_member': 'Fayyadamaan kun duraan miseensa dhaabbata keessaniiti.',
+    'err_already_access': 'Fayyadamaan kun duraan eyamu dhaabbata keessanii qaba.',
+    'err_cannot_remove_self': 'Ofii keessan haquu hin dandeessan.',
+    'err_no_access_company': 'Dhaabbata sanaaf eyamu hin qabdan.',
+    'err_no_permission': 'Gocha kanaaf eyamu hin qabdan.',
+    'err_valid_date_hours': 'Guyyaa fi sa\'aatii sirriin ni barbaadama.',
+    'err_payroll_data_not_found': 'Odeeffannoon kaffaltii hin argamne. Draftiin haqamee ta\'uu mala; maaloo CSV deebisaa fe\'aa.',
+    'msg_payroll_submitted': 'Kaffaltiin mirkaneessa abbaaf ergameera.',
+    'msg_overtime_deleted': 'Galmee hojii turee haqameera.',
+    'err_reports_completed_only': 'Gabaasa ehamuun kan danda\'amu kaffaltii xumurame qofafi.',
+    'err_bank_file_completed_only': 'Faayila baankii qopheessuun kan danda\'amu kaffaltii xumurame qofafi.',
+    'err_not_linked': 'Herregni keessan galmee hojjetaa waliin hin qabatin. Hojjetaa HR keessan qunnamaa.',
+    'err_both_required': 'Hojjetaan fi fayyadamaan lamaanuu ni barbaadamu.',
 }

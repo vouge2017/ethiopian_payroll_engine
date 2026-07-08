@@ -4,7 +4,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
-            {% if show_archived %}Archived Employees{% else %}Employees{% endif %}
+            {% if show_archived %}Archived Employees{% else %}{{ _('employees') }}{% endif %}
         </h3>
         <div>
             {% if show_archived %}
@@ -17,7 +17,7 @@
             </a>
             {% endif %}
             <a href="{{ url_for('main.add_employee') }}" class="btn btn-primary">
-                <i class="bi bi-person-plus me-1"></i> Add Employee
+                <i class="bi bi-person-plus me-1"></i> {{ _('add_employee') }}
             </a>
         </div>
     </div>
@@ -33,7 +33,7 @@
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control" name="q" placeholder="Search by name or ID..." value="{{ search }}">
-                        <button type="submit" class="btn btn-outline-primary">Search</button>
+                        <button type="submit" class="btn btn-outline-primary">{{ _('search') }}</button>
                     </div>
                 </div>
             </form>
@@ -49,11 +49,11 @@
                     <thead class="table-light">
                         <tr>
                             <th>ID</th>
-                            <th>Name</th>
-                            <th>Department</th>
-                            <th>Position</th>
-                            <th>Basic Salary (ETB)</th>
-                            <th>Gross (ETB)</th>
+                            <th>{{ _('name') }}</th>
+                            <th>{{ _('department') }}</th>
+                            <th>{{ _('position') }}</th>
+                            <th>{{ _('basic_salary') }} (ETB)</th>
+                            <th>{{ _('gross') }} (ETB)</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -73,7 +73,7 @@
                                 {% if show_archived %}
                                 <form method="POST" action="{{ url_for('main.reactivate_employee', emp_id=emp.id) }}" style="display:inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivate">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="{{ _('reactivate') }}">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </button>
                                 </form>
@@ -90,7 +90,7 @@
                 {% if show_archived %}
                 <p class="mt-2">No archived employees.</p>
                 {% else %}
-                <p class="mt-2">No employees found. <a href="{{ url_for('main.add_employee') }}">Add your first employee</a>.</p>
+                <p class="mt-2">No employees found. <a href="{{ url_for('main.add_employee') }}">{{ _('add_employee') }}</a>.</p>
                 {% endif %}
             </div>
             {% endif %}

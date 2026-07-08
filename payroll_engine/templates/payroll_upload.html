@@ -4,11 +4,11 @@
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <h3 class="mb-4"><i class="bi bi-cloud-upload me-2"></i>Run Payroll</h3>
+            <h3 class="mb-4"><i class="bi bi-cloud-upload me-2"></i>{{ _('run_payroll') }}</h3>
 
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">CSV Format</h5>
+                    <h5 class="mb-0">{{ _('csv_format') }}</h5>
                 </div>
                 <div class="card-body">
                     <p class="small text-muted">Your CSV must include these columns:</p>
@@ -24,13 +24,13 @@ EMP002,Bekelech Wondimu,12000,3000,bank:cbe</pre>
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Upload CSV</h5>
+                    <h5 class="mb-0"><i class="bi bi-upload me-2"></i>{{ _('upload_csv') }}</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('main.payroll_upload') }}" enctype="multipart/form-data" id="uploadForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
-                            <label for="file" class="form-label">Select CSV file</label>
+                            <label for="file" class="form-label">{{ _('select_csv') }}</label>
                             <input class="form-control" type="file" id="file" name="file" accept=".csv" required>
                         </div>
                         <div id="progressContainer" class="mb-3 d-none">

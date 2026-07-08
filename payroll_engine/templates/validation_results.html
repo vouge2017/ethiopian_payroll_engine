@@ -23,7 +23,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Total Checks</h6>
+                    <h6 class="text-muted">{{ _('total_checks') }}</h6>
                     <h4>{{ summary.total }}</h4>
                 </div>
             </div>
@@ -57,24 +57,24 @@
     <!-- Payroll Summary -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Payroll Summary</h5>
+            <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>{{ _('payroll_summary') }}</h5>
         </div>
         <div class="card-body">
             <div class="row text-center">
                 <div class="col-md-3">
-                    <h6 class="text-muted">Employees</h6>
+                    <h6 class="text-muted">{{ _('total_employees') }}</h6>
                     <h4>{{ employees|length }}</h4>
                 </div>
                 <div class="col-md-3">
-                    <h6 class="text-muted">Total Gross</h6>
+                    <h6 class="text-muted">{{ _('total_gross') }}</h6>
                     <h4>ETB {{ '%.2f'|format(total_gross) }}</h4>
                 </div>
                 <div class="col-md-3">
-                    <h6 class="text-muted">Total Tax</h6>
+                    <h6 class="text-muted">{{ _('total_tax') }}</h6>
                     <h4>ETB {{ '%.2f'|format(total_tax) }}</h4>
                 </div>
                 <div class="col-md-3">
-                    <h6 class="text-muted">Total Net</h6>
+                    <h6 class="text-muted">{{ _('total_net') }}</h6>
                     <h4>ETB {{ '%.2f'|format(total_net) }}</h4>
                 </div>
             </div>
@@ -94,9 +94,9 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Rule</th>
-                            <th>Employee</th>
-                            <th>Issue</th>
+                            <th>{{ _('rule') }}</th>
+                            <th>{{ _('name') }}</th>
+                            <th>{{ _('issue') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -131,11 +131,11 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Rule</th>
-                                <th>Employee</th>
-                                <th>Issue</th>
-                                <th>Override</th>
-                                <th>Reason</th>
+                                <th>{{ _('rule') }}</th>
+                                <th>{{ _('name') }}</th>
+                                <th>{{ _('issue') }}</th>
+                                <th>{{ _('override') }}</th>
+                                <th>{{ _('reason') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -152,7 +152,7 @@
                                 </td>
                                 <td>
                                     <input type="text" class="form-control form-control-sm"
-                                           name="reason_{{ loop.index0 }}" placeholder="Why is this OK?">
+                                           name="reason_{{ loop.index0 }}" placeholder="{{ _('why_ok') }}">
                                 </td>
                             </tr>
                             {% endfor %}
@@ -175,9 +175,9 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Rule</th>
-                            <th>Employee</th>
-                            <th>Note</th>
+                            <th>{{ _('rule') }}</th>
+                            <th>{{ _('name') }}</th>
+                            <th>{{ _('note') }}</th>
                         </tr>
                     </thead>
                     <tbody>

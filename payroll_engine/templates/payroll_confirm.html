@@ -8,30 +8,30 @@
                 <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}" class="text-decoration-none text-muted me-2">
                     <i class="bi bi-arrow-left"></i>
                 </a>
-                <h3 class="mb-0">Confirm Payroll Processing</h3>
+                <h3 class="mb-0">{{ _('confirm_payroll_processing') }}</h3>
             </div>
 
             <!-- Summary -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Payroll Summary</h5>
+                    <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>{{ _('payroll_summary') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-3">
-                            <h6 class="text-muted">Employees</h6>
+                            <h6 class="text-muted">{{ _('total_employees') }}</h6>
                             <h4>{{ employee_count }}</h4>
                         </div>
                         <div class="col-3">
-                            <h6 class="text-muted">Total Gross</h6>
+                            <h6 class="text-muted">{{ _('total_gross') }}</h6>
                             <h4>ETB {{ '%.2f'|format(total_gross) }}</h4>
                         </div>
                         <div class="col-3">
-                            <h6 class="text-muted">Total Tax + Pension</h6>
+                            <h6 class="text-muted">{{ _('total_tax') }} + Pension</h6>
                             <h4>ETB {{ '%.2f'|format(total_tax + total_pension) }}</h4>
                         </div>
                         <div class="col-3">
-                            <h6 class="text-muted">Total Net</h6>
+                            <h6 class="text-muted">{{ _('total_net') }}</h6>
                             <h4 class="text-success">ETB {{ '%.2f'|format(total_net) }}</h4>
                         </div>
                     </div>
@@ -62,7 +62,7 @@
             {% if not blocks %}
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Confirm & Approve</h5>
+                    <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{{ _('confirm_approve') }}</h5>
                 </div>
                 <div class="card-body p-4">
                     <div class="alert alert-info mb-4">
@@ -76,9 +76,9 @@
                         <input type="hidden" name="run_id" value="{{ run.id }}">
 
                         <div class="mb-4">
-                            <label for="password" class="form-label fw-bold">Enter your password to confirm</label>
+                            <label for="password" class="form-label fw-bold">{{ _('enter_password_confirm') }}</label>
                             <input type="password" class="form-control form-control-lg" id="password"
-                                   name="password" required autofocus placeholder="Your login password">
+                                   name="password" required autofocus placeholder="{{ _('your_login_password') }}">
                             <div class="form-text">Re-authentication required for security.</div>
                         </div>
 
@@ -92,12 +92,12 @@
                         <div class="d-flex gap-2">
                             <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}"
                                class="btn btn-outline-secondary btn-lg flex-grow-1">
-                                <i class="bi bi-arrow-left me-1"></i>Cancel
+                                <i class="bi bi-arrow-left me-1"></i>{{ _('cancel') }}
                             </a>
                             {% if current_user.role == 'owner' %}
                             <button type="submit" class="btn btn-primary btn-lg flex-grow-1"
                                     {% if blocks %}disabled{% endif %}>
-                                <i class="bi bi-check-circle me-1"></i>Confirm & Process
+                                <i class="bi bi-check-circle me-1"></i>{{ _('confirm_approve') }}
                             </button>
                             {% elif current_user.role == 'accountant' %}
                             <button type="submit" class="btn btn-warning btn-lg flex-grow-1"

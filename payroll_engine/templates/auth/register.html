@@ -24,12 +24,12 @@
                             <div class="form-text">Ethio Telecom format: 09XXXXXXXX or +2519XXXXXXXX</div>
                         </div>
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email <span class="text-muted">(optional)</span></label>
+                            <label for="email" class="form-label">{{ _('email') }} <span class="text-muted">(optional)</span></label>
                             <input type="email" class="form-control" id="email" name="email"
                                    placeholder="you@email.com">
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Password *</label>
+                            <label for="password" class="form-label">{{ _('password') }} *</label>
                             <input type="password" class="form-control" id="password" name="password" required minlength="8">
                             <div class="form-text">At least 8 characters.</div>
                         </div>
@@ -38,12 +38,12 @@
                             <input type="password" class="form-control" id="password2" name="password2" required>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Register</button>
+                            <button type="submit" class="btn btn-primary btn-lg">{{ _('register') }}</button>
                         </div>
                     </form>
                 </div>
                 <div class="card-footer text-center bg-light">
-                    <small>Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></small>
+                    <small>Already have an account? <a href="{{ url_for('auth.login') }}">{{ _('log_in') }}</a></small>
                 </div>
             </div>
         </div>

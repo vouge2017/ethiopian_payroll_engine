@@ -11,21 +11,21 @@
             <span class="badge bg-secondary me-2">{{ employee.employee_id }}</span>
             {% if not employee.is_deleted %}
             <a href="{{ url_for('main.terminate_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-danger me-1">
-                <i class="bi bi-person-dash me-1"></i>Terminate
+                <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
             </a>
             <form method="POST" action="{{ url_for('main.deactivate_employee', emp_id=employee.id) }}" style="display:inline"
                   onsubmit="return confirm('Deactivate {{ employee.name }}? Their payroll history will be preserved.')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-person-dash me-1"></i>Deactivate
+                    <i class="bi bi-person-dash me-1"></i>{{ _('deactivated') }}
                 </button>
             </form>
             {% else %}
-            <span class="badge bg-warning text-dark">Deactivated</span>
+            <span class="badge bg-warning text-dark">{{ _('deactivated') }}</span>
             <form method="POST" action="{{ url_for('main.reactivate_employee', emp_id=employee.id) }}" style="display:inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-success">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivate
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>{{ _('reactivate') }}
                 </button>
             </form>
             {% endif %}
@@ -36,7 +36,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Basic Salary</h6>
+                    <h6 class="text-muted">{{ _('basic_salary') }}</h6>
                     <h4>ETB {{ '%.2f'|format(employee.basic_salary) }}</h4>
                 </div>
             </div>
@@ -44,7 +44,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Allowances</h6>
+                    <h6 class="text-muted">{{ _('allowances') }}</h6>
                     <h4>ETB {{ '%.2f'|format(employee.allowances) }}</h4>
                 </div>
             </div>
@@ -52,7 +52,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Gross</h6>
+                    <h6 class="text-muted">{{ _('gross') }}</h6>
                     <h4>ETB {{ '%.2f'|format(employee.gross_salary) }}</h4>
                 </div>
             </div>
@@ -60,7 +60,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Payment</h6>
+                    <h6 class="text-muted">{{ _('payment') }}</h6>
                     <p class="mb-0">{{ employee.bank_account or employee.bank_or_telebirr or 'Cash' }}</p>
                 </div>
             </div>
@@ -70,7 +70,7 @@
         <div class="col-md-2">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Phone</h6>
+                    <h6 class="text-muted">{{ _('phone') }}</h6>
                     <p class="mb-0">{{ employee.phone or 'Not set' }}</p>
                 </div>
             </div>
@@ -78,7 +78,7 @@
         <div class="col-md-2">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Department</h6>
+                    <h6 class="text-muted">{{ _('department') }}</h6>
                     <p class="mb-0">{{ employee.department or 'Not set' }}</p>
                 </div>
             </div>
@@ -86,7 +86,7 @@
         <div class="col-md-2">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Position</h6>
+                    <h6 class="text-muted">{{ _('position') }}</h6>
                     <p class="mb-0">{{ employee.position or 'Not set' }}</p>
                 </div>
             </div>
@@ -94,7 +94,7 @@
         <div class="col-md-2">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Start Date</h6>
+                    <h6 class="text-muted">{{ _('start_date') }}</h6>
                     <p class="mb-0">{{ employee.start_date or 'Not set' }}</p>
                 </div>
             </div>
@@ -102,7 +102,7 @@
         <div class="col-md-2">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">TIN</h6>
+                    <h6 class="text-muted">{{ _('tin') }}</h6>
                     <p class="mb-0">{{ employee.tin or 'Not set' }}</p>
                 </div>
             </div>
@@ -110,8 +110,8 @@
         <div class="col-md-2">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Linked User</h6>
-                    <p class="mb-0">{{ 'Yes' if employee.user_id else 'No' }}</p>
+                    <h6 class="text-muted">{{ _('linked_user') }}</h6>
+                    <p class="mb-0">{{ _('yes') if employee.user_id else _('no') }}</p>
                 </div>
             </div>
         </div>
@@ -120,7 +120,7 @@
     <!-- Overtime Section -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Overtime (This Month)</h5>
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }}</h5>
             {% if total_ot_hours > 0 %}
             <span class="badge bg-light text-dark">{{ total_ot_hours }}h / ETB {{ '%.2f'|format(total_ot_pay) }}</span>
             {% endif %}
@@ -143,7 +143,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus me-1"></i>Add</button>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus me-1"></i>{{ _('add') }}</button>
                 </div>
             </form>
 
@@ -153,10 +153,10 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Date</th>
-                            <th>Hours</th>
-                            <th>Type</th>
-                            <th>Rate</th>
+                            <th>{{ _('date') }}</th>
+                            <th>{{ _('hours') }}</th>
+                            <th>{{ _('type') }}</th>
+                            <th>{{ _('rate') }}</th>
                             <th>Pay (ETB)</th>
                             <th></th>
                         </tr>
@@ -196,7 +196,7 @@
     <!-- Payslip History -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Payslip History</h5>
+            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>{{ _('payslip_history') }}</h5>
         </div>
         <div class="card-body p-0">
             {% if payslips %}
@@ -204,12 +204,12 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Date</th>
-                            <th>Gross</th>
+                            <th>{{ _('date') }}</th>
+                            <th>{{ _('gross') }}</th>
                             <th>Tax</th>
                             <th>Pension</th>
-                            <th>Net</th>
-                            <th>PDF</th>
+                            <th>{{ _('net') }}</th>
+                            <th>{{ _('pdf') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -234,7 +234,7 @@
             </div>
             {% else %}
             <div class="text-center py-4 text-muted">
-                <p>No payslips yet.</p>
+                <p>{{ _('no_payslips') }}</p>
             </div>
             {% endif %}
         </div>

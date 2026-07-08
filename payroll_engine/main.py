@@ -1205,6 +1205,7 @@ def _get_linked_employee():
     """Get the Employee record linked to the current user via user_id FK."""
     return Employee.query.filter_by(
         user_id=current_user.id,
+        company_id=current_user.company_id,
         is_deleted=False
     ).first()
 

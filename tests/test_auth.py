@@ -49,7 +49,7 @@ def test_register_creates_new_company(client, app):
         user = User.query.filter_by(phone='0911234567').first()
         assert user is not None
         assert user.company_id == company.id
-        assert user.role == 'admin'
+        assert user.role == 'owner'
 
 
 def test_register_rejects_existing_company_name(client, app):

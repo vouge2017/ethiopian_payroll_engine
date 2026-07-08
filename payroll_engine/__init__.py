@@ -67,9 +67,34 @@ def create_app():
         # Get language from session or default to English
         from flask import session
         lang = session.get('language', 'en')
+
+        def _safe_dual_date(d):
+            """Handle both date objects and ISO date strings."""
+            if not d:
+                return ''
+            if isinstance(d, str):
+                from datetime import datetime as dt
+                try:
+                    d = dt.strptime(d[:10], '%Y-%m-%d').date()
+                except (ValueError, IndexError):
+                    return d
+            return format_dual_date(d)
+
+        def _safe_eth_date(d):
+            """Handle both date objects and ISO date strings."""
+            if not d:
+                return ''
+            if isinstance(d, str):
+                from datetime import datetime as dt
+                try:
+                    d = dt.strptime(d[:10], '%Y-%m-%d').date()
+                except (ValueError, IndexError):
+                    return d
+            return format_ethiopian_date(d)
+
         return {
-            'eth_date': lambda d: format_dual_date(d) if d else '',
-            'eth_only': lambda d: format_ethiopian_date(d) if d else '',
+            'eth_date': _safe_dual_date,
+            'eth_only': _safe_eth_date,
             'today_eth': format_dual_date(date.today()),
             '_': lambda key: get_string(key, lang),
             'current_language': lang,

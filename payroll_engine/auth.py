@@ -115,7 +115,7 @@ def register():
             email=email,
             phone=normalized_phone,
             company_id=company.id,
-            role='admin'
+            role='owner'
         )
         user.set_password(password)
         db.session.add(user)

@@ -190,7 +190,7 @@ def run_all_checks():
     }
 
     # E2E test
-    e2e_exists = (TESTS_DIR / 'test_e2e.py').exists() or (REPO_ROOT / 'test_e2e.py').exists()
+    e2e_exists = (TESTS_DIR / 'test_e2e.py').exists() or (TESTS_DIR / 'test_e2e_full.py').exists() or (REPO_ROOT / 'test_e2e.py').exists()
     report['features']['e2e_test'] = {
         'exists': e2e_exists,
         'detail': 'End-to-end integration test'

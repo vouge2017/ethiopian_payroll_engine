@@ -45,6 +45,8 @@ STRINGS_OM = {
     'add_first_employee': 'Hojjetaa keessan isa jalqabaa dabala',
     'run_first_payroll': 'Kaffaltii keessan isa jalqabaa raawwadha',
     'english': 'Ingiliffa',
+    'oromoo': 'Afaan Oromoo',
+    'actions': 'Gochaawwan',
     'amharic_coming_soon': 'Hiikkaan Amaariffaa dhiyeenyatti ni dhufa',
     'oromoo_coming_soon': 'Hiikkaan Afaan Oromoo dhiyeenyatti ni dhufa',
 

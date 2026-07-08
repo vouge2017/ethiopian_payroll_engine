@@ -28,7 +28,7 @@
     <div class="sidebar p-0" style="width: 240px;">
         <div class="sidebar-brand p-3 text-white border-bottom border-secondary">
             <div>
-                <h5 class="mb-0"><i class="bi bi-bank me-2"></i>Payroll</h5>
+                <h5 class="mb-0"><i class="bi bi-bank me-2"></i>{{ _("payroll") }}</h5>
                 <small class="text-muted">{{ current_user.company.name }}</small>
             </div>
             <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Menu">
@@ -75,13 +75,13 @@
             <!-- Language Switcher -->
             <div class="mb-2">
                 <a href="{{ url_for('auth.set_language', lang='en') }}" 
-                   class="text-white-50 {% if current_language == 'en' %}text-white fw-bold{% endif %}">English</a>
+                   class="text-white-50 {% if current_language == 'en' %}text-white fw-bold{% endif %}">{{ english }}</a>
                 <span class="text-white-50">|</span>
                 <a href="{{ url_for('auth.set_language', lang='am') }}" 
                    class="text-white-50 {% if current_language == 'am' %}text-white fw-bold{% endif %}">አማርኛ</a>
                 <span class="text-white-50">|</span>
                 <a href="{{ url_for('auth.set_language', lang='om') }}" 
-                   class="text-white-50 {% if current_language == 'om' %}text-white fw-bold{% endif %}">Afaan Oromoo</a>
+                   class="text-white-50 {% if current_language == 'om' %}text-white fw-bold{% endif %}">{{ _("oromoo") }}</a>
             </div>
             <div class="d-flex align-items-center">
                 <i class="bi bi-person-circle me-2"></i>

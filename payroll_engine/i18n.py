@@ -48,6 +48,8 @@ STRINGS = {
     'add_first_employee': 'የመጀመሪያ ሰራተኛዎን ይመዝግቡ',
     'run_first_payroll': 'የመጀመሪያ ደመወዝዎን ያዘጋጁ',
     'english': 'እንግሊዘኛ',
+    'oromoo': 'ኦሮሞኛ',
+    'actions': 'ተግባራት',
     'amharic_coming_soon': 'የአማርኛ ትርጉም በቅርቡ ይደርሳል',
     'oromoo_coming_soon': 'የአፋን ኦሮሞ ትርጉም በቅርቡ ይደርሳል',
 

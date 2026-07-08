@@ -131,7 +131,7 @@
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <h6 class="text-success"><i class="bi bi-check-circle me-1"></i>Status</h6>
+                    <h6 class="text-success"><i class="bi bi-check-circle me-1"></i>{{ status }}</h6>
                     <p class="text-success mb-0">All within 20h limit</p>
                     {% endif %}
                 </div>
@@ -154,7 +154,7 @@
                             <th>{{ _('date') }}</th>
                             <th>{{ _('status') }}</th>
                             <th>{{ _('payslips') }}</th>
-                            <th>Actions</th>
+                            <th>{{ actions }}</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -47,6 +47,9 @@ STRINGS_OM = {
     'english': 'Ingiliffa',
     'oromoo': 'Afaan Oromoo',
     'actions': 'Gochaawwan',
+    'show_calculation': 'Shallacha agarsiisi',
+    'entries': 'Galfamoota',
+    'overtime': 'Hojii Turee',
     'amharic_coming_soon': 'Hiikkaan Amaariffaa dhiyeenyatti ni dhufa',
     'oromoo_coming_soon': 'Hiikkaan Afaan Oromoo dhiyeenyatti ni dhufa',
 

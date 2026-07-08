@@ -48,6 +48,12 @@
                                 <td>{{ _('allowances') }}</td>
                                 <td class="text-end">ETB {{ '%.2f'|format(employee.allowances) }}</td>
                             </tr>
+                            {% if overtime_details %}
+                            <tr>
+                                <td>{{ _('overtime') }} ({{ overtime_details|length }} {{ _('entries') }})</td>
+                                <td class="text-end">ETB {{ '%.2f'|format(total_ot_pay) }}</td>
+                            </tr>
+                            {% endif %}
                             <tr class="table-light">
                                 <td><strong>{{ _('gross_salary') }}</strong></td>
                                 <td class="text-end"><strong>ETB {{ '%.2f'|format(payslip.gross_salary) }}</strong></td>
@@ -65,14 +71,83 @@
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0">
                         <tbody>
+                            <!-- Pension with breakdown -->
                             <tr>
-                                <td>{{ _('employee_pension') }} (7%)</td>
-                                <td class="text-end">ETB {{ '%.2f'|format(payslip.employee_pension) }}</td>
+                                <td>
+                                    {{ _('employee_pension') }} (7% of {{ _('basic_salary') }})
+                                    <details class="mt-1">
+                                        <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
+                                        <div class="ms-3 small text-muted">
+                                            7% × ETB {{ '%.2f'|format(employee.basic_salary) }} = ETB {{ '%.2f'|format(payslip.employee_pension) }}
+                                        </div>
+                                    </details>
+                                </td>
+                                <td class="text-end align-top">ETB {{ '%.2f'|format(payslip.employee_pension) }}</td>
                             </tr>
+
+                            <!-- Tax with bracket breakdown -->
                             <tr>
-                                <td>{{ _('income_tax') }}</td>
-                                <td class="text-end">ETB {{ '%.2f'|format(payslip.tax) }}</td>
+                                <td>
+                                    {{ _('income_tax') }}
+                                    <details class="mt-1">
+                                        <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
+                                        <div class="ms-3 small">
+                                            <table class="table table-sm table-borderless mb-1" style="font-size: 0.85em;">
+                                                {% for b in tax_breakdown.brackets %}
+                                                <tr>
+                                                    <td class="text-muted">
+                                                        {% if b.rate_pct == 0 %}
+                                                        {{ b.rate_pct }}% on first {{ '{:,.0f}'.format(b.upper) }}
+                                                        {% elif b.upper is none %}
+                                                        {{ b.rate_pct }}% on remaining {{ '{:,.0f}'.format(b.taxable_amount) }}
+                                                        {% else %}
+                                                        {{ b.rate_pct }}% on next {{ '{:,.0f}'.format(b.taxable_amount) }}
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-end text-muted">{{ '{:,.2f}'.format(b.bracket_tax) }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                                {% if tax_breakdown.personal_relief > 0 %}
+                                                <tr class="text-danger">
+                                                    <td>Personal relief</td>
+                                                    <td class="text-end">-{{ '{:,.2f}'.format(tax_breakdown.personal_relief) }}</td>
+                                                </tr>
+                                                {% endif %}
+                                                <tr style="border-top: 1px solid #dee2e6;">
+                                                    <td><strong>Total tax</strong></td>
+                                                    <td class="text-end"><strong>{{ '{:,.2f}'.format(tax_breakdown.total_tax) }}</strong></td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </details>
+                                </td>
+                                <td class="text-end align-top">ETB {{ '%.2f'|format(payslip.tax) }}</td>
                             </tr>
+
+                            <!-- Overtime breakdown -->
+                            {% if overtime_details %}
+                            <tr>
+                                <td>
+                                    {{ _('overtime') }}
+                                    <details class="mt-1">
+                                        <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
+                                        <div class="ms-3 small">
+                                            {% for ot in overtime_details %}
+                                            <div class="text-muted">
+                                                {{ ot.hours }}h × {{ '%.2f'|format(ot.hourly_rate) }} × {{ ot.multiplier }} = ETB {{ '%.2f'|format(ot.pay) }}
+                                                <span class="badge bg-secondary ms-1">{{ ot.type }}</span>
+                                            </div>
+                                            {% endfor %}
+                                            <div class="mt-1" style="border-top: 1px solid #dee2e6; padding-top: 4px;">
+                                                <strong>Total overtime: ETB {{ '%.2f'|format(total_ot_pay) }}</strong>
+                                            </div>
+                                        </div>
+                                    </details>
+                                </td>
+                                <td class="text-end align-top">ETB {{ '%.2f'|format(total_ot_pay) }}</td>
+                            </tr>
+                            {% endif %}
+
                             <tr class="table-light">
                                 <td><strong>{{ _('total_deductions') }}</strong></td>
                                 <td class="text-end"><strong>ETB {{ '%.2f'|format(payslip.tax + payslip.employee_pension) }}</strong></td>
@@ -93,7 +168,7 @@
             <!-- Payment Method -->
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <strong>{{ _('payment_method') }}:</strong> {{ employee.bank_or_telebirr or 'Cash' }}
+                    <strong>{{ _('payment_method') }}:</strong> {{ employee.bank_account or employee.bank_or_telebirr or 'Cash' }}
                 </div>
             </div>
         </div>

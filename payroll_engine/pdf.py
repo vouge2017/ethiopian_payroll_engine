@@ -153,11 +153,41 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
     elements.append(Paragraph("Deductions / ከፊዎች", section_style))
     deductions_data = [
         ['Description / መግለጫ', 'Amount (ETB) / መጠን (ብር)'],
-        ['Income Tax / የገቢ ታክስ', f"{emp['tax']:,.2f}"],
-        ['Employee Pension (7%) / የሰራተኛ እቅድ', f"{emp['pension_employee']:,.2f}"],
-        ['Total Deductions / ጠቅላይ ከፊዎች',
-         f"{emp['tax'] + emp['pension_employee']:,.2f}"],
     ]
+
+    # Pension line
+    deductions_data.append(
+        ['Employee Pension (7%) / የሰራተኛ እቅድ', f"{emp['pension_employee']:,.2f}"]
+    )
+
+    # Tax line with bracket breakdown if available
+    tax_breakdown = emp.get('tax_breakdown')
+    if tax_breakdown and tax_breakdown.get('brackets'):
+        deductions_data.append(
+            [f"Income Tax / የገቢ ታክስ", f"{emp['tax']:,.2f}"]
+        )
+        # Add bracket lines (indented)
+        for b in tax_breakdown['brackets']:
+            if b['rate_pct'] == 0:
+                label = f"  {b['rate_pct']}% on first {b['upper']:,.0f}"
+            elif b['upper'] is None:
+                label = f"  {b['rate_pct']}% on remaining {b['taxable_amount']:,.0f}"
+            else:
+                label = f"  {b['rate_pct']}% on next {b['taxable_amount']:,.0f}"
+            deductions_data.append([label, f"{b['bracket_tax']:,.2f}"])
+        if tax_breakdown.get('personal_relief', 0) > 0:
+            deductions_data.append(
+                ['  Personal relief / የግል ነፃ እረፍት', f"-{tax_breakdown['personal_relief']:,.2f}"]
+            )
+    else:
+        deductions_data.append(
+            ['Income Tax / የገቢ ታክስ', f"{emp['tax']:,.2f}"]
+        )
+
+    deductions_data.append(
+        ['Total Deductions / ጠቅላይ ከፊዎች',
+         f"{emp['tax'] + emp['pension_employee']:,.2f}"]
+    )
     deductions_table = Table(deductions_data, colWidths=[100 * mm, 70 * mm])
     deductions_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), DARK_BG),

@@ -50,6 +50,9 @@ STRINGS = {
     'english': 'እንግሊዘኛ',
     'oromoo': 'ኦሮሞኛ',
     'actions': 'ተግባራት',
+    'show_calculation': 'ስሌት አሳይ',
+    'entries': 'ምዝገባዎች',
+    'overtime': 'ትርፍ ሰዓት',
     'amharic_coming_soon': 'የአማርኛ ትርጉም በቅርቡ ይደርሳል',
     'oromoo_coming_soon': 'የአፋን ኦሮሞ ትርጉም በቅርቡ ይደርሳል',
 

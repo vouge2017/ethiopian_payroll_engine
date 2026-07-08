@@ -93,6 +93,65 @@ def calculate_tax(gross_salary: float, for_date=None) -> float:
     return round(tax, 2)
 
 
+def calculate_tax_breakdown(gross_salary: float, for_date=None) -> dict:
+    """
+    Calculate tax with full bracket-by-bracket breakdown.
+
+    Args:
+        gross_salary: Monthly taxable salary in ETB (after pension deduction)
+        for_date: Optional date for rule versioning
+
+    Returns:
+        Dict with:
+            total_tax: float
+            personal_relief: float
+            brackets: list of dicts with keys:
+                lower, upper, rate, taxable_amount, bracket_tax
+            gross_tax: tax before relief
+    """
+    if gross_salary <= 0:
+        return {
+            'total_tax': 0.0,
+            'personal_relief': 0.0,
+            'gross_tax': 0.0,
+            'brackets': [],
+        }
+
+    brackets_config, personal_relief = _get_brackets_and_relief(for_date)
+
+    bracket_details = []
+    tax = 0.0
+    previous_bound = 0.0
+
+    for upper_bound, rate in brackets_config:
+        if gross_salary <= previous_bound:
+            break
+        taxable_in_bracket = min(gross_salary, upper_bound) - previous_bound
+        bracket_tax = round(taxable_in_bracket * rate, 2) if taxable_in_bracket > 0 else 0.0
+        tax += bracket_tax
+
+        upper_display = upper_bound if upper_bound != float('inf') else None
+        bracket_details.append({
+            'lower': previous_bound,
+            'upper': upper_display,
+            'rate': rate,
+            'rate_pct': int(rate * 100),
+            'taxable_amount': round(taxable_in_bracket, 2),
+            'bracket_tax': bracket_tax,
+        })
+        previous_bound = upper_bound
+
+    gross_tax = round(tax, 2)
+    total_tax = round(max(0.0, tax - personal_relief), 2)
+
+    return {
+        'total_tax': total_tax,
+        'personal_relief': personal_relief,
+        'gross_tax': gross_tax,
+        'brackets': bracket_details,
+    }
+
+
 def explain_tax_amharic(gross_salary: float, for_date=None) -> str:
     """
     Generate a bilingual (Amharic + English) explanation of the tax calculation.

@@ -314,6 +314,9 @@ def payroll_upload():
                     allow = float(row.get('allowances', 0) or 0)
                     # Single entry point — enforces deduction order
                     result = calculate_payroll(basic, allow)
+                    # Tax breakdown for PDF
+                    from payroll_engine.tax import calculate_tax_breakdown
+                    tax_bd = calculate_tax_breakdown(result['taxable'])
                     employees_data.append({
                         'id': row.get('employee_id', '').strip(),
                         'name': row.get('name', '').strip(),
@@ -332,6 +335,7 @@ def payroll_upload():
                         'bank_account': row.get('bank_account', '').strip(),
                         'bank': row.get('bank_or_telebirr', '').strip(),
                         'tin': row.get('tin', '').strip(),
+                        'tax_breakdown': tax_bd,
                     })
 
             if not employees_data:
@@ -1309,12 +1313,49 @@ def my_payslips():
 @main.route('/my/payslips/<int:payslip_id>')
 @login_required
 def my_payslip_detail(payslip_id):
-    """View a specific payslip."""
+    """View a specific payslip with full breakdown."""
+    from payroll_engine.tax import calculate_tax_breakdown
+    from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES, calculate_hourly_rate
+
     emp = _get_linked_employee()
     if not emp:
         abort(404)
     payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
-    return render_template('employee_portal/payslip_detail.html', employee=emp, payslip=payslip)
+
+    # Tax breakdown
+    taxable = payslip.gross_salary - payslip.employee_pension
+    tax_breakdown = calculate_tax_breakdown(taxable)
+
+    # Overtime breakdown (if any)
+    ot_entries = OvertimeEntry.query.filter_by(
+        employee_id=emp.id, company_id=emp.company_id
+    ).all()
+    # Filter to entries from the same month as the payslip
+    payslip_month = payslip.generated_at.month if payslip.generated_at else None
+    payslip_year = payslip.generated_at.year if payslip.generated_at else None
+    overtime_details = []
+    total_ot_pay = 0
+    for entry in ot_entries:
+        if entry.date and entry.date.month == payslip_month and entry.date.year == payslip_year:
+            hourly = calculate_hourly_rate(emp.basic_salary)
+            multiplier = OVERTIME_RATES.get(entry.overtime_type, 1.0)
+            pay = round(hourly * entry.hours * multiplier, 2)
+            overtime_details.append({
+                'date': entry.date,
+                'hours': entry.hours,
+                'type': entry.overtime_type,
+                'hourly_rate': hourly,
+                'multiplier': multiplier,
+                'pay': pay,
+            })
+            total_ot_pay += pay
+
+    return render_template('employee_portal/payslip_detail.html',
+                           employee=emp,
+                           payslip=payslip,
+                           tax_breakdown=tax_breakdown,
+                           overtime_details=overtime_details,
+                           total_ot_pay=round(total_ot_pay, 2))
 
 
 @main.route('/my/profile')

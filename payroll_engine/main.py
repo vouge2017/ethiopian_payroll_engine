@@ -147,10 +147,24 @@ def add_employee():
     if request.method == 'POST':
         emp_id = request.form.get('employee_id', '').strip()
         name = request.form.get('name', '').strip()
+        phone = request.form.get('phone', '').strip() or None
+        department = request.form.get('department', '').strip() or None
+        position = request.form.get('position', '').strip() or None
+        start_date_str = request.form.get('start_date', '').strip()
         basic = float(request.form.get('basic_salary', 0))
         allow = float(request.form.get('allowances', 0))
+        bank_account = request.form.get('bank_account', '').strip() or None
         bank = request.form.get('bank_or_telebirr', '').strip()
         tin = request.form.get('tin', '').strip() or None
+
+        start_date = None
+        if start_date_str:
+            from datetime import datetime as dt
+            try:
+                start_date = dt.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+                return redirect(url_for('main.add_employee'))
 
         if not emp_id or not name:
             flash('Employee ID and name are required.', 'danger')
@@ -166,8 +180,13 @@ def add_employee():
         emp = Employee(
             employee_id=emp_id,
             name=name,
+            phone=phone,
+            department=department,
+            position=position,
+            start_date=start_date,
             basic_salary=basic,
             allowances=allow,
+            bank_account=bank_account,
             bank_or_telebirr=bank,
             tin=tin,
             company_id=current_user.company_id
@@ -246,6 +265,10 @@ def payroll_upload():
                     employees_data.append({
                         'id': row.get('employee_id', '').strip(),
                         'name': row.get('name', '').strip(),
+                        'phone': row.get('phone', '').strip(),
+                        'department': row.get('department', '').strip(),
+                        'position': row.get('position', '').strip(),
+                        'start_date': row.get('start_date', '').strip(),
                         'basic': basic,
                         'allowances': allow,
                         'gross': result['gross'],
@@ -254,6 +277,7 @@ def payroll_upload():
                         'pension_employee': result['pension_employee'],
                         'pension_employer': result['pension_employer'],
                         'net': result['net'],
+                        'bank_account': row.get('bank_account', '').strip(),
                         'bank': row.get('bank_or_telebirr', '').strip(),
                         'tin': row.get('tin', '').strip(),
                     })
@@ -759,6 +783,89 @@ def reactivate_employee(emp_id):
     return redirect(url_for('main.list_employees'))
 
 
+@main.route('/employees/<int:emp_id>/terminate', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def terminate_employee(emp_id):
+    """Terminate an employee with severance calculation."""
+    from payroll_engine.severance import calculate_severance, TerminationReason, format_severance_for_payslip
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=current_user.company_id, is_deleted=False
+    ).first_or_404()
+
+    if request.method == 'POST':
+        reason = request.form.get('termination_reason', '').strip()
+        password = request.form.get('password', '').strip()
+        end_date_str = request.form.get('end_date', '').strip()
+
+        if reason not in TerminationReason.ALL:
+            flash('Invalid termination reason.', 'danger')
+            return redirect(url_for('main.terminate_employee', emp_id=emp.id))
+
+        # Owner must confirm with password
+        if not password or not current_user.check_password(password):
+            flash('Incorrect password. Termination cancelled.', 'danger')
+            return redirect(url_for('main.terminate_employee', emp_id=emp.id))
+
+        from datetime import datetime as dt
+        end_date = date.today()
+        if end_date_str:
+            try:
+                end_date = dt.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Invalid date format.', 'danger')
+                return redirect(url_for('main.terminate_employee', emp_id=emp.id))
+
+        # Calculate severance
+        start = emp.start_date or emp.created_at.date() if emp.created_at else date.today()
+        sev_result = calculate_severance(emp.basic_salary, start, end_date, reason)
+
+        # Soft-delete the employee
+        emp.is_deleted = True
+        emp.deleted_at = datetime.utcnow()
+        emp.deleted_by = current_user.id
+
+        # Audit log
+        log = AuditLog(
+            company_id=current_user.company_id,
+            user_id=current_user.id,
+            action='employee_terminated',
+            details={
+                'employee_id': emp.employee_id,
+                'name': emp.name,
+                'reason': reason,
+                'end_date': end_date.isoformat(),
+                'years_of_service': sev_result['years_of_service'],
+                'severance_eligible': sev_result['eligible'],
+                'severance_amount': sev_result['final_amount'],
+            }
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        if sev_result['eligible']:
+            flash(f'{emp.name} terminated. Severance: ETB {sev_result["final_amount"]:,.2f} ({sev_result["years_of_service"]} years of service).', 'warning')
+        else:
+            flash(f'{emp.name} terminated. Reason: {reason}. No severance payable.', 'info')
+        return redirect(url_for('main.employee_detail', emp_id=emp.id))
+
+    # GET: show termination form with severance preview
+    today = date.today()
+    start = emp.start_date or (emp.created_at.date() if emp.created_at else today)
+    # Preview for each reason
+    previews = {}
+    for r in TerminationReason.ALL:
+        result = calculate_severance(emp.basic_salary, start, today, r)
+        previews[r] = result
+
+    return render_template('terminate_employee.html',
+                           employee=emp,
+                           start_date=start,
+                           today=today,
+                           previews=previews,
+                           termination_reasons=TerminationReason.ALL)
+
+
 @main.route('/reports')
 @login_required
 @role_required('owner', 'accountant')
@@ -1041,6 +1148,41 @@ def remove_team_member(user_id):
     return redirect(url_for('main.team_settings'))
 
 
+@main.route('/employees/link-user', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def link_employee_user():
+    """Link a User account to an Employee record (for portal access)."""
+    if request.method == 'POST':
+        employee_id = request.form.get('employee_id', type=int)
+        user_id = request.form.get('user_id', type=int)
+        if not employee_id or not user_id:
+            flash('Both employee and user are required.', 'danger')
+            return redirect(url_for('main.link_employee_user'))
+        emp = Employee.query.filter_by(
+            id=employee_id, company_id=current_user.company_id
+        ).first_or_404()
+        user = User.query.get_or_404(user_id)
+        emp.user_id = user.id
+        log = AuditLog(
+            company_id=current_user.company_id,
+            user_id=current_user.id,
+            action='employee_user_linked',
+            details={'employee_id': emp.employee_id, 'employee_name': emp.name, 'user_id': user.id}
+        )
+        db.session.add(log)
+        db.session.commit()
+        flash(f'{emp.name} linked to {user.phone or user.email}. They can now access the employee portal.', 'success')
+        return redirect(url_for('main.employee_detail', emp_id=emp.id))
+
+    # GET: show form
+    employees = Employee.query.filter_by(
+        company_id=current_user.company_id, is_deleted=False, user_id=None
+    ).all()
+    users = User.query.filter_by(company_id=current_user.company_id).all()
+    return render_template('link_employee_user.html', employees=employees, users=users)
+
+
 # --- Company Switcher (for multi-company accountants) ---
 
 @main.route('/switch-company/<int:company_id>')
@@ -1059,23 +1201,21 @@ def switch_company(company_id):
 
 # --- Employee Self-Service Portal ---
 
+def _get_linked_employee():
+    """Get the Employee record linked to the current user via user_id FK."""
+    return Employee.query.filter_by(
+        user_id=current_user.id,
+        is_deleted=False
+    ).first()
+
+
 @main.route('/my/dashboard')
 @login_required
 def employee_dashboard():
     """Employee's own dashboard — view payslips, overtime, profile."""
-    # Link user to employee: phone matches bank_or_telebirr field
-    # or employee_id matches user's phone (for phone-based IDs)
-    emp = Employee.query.filter_by(
-        company_id=current_user.company_id,
-        is_deleted=False
-    ).filter(
-        db.or_(
-            Employee.bank_or_telebirr.like(f'%{current_user.phone}%'),
-            Employee.employee_id == current_user.phone
-        )
-    ).first()
+    emp = _get_linked_employee()
     if not emp:
-        flash('Employee record not linked to your account. Contact your admin.', 'warning')
+        flash('Your account is not linked to an employee record. Contact your HR officer.', 'warning')
         return render_template('employee_portal/dashboard.html', employee=None)
     # Latest payslip
     latest_payslip = Payslip.query.filter_by(employee_id=emp.id) \
@@ -1104,16 +1244,9 @@ def employee_dashboard():
 @login_required
 def my_payslips():
     """Employee's payslip history."""
-    emp = Employee.query.filter_by(
-        company_id=current_user.company_id, is_deleted=False
-    ).filter(
-        db.or_(
-            Employee.bank_or_telebirr.like(f"%{current_user.phone}%"),
-            Employee.employee_id == current_user.phone
-        )
-    ).first()
+    emp = _get_linked_employee()
     if not emp:
-        flash('Employee record not linked.', 'warning')
+        flash('Your account is not linked to an employee record. Contact your HR officer.', 'warning')
         return render_template('employee_portal/payslips.html', employee=None, payslips=[])
     payslips = Payslip.query.filter_by(employee_id=emp.id) \
         .order_by(Payslip.generated_at.desc()).all()
@@ -1124,14 +1257,9 @@ def my_payslips():
 @login_required
 def my_payslip_detail(payslip_id):
     """View a specific payslip."""
-    emp = Employee.query.filter_by(
-        company_id=current_user.company_id, is_deleted=False
-    ).filter(
-        db.or_(
-            Employee.bank_or_telebirr.like(f"%{current_user.phone}%"),
-            Employee.employee_id == current_user.phone
-        )
-    ).first_or_404()
+    emp = _get_linked_employee()
+    if not emp:
+        abort(404)
     payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
     return render_template('employee_portal/payslip_detail.html', employee=emp, payslip=payslip)
 
@@ -1140,16 +1268,11 @@ def my_payslip_detail(payslip_id):
 @login_required
 def my_profile():
     """Employee's own profile (read-only)."""
-    emp = Employee.query.filter_by(
-        company_id=current_user.company_id, is_deleted=False
-    ).filter(
-        db.or_(
-            Employee.bank_or_telebirr.like(f"%{current_user.phone}%"),
-            Employee.employee_id == current_user.phone
-        )
-    ).first_or_404()
+    emp = _get_linked_employee()
+    if not emp:
+        abort(404)
     # Mask bank account
-    bank = emp.bank_or_telebirr or ''
+    bank = emp.bank_account or emp.bank_or_telebirr or ''
     if ':' in bank:
         parts = bank.split(':', 1)
         masked = parts[0] + ':' + '*' * max(0, len(parts[1]) - 4) + parts[1][-4:] if len(parts[1]) > 4 else bank

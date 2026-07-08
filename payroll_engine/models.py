@@ -265,11 +265,17 @@ class Employee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     employee_id = db.Column(db.String(20), nullable=False)  # e.g., EMP001
     name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=True)  # Employee phone: 09XXXXXXXX
+    department = db.Column(db.String(100), nullable=True)
+    position = db.Column(db.String(100), nullable=True)
+    start_date = db.Column(db.Date, nullable=True)  # Employment start date
     basic_salary = db.Column(db.Float, nullable=False)
     allowances = db.Column(db.Float, nullable=False, default=0.0)
-    bank_or_telebirr = db.Column(db.String(100))  # e.g., 'telebirr:0912345678' or 'bank:cbe'
+    bank_account = db.Column(db.String(100), nullable=True)  # Bank account number
+    bank_or_telebirr = db.Column(db.String(100))  # Legacy: 'telebirr:0912345678' or 'bank:cbe'
     tin = db.Column(db.String(20), nullable=True)  # Tax Identification Number for ERCA filing
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Link to User account
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Soft delete — employee is deactivated, not removed
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)

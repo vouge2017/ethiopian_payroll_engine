@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Terminate Employee - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-person-dash me-2"></i>Terminate Employee</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Employee Summary -->
+                    <div class="alert alert-secondary">
+                        <strong>{{ employee.name }}</strong> ({{ employee.employee_id }})<br>
+                        Department: {{ employee.department or 'Not set' }}<br>
+                        Position: {{ employee.position or 'Not set' }}<br>
+                        Basic Salary: ETB {{ '%.2f'|format(employee.basic_salary) }}<br>
+                        Start Date: {{ employee.start_date or 'Not recorded' }}<br>
+                        Years of Service: {{ '%.1f'|format((today - start_date).days / 365.25) if start_date else 'Unknown' }}
+                    </div>
+
+                    <!-- Severance Preview -->
+                    <h6 class="mt-4 mb-3">Severance Calculation Preview</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Termination Reason</th>
+                                    <th>Eligible?</th>
+                                    <th>Severance (ETB)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reason in termination_reasons %}
+                                <tr>
+                                    <td>{{ reason|replace('_', ' ')|title }}</td>
+                                    <td>
+                                        {% if previews[reason].eligible %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if previews[reason].eligible %}
+                                        ETB {{ '%.2f'|format(previews[reason].final_amount) }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-muted small">
+                        Severance: monthly salary &times; years of service, capped at 12 months.
+                        Per Labor Proclamation 1156/2019, Articles 40-42.
+                    </p>
+
+                    <hr>
+
+                    <!-- Termination Form -->
+                    <form method="POST" action="{{ url_for('main.terminate_employee', emp_id=employee.id) }}"
+                          onsubmit="return confirm('Are you sure you want to terminate {{ employee.name }}? This action will deactivate their account.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label for="termination_reason" class="form-label">Termination Reason *</label>
+                            <select class="form-select" id="termination_reason" name="termination_reason" required>
+                                <option value="">-- Select Reason --</option>
+                                {% for reason in termination_reasons %}
+                                <option value="{{ reason }}">{{ reason|replace('_', ' ')|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">Last Working Day</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                   value="{{ today.isoformat() }}">
+                            <div class="form-text">Defaults to today if left empty.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Confirm Password *</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="form-text">Re-enter your password to confirm termination.</div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-person-dash me-1"></i>Terminate Employee
+                            </button>
+                            <a href="{{ url_for('main.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

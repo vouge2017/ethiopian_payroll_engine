@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Add Employee</h5>
@@ -11,14 +11,39 @@
                 <div class="card-body p-4">
                     <form method="POST" action="{{ url_for('main.add_employee') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="mb-3">
-                            <label for="employee_id" class="form-label">Employee ID *</label>
-                            <input type="text" class="form-control" id="employee_id" name="employee_id" required placeholder="e.g., EMP001">
+
+                        <h6 class="text-muted mb-3">Basic Information</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="employee_id" class="form-label">Employee ID *</label>
+                                <input type="text" class="form-control" id="employee_id" name="employee_id" required placeholder="e.g., EMP001">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="name" class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" required placeholder="Abebe Kebede">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="phone" class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="phone" name="phone" placeholder="0911223344">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Full Name *</label>
-                            <input type="text" class="form-control" id="name" name="name" required placeholder="Abebe Kebede">
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="department" class="form-label">Department</label>
+                                <input type="text" class="form-control" id="department" name="department" placeholder="Finance">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="position" class="form-label">Position</label>
+                                <input type="text" class="form-control" id="position" name="position" placeholder="Accountant">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
                         </div>
+
+                        <h6 class="text-muted mb-3 mt-4">Compensation</h6>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label">Basic Salary (ETB)</label>
@@ -29,19 +54,25 @@
                                 <input type="number" class="form-control" id="allowances" name="allowances" step="0.01" min="0" value="0">
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="bank_or_telebirr" class="form-label">Payment Method</label>
-                            <input type="text" class="form-control" id="bank_or_telebirr" name="bank_or_telebirr"
-                                   placeholder="telebirr:0912345678 or bank:cbe">
-                            <div class="form-text">Format: <code>telebirr:PHONE</code> or <code>bank:NAME</code> or leave empty for cash.</div>
+
+                        <h6 class="text-muted mb-3 mt-4">Payment & Tax</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="bank_account" class="form-label">Bank Account</label>
+                                <input type="text" class="form-control" id="bank_account" name="bank_account" placeholder="1234567890">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="bank_or_telebirr" class="form-label">Payment Method</label>
+                                <input type="text" class="form-control" id="bank_or_telebirr" name="bank_or_telebirr"
+                                       placeholder="telebirr:0912345678 or bank:cbe">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="tin" class="form-label">TIN</label>
+                                <input type="text" class="form-control" id="tin" name="tin" placeholder="1234567890">
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="tin" class="form-label">TIN (Tax Identification Number)</label>
-                            <input type="text" class="form-control" id="tin" name="tin"
-                                   placeholder="1234567890">
-                            <div class="form-text">Required for ERCA tax filing. Leave empty if unknown.</div>
-                        </div>
-                        <div class="d-grid gap-2 d-md-flex">
+
+                        <div class="d-grid gap-2 d-md-flex mt-4">
                             <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Employee</button>
                             <a href="{{ url_for('main.list_employees') }}" class="btn btn-outline-secondary">Cancel</a>
                         </div>

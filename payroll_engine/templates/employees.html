@@ -50,10 +50,10 @@
                         <tr>
                             <th>ID</th>
                             <th>Name</th>
+                            <th>Department</th>
+                            <th>Position</th>
                             <th>Basic Salary (ETB)</th>
-                            <th>Allowances (ETB)</th>
                             <th>Gross (ETB)</th>
-                            <th>Payment Method</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -62,10 +62,10 @@
                         <tr>
                             <td><code>{{ emp.employee_id }}</code></td>
                             <td>{{ emp.name }}</td>
+                            <td>{{ emp.department or '-' }}</td>
+                            <td>{{ emp.position or '-' }}</td>
                             <td>{{ '%.2f'|format(emp.basic_salary) }}</td>
-                            <td>{{ '%.2f'|format(emp.allowances) }}</td>
                             <td>{{ '%.2f'|format(emp.gross_salary) }}</td>
-                            <td>{{ emp.bank_or_telebirr or '-' }}</td>
                             <td>
                                 <a href="{{ url_for('main.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-eye"></i>

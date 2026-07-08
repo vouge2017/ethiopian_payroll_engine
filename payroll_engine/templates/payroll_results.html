@@ -75,6 +75,7 @@
                         <tr>
                             <th>#</th>
                             <th>Employee</th>
+                            <th>Dept</th>
                             <th>Gross (ETB)</th>
                             <th>Tax (ETB)</th>
                             <th>Pension (ETB)</th>
@@ -87,6 +88,7 @@
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td>{{ p.employee.name }} <small class="text-muted">({{ p.employee.employee_id }})</small></td>
+                            <td>{{ p.employee.department or '-' }}</td>
                             <td>{{ '%.2f'|format(p.gross_salary) }}</td>
                             <td>{{ '%.2f'|format(p.tax) }}</td>
                             <td>{{ '%.2f'|format(p.employee_pension) }}</td>

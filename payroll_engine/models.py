@@ -178,6 +178,7 @@ class TenantQuery(db.Query):
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    is_demo = db.Column(db.Boolean, default=False, nullable=False)  # Demo companies flagged
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships

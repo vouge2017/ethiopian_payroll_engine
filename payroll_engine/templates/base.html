@@ -100,6 +100,16 @@
     <div class="flex-grow-1 main-content" style="min-width: 0;">
 {% endif %}
 
+        <!-- Demo mode banner -->
+        {% if current_user.is_authenticated and current_user.company.is_demo %}
+        <div class="alert alert-warning alert-dismissible fade show mt-3 mb-0" role="alert">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>DEMO MODE</strong> — You're exploring with sample data. No real data is stored.
+            <a href="{{ url_for('auth.register') }}" class="alert-link ms-2">Create my real company</a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
         <!-- Flash messages -->
         <div class="{% if current_user.is_authenticated %}container-fluid{% else %}container{% endif %}">
             {% with messages = get_flashed_messages(with_categories=true) %}

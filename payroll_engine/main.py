@@ -59,6 +59,20 @@ def role_required(*roles):
     return decorator
 
 
+# --- Demo Mode ---
+
+@main.route('/demo')
+def demo_mode():
+    """Create demo data and log in automatically."""
+    from payroll_engine.demo import create_demo_data
+    company, user, employees, run = create_demo_data()
+    # Log in as demo user
+    from flask_login import login_user
+    login_user(user)
+    flash('Welcome to the demo! You\'re exploring with sample data. No real data is stored.', 'info')
+    return redirect(url_for('main.index'))
+
+
 # --- Dashboard ---
 
 @main.route('/')
@@ -214,6 +228,44 @@ import csv as csv_module
 import uuid
 from payroll_engine.validation import validate_payroll_data, get_summary
 from payroll_engine.models import PayrollValidationResult
+
+
+@main.route('/payroll/template')
+@login_required
+@role_required('owner', 'accountant')
+def download_csv_template():
+    """Download a CSV template with example data."""
+    import csv
+    import io
+    from flask import Response
+
+    output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM for Excel compatibility
+    writer = csv.writer(output)
+
+    # Comment rows (ignored by most CSV parsers)
+    writer.writerow(['# bank_account format: bank_name:account_number'])
+    writer.writerow(['# supported banks: cbe, dashen, awash, telebirr'])
+    writer.writerow([])
+
+    # Headers
+    writer.writerow(['employee_id', 'name', 'tin', 'basic_salary', 'allowances',
+                     'bank_account', 'department', 'position'])
+
+    # Example data
+    writer.writerow(['EMP001', 'Dawit Mekonnen', '1234567890', '10000', '2000',
+                     'cbe:1000123456789', 'Sales', 'Sales Manager'])
+    writer.writerow(['EMP002', 'Hana Tesfaye', '0987654321', '5000', '500',
+                     'dashen:2000987654321', 'Factory', 'Worker'])
+    writer.writerow(['EMP003', 'Kebede Alemu', '1122334455', '15000', '3000',
+                     'awash:3000112233445', 'Finance', 'Accountant'])
+
+    csv_content = output.getvalue()
+    return Response(
+        csv_content,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename=payroll_template.csv'}
+    )
 
 
 @main.route('/payroll', methods=['GET', 'POST'])

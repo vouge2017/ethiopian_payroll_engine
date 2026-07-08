@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Add Employee - Ethiopian Payroll Engine{% endblock %}
+{% block title %}{{ _('add_employee') }} - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
-        <div class="col-md-8">
+        <div class="col-md-8 col-lg-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>{{ _('add_employee') }}</h5>
@@ -12,69 +12,89 @@
                     <form method="POST" action="{{ url_for('main.add_employee') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                        <h6 class="text-muted mb-3">{{ _('basic_information') }}</h6>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="employee_id" class="form-label">{{ _('employee_id') }} *</label>
-                                <input type="text" class="form-control" id="employee_id" name="employee_id" required placeholder="e.g., EMP001">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="name" class="form-label">{{ _('full_name') }} *</label>
-                                <input type="text" class="form-control" id="name" name="name" required placeholder="Abebe Kebede">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="phone" class="form-label">{{ _('phone') }}</label>
-                                <input type="text" class="form-control" id="phone" name="phone" placeholder="0911223344">
-                            </div>
+                        <!-- Step 1: Required fields -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label fw-bold">{{ _('full_name') }} *</label>
+                            <input type="text" class="form-control form-control-lg" id="name" name="name"
+                                   required placeholder="Abebe Kebede" autofocus>
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="department" class="form-label">{{ _('department') }}</label>
-                                <input type="text" class="form-control" id="department" name="department" placeholder="Finance">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="position" class="form-label">{{ _('position') }}</label>
-                                <input type="text" class="form-control" id="position" name="position" placeholder="Accountant">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="start_date" class="form-label">{{ _('start_date') }}</label>
-                                <input type="date" class="form-control" id="start_date" name="start_date">
-                            </div>
-                        </div>
-
-                        <h6 class="text-muted mb-3 mt-4">{{ _('compensation') }}</h6>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="basic_salary" class="form-label">{{ _('basic_salary') }} (ETB)</label>
-                                <input type="number" class="form-control" id="basic_salary" name="basic_salary" step="0.01" min="0" value="0">
+                                <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
+                                <input type="text" class="form-control form-control-lg" id="phone" name="phone"
+                                       placeholder="0911223344">
+                                <div class="form-text">Ethio Telecom (09X) or Safaricom (07X)</div>
                             </div>
                             <div class="col-md-6">
-                                <label for="allowances" class="form-label">{{ _('allowances') }} (ETB)</label>
-                                <input type="number" class="form-control" id="allowances" name="allowances" step="0.01" min="0" value="0">
+                                <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>
+                                <input type="number" class="form-control form-control-lg" id="basic_salary"
+                                       name="basic_salary" step="0.01" min="0" required placeholder="10000">
                             </div>
                         </div>
 
-                        <h6 class="text-muted mb-3 mt-4">{{ _('payment_tax') }}</h6>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="bank_account" class="form-label">{{ _('bank_account') }}</label>
-                                <input type="text" class="form-control" id="bank_account" name="bank_account" placeholder="1234567890">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="bank_or_telebirr" class="form-label">{{ _('payment_method') }}</label>
-                                <input type="text" class="form-control" id="bank_or_telebirr" name="bank_or_telebirr"
-                                       placeholder="telebirr:0912345678 or bank:cbe">
-                            </div>
-                            <div class="col-md-4">
-                                <label for="tin" class="form-label">{{ _('tin') }}</label>
-                                <input type="text" class="form-control" id="tin" name="tin" placeholder="1234567890">
-                            </div>
+                        <div class="mb-3">
+                            <label for="allowances" class="form-label">{{ _('allowances') }} (ETB)</label>
+                            <input type="number" class="form-control" id="allowances" name="allowances"
+                                   step="0.01" min="0" value="0" placeholder="0">
                         </div>
 
-                        <div class="d-grid gap-2 d-md-flex mt-4">
-                            <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>{{ _('save_employee') }}</button>
-                            <a href="{{ url_for('main.list_employees') }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
+                        <!-- Step 2: Optional fields (collapsed) -->
+                        <details class="mb-4">
+                            <summary class="text-muted fw-bold" style="cursor: pointer;">
+                                <i class="bi bi-chevron-down me-1"></i>More details (optional)
+                            </summary>
+                            <div class="mt-3 ps-2 border-start">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="employee_id" class="form-label">{{ _('employee_id') }}</label>
+                                        <input type="text" class="form-control" id="employee_id" name="employee_id"
+                                               placeholder="Auto-generated if empty">
+                                        <div class="form-text">Leave empty to auto-generate (EMP001, EMP002...)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="tin" class="form-label">TIN</label>
+                                        <input type="text" class="form-control" id="tin" name="tin"
+                                               placeholder="1234567890">
+                                        <div class="form-text">For ERCA tax filing</div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="department" class="form-label">{{ _('department') }}</label>
+                                        <input type="text" class="form-control" id="department" name="department"
+                                               placeholder="Sales, Factory, Finance...">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="position" class="form-label">{{ _('position') }}</label>
+                                        <input type="text" class="form-control" id="position" name="position"
+                                               placeholder="Manager, Worker, Accountant...">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="start_date" class="form-label">{{ _('start_date') }}</label>
+                                        <input type="date" class="form-control" id="start_date" name="start_date">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="bank_account" class="form-label">{{ _('bank_account') }}</label>
+                                        <input type="text" class="form-control" id="bank_account" name="bank_account"
+                                               placeholder="cbe:1000123456789">
+                                        <div class="form-text">bank_name:account_number</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="bi bi-save me-1"></i>{{ _('save_employee') }}
+                            </button>
+                            <a href="{{ url_for('main.list_employees') }}" class="btn btn-outline-secondary btn-lg">
+                                {{ _('cancel') }}
+                            </a>
                         </div>
                     </form>
                 </div>

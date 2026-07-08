@@ -169,7 +169,6 @@ def add_employee():
         basic = float(request.form.get('basic_salary', 0))
         allow = float(request.form.get('allowances', 0))
         bank_account = request.form.get('bank_account', '').strip() or None
-        bank = request.form.get('bank_or_telebirr', '').strip()
         tin = request.form.get('tin', '').strip() or None
 
         start_date = None
@@ -181,9 +180,23 @@ def add_employee():
                 flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
                 return redirect(url_for('main.add_employee'))
 
-        if not emp_id or not name:
-            flash('Employee ID and name are required.', 'danger')
+        if not name:
+            flash('Employee name is required.', 'danger')
             return redirect(url_for('main.add_employee'))
+
+        # Auto-generate employee_id if not provided
+        if not emp_id:
+            last_emp = Employee.query.filter_by(
+                company_id=current_user.company_id
+            ).order_by(Employee.id.desc()).first()
+            if last_emp and last_emp.employee_id.startswith('EMP'):
+                try:
+                    next_num = int(last_emp.employee_id[3:]) + 1
+                except ValueError:
+                    next_num = 1
+            else:
+                next_num = 1
+            emp_id = f'EMP{next_num:03d}'
 
         existing = Employee.query.filter_by(
             company_id=current_user.company_id, employee_id=emp_id
@@ -191,6 +204,9 @@ def add_employee():
         if existing:
             flash(f'Employee ID {emp_id} already exists.', 'danger')
             return redirect(url_for('main.add_employee'))
+
+        # Merge bank_account into bank_or_telebirr for backward compat
+        bank = bank_account or ''
 
         emp = Employee(
             employee_id=emp_id,
@@ -447,6 +463,7 @@ def payroll_confirm(run_id):
     ).all()
     return render_template('payroll_confirm.html',
                            run=run,
+                           employees=employees_data,
                            employee_count=len(employees_data),
                            total_gross=round(total_gross, 2),
                            total_tax=round(total_tax, 2),

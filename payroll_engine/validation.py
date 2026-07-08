@@ -97,8 +97,8 @@ def _check_duplicate_employees(data: List[Dict], results: List[ValidationResult]
             results.append(ValidationResult(
                 rule_code='DUPLICATE_EMPLOYEE',
                 severity='BLOCK',
-                message=f"Possible duplicate: '{emp['name']}' with bank '{emp.get('bank', '')}' "
-                        f"matches employee '{seen[key]}'",
+                message=f"Possible duplicate: '{emp['name']}' appears twice with the same bank account. "
+                        f"Check if this is the same person.",
                 employee_id=emp.get('id'),
                 details={'matched_with': seen[key]}
             ))

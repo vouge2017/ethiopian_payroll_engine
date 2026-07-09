@@ -18,6 +18,12 @@ depends_on = None
 
 
 def upgrade():
+    # Check if table already exists (partial apply from failed deploy)
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if 'employee_deduction' in inspector.get_table_names():
+        return
+
     op.create_table(
         'employee_deduction',
         sa.Column('id', sa.Integer, primary_key=True),

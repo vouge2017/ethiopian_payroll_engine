@@ -35,7 +35,8 @@ def _D(value) -> Decimal:
 
 def calculate_payroll(basic_salary, allowances=Decimal('0'),
                       overtime_entries: list = None,
-                      for_date=None) -> dict:
+                      for_date=None,
+                      deductions: list = None) -> dict:
     """
     Calculate complete payroll for one employee.
 
@@ -44,6 +45,7 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         → Subtract pension (7% of basic ONLY — not affected by overtime)
         → Calculate tax on remainder
         → Subtract tax
+        → Apply post-tax deductions (cost-sharing, court orders, etc.)
         = Net pay
 
     Args:
@@ -51,10 +53,12 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         allowances: Monthly allowances in ETB (default 0)
         overtime_entries: List of dicts with 'hours' and 'type' keys (optional)
         for_date: Optional date for rule versioning
+        deductions: List of EmployeeDeduction objects (optional, applied post-tax)
 
     Returns:
         Dict with: gross, taxable, tax, pension_employee, pension_employer,
-                   net, tax_explanation, overtime_pay, overtime_total_hours
+                   net, tax_explanation, overtime_pay, overtime_total_hours,
+                   total_deductions, deduction_details
         All monetary values are Decimal.
 
     Raises:
@@ -94,10 +98,33 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
     # Step 6: Tax on taxable amount
     tax = calculate_tax(taxable, for_date)
 
-    # Step 7: Net = Gross - Tax - Pension
-    net = gross - tax - emp_pen
+    # Step 7: Net before post-tax deductions
+    net_before_deductions = gross - tax - emp_pen
 
-    # Step 8: Tax explanation (bilingual)
+    # Step 8: Post-tax deductions (cost-sharing, court orders, penalties, loans)
+    total_deductions = Decimal('0')
+    deduction_details = []
+    if deductions:
+        for ded in deductions:
+            if not ded.is_active:
+                continue
+            ded_amount = ded.calculate_deduction(net_before_deductions)
+            if ded_amount > 0:
+                total_deductions += ded_amount
+                deduction_details.append({
+                    'id': ded.id,
+                    'type': ded.deduction_type,
+                    'type_label': ded.type_label,
+                    'label': ded.label,
+                    'amount': ded_amount,
+                    'remaining_balance': ded.remaining_balance,
+                    'warning': ded.warning_message,
+                })
+
+    # Step 9: Final net = Net before deductions - post-tax deductions
+    net = net_before_deductions - total_deductions
+
+    # Step 10: Tax explanation (bilingual)
     tax_explanation = explain_tax_amharic(taxable, for_date)
 
     return {
@@ -106,6 +133,9 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         'tax': tax,
         'pension_employee': emp_pen,
         'pension_employer': empr_pen,
+        'net_before_deductions': net_before_deductions.quantize(Q, rounding=ROUND_HALF_UP),
+        'total_deductions': total_deductions.quantize(Q, rounding=ROUND_HALF_UP),
+        'deduction_details': deduction_details,
         'net': net.quantize(Q, rounding=ROUND_HALF_UP),
         'tax_explanation': tax_explanation,
         'overtime_pay': overtime_pay,

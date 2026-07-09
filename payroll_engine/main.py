@@ -935,7 +935,7 @@ def download_payslip(payslip_id):
 @login_required
 def employee_detail(emp_id):
     """Show employee details."""
-    from payroll_engine.models import OvertimeEntry
+    from payroll_engine.models import OvertimeEntry, EmployeeDeduction
     from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
     emp = Employee.query.filter_by(
         id=emp_id, company_id=current_user.company_id
@@ -962,13 +962,23 @@ def employee_detail(emp_id):
         })
         total_ot_hours += entry.hours
         total_ot_pay += pay
+    # Deductions
+    deductions = EmployeeDeduction.query.filter_by(
+        employee_id=emp.id, company_id=current_user.company_id
+    ).order_by(EmployeeDeduction.created_at.desc()).all()
+    active_deductions = [d for d in deductions if d.is_active]
+    inactive_deductions = [d for d in deductions if not d.is_active]
     years = today.year
     return render_template('employee_detail.html',
                            employee=emp, payslips=payslips, year=years,
                            overtime_data=overtime_data,
                            total_ot_hours=round(total_ot_hours, 2),
                            total_ot_pay=round(total_ot_pay, 2),
-                           overtime_types=list(OVERTIME_RATES.keys()))
+                           overtime_types=list(OVERTIME_RATES.keys()),
+                           deductions=deductions,
+                           active_deductions=active_deductions,
+                           inactive_deductions=inactive_deductions,
+                           deduction_types=EmployeeDeduction.DEDUCTION_TYPES)
 
 
 @main.route('/employees/<int:emp_id>/overtime', methods=['POST'])
@@ -1013,6 +1023,213 @@ def delete_overtime(entry_id):
     db.session.delete(entry)
     db.session.commit()
     flash('Overtime entry deleted.', 'info')
+    return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+
+# --- Employee Deductions ---
+
+@main.route('/employees/<int:emp_id>/deductions/add', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def add_deduction(emp_id):
+    """Add a flexible deduction to an employee."""
+    from payroll_engine.models import EmployeeDeduction
+    from decimal import Decimal, InvalidOperation
+    from datetime import datetime as dt
+    import os, uuid
+
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=current_user.company_id
+    ).first_or_404()
+
+    deduction_type = request.form.get('deduction_type', '').strip()
+    label = request.form.get('label', '').strip()
+    amount_mode = request.form.get('amount_mode', 'fixed').strip()
+    amount_str = request.form.get('amount', '0').strip()
+    tracking_mode = request.form.get('tracking_mode', 'declining').strip()
+    total_str = request.form.get('total_to_recover', '').strip()
+    start_date_str = request.form.get('start_date', '').strip()
+    end_date_str = request.form.get('end_date', '').strip()
+    reference_number = request.form.get('reference_number', '').strip() or None
+
+    # Validate required fields
+    valid_types = [t[0] for t in EmployeeDeduction.DEDUCTION_TYPES]
+    if deduction_type not in valid_types:
+        flash('Invalid deduction type.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    if not label:
+        flash('Label is required (e.g. "MoE Batch 2024-07").', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    if amount_mode not in EmployeeDeduction.AMOUNT_MODES:
+        flash('Invalid amount mode.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    if tracking_mode not in EmployeeDeduction.TRACKING_MODES:
+        flash('Invalid tracking mode.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    try:
+        amount = Decimal(amount_str)
+    except (InvalidOperation, ValueError):
+        flash('Invalid amount.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    if amount <= 0:
+        flash('Amount must be positive.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    if amount_mode == 'percentage' and amount > 100:
+        flash('Percentage cannot exceed 100%.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    # Parse dates
+    start_date = None
+    if start_date_str:
+        try:
+            start_date = dt.strptime(start_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Invalid start date. Use YYYY-MM-DD.', 'danger')
+            return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    else:
+        start_date = date.today()
+
+    end_date = None
+    if end_date_str:
+        try:
+            end_date = dt.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash('Invalid end date. Use YYYY-MM-DD.', 'danger')
+            return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    # Parse total to recover (for declining mode)
+    total_to_recover = None
+    remaining_balance = None
+    if tracking_mode == 'declining':
+        if total_str:
+            try:
+                total_to_recover = Decimal(total_str)
+            except (InvalidOperation, ValueError):
+                flash('Invalid total to recover.', 'danger')
+                return redirect(url_for('main.employee_detail', emp_id=emp_id))
+            if total_to_recover <= 0:
+                flash('Total to recover must be positive.', 'danger')
+                return redirect(url_for('main.employee_detail', emp_id=emp_id))
+            remaining_balance = total_to_recover
+
+    # Handle document upload
+    document_path = None
+    if 'document' in request.files:
+        file = request.files['document']
+        if file.filename:
+            from werkzeug.utils import secure_filename
+            filename = secure_filename(file.filename)
+            filename = f"deduction_{uuid.uuid4().hex[:8]}_{filename}"
+            upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'deductions')
+            os.makedirs(upload_dir, exist_ok=True)
+            document_path = os.path.join(upload_dir, filename)
+            file.save(document_path)
+
+    # Court order cap validation
+    if deduction_type == 'court_order' and amount_mode == 'percentage' and amount > Decimal('50'):
+        flash(
+            f'Warning: Court order deduction is {amount}% of net pay. '
+            f'Ethiopian labor law caps at 1/3 (33.33%) standard, 1/2 (50%) for child support.',
+            'warning'
+        )
+
+    deduction = EmployeeDeduction(
+        company_id=current_user.company_id,
+        employee_id=emp.id,
+        deduction_type=deduction_type,
+        label=label,
+        amount_mode=amount_mode,
+        amount=amount,
+        tracking_mode=tracking_mode,
+        total_to_recover=total_to_recover,
+        remaining_balance=remaining_balance,
+        start_date=start_date,
+        end_date=end_date,
+        reference_number=reference_number,
+        document_path=document_path,
+        is_active=True,
+        created_by=current_user.id,
+    )
+    db.session.add(deduction)
+
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='deduction_created',
+        details={
+            'employee_id': emp.employee_id,
+            'employee_name': emp.name,
+            'deduction_type': deduction_type,
+            'label': label,
+            'amount': str(amount),
+            'amount_mode': amount_mode,
+            'tracking_mode': tracking_mode,
+            'reference_number': reference_number,
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f'Deduction "{label}" added for {emp.name}.', 'success')
+    return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+
+@main.route('/deductions/<int:ded_id>/stop', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def stop_deduction(ded_id):
+    """Stop (deactivate) a deduction."""
+    from payroll_engine.models import EmployeeDeduction
+    ded = EmployeeDeduction.query.filter_by(
+        id=ded_id, company_id=current_user.company_id
+    ).first_or_404()
+    reason = request.form.get('reason', '').strip() or 'Manually stopped'
+    ded.is_active = False
+    ded.stopped_reason = reason
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='deduction_stopped',
+        details={
+            'deduction_id': ded.id,
+            'employee_id': ded.employee_id,
+            'deduction_type': ded.deduction_type,
+            'label': ded.label,
+            'reason': reason,
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'Deduction "{ded.label}" stopped.', 'info')
+    return redirect(url_for('main.employee_detail', emp_id=ded.employee_id))
+
+
+@main.route('/deductions/<int:ded_id>/delete', methods=['POST'])
+@login_required
+@role_required('owner')
+def delete_deduction(ded_id):
+    """Delete a deduction (owner only). Use stop for audit trail."""
+    from payroll_engine.models import EmployeeDeduction
+    ded = EmployeeDeduction.query.filter_by(
+        id=ded_id, company_id=current_user.company_id
+    ).first_or_404()
+    emp_id = ded.employee_id
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='deduction_deleted',
+        details={
+            'deduction_id': ded.id,
+            'employee_id': emp_id,
+            'label': ded.label,
+            'deduction_type': ded.deduction_type,
+        }
+    )
+    db.session.add(log)
+    db.session.delete(ded)
+    db.session.commit()
+    flash(f'Deduction "{ded.label}" deleted.', 'warning')
     return redirect(url_for('main.employee_detail', emp_id=emp_id))
 
 

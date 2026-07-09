@@ -196,6 +196,164 @@
         </div>
     </div>
 
+    <!-- Deductions Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Deductions</h5>
+        </div>
+        <div class="card-body">
+            <!-- Add Deduction Form -->
+            <form method="POST" action="{{ url_for('main.add_deduction', emp_id=employee.id) }}" enctype="multipart/form-data" class="row g-2 mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="deduction_type" required>
+                        <option value="">Type...</option>
+                        {% for key, label in deduction_types %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" name="label" placeholder="Label (e.g. MoE Batch 2024-07)" required>
+                </div>
+                <div class="col-md-1">
+                    <select class="form-select form-select-sm" name="amount_mode">
+                        <option value="fixed">Fixed ETB</option>
+                        <option value="percentage">% of Net</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" class="form-control form-control-sm" name="amount" placeholder="Amount" step="0.01" min="0.01" required>
+                </div>
+                <div class="col-md-1">
+                    <select class="form-select form-select-sm" name="tracking_mode">
+                        <option value="declining">Balance</option>
+                        <option value="date_bounded">Date Range</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" class="form-control form-control-sm" name="total_to_recover" placeholder="Total" step="0.01" min="0">
+                </div>
+                <div class="col-md-1">
+                    <input type="date" class="form-control form-control-sm" name="start_date" title="Start date">
+                </div>
+                <div class="col-md-1">
+                    <input type="date" class="form-control form-control-sm" name="end_date" title="End date">
+                </div>
+                <div class="col-md-1">
+                    <input type="text" class="form-control form-control-sm" name="reference_number" placeholder="Ref #">
+                </div>
+                <div class="col-md-1">
+                    <input type="file" class="form-control form-control-sm" name="document" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-sm btn-warning">
+                        <i class="bi bi-plus-circle me-1"></i> Add Deduction
+                    </button>
+                </div>
+            </form>
+
+            <!-- Active Deductions -->
+            {% if active_deductions %}
+            <h6 class="text-muted mb-2">Active Deductions</h6>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Label</th>
+                            <th>Amount</th>
+                            <th>Balance</th>
+                            <th>Period</th>
+                            <th>Ref #</th>
+                            <th>Doc</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in active_deductions %}
+                        <tr>
+                            <td><span class="badge bg-{{ 'danger' if d.deduction_type == 'court_order' else 'warning' if d.deduction_type == 'cost_sharing' else 'info' }}">{{ d.type_label }}</span></td>
+                            <td>{{ d.label }}</td>
+                            <td>
+                                {% if d.amount_mode == 'percentage' %}
+                                    {{ d.amount }}% of net
+                                {% else %}
+                                    ETB {{ '%.2f'|format(d.amount) }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if d.is_declining and d.remaining_balance is not none %}
+                                    {% if d.remaining_balance <= d.amount %}
+                                        <span class="text-warning"><i class="bi bi-exclamation-triangle"></i> ETB {{ '%.2f'|format(d.remaining_balance) }}</span>
+                                    {% else %}
+                                        ETB {{ '%.2f'|format(d.remaining_balance) }}
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ d.start_date }}
+                                {% if d.end_date %} → {{ d.end_date }}{% else %} → ongoing{% endif %}
+                            </td>
+                            <td>{{ d.reference_number or '—' }}</td>
+                            <td>
+                                {% if d.document_path %}
+                                    <a href="{{ d.document_path }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark"></i></a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('main.stop_deduction', ded_id=d.id) }}" class="d-inline" onsubmit="return confirm('Stop this deduction?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="reason" value="Manually stopped by {{ current_user.phone or current_user.email }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Stop deduction">
+                                        <i class="bi bi-stop-circle"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No active deductions.</p>
+            {% endif %}
+
+            <!-- Inactive Deductions -->
+            {% if inactive_deductions %}
+            <details class="mt-2">
+                <summary class="text-muted" style="cursor:pointer">Stopped/Exhausted ({{ inactive_deductions|length }})</summary>
+                <div class="table-responsive mt-2">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Label</th>
+                                <th>Amount</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in inactive_deductions %}
+                            <tr class="text-muted">
+                                <td>{{ d.type_label }}</td>
+                                <td>{{ d.label }}</td>
+                                <td>ETB {{ '%.2f'|format(d.amount) }}</td>
+                                <td>{{ d.stopped_reason or '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Payslip History -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-primary text-white">

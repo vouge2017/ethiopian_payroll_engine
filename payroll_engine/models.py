@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 import re
 import threading
@@ -446,6 +446,170 @@ class OvertimeEntry(db.Model):
 
     def __repr__(self):
         return f'<OvertimeEntry {self.employee_id} {self.hours}h {self.overtime_type} on {self.date}>'
+
+
+class EmployeeDeduction(db.Model):
+    """Flexible deduction attached to an employee.
+
+    Handles cost-sharing, court orders, penalties, loans, and arbitrary deductions.
+    Supports both fixed ETB amounts and percentage-of-net-pay calculations.
+    Supports both declining-balance (ledger-tracked) and date-bounded (open-ended) modes.
+    """
+    query_class = TenantQuery
+
+    # Deduction type choices
+    TYPE_COST_SHARING = 'cost_sharing'
+    TYPE_COURT_ORDER = 'court_order'
+    TYPE_PENALTY = 'penalty'
+    TYPE_LOAN = 'loan'
+    TYPE_OTHER = 'other'
+    DEDUCTION_TYPES = [
+        (TYPE_COST_SHARING, 'Graduate Cost-Sharing'),
+        (TYPE_COURT_ORDER, 'Court Order / Garnishment'),
+        (TYPE_PENALTY, 'Regulatory Penalty'),
+        (TYPE_LOAN, 'Company Loan'),
+        (TYPE_OTHER, 'Other'),
+    ]
+
+    # Amount mode choices
+    MODE_FIXED = 'fixed'
+    MODE_PERCENTAGE = 'percentage'
+    AMOUNT_MODES = [MODE_FIXED, MODE_PERCENTAGE]
+
+    # Balance tracking mode choices
+    TRACK_DECLINING = 'declining'   # Ledger-tracked, auto-stop at zero
+    TRACK_DATE_BOUNDED = 'date_bounded'  # Open-ended between start/end dates
+    TRACKING_MODES = [TRACK_DECLINING, TRACK_DATE_BOUNDED]
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+
+    # What
+    deduction_type = db.Column(db.String(30), nullable=False)  # One of DEDUCTION_TYPES keys
+    label = db.Column(db.String(200), nullable=False)  # Human-readable, e.g. "MoE Batch 2024-07"
+
+    # How much
+    amount_mode = db.Column(db.String(15), nullable=False, default=MODE_FIXED)  # fixed or percentage
+    amount = db.Column(db.Numeric(12, 2), nullable=False)  # ETB amount or percentage (e.g. 33.33 for 1/3)
+
+    # Balance tracking
+    tracking_mode = db.Column(db.String(15), nullable=False, default=TRACK_DECLINING)
+    total_to_recover = db.Column(db.Numeric(12, 2), nullable=True)  # Only for declining mode
+    remaining_balance = db.Column(db.Numeric(12, 2), nullable=True)  # Auto-decremented
+
+    # Date bounds
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)  # Null = open-ended (manual stop)
+
+    # Document trail
+    reference_number = db.Column(db.String(100), nullable=True)  # Court case #, MoE batch code, etc.
+    document_path = db.Column(db.String(255), nullable=True)  # Path to uploaded PDF/image
+
+    # Status
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    stopped_reason = db.Column(db.String(200), nullable=True)  # Why was it stopped?
+
+    # Audit
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    employee = db.relationship('Employee', backref=db.backref('deductions', lazy=True))
+    creator = db.relationship('User', backref=db.backref('created_deductions', lazy=True))
+
+    @property
+    def type_label(self):
+        """Human-readable deduction type."""
+        return dict(self.DEDUCTION_TYPES).get(self.deduction_type, self.deduction_type)
+
+    @property
+    def is_declining(self):
+        return self.tracking_mode == self.TRACK_DECLINING
+
+    @property
+    def is_date_bounded(self):
+        return self.tracking_mode == self.TRACK_DATE_BOUNDED
+
+    @property
+    def is_expired(self):
+        """Check if a date-bounded deduction has passed its end date."""
+        if self.end_date and date.today() > self.end_date:
+            return True
+        return False
+
+    @property
+    def is_exhausted(self):
+        """Check if a declining-balance deduction has reached zero."""
+        if self.is_declining and self.remaining_balance is not None:
+            return self.remaining_balance <= Decimal('0')
+        return False
+
+    def calculate_deduction(self, net_pay: Decimal) -> Decimal:
+        """Calculate the deduction amount for this pay period.
+
+        Args:
+            net_pay: The employee's net pay after tax and pension.
+
+        Returns:
+            Deduction amount (capped at remaining balance for declining mode).
+        """
+        if not self.is_active:
+            return Decimal('0')
+        if self.is_expired:
+            return Decimal('0')
+        if self.is_exhausted:
+            return Decimal('0')
+
+        if self.amount_mode == self.MODE_PERCENTAGE:
+            raw = (net_pay * self.amount / Decimal('100')).quantize(Decimal('0.01'))
+        else:
+            raw = self.amount
+
+        # Cap at remaining balance for declining mode
+        if self.is_declining and self.remaining_balance is not None:
+            raw = min(raw, self.remaining_balance)
+
+        return max(Decimal('0'), raw)
+
+    def apply_deduction(self, amount: Decimal):
+        """Decrement the remaining balance (declining mode only)."""
+        if self.is_declining and self.remaining_balance is not None:
+            self.remaining_balance = max(Decimal('0'), self.remaining_balance - amount)
+            if self.remaining_balance <= Decimal('0'):
+                self.is_active = False
+                self.stopped_reason = 'Balance exhausted'
+
+    @property
+    def warning_message(self):
+        """Generate a warning message for the validation engine."""
+        if not self.is_active:
+            return None
+        if self.is_declining and self.remaining_balance is not None:
+            if self.remaining_balance <= self.amount and self.remaining_balance > Decimal('0'):
+                return f"{self.type_label} balance ({self.remaining_balance}) is less than one monthly deduction ({self.amount}). Will stop after this payment."
+        if self.is_expired:
+            return f"{self.type_label} end date ({self.end_date}) has passed. Deduction should be stopped."
+        return None
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "amount_mode IN ('fixed', 'percentage')",
+            name='ck_deduction_amount_mode'
+        ),
+        db.CheckConstraint(
+            "tracking_mode IN ('declining', 'date_bounded')",
+            name='ck_deduction_tracking_mode'
+        ),
+        db.CheckConstraint(
+            "deduction_type IN ('cost_sharing', 'court_order', 'penalty', 'loan', 'other')",
+            name='ck_deduction_type'
+        ),
+    )
+
+    def __repr__(self):
+        return f'<EmployeeDeduction {self.deduction_type} {self.amount} for employee {self.employee_id}>'
 
 
 class AuditLog(db.Model):

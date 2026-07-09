@@ -98,6 +98,9 @@ def validate_payroll_data(employees_data: List[Dict[str, Any]],
 
     _check_missing_tin(employees_data, results)
 
+    # --- Deduction checks ---
+    _check_active_deductions(employees_data, company_id, results)
+
     return results
 
 
@@ -298,6 +301,122 @@ def _check_cash_compliance(data: List[Dict], results: List[ValidationResult]):
                 hint='Add a bank account for this employee to avoid a compliance violation.',
                 details={'net_pay': net, 'cash_limit': CASH_LIMIT}
             ))
+
+
+def _check_active_deductions(data: List[Dict], company_id: int,
+                              results: List[ValidationResult]):
+    """FLAG: Check for active deductions and their warnings.
+
+    Pulls active deductions for each employee and flags:
+    - Balance nearing zero (yellow)
+    - Court order exceeding statutory cap (red)
+    - Expired date-bounded deductions
+    """
+    if company_id is None:
+        return
+    try:
+        from payroll_engine.models import EmployeeDeduction
+        from decimal import Decimal
+
+        # Collect all employee IDs from the data
+        emp_ids = [e.get('id') for e in data if e.get('id')]
+        if not emp_ids:
+            return
+
+        # Batch-fetch active deductions
+        # We need to match by employee_id (string) which is stored in the Employee table
+        # The deduction's employee_id is the FK to Employee.id (integer)
+        # We need to look up by Employee.employee_id
+        from payroll_engine.models import Employee
+        employees = Employee.query.filter(
+            Employee.company_id == company_id,
+            Employee.employee_id.in_(emp_ids)
+        ).all()
+        emp_by_eid = {e.employee_id: e for e in employees}
+
+        emp_int_ids = [e.id for e in employees]
+        if not emp_int_ids:
+            return
+
+        deductions = EmployeeDeduction.query.filter(
+            EmployeeDeduction.company_id == company_id,
+            EmployeeDeduction.employee_id.in_(emp_int_ids),
+            EmployeeDeduction.is_active == True
+        ).all()
+
+        # Group deductions by employee_id (integer)
+        ded_by_emp = {}
+        for d in deductions:
+            if d.employee_id not in ded_by_emp:
+                ded_by_emp[d.employee_id] = []
+            ded_by_emp[d.employee_id].append(d)
+
+        for emp_data in data:
+            eid = emp_data.get('id')
+            emp_obj = emp_by_eid.get(eid)
+            if not emp_obj:
+                continue
+            emp_deds = ded_by_emp.get(emp_obj.id, [])
+            net = Decimal(str(emp_data.get('net', 0)))
+            emp_name = emp_data.get('name', '')
+
+            for ded in emp_deds:
+                # Check for balance warning
+                warning = ded.warning_message
+                if warning:
+                    results.append(ValidationResult(
+                        rule_code='DEDUCTION_LOW_BALANCE',
+                        severity='FLAG',
+                        message=f"{emp_name}: {warning}",
+                        employee_id=eid,
+                        employee_name=emp_name,
+                        hint='This deduction will stop after this payment. Verify the amount is correct.',
+                    ))
+
+                # Court order cap check
+                if ded.deduction_type == 'court_order' and ded.amount_mode == 'percentage':
+                    cap = Decimal('33.33')  # 1/3 standard cap
+                    if ded.amount > cap:
+                        # Check if it exceeds 1/2 (child support max)
+                        if ded.amount > Decimal('50'):
+                            results.append(ValidationResult(
+                                rule_code='COURT_ORDER_EXCEEDS_CAP',
+                                severity='BLOCK',
+                                message=f"{emp_name}: Court order deduction ({ded.amount}%) exceeds "
+                                        f"the statutory maximum of 50% (child support cap). "
+                                        f"This is illegal.",
+                                employee_id=eid,
+                                employee_name=emp_name,
+                                hint='Reduce the deduction percentage to 50% or less.',
+                            ))
+                        else:
+                            results.append(ValidationResult(
+                                rule_code='COURT_ORDER_ABOVE_STANDARD',
+                                severity='FLAG',
+                                message=f"{emp_name}: Court order deduction ({ded.amount}%) exceeds "
+                                        f"the standard 1/3 (33.33%) cap. Only allowed for "
+                                        f"child support/maintenance.",
+                                employee_id=eid,
+                                employee_name=emp_name,
+                                hint='Verify this is a child support/maintenance order.',
+                            ))
+
+                # Net pay cap check: total deductions can't exceed net
+                total_ded_amount = sum(d.calculate_deduction(net) for d in emp_deds)
+                if total_ded_amount > net:
+                    results.append(ValidationResult(
+                        rule_code='DEDUCTIONS_EXCEED_NET',
+                        severity='BLOCK',
+                        message=f"{emp_name}: Total deductions (ETB {total_ded_amount:,.2f}) exceed "
+                                f"net pay (ETB {net:,.2f}). Paycheck would be negative.",
+                        employee_id=eid,
+                        employee_name=emp_name,
+                        hint='Reduce deduction amounts or stop one of the deductions.',
+                    ))
+
+    except Exception:
+        # Database not available during tests or CSV-only validation
+        pass
 
 
 def get_summary(results: List[ValidationResult]) -> Dict[str, Any]:

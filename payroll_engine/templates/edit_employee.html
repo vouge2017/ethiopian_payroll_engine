@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ employee.name }} - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <a href="{{ url_for('main.employee_detail', emp_id=employee.id) }}" class="text-white text-decoration-none me-2">
+                            <i class="bi bi-arrow-left"></i>
+                        </a>
+                        <i class="bi bi-pencil me-2"></i>Edit {{ employee.name }}
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('main.edit_employee', emp_id=employee.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label fw-bold">{{ _('full_name') }} *</label>
+                            <input type="text" class="form-control form-control-lg" id="name" name="name"
+                                   value="{{ employee.name }}" required>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
+                                <input type="text" class="form-control" id="phone" name="phone"
+                                       value="{{ employee.phone or '' }}" placeholder="0911223344">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>
+                                <input type="number" class="form-control" id="basic_salary"
+                                       name="basic_salary" step="0.01" min="0"
+                                       value="{{ employee.basic_salary }}" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="allowances" class="form-label">{{ _('allowances') }} (ETB)</label>
+                            <input type="number" class="form-control" id="allowances" name="allowances"
+                                   step="0.01" min="0" value="{{ employee.allowances }}">
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="department" class="form-label">{{ _('department') }}</label>
+                                <input type="text" class="form-control" id="department" name="department"
+                                       value="{{ employee.department or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="position" class="form-label">{{ _('position') }}</label>
+                                <input type="text" class="form-control" id="position" name="position"
+                                       value="{{ employee.position or '' }}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="tin" class="form-label">TIN</label>
+                                <input type="text" class="form-control" id="tin" name="tin"
+                                       value="{{ employee.tin or '' }}" placeholder="1234567890">
+                                <div class="form-text">For ERCA tax filing</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="bank_account" class="form-label">{{ _('bank_account') }}</label>
+                                <input type="text" class="form-control" id="bank_account" name="bank_account"
+                                       value="{{ employee.bank_account or '' }}"
+                                       placeholder="cbe:1000123456789">
+                                <div class="form-text">bank_name:account_number or Telebirr: 0911234567</div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="bi bi-save me-1"></i>Save Changes
+                            </button>
+                            <a href="{{ url_for('main.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary btn-lg">
+                                {{ _('cancel') }}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

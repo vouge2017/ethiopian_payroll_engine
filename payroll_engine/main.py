@@ -245,6 +245,108 @@ def add_employee():
     return render_template('add_employee.html', year=date.today().year)
 
 
+@main.route('/employees/<int:emp_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def edit_employee(emp_id):
+    """Edit an employee. Logs salary and bank account changes to audit trail."""
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=current_user.company_id
+    ).first_or_404()
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        phone = request.form.get('phone', '').strip() or None
+        basic = float(request.form.get('basic_salary', 0))
+        allow = float(request.form.get('allowances', 0))
+        department = request.form.get('department', '').strip() or None
+        position = request.form.get('position', '').strip() or None
+        tin = request.form.get('tin', '').strip() or None
+        bank_account = request.form.get('bank_account', '').strip() or None
+
+        if not name:
+            flash('Employee name is required.', 'danger')
+            return redirect(url_for('main.edit_employee', emp_id=emp_id))
+
+        # Track changes for audit log
+        changes = {}
+
+        # Salary change
+        old_basic = emp.basic_salary
+        old_allow = emp.allowances
+        if basic != old_basic or allow != old_allow:
+            changes['salary_changed'] = {
+                'old_basic': old_basic,
+                'new_basic': basic,
+                'old_allowances': old_allow,
+                'new_allowances': allow,
+                'old_gross': old_basic + old_allow,
+                'new_gross': basic + allow,
+            }
+
+        # Bank account change
+        old_bank = emp.bank_account or ''
+        new_bank = bank_account or ''
+        if old_bank != new_bank:
+            changes['bank_account_changed'] = {
+                'old': old_bank or 'Cash',
+                'new': new_bank or 'Cash',
+            }
+
+        # TIN change
+        old_tin = emp.tin or ''
+        new_tin = tin or ''
+        if old_tin != new_tin:
+            changes['tin_changed'] = {
+                'old': old_tin,
+                'new': new_tin,
+            }
+
+        # Name change
+        old_name = emp.name
+        if name != old_name:
+            changes['name_changed'] = {
+                'old': old_name,
+                'new': name,
+            }
+
+        # Apply changes
+        emp.name = name
+        emp.phone = phone
+        emp.basic_salary = basic
+        emp.allowances = allow
+        emp.department = department
+        emp.position = position
+        emp.tin = tin
+        emp.bank_account = bank_account
+        emp.bank_or_telebirr = bank_account or ''
+
+        # Log to audit trail (one entry per changed field)
+        for change_type, details in changes.items():
+            log = AuditLog(
+                company_id=current_user.company_id,
+                user_id=current_user.id,
+                action=change_type,
+                details={
+                    'employee_id': emp.employee_id,
+                    'employee_name': name,
+                    **details,
+                }
+            )
+            db.session.add(log)
+
+        db.session.commit()
+
+        if changes:
+            field_names = [c.replace('_', ' ') for c in changes.keys()]
+            flash(f'{name}: {', '.join(field_names)} updated.', 'success')
+        else:
+            flash(f'No changes for {name}.', 'info')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    return render_template('edit_employee.html', employee=emp, year=date.today().year)
+
+
 # --- Payroll Processing (Lifecycle: Draft → Validate → Review → Approve → Process) ---
 
 import csv as csv_module
@@ -976,6 +1078,17 @@ def reports():
         deadlines=deadlines,
         year=date.today().year
     )
+
+
+@main.route('/audit-log')
+@login_required
+@role_required('owner', 'accountant')
+def audit_log():
+    """View the append-only audit trail for this company."""
+    logs = AuditLog.query.filter_by(
+        company_id=current_user.company_id
+    ).order_by(AuditLog.timestamp.desc()).limit(200).all()
+    return render_template('audit_log.html', logs=logs, year=date.today().year)
 
 
 @main.route('/reports/erca/<int:run_id>')

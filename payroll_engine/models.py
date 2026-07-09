@@ -420,6 +420,9 @@ class AuditLog(db.Model):
     action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     details = db.Column(db.JSON)
+
+    # Relationship to User
+    user = db.relationship('User', backref=db.backref('audit_logs', lazy=True))
     
     def __repr__(self):
         return f'<AuditLog {self.action} at {self.timestamp}>'

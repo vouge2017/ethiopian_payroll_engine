@@ -46,7 +46,7 @@ def upgrade():
         sa.Column('document_path', sa.String(255), nullable=True),
 
         # Status
-        sa.Column('is_active', sa.Boolean, nullable=False, server_default='1'),
+        sa.Column('is_active', sa.Boolean, nullable=False, server_default=sa.text('true')),
         sa.Column('stopped_reason', sa.String(200), nullable=True),
 
         # Audit

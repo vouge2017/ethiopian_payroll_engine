@@ -340,7 +340,7 @@ def edit_employee(emp_id):
 
         if changes:
             field_names = [c.replace('_', ' ') for c in changes.keys()]
-            flash(f'{name}: {', '.join(field_names)} updated.', 'success')
+            flash(f'{name}: {", ".join(field_names)} updated.', 'success')
         else:
             flash(f'No changes for {name}.', 'info')
         return redirect(url_for('main.employee_detail', emp_id=emp_id))

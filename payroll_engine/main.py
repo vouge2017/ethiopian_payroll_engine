@@ -113,11 +113,17 @@ def index():
     ot_over_limit = [{'name': v['name'], 'hours': round(v['hours'], 1)}
                      for v in ot_by_employee.values() if v['hours'] > MAX_OVERTIME_HOURS_MONTH]
 
+    # Count completed payroll runs for first-run wizard
+    completed_runs_count = PayrollRun.query.filter_by(
+        company_id=company.id, status='completed'
+    ).count()
+
     return render_template(
         'dashboard.html',
         company=company,
         employee_count=employee_count,
         recent_runs=recent_runs,
+        completed_runs_count=completed_runs_count,
         compliance_score=score,
         compliance_status=status,
         status_message=status_msg,

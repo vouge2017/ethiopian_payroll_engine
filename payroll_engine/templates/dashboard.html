@@ -66,6 +66,103 @@
         </div>
     </div>
 
+    <!-- First-Run Wizard -->
+    {% if completed_runs_count == 0 %}
+    <div class="card border-primary shadow-sm mb-4" id="first-run-wizard">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-magic me-2"></i>Welcome! Here's how to run your first payroll</h5>
+            <span class="badge bg-light text-primary">Getting Started</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <!-- Step 1: Add Employees -->
+                <div class="col-md-4">
+                    <div class="card h-100 {% if employee_count > 0 %}border-success{% else %}border-primary{% endif %}">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                {% if employee_count > 0 %}
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                                {% else %}
+                                <span class="badge bg-primary rounded-circle" style="font-size: 1.5rem; width: 40px; height: 40px; line-height: 30px;">1</span>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Add your employees</h6>
+                            <p class="card-text text-muted small">Add each employee with their name, phone, and salary.</p>
+                            {% if employee_count > 0 %}
+                            <span class="badge bg-success">✓ {{ employee_count }} employee{{ 's' if employee_count != 1 else '' }} added</span>
+                            {% else %}
+                            <a href="{{ url_for('main.add_employee') }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-person-plus me-1"></i> Add Employee
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Upload Payroll CSV -->
+                <div class="col-md-4">
+                    <div class="card h-100 {% if recent_runs|length > 0 %}border-success{% elif employee_count > 0 %}border-primary{% else %}border-secondary{% endif %}">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                {% if recent_runs|length > 0 %}
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                                {% elif employee_count > 0 %}
+                                <span class="badge bg-primary rounded-circle" style="font-size: 1.5rem; width: 40px; height: 40px; line-height: 30px;">2</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-circle" style="font-size: 1.5rem; width: 40px; height: 40px; line-height: 30px;">2</span>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Upload payroll CSV</h6>
+                            <p class="card-text text-muted small">Download the template, fill in salary data, and upload it.</p>
+                            {% if recent_runs|length > 0 %}
+                            <span class="badge bg-success">✓ CSV uploaded</span>
+                            {% elif employee_count > 0 %}
+                            <a href="{{ url_for('main.payroll_upload') }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-cloud-upload me-1"></i> Upload CSV
+                            </a>
+                            {% else %}
+                            <button class="btn btn-secondary btn-sm" disabled>
+                                <i class="bi bi-cloud-upload me-1"></i> Add employees first
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Review and Approve -->
+                <div class="col-md-4">
+                    <div class="card h-100 {% if completed_runs_count > 0 %}border-success{% elif recent_runs|length > 0 %}border-primary{% else %}border-secondary{% endif %}">
+                        <div class="card-body text-center">
+                            <div class="mb-2">
+                                {% if completed_runs_count > 0 %}
+                                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                                {% elif recent_runs|length > 0 %}
+                                <span class="badge bg-primary rounded-circle" style="font-size: 1.5rem; width: 40px; height: 40px; line-height: 30px;">3</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-circle" style="font-size: 1.5rem; width: 40px; height: 40px; line-height: 30px;">3</span>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-title">Review and approve</h6>
+                            <p class="card-text text-muted small">Check the numbers, then approve with your password.</p>
+                            {% if completed_runs_count > 0 %}
+                            <span class="badge bg-success">✓ Payroll completed</span>
+                            {% elif recent_runs|length > 0 %}
+                            <a href="{{ url_for('main.payroll_confirm', run_id=recent_runs[0].id) }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-shield-lock me-1"></i> Review Now
+                            </a>
+                            {% else %}
+                            <button class="btn btn-secondary btn-sm" disabled>
+                                <i class="bi bi-shield-lock me-1"></i> Upload CSV first
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Compliance Deadlines -->
     {% if deadlines %}
     <div class="row g-3 mb-4">

@@ -1,5 +1,5 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
-# Deploys web service + worker + managed Postgres + Redis.
+# Deploys web service + managed Postgres.
 #
 # After deploying, set these in the Render dashboard → Environment:
 #   SECRET_KEY  — generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -14,7 +14,7 @@ services:
     name: ethiopian-payroll-web
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT wsgi:app
+    startCommand: flask db upgrade && gunicorn --bind 0.0.0.0:$PORT wsgi:app
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -22,37 +22,11 @@ services:
         fromDatabase:
           name: ethiopian-payroll-db
           property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          name: ethiopian-payroll-redis
-          property: connectionString
       - key: FLASK_ENV
         value: production
+      - key: FLASK_APP
+        value: wsgi:app
     autoDeploy: true
-
-  - type: worker
-    name: ethiopian-payroll-worker
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: celery -A celery_worker.celery worker --loglevel=info
-    envVars:
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DATABASE_URL
-        fromDatabase:
-          name: ethiopian-payroll-db
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          name: ethiopian-payroll-redis
-          property: connectionString
-      - key: FLASK_ENV
-        value: production
-
-  - type: redis
-    name: ethiopian-payroll-redis
-    plan: starter
-    ipAllowList: []   # only internal services
 
 databases:
   - name: ethiopian-payroll-db

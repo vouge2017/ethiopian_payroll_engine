@@ -14,6 +14,7 @@ These tests verify the core payroll math against Ethiopian law:
 """
 
 import sys
+from decimal import Decimal
 import os
 import pytest
 from datetime import date
@@ -110,7 +111,7 @@ class TestVerification5:
             basic_salary=5000, hours=8, overtime_type='day'
         )
         # hourly = 5000/30/8 = 20.83, 8 * 20.83 * 1.25 = 208.3
-        assert pay == 208.3, \
+        assert pay == Decimal("208.30"), \
             f"Overtime should be 208.3, got {pay}"
 
 

@@ -18,9 +18,21 @@ Does NOT apply to:
 """
 
 from datetime import date, datetime
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from typing import Optional
 
+Q = Decimal('0.01')
 MAX_SEVERANCE_MONTHS = 12  # Art. 42 cap
+
+
+def _D(value) -> Decimal:
+    """Safely convert any numeric type to Decimal."""
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return Decimal('0')
 
 
 class TerminationReason:
@@ -35,7 +47,7 @@ class TerminationReason:
     ALL = {RESIGNATION, TERMINATION_FOR_CAUSE, REDUNDANCY, MUTUAL_AGREEMENT}
 
 
-def calculate_years_of_service(start_date, end_date) -> float:
+def calculate_years_of_service(start_date, end_date) -> Decimal:
     """
     Calculate years of service as a decimal.
 
@@ -44,7 +56,7 @@ def calculate_years_of_service(start_date, end_date) -> float:
         end_date: Termination/last working date (date object or YYYY-MM-DD string)
 
     Returns:
-        Years of service as float (e.g., 5.5 for 5 years and 6 months)
+        Years of service as Decimal (e.g., 5.50 for 5 years and 6 months)
     """
     if isinstance(start_date, str):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
@@ -52,13 +64,13 @@ def calculate_years_of_service(start_date, end_date) -> float:
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
 
     if end_date <= start_date:
-        return 0.0
+        return Decimal('0')
 
     delta = end_date - start_date
-    return round(delta.days / 365.25, 2)
+    return (Decimal(str(delta.days)) / Decimal('365.25')).quantize(Q, rounding=ROUND_HALF_UP)
 
 
-def calculate_severance(monthly_salary: float, start_date, end_date,
+def calculate_severance(monthly_salary, start_date, end_date,
                         termination_reason: str) -> dict:
     """
     Calculate severance pay for a terminated employee.
@@ -70,14 +82,12 @@ def calculate_severance(monthly_salary: float, start_date, end_date,
         termination_reason: One of TerminationReason constants
 
     Returns:
-        Dict with:
-            eligible: bool (whether severance applies)
-            years_of_service: float
-            calculated_amount: float (before cap)
-            capped_amount: float (after 12-month cap)
-            final_amount: float (what the employee receives)
-            reason: explanation string
+        Dict with: eligible, years_of_service, calculated_amount,
+                   capped_amount, final_amount, reason
+        All monetary values are Decimal.
     """
+    monthly_salary = _D(monthly_salary)
+
     if isinstance(start_date, str):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     if isinstance(end_date, str):
@@ -90,9 +100,9 @@ def calculate_severance(monthly_salary: float, start_date, end_date,
         return {
             'eligible': False,
             'years_of_service': years,
-            'calculated_amount': 0.0,
-            'capped_amount': 0.0,
-            'final_amount': 0.0,
+            'calculated_amount': Decimal('0'),
+            'capped_amount': Decimal('0'),
+            'final_amount': Decimal('0'),
             'reason': _ineligibility_reason(termination_reason),
         }
 
@@ -100,9 +110,9 @@ def calculate_severance(monthly_salary: float, start_date, end_date,
         return {
             'eligible': False,
             'years_of_service': years,
-            'calculated_amount': 0.0,
-            'capped_amount': 0.0,
-            'final_amount': 0.0,
+            'calculated_amount': Decimal('0'),
+            'capped_amount': Decimal('0'),
+            'final_amount': Decimal('0'),
             'reason': f"Unknown termination reason: '{termination_reason}'",
         }
 
@@ -110,13 +120,13 @@ def calculate_severance(monthly_salary: float, start_date, end_date,
     calculated = monthly_salary * years
     cap = monthly_salary * MAX_SEVERANCE_MONTHS
     capped = min(calculated, cap)
-    final = round(capped, 2)
+    final = capped.quantize(Q, rounding=ROUND_HALF_UP)
 
     return {
         'eligible': True,
         'years_of_service': years,
-        'calculated_amount': round(calculated, 2),
-        'capped_amount': round(cap, 2),
+        'calculated_amount': calculated.quantize(Q, rounding=ROUND_HALF_UP),
+        'capped_amount': cap.quantize(Q, rounding=ROUND_HALF_UP),
         'final_amount': final,
         'reason': _calculation_explanation(monthly_salary, years, calculated, cap, final),
     }

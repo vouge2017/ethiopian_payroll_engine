@@ -17,6 +17,15 @@ def load_user(user_id):
 
 CELERY_BROKER_DEFAULT = "redis:" + chr(47) + chr(47) + "localhost:6379/0"
 
+def _json_serializer(obj):
+    """Custom JSON serializer that handles Decimal for db.JSON columns."""
+    import json as _json
+    from decimal import Decimal as _Dec
+    if isinstance(obj, _Dec):
+        return float(obj)
+    raise TypeError(f'Object of type {type(obj).__name__} is not JSON serializable')
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -33,6 +42,9 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'json_serializer': lambda obj, **kwargs: __import__('json').dumps(obj, default=_json_serializer, **kwargs)
+    }
     csrf.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'

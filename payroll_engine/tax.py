@@ -18,20 +18,34 @@ Rules are configurable via the TaxRule database model.
 When no database rule exists, falls back to hardcoded defaults.
 """
 
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from typing import List, Tuple
+
+# Quantizer for 2 decimal places
+Q = Decimal('0.01')
 
 # Default fallback brackets (Proclamation No. 1395/2025)
 # Used only when no TaxRule exists in the database
-DEFAULT_BRACKETS: List[Tuple[float, float]] = [
-    (2000.0, 0.00),
-    (4000.0, 0.15),
-    (7000.0, 0.20),
-    (10000.0, 0.25),
-    (14000.0, 0.30),
-    (float('inf'), 0.35),
+DEFAULT_BRACKETS: List[Tuple[Decimal, Decimal]] = [
+    (Decimal('2000'), Decimal('0.00')),
+    (Decimal('4000'), Decimal('0.15')),
+    (Decimal('7000'), Decimal('0.20')),
+    (Decimal('10000'), Decimal('0.25')),
+    (Decimal('14000'), Decimal('0.30')),
+    (Decimal('Infinity'), Decimal('0.35')),
 ]
 
-DEFAULT_PERSONAL_RELIEF = 150.0  # ETB monthly personal relief
+DEFAULT_PERSONAL_RELIEF = Decimal('150')  # ETB monthly personal relief
+
+
+def _D(value) -> Decimal:
+    """Safely convert any numeric type to Decimal."""
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return Decimal('0')
 
 
 def _get_brackets_and_relief(for_date=None):
@@ -40,7 +54,7 @@ def _get_brackets_and_relief(for_date=None):
     Falls back to hardcoded defaults if no TaxRule exists.
 
     Returns:
-        (brackets: list of (upper_bound, rate), personal_relief: float)
+        (brackets: list of (Decimal, Decimal), personal_relief: Decimal)
     """
     try:
         from payroll_engine.models import TaxRule
@@ -48,9 +62,9 @@ def _get_brackets_and_relief(for_date=None):
         if rule and rule.brackets:
             brackets = []
             for b in rule.brackets:
-                upper = b['max'] if b['max'] is not None else float('inf')
-                brackets.append((float(upper), float(b['rate'])))
-            return brackets, float(rule.personal_relief)
+                upper = Decimal('Infinity') if b['max'] is None else _D(b['max'])
+                brackets.append((upper, _D(b['rate'])))
+            return brackets, _D(rule.personal_relief)
     except Exception:
         # Database not available (e.g., during tests without app context)
         pass
@@ -58,7 +72,7 @@ def _get_brackets_and_relief(for_date=None):
     return DEFAULT_BRACKETS, DEFAULT_PERSONAL_RELIEF
 
 
-def calculate_tax(gross_salary: float, for_date=None) -> float:
+def calculate_tax(gross_salary, for_date=None) -> Decimal:
     """
     Calculate monthly income tax on taxable salary using progressive brackets.
 
@@ -70,15 +84,16 @@ def calculate_tax(gross_salary: float, for_date=None) -> float:
         for_date: Optional date for rule versioning (YYYY-MM-DD string or date object)
 
     Returns:
-        Tax amount in ETB (minimum 0)
+        Tax amount in ETB (minimum 0), as Decimal
     """
+    gross_salary = _D(gross_salary)
     if gross_salary <= 0:
-        return 0.0
+        return Decimal('0')
 
     brackets, personal_relief = _get_brackets_and_relief(for_date)
 
-    tax = 0.0
-    previous_bound = 0.0
+    tax = Decimal('0')
+    previous_bound = Decimal('0')
 
     for upper_bound, rate in brackets:
         if gross_salary <= previous_bound:
@@ -89,11 +104,11 @@ def calculate_tax(gross_salary: float, for_date=None) -> float:
         previous_bound = upper_bound
 
     # Apply personal relief
-    tax = max(0.0, tax - personal_relief)
-    return round(tax, 2)
+    tax = max(Decimal('0'), tax - personal_relief)
+    return tax.quantize(Q, rounding=ROUND_HALF_UP)
 
 
-def calculate_tax_breakdown(gross_salary: float, for_date=None) -> dict:
+def calculate_tax_breakdown(gross_salary, for_date=None) -> dict:
     """
     Calculate tax with full bracket-by-bracket breakdown.
 
@@ -103,46 +118,46 @@ def calculate_tax_breakdown(gross_salary: float, for_date=None) -> dict:
 
     Returns:
         Dict with:
-            total_tax: float
-            personal_relief: float
-            brackets: list of dicts with keys:
-                lower, upper, rate, taxable_amount, bracket_tax
-            gross_tax: tax before relief
+            total_tax: Decimal
+            personal_relief: Decimal
+            gross_tax: Decimal
+            brackets: list of dicts
     """
+    gross_salary = _D(gross_salary)
     if gross_salary <= 0:
         return {
-            'total_tax': 0.0,
-            'personal_relief': 0.0,
-            'gross_tax': 0.0,
+            'total_tax': Decimal('0'),
+            'personal_relief': Decimal('0'),
+            'gross_tax': Decimal('0'),
             'brackets': [],
         }
 
     brackets_config, personal_relief = _get_brackets_and_relief(for_date)
 
     bracket_details = []
-    tax = 0.0
-    previous_bound = 0.0
+    tax = Decimal('0')
+    previous_bound = Decimal('0')
 
     for upper_bound, rate in brackets_config:
         if gross_salary <= previous_bound:
             break
         taxable_in_bracket = min(gross_salary, upper_bound) - previous_bound
-        bracket_tax = round(taxable_in_bracket * rate, 2) if taxable_in_bracket > 0 else 0.0
+        bracket_tax = (taxable_in_bracket * rate).quantize(Q, rounding=ROUND_HALF_UP) if taxable_in_bracket > 0 else Decimal('0')
         tax += bracket_tax
 
-        upper_display = upper_bound if upper_bound != float('inf') else None
+        upper_display = upper_bound if upper_bound != Decimal('Infinity') else None
         bracket_details.append({
             'lower': previous_bound,
             'upper': upper_display,
             'rate': rate,
             'rate_pct': int(rate * 100),
-            'taxable_amount': round(taxable_in_bracket, 2),
+            'taxable_amount': taxable_in_bracket.quantize(Q, rounding=ROUND_HALF_UP),
             'bracket_tax': bracket_tax,
         })
         previous_bound = upper_bound
 
-    gross_tax = round(tax, 2)
-    total_tax = round(max(0.0, tax - personal_relief), 2)
+    gross_tax = tax.quantize(Q, rounding=ROUND_HALF_UP)
+    total_tax = max(Decimal('0'), tax - personal_relief).quantize(Q, rounding=ROUND_HALF_UP)
 
     return {
         'total_tax': total_tax,
@@ -152,7 +167,7 @@ def calculate_tax_breakdown(gross_salary: float, for_date=None) -> dict:
     }
 
 
-def explain_tax_amharic(gross_salary: float, for_date=None) -> str:
+def explain_tax_amharic(gross_salary, for_date=None) -> str:
     """
     Generate a bilingual (Amharic + English) explanation of the tax calculation.
 
@@ -163,6 +178,7 @@ def explain_tax_amharic(gross_salary: float, for_date=None) -> str:
     Returns:
         Multi-line string with bracket-by-bracket breakdown
     """
+    gross_salary = _D(gross_salary)
     if gross_salary <= 0:
         return "ምንም ገቢ የለም / No income — no tax."
 
@@ -175,8 +191,8 @@ def explain_tax_amharic(gross_salary: float, for_date=None) -> str:
         "-" * 50,
     ]
 
-    tax = 0.0
-    previous_bound = 0.0
+    tax = Decimal('0')
+    previous_bound = Decimal('0')
 
     for upper_bound, rate in brackets:
         if gross_salary <= previous_bound:
@@ -185,7 +201,7 @@ def explain_tax_amharic(gross_salary: float, for_date=None) -> str:
         if taxable > 0:
             bracket_tax = taxable * rate
             tax += bracket_tax
-            upper_display = f"{upper_bound:,.0f}" if upper_bound != float('inf') else "∞"
+            upper_display = f"{upper_bound:,.0f}" if upper_bound != Decimal('Infinity') else "∞"
             lines.append(
                 f"  ETB {previous_bound:,.0f} – {upper_display}: "
                 f"{rate*100:.0f}% × ETB {taxable:,.2f} = ETB {bracket_tax:,.2f}"
@@ -195,11 +211,11 @@ def explain_tax_amharic(gross_salary: float, for_date=None) -> str:
     lines.append("-" * 50)
     lines.append(f"  ጠቅላይ ታክስ ከነፃ እረፍት / Gross Tax: ETB {tax:,.2f}")
     lines.append(f"  የግል ነፃ እረፍት / Personal Relief: -ETB {personal_relief:,.2f}")
-    net_tax = max(0.0, tax - personal_relief)
+    net_tax = max(Decimal('0'), tax - personal_relief)
     lines.append(f"  የሚከፈል ታክስ / Tax Due: ETB {net_tax:,.2f}")
     lines.append("=" * 50)
 
-    effective_rate = (net_tax / gross_salary * 100) if gross_salary > 0 else 0
+    effective_rate = (net_tax / gross_salary * 100) if gross_salary > 0 else Decimal('0')
     lines.append(
         f"ውጤታዊ ታክስ መጠን / Effective Tax Rate: {effective_rate:.1f}%"
     )

@@ -14,14 +14,18 @@ Overtime is taxable income (included in gross for ERCA reporting).
 Overtime limit: 20 hours/month, 100 hours/year (Art. 89).
 """
 
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from typing import Optional
+
+# Quantizer for 2 decimal places
+Q = Decimal('0.01')
 
 # Rate multipliers per Ethiopian labor law
 OVERTIME_RATES = {
-    'day': 1.25,           # Regular day overtime
-    'night': 1.50,         # Nighttime (10pm-6am)
-    'holiday': 2.00,       # Public holiday
-    'rest_day_holiday': 2.50,  # Weekly rest day that falls on public holiday
+    'day': Decimal('1.25'),           # Regular day overtime
+    'night': Decimal('1.50'),         # Nighttime (10pm-6am)
+    'holiday': Decimal('2.00'),       # Public holiday
+    'rest_day_holiday': Decimal('2.50'),  # Weekly rest day that falls on public holiday
 }
 
 # Legal limits
@@ -29,7 +33,17 @@ MAX_OVERTIME_HOURS_MONTH = 20   # Art. 89(1)
 MAX_OVERTIME_HOURS_YEAR = 100   # Art. 89(2)
 
 
-def calculate_hourly_rate(basic_salary: float) -> float:
+def _D(value) -> Decimal:
+    """Safely convert any numeric type to Decimal."""
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return Decimal('0')
+
+
+def calculate_hourly_rate(basic_salary) -> Decimal:
     """
     Calculate hourly rate from monthly basic salary.
 
@@ -40,15 +54,15 @@ def calculate_hourly_rate(basic_salary: float) -> float:
         basic_salary: Monthly basic salary in ETB
 
     Returns:
-        Hourly rate in ETB
+        Hourly rate in ETB, as Decimal
     """
+    basic_salary = _D(basic_salary)
     if basic_salary <= 0:
-        return 0.0
-    return round(basic_salary / 30.0 / 8.0, 2)
+        return Decimal('0')
+    return (basic_salary / Decimal('30') / Decimal('8')).quantize(Q, rounding=ROUND_HALF_UP)
 
 
-def calculate_overtime_pay(basic_salary: float, hours: float,
-                           overtime_type: str = 'day') -> float:
+def calculate_overtime_pay(basic_salary, hours, overtime_type: str = 'day') -> Decimal:
     """
     Calculate overtime pay for a given number of hours.
 
@@ -58,13 +72,14 @@ def calculate_overtime_pay(basic_salary: float, hours: float,
         overtime_type: One of 'day', 'night', 'holiday', 'rest_day_holiday'
 
     Returns:
-        Overtime pay in ETB
+        Overtime pay in ETB, as Decimal
 
     Raises:
         ValueError: If overtime_type is invalid
     """
+    hours = _D(hours)
     if hours <= 0:
-        return 0.0
+        return Decimal('0')
 
     if overtime_type not in OVERTIME_RATES:
         raise ValueError(
@@ -74,33 +89,32 @@ def calculate_overtime_pay(basic_salary: float, hours: float,
 
     hourly_rate = calculate_hourly_rate(basic_salary)
     multiplier = OVERTIME_RATES[overtime_type]
-    return round(hourly_rate * hours * multiplier, 2)
+    return (hourly_rate * hours * multiplier).quantize(Q, rounding=ROUND_HALF_UP)
 
 
-def calculate_total_overtime(basic_salary: float, overtime_entries: list) -> dict:
+def calculate_total_overtime(basic_salary, overtime_entries: list) -> dict:
     """
     Calculate total overtime pay from multiple entries.
 
     Args:
         basic_salary: Monthly basic salary in ETB
         overtime_entries: List of dicts with 'hours' and 'type' keys
-            e.g., [{'hours': 4, 'type': 'day'}, {'hours': 2, 'type': 'night'}]
 
     Returns:
         Dict with:
-            total_hours: total overtime hours
-            total_pay: total overtime pay
-            entries: list of processed entries with pay amounts
-            exceeds_monthly_limit: bool (True if > 20 hours)
+            total_hours: Decimal
+            total_pay: Decimal
+            entries: list of processed entries
+            exceeds_monthly_limit: bool
             warnings: list of warning messages
     """
-    total_hours = 0.0
-    total_pay = 0.0
+    total_hours = Decimal('0')
+    total_pay = Decimal('0')
     entries = []
     warnings = []
 
     for entry in overtime_entries:
-        hours = entry.get('hours', 0)
+        hours = _D(entry.get('hours', 0))
         ot_type = entry.get('type', 'day')
 
         if hours <= 0:
@@ -113,7 +127,7 @@ def calculate_total_overtime(basic_salary: float, overtime_entries: list) -> dic
         entries.append({
             'hours': hours,
             'type': ot_type,
-            'rate': OVERTIME_RATES.get(ot_type, 1.0),
+            'rate': OVERTIME_RATES.get(ot_type, Decimal('1')),
             'pay': pay,
         })
 
@@ -126,8 +140,8 @@ def calculate_total_overtime(basic_salary: float, overtime_entries: list) -> dic
         )
 
     return {
-        'total_hours': round(total_hours, 2),
-        'total_pay': round(total_pay, 2),
+        'total_hours': total_hours.quantize(Q, rounding=ROUND_HALF_UP),
+        'total_pay': total_pay.quantize(Q, rounding=ROUND_HALF_UP),
         'entries': entries,
         'exceeds_monthly_limit': total_hours > MAX_OVERTIME_HOURS_MONTH,
         'warnings': warnings,

@@ -15,12 +15,25 @@ Usage:
     result = calculate_payroll(basic_salary=10000, allowances=2000)
 """
 
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
 from payroll_engine.overtime import calculate_total_overtime
 
+Q = Decimal('0.01')
 
-def calculate_payroll(basic_salary: float, allowances: float = 0.0,
+
+def _D(value) -> Decimal:
+    """Safely convert any numeric type to Decimal."""
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return Decimal('0')
+
+
+def calculate_payroll(basic_salary, allowances=Decimal('0'),
                       overtime_entries: list = None,
                       for_date=None) -> dict:
     """
@@ -42,10 +55,14 @@ def calculate_payroll(basic_salary: float, allowances: float = 0.0,
     Returns:
         Dict with: gross, taxable, tax, pension_employee, pension_employer,
                    net, tax_explanation, overtime_pay, overtime_total_hours
+        All monetary values are Decimal.
 
     Raises:
         ValueError: If basic_salary is negative
     """
+    basic_salary = _D(basic_salary)
+    allowances = _D(allowances)
+
     if basic_salary < 0:
         raise ValueError(f"basic_salary cannot be negative: {basic_salary}")
     if allowances < 0:
@@ -55,8 +72,8 @@ def calculate_payroll(basic_salary: float, allowances: float = 0.0,
     base_gross = basic_salary + allowances
 
     # Step 2: Overtime (added to gross BEFORE tax)
-    overtime_pay = 0.0
-    overtime_total_hours = 0.0
+    overtime_pay = Decimal('0')
+    overtime_total_hours = Decimal('0')
     overtime_result = None
     if overtime_entries:
         overtime_result = calculate_total_overtime(basic_salary, overtime_entries)
@@ -84,14 +101,14 @@ def calculate_payroll(basic_salary: float, allowances: float = 0.0,
     tax_explanation = explain_tax_amharic(taxable, for_date)
 
     return {
-        'gross': round(gross, 2),
-        'taxable': round(taxable, 2),
-        'tax': round(tax, 2),
-        'pension_employee': round(emp_pen, 2),
-        'pension_employer': round(empr_pen, 2),
-        'net': round(net, 2),
+        'gross': gross.quantize(Q, rounding=ROUND_HALF_UP),
+        'taxable': taxable.quantize(Q, rounding=ROUND_HALF_UP),
+        'tax': tax,
+        'pension_employee': emp_pen,
+        'pension_employer': empr_pen,
+        'net': net.quantize(Q, rounding=ROUND_HALF_UP),
         'tax_explanation': tax_explanation,
-        'overtime_pay': round(overtime_pay, 2),
-        'overtime_total_hours': round(overtime_total_hours, 2),
+        'overtime_pay': overtime_pay,
+        'overtime_total_hours': overtime_total_hours,
         'overtime_result': overtime_result,
     }

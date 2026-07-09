@@ -133,36 +133,39 @@ def test_overtime_delete(company_and_employee):
 
 def test_overtime_pay_weekday():
     """4h weekday overtime on basic 10,000 → 208.33"""
+    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'day')
-    # hourly = 10000/30/8 = 41.67
-    # pay = 41.67 * 4 * 1.25 = 208.35 (rounded)
-    assert abs(pay - 208.35) < 1.0  # Allow rounding tolerance
+    assert abs(float(pay) - 208.35) < 1.0  # Allow rounding tolerance
 
 
 def test_overtime_pay_night():
     """4h night overtime → 1.5x"""
+    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'night')
     expected = round(10000 / 30 / 8 * 4 * 1.5, 2)
-    assert abs(pay - expected) < 0.10  # Rounding tolerance
+    assert abs(float(pay) - expected) < 0.10
 
 
 def test_overtime_pay_holiday():
     """4h holiday overtime → 2x"""
+    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'holiday')
     expected = round(10000 / 30 / 8 * 4 * 2.0, 2)
-    assert abs(pay - expected) < 0.10
+    assert abs(float(pay) - expected) < 0.10
 
 
 def test_overtime_pay_rest_day():
     """4h rest_day_holiday overtime → 2.5x"""
+    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'rest_day_holiday')
     expected = round(10000 / 30 / 8 * 4 * 2.5, 2)
-    assert abs(pay - expected) < 0.10
+    assert abs(float(pay) - expected) < 0.10
 
 
 def test_overtime_zero_hours():
     """Zero hours should give zero pay."""
-    assert calculate_overtime_pay(10000, 0, 'day') == 0.0
+    from decimal import Decimal as D
+    assert calculate_overtime_pay(10000, 0, 'day') == D('0')
 
 
 def test_overtime_total():
@@ -172,7 +175,8 @@ def test_overtime_total():
         {'hours': 2, 'type': 'night'},
     ]
     result = calculate_total_overtime(10000, entries)
-    assert result['total_hours'] == 6.0
+    from decimal import Decimal as D
+    assert result['total_hours'] == D('6')
     assert result['total_pay'] > 0
     assert len(result['entries']) == 2
 
@@ -201,36 +205,38 @@ def test_overtime_included_in_gross():
 
 def test_deduction_order_with_overtime():
     """Verify exact deduction order: gross+pension→taxable→tax→net"""
+    from decimal import Decimal as D
     result = calculate_payroll(
         basic_salary=10000, allowances=2000,
         overtime_entries=[{'hours': 4, 'type': 'day'}]
     )
     # Gross = 10000 + 2000 + overtime
-    assert result['gross'] == 12000 + result['overtime_pay']
+    assert result['gross'] == D('12000') + result['overtime_pay']
     # Pension = 7% of basic (NOT affected by overtime)
-    assert result['pension_employee'] == 700.0
+    assert result['pension_employee'] == D('700')
     # Taxable = gross - pension
-    assert abs(result['taxable'] - (result['gross'] - 700)) < 0.01
+    assert result['taxable'] == result['gross'] - D('700')
     # Net = gross - tax - pension
-    assert abs(result['net'] - (result['gross'] - result['tax'] - 700)) < 0.01
+    assert result['net'] == result['gross'] - result['tax'] - D('700')
 
 
 def test_verification_numbers():
     """Use the exact verification numbers from the task spec."""
+    from decimal import Decimal as D
     result = calculate_payroll(
         basic_salary=10000, allowances=2000,
         overtime_entries=[{'hours': 4, 'type': 'day'}]
     )
     # Overtime pay should be approximately 208.33-208.35
-    assert 208 < result['overtime_pay'] < 209
+    assert D('208') < result['overtime_pay'] < D('209')
     # Gross = 12000 + overtime
-    assert result['gross'] > 12200
+    assert result['gross'] > D('12200')
     # Pension = 700 (7% of basic 10,000 — NOT affected by overtime)
-    assert result['pension_employee'] == 700.0
+    assert result['pension_employee'] == D('700')
     # Taxable = gross - pension
-    assert abs(result['taxable'] - (result['gross'] - 700)) < 0.10
+    assert result['taxable'] == result['gross'] - D('700')
     # Net = gross - tax - pension
-    assert abs(result['net'] - (result['gross'] - result['tax'] - 700)) < 0.10
+    assert result['net'] == result['gross'] - result['tax'] - D('700')
 
 
 # ---------------------------------------------------------------

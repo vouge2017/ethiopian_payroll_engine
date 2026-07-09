@@ -10,8 +10,11 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from decimal import Decimal
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.tax import calculate_tax
+
+D = Decimal
 
 
 # ---------------------------------------------------------------
@@ -20,11 +23,11 @@ from payroll_engine.tax import calculate_tax
 def test_payroll_15000():
     """15,000 gross, basic 10,000 — verifies pension before tax."""
     result = calculate_payroll(basic_salary=10000, allowances=5000)
-    assert result['gross'] == 15000.0
-    assert result['pension_employee'] == 700.0  # 7% of 10,000
-    assert result['taxable'] == 14300.0  # 15,000 - 700
-    assert result['tax'] == 2805.0  # tax on 14,300
-    assert result['net'] == 11495.0  # 15,000 - 2,805 - 700
+    assert result['gross'] == D('15000')
+    assert result['pension_employee'] == D('700')  # 7% of 10,000
+    assert result['taxable'] == D('14300')  # 15,000 - 700
+    assert result['tax'] == D('2805')  # tax on 14,300
+    assert result['net'] == D('11495')  # 15,000 - 2,805 - 700
 
 
 # ---------------------------------------------------------------
@@ -32,10 +35,10 @@ def test_payroll_15000():
 # ---------------------------------------------------------------
 def test_payroll_zero():
     result = calculate_payroll(basic_salary=0, allowances=0)
-    assert result['gross'] == 0.0
-    assert result['pension_employee'] == 0.0
-    assert result['tax'] == 0.0
-    assert result['net'] == 0.0
+    assert result['gross'] == D('0')
+    assert result['pension_employee'] == D('0')
+    assert result['tax'] == D('0')
+    assert result['net'] == D('0')
 
 
 # ---------------------------------------------------------------
@@ -67,11 +70,11 @@ def test_payroll_negative_allowances():
 def test_payroll_low_salary():
     """1,800 basic, 0 allowances — zero tax bracket."""
     result = calculate_payroll(basic_salary=1800, allowances=0)
-    assert result['gross'] == 1800.0
-    assert result['pension_employee'] == 126.0  # 7% of 1,800
-    assert result['taxable'] == 1674.0
-    assert result['tax'] == 0.0  # under 2,000 bracket
-    assert result['net'] == 1674.0
+    assert result['gross'] == D('1800')
+    assert result['pension_employee'] == D('126')  # 7% of 1,800
+    assert result['taxable'] == D('1674')
+    assert result['tax'] == D('0')  # under 2,000 bracket
+    assert result['net'] == D('1674')
 
 
 # ---------------------------------------------------------------
@@ -80,9 +83,9 @@ def test_payroll_low_salary():
 def test_payroll_high_salary():
     """50,000 basic, 10,000 allowances."""
     result = calculate_payroll(basic_salary=50000, allowances=10000)
-    assert result['gross'] == 60000.0
-    assert result['pension_employee'] == 3500.0  # 7% of 50,000
-    assert result['taxable'] == 56500.0  # 60,000 - 3,500
+    assert result['gross'] == D('60000')
+    assert result['pension_employee'] == D('3500')  # 7% of 50,000
+    assert result['taxable'] == D('56500')  # 60,000 - 3,500
     assert result['tax'] > 0
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 
@@ -92,8 +95,8 @@ def test_payroll_high_salary():
 # ---------------------------------------------------------------
 def test_payroll_basic_only():
     result = calculate_payroll(basic_salary=8000)
-    assert result['gross'] == 8000.0
-    assert result['pension_employee'] == 560.0
+    assert result['gross'] == D('8000')
+    assert result['pension_employee'] == D('560')
 
 
 # ---------------------------------------------------------------
@@ -106,9 +109,9 @@ def test_deduction_order_matters():
     calculate_tax(gross - pension), they get WRONG numbers.
     This test proves the difference.
     """
-    gross = 15000
-    basic = 10000
-    pension = basic * 0.07  # 700
+    gross = D('15000')
+    basic = D('10000')
+    pension = basic * D('0.07')  # 700
 
     # WRONG way: tax on full gross
     wrong_tax = calculate_tax(gross)
@@ -134,8 +137,8 @@ def test_deduction_order_matters():
 def test_payroll_no_overflow():
     """10,000,000 ETB — should calculate without errors."""
     result = calculate_payroll(basic_salary=10000000, allowances=0)
-    assert result['gross'] == 10000000.0
-    assert result['pension_employee'] == 700000.0
+    assert result['gross'] == D('10000000')
+    assert result['pension_employee'] == D('700000')
     assert result['net'] > 0
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 

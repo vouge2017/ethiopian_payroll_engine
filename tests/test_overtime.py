@@ -16,6 +16,9 @@ from overtime import (
     OVERTIME_RATES,
     MAX_OVERTIME_HOURS_MONTH,
 )
+from decimal import Decimal
+
+D = Decimal
 
 
 # --- Hourly rate ---
@@ -23,19 +26,19 @@ from overtime import (
 def test_hourly_rate_basic():
     """10,000 ETB / 30 days / 8 hours = 41.67 ETB/hour"""
     rate = calculate_hourly_rate(10000)
-    expected = round(10000 / 30 / 8, 2)
+    expected = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
     assert rate == expected, f"Expected {expected}, got {rate}"
 
 def test_hourly_rate_zero():
-    assert calculate_hourly_rate(0) == 0.0
+    assert calculate_hourly_rate(0) == D('0')
 
 def test_hourly_rate_negative():
-    assert calculate_hourly_rate(-5000) == 0.0
+    assert calculate_hourly_rate(-5000) == D('0')
 
 def test_hourly_rate_15000():
     """15,000 / 30 / 8 = 62.50"""
     rate = calculate_hourly_rate(15000)
-    assert rate == 62.50, f"Expected 62.50, got {rate}"
+    assert rate == D('62.50'), f"Expected 62.50, got {rate}"
 
 
 # --- Overtime pay by type ---
@@ -43,33 +46,33 @@ def test_hourly_rate_15000():
 def test_overtime_day():
     """10,000 salary, 4 hours day overtime: 41.67 × 4 × 1.25 = 208.35"""
     pay = calculate_overtime_pay(10000, 4, 'day')
-    hourly = round(10000 / 30 / 8, 2)
-    expected = round(hourly * 4 * 1.25, 2)
+    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    expected = (hourly * D('4') * D('1.25')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_night():
     """10,000 salary, 3 hours night: 41.67 × 3 × 1.50 = 187.52"""
     pay = calculate_overtime_pay(10000, 3, 'night')
-    hourly = round(10000 / 30 / 8, 2)
-    expected = round(hourly * 3 * 1.50, 2)
+    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    expected = (hourly * D('3') * D('1.50')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_holiday():
     """10,000 salary, 4 hours holiday: 41.67 × 4 × 2.0 = 333.36"""
     pay = calculate_overtime_pay(10000, 4, 'holiday')
-    hourly = round(10000 / 30 / 8, 2)
-    expected = round(hourly * 4 * 2.0, 2)
+    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    expected = (hourly * D('4') * D('2.0')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_rest_day_holiday():
     """10,000 salary, 2 hours rest day holiday: 41.67 × 2 × 2.5 = 208.35"""
     pay = calculate_overtime_pay(10000, 2, 'rest_day_holiday')
-    hourly = round(10000 / 30 / 8, 2)
-    expected = round(hourly * 2 * 2.5, 2)
+    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    expected = (hourly * D('2') * D('2.5')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_zero_hours():
-    assert calculate_overtime_pay(10000, 0, 'day') == 0.0
+    assert calculate_overtime_pay(10000, 0, 'day') == D('0')
 
 def test_overtime_invalid_type():
     try:
@@ -90,7 +93,7 @@ def test_total_overtime_mixed():
     ]
     result = calculate_total_overtime(10000, entries)
 
-    assert result['total_hours'] == 10.0
+    assert result['total_hours'] == D('10')
     assert len(result['entries']) == 3
     assert not result['exceeds_monthly_limit']  # 10 < 20
     assert len(result['warnings']) == 0
@@ -100,15 +103,15 @@ def test_total_overtime_exceeds_limit():
     entries = [{'hours': 25, 'type': 'day'}]
     result = calculate_total_overtime(10000, entries)
 
-    assert result['total_hours'] == 25.0
+    assert result['total_hours'] == D('25')
     assert result['exceeds_monthly_limit']
     assert len(result['warnings']) == 1
     assert '20-hour monthly limit' in result['warnings'][0]
 
 def test_total_overtime_empty():
     result = calculate_total_overtime(10000, [])
-    assert result['total_hours'] == 0.0
-    assert result['total_pay'] == 0.0
+    assert result['total_hours'] == D('0')
+    assert result['total_pay'] == D('0')
     assert not result['exceeds_monthly_limit']
 
 
@@ -116,10 +119,10 @@ def test_total_overtime_empty():
 
 def test_rate_multipliers():
     """Verify all rate multipliers match Labor Proclamation 1156/2019."""
-    assert OVERTIME_RATES['day'] == 1.25      # Art. 68(1)
-    assert OVERTIME_RATES['night'] == 1.50     # Art. 68(2)
-    assert OVERTIME_RATES['holiday'] == 2.00   # Art. 68(3)
-    assert OVERTIME_RATES['rest_day_holiday'] == 2.50  # Art. 68(4)
+    assert OVERTIME_RATES['day'] == D('1.25')      # Art. 68(1)
+    assert OVERTIME_RATES['night'] == D('1.50')     # Art. 68(2)
+    assert OVERTIME_RATES['holiday'] == D('2.00')   # Art. 68(3)
+    assert OVERTIME_RATES['rest_day_holiday'] == D('2.50')  # Art. 68(4)
 
 def test_monthly_limit():
     """Verify monthly overtime limit matches Art. 89."""
@@ -136,8 +139,8 @@ def test_factory_worker_overtime():
     Overtime: 20.83 × 8 × 2.0 = 333.28
     """
     pay = calculate_overtime_pay(5000, 8, 'holiday')
-    hourly = round(5000 / 30 / 8, 2)
-    expected = round(hourly * 8 * 2.0, 2)
+    hourly = (D('5000') / D('30') / D('8')).quantize(D('0.01'))
+    expected = (hourly * D('8') * D('2.0')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
     assert pay > 0
 

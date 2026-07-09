@@ -1,6 +1,7 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from decimal import Decimal
 import re
 import threading
 import sys
@@ -270,8 +271,8 @@ class Employee(db.Model):
     department = db.Column(db.String(100), nullable=True)
     position = db.Column(db.String(100), nullable=True)
     start_date = db.Column(db.Date, nullable=True)  # Employment start date
-    basic_salary = db.Column(db.Float, nullable=False)
-    allowances = db.Column(db.Float, nullable=False, default=0.0)
+    basic_salary = db.Column(db.Numeric(12, 2), nullable=False)
+    allowances = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0.00'))
     bank_account = db.Column(db.String(100), nullable=True)  # Bank account number
     bank_or_telebirr = db.Column(db.String(100))  # Legacy: 'telebirr:0912345678' or 'bank:cbe'
     tin = db.Column(db.String(20), nullable=True)  # Tax Identification Number for ERCA filing
@@ -336,11 +337,11 @@ class Payslip(db.Model):
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
     pdf_file_path = db.Column(db.String(255))  # Path to the generated PDF
-    gross_salary = db.Column(db.Float, nullable=False)
-    tax = db.Column(db.Float, nullable=False)
-    employee_pension = db.Column(db.Float, nullable=False)
-    employer_pension = db.Column(db.Float, nullable=False)
-    net_pay = db.Column(db.Float, nullable=False)
+    gross_salary = db.Column(db.Numeric(12, 2), nullable=False)
+    tax = db.Column(db.Numeric(12, 2), nullable=False)
+    employee_pension = db.Column(db.Numeric(12, 2), nullable=False)
+    employer_pension = db.Column(db.Numeric(12, 2), nullable=False)
+    net_pay = db.Column(db.Numeric(12, 2), nullable=False)
     # Payment status for bank file error re-uploader workflow
     # pending_bank_clearance → bank_rejected → corrected → paid
     payment_status = db.Column(db.String(30), nullable=False, default='pending_bank_clearance')

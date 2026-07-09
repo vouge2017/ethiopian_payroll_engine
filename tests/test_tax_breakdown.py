@@ -7,6 +7,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from payroll_engine.tax import calculate_tax, calculate_tax_breakdown
+from decimal import Decimal
 
 
 def test_breakdown_matches_total():
@@ -46,7 +47,7 @@ def test_breakdown_two_brackets():
     assert len(bd['brackets']) == 2
     assert bd['brackets'][0]['rate_pct'] == 0
     assert bd['brackets'][1]['rate_pct'] == 15
-    assert bd['brackets'][1]['bracket_tax'] == 150.0  # 1000 * 0.15
+    assert bd["brackets"][1]["bracket_tax"] == Decimal("150")  # 1000 * 0.15
 
 
 def test_breakdown_all_brackets():
@@ -59,9 +60,9 @@ def test_breakdown_all_brackets():
 def test_breakdown_personal_relief():
     """Personal relief is shown separately."""
     bd = calculate_tax_breakdown(5000)
-    assert bd['personal_relief'] == 150.0
+    assert bd["personal_relief"] == Decimal("150")
     # gross_tax - 150 = total_tax
-    assert bd['total_tax'] == bd['gross_tax'] - 150.0
+    assert bd["total_tax"] == bd["gross_tax"] - Decimal("150")
 
 
 def test_breakdown_bracket_amounts_sum():
@@ -69,7 +70,7 @@ def test_breakdown_bracket_amounts_sum():
     for taxable in [5000, 11300, 16950]:
         bd = calculate_tax_breakdown(taxable)
         bracket_sum = sum(b['bracket_tax'] for b in bd['brackets'])
-        assert abs(bracket_sum - bd['gross_tax']) < 0.01, \
+        assert abs(bracket_sum - bd["gross_tax"]) < Decimal("0.01"), \
             f"Bracket sum {bracket_sum} != gross_tax {bd['gross_tax']} on {taxable}"
 
 
@@ -77,7 +78,7 @@ def test_dawit_taxable_11300():
     """Dawit's tax: 11300 taxable → 1890 total."""
     bd = calculate_tax_breakdown(11300)
     assert bd['total_tax'] == 1890.0
-    assert bd['personal_relief'] == 150.0
+    assert bd["personal_relief"] == Decimal("150")
     # 0% on 2000 = 0
     # 15% on 2000 = 300
     # 20% on 3000 = 600

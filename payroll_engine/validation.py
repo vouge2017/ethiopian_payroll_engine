@@ -11,7 +11,18 @@ Severity levels:
 """
 
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from typing import List, Dict, Any
+
+
+def _D(value) -> Decimal:
+    """Safely convert any numeric type to Decimal."""
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return Decimal('0')
 
 
 class ValidationResult:
@@ -191,12 +202,12 @@ def _check_salary_typos(data: List[Dict], previous: Dict[str, dict],
 def _check_pension_mismatch(data: List[Dict], results: List[ValidationResult]):
     """FLAG: Pension should be 7% of basic salary."""
     for emp in data:
-        basic = emp.get('basic', 0)
-        pension = emp.get('pension_employee', 0)
-        expected = round(basic * 0.07, 2)
+        basic = _D(emp.get('basic', 0))
+        pension = _D(emp.get('pension_employee', 0))
+        expected = (basic * Decimal('0.07')).quantize(Decimal('0.01'))
         emp_name = emp.get('name', '')
 
-        if basic > 0 and abs(pension - expected) > 0.01:
+        if basic > 0 and abs(pension - expected) > Decimal('0.01'):
             results.append(ValidationResult(
                 rule_code='PENSION_MISMATCH',
                 severity='FLAG',

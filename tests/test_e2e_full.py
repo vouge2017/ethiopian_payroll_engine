@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import pytest
 import io
 import csv
+from decimal import Decimal
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
@@ -162,7 +163,7 @@ def test_full_payroll_flow(ctx, client):
     assert saved_ot.overtime_type == 'day'
 
     ot_pay = calculate_overtime_pay(10000, 4, 'day')
-    assert ot_pay == 208.35, f"Overtime pay should be 208.35, got {ot_pay}"
+    assert ot_pay == Decimal("208.35"), f"Overtime pay should be 208.35, got {ot_pay}"
 
     # ============================================================
     # STEP 5: Run payroll calculation (unit-level verification)
@@ -170,7 +171,7 @@ def test_full_payroll_flow(ctx, client):
 
     # Dawit: 10000 basic + 2000 allowances
     dawit_result = calculate_payroll(10000, 2000)
-    assert dawit_result['pension_employee'] == 700.0
+    assert dawit_result['pension_employee'] == Decimal('700')
     assert dawit_result['gross'] == 12000.0
     assert dawit_result['taxable'] == 11300.0
 

@@ -321,36 +321,62 @@ def generate_xlsx(employees_data: List[Dict[str, Any]],
     """
     try:
         import openpyxl
-        from openpyxl.styles import Font, Alignment, PatternFill, numbers
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     except ImportError:
         # Fallback to CSV
         return generate_csv(employees_data, bank, company_name, period)
+
+    from datetime import date as _date
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Bank Transfer"
 
     # Styles
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="1A5276", end_color="1A5276", fill_type="solid")
+    title_font = Font(bold=True, size=16, color='1A5276')
+    subtitle_font = Font(bold=True, size=12, color='333333')
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    header_fill = PatternFill(start_color='1A5276', end_color='1A5276', fill_type='solid')
+    header_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    data_align = Alignment(horizontal='right', vertical='center')
+    name_align = Alignment(horizontal='left', vertical='center')
+    totals_font = Font(bold=True, size=11, color='1A5276')
+    totals_fill = PatternFill(start_color='D6EAF8', end_color='D6EAF8', fill_type='solid')
+    thin_border = Border(
+        left=Side(style='thin', color='CCCCCC'),
+        right=Side(style='thin', color='CCCCCC'),
+        top=Side(style='thin', color='CCCCCC'),
+        bottom=Side(style='thin', color='CCCCCC'),
+    )
     text_format = '@'  # Explicit text format — prevents scientific notation
+    etb_format = '#,##0.00'
 
-    # Title
+    # --- Title block ---
     ws.merge_cells('A1:D1')
-    ws['A1'] = f"Bank Transfer File — {company_name}"
-    ws['A1'].font = Font(bold=True, size=14)
-    ws['A2'] = f"Period: {period}" if period else ""
-    ws['A2'].font = Font(bold=True, size=11)
+    ws['A1'] = company_name
+    ws['A1'].font = title_font
+    ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
 
-    # Headers
+    ws.merge_cells('A2:D2')
+    ws['A2'] = f'Bank Transfer File — {period}' if period else 'Bank Transfer File'
+    ws['A2'].font = subtitle_font
+
+    ws.merge_cells('A3:D3')
+    ws['A3'] = f'Generated: {_date.today().strftime("%d %B %Y")}'
+    ws['A3'].font = Font(italic=True, color='666666')
+
+    # --- Headers (row 5) ---
     headers = ['Account Number', 'Amount (ETB)', 'Narrative', 'Currency']
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col, value=header)
+    col_widths = [20, 16, 40, 10]
+    for col, (header, width) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=5, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
-        cell.alignment = Alignment(horizontal='center')
+        cell.alignment = header_align
+        cell.border = thin_border
+        ws.column_dimensions[cell.column_letter].width = width
 
-    # Data rows
+    # --- Data rows ---
     total_amount = 0
     for i, emp in enumerate(employees_data, 1):
         account = emp.get('bank', '').strip()
@@ -369,33 +395,45 @@ def generate_xlsx(employees_data: List[Dict[str, Any]],
             custom_template=custom_narrative,
         )
 
-        row = 4 + i
+        row = 5 + i
 
         # Account number: force TEXT format (prevents Excel scientific notation)
         cell = ws.cell(row=row, column=1, value=account)
         cell.number_format = text_format
+        cell.alignment = name_align
+        cell.border = thin_border
 
-        # Amount: 2 decimal places, no commas
+        # Amount
         cell = ws.cell(row=row, column=2, value=amount)
-        cell.number_format = '0.00'
+        cell.number_format = etb_format
+        cell.alignment = data_align
+        cell.border = thin_border
 
-        ws.cell(row=row, column=3, value=narrative)
-        ws.cell(row=row, column=4, value='ETB')
+        ws.cell(row=row, column=3, value=narrative).alignment = name_align
+        ws.cell(row=row, column=3).border = thin_border
+        ws.cell(row=row, column=4, value='ETB').alignment = Alignment(horizontal='center')
+        ws.cell(row=row, column=4).border = thin_border
 
-    # Totals row
-    totals_row = 4 + len(employees_data) + 1
-    ws.cell(row=totals_row, column=1, value='TOTAL').font = Font(bold=True)
+    # --- Totals row ---
+    totals_row = 5 + len(employees_data) + 1
+    cell = ws.cell(row=totals_row, column=1, value='TOTAL')
+    cell.font = totals_font
+    cell.fill = totals_fill
+    cell.border = thin_border
     cell = ws.cell(row=totals_row, column=2, value=total_amount)
-    cell.font = Font(bold=True)
-    cell.number_format = '0.00'
+    cell.font = totals_font
+    cell.fill = totals_fill
+    cell.number_format = etb_format
+    cell.alignment = data_align
+    cell.border = thin_border
+    ws.cell(row=totals_row, column=3).fill = totals_fill
+    ws.cell(row=totals_row, column=3).border = thin_border
+    ws.cell(row=totals_row, column=4).fill = totals_fill
+    ws.cell(row=totals_row, column=4).border = thin_border
 
-    # Auto-width columns
-    for col in ws.columns:
-        max_length = 0
-        for cell in col:
-            if cell.value:
-                max_length = max(max_length, len(str(cell.value)))
-        ws.column_dimensions[col[0].column_letter].width = min(max_length + 2, 30)
+    # --- Print setup ---
+    ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
+    ws.page_setup.fitToWidth = 1
 
     output = io.BytesIO()
     wb.save(output)

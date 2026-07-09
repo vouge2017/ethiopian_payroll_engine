@@ -7,10 +7,6 @@ from .models import Company, User, Employee, PayrollRun, Payslip, Attendance, Le
 
 api = Blueprint('api', __name__)
 
-# API endpoints are CSRF-exempt (they use session auth, not form submissions)
-from payroll_engine import csrf
-csrf.exempt(api)
-
 
 def company_required(f):
     """Ensure user belongs to a company."""

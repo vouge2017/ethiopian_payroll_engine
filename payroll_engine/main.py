@@ -494,6 +494,36 @@ def payroll_upload():
                 run_date=date.today(),
                 status='review',
             )
+            # Auto-set Ethiopian period
+            run.generate_period()
+
+            # Check for duplicate period — one active run per company+period
+            existing = PayrollRun.query.filter_by(
+                company_id=current_user.company_id,
+                period=run.period
+            ).filter(
+                PayrollRun.status.notin_(['failed', 'rejected'])
+            ).first()
+            if existing:
+                from payroll_engine.ethiopian_calendar import get_ethiopian_month_name
+                eth_parts = run.period.split('-')
+                month_name = get_ethiopian_month_name(int(eth_parts[1]), 'en')
+                if existing.status == 'locked':
+                    flash(
+                        f'{month_name} {eth_parts[0]} is locked '
+                        f'(#{existing.reference}). '
+                        f'Ask the owner to unlock it first.',
+                        'danger'
+                    )
+                else:
+                    flash(
+                        f'A payroll run for {month_name} {eth_parts[0]} already exists '
+                        f'(#{existing.reference}, status: {existing.status}). '
+                        f'Delete or reject it first to reprocess.',
+                        'danger'
+                    )
+                return redirect(url_for('main.payroll_runs'))
+
             db.session.add(run)
             db.session.commit()
 
@@ -786,6 +816,64 @@ def payroll_runs():
     runs = PayrollRun.query.filter_by(company_id=current_user.company_id) \
         .order_by(PayrollRun.created_at.desc()).all()
     return render_template('payroll_runs.html', runs=runs, year=date.today().year)
+
+
+@main.route('/payroll/runs/<int:run_id>/lock', methods=['POST'])
+@login_required
+@role_required('owner')
+def lock_payroll(run_id):
+    """Lock a completed payroll run — prevents any further changes.
+
+    Only owners can lock. Once locked, no new run can be created for the same period.
+    """
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=current_user.company_id
+    ).first_or_404()
+    if run.status != 'completed':
+        flash('Can only lock completed payroll runs.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    run.status = 'locked'
+    run.locked_at = datetime.utcnow()
+    run.locked_by = current_user.id
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='payroll_locked',
+        details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'Period {run.period} is now locked. No further changes allowed.', 'success')
+    return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+
+@main.route('/payroll/runs/<int:run_id>/unlock', methods=['POST'])
+@login_required
+@role_required('owner')
+def unlock_payroll(run_id):
+    """Unlock a payroll run — allows corrections.
+
+    Only owners can unlock. Use with caution — this removes the period protection.
+    """
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=current_user.company_id
+    ).first_or_404()
+    if run.status != 'locked':
+        flash('This run is not locked.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    run.status = 'completed'
+    run.locked_at = None
+    run.locked_by = None
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='payroll_unlocked',
+        details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'Period {run.period} unlocked. You can now create a correction run.', 'warning')
+    return redirect(url_for('main.payroll_run_detail', run_id=run.id))
 
 
 @main.route('/payroll/runs/<int:run_id>')

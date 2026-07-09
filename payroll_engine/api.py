@@ -1,10 +1,15 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from functools import wraps
+from sqlalchemy.exc import IntegrityError
 from . import db
 from .models import Company, User, Employee, PayrollRun, Payslip, Attendance, Leave, AuditLog
 
 api = Blueprint('api', __name__)
+
+# API endpoints are CSRF-exempt (they use session auth, not form submissions)
+from payroll_engine import csrf
+csrf.exempt(api)
 
 
 def company_required(f):
@@ -103,7 +108,24 @@ def update_employee(emp_id):
 @company_required
 def delete_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
-    db.session.delete(emp)
+    try:
+        db.session.delete(emp)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({
+            'error': 'Cannot delete employee with payroll history. '
+                     'Use deactivation instead.',
+            'suggestion': f'POST /api/v1/employees/{emp_id}/deactivate'
+        }), 409
+    # Log successful delete
+    log = AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='employee_deleted_api',
+        details={'employee_id': emp.employee_id, 'employee_name': emp.name}
+    )
+    db.session.add(log)
     db.session.commit()
     return jsonify({'message': 'Deleted'})
 

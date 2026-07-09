@@ -259,12 +259,24 @@
                         <tr>
                             <td>
                                 <strong>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</strong>
-                                <br><small class="text-muted">{{ eth_date(run.run_date) }}</small>
+                                {% if run.period %}
+                                    <br><small class="text-muted">{{ run.period }} · {{ eth_date(run.run_date) }}</small>
+                                {% else %}
+                                    <br><small class="text-muted">{{ eth_date(run.run_date) }}</small>
+                                {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-{{ 'success' if run.status == 'completed' else 'warning' if run.status == 'processing' else 'danger' if run.status == 'failed' else 'secondary' }}">
-                                    {{ run.status }}
-                                </span>
+                                {% if run.status == 'locked' %}
+                                    <span class="badge bg-dark"><i class="bi bi-lock-fill"></i> locked</span>
+                                {% elif run.status == 'completed' %}
+                                    <span class="badge bg-success">completed</span>
+                                {% elif run.status == 'processing' %}
+                                    <span class="badge bg-warning">processing</span>
+                                {% elif run.status == 'failed' %}
+                                    <span class="badge bg-danger">failed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ run.status }}</span>
+                                {% endif %}
                             </td>
                             <td>{{ run.payslips|length }}</td>
                             <td>

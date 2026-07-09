@@ -327,25 +327,42 @@ class PayrollRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     reference = db.Column(db.String(20), nullable=True)  # e.g., PR-2026-07-001
+    period = db.Column(db.String(7), nullable=True)  # Ethiopian period e.g. '2018-10' (Sene 2018)
     run_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
-    # Lifecycle: draft → validating → review → approved → processing → completed / failed
+    # Lifecycle: draft → review → pending_approval → processing → completed → locked / failed
     status = db.Column(db.String(20), nullable=False, default='draft')
     approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     approved_at = db.Column(db.DateTime, nullable=True)
     approval_ip = db.Column(db.String(45), nullable=True)
+    locked_at = db.Column(db.DateTime, nullable=True)
+    locked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     payslips = db.relationship('Payslip', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
     validation_results = db.relationship('PayrollValidationResult', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
 
+    def generate_period(self):
+        """Set period from run_date using Ethiopian calendar.
+
+        Format: 'YYYY-MM' where YYYY is Ethiopian year, MM is Ethiopian month.
+        Example: Gregorian Jul 2026 → Ethiopian Sene 2018 → '2018-10'
+        """
+        from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
+        ref_date = self.run_date or date.today()
+        eth_year, eth_month, _ = gregorian_to_ethiopian(ref_date)
+        self.period = f'{eth_year}-{eth_month:02d}'
+
     def generate_reference(self):
         """Generate a human-readable reference number."""
-        if self.run_date:
+        if self.period:
+            self.reference = f'PR-{self.period}-{self.id:03d}'
+        elif self.run_date:
             month_str = self.run_date.strftime('%Y-%m')
+            self.reference = f'PR-{month_str}-{self.id:03d}'
         else:
             month_str = datetime.utcnow().strftime('%Y-%m')
-        self.reference = f'PR-{month_str}-{self.id:03d}'
+            self.reference = f'PR-{month_str}-{self.id:03d}'
 
     def __repr__(self):
         return f'<PayrollRun {self.reference or self.id} for {self.company_id} on {self.run_date}>'

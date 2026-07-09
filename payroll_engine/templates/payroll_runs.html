@@ -17,21 +17,37 @@
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
+                            <th>{{ _('period') }}</th>
                             <th>{{ _('date') }}</th>
                             <th>{{ _('status') }}</th>
                             <th>{{ _('payslips') }}</th>
-                            <th>{{ actions }}</th>
+                            <th>{{ _('actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for run in runs %}
                         <tr>
-                            <td>{{ run.id }}</td>
+                            <td>{{ run.reference or run.id }}</td>
+                            <td>
+                                {% if run.period %}
+                                    <strong>{{ run.period }}</strong>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>{{ run.run_date }}</td>
                             <td>
-                                <span class="badge bg-{{ 'success' if run.status == 'completed' else 'warning' if run.status == 'processing' else 'danger' if run.status == 'failed' else 'secondary' }}">
-                                    {{ run.status }}
-                                </span>
+                                {% if run.status == 'locked' %}
+                                    <span class="badge bg-dark"><i class="bi bi-lock-fill"></i> locked</span>
+                                {% elif run.status == 'completed' %}
+                                    <span class="badge bg-success">completed</span>
+                                {% elif run.status == 'processing' %}
+                                    <span class="badge bg-warning">processing</span>
+                                {% elif run.status == 'failed' %}
+                                    <span class="badge bg-danger">failed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ run.status }}</span>
+                                {% endif %}
                             </td>
                             <td>{{ run.payslips|length }}</td>
                             <td>

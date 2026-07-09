@@ -8,7 +8,12 @@
                 <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}" class="text-decoration-none text-muted me-2">
                     <i class="bi bi-arrow-left"></i>
                 </a>
-                <h3 class="mb-0">{{ _('confirm_payroll_processing') }}</h3>
+                <h3 class="mb-0">
+                    {{ _('confirm_payroll_processing') }}
+                    {% if run.period %}
+                        <small class="text-muted ms-2">{{ run.period }}</small>
+                    {% endif %}
+                </h3>
             </div>
 
             <!-- Summary -->

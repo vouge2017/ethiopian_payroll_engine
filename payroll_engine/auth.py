@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
-from . import db
+from . import db, limiter
 from .models import User, Company, validate_ethiopian_phone
 
 auth = Blueprint('auth', __name__)
 
 
 @auth.route('/login', methods=['GET', 'POST'])
+@limiter.limit('5 per minute')
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))

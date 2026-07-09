@@ -3,6 +3,7 @@ from flask import (
     Blueprint, render_template, request, redirect, url_for,
     flash, send_file, abort, current_app, jsonify
 )
+from payroll_engine import limiter
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -612,6 +613,7 @@ def reject_payroll(run_id):
 @main.route('/payroll/approve', methods=['POST'])
 @login_required
 @role_required('owner')
+@limiter.limit('10 per minute')
 def approve_payroll():
     """
     Approve a payroll run and process it.
@@ -628,9 +630,10 @@ def approve_payroll():
         flash('Incorrect password. Approval cancelled.', 'danger')
         return redirect(url_for('main.payroll_confirm', run_id=int(run_id)))
 
+    # SELECT ... FOR UPDATE — prevents double-approval on concurrent requests
     run = PayrollRun.query.filter_by(
         id=int(run_id), company_id=current_user.company_id
-    ).first_or_404()
+    ).with_for_update().first_or_404()
 
     if run.status not in ('review', 'pending_approval'):
         flash('This payroll run is not ready for approval.', 'danger')

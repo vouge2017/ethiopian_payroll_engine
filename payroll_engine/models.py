@@ -9,6 +9,21 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from payroll_engine import db
 
+# Encryption key for sensitive fields (bank_account, tin)
+# In production: set DB_ENCRYPTION_KEY env var (32-byte hex or base64)
+# In dev/test: falls back to a deterministic key (NOT secure, only for development)
+_ENCRYPTION_KEY = os.environ.get(
+    'DB_ENCRYPTION_KEY',
+    'dev-encryption-key-not-for-production-use-only-32b'
+)
+
+try:
+    from sqlalchemy_utils import EncryptedType
+    from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+    _HAS_ENCRYPTION = True
+except ImportError:
+    _HAS_ENCRYPTION = False
+
 
 def validate_ethiopian_phone(phone: str) -> tuple:
     """
@@ -273,9 +288,13 @@ class Employee(db.Model):
     start_date = db.Column(db.Date, nullable=True)  # Employment start date
     basic_salary = db.Column(db.Numeric(12, 2), nullable=False)
     allowances = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0.00'))
-    bank_account = db.Column(db.String(100), nullable=True)  # Bank account number
+    if _HAS_ENCRYPTION:
+        bank_account = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
+        tin = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
+    else:
+        bank_account = db.Column(db.String(100), nullable=True)
+        tin = db.Column(db.String(20), nullable=True)
     bank_or_telebirr = db.Column(db.String(100))  # Legacy: 'telebirr:0912345678' or 'bank:cbe'
-    tin = db.Column(db.String(20), nullable=True)  # Tax Identification Number for ERCA filing
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Link to User account
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

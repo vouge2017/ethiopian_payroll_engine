@@ -123,7 +123,7 @@
                         and payroll will be marked as completed.
                     </div>
 
-                    <form method="POST" action="{{ url_for('main.approve_payroll') }}">
+                    <form method="POST" action="{{ url_for('main.approve_payroll') }}" id="approve-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="run_id" value="{{ run.id }}">
 
@@ -171,4 +171,17 @@
         </div>
     </div>
 </div>
+<script>
+// Disable approve button on submit to prevent double-click
+const approveForm = document.getElementById('approve-form');
+if (approveForm) {
+    approveForm.addEventListener('submit', function(e) {
+        const btn = this.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+        }
+    });
+}
+</script>
 {% endblock %}

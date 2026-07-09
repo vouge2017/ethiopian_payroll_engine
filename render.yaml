@@ -26,6 +26,8 @@ services:
         value: production
       - key: FLASK_APP
         value: wsgi:app
+      - key: DB_ENCRYPTION_KEY
+        generateValue: true
     autoDeploy: true
 
 databases:

@@ -687,12 +687,17 @@ def approve_payroll():
     employees_data = draft.employee_data
 
     try:
+        # Batch-fetch existing employees to avoid N+1 queries
+        emp_ids = [emp_data['id'] for emp_data in employees_data]
+        existing_emps = Employee.query.filter(
+            Employee.company_id == current_user.company_id,
+            Employee.employee_id.in_(emp_ids)
+        ).all()
+        emp_by_eid = {e.employee_id: e for e in existing_emps}
+
         # Generate payslips and employee records
         for emp_data in employees_data:
-            emp = Employee.query.filter_by(
-                company_id=current_user.company_id,
-                employee_id=emp_data['id']
-            ).first()
+            emp = emp_by_eid.get(emp_data['id'])
             if not emp:
                 emp = Employee(
                     employee_id=emp_data['id'],
@@ -705,6 +710,7 @@ def approve_payroll():
                 )
                 db.session.add(emp)
                 db.session.flush()
+                emp_by_eid[emp_data['id']] = emp
             else:
                 emp.basic_salary = emp_data['basic']
                 emp.allowances = emp_data['allowances']

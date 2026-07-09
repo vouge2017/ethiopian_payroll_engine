@@ -35,6 +35,12 @@ class ProductionConfig(Config):
                 "DATABASE_URL must be a PostgreSQL connection string in production, "
                 "not SQLite. Set the DATABASE_URL environment variable."
             )
+        _db_enc_key = os.environ.get('DB_ENCRYPTION_KEY', '')
+        if not _db_enc_key or _db_enc_key == 'dev-encryption-key-not-for-production-use-only-32b':
+            raise ValueError(
+                "DB_ENCRYPTION_KEY must be set to a real value in production. "
+                "Generate one with: python3 -c 'import secrets; print(secrets.token_hex(32))'"
+            )
 
 
 class TestingConfig(Config):

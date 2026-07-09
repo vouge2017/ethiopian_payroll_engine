@@ -18,11 +18,14 @@ class ValidationResult:
     """A single validation finding."""
 
     def __init__(self, rule_code: str, severity: str, message: str,
-                 employee_id: str = None, details: dict = None):
+                 employee_id: str = None, details: dict = None,
+                 employee_name: str = None, hint: str = None):
         self.rule_code = rule_code
         self.severity = severity  # BLOCK / FLAG / WARN
         self.message = message
         self.employee_id = employee_id  # None = global issue
+        self.employee_name = employee_name or ''
+        self.hint = hint or ''
         self.details = details or {}
         self.overridden = False
         self.override_reason = None
@@ -34,6 +37,8 @@ class ValidationResult:
             'severity': self.severity,
             'message': self.message,
             'employee_id': self.employee_id,
+            'employee_name': self.employee_name,
+            'hint': self.hint,
             'details': self.details,
             'overridden': self.overridden,
             'override_reason': self.override_reason,
@@ -100,6 +105,8 @@ def _check_duplicate_employees(data: List[Dict], results: List[ValidationResult]
                 message=f"Possible duplicate: '{emp['name']}' appears twice with the same bank account. "
                         f"Check if this is the same person.",
                 employee_id=emp.get('id'),
+                employee_name=emp.get('name', ''),
+                hint='Check if this is the same person listed twice.',
                 details={'matched_with': seen[key]}
             ))
         else:
@@ -118,7 +125,9 @@ def _check_negative_net_pay(data: List[Dict], results: List[ValidationResult]):
                         f"Gross ({emp.get('gross', 0):,.2f}) < "
                         f"Deductions (tax {emp.get('tax', 0):,.2f} + "
                         f"pension {emp.get('pension_employee', 0):,.2f})",
-                employee_id=emp.get('id')
+                employee_id=emp.get('id'),
+                employee_name=emp.get('name', ''),
+                hint='Check the salary, tax, and pension values for this employee.'
             ))
 
 
@@ -131,7 +140,9 @@ def _check_missing_bank(data: List[Dict], results: List[ValidationResult]):
                 rule_code='MISSING_BANK',
                 severity='BLOCK',
                 message=f"No bank/Telebirr details for '{emp.get('name', 'Unknown')}'",
-                employee_id=emp.get('id')
+                employee_id=emp.get('id'),
+                employee_name=emp.get('name', ''),
+                hint='Add a bank account or Telebirr number so they can be paid.'
             ))
 
 
@@ -142,15 +153,18 @@ def _check_salary_typos(data: List[Dict], previous: Dict[str, dict],
         basic = emp.get('basic', 0)
         allowances = emp.get('allowances', 0)
         total = basic + allowances
+        emp_name = emp.get('name', '')
 
         # Absolute threshold
         if total > 500000:
             results.append(ValidationResult(
                 rule_code='SALTYPO_ABSOLUTE',
                 severity='FLAG',
-                message=f"Unusually high salary: ETB {total:,.2f} for '{emp.get('name', '')}'. "
-                        f"Please confirm this is correct.",
+                message=f"{emp_name}'s salary is unusually high: ETB {total:,.2f}. "
+                        f"Is this correct?",
                 employee_id=emp.get('id'),
+                employee_name=emp_name,
+                hint='Check with the employee if this amount is correct.',
                 details={'salary': total, 'threshold': 500000}
             ))
             continue
@@ -163,10 +177,12 @@ def _check_salary_typos(data: List[Dict], previous: Dict[str, dict],
                 results.append(ValidationResult(
                     rule_code='SALTYPO_RELATIVE',
                     severity='FLAG',
-                    message=f"Salary jumped {total/prev_total:.1f}× from last month "
-                            f"(ETB {prev_total:,.2f} → {total:,.2f}) for '{emp.get('name', '')}'. "
-                            f"Please confirm.",
+                    message=f"{emp_name}'s salary changed significantly "
+                            f"(ETB {prev_total:,.2f} → {total:,.2f}). "
+                            f"Is this correct?",
                     employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Check with the employee if this change is correct.',
                     details={'current': total, 'previous': prev_total}
                 ))
 
@@ -177,15 +193,18 @@ def _check_pension_mismatch(data: List[Dict], results: List[ValidationResult]):
         basic = emp.get('basic', 0)
         pension = emp.get('pension_employee', 0)
         expected = round(basic * 0.07, 2)
+        emp_name = emp.get('name', '')
 
         if basic > 0 and abs(pension - expected) > 0.01:
             results.append(ValidationResult(
                 rule_code='PENSION_MISMATCH',
                 severity='FLAG',
-                message=f"Pension mismatch for '{emp.get('name', '')}': "
+                message=f"{emp_name}'s pension doesn't match: "
                         f"expected ETB {expected:,.2f} (7% of {basic:,.2f}), "
                         f"got ETB {pension:,.2f}",
                 employee_id=emp.get('id'),
+                employee_name=emp_name,
+                hint='Pension should be 7% of basic salary. Check the calculation.',
                 details={'expected': expected, 'actual': pension, 'basic': basic}
             ))
 
@@ -197,15 +216,18 @@ def _check_tax_mismatch(data: List[Dict], results: List[ValidationResult]):
     for emp in data:
         gross = emp.get('gross', 0)
         tax = emp.get('tax', 0)
+        emp_name = emp.get('name', '')
 
         # Tax can never exceed gross
         if tax > gross:
             results.append(ValidationResult(
                 rule_code='TAX_EXCEEDS_GROSS',
                 severity='FLAG',
-                message=f"Tax (ETB {tax:,.2f}) exceeds gross salary (ETB {gross:,.2f}) "
-                        f"for '{emp.get('name', '')}'. This should never happen.",
+                message=f"{emp_name}'s tax (ETB {tax:,.2f}) exceeds gross salary (ETB {gross:,.2f}). "
+                        f"This should never happen.",
                 employee_id=emp.get('id'),
+                employee_name=emp_name,
+                hint='Check the tax calculation for this employee.',
                 details={'tax': tax, 'gross': gross}
             ))
 
@@ -214,24 +236,27 @@ def _check_tax_mismatch(data: List[Dict], results: List[ValidationResult]):
             results.append(ValidationResult(
                 rule_code='TAX_ON_ZERO',
                 severity='FLAG',
-                message=f"Tax of ETB {tax:,.2f} on zero salary for '{emp.get('name', '')}'",
-                employee_id=emp.get('id')
+                message=f"{emp_name} has tax of ETB {tax:,.2f} on zero salary.",
+                employee_id=emp.get('id'),
+                employee_name=emp_name,
+                hint='Check if this employee should have a salary.'
             ))
 
 
 def _check_missing_tin(data: List[Dict], results: List[ValidationResult]):
     """WARN: TIN needed for ERCA reporting."""
-    # TIN field doesn't exist on Employee yet, so this is a placeholder
-    # for when it's added. For now, warn for all employees.
     for emp in data:
         tin = emp.get('tin', '').strip()
+        emp_name = emp.get('name', '')
         if not tin:
             results.append(ValidationResult(
                 rule_code='MISSING_TIN',
                 severity='WARN',
-                message=f"No TIN for '{emp.get('name', '')}'. "
+                message=f"{emp_name} has no TIN number. "
                         f"Required for ERCA filing.",
-                employee_id=emp.get('id')
+                employee_id=emp.get('id'),
+                employee_name=emp_name,
+                hint='Ask the employee for their TIN number before filing.'
             ))
 
 

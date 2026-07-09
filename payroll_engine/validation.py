@@ -81,6 +81,7 @@ def validate_payroll_data(employees_data: List[Dict[str, Any]],
     _check_salary_typos(employees_data, previous_payslips, results)
     _check_pension_mismatch(employees_data, results)
     _check_tax_mismatch(employees_data, results)
+    _check_cash_compliance(employees_data, results)
 
     # --- WARN checks (informational) ---
 
@@ -257,6 +258,34 @@ def _check_missing_tin(data: List[Dict], results: List[ValidationResult]):
                 employee_id=emp.get('id'),
                 employee_name=emp_name,
                 hint='Ask the employee for their TIN number before filing.'
+            ))
+
+
+def _check_cash_compliance(data: List[Dict], results: List[ValidationResult]):
+    """FLAG: Ethiopian law requires electronic payment for salaries above ETB 30,000.
+
+    Per the Income Tax (Amendment) Proclamation No. 1395/2025, cash payments
+    above ETB 30,000 must go through a bank or official electronic channel.
+    This is a FLAG (not BLOCK) — the system informs, the owner decides.
+    """
+    CASH_LIMIT = 30000
+    for emp in data:
+        net = emp.get('net', 0)
+        bank = emp.get('bank', '').strip()
+        emp_name = emp.get('name', '')
+
+        if net > CASH_LIMIT and not bank:
+            results.append(ValidationResult(
+                rule_code='CASH_COMPLIANCE',
+                severity='FLAG',
+                message=f"{emp_name}'s net pay (ETB {net:,.2f}) exceeds the "
+                        f"ETB {CASH_LIMIT:,} cash payment limit. Ethiopian law "
+                        f"requires electronic payment (bank transfer or Telebirr) "
+                        f"for salaries above this amount.",
+                employee_id=emp.get('id'),
+                employee_name=emp_name,
+                hint='Add a bank account for this employee to avoid a compliance violation.',
+                details={'net_pay': net, 'cash_limit': CASH_LIMIT}
             ))
 
 

@@ -195,3 +195,94 @@ def test_audit_log_no_edit_delete_routes(app):
         url_rules = [rule.rule for rule in app.url_map.iter_rules()]
         audit_edit_routes = [r for r in url_rules if 'audit' in r and ('edit' in r or 'delete' in r or 'remove' in r)]
         assert len(audit_edit_routes) == 0, f'Found audit edit/delete routes: {audit_edit_routes}'
+
+
+def test_audit_log_hash_chain(app):
+    """Audit log entries form an unbroken hash chain per company."""
+    with app.app_context():
+        company = Company(name='Hash Test Co')
+        db.session.add(company)
+        db.session.flush()
+        cid = company.id
+
+        # Create entries one at a time (mirrors production — each route creates one log per request)
+        for i, action in enumerate(['action_a', 'action_b', 'action_c']):
+            entry = AuditLog(
+                company_id=cid,
+                user_id=None,
+                action=action,
+                details={'seq': i},
+            )
+            db.session.add(entry)
+            db.session.commit()
+
+        entries = AuditLog.query.filter_by(company_id=cid).order_by(AuditLog.id).all()
+        assert len(entries) == 3
+
+        # Chain integrity
+        assert entries[0].previous_hash is None
+        assert entries[0].hash is not None
+        assert entries[0].hash == entries[0].compute_hash()
+
+        assert entries[1].previous_hash == entries[0].hash
+        assert entries[1].hash == entries[1].compute_hash()
+
+        assert entries[2].previous_hash == entries[1].hash
+        assert entries[2].hash == entries[2].compute_hash()
+
+        # verify_chain returns all OK
+        results = AuditLog.verify_chain(cid)
+        assert all(ok for _, ok, _ in results)
+        assert len(results) == 3
+
+
+def test_audit_log_tamper_detected(app):
+    """Tampering with a hash or previous_hash is detected by verify_chain."""
+    with app.app_context():
+        company = Company(name='Tamper Test Co')
+        db.session.add(company)
+        db.session.flush()
+        cid = company.id
+
+        entry = AuditLog(company_id=cid, action='original', details={'v': 1})
+        db.session.add(entry)
+        db.session.commit()
+        entry_id = entry.id
+
+        results = AuditLog.verify_chain(cid)
+        assert results[0][1] is True  # ok before tamper
+
+        # Tamper with the hash directly via DB
+        entry = AuditLog.query.get(entry_id)
+        entry.hash = 'tampered'
+        db.session.commit()
+
+        results = AuditLog.verify_chain(cid)
+        assert results[0][1] is False  # detected after tamper
+        assert 'hash does not match' in results[0][2]
+
+
+def test_audit_log_hash_chain_multiple_companies(app):
+    """Hash chains are isolated per company."""
+    with app.app_context():
+        c1 = Company(name='Chain Co A')
+        c2 = Company(name='Chain Co B')
+        db.session.add_all([c1, c2])
+        db.session.flush()
+
+        db.session.add(AuditLog(company_id=c1.id, action='a1', details={}))
+        db.session.commit()
+        db.session.add(AuditLog(company_id=c2.id, action='b1', details={}))
+        db.session.commit()
+        db.session.add(AuditLog(company_id=c1.id, action='a2', details={}))
+        db.session.commit()
+        db.session.add(AuditLog(company_id=c2.id, action='b2', details={}))
+        db.session.commit()
+
+        # Both chains verify independently
+        assert all(ok for _, ok, _ in AuditLog.verify_chain(c1.id))
+        assert all(ok for _, ok, _ in AuditLog.verify_chain(c2.id))
+
+        # Each company has 2 entries, not mixed
+        assert AuditLog.query.filter_by(company_id=c1.id).count() == 2
+        assert AuditLog.query.filter_by(company_id=c2.id).count() == 2

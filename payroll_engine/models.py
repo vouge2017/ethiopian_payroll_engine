@@ -621,12 +621,73 @@ class AuditLog(db.Model):
     action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     details = db.Column(db.JSON)
+    previous_hash = db.Column(db.String(64), nullable=True)
+    hash = db.Column(db.String(64), nullable=True)
 
     # Relationship to User
     user = db.relationship('User', backref=db.backref('audit_logs', lazy=True))
-    
+
+    def compute_hash(self):
+        """SHA-256 of (previous_hash + company_id + user_id + action + sorted JSON details).
+
+        Does NOT include timestamp because the column default fires after before_insert,
+        so the value isn't yet available at hash-computation time.
+        """
+        import hashlib, json
+        raw = (
+            str(self.previous_hash or '')
+            + str(self.company_id)
+            + str(self.user_id or '')
+            + str(self.action)
+            + json.dumps(self.details or {}, sort_keys=True, default=str)
+        )
+        return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+    @classmethod
+    def verify_chain(cls, company_id: int) -> list:
+        """Verify the hash chain for a company's audit log.
+
+        Returns a list of (entry_id, ok, message) tuples.
+        """
+        entries = cls.query.filter_by(company_id=company_id).order_by(cls.id).all()
+        results = []
+        for i, entry in enumerate(entries):
+            expected_hash = entry.compute_hash()
+            ok = entry.hash == expected_hash
+            if i == 0:
+                chain_ok = entry.previous_hash is None
+                if not chain_ok:
+                    results.append((entry.id, False, 'first entry has non-null previous_hash'))
+                    continue
+            else:
+                chain_ok = entry.previous_hash == entries[i - 1].hash
+                if not chain_ok:
+                    results.append((entry.id, False, f'previous_hash mismatch with entry {entries[i - 1].id}'))
+                    continue
+            if not ok:
+                results.append((entry.id, False, 'hash does not match computed value'))
+            else:
+                results.append((entry.id, True, 'ok'))
+        return results
+
     def __repr__(self):
         return f'<AuditLog {self.action} at {self.timestamp}>'
+
+
+@db.event.listens_for(AuditLog, 'before_insert')
+def _audit_log_before_insert(mapper, connection, target):
+    """Auto-compute hash chain on insert.
+
+    Uses the raw connection so it works even before the session is flushed.
+    """
+    from sqlalchemy import select, func
+    if target.previous_hash is None:
+        stmt = select(AuditLog.hash).where(
+            AuditLog.company_id == target.company_id
+        ).order_by(AuditLog.id.desc()).limit(1)
+        result = connection.execute(stmt).scalar()
+        target.previous_hash = result
+    target.hash = target.compute_hash()
 
 
 class TaxRule(db.Model):

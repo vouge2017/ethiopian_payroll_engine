@@ -104,6 +104,10 @@ def create_app():
     limiter.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    if not app.debug:
+        app.config['SESSION_COOKIE_SECURE'] = True
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     db.init_app(app)
     migrate.init_app(app, db)
@@ -119,6 +123,15 @@ def create_app():
     @app.before_request
     def set_request_id():
         g.request_id = request.headers.get('X-Request-Id', uuid.uuid4().hex[:12])
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.set('X-Content-Type-Options', 'nosniff')
+        response.headers.set('X-Frame-Options', 'DENY')
+        response.headers.set('X-XSS-Protection', '0')
+        if not app.debug:
+            response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        return response
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')

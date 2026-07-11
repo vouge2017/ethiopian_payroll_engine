@@ -166,27 +166,42 @@ def test_company_isolation(ctx):
     assert not user.can_access_company(company2.id)
 
 
-def test_switch_company(ctx):
-    """Switching company updates user's company_id."""
-    company1 = Company(name='Company A')
-    company2 = Company(name='Company B')
-    db.session.add_all([company1, company2])
-    db.session.commit()
+def test_switch_company(app):
+    """Switching company stores active_company_id in session, not DB."""
+    app.config['WTF_CSRF_ENABLED'] = False
+    client = app.test_client()
+    with app.app_context():
+        company1 = Company(name='Company A')
+        company2 = Company(name='Company B')
+        db.session.add_all([company1, company2])
+        db.session.commit()
 
-    user = User(phone='0911234567', company_id=company1.id, role='accountant')
-    user.set_password('pass123')
-    db.session.add(user)
-    db.session.commit()
+        user = User(phone='0911234567', company_id=company1.id, role='accountant')
+        user.set_password('pass123')
+        db.session.add(user)
+        db.session.flush()
+        link = UserCompany(user_id=user.id, company_id=company2.id, role='accountant')
+        db.session.add(link)
+        db.session.commit()
+        cid1, cid2 = company1.id, company2.id
+        uid = user.id
 
-    link = UserCompany(user_id=user.id, company_id=company2.id, role='accountant')
-    db.session.add(link)
-    db.session.commit()
+    # Login as the multi-company accountant
+    login_resp = client.post('/auth/login', data={
+        'login_id': '0911234567', 'password': 'pass123'
+    }, follow_redirects=True)
+    assert login_resp.status_code == 200, f'Login failed: {login_resp.status_code}'
+    assert b'Dashboard' in login_resp.data or b'dashboard' in login_resp.data.lower()
 
-    # Switch to company2
-    user.company_id = company2.id
-    db.session.commit()
+    # Switch to company2 via the route
+    resp = client.get(f'/switch-company/{cid2}', follow_redirects=True)
+    assert resp.status_code == 200
+    assert b'Company B' in resp.data or b'Switched' in resp.data
 
-    assert user.company_id == company2.id
+    # DB record is unchanged — still points to company1
+    with app.app_context():
+        db_user = db.session.get(User, uid)
+        assert db_user.company_id == cid1  # DB unchanged
 
 
 # ---------------------------------------------------------------

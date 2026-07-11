@@ -3,9 +3,9 @@
 Routes in main.py delegate to this module so they stay thin.
 """
 import csv as csv_module
+import math
 import os
 from datetime import date
-from decimal import Decimal
 from typing import List, Dict, Tuple, Optional
 
 from payroll_engine.payroll import calculate_payroll
@@ -37,6 +37,8 @@ def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
                 allow_raw = row.get('allowances', '0') or '0'
                 basic = float(basic_raw)
                 allow = float(allow_raw)
+                if not (math.isfinite(basic) and math.isfinite(allow)):
+                    raise ValueError('NaN or Infinity')
             except (ValueError, TypeError):
                 row_errors.append(
                     f"Row {row_idx}: invalid numeric value "
@@ -143,39 +145,43 @@ def check_duplicate_period(company_id: int, period: str) -> Optional[Tuple[str, 
 def create_payroll_run(company_id: int, employees_data: List, validation_results: list) -> dict:
     """Create a complete payroll run with draft and validation results.
 
+    Wraps all DB writes in a transaction so a partial failure rolls back cleanly.
+
     Returns dict with keys: run_id, employees_data, totals.
     """
     from payroll_engine import db
     from payroll_engine.models import PayrollRun, PayrollDraft, PayrollValidationResult
 
-    run = PayrollRun(
-        company_id=company_id,
-        run_date=date.today(),
-        status='review',
-    )
-    run.generate_period()
-    db.session.add(run)
-    db.session.commit()
-    run.generate_reference()
-    db.session.commit()
-
-    for vr in validation_results:
-        db_vr = PayrollValidationResult(
-            payroll_run_id=run.id,
-            rule_code=vr.rule_code,
-            severity=vr.severity,
-            message=vr.message,
-            details_json=vr.details,
+    try:
+        run = PayrollRun(
+            company_id=company_id,
+            run_date=date.today(),
+            status='review',
         )
-        db.session.add(db_vr)
-    db.session.commit()
+        run.generate_period()
+        db.session.add(run)
+        db.session.flush()
+        run.generate_reference()
 
-    draft = PayrollDraft(
-        payroll_run_id=run.id,
-        employee_data=employees_data,
-    )
-    db.session.add(draft)
-    db.session.commit()
+        for vr in validation_results:
+            db_vr = PayrollValidationResult(
+                payroll_run_id=run.id,
+                rule_code=vr.rule_code,
+                severity=vr.severity,
+                message=vr.message,
+                details_json=vr.details,
+            )
+            db.session.add(db_vr)
+
+        draft = PayrollDraft(
+            payroll_run_id=run.id,
+            employee_data=employees_data,
+        )
+        db.session.add(draft)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
     total_gross = sum(e['gross'] for e in employees_data)
     total_tax = sum(e['tax'] for e in employees_data)

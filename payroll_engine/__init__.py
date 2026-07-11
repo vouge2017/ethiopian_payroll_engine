@@ -56,9 +56,6 @@ def _configure_logging(app):
     app.logger.addHandler(handler)
     app.logger.setLevel(log_level)
     app.logger.propagate = False
-    logging.getLogger('payroll_engine').addHandler(handler)
-    logging.getLogger('payroll_engine').setLevel(log_level)
-    logging.getLogger('payroll_engine').propagate = False
 
 
 def create_app():
@@ -139,10 +136,6 @@ def create_app():
     app.register_blueprint(main_blueprint)
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
-    @app.route('/health')
-    def health():
-        return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200
-
     @app.route('/healthz')
     def healthz():
         return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200

@@ -1,11 +1,14 @@
-from flask import Flask
+import logging
+import os
+import uuid
+
+from flask import Flask, current_app, g, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import os
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -29,12 +32,53 @@ def _json_serializer(obj):
     raise TypeError(f'Object of type {type(obj).__name__} is not JSON serializable')
 
 
+class RequestIdFilter(logging.Filter):
+    def filter(self, record):
+        try:
+            record.request_id = getattr(g, 'request_id', '-')
+            record.method = request.method
+            record.path = request.path
+        except RuntimeError:
+            record.request_id = '-'
+            record.method = '-'
+            record.path = '-'
+        return True
+
+
+def _configure_logging(app):
+    log_level = getattr(logging, app.config.get('LOG_LEVEL', 'INFO'), logging.INFO)
+    handler = logging.StreamHandler()
+    handler.setLevel(log_level)
+    handler.setFormatter(logging.Formatter(
+        '[%(asctime)s] %(levelname)s req=%(request_id)s %(method)s %(path)s %(message)s'
+    ))
+    handler.addFilter(RequestIdFilter())
+    app.logger.addHandler(handler)
+    app.logger.setLevel(log_level)
+    app.logger.propagate = False
+    logging.getLogger('payroll_engine').addHandler(handler)
+    logging.getLogger('payroll_engine').setLevel(log_level)
+    logging.getLogger('payroll_engine').propagate = False
+
+
 def create_app():
     app = Flask(__name__)
 
-    # Load config based on environment
     env = os.environ.get('FLASK_ENV', 'development')
+
     if env == 'production':
+        secret = os.environ.get('SECRET_KEY', '')
+        db_url = os.environ.get('DATABASE_URL', '')
+        enc_key = os.environ.get('DB_ENCRYPTION_KEY', '')
+        errors = []
+        if not secret or secret in ('dev-change-in-production', 'your-secret-key-here'):
+            errors.append('SECRET_KEY must be a real value in production')
+        if not db_url or 'sqlite' in db_url:
+            errors.append('DATABASE_URL must be a PostgreSQL connection string in production')
+        if not enc_key or enc_key == 'dev-encryption-key-not-for-production-use-only-32b':
+            errors.append('DB_ENCRYPTION_KEY must be a real value in production')
+        if errors:
+            raise RuntimeError('Insecure production configuration: ' + '; '.join(errors))
         from config import ProductionConfig
         app.config.from_object(ProductionConfig())
     else:
@@ -50,6 +94,9 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+    app.config['LOG_LEVEL'] = os.environ.get('LOG_LEVEL', 'INFO').upper()
+
+    _configure_logging(app)
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'json_serializer': lambda obj, **kwargs: __import__('json').dumps(obj, default=_json_serializer, **kwargs)
     }
@@ -69,6 +116,10 @@ def create_app():
     TenantQuery.register_model(OvertimeEntry)
     TenantQuery.register_model(EmployeeDeduction)
 
+    @app.before_request
+    def set_request_id():
+        g.request_id = request.headers.get('X-Request-Id', uuid.uuid4().hex[:12])
+
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
     from .main import main as main_blueprint
@@ -78,6 +129,23 @@ def create_app():
     @app.route('/health')
     def health():
         return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200
+
+    @app.route('/healthz')
+    def healthz():
+        return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200
+
+    @app.route('/readyz')
+    def readyz():
+        from sqlalchemy import text
+        status = {'self': 'up'}
+        try:
+            db.session.execute(text('SELECT 1'))
+            status['database'] = 'up'
+        except Exception as e:
+            status['database'] = 'down'
+            current_app.logger.error('readyz DB check failed: %s', e)
+            return {'status': 'not_ready', 'checks': status}, 503
+        return {'status': 'ready', 'checks': status}, 200
 
     # Make Ethiopian calendar available in all templates
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date

@@ -10,62 +10,67 @@
     <style>
         body { background: #f4f6f9; }
         .sidebar { min-height: 100vh; background: #1a5276; }
-        .sidebar a { color: rgba(255,255,255,0.8); padding: 0.6rem 1rem; display: block; text-decoration: none; }
-        .sidebar a:hover, .sidebar a.active { color: #fff; background: rgba(255,255,255,0.1); }
+        .sidebar a { color: rgba(255,255,255,0.85); padding: 0.6rem 1rem; display: block; text-decoration: none; }
+        .sidebar a:hover, .sidebar a.active { color: #fff; background: rgba(255,255,255,0.15); }
+        .sidebar a:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
         .bg-primary { background-color: #1a5276 !important; }
         .btn-primary { background-color: #1a5276; border-color: #1a5276; }
         .btn-primary:hover { background-color: #154360; border-color: #154360; }
+        .btn:focus-visible, .form-control:focus-visible { outline: 3px solid #1a5276; outline-offset: 2px; }
         .card-header.bg-primary { background-color: #1a5276 !important; }
         .table-responsive { margin-top: 1rem; }
         .badge-status { font-size: 0.85rem; }
+        .skip-link { position: absolute; top: -40px; left: 0; background: #1a5276; color: #fff; padding: 8px 16px; z-index: 9999; }
+        .skip-link:focus { top: 0; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+<a href="#mainContent" class="skip-link" tabindex="1">Skip to main content</a>
 {% if current_user.is_authenticated %}
 <div class="d-flex">
     <!-- Sidebar -->
-    <div class="sidebar p-0" style="width: 240px;">
+    <div class="sidebar p-0" style="width: 240px;" role="navigation" aria-label="Main navigation">
         <div class="sidebar-brand p-3 text-white border-bottom border-secondary">
             <div>
                 <h5 class="mb-0"><i class="bi bi-bank me-2"></i>{{ _("payroll") }}</h5>
                 <small class="text-muted">{{ current_user.company.name }}</small>
             </div>
-            <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Menu">
+            <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebarNav">
                 <i class="bi bi-list"></i>
             </button>
         </div>
-        <nav class="flex-column">
+        <nav class="flex-column" id="sidebarNav" role="menu">
             {% if current_user.role == 'employee' %}
             <!-- Employee portal navigation -->
-            <a href="{{ url_for('main.employee_dashboard') }}" class="{% if request.endpoint == 'main.employee_dashboard' %}active{% endif %}">
+            <a href="{{ url_for('main.employee_dashboard') }}" class="{% if request.endpoint == 'main.employee_dashboard' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-speedometer2 me-2"></i>{{ _('my_dashboard') }}
             </a>
-            <a href="{{ url_for('main.my_payslips') }}" class="{% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.my_payslips') }}" class="{% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-receipt me-2"></i>{{ _('my_payslips') }}
             </a>
-            <a href="{{ url_for('main.my_profile') }}" class="{% if request.endpoint == 'main.my_profile' %}active{% endif %}">
+            <a href="{{ url_for('main.my_profile') }}" class="{% if request.endpoint == 'main.my_profile' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-person me-2"></i>{{ _('my_profile') }}
             </a>
             {% else %}
             <!-- Owner/Accountant navigation -->
-            <a href="{{ url_for('main.index') }}" class="{% if request.endpoint == 'main.index' %}active{% endif %}">
+            <a href="{{ url_for('main.index') }}" class="{% if request.endpoint == 'main.index' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-speedometer2 me-2"></i>{{ _('dashboard') }}
             </a>
-            <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-people me-2"></i>{{ _('employees') }}
             </a>
-            <a href="{{ url_for('main.payroll_upload') }}" class="{% if 'payroll' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.payroll_upload') }}" class="{% if 'payroll' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-cloud-upload me-2"></i>{{ _('run_payroll') }}
             </a>
-            <a href="{{ url_for('main.payroll_runs') }}" class="{% if 'payroll_runs' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.payroll_runs') }}" class="{% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-clock-history me-2"></i>{{ _('payroll_runs') }}
             </a>
-            <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-bar-chart me-2"></i>{{ _('reports') }}
             </a>
             {% if current_user.role == 'owner' %}
-            <a href="{{ url_for('main.team_settings') }}" class="{% if 'team' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.team_settings') }}" class="{% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-gear me-2"></i>{{ _('team') }}
             </a>
             {% endif %}
@@ -97,7 +102,7 @@
     </div>
 
     <!-- Main content -->
-    <div class="flex-grow-1 main-content" style="min-width: 0;">
+    <div class="flex-grow-1 main-content" style="min-width: 0;" id="mainContent" role="main">
 {% endif %}
 
         <!-- Demo mode banner -->
@@ -136,16 +141,21 @@
 function toggleSidebar() {
     var nav = document.querySelector('.sidebar nav');
     var footer = document.querySelector('.sidebar > div:last-child');
-    nav.classList.toggle('show');
+    var btn = document.querySelector('.sidebar-toggle');
+    var expanded = nav.classList.toggle('show');
     if (footer) footer.classList.toggle('show');
+    if (btn) btn.setAttribute('aria-expanded', expanded);
 }
 // Close sidebar when clicking a link (mobile)
 document.querySelectorAll('.sidebar nav a').forEach(function(a) {
     a.addEventListener('click', function() {
         if (window.innerWidth < 768) {
-            document.querySelector('.sidebar nav').classList.remove('show');
+            var nav = document.querySelector('.sidebar nav');
             var footer = document.querySelector('.sidebar > div:last-child');
+            var btn = document.querySelector('.sidebar-toggle');
+            nav.classList.remove('show');
             if (footer) footer.classList.remove('show');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
         }
     });
 });

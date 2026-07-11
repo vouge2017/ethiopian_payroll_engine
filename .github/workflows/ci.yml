@@ -27,8 +27,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Verify Flask-Login import (Wave 0 safety net)
-        run: python -c "import flask_login; print('flask_login', flask_login.__version__)"
+      - name: Verify lock file install and import check
+        run: |
+          pip install -r requirements-lock.txt
+          python -c "import flask_login; print('flask_login', flask_login.__version__)"
+          python -c "from payroll_engine import create_app; app = create_app(); print('App created OK')"
 
       - name: Verify this is the Flask payroll app (not Django)
         run: |

@@ -1,7 +1,7 @@
 """Main blueprint: dashboard, employees, payroll upload/results, reports."""
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
-    flash, send_file, abort, current_app, jsonify
+    flash, send_file, abort, current_app, jsonify, session
 )
 from payroll_engine import limiter
 from flask_login import login_required, current_user
@@ -24,9 +24,22 @@ from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score, get_status_message
 from payroll_engine.security import log_and_flash_error
+from payroll_engine.services.payroll_workflow import (
+    parse_and_calculate_payroll,
+    check_csv_row_limit,
+    build_period_string,
+    get_previous_payslips,
+    check_duplicate_period,
+    create_payroll_run,
+)
 
 
 main = Blueprint('main', __name__)
+
+
+def _company_id():
+    """Return the session-scoped active company ID, falling back to user default."""
+    return session.get('active_company_id', current_user.company_id)
 
 
 # --- Decorators ---
@@ -41,13 +54,13 @@ def role_required(*roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # Get effective role for current company
-            effective_role = current_user.get_role_for_company(current_user.company_id)
+            effective_role = current_user.get_role_for_company(_company_id())
             if effective_role not in roles:
                 flash('You do not have permission for this action.', 'danger')
                 # Log the attempt
                 from payroll_engine.models import AuditLog
                 log = AuditLog(
-                    company_id=current_user.company_id,
+                    company_id=_company_id(),
                     user_id=current_user.id,
                     action='permission_denied',
                     details={'route': request.endpoint, 'required_roles': list(roles),
@@ -149,7 +162,7 @@ def list_employees():
     search = request.args.get('q', '').strip()
     # Filter out soft-deleted employees by default
     show_archived = request.args.get('archived', '') == '1'
-    query = Employee.query.filter_by(company_id=current_user.company_id)
+    query = Employee.query.filter_by(company_id=_company_id())
     if not show_archived:
         query = query.filter_by(is_deleted=False)
     if search:
@@ -197,7 +210,7 @@ def add_employee():
         # Auto-generate employee_id if not provided
         if not emp_id:
             last_emp = Employee.query.filter_by(
-                company_id=current_user.company_id
+                company_id=_company_id()
             ).order_by(Employee.id.desc()).first()
             if last_emp and last_emp.employee_id.startswith('EMP'):
                 try:
@@ -209,7 +222,7 @@ def add_employee():
             emp_id = f'EMP{next_num:03d}'
 
         existing = Employee.query.filter_by(
-            company_id=current_user.company_id, employee_id=emp_id
+            company_id=_company_id(), employee_id=emp_id
         ).first()
         if existing:
             flash(f'Employee ID {emp_id} already exists.', 'danger')
@@ -230,12 +243,12 @@ def add_employee():
             bank_account=bank_account,
             bank_or_telebirr=bank,
             tin=tin,
-            company_id=current_user.company_id
+            company_id=_company_id()
         )
         db.session.add(emp)
 
         log = AuditLog(
-            company_id=current_user.company_id,
+            company_id=_company_id(),
             user_id=current_user.id,
             action='employee_added',
             details={'employee_id': emp_id, 'name': name}
@@ -255,7 +268,7 @@ def add_employee():
 def edit_employee(emp_id):
     """Edit an employee. Logs salary and bank account changes to audit trail."""
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=current_user.company_id
+        id=emp_id, company_id=_company_id()
     ).first_or_404()
 
     if request.method == 'POST':
@@ -328,7 +341,7 @@ def edit_employee(emp_id):
         # Log to audit trail (one entry per changed field)
         for change_type, details in changes.items():
             log = AuditLog(
-                company_id=current_user.company_id,
+                company_id=_company_id(),
                 user_id=current_user.id,
                 action=change_type,
                 details={
@@ -458,65 +471,11 @@ def payroll_upload():
         file.save(filepath)
 
         try:
-            # --- STAGE 1: DRAFT ---
-            # Parse CSV and calculate payroll (no money moves)
-            employees_data = []
-            row_errors = []
-            with open(filepath, newline='', encoding='utf-8') as f:
-                reader = csv_module.DictReader(f)
-                if not reader.fieldnames:
-                    raise ValueError('CSV file is empty or has no headers')
-                required = ['employee_id', 'name', 'basic_salary', 'allowances']
-                missing = [col for col in required if col not in reader.fieldnames]
-                if missing:
-                    raise ValueError(f'Missing required columns: {", ".join(missing)}')
+            employees_data, row_errors = parse_and_calculate_payroll(filepath)
 
-                for row_idx, row in enumerate(reader, start=2):
-                    try:
-                        basic_raw = row.get('basic_salary', '0') or '0'
-                        allow_raw = row.get('allowances', '0') or '0'
-                        basic = float(basic_raw)
-                        allow = float(allow_raw)
-                    except (ValueError, TypeError):
-                        row_errors.append(
-                            f"Row {row_idx}: invalid numeric value "
-                            f"(basic_salary='{row.get('basic_salary', '')}', "
-                            f"allowances='{row.get('allowances', '')}')"
-                        )
-                        continue
-                    # Single entry point — enforces deduction order
-                    result = calculate_payroll(basic, allow)
-                    # Tax breakdown for PDF
-                    from payroll_engine.tax import calculate_tax_breakdown
-                    tax_bd = calculate_tax_breakdown(result['taxable'])
-                    employees_data.append({
-                        'id': row.get('employee_id', '').strip(),
-                        'name': row.get('name', '').strip(),
-                        'phone': row.get('phone', '').strip(),
-                        'department': row.get('department', '').strip(),
-                        'position': row.get('position', '').strip(),
-                        'start_date': row.get('start_date', '').strip(),
-                        'basic': basic,
-                        'allowances': allow,
-                        'gross': result['gross'],
-                        'taxable': result['taxable'],
-                        'tax': result['tax'],
-                        'pension_employee': result['pension_employee'],
-                        'pension_employer': result['pension_employer'],
-                        'net': result['net'],
-                        'bank_account': row.get('bank_account', '').strip(),
-                        'bank': row.get('bank_or_telebirr', '').strip(),
-                        'tin': row.get('tin', '').strip(),
-                        'tax_breakdown': tax_bd,
-                    })
-
-            _MAX_CSV_ROWS = 5000
-            if len(employees_data) > _MAX_CSV_ROWS:
-                flash(
-                    f'CSV contains {len(employees_data)} employees — '
-                    f'maximum allowed is {_MAX_CSV_ROWS}.',
-                    'danger'
-                )
+            limit_msg = check_csv_row_limit(employees_data)
+            if limit_msg:
+                flash(limit_msg, 'danger')
                 return redirect(request.url)
 
             if row_errors:
@@ -528,106 +487,39 @@ def payroll_upload():
             if not employees_data:
                 raise ValueError('No valid data rows in CSV')
 
-            # --- STAGE 2: VALIDATE ---
-            # Get previous payslips for salary comparison
-            previous_payslips = {}
-            last_run = PayrollRun.query.filter_by(
-                company_id=current_user.company_id, status='completed'
-            ).order_by(PayrollRun.run_date.desc()).first()
-            if last_run:
-                for p in last_run.payslips:
-                    emp = p.employee
-                    previous_payslips[emp.employee_id] = {
-                        'basic': emp.basic_salary,
-                        'allowances': emp.allowances,
-                    }
+            previous_payslips = get_previous_payslips(_company_id())
 
             validation_results = validate_payroll_data(
                 employees_data,
-                company_id=current_user.company_id,
-                previous_payslips=previous_payslips
+                company_id=_company_id(),
+                previous_payslips=previous_payslips,
             )
             summary = get_summary(validation_results)
 
-            # Create draft payroll run
-            run = PayrollRun(
-                company_id=current_user.company_id,
-                run_date=date.today(),
-                status='review',
+            period_str = build_period_string()
+            dup = check_duplicate_period(
+                _company_id(),
+                period_str,
             )
-            # Auto-set Ethiopian period
-            run.generate_period()
-
-            # Check for duplicate period — one active run per company+period
-            existing = PayrollRun.query.filter_by(
-                company_id=current_user.company_id,
-                period=run.period
-            ).filter(
-                PayrollRun.status.notin_(['failed', 'rejected'])
-            ).first()
-            if existing:
-                from payroll_engine.ethiopian_calendar import get_ethiopian_month_name
-                eth_parts = run.period.split('-')
-                month_name = get_ethiopian_month_name(int(eth_parts[1]), 'en')
-                if existing.status == 'locked':
-                    flash(
-                        f'{month_name} {eth_parts[0]} is locked '
-                        f'(#{existing.reference}). '
-                        f'Ask the owner to unlock it first.',
-                        'danger'
-                    )
-                else:
-                    flash(
-                        f'A payroll run for {month_name} {eth_parts[0]} already exists '
-                        f'(#{existing.reference}, status: {existing.status}). '
-                        f'Delete or reject it first to reprocess.',
-                        'danger'
-                    )
+            if dup:
+                flash(dup[0], 'danger')
                 return redirect(url_for('main.payroll_runs'))
 
-            db.session.add(run)
-            db.session.commit()
-
-            # Generate human-readable reference
-            run.generate_reference()
-            db.session.commit()
-
-            # Save validation results
-            for vr in validation_results:
-                db_vr = PayrollValidationResult(
-                    payroll_run_id=run.id,
-                    rule_code=vr.rule_code,
-                    severity=vr.severity,
-                    message=vr.message,
-                    details_json=vr.details,
-                )
-                db.session.add(db_vr)
-            db.session.commit()
-
-            # Store employees_data in database (not session)
-            # Session storage caused data loss when sessions expired
-            draft = PayrollDraft(
-                payroll_run_id=run.id,
-                employee_data=employees_data,
+            result = create_payroll_run(
+                company_id=_company_id(),
+                employees_data=employees_data,
+                validation_results=validation_results,
             )
-            db.session.add(draft)
-            db.session.commit()
-
-            # --- STAGE 3: REVIEW ---
-            # Show validation results and payroll summary
-            total_gross = sum(e['gross'] for e in employees_data)
-            total_tax = sum(e['tax'] for e in employees_data)
-            total_net = sum(e['net'] for e in employees_data)
 
             return render_template(
                 'validation_results.html',
-                run_id=run.id,
-                results=validation_results,
+                run_id=result['run_id'],
+                results=result['validation_results'],
                 summary=summary,
-                employees=employees_data,
-                total_gross=total_gross,
-                total_tax=total_tax,
-                total_net=total_net,
+                employees=result['employees_data'],
+                total_gross=result['total_gross'],
+                total_tax=result['total_tax'],
+                total_net=result['total_net'],
                 year=date.today().year,
             )
 
@@ -647,7 +539,7 @@ def payroll_upload():
 def payroll_confirm(run_id):
     """Show confirmation page before approval. Password re-auth required."""
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     if run.status != 'review':
         flash('This payroll run is not in review status.', 'danger')
@@ -681,7 +573,7 @@ def payroll_confirm(run_id):
 def reject_payroll(run_id):
     """Reject a payroll run and send back to draft with reason."""
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     if run.status != 'review':
         flash('Can only reject payroll in review status.', 'danger')
@@ -693,7 +585,7 @@ def reject_payroll(run_id):
     run.status = 'draft'
     # Store rejection reason in audit log
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='payroll_rejected',
         details={'run_id': run.id, 'reason': reason}
@@ -726,7 +618,7 @@ def approve_payroll():
 
     # SELECT ... FOR UPDATE — prevents double-approval on concurrent requests
     run = PayrollRun.query.filter_by(
-        id=int(run_id), company_id=current_user.company_id
+        id=int(run_id), company_id=_company_id()
     ).with_for_update().first_or_404()
 
     if run.status not in ('review', 'pending_approval'):
@@ -734,7 +626,7 @@ def approve_payroll():
         return redirect(url_for('main.payroll_run_detail', run_id=run.id))
 
     # Accountant submits for owner approval
-    effective_role = current_user.get_role_for_company(current_user.company_id)
+    effective_role = current_user.get_role_for_company(_company_id())
     if effective_role == 'accountant' and run.status == 'review':
         run.status = 'pending_approval'
         db.session.commit()
@@ -784,7 +676,7 @@ def approve_payroll():
         # Batch-fetch existing employees to avoid N+1 queries
         emp_ids = [emp_data['id'] for emp_data in employees_data]
         existing_emps = Employee.query.filter(
-            Employee.company_id == current_user.company_id,
+            Employee.company_id == _company_id(),
             Employee.employee_id.in_(emp_ids)
         ).all()
         emp_by_eid = {e.employee_id: e for e in existing_emps}
@@ -800,7 +692,7 @@ def approve_payroll():
                     allowances=emp_data['allowances'],
                     bank_or_telebirr=emp_data.get('bank', ''),
                     tin=emp_data.get('tin') or None,
-                    company_id=current_user.company_id,
+                    company_id=_company_id(),
                 )
                 db.session.add(emp)
                 db.session.flush()
@@ -837,7 +729,7 @@ def approve_payroll():
 
         # Audit log
         log = AuditLog(
-            company_id=current_user.company_id,
+            company_id=_company_id(),
             user_id=current_user.id,
             action='payroll_run_completed',
             details={
@@ -862,7 +754,7 @@ def approve_payroll():
         run.status = 'failed'
         db.session.commit()
         log = AuditLog(
-            company_id=current_user.company_id,
+            company_id=_company_id(),
             user_id=current_user.id,
             action='payroll_run_failed',
             details={'run_id': run.id, 'error': str(e)}
@@ -880,7 +772,7 @@ def approve_payroll():
 @login_required
 def payroll_runs():
     """List payroll runs for the company."""
-    runs = PayrollRun.query.filter_by(company_id=current_user.company_id) \
+    runs = PayrollRun.query.filter_by(company_id=_company_id()) \
         .order_by(PayrollRun.created_at.desc()).all()
     return render_template('payroll_runs.html', runs=runs, year=date.today().year)
 
@@ -894,7 +786,7 @@ def lock_payroll(run_id):
     Only owners can lock. Once locked, no new run can be created for the same period.
     """
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     if run.status != 'completed':
         flash('Can only lock completed payroll runs.', 'danger')
@@ -903,7 +795,7 @@ def lock_payroll(run_id):
     run.locked_at = datetime.utcnow()
     run.locked_by = current_user.id
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='payroll_locked',
         details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
@@ -923,7 +815,7 @@ def unlock_payroll(run_id):
     Only owners can unlock. Use with caution — this removes the period protection.
     """
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     if run.status != 'locked':
         flash('This run is not locked.', 'danger')
@@ -932,7 +824,7 @@ def unlock_payroll(run_id):
     run.locked_at = None
     run.locked_by = None
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='payroll_unlocked',
         details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
@@ -948,7 +840,7 @@ def unlock_payroll(run_id):
 def payroll_run_detail(run_id):
     """Show payroll run details."""
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     return render_template('payroll_results.html', run=run, year=date.today().year)
 
@@ -958,7 +850,7 @@ def payroll_run_detail(run_id):
 def download_all_payslips(run_id):
     """Download all payslips for a run as a ZIP file."""
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
 
     payslips = run.payslips
@@ -990,7 +882,7 @@ def download_payslip(payslip_id):
     """Download a single payslip PDF."""
     payslip = Payslip.query.get_or_404(payslip_id)
     run = PayrollRun.query.get(payslip.payroll_run_id)
-    if run.company_id != current_user.company_id:
+    if run.company_id != _company_id():
         abort(403)
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
         flash('PDF not found.', 'danger')
@@ -1005,7 +897,7 @@ def employee_detail(emp_id):
     from payroll_engine.models import OvertimeEntry, EmployeeDeduction
     from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=current_user.company_id
+        id=emp_id, company_id=_company_id()
     ).first_or_404()
     payslips = Payslip.query.filter_by(employee_id=emp.id) \
         .order_by(Payslip.generated_at.desc()).all()
@@ -1013,7 +905,7 @@ def employee_detail(emp_id):
     today = date.today()
     month_start = today.replace(day=1)
     overtime_entries = OvertimeEntry.query.filter_by(
-        employee_id=emp.id, company_id=current_user.company_id
+        employee_id=emp.id, company_id=_company_id()
     ).filter(OvertimeEntry.date >= month_start) \
      .order_by(OvertimeEntry.date.desc()).all()
     # Calculate pay for each entry
@@ -1031,7 +923,7 @@ def employee_detail(emp_id):
         total_ot_pay += pay
     # Deductions
     deductions = EmployeeDeduction.query.filter_by(
-        employee_id=emp.id, company_id=current_user.company_id
+        employee_id=emp.id, company_id=_company_id()
     ).order_by(EmployeeDeduction.created_at.desc()).all()
     active_deductions = [d for d in deductions if d.is_active]
     inactive_deductions = [d for d in deductions if not d.is_active]
@@ -1054,7 +946,7 @@ def add_overtime(emp_id):
     """Add overtime entry for an employee."""
     from payroll_engine.models import OvertimeEntry
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=current_user.company_id
+        id=emp_id, company_id=_company_id()
     ).first_or_404()
     ot_date = request.form.get('date')
     hours = request.form.get('hours', type=float)
@@ -1066,7 +958,7 @@ def add_overtime(emp_id):
         flash('Cannot exceed 24 hours in a single day.', 'danger')
         return redirect(url_for('main.employee_detail', emp_id=emp_id))
     entry = OvertimeEntry(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         employee_id=emp.id,
         date=date.fromisoformat(ot_date),
         hours=hours,
@@ -1084,7 +976,7 @@ def delete_overtime(entry_id):
     """Delete an overtime entry."""
     from payroll_engine.models import OvertimeEntry
     entry = OvertimeEntry.query.filter_by(
-        id=entry_id, company_id=current_user.company_id
+        id=entry_id, company_id=_company_id()
     ).first_or_404()
     emp_id = entry.employee_id
     db.session.delete(entry)
@@ -1106,7 +998,7 @@ def add_deduction(emp_id):
     import os, uuid
 
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=current_user.company_id
+        id=emp_id, company_id=_company_id()
     ).first_or_404()
 
     deduction_type = request.form.get('deduction_type', '').strip()
@@ -1213,7 +1105,7 @@ def add_deduction(emp_id):
         )
 
     deduction = EmployeeDeduction(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         employee_id=emp.id,
         deduction_type=deduction_type,
         label=label,
@@ -1232,7 +1124,7 @@ def add_deduction(emp_id):
     db.session.add(deduction)
 
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='deduction_created',
         details={
@@ -1260,13 +1152,13 @@ def stop_deduction(ded_id):
     """Stop (deactivate) a deduction."""
     from payroll_engine.models import EmployeeDeduction
     ded = EmployeeDeduction.query.filter_by(
-        id=ded_id, company_id=current_user.company_id
+        id=ded_id, company_id=_company_id()
     ).first_or_404()
     reason = request.form.get('reason', '').strip() or 'Manually stopped'
     ded.is_active = False
     ded.stopped_reason = reason
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='deduction_stopped',
         details={
@@ -1290,11 +1182,11 @@ def delete_deduction(ded_id):
     """Delete a deduction (owner only). Use stop for audit trail."""
     from payroll_engine.models import EmployeeDeduction
     ded = EmployeeDeduction.query.filter_by(
-        id=ded_id, company_id=current_user.company_id
+        id=ded_id, company_id=_company_id()
     ).first_or_404()
     emp_id = ded.employee_id
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='deduction_deleted',
         details={
@@ -1317,13 +1209,13 @@ def delete_deduction(ded_id):
 def deactivate_employee(emp_id):
     """Soft-delete an employee (deactivate). Preserves payroll history."""
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=current_user.company_id, is_deleted=False
+        id=emp_id, company_id=_company_id(), is_deleted=False
     ).first_or_404()
     emp.is_deleted = True
     emp.deleted_at = datetime.utcnow()
     emp.deleted_by = current_user.id
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='employee_deactivated',
         details={'employee_id': emp.employee_id, 'name': emp.name}
@@ -1340,13 +1232,13 @@ def deactivate_employee(emp_id):
 def reactivate_employee(emp_id):
     """Reactivate a soft-deleted employee."""
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=current_user.company_id, is_deleted=True
+        id=emp_id, company_id=_company_id(), is_deleted=True
     ).first_or_404()
     emp.is_deleted = False
     emp.deleted_at = None
     emp.deleted_by = None
     log = AuditLog(
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         user_id=current_user.id,
         action='employee_reactivated',
         details={'employee_id': emp.employee_id, 'name': emp.name}
@@ -1364,7 +1256,7 @@ def terminate_employee(emp_id):
     """Terminate an employee with severance calculation."""
     from payroll_engine.severance import calculate_severance, TerminationReason, format_severance_for_payslip
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=current_user.company_id, is_deleted=False
+        id=emp_id, company_id=_company_id(), is_deleted=False
     ).first_or_404()
 
     if request.method == 'POST':
@@ -1401,7 +1293,7 @@ def terminate_employee(emp_id):
 
         # Audit log
         log = AuditLog(
-            company_id=current_user.company_id,
+            company_id=_company_id(),
             user_id=current_user.id,
             action='employee_terminated',
             details={
@@ -1478,7 +1370,7 @@ def reports():
 def audit_log():
     """View the append-only audit trail for this company."""
     logs = AuditLog.query.filter_by(
-        company_id=current_user.company_id
+        company_id=_company_id()
     ).order_by(AuditLog.timestamp.desc()).limit(200).all()
     return render_template('audit_log.html', logs=logs, year=date.today().year)
 
@@ -1490,7 +1382,7 @@ def download_erca_report(run_id):
     """Download ERCA tax filing report for a payroll run."""
     from payroll_engine.reports import generate_erca_report
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     if run.status != 'completed':
         flash('Can only generate reports for completed payroll runs.', 'warning')
@@ -1515,7 +1407,7 @@ def download_pension_report(run_id):
     """Download pension contribution report for a payroll run."""
     from payroll_engine.reports import generate_pension_report
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     if run.status != 'completed':
         flash('Can only generate reports for completed payroll runs.', 'warning')
@@ -1530,6 +1422,39 @@ def download_pension_report(run_id):
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
         download_name=f'Pension_{company.name}_{period.replace(" ", "_")}.xlsx'
+    )
+
+
+@main.route('/reports/yearly/<int:year>')
+@login_required
+@role_required('owner', 'accountant')
+def download_yearly_summary(year):
+    """Download year-end tax/pension summary for a given year."""
+    from payroll_engine.reports import generate_yearly_summary
+    company = current_user.company
+    start = date(year, 1, 1)
+    end = date(year, 12, 31)
+    runs = PayrollRun.query.filter(
+        PayrollRun.company_id == company.id,
+        PayrollRun.status == 'completed',
+        PayrollRun.run_date >= start,
+        PayrollRun.run_date <= end,
+    ).all()
+    if not runs:
+        flash(f'No completed payroll runs found for {year}.', 'warning')
+        return redirect(url_for('main.reports'))
+
+    payslips = []
+    for run in runs:
+        payslips.extend(run.payslips)
+
+    report_bytes = generate_yearly_summary(payslips, company.name, year)
+
+    return send_file(
+        io.BytesIO(report_bytes),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'YearlySummary_{company.name}_{year}.xlsx'
     )
 
 
@@ -1552,7 +1477,7 @@ def download_bank_file(run_id):
         ACCOUNT_PATTERNS, NARRATIVE_TEMPLATES
     )
     run = PayrollRun.query.filter_by(
-        id=run_id, company_id=current_user.company_id
+        id=run_id, company_id=_company_id()
     ).first_or_404()
     if run.status != 'completed':
         flash('Can only generate bank files for completed payroll runs.', 'warning')
@@ -1582,7 +1507,7 @@ def download_bank_file(run_id):
     # Get previous payslips for account change detection
     previous_payslips = {}
     last_run = PayrollRun.query.filter_by(
-        company_id=current_user.company_id, status='completed'
+        company_id=_company_id(), status='completed'
     ).order_by(PayrollRun.run_date.desc()).first()
     if last_run and last_run.id != run.id:
         for p in last_run.payslips:
@@ -1644,10 +1569,10 @@ def team_settings():
     """Show team members and invite form."""
     from payroll_engine.models import UserCompany
     # Users directly in this company
-    members = User.query.filter_by(company_id=current_user.company_id).all()
+    members = User.query.filter_by(company_id=_company_id()).all()
     # Users linked via UserCompany
-    extra_links = UserCompany.query.filter_by(company_id=current_user.company_id).all()
-    extra_users = [link.user for link in extra_links if link.user.company_id != current_user.company_id]
+    extra_links = UserCompany.query.filter_by(company_id=_company_id()).all()
+    extra_users = [link.user for link in extra_links if link.user.company_id != _company_id()]
     return render_template('team_settings.html', members=members, extra_users=extra_users)
 
 
@@ -1672,16 +1597,16 @@ def invite_team_member():
     existing = User.query.filter_by(phone=normalized).first()
     if existing:
         # Link existing user to this company
-        if existing.company_id == current_user.company_id:
+        if existing.company_id == _company_id():
             flash('This user is already a member of your company.', 'warning')
             return redirect(url_for('main.team_settings'))
         link = UserCompany.query.filter_by(
-            user_id=existing.id, company_id=current_user.company_id
+            user_id=existing.id, company_id=_company_id()
         ).first()
         if link:
             flash('This user already has access to your company.', 'warning')
             return redirect(url_for('main.team_settings'))
-        link = UserCompany(user_id=existing.id, company_id=current_user.company_id, role=role)
+        link = UserCompany(user_id=existing.id, company_id=_company_id(), role=role)
         db.session.add(link)
         db.session.commit()
         flash(f'{name} ({normalized}) linked to your company as {role}.', 'success')
@@ -1691,14 +1616,14 @@ def invite_team_member():
     import secrets
     temp_password = secrets.token_urlsafe(16)
     user = User(
-        phone=normalized, company_id=current_user.company_id,
+        phone=normalized, company_id=_company_id(),
         role=role, must_change_password=True
     )
     user.set_password(temp_password)
     db.session.add(user)
     db.session.commit()
     log = AuditLog(
-        company_id=current_user.company_id, user_id=current_user.id,
+        company_id=_company_id(), user_id=current_user.id,
         action='team_member_invited',
         details={'phone': normalized, 'name': name, 'role': role}
     )
@@ -1723,7 +1648,7 @@ def remove_team_member(user_id):
     if user.id == current_user.id:
         flash('You cannot remove yourself.', 'danger')
         return redirect(url_for('main.team_settings'))
-    if user.company_id == current_user.company_id:
+    if user.company_id == _company_id():
         # Can't remove the primary company owner
         if user.role == 'owner':
             flash('Cannot remove the company owner.', 'danger')
@@ -1731,7 +1656,7 @@ def remove_team_member(user_id):
         # Move to a different company or delete
         user.company_id = user.id  # Hack: assign to self
     link = UserCompany.query.filter_by(
-        user_id=user_id, company_id=current_user.company_id
+        user_id=user_id, company_id=_company_id()
     ).first()
     if link:
         db.session.delete(link)
@@ -1752,12 +1677,12 @@ def link_employee_user():
             flash('Both employee and user are required.', 'danger')
             return redirect(url_for('main.link_employee_user'))
         emp = Employee.query.filter_by(
-            id=employee_id, company_id=current_user.company_id
+            id=employee_id, company_id=_company_id()
         ).first_or_404()
         user = User.query.get_or_404(user_id)
         emp.user_id = user.id
         log = AuditLog(
-            company_id=current_user.company_id,
+            company_id=_company_id(),
             user_id=current_user.id,
             action='employee_user_linked',
             details={'employee_id': emp.employee_id, 'employee_name': emp.name, 'user_id': user.id}
@@ -1769,9 +1694,9 @@ def link_employee_user():
 
     # GET: show form
     employees = Employee.query.filter_by(
-        company_id=current_user.company_id, is_deleted=False, user_id=None
+        company_id=_company_id(), is_deleted=False, user_id=None
     ).all()
-    users = User.query.filter_by(company_id=current_user.company_id).all()
+    users = User.query.filter_by(company_id=_company_id()).all()
     return render_template('link_employee_user.html', employees=employees, users=users)
 
 
@@ -1780,12 +1705,15 @@ def link_employee_user():
 @main.route('/switch-company/<int:company_id>')
 @login_required
 def switch_company(company_id):
-    """Switch to a different company (for multi-company accountants)."""
+    """Switch to a different company (for multi-company accountants).
+
+    Stores the active company in the session so it is per-browser-session
+    rather than mutating the user's database record.
+    """
     if not current_user.can_access_company(company_id):
         flash('You do not have access to that company.', 'danger')
         return redirect(url_for('main.index'))
-    current_user.company_id = company_id
-    db.session.commit()
+    session['active_company_id'] = company_id
     company = Company.query.get(company_id)
     flash(f'Switched to {company.name}.', 'success')
     return redirect(url_for('main.index'))
@@ -1797,7 +1725,7 @@ def _get_linked_employee():
     """Get the Employee record linked to the current user via user_id FK."""
     return Employee.query.filter_by(
         user_id=current_user.id,
-        company_id=current_user.company_id,
+        company_id=_company_id(),
         is_deleted=False
     ).first()
 
@@ -1818,7 +1746,7 @@ def employee_dashboard():
     from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
     month_start = date.today().replace(day=1)
     ot_entries = OvertimeEntry.query.filter_by(
-        employee_id=emp.id, company_id=current_user.company_id
+        employee_id=emp.id, company_id=_company_id()
     ).filter(OvertimeEntry.date >= month_start).all()
     ot_hours = sum(e.hours for e in ot_entries)
     ot_pay = sum(calculate_overtime_pay(emp.basic_salary, e.hours, e.overtime_type) for e in ot_entries)

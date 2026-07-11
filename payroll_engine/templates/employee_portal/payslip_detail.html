@@ -16,6 +16,38 @@
                 {% endif %}
             </div>
 
+            <!-- Summary-first card -->
+            <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;">
+                <div class="card-body py-3">
+                    <div class="row align-items-center">
+                        <div class="col-6">
+                            <p class="small mb-1 opacity-75">{{ _('name') }}</p>
+                            <h5 class="mb-0">{{ employee.name }}</h5>
+                            <small class="opacity-75">ID: {{ employee.employee_id }}</small>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="small mb-1 opacity-75">{{ _('period') }}</p>
+                            <h5 class="mb-0">{{ payslip.generated_at.strftime('%B %Y') }}</h5>
+                            <small class="opacity-75">{{ _('generated') }}: {{ payslip.generated_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                    </div>
+                    <div class="row mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.3);">
+                        <div class="col-4 text-center">
+                            <p class="small mb-0 opacity-75">{{ _('gross_salary') }}</p>
+                            <h4 class="mb-0">ETB {{ '%.2f'|format(payslip.gross_salary) }}</h4>
+                        </div>
+                        <div class="col-4 text-center">
+                            <p class="small mb-0 opacity-75">{{ _('total_deductions') }}</p>
+                            <h4 class="mb-0">- ETB {{ '%.2f'|format(payslip.tax + payslip.employee_pension) }}</h4>
+                        </div>
+                        <div class="col-4 text-center">
+                            <p class="small mb-0 opacity-75">{{ _('net_pay') }}</p>
+                            <h3 class="mb-0 fw-bold">ETB {{ '%.2f'|format(payslip.net_pay) }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Employee Info -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
@@ -74,7 +106,7 @@
                             <!-- Pension with breakdown -->
                             <tr>
                                 <td>
-                                    {{ _('employee_pension') }} (7% of {{ _('basic_salary') }})
+                                    {{ _('employee_pension') }} <span class="text-muted small">(7% {{ _('of') }} {{ _('basic_salary') }})</span>
                                     <details class="mt-1">
                                         <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small text-muted">
@@ -88,7 +120,7 @@
                             <!-- Tax with bracket breakdown -->
                             <tr>
                                 <td>
-                                    {{ _('income_tax') }}
+                                    {{ _('income_tax') }} <span class="text-muted small">({{ _('per') }} Proclamation 1395/2025)</span>
                                     <details class="mt-1">
                                         <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small">
@@ -109,12 +141,12 @@
                                                 {% endfor %}
                                                 {% if tax_breakdown.personal_relief > 0 %}
                                                 <tr class="text-danger">
-                                                    <td>Personal relief</td>
+                                                    <td>{{ _('personal_relief') }}</td>
                                                     <td class="text-end">-{{ '{:,.2f}'.format(tax_breakdown.personal_relief) }}</td>
                                                 </tr>
                                                 {% endif %}
                                                 <tr style="border-top: 1px solid #dee2e6;">
-                                                    <td><strong>Total tax</strong></td>
+                                                    <td><strong>{{ _('total_tax') }}</strong></td>
                                                     <td class="text-end"><strong>{{ '{:,.2f}'.format(tax_breakdown.total_tax) }}</strong></td>
                                                 </tr>
                                             </table>
@@ -139,7 +171,7 @@
                                             </div>
                                             {% endfor %}
                                             <div class="mt-1" style="border-top: 1px solid #dee2e6; padding-top: 4px;">
-                                                <strong>Total overtime: ETB {{ '%.2f'|format(total_ot_pay) }}</strong>
+                                                <strong>{{ _('total_overtime') }}: ETB {{ '%.2f'|format(total_ot_pay) }}</strong>
                                             </div>
                                         </div>
                                     </details>

@@ -34,7 +34,13 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="file" class="form-label">{{ _('select_csv') }}</label>
-                            <input class="form-control" type="file" id="file" name="file" accept=".csv" required>
+                            <div id="dropZone" class="border border-2 border-dashed rounded p-5 text-center" style="border-style: dashed !important; cursor: pointer; transition: background 0.2s;">
+                                <i class="bi bi-cloud-arrow-up fs-1 text-muted d-block mb-2"></i>
+                                <p class="mb-1 text-muted" id="dropText">Drag & drop your CSV file here, or click to browse</p>
+                                <p class="small text-muted mb-0" id="fileInfo">No file selected</p>
+                                <input class="d-none" type="file" id="file" name="file" accept=".csv" required>
+                            </div>
+                            <div id="inlineError" class="alert alert-danger mt-2 d-none py-2 small mb-0"></div>
                         </div>
                         <div id="progressContainer" class="mb-3 d-none">
                             <div class="progress" style="height: 25px;">
@@ -44,7 +50,7 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
                             </div>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
                                 <i class="bi bi-cloud-upload me-2"></i>Upload & Process
                             </button>
                         </div>
@@ -57,10 +63,81 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
 {% endblock %}
 {% block extra_js %}
 <script>
-document.getElementById('uploadForm').addEventListener('submit', function() {
-    document.getElementById('submitBtn').disabled = true;
-    document.getElementById('submitBtn').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
-    document.getElementById('progressContainer').classList.remove('d-none');
-});
+(function() {
+    var dropZone = document.getElementById('dropZone');
+    var fileInput = document.getElementById('file');
+    var fileInfo = document.getElementById('fileInfo');
+    var submitBtn = document.getElementById('submitBtn');
+    var inlineError = document.getElementById('inlineError');
+    var dropText = document.getElementById('dropText');
+
+    function showError(msg) {
+        inlineError.textContent = msg;
+        inlineError.classList.remove('d-none');
+        submitBtn.disabled = true;
+    }
+
+    function clearError() {
+        inlineError.classList.add('d-none');
+    }
+
+    function handleFile(file) {
+        clearError();
+        if (!file) {
+            fileInfo.textContent = 'No file selected';
+            submitBtn.disabled = true;
+            return;
+        }
+        var ext = file.name.split('.').pop().toLowerCase();
+        if (ext !== 'csv') {
+            showError('Only .csv files are accepted. Please select a CSV file.');
+            fileInfo.textContent = '';
+            return;
+        }
+        if (file.size === 0) {
+            showError('The selected file is empty. Please choose a non-empty CSV file.');
+            fileInfo.textContent = '';
+            return;
+        }
+        var sizeKB = (file.size / 1024).toFixed(1);
+        fileInfo.textContent = file.name + ' (' + sizeKB + ' KB)';
+        dropText.textContent = 'File selected — click to change';
+        submitBtn.disabled = false;
+    }
+
+    dropZone.addEventListener('click', function() { fileInput.click(); });
+
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.background = '#e8f4fd';
+    });
+
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.background = '';
+    });
+
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.background = '';
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length) handleFile(this.files[0]);
+    });
+
+    document.getElementById('uploadForm').addEventListener('submit', function() {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+        document.getElementById('progressContainer').classList.remove('d-none');
+    });
+})();
 </script>
 {% endblock %}

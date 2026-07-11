@@ -25,6 +25,7 @@ def app():
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     app.config['WTF_CSRF_ENABLED'] = False
+    app.config['ENABLE_DEMO_MODE'] = True
     with app.app_context():
         db.create_all()
         TenantQuery.register_model(Employee)

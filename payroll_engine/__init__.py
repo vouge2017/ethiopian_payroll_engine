@@ -38,9 +38,14 @@ def create_app():
         from config import ProductionConfig
         app.config.from_object(ProductionConfig())
     else:
+        from config import _env_bool
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-in-production')
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
         app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', CELERY_BROKER_DEFAULT)
+        app.config['ENABLE_DEMO_MODE'] = _env_bool(
+            'ENABLE_DEMO_MODE',
+            default=(env == 'development'),
+        )
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')

@@ -23,6 +23,7 @@ from payroll_engine.pension import employee_pension, employer_pension
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score, get_status_message
+from payroll_engine.security import log_and_flash_error
 
 
 main = Blueprint('main', __name__)
@@ -65,6 +66,8 @@ def role_required(*roles):
 @main.route('/demo')
 def demo_mode():
     """Create demo data and log in automatically."""
+    if not current_app.config.get('ENABLE_DEMO_MODE', False):
+        abort(404)
     from payroll_engine.demo import create_demo_data
     company, user, employees, run = create_demo_data()
     # Log in as demo user
@@ -364,6 +367,7 @@ def download_csv_template():
     import csv
     import io
     from flask import Response
+    from payroll_engine.security import prevent_csv_injection
 
     output = io.StringIO()
     output.write('\ufeff')  # UTF-8 BOM for Excel compatibility
@@ -378,13 +382,34 @@ def download_csv_template():
     writer.writerow(['employee_id', 'name', 'tin', 'basic_salary', 'allowances',
                      'bank_account', 'department', 'position'])
 
-    # Example data
-    writer.writerow(['EMP001', 'Dawit Mekonnen', '1234567890', '10000', '2000',
-                     'cbe:1000123456789', 'Sales', 'Sales Manager'])
-    writer.writerow(['EMP002', 'Hana Tesfaye', '0987654321', '5000', '500',
-                     'dashen:2000987654321', 'Factory', 'Worker'])
-    writer.writerow(['EMP003', 'Kebede Alemu', '1122334455', '15000', '3000',
-                     'awash:3000112233445', 'Finance', 'Accountant'])
+    # Example data — values are plain but the function is wired for future use
+    writer.writerow([
+        prevent_csv_injection('EMP001'),
+        prevent_csv_injection('Dawit Mekonnen'),
+        prevent_csv_injection('1234567890'),
+        '10000', '2000',
+        prevent_csv_injection('cbe:1000123456789'),
+        prevent_csv_injection('Sales'),
+        prevent_csv_injection('Sales Manager'),
+    ])
+    writer.writerow([
+        prevent_csv_injection('EMP002'),
+        prevent_csv_injection('Hana Tesfaye'),
+        prevent_csv_injection('0987654321'),
+        '5000', '500',
+        prevent_csv_injection('dashen:2000987654321'),
+        prevent_csv_injection('Factory'),
+        prevent_csv_injection('Worker'),
+    ])
+    writer.writerow([
+        prevent_csv_injection('EMP003'),
+        prevent_csv_injection('Kebede Alemu'),
+        prevent_csv_injection('1122334455'),
+        '15000', '3000',
+        prevent_csv_injection('awash:3000112233445'),
+        prevent_csv_injection('Finance'),
+        prevent_csv_injection('Accountant'),
+    ])
 
     csv_content = output.getvalue()
     return Response(
@@ -416,6 +441,16 @@ def payroll_upload():
             flash('Only CSV files are allowed.', 'danger')
             return redirect(request.url)
 
+        # MIME sniffing — reject non-CSV content
+        mime_header = file.read(512)
+        file.seek(0)
+        if mime_header and not mime_header[:1] in (b'\xef', b'#', b'"', b'\r', b'\n', b' '):
+            decoded = mime_header.decode('utf-8', errors='replace')
+            first_non_space = decoded.lstrip()[:1]
+            if first_non_space and first_non_space not in ('e', 'n', 'b', 'a', 'p', 'd', ',', '"', '#', '\ufeff'):
+                flash('File does not appear to be a valid CSV.', 'danger')
+                return redirect(request.url)
+
         # Save file
         filename = secure_filename(file.filename)
         filename = f"{uuid.uuid4().hex[:8]}_{filename}"
@@ -426,6 +461,7 @@ def payroll_upload():
             # --- STAGE 1: DRAFT ---
             # Parse CSV and calculate payroll (no money moves)
             employees_data = []
+            row_errors = []
             with open(filepath, newline='', encoding='utf-8') as f:
                 reader = csv_module.DictReader(f)
                 if not reader.fieldnames:
@@ -435,9 +471,19 @@ def payroll_upload():
                 if missing:
                     raise ValueError(f'Missing required columns: {", ".join(missing)}')
 
-                for row in reader:
-                    basic = float(row.get('basic_salary', 0) or 0)
-                    allow = float(row.get('allowances', 0) or 0)
+                for row_idx, row in enumerate(reader, start=2):
+                    try:
+                        basic_raw = row.get('basic_salary', '0') or '0'
+                        allow_raw = row.get('allowances', '0') or '0'
+                        basic = float(basic_raw)
+                        allow = float(allow_raw)
+                    except (ValueError, TypeError):
+                        row_errors.append(
+                            f"Row {row_idx}: invalid numeric value "
+                            f"(basic_salary='{row.get('basic_salary', '')}', "
+                            f"allowances='{row.get('allowances', '')}')"
+                        )
+                        continue
                     # Single entry point — enforces deduction order
                     result = calculate_payroll(basic, allow)
                     # Tax breakdown for PDF
@@ -464,8 +510,23 @@ def payroll_upload():
                         'tax_breakdown': tax_bd,
                     })
 
+            _MAX_CSV_ROWS = 5000
+            if len(employees_data) > _MAX_CSV_ROWS:
+                flash(
+                    f'CSV contains {len(employees_data)} employees — '
+                    f'maximum allowed is {_MAX_CSV_ROWS}.',
+                    'danger'
+                )
+                return redirect(request.url)
+
+            if row_errors:
+                for err in row_errors[:5]:
+                    flash(err, 'warning')
+                if len(row_errors) > 5:
+                    flash(f'... and {len(row_errors) - 5} more row error(s).', 'warning')
+
             if not employees_data:
-                raise ValueError('No data rows in CSV')
+                raise ValueError('No valid data rows in CSV')
 
             # --- STAGE 2: VALIDATE ---
             # Get previous payslips for salary comparison
@@ -571,7 +632,10 @@ def payroll_upload():
             )
 
         except Exception as e:
-            flash(f'Error processing payroll: {e}', 'danger')
+            log_and_flash_error(
+                'Could not process the payroll file. Please check the CSV and try again.',
+                e,
+            )
             return redirect(request.url)
 
     return render_template('payroll_upload.html', year=date.today().year)
@@ -805,7 +869,10 @@ def approve_payroll():
         )
         db.session.add(log)
         db.session.commit()
-        flash(f'Error processing payroll: {e}', 'danger')
+        log_and_flash_error(
+            'Payroll approval failed. Please try again or contact support.',
+            e,
+        )
         return redirect(url_for('main.payroll_upload'))
 
 
@@ -1115,10 +1182,21 @@ def add_deduction(emp_id):
 
     # Handle document upload
     document_path = None
+    _ALLOWED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.tif', '.doc', '.docx'}
+    _ALLOWED_MIME_PREFIXES = {b'%PDF', b'\xff\xd8\xff', b'\x89PNG', b'RIFF', b'\xd0\xcf\x11\xe0'}
     if 'document' in request.files:
         file = request.files['document']
         if file.filename:
             from werkzeug.utils import secure_filename
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in _ALLOWED_EXTENSIONS:
+                flash(f'File type "{ext}" is not allowed. Accepted: {", ".join(sorted(_ALLOWED_EXTENSIONS))}', 'danger')
+                return redirect(url_for('main.employee_detail', emp_id=emp_id))
+            mime_sniff = file.read(4)
+            file.seek(0)
+            if mime_sniff and not any(mime_sniff.startswith(p) for p in _ALLOWED_MIME_PREFIXES):
+                flash('File content does not match an accepted document type.', 'danger')
+                return redirect(url_for('main.employee_detail', emp_id=emp_id))
             filename = secure_filename(file.filename)
             filename = f"deduction_{uuid.uuid4().hex[:8]}_{filename}"
             upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'deductions')
@@ -1608,8 +1686,10 @@ def invite_team_member():
         db.session.commit()
         flash(f'{name} ({normalized}) linked to your company as {role}.', 'success')
         return redirect(url_for('main.team_settings'))
-    # Create new user
-    temp_password = normalized[-6:] + 'Temp1!'  # Last 6 digits + Temp1!
+    # Cryptographically random temp password — shown only in this response body.
+    # Never flash it, never put it in the session cookie, never log it.
+    import secrets
+    temp_password = secrets.token_urlsafe(16)
     user = User(
         phone=normalized, company_id=current_user.company_id,
         role=role, must_change_password=True
@@ -1624,8 +1704,13 @@ def invite_team_member():
     )
     db.session.add(log)
     db.session.commit()
-    flash(f'{name} invited as {role}. Temporary password: {temp_password}', 'success')
-    return redirect(url_for('main.team_settings'))
+    # One-shot display (same pattern as API token minting UIs).
+    return render_template(
+        'team_invite_credentials.html',
+        invited_user=user,
+        temp_password=temp_password,
+        invitee_name=name,
+    )
 
 
 @main.route('/settings/team/<int:user_id>/remove', methods=['POST'])

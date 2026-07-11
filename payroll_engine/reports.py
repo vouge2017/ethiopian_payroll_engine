@@ -280,7 +280,14 @@ def _generate_erca_csv(payslips, company_name, period):
     for i, p in enumerate(payslips, 1):
         emp = p.employee
         taxable = p.gross_salary - p.employee_pension
-        writer.writerow([i, emp.employee_id, emp.name, emp.tin or '', p.gross_salary, p.employee_pension, taxable, p.tax, p.net_pay])
+        from payroll_engine.security import prevent_csv_injection
+        writer.writerow([
+            i,
+            prevent_csv_injection(emp.employee_id),
+            prevent_csv_injection(emp.name),
+            prevent_csv_injection(emp.tin or ''),
+            p.gross_salary, p.employee_pension, taxable, p.tax, p.net_pay,
+        ])
     return output.getvalue().encode('utf-8')
 
 
@@ -294,5 +301,11 @@ def _generate_pension_csv(payslips, company_name, period):
     for i, p in enumerate(payslips, 1):
         emp = p.employee
         total = p.employee_pension + p.employer_pension
-        writer.writerow([i, emp.employee_id, emp.name, emp.basic_salary, p.employee_pension, p.employer_pension, total])
+        from payroll_engine.security import prevent_csv_injection
+        writer.writerow([
+            i,
+            prevent_csv_injection(emp.employee_id),
+            prevent_csv_injection(emp.name),
+            emp.basic_salary, p.employee_pension, p.employer_pension, total,
+        ])
     return output.getvalue().encode('utf-8')

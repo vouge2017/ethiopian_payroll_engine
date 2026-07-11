@@ -3,8 +3,16 @@ import os
 basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-change-in-production')
+    ENABLE_DEMO_MODE = _env_bool('ENABLE_DEMO_MODE', default=False)
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'app.db')
     )
@@ -18,13 +26,18 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    ENABLE_DEMO_MODE = _env_bool('ENABLE_DEMO_MODE', default=True)
 
 
 class ProductionConfig(Config):
     DEBUG = False
+    # Demo auto-login is never available in production — ignore env overrides.
+    ENABLE_DEMO_MODE = False
 
     def __init__(self):
         super().__init__()
+        # Hard-lock even if subclassing or env tries to re-enable it.
+        self.ENABLE_DEMO_MODE = False
         if self.SECRET_KEY in ('dev-change-in-production', 'your-secret-key-here'):
             raise ValueError(
                 "SECRET_KEY must be set to a real value in production. "

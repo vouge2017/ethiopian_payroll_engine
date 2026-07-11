@@ -31,6 +31,7 @@
                             <button type="submit" class="btn btn-primary btn-lg">{{ _('log_in') }}</button>
                         </div>
                     </form>
+                    {% if demo_enabled %}
                     <hr>
                     <div class="d-grid">
                         <a href="{{ url_for('main.demo_mode') }}" class="btn btn-outline-warning btn-lg">
@@ -40,6 +41,7 @@
                     <p class="text-muted text-center mt-2 small">
                         Explore the full payroll system with pre-populated Ethiopian sample data.
                     </p>
+                    {% endif %}
                 </div>
                 <div class="card-footer text-center bg-light">
                     <small>Don't have an account? <a href="{{ url_for('auth.register') }}">{{ _('register') }}</a></small>

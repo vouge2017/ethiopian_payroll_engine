@@ -294,7 +294,14 @@ def generate_csv(employees_data: List[Dict[str, Any]],
             custom_template=custom_narrative,
         )
 
-        writer.writerow([account, amount, narrative, 'ETB'])
+        # CSV injection prevention
+        from payroll_engine.security import prevent_csv_injection
+        writer.writerow([
+            account,
+            amount,
+            prevent_csv_injection(narrative),
+            'ETB',
+        ])
 
     return output.getvalue().encode('utf-8')
 

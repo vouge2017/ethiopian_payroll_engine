@@ -2,10 +2,69 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from functools import wraps
 from sqlalchemy.exc import IntegrityError
-from . import db
+from decimal import Decimal, InvalidOperation
+from . import db, limiter
 from .models import Company, User, Employee, PayrollRun, Payslip, Attendance, Leave, AuditLog
 
 api = Blueprint('api', __name__)
+
+
+def _validate_employee_data(data, *, partial=False):
+    """Validate employee data dict. Returns list of error messages (empty = valid).
+
+    When partial=True (for PUT), fields are optional but checked if present.
+    """
+    errors = []
+    if not data:
+        return ['Request body is required']
+
+    if not partial:
+        if not data.get('employee_id'):
+            errors.append('employee_id is required')
+        if not data.get('name'):
+            errors.append('name is required')
+
+    emp_id = data.get('employee_id')
+    if emp_id is not None:
+        if not isinstance(emp_id, str) or not emp_id.strip():
+            errors.append('employee_id must be a non-empty string')
+        elif len(emp_id) > 20:
+            errors.append('employee_id must be 20 characters or fewer')
+
+    name = data.get('name')
+    if name is not None:
+        if not isinstance(name, str) or not name.strip():
+            errors.append('name must be a non-empty string')
+        elif len(name) > 100:
+            errors.append('name must be 100 characters or fewer')
+
+    basic = data.get('basic_salary')
+    if basic is not None:
+        try:
+            basic_d = Decimal(str(basic))
+            if basic_d < 0:
+                errors.append('basic_salary must be zero or positive')
+        except (InvalidOperation, ValueError):
+            errors.append('basic_salary must be a valid number')
+
+    allow = data.get('allowances')
+    if allow is not None:
+        try:
+            allow_d = Decimal(str(allow))
+            if allow_d < 0:
+                errors.append('allowances must be zero or positive')
+        except (InvalidOperation, ValueError):
+            errors.append('allowances must be a valid number')
+
+    tin = data.get('tin')
+    if tin is not None and tin != '':
+        tin_s = str(tin)
+        if not tin_s.isdigit():
+            errors.append('TIN must contain only digits')
+        elif len(tin_s) not in (9, 10):
+            errors.append('TIN must be 9 or 10 digits')
+
+    return errors
 
 
 def company_required(f):
@@ -39,10 +98,12 @@ def list_employees():
 @api.route('/employees', methods=['POST'])
 @login_required
 @company_required
+@limiter.limit('30 per minute')
 def create_employee():
     data = request.get_json()
-    if not data or not data.get('employee_id') or not data.get('name'):
-        return jsonify({'error': 'Missing required fields'}), 400
+    errors = _validate_employee_data(data)
+    if errors:
+        return jsonify({'error': 'Validation failed', 'details': errors}), 422
     existing = Employee.query.filter_by(
         company_id=current_user.company_id,
         employee_id=data['employee_id']
@@ -82,9 +143,13 @@ def get_employee(emp_id):
 @api.route('/employees/<int:emp_id>', methods=['PUT'])
 @login_required
 @company_required
+@limiter.limit('30 per minute')
 def update_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
     data = request.get_json()
+    errors = _validate_employee_data(data, partial=True)
+    if errors:
+        return jsonify({'error': 'Validation failed', 'details': errors}), 422
     if 'name' in data:
         emp.name = data['name']
     if 'basic_salary' in data:
@@ -102,6 +167,7 @@ def update_employee(emp_id):
 @api.route('/employees/<int:emp_id>', methods=['DELETE'])
 @login_required
 @company_required
+@limiter.limit('10 per minute')
 def delete_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
     try:

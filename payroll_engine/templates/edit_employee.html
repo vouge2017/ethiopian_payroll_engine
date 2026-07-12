@@ -27,7 +27,8 @@
                             <div class="col-md-6">
                                 <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
                                 <input type="text" class="form-control" id="phone" name="phone"
-                                       value="{{ employee.phone or '' }}" placeholder="0911223344">
+                                       value="{{ employee.phone or '' }}" placeholder="0911223344 or +2519...">
+                                <div class="form-text">09XXXXXXXX, 07XXXXXXXX, or +251 format</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>

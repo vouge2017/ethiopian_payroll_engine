@@ -185,7 +185,7 @@ def add_employee():
     if request.method == 'POST':
         emp_id = request.form.get('employee_id', '').strip()
         name = request.form.get('name', '').strip()
-        phone = request.form.get('phone', '').strip() or None
+        phone_raw = request.form.get('phone', '').strip()
         department = request.form.get('department', '').strip() or None
         position = request.form.get('position', '').strip() or None
         start_date_str = request.form.get('start_date', '').strip()
@@ -193,6 +193,16 @@ def add_employee():
         allow = float(request.form.get('allowances', 0))
         bank_account = request.form.get('bank_account', '').strip() or None
         tin = request.form.get('tin', '').strip() or None
+
+        # Validate and normalize phone
+        phone = None
+        if phone_raw:
+            from payroll_engine.models import validate_ethiopian_phone
+            is_valid, normalized, phone_error = validate_ethiopian_phone(phone_raw)
+            if not is_valid:
+                flash(phone_error, 'danger')
+                return redirect(url_for('main.add_employee'))
+            phone = normalized
 
         start_date = None
         if start_date_str:
@@ -273,13 +283,23 @@ def edit_employee(emp_id):
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
-        phone = request.form.get('phone', '').strip() or None
+        phone_raw = request.form.get('phone', '').strip()
         basic = float(request.form.get('basic_salary', 0))
         allow = float(request.form.get('allowances', 0))
         department = request.form.get('department', '').strip() or None
         position = request.form.get('position', '').strip() or None
         tin = request.form.get('tin', '').strip() or None
         bank_account = request.form.get('bank_account', '').strip() or None
+
+        # Validate and normalize phone
+        phone = None
+        if phone_raw:
+            from payroll_engine.models import validate_ethiopian_phone
+            is_valid, normalized, phone_error = validate_ethiopian_phone(phone_raw)
+            if not is_valid:
+                flash(phone_error, 'danger')
+                return redirect(url_for('main.edit_employee', emp_id=emp_id))
+            phone = normalized
 
         if not name:
             flash('Employee name is required.', 'danger')

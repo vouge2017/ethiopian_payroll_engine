@@ -28,6 +28,10 @@ services:
         value: wsgi:app
       - key: DB_ENCRYPTION_KEY
         generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        value: ""
+      - key: GOOGLE_CLIENT_SECRET
+        value: ""
     autoDeploy: true
 
 databases:

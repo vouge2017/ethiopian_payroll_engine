@@ -1,10 +1,18 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from . import db, limiter
 from .models import User, Company, validate_ethiopian_phone
 from .security import safe_redirect_target
 
 auth = Blueprint('auth', __name__)
+
+
+def _get_google_oauth():
+    """Get the Google OAuth client, or None if not configured."""
+    oauth = getattr(current_app, 'oauth', None)
+    if oauth:
+        return oauth.create_client('google')
+    return None
 
 # Endpoints allowed while must_change_password is True
 _PASSWORD_CHANGE_ALLOWED = frozenset({
@@ -73,6 +81,7 @@ def login():
     return render_template(
         'auth/login.html',
         demo_enabled=bool(current_app.config.get('ENABLE_DEMO_MODE', False)),
+        google_enabled=bool(current_app.config.get('GOOGLE_CLIENT_ID', '')),
     )
 
 
@@ -197,3 +206,122 @@ def register():
         flash('Account created. Please log in.', 'success')
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html')
+
+
+@auth.route('/google/login')
+def google_login():
+    """Initiate Google OAuth login."""
+    google = _get_google_oauth()
+    if not google:
+        flash('Google sign-in is not configured.', 'danger')
+        return redirect(url_for('auth.login'))
+    redirect_uri = url_for('auth.google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+
+@auth.route('/google/callback')
+def google_callback():
+    """Handle Google OAuth callback."""
+    google = _get_google_oauth()
+    if not google:
+        flash('Google sign-in is not configured.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    try:
+        token = google.authorize_access_token()
+    except Exception as e:
+        current_app.logger.error('Google OAuth error: %s', e)
+        flash('Google sign-in failed. Please try again.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    resp = google.get('userinfo')
+    if resp.status_code != 200:
+        flash('Could not get user info from Google.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    user_info = resp.json()
+    email = user_info.get('email', '').lower()
+    google_name = user_info.get('name', '')
+
+    if not email:
+        flash('Google account has no email. Please use phone login.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    # Find existing user by email
+    user = User.query.filter_by(email=email).first()
+
+    if user:
+        # Existing user — log them in
+        login_user(user)
+        flash('Welcome back!', 'success')
+        next_page = safe_redirect_target(request.args.get('next'))
+        return redirect(next_page)
+
+    # New user — store Google info in session and redirect to complete registration
+    session['google_email'] = email
+    session['google_name'] = google_name
+    return redirect(url_for('auth.google_register'))
+
+
+@auth.route('/google/register', methods=['GET', 'POST'])
+def google_register():
+    """Complete registration for Google OAuth users."""
+    email = session.get('google_email')
+    google_name = session.get('google_name')
+
+    if not email:
+        flash('Session expired. Please try Google sign-in again.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        phone = request.form.get('phone', '').strip()
+        company_name = request.form.get('company_name', '').strip()
+
+        if not phone or not company_name:
+            flash('Phone and company name are required.', 'danger')
+            return redirect(url_for('auth.google_register'))
+
+        is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
+        if not is_valid:
+            flash(phone_error, 'danger')
+            return redirect(url_for('auth.google_register'))
+
+        if User.query.filter_by(phone=normalized_phone).first():
+            flash('Phone number already registered.', 'danger')
+            return redirect(url_for('auth.google_register'))
+
+        existing_company = Company.query.filter_by(name=company_name).first()
+        if existing_company:
+            flash('A company with that name already exists.', 'danger')
+            return redirect(url_for('auth.google_register'))
+
+        company = Company(name=company_name)
+        db.session.add(company)
+        db.session.commit()
+
+        user = User(
+            email=email,
+            phone=normalized_phone,
+            company_id=company.id,
+            role='owner',
+        )
+        user.set_password(User._generate_temp_password())
+        db.session.add(user)
+        db.session.commit()
+
+        # Clear session
+        session.pop('google_email', None)
+        session.pop('google_name', None)
+
+        login_user(user)
+        flash('Account created with Google!', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template(
+        'auth/google_register.html',
+        email=email,
+        google_name=google_name,
+    )

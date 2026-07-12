@@ -251,6 +251,14 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    @staticmethod
+    def _generate_temp_password():
+        """Generate a cryptographically random temporary password."""
+        import secrets
+        import string
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(16))
+
     def get_role_for_company(self, company_id):
         """Get user's role for a specific company."""
         uc = UserCompany.query.filter_by(user_id=self.id, company_id=company_id).first()

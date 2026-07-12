@@ -189,8 +189,15 @@ def add_employee():
         department = request.form.get('department', '').strip() or None
         position = request.form.get('position', '').strip() or None
         start_date_str = request.form.get('start_date', '').strip()
-        basic = float(request.form.get('basic_salary', 0))
-        allow = float(request.form.get('allowances', 0))
+        from decimal import Decimal, InvalidOperation
+        try:
+            basic = Decimal(request.form.get('basic_salary', '0') or '0')
+        except (InvalidOperation, ValueError):
+            basic = Decimal('0')
+        try:
+            allow = Decimal(request.form.get('allowances', '0') or '0')
+        except (InvalidOperation, ValueError):
+            allow = Decimal('0')
         bank_account = request.form.get('bank_account', '').strip() or None
         tin = request.form.get('tin', '').strip() or None
 
@@ -284,8 +291,15 @@ def edit_employee(emp_id):
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         phone_raw = request.form.get('phone', '').strip()
-        basic = float(request.form.get('basic_salary', 0))
-        allow = float(request.form.get('allowances', 0))
+        from decimal import Decimal, InvalidOperation
+        try:
+            basic = Decimal(request.form.get('basic_salary', '0') or '0')
+        except (InvalidOperation, ValueError):
+            basic = Decimal('0')
+        try:
+            allow = Decimal(request.form.get('allowances', '0') or '0')
+        except (InvalidOperation, ValueError):
+            allow = Decimal('0')
         department = request.form.get('department', '').strip() or None
         position = request.form.get('position', '').strip() or None
         tin = request.form.get('tin', '').strip() or None

@@ -26,6 +26,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install ruff
 
       - name: Verify lock file install and import check
         run: |
@@ -38,6 +39,10 @@ jobs:
           python -c "from payroll_engine import create_app; app = create_app(); print(app.name)"
           test ! -f manage.py
           test ! -f .github/workflows/django.yml
+
+      - name: Lint with ruff
+        run: |
+          ruff check payroll_engine/ --select=E,F,W --ignore=E501,E402,W503 --exit-zero
 
       - name: Run tests
         env:

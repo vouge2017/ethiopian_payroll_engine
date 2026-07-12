@@ -16,7 +16,7 @@ from datetime import date, datetime
 from payroll_engine import db
 from payroll_engine.models import (
     Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
-    Attendance, Leave, AuditLog, PayrollValidationResult, OvertimeEntry
+    AuditLog, PayrollValidationResult, OvertimeEntry
 )
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension

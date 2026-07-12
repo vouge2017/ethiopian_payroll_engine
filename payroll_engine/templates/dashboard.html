@@ -229,6 +229,75 @@
     </div>
     {% endif %}
 
+    <!-- Compliance Action Checklist -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i>Action Checklist</h5>
+        </div>
+        <div class="card-body">
+            <div class="list-group list-group-flush">
+                {% if employee_count == 0 %}
+                <div class="list-group-item d-flex align-items-center">
+                    <i class="bi bi-circle text-muted me-3"></i>
+                    <div>
+                        <strong>Add your first employee</strong>
+                        <div class="text-muted small">Start by adding employee details, salary, and bank info.</div>
+                    </div>
+                    <a href="{{ url_for('main.add_employee') }}" class="btn btn-sm btn-outline-primary ms-auto">Add</a>
+                </div>
+                {% endif %}
+                {% if recent_runs|length == 0 and employee_count > 0 %}
+                <div class="list-group-item d-flex align-items-center">
+                    <i class="bi bi-circle text-muted me-3"></i>
+                    <div>
+                        <strong>Run your first payroll</strong>
+                        <div class="text-muted small">Upload a CSV or use the template to process payroll.</div>
+                    </div>
+                    <a href="{{ url_for('main.payroll_upload') }}" class="btn btn-sm btn-outline-primary ms-auto">Run</a>
+                </div>
+                {% endif %}
+                {% if deadlines %}
+                    {% if deadlines.erca_days_left is defined and deadlines.erca_days_left < 7 %}
+                    <div class="list-group-item d-flex align-items-center">
+                        <i class="bi bi-exclamation-circle text-warning me-3"></i>
+                        <div>
+                            <strong>ERCA filing due soon</strong>
+                            <div class="text-muted small">{{ deadlines.erca_days_left }} days remaining. Download the report and file with ERCA.</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if deadlines.pension_days_left is defined and deadlines.pension_days_left < 7 %}
+                    <div class="list-group-item d-flex align-items-center">
+                        <i class="bi bi-exclamation-circle text-warning me-3"></i>
+                        <div>
+                            <strong>Pension remittance due soon</strong>
+                            <div class="text-muted small">{{ deadlines.pension_days_left }} days remaining. Remit pension contributions to PSSA.</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endif %}
+                {% if compliance_score < 100 %}
+                <div class="list-group-item d-flex align-items-center">
+                    <i class="bi bi-info-circle text-info me-3"></i>
+                    <div>
+                        <strong>Compliance score: {{ compliance_score|round(0)|int }}%</strong>
+                        <div class="text-muted small">{{ status_message }}</div>
+                    </div>
+                </div>
+                {% endif %}
+                {% if employee_count > 0 and recent_runs|length > 0 and compliance_score == 100 %}
+                <div class="list-group-item d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-3"></i>
+                    <div>
+                        <strong>All caught up!</strong>
+                        <div class="text-muted small">No pending actions. Your payroll is up to date.</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     <!-- Overtime This Month -->
     {% if ot_employee_count > 0 %}
     <div class="card border-0 shadow-sm mb-4">

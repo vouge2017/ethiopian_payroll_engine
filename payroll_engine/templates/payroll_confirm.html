@@ -100,6 +100,22 @@
                                     <table class="table table-sm table-borderless mb-0">
                                         <tr><td class="text-muted">{{ _('employee_pension') }} (7%)</td><td class="text-end">ETB {{ '%.2f'|format(emp.pension_employee) }}</td></tr>
                                         <tr><td class="text-muted">{{ _('income_tax') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.tax) }}</td></tr>
+                                        {% if emp.tax_breakdown and emp.tax_breakdown.brackets %}
+                                        <tr><td colspan="2">
+                                            <details>
+                                                <summary class="text-muted small" style="cursor:pointer"><i class="bi bi-calculator me-1"></i>Show tax brackets</summary>
+                                                <table class="table table-sm table-borderless mt-1 mb-0" style="font-size:0.85em;">
+                                                    {% for b in emp.tax_breakdown.brackets %}
+                                                    <tr>
+                                                        <td class="text-muted">ETB {{ "{:,.0f}".format(b.lower) }}{% if b.upper %}&ndash;{{ "{:,.0f}".format(b.upper) }}{% else %}+{% endif %} ({{ b.rate_pct }}%)</td>
+                                                        <td class="text-end">ETB {{ "{:,.2f}".format(b.bracket_tax) }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                    <tr class="text-muted"><td>Personal relief</td><td class="text-end">-ETB {{ "{:,.2f}".format(emp.tax_breakdown.personal_relief) }}</td></tr>
+                                                </table>
+                                            </details>
+                                        </td></tr>
+                                        {% endif %}
                                         <tr class="table-light"><td><strong>{{ _('total_deductions') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.tax + emp.pension_employee) }}</strong></td></tr>
                                     </table>
                                 </div>

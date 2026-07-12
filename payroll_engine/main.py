@@ -668,6 +668,12 @@ def payroll_confirm(run_id):
     flags = PayrollValidationResult.query.filter_by(
         payroll_run_id=run.id, severity='FLAG'
     ).all()
+    # Add tax breakdown for each employee
+    from payroll_engine.tax import calculate_tax_breakdown
+    for emp in employees_data:
+        taxable = emp.get('gross', 0) - emp.get('pension_employee', 0)
+        emp['tax_breakdown'] = calculate_tax_breakdown(taxable)
+
     return render_template('payroll_confirm.html',
                            run=run,
                            employees=employees_data,

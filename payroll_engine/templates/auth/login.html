@@ -15,9 +15,14 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="login_id" class="form-label">{{ _('phone_or_email') }}</label>
-                            <input type="text" class="form-control" id="login_id" name="login_id"
-                                   required autofocus
-                                   placeholder="0911234567, +2519... or you@email.com">
+                            <div class="input-group">
+                                <span class="input-group-text" id="phone-prefix">+251</span>
+                                <input type="text" class="form-control" id="login_id" name="login_id"
+                                       required autofocus
+                                       placeholder="9XXXXXXXX or email"
+                                       aria-describedby="phone-prefix">
+                            </div>
+                            <div class="form-text">Enter 9 digits starting with 9 or 7, or your email</div>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">{{ _('password') }}</label>

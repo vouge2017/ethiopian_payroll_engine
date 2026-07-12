@@ -30,12 +30,12 @@ def validate_ethiopian_phone(phone: str) -> tuple:
     Validate Ethiopian phone number format.
 
     Accepted formats (Ethio Telecom 09X + Safaricom 07X):
-        +251911234567, 0911234567, +251 911 234 567, 0911 234 567
-        +251711234567, 0711234567, +251 711 234 567, 0711 234 567
+        +251911234567, 0911234567, 911234567, +251 911 234 567
+        +251711234567, 0711234567, 711234567, +251 711 234 567
 
     Returns:
         (is_valid, normalized, error_message)
-        normalized is the number in 09XXXXXXXX or 07XXXXXXXX format,
+        normalized is the number in 9XXXXXXXX or 7XXXXXXXX format (9 digits),
         or None if invalid.
     """
     if not phone:
@@ -44,15 +44,16 @@ def validate_ethiopian_phone(phone: str) -> tuple:
     # Strip all spaces
     cleaned = phone.replace(' ', '')
 
-    # Pattern: +251 followed by 9XXXXXXXX or 7XXXXXXXX, or 09XXXXXXXX or 07XXXXXXXX
-    # Also handles +25109XXXXXXXX and +25107XXXXXXXX (common mistake: 0 after country code)
+    # Normalize to 9 digits (strip leading 0 and country code)
     patterns = [
-        (r'^\+2510(9\d{8})$', '0{}'),     # +2510911234567 → 0911234567
-        (r'^\+2510(7\d{8})$', '0{}'),     # +2510711234567 → 0711234567
-        (r'^\+251(9\d{8})$', '0{}'),      # +251911234567 → 0911234567
-        (r'^\+251(7\d{8})$', '0{}'),      # +251711234567 → 0711234567
-        (r'^(09\d{8})$', '{}'),             # 0911234567 → 0911234567
-        (r'^(07\d{8})$', '{}'),             # 0711234567 → 0711234567
+        (r'^\+2510(9\d{8})$', '{}'),     # +2510911234567 → 911234567
+        (r'^\+2510(7\d{8})$', '{}'),     # +2510711234567 → 711234567
+        (r'^\+251(9\d{8})$', '{}'),      # +251911234567 → 911234567
+        (r'^\+251(7\d{8})$', '{}'),      # +251711234567 → 711234567
+        (r'^0(9\d{8})$', '{}'),           # 0911234567 → 911234567
+        (r'^0(7\d{8})$', '{}'),           # 0711234567 → 711234567
+        (r'^(9\d{8})$', '{}'),            # 911234567 → 911234567
+        (r'^(7\d{8})$', '{}'),            # 711234567 → 711234567
     ]
 
     for pattern, fmt in patterns:
@@ -64,9 +65,9 @@ def validate_ethiopian_phone(phone: str) -> tuple:
     # Provide helpful error
     if cleaned.startswith('+251'):
         return False, None, 'Ethiopian mobile must start with +251 9XX or +251 7XX.'
-    if len(cleaned) < 10:
-        return False, None, 'Phone number too short. Use 09XXXXXXXX or 07XXXXXXXX.'
-    return False, None, 'Invalid Ethiopian phone format. Use 09XXXXXXXX or 07XXXXXXXX.'
+    if len(cleaned) < 9:
+        return False, None, 'Phone number too short. Enter 9 digits starting with 9 or 7.'
+    return False, None, 'Invalid Ethiopian phone format. Enter 9 digits starting with 9 or 7.'
 
 
 # ---------------------------------------------------------------------------

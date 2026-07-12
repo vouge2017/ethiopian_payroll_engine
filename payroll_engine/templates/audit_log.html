@@ -48,7 +48,7 @@
                             </td>
                             <td>
                                 {% if log.user %}
-                                {{ log.user.phone or log.user.email or 'User #' ~ log.user_id }}
+                                {% if log.user.phone %}+251 {{ log.user.phone }}{% elif log.user.email %}{{ log.user.email }}{% else %}User #{{ log.user_id }}{% endif %}
                                 {% else %}
                                 <span class="text-muted">System</span>
                                 {% endif %}

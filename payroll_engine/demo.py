@@ -23,7 +23,7 @@ DEMO_EMPLOYEES = [
         'start_date': date(2023, 1, 15),
         'bank_or_telebirr': 'cbe:1000123456789',
         'bank_account': '1000123456789',
-        'tin': '1234567890', 'phone': '0911111111',
+        'tin': '1234567890', 'phone': '911111111',
     },
     {
         'employee_id': 'EMP002', 'name': 'Hana Tesfaye',
@@ -32,7 +32,7 @@ DEMO_EMPLOYEES = [
         'start_date': date(2024, 6, 1),
         'bank_or_telebirr': 'dashen:2000987654321',
         'bank_account': '2000987654321',
-        'tin': '0987654321', 'phone': '0922222222',
+        'tin': '0987654321', 'phone': '922222222',
     },
     {
         'employee_id': 'EMP003', 'name': 'Kebede Alemu',
@@ -41,7 +41,7 @@ DEMO_EMPLOYEES = [
         'start_date': date(2022, 3, 10),
         'bank_or_telebirr': 'awash:3000112233445',
         'bank_account': '3000112233445',
-        'tin': '1122334455', 'phone': '0933333333',
+        'tin': '1122334455', 'phone': '933333333',
     },
     {
         'employee_id': 'EMP004', 'name': 'Tigist Bekele',
@@ -50,7 +50,7 @@ DEMO_EMPLOYEES = [
         'start_date': date(2023, 9, 1),
         'bank_or_telebirr': 'cbe:1000445566778',
         'bank_account': '1000445566778',
-        'tin': '5566778899', 'phone': '0944444444',
+        'tin': '5566778899', 'phone': '944444444',
     },
     {
         'employee_id': 'EMP005', 'name': 'Yonas Desta',
@@ -59,7 +59,7 @@ DEMO_EMPLOYEES = [
         'start_date': date(2025, 1, 15),
         'bank_or_telebirr': 'telebirr:0911234567',
         'bank_account': 'telebirr:0911234567',
-        'tin': '9988776655', 'phone': '0955555555',
+        'tin': '9988776655', 'phone': '955555555',
     },
 ]
 
@@ -96,7 +96,7 @@ def create_demo_data():
     # 1. Check if demo company already exists
     existing = Company.query.filter_by(is_demo=True).first()
     if existing:
-        user = User.query.filter_by(company_id=existing.id, phone='0900000000').first()
+        user = User.query.filter_by(company_id=existing.id, phone='900000000').first()
         employees = Employee.query.filter_by(company_id=existing.id, is_deleted=False).all()
         run = PayrollRun.query.filter_by(company_id=existing.id).order_by(PayrollRun.id.desc()).first()
         if user and employees and run:
@@ -109,7 +109,7 @@ def create_demo_data():
 
     # 3. Create demo user
     user = User(
-        phone='0900000000',
+        phone='900000000',
         company_id=company.id,
         role='owner',
     )

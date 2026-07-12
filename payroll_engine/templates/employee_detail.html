@@ -74,7 +74,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('phone') }}</h6>
-                    <p class="mb-0">{{ employee.phone or 'Not set' }}</p>
+                    <p class="mb-0">{% if employee.phone %}+251 {{ employee.phone }}{% else %}Not set{% endif %}</p>
                 </div>
             </div>
         </div>

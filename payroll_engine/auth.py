@@ -46,7 +46,12 @@ def login():
         if login_id:
             # Check if it looks like a phone number
             cleaned = login_id.replace(' ', '')
-            if cleaned.startswith('09') or cleaned.startswith('07') or cleaned.startswith('+251'):
+            looks_like_phone = (
+                cleaned.startswith('09') or cleaned.startswith('07') or
+                cleaned.startswith('+251') or
+                (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
+            )
+            if looks_like_phone:
                 # Normalize phone and look up
                 is_valid, normalized, _ = validate_ethiopian_phone(login_id)
                 if is_valid:

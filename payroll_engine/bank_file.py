@@ -8,7 +8,7 @@ Key rules from the implementation blueprint:
 - Account numbers must be TEXT (not numbers) to prevent Excel scientific notation
 - No commas in numbers — force 2 decimal places, string data type
 - CBE traditional: 13 numeric digits (starts with 1000...)
-- Telebirr/CBE Birr/mobile wallets: 10 digits starting with 09 or 07
+- Telebirr/CBE Birr/mobile wallets: 9 digits starting with 9 or 7
 - Pre-validation catches bad account numbers before file generation
 """
 
@@ -40,9 +40,9 @@ ACCOUNT_PATTERNS = {
     },
     'telebirr': {
         'name': 'Telebirr / Mobile Wallet',
-        'pattern': r'^(09|07)\d{8}$',
-        'description': '10 digits starting with 09 or 07',
-        'example': '0912345678',
+        'pattern': r'^(0?9|0?7)\d{8}$',
+        'description': '9 digits starting with 9 or 7 (or 10 with leading 0)',
+        'example': '912345678',
     },
 }
 

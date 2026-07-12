@@ -19,9 +19,12 @@
                         </div>
                         <div class="mb-3">
                             <label for="phone" class="form-label">Phone Number *</label>
-                            <input type="tel" class="form-control" id="phone" name="phone"
-                                   required placeholder="0911234567 or +2519...">
-                            <div class="form-text">09XXXXXXXX, 07XXXXXXXX, or +251 format (0 after +251 is OK)</div>
+                            <div class="input-group">
+                                <span class="input-group-text">+251</span>
+                                <input type="tel" class="form-control" id="phone" name="phone"
+                                       required placeholder="9XXXXXXXX">
+                            </div>
+                            <div class="form-text">Enter 9 digits starting with 9 or 7</div>
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">{{ _('email') }} <span class="text-muted">(optional)</span></label>

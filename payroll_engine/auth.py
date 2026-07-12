@@ -73,10 +73,10 @@ def login():
             return redirect(url_for('auth.login'))
         login_user(user, remember=remember)
         if user.must_change_password:
-            flash('You must set a new password before continuing.', 'warning')
+            flash('Please set a new password to continue. Your temporary password needs to be changed.', 'warning')
             return redirect(url_for('auth.change_password'))
         next_page = safe_redirect_target(request.args.get('next'))
-        flash('Welcome back!', 'success')
+        flash(f'Welcome back! Logged in as {user.phone or user.email}.', 'success')
         return redirect(next_page)
     return render_template(
         'auth/login.html',

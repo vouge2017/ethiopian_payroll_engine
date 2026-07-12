@@ -9,9 +9,14 @@
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">{{ _('csv_format') }}</h5>
-                    <a href="{{ url_for('main.download_csv_template') }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-download me-1"></i>Download template
-                    </a>
+                    <div>
+                        <a href="{{ url_for('main.download_prefilled_csv') }}" class="btn btn-success btn-sm me-1">
+                            <i class="bi bi-magic me-1"></i>Pre-filled CSV
+                        </a>
+                        <a href="{{ url_for('main.download_csv_template') }}" class="btn btn-light btn-sm">
+                            <i class="bi bi-download me-1"></i>Blank template
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <p class="small text-muted">Your CSV must include these columns:</p>

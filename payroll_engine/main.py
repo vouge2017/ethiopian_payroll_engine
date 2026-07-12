@@ -351,7 +351,7 @@ def add_employee():
         db.session.add(log)
         db.session.commit()
 
-        flash(f'Employee {name} added successfully.', 'success')
+        flash(f'{name} added to your team! You can now include them in payroll runs.', 'success')
         return redirect(url_for('main.list_employees'))
 
     return render_template('add_employee.html', year=date.today().year)
@@ -468,7 +468,7 @@ def edit_employee(emp_id):
 
         if changes:
             field_names = [c.replace('_', ' ') for c in changes.keys()]
-            flash(f'{name}: {", ".join(field_names)} updated.', 'success')
+            flash(f'{name}\'s profile updated: {", ".join(field_names)}.', 'success')
         else:
             flash(f'No changes for {name}.', 'info')
         return redirect(url_for('main.employee_detail', emp_id=emp_id))
@@ -541,6 +541,52 @@ def download_csv_template():
         csv_content,
         mimetype='text/csv; charset=utf-8',
         headers={'Content-Disposition': 'attachment; filename=payroll_template.csv'}
+    )
+
+
+@main.route('/payroll/prefilled-csv')
+@login_required
+@role_required('owner', 'accountant')
+def download_prefilled_csv():
+    """Download CSV pre-filled with current employee data."""
+    import csv
+    import io
+    from flask import Response
+    from payroll_engine.security import prevent_csv_injection
+
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM
+    writer = csv.writer(output)
+    writer.writerow(['# Pre-filled with your current employees. Update salaries and upload.'])
+    writer.writerow(['# bank_account format: bank_name:account_number'])
+    writer.writerow([])
+    writer.writerow(['employee_id', 'name', 'tin', 'basic_salary', 'allowances',
+                     'bank_account', 'department', 'position'])
+
+    for emp in employees:
+        writer.writerow([
+            prevent_csv_injection(emp.employee_id or ''),
+            prevent_csv_injection(emp.name or ''),
+            prevent_csv_injection(emp.tin or ''),
+            str(emp.basic_salary or 0),
+            str(emp.allowances or 0),
+            prevent_csv_injection(emp.bank_account or emp.bank_or_telebirr or ''),
+            prevent_csv_injection(emp.department or ''),
+            prevent_csv_injection(emp.position or ''),
+        ])
+
+    if not employees:
+        writer.writerow(['EMP001', 'Example Employee', '1234567890', '5000', '0', '', '', ''])
+
+    csv_content = output.getvalue()
+    return Response(
+        csv_content,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename=payroll_prefilled.csv'}
     )
 
 
@@ -865,7 +911,7 @@ def approve_payroll():
         PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
         db.session.commit()
 
-        flash(f'Payroll processed: {len(employees_data)} employees, compliance {score}%.', 'success')
+        flash(f'Payroll ready for review! {len(employees_data)} employees, compliance score {score}%. Review and approve to process.', 'success')
         return redirect(url_for('main.payroll_run_detail', run_id=run.id))
 
     except Exception as e:

@@ -34,4 +34,4 @@ EXPOSE 5000
 
 USER appuser
 
-CMD ["sh", "-c", "flask db upgrade && gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 wsgi:app"]
+CMD ["sh", "-c", "python -c \"from payroll_engine import create_app, db; app = create_app(); app.app_context().push(); db.create_all()\" && gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 wsgi:app"]

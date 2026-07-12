@@ -149,11 +149,10 @@ def register():
         email = request.form.get('email', '').strip().lower() or None
         password = request.form.get('password', '')
         password2 = request.form.get('password2', '')
-        company_name = request.form.get('company_name', '').strip()
 
         # Validate required fields
-        if not phone or not password or not company_name:
-            flash('Phone, password, and company name are required.', 'danger')
+        if not phone or not password:
+            flash('Phone and password are required.', 'danger')
             return redirect(url_for('auth.register'))
 
         # Validate phone format
@@ -180,30 +179,16 @@ def register():
             flash('Email already registered.', 'danger')
             return redirect(url_for('auth.register'))
 
-        # Check duplicate company name
-        existing_company = Company.query.filter_by(name=company_name).first()
-        if existing_company:
-            flash(
-                'A company with that name already exists. '
-                'Contact your admin for an invite, or use a different name.',
-                'danger'
-            )
-            return redirect(url_for('auth.register'))
-
-        # Create company and user
-        company = Company(name=company_name)
-        db.session.add(company)
-        db.session.commit()
+        # Create user (no company yet — they'll create/join after login)
         user = User(
             email=email,
             phone=normalized_phone,
-            company_id=company.id,
             role='owner'
         )
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        flash('Account created. Please log in.', 'success')
+        flash('Account created! Please log in and set up your company.', 'success')
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html')
 

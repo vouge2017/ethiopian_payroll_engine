@@ -14,10 +14,6 @@
                     <form method="POST" action="{{ url_for('auth.register') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
-                            <label for="company_name" class="form-label">Company Name *</label>
-                            <input type="text" class="form-control" id="company_name" name="company_name" required>
-                        </div>
-                        <div class="mb-3">
                             <label for="phone" class="form-label">Phone Number *</label>
                             <div class="input-group">
                                 <span class="input-group-text">+251</span>

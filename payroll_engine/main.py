@@ -74,6 +74,57 @@ def role_required(*roles):
     return decorator
 
 
+# --- Company Setup Guard ---
+
+@main.before_request
+def require_company():
+    """Redirect users without a company to the setup page."""
+    if not current_user.is_authenticated:
+        return None  # Let Flask-Login handle it
+    if request.endpoint in ('main.setup_company', 'main.demo_mode', 'static', 'health', 'healthz', 'readyz'):
+        return None
+    if current_user.company_id is None:
+        return redirect(url_for('main.setup_company'))
+    return None
+
+
+# --- Company Setup ---
+
+@main.route('/setup-company', methods=['GET', 'POST'])
+@login_required
+def setup_company():
+    """Create or join a company after registration."""
+    if current_user.company_id:
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+
+        if action == 'create':
+            company_name = request.form.get('company_name', '').strip()
+            if not company_name:
+                flash('Company name is required.', 'danger')
+                return redirect(url_for('main.setup_company'))
+
+            existing = Company.query.filter_by(name=company_name).first()
+            if existing:
+                flash('A company with that name already exists. Choose a different name.', 'danger')
+                return redirect(url_for('main.setup_company'))
+
+            company = Company(name=company_name)
+            db.session.add(company)
+            db.session.commit()
+
+            current_user.company_id = company.id
+            current_user.role = 'owner'
+            db.session.commit()
+
+            flash(f'Company "{company_name}" created! Welcome to EthioPayroll.', 'success')
+            return redirect(url_for('main.index'))
+
+    return render_template('setup_company.html')
+
+
 # --- Demo Mode ---
 
 @main.route('/demo')

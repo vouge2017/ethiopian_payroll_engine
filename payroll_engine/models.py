@@ -238,10 +238,10 @@ class UserCompany(db.Model):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=True)  # Optional — phone is primary
-    phone = db.Column(db.String(20), unique=True, nullable=True)   # 09XXXXXXXX format
+    phone = db.Column(db.String(20), unique=True, nullable=True)   # 9XXXXXXXX format
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='owner')  # owner, accountant, employee
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # Null until user creates/joins a company
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

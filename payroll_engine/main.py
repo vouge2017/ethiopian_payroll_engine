@@ -186,6 +186,28 @@ def index():
         company_id=company.id, status='completed'
     ).count()
 
+    # "What happened last month" summary
+    last_month_summary = None
+    last_completed = PayrollRun.query.filter_by(
+        company_id=company.id, status='completed'
+    ).order_by(PayrollRun.created_at.desc()).first()
+    if last_completed:
+        from payroll_engine.models import Payslip
+        payslips = Payslip.query.filter_by(payroll_run_id=last_completed.id).all()
+        if payslips:
+            total_net = sum(p.net_pay for p in payslips)
+            total_gross = sum(p.gross_pay for p in payslips)
+            total_tax = sum(p.income_tax for p in payslips)
+            avg_salary = total_net / len(payslips) if payslips else 0
+            last_month_summary = {
+                'period': last_completed.reference or last_completed.run_date.strftime('%B %Y'),
+                'employee_count': len(payslips),
+                'total_net': total_net,
+                'total_gross': total_gross,
+                'total_tax': total_tax,
+                'avg_salary': avg_salary,
+            }
+
     return render_template(
         'dashboard.html',
         company=company,
@@ -200,6 +222,7 @@ def index():
         ot_total_hours=round(ot_total_hours, 1),
         ot_employee_count=ot_employee_count,
         ot_over_limit=ot_over_limit,
+        last_month_summary=last_month_summary,
     )
 
 
@@ -211,6 +234,7 @@ def index():
 def list_employees():
     """List employees for the current company."""
     search = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
     # Filter out soft-deleted employees by default
     show_archived = request.args.get('archived', '') == '1'
     query = Employee.query.filter_by(company_id=_company_id())
@@ -223,8 +247,11 @@ def list_employees():
                 Employee.employee_id.ilike(f'%{search}%')
             )
         )
-    employees = query.order_by(Employee.name).all()
-    return render_template('employees.html', employees=employees, search=search,
+    pagination = query.order_by(Employee.name).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    return render_template('employees.html', employees=pagination.items,
+                           pagination=pagination, search=search,
                            year=date.today().year, show_archived=show_archived)
 
 
@@ -857,9 +884,13 @@ def approve_payroll():
 @login_required
 def payroll_runs():
     """List payroll runs for the company."""
-    runs = PayrollRun.query.filter_by(company_id=_company_id()) \
-        .order_by(PayrollRun.created_at.desc()).all()
-    return render_template('payroll_runs.html', runs=runs, year=date.today().year)
+    page = request.args.get('page', 1, type=int)
+    pagination = PayrollRun.query.filter_by(company_id=_company_id()) \
+        .order_by(PayrollRun.created_at.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+    return render_template('payroll_runs.html', runs=pagination.items,
+                           pagination=pagination, year=date.today().year)
 
 
 @main.route('/payroll/runs/<int:run_id>/lock', methods=['POST'])
@@ -1454,10 +1485,14 @@ def reports():
 @role_required('owner', 'accountant')
 def audit_log():
     """View the append-only audit trail for this company."""
-    logs = AuditLog.query.filter_by(
+    page = request.args.get('page', 1, type=int)
+    pagination = AuditLog.query.filter_by(
         company_id=_company_id()
-    ).order_by(AuditLog.timestamp.desc()).limit(200).all()
-    return render_template('audit_log.html', logs=logs, year=date.today().year)
+    ).order_by(AuditLog.timestamp.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    return render_template('audit_log.html', logs=pagination.items,
+                           pagination=pagination, year=date.today().year)
 
 
 @main.route('/reports/erca/<int:run_id>')

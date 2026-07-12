@@ -165,8 +165,10 @@ def register():
         if password != password2:
             flash('Passwords do not match.', 'danger')
             return redirect(url_for('auth.register'))
-        if len(password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
+        from payroll_engine.password_policy import check_password_strength
+        is_strong, pw_error = check_password_strength(password)
+        if not is_strong:
+            flash(pw_error, 'danger')
             return redirect(url_for('auth.register'))
 
         # Check duplicate phone

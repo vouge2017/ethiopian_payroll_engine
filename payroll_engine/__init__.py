@@ -148,6 +148,36 @@ def create_app():
 
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
+
+    # HTTPS enforcement via Flask-Talisman
+    if not app.debug:
+        from flask_talisman import Talisman
+        Talisman(
+            app,
+            force_https=True,
+            strict_transport_security=True,
+            strict_transport_security_max_age=31536000,
+            strict_transport_security_include_subdomains=True,
+            content_security_policy={
+                'default-src': "'self'",
+                'script-src': [
+                    "'self'",
+                    "'unsafe-inline'",
+                    "https://cdn.jsdelivr.net",
+                ],
+                'style-src': [
+                    "'self'",
+                    "'unsafe-inline'",
+                    "https://cdn.jsdelivr.net",
+                ],
+                'font-src': [
+                    "'self'",
+                    "https://cdn.jsdelivr.net",
+                ],
+                'img-src': "'self' data:",
+            },
+            content_security_policy_nonce_in=['script-src'],
+        )
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
     from .api import api as api_blueprint

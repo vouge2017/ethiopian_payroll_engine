@@ -73,5 +73,7 @@
             {% endif %}
         </div>
     </div>
+    {% from "_pagination.html" import render_pagination %}
+    {{ render_pagination(pagination, 'main.payroll_runs') }}
 </div>
 {% endblock %}

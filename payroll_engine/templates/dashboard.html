@@ -66,6 +66,33 @@
         </div>
     </div>
 
+    <!-- What Happened Last Month -->
+    {% if last_month_summary %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="mb-3"><i class="bi bi-clock-history me-2"></i>Last Payroll: {{ last_month_summary.period }}</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="mb-2">
+                        <strong>{{ last_month_summary.employee_count }} employees</strong> paid.
+                        Total net: <strong>ETB {{ "{:,.2f}".format(last_month_summary.total_net) }}</strong>.
+                        Average salary: <strong>ETB {{ "{:,.2f}".format(last_month_summary.avg_salary) }}</strong>.
+                    </p>
+                    <p class="mb-0 text-muted">
+                        Gross: ETB {{ "{:,.2f}".format(last_month_summary.total_gross) }} ·
+                        Tax withheld: ETB {{ "{:,.2f}".format(last_month_summary.total_tax) }}
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ url_for('main.payroll_runs') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-list me-1"></i>View all runs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- First-Run Wizard -->
     {% if completed_runs_count == 0 %}
     <div class="card border-primary shadow-sm mb-4" id="first-run-wizard">

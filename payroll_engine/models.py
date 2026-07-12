@@ -45,7 +45,10 @@ def validate_ethiopian_phone(phone: str) -> tuple:
     cleaned = phone.replace(' ', '')
 
     # Pattern: +251 followed by 9XXXXXXXX or 7XXXXXXXX, or 09XXXXXXXX or 07XXXXXXXX
+    # Also handles +25109XXXXXXXX and +25107XXXXXXXX (common mistake: 0 after country code)
     patterns = [
+        (r'^\+2510(9\d{8})$', '0{}'),     # +2510911234567 → 0911234567
+        (r'^\+2510(7\d{8})$', '0{}'),     # +2510711234567 → 0711234567
         (r'^\+251(9\d{8})$', '0{}'),      # +251911234567 → 0911234567
         (r'^\+251(7\d{8})$', '0{}'),      # +251711234567 → 0711234567
         (r'^(09\d{8})$', '{}'),             # 0911234567 → 0911234567

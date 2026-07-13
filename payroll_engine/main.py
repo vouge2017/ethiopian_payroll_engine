@@ -314,6 +314,7 @@ def index():
 def list_employees():
     """List employees for the current company."""
     search = request.args.get('q', '').strip()
+    selected_dept = request.args.get('dept', '').strip()
     page = request.args.get('page', 1, type=int)
     # Filter out soft-deleted employees by default
     show_archived = request.args.get('archived', '') == '1'
@@ -327,11 +328,22 @@ def list_employees():
                 Employee.employee_id.ilike(f'%{search}%')
             )
         )
+    if selected_dept:
+        query = query.filter(Employee.department == selected_dept)
+
+    # Get all departments for the filter dropdown
+    departments = [
+        r[0] for r in db.session.query(Employee.department)
+        .filter(Employee.company_id == _company_id(), Employee.department.isnot(None), Employee.department != '')
+        .distinct().order_by(Employee.department).all()
+    ]
+
     pagination = query.order_by(Employee.name).paginate(
         page=page, per_page=20, error_out=False
     )
     return render_template('employees.html', employees=pagination.items,
                            pagination=pagination, search=search,
+                           departments=departments, selected_dept=selected_dept,
                            year=date.today().year, show_archived=show_archived)
 
 

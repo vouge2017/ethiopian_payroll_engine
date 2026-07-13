@@ -29,12 +29,22 @@
                 {% if show_archived %}
                 <input type="hidden" name="archived" value="1">
                 {% endif %}
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control" name="q" placeholder="Search by name or ID..." value="{{ search }}">
-                        <button type="submit" class="btn btn-outline-primary">{{ _('search') }}</button>
                     </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="dept" class="form-select">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" {% if dept == selected_dept %}selected{% endif %}>{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-primary w-100">{{ _('search') }}</button>
                 </div>
             </form>
         </div>

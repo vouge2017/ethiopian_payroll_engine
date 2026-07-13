@@ -242,4 +242,29 @@ def create_app():
             'current_language': lang,
         }
 
+    @app.context_processor
+    def inject_deadline_alerts():
+        """Inject deadline notification banner data for authenticated users."""
+        from flask import session as flask_session
+        from flask_login import current_user
+        try:
+            if not current_user.is_authenticated or not current_user.company_id:
+                return {'deadline_alerts': []}
+            company_id = flask_session.get('active_company_id', current_user.company_id)
+            from payroll_engine.compliance import get_upcoming_deadlines
+            from payroll_engine.models import PayrollRun
+            latest_run = PayrollRun.query.filter_by(company_id=company_id).order_by(PayrollRun.created_at.desc()).first()
+            payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
+            deadlines = get_upcoming_deadlines(payroll_date)
+            alerts = []
+            for key, label in [('erca', 'ERCA Filing'), ('pension', 'Pension'), ('pssa', 'PSSA')]:
+                days = deadlines.get(f'{key}_days_left', 999)
+                if days <= 3:
+                    severity = 'danger' if days < 0 else 'warning'
+                    msg = f'{label}: {abs(days)} days overdue' if days < 0 else f'{label}: {days} days remaining'
+                    alerts.append({'message': msg, 'severity': severity})
+            return {'deadline_alerts': alerts}
+        except Exception:
+            return {'deadline_alerts': []}
+
     return app

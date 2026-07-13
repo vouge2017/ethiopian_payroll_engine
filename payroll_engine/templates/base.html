@@ -137,6 +137,18 @@
             {% endwith %}
         </div>
 
+        {% if deadline_alerts is defined and deadline_alerts %}
+        <div class="container-fluid">
+            {% for alert in deadline_alerts %}
+            <div class="alert alert-{{ alert.severity }} alert-dismissible fade show py-2 mb-2" role="alert">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Deadline Alert:</strong> {{ alert.message }}
+                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% block content %}{% endblock %}
 
 {% if current_user.is_authenticated %}

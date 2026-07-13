@@ -245,11 +245,14 @@ def index():
     from payroll_engine.compliance import get_upcoming_deadlines
     deadlines = get_upcoming_deadlines(payroll_date_str)
 
-    # Overtime summary for current month
+    # Overtime summary for current month (eager-load employee to avoid N+1)
     from payroll_engine.models import OvertimeEntry
     from payroll_engine.overtime import MAX_OVERTIME_HOURS_MONTH
+    from sqlalchemy.orm import joinedload
     month_start = date.today().replace(day=1)
-    ot_entries = OvertimeEntry.query.filter_by(company_id=company.id) \
+    ot_entries = OvertimeEntry.query.options(
+        joinedload(OvertimeEntry.employee)
+    ).filter_by(company_id=company.id) \
         .filter(OvertimeEntry.date >= month_start).all()
     ot_by_employee = {}
     for entry in ot_entries:
@@ -1188,6 +1191,7 @@ def payroll_spreadsheet():
     Accountant can edit overtime, absences, advances, and bonus inline.
     """
     from payroll_engine.overtime import MAX_OVERTIME_HOURS_MONTH
+    from payroll_engine.models import OvertimeEntry, EmployeeDeduction
     from payroll_engine.payroll import calculate_payroll
     from decimal import Decimal, InvalidOperation
 
@@ -1211,7 +1215,6 @@ def payroll_spreadsheet():
             })
 
         # Save overtime entries
-        from payroll_engine.models import OvertimeEntry, EmployeeDeduction
         today = date.today()
 
         for change in changes:
@@ -1274,36 +1277,39 @@ def payroll_spreadsheet():
     # Calculate current month overtime for each employee
     month_start = date.today().replace(day=1)
 
+    # Batch-load ALL overtime entries for this month (avoid N+1)
+    all_ot = OvertimeEntry.query.filter(
+        OvertimeEntry.company_id == _company_id(),
+        OvertimeEntry.date >= month_start,
+    ).all()
+    from collections import defaultdict
+    ot_by_emp = defaultdict(list)
+    for ot in all_ot:
+        ot_by_emp[ot.employee_id].append(ot)
+
+    # Batch-load unpaid leave deductions
+    if date.today().month == 12:
+        next_month = date(date.today().year + 1, 1, 1)
+    else:
+        next_month = date(date.today().year, date.today().month + 1, 1)
+    month_end_batch = next_month - date.resolution
+
     rows = []
     total_gross = Decimal('0')
     total_tax = Decimal('0')
     total_net = Decimal('0')
 
     for emp in employees:
-        # Get existing overtime for this month
-        ot_entries = OvertimeEntry.query.filter(
-            OvertimeEntry.employee_id == emp.id,
-            OvertimeEntry.company_id == _company_id(),
-            OvertimeEntry.date >= month_start,
-        ).all()
-
+        emp_ot = ot_by_emp.get(emp.id, [])
         ot_by_type = {'day': 0, 'night': 0, 'holiday': 0, 'rest_day_holiday': 0}
-        for ot in ot_entries:
+        for ot in emp_ot:
             ot_by_type[ot.overtime_type] = float(ot.hours)
 
         # Calculate payroll
         ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
 
-        # Check for approved unpaid leave this month
-        month_end = date.today()
-        if date.today().month == 12:
-            next_month = date(date.today().year + 1, 1, 1)
-        else:
-            next_month = date(date.today().year, date.today().month + 1, 1)
-        month_end = next_month - date.resolution
-
         unpaid_deduction = _calculate_unpaid_leave_deduction(
-            emp, _company_id(), month_start, month_end
+            emp, _company_id(), month_start, month_end_batch
         )
 
         # Check for approved sick leave reduction
@@ -1313,7 +1319,6 @@ def payroll_spreadsheet():
         # Calculate payroll based on employee type
         if emp.employee_type == 'daily' and emp.daily_rate:
             from payroll_engine.payroll import calculate_daily_worker_payroll
-            # Daily workers: get days worked from attendance or default to 26
             days_worked = 26  # Default; can be overridden by attendance system
             result = calculate_daily_worker_payroll(emp.daily_rate, days_worked)
         else:
@@ -2416,7 +2421,8 @@ def leave_management():
     status_filter = request.args.get('status', '').strip()
     type_filter = request.args.get('type', '').strip()
 
-    query = Leave.query.filter(Leave.company_id == _company_id())
+    from sqlalchemy.orm import joinedload as _joinedload
+    query = Leave.query.options(_joinedload(Leave.employee)).filter(Leave.company_id == _company_id())
 
     if status_filter:
         query = query.filter(Leave.status == status_filter)
@@ -2459,6 +2465,8 @@ def _calculate_unpaid_leave_deduction(employee, company_id, pay_period_start, pa
     Returns:
         Decimal amount to deduct from salary
     """
+    from decimal import Decimal
+    from payroll_engine.leave import LeaveType
     # Get all approved unpaid leave that overlaps with the pay period
     unpaid_leaves = Leave.query.filter(
         Leave.company_id == company_id,

@@ -22,27 +22,69 @@ from typing import List, Dict, Any
 ACCOUNT_PATTERNS = {
     'cbe': {
         'name': 'Commercial Bank of Ethiopia (CBE)',
-        'pattern': r'^\d{13}$',
-        'description': '13 numeric digits (e.g., 1000123456789)',
+        'pattern': r'^1\d{12}$',
+        'description': '13 digits starting with 1 (e.g., 1000123456789)',
         'example': '1000123456789',
     },
     'dashen': {
         'name': 'Dashen Bank',
         'pattern': r'^\d{13}$',
         'description': '13 numeric digits',
-        'example': '1000123456789',
+        'example': '0990123456789',
     },
     'awash': {
         'name': 'Awash Bank',
         'pattern': r'^\d{13}$',
         'description': '13 numeric digits',
-        'example': '1000123456789',
+        'example': '0990123456789',
+    },
+    'boa': {
+        'name': 'Bank of Abyssinia',
+        'pattern': r'^\d{13}$',
+        'description': '13 numeric digits',
+        'example': '0990123456789',
+    },
+    'wegagen': {
+        'name': 'Wegagen Bank',
+        'pattern': r'^\d{13}$',
+        'description': '13 numeric digits',
+        'example': '0990123456789',
+    },
+    'nib': {
+        'name': 'NIB International Bank',
+        'pattern': r'^\d{13}$',
+        'description': '13 numeric digits',
+        'example': '0990123456789',
+    },
+    'bunna': {
+        'name': 'Bunna Bank',
+        'pattern': r'^\d{13}$',
+        'description': '13 numeric digits',
+        'example': '0990123456789',
+    },
+    'zemen': {
+        'name': 'Zemen Bank',
+        'pattern': r'^\d{13}$',
+        'description': '13 numeric digits',
+        'example': '0990123456789',
+    },
+    'lion': {
+        'name': 'Lion International Bank',
+        'pattern': r'^\d{13}$',
+        'description': '13 numeric digits',
+        'example': '0990123456789',
     },
     'telebirr': {
         'name': 'Telebirr / Mobile Wallet',
         'pattern': r'^(0?9|0?7)\d{8}$',
         'description': '9 digits starting with 9 or 7 (or 10 with leading 0)',
         'example': '912345678',
+    },
+    'mpesa': {
+        'name': 'M-Pesa (Safaricom)',
+        'pattern': r'^(0?7)\d{8}$',
+        'description': '9 digits starting with 7 (or 10 with leading 0)',
+        'example': '712345678',
     },
 }
 

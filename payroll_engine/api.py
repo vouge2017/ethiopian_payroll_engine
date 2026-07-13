@@ -258,3 +258,106 @@ def list_audit_logs():
         'timestamp': l.timestamp.isoformat(),
         'details': l.details,
     } for l in logs])
+
+
+# --- Impact Preview API ---
+
+def _convert(obj):
+    """Convert Decimal to string for JSON serialization."""
+    if isinstance(obj, Decimal):
+        return str(obj)
+    if isinstance(obj, dict):
+        return {k: _convert(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_convert(v) for v in obj]
+    return obj
+
+
+@api.route('/impact/salary-raise', methods=['POST'])
+@login_required
+@company_required
+def impact_salary_raise():
+    """Preview impact of a salary raise."""
+    from payroll_engine.impact import preview_salary_raise
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+    try:
+        result = preview_salary_raise(
+            current_basic=data.get('current_basic', 0),
+            current_allowances=data.get('current_allowances', 0),
+            new_basic=data.get('new_basic', 0),
+            new_allowances=data.get('new_allowances', 0),
+            employee_name=data.get('employee_name', 'Employee'),
+        )
+        return jsonify(_convert(result))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@api.route('/impact/new-hire', methods=['POST'])
+@login_required
+@company_required
+def impact_new_hire():
+    """Preview cost of hiring a new employee."""
+    from payroll_engine.impact import preview_new_hire
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+    try:
+        result = preview_new_hire(
+            basic_salary=data.get('basic_salary', 0),
+            allowances=data.get('allowances', 0),
+            transport_allowance=data.get('transport_allowance', 0),
+            employee_name=data.get('employee_name', 'New Employee'),
+        )
+        return jsonify(_convert(result))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@api.route('/impact/termination', methods=['POST'])
+@login_required
+@company_required
+def impact_termination():
+    """Preview cost of terminating an employee."""
+    from payroll_engine.impact import preview_termination
+    from datetime import datetime as dt
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+    try:
+        end_date = dt.strptime(data.get('end_date', ''), '%Y-%m-%d').date()
+        start_date = dt.strptime(data.get('start_date', ''), '%Y-%m-%d').date()
+        result = preview_termination(
+            basic_salary=data.get('basic_salary', 0),
+            allowances=data.get('allowances', 0),
+            start_date=start_date,
+            end_date=end_date,
+            termination_reason=data.get('reason', 'redundancy'),
+            employee_name=data.get('employee_name', 'Employee'),
+        )
+        return jsonify(_convert(result))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@api.route('/impact/allowance-change', methods=['POST'])
+@login_required
+@company_required
+def impact_allowance_change():
+    """Preview impact of changing an allowance."""
+    from payroll_engine.impact import preview_allowance_change
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Request body required'}), 400
+    try:
+        result = preview_allowance_change(
+            current_amount=data.get('current_amount', 0),
+            new_amount=data.get('new_amount', 0),
+            basic_salary=data.get('basic_salary', 0),
+            allowance_type=data.get('allowance_type', 'transport'),
+        )
+        return jsonify(_convert(result))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400

@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+{% block title %}Impact Calculator - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-calculator me-2"></i>Impact Calculator</h4>
+            <p class="text-muted mb-0">See the financial impact before you decide</p>
+        </div>
+    </div>
+
+    <!-- Calculator Tabs -->
+    <ul class="nav nav-pills mb-4" id="calcTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#salaryRaise">
+                <i class="bi bi-arrow-up-circle me-1"></i>Salary Raise
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#newHire">
+                <i class="bi bi-person-plus me-1"></i>New Hire
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#allowanceChange">
+                <i class="bi bi-wallet2 me-1"></i>Allowance Change
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#termination">
+                <i class="bi bi-person-dash me-1"></i>Termination
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Salary Raise Calculator -->
+        <div class="tab-pane fade show active" id="salaryRaise">
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">Current vs New Salary</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label fw-bold text-muted">CURRENT</label>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Basic Salary</label>
+                                        <input type="number" class="form-control" id="cur_basic" value="10000" step="100">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Allowances</label>
+                                        <input type="number" class="form-control" id="cur_allow" value="2000" step="100">
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-bold text-success">NEW</label>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Basic Salary</label>
+                                        <input type="number" class="form-control" id="new_basic" value="15000" step="100">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Allowances</label>
+                                        <input type="number" class="form-control" id="new_allow" value="3000" step="100">
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary w-100 mt-3" onclick="calculateRaise()">
+                                <i class="bi bi-calculator me-1"></i>Calculate Impact
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7" id="raiseResult" style="display:none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Impact Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Employee Gets More (Monthly)</small>
+                                            <h3 class="text-success mb-0" id="raiseNetMonthly">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Employee Gets More (Yearly)</small>
+                                            <h3 class="text-success mb-0" id="raiseNetAnnual">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Company Pays More (Monthly)</small>
+                                            <h3 class="text-primary mb-0" id="raiseEmployerMonthly">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Company Pays More (Yearly)</small>
+                                            <h3 class="text-primary mb-0" id="raiseEmployerAnnual">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr><th></th><th>Current</th><th>New</th><th>Change</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Gross</td><td id="rGrossC">-</td><td id="rGrossN">-</td><td id="rGrossD">-</td></tr>
+                                    <tr><td>Tax</td><td id="rTaxC">-</td><td id="rTaxN">-</td><td id="rTaxD">-</td></tr>
+                                    <tr><td>Pension (7%)</td><td id="rPenC">-</td><td id="rPenN">-</td><td id="rPenD">-</td></tr>
+                                    <tr class="table-success"><td><strong>Net Pay</strong></td><td id="rNetC">-</td><td id="rNetN">-</td><td id="rNetD">-</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Hire Calculator -->
+        <div class="tab-pane fade" id="newHire">
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">New Employee Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Employee Name</label>
+                                <input type="text" class="form-control" id="nh_name" placeholder="e.g. Abebe Kebede">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Basic Salary (ETB)</label>
+                                <input type="number" class="form-control" id="nh_basic" value="15000" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Allowances (ETB)</label>
+                                <input type="number" class="form-control" id="nh_allow" value="3000" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Transport Allowance (ETB) <small class="text-muted">optional</small></label>
+                                <input type="number" class="form-control" id="nh_transport" value="0" step="100">
+                            </div>
+                            <button class="btn btn-info w-100 text-white" onclick="calculateNewHire()">
+                                <i class="bi bi-calculator me-1"></i>Calculate Cost
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7" id="nhResult" style="display:none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Cost Breakdown</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Company Pays (Monthly)</small>
+                                            <h3 class="text-primary mb-0" id="nhEmployerMonthly">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Employee Gets (Monthly)</small>
+                                            <h3 class="text-success mb-0" id="nhNetMonthly">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Company Pays (Yearly)</small>
+                                            <h3 class="text-primary mb-0" id="nhEmployerAnnual">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td>Basic Salary</td><td class="text-end" id="nhBasic">-</td></tr>
+                                    <tr><td>Allowances</td><td class="text-end" id="nhAllow">-</td></tr>
+                                    <tr class="table-primary"><td><strong>Gross Salary</strong></td><td class="text-end fw-bold" id="nhGross">-</td></tr>
+                                    <tr><td>Pension (Employee 7%)</td><td class="text-end" id="nhPenEmp">-</td></tr>
+                                    <tr><td>Pension (Employer 11%)</td><td class="text-end" id="nhPenEmpr">-</td></tr>
+                                    <tr><td>Income Tax</td><td class="text-end" id="nhTax">-</td></tr>
+                                    <tr class="table-success"><td><strong>Net Take-Home</strong></td><td class="text-end fw-bold" id="nhNet">-</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Allowance Change Calculator -->
+        <div class="tab-pane fade" id="allowanceChange">
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">Allowance Change</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Employee Basic Salary (ETB)</label>
+                                <input type="number" class="form-control" id="ac_basic" value="10000" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Allowance Type</label>
+                                <select class="form-select" id="ac_type">
+                                    <option value="transport" selected>Transport</option>
+                                    <option value="hardship">Hardship</option>
+                                    <option value="housing">Housing</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label">Current Amount</label>
+                                    <input type="number" class="form-control" id="ac_current" value="1500" step="100">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">New Amount</label>
+                                    <input type="number" class="form-control" id="ac_new" value="3000" step="100">
+                                </div>
+                            </div>
+                            <button class="btn btn-warning w-100 mt-3 text-dark" onclick="calculateAllowance()">
+                                <i class="bi bi-calculator me-1"></i>Calculate Impact
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7" id="acResult" style="display:none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Impact</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Employee Gets More (Monthly)</small>
+                                            <h3 class="text-success mb-0" id="acNetMonthly">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Company Pays More (Monthly)</small>
+                                            <h3 class="text-primary mb-0" id="acEmployerMonthly">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td>Amount Change</td><td class="text-end" id="acAmountChange">-</td></tr>
+                                    <tr><td>Tax-Exempt Portion</td><td class="text-end" id="acExempt">-</td></tr>
+                                    <tr><td>Tax Impact</td><td class="text-end" id="acTaxChange">-</td></tr>
+                                    <tr class="table-success"><td><strong>Net Pay Change</strong></td><td class="text-end fw-bold" id="acNetChange">-</td></tr>
+                                    <tr><td>Annual Impact (Employee)</td><td class="text-end" id="acAnnual">-</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Termination Calculator -->
+        <div class="tab-pane fade" id="termination">
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0">Termination Cost</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Employee Name</label>
+                                <input type="text" class="form-control" id="term_name" placeholder="e.g. Dawit Mekonnen">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Basic Salary (ETB)</label>
+                                <input type="number" class="form-control" id="term_basic" value="15000" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Allowances (ETB)</label>
+                                <input type="number" class="form-control" id="term_allow" value="3000" step="100">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="term_start" value="2023-01-15">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Termination Reason</label>
+                                <select class="form-select" id="term_reason">
+                                    <option value="redundancy">Redundancy</option>
+                                    <option value="mutual_agreement">Mutual Agreement</option>
+                                    <option value="resignation">Resignation (no severance)</option>
+                                    <option value="termination_for_cause">Termination for Cause (no severance)</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-danger w-100" onclick="calculateTermination()">
+                                <i class="bi bi-calculator me-1"></i>Calculate Cost
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-7" id="termResult" style="display:none">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Termination Cost</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Total Company Cost</small>
+                                            <h3 class="text-danger mb-0" id="termTotalCost">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center py-3">
+                                            <small class="text-muted">Employee Receives</small>
+                                            <h3 class="text-success mb-0" id="termNetPayout">-</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr><td>Years of Service</td><td class="text-end" id="termYears">-</td></tr>
+                                    <tr><td>Outstanding Salary</td><td class="text-end" id="termOutstanding">-</td></tr>
+                                    <tr><td>Severance Pay</td><td class="text-end" id="termSeverance">-</td></tr>
+                                    <tr><td>Leave Encashment</td><td class="text-end" id="termLeave">-</td></tr>
+                                    <tr class="table-primary"><td><strong>Total Earnings</strong></td><td class="text-end fw-bold" id="termEarnings">-</td></tr>
+                                    <tr><td>Pension Deduction</td><td class="text-end" id="termPension">-</td></tr>
+                                    <tr><td>Tax Deduction</td><td class="text-end" id="termTax">-</td></tr>
+                                    <tr class="table-success"><td><strong>Net Payout</strong></td><td class="text-end fw-bold" id="termNet">-</td></tr>
+                                </tbody>
+                            </table>
+                            <div id="termCapNote" class="alert alert-warning mt-3" style="display:none">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <span id="termCapText"></span>
+                            </div>
+                            <div id="termNoSeverance" class="alert alert-info mt-3" style="display:none">
+                                <i class="bi bi-info-circle me-1"></i>
+                                No severance payable for this termination reason.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function fmt(n) { return 'ETB ' + Number(n).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+
+async function apiCall(endpoint, data) {
+    const resp = await fetch('/api/v1/' + endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    return resp.json();
+}
+
+async function calculateRaise() {
+    const data = {
+        current_basic: parseFloat(document.getElementById('cur_basic').value),
+        current_allowances: parseFloat(document.getElementById('cur_allow').value),
+        new_basic: parseFloat(document.getElementById('new_basic').value),
+        new_allowances: parseFloat(document.getElementById('new_allow').value),
+    };
+    const r = await apiCall('impact/salary-raise', data);
+    if (r.error) { alert(r.error); return; }
+
+    document.getElementById('raiseResult').style.display = 'block';
+    document.getElementById('raiseNetMonthly').textContent = fmt(r.impact.net_monthly_change);
+    document.getElementById('raiseNetAnnual').textContent = fmt(r.impact.net_annual_change);
+    document.getElementById('raiseEmployerMonthly').textContent = fmt(r.impact.employer_monthly_change);
+    document.getElementById('raiseEmployerAnnual').textContent = fmt(r.impact.employer_annual_change);
+
+    document.getElementById('rGrossC').textContent = fmt(r.current.gross);
+    document.getElementById('rGrossN').textContent = fmt(r.new.gross);
+    document.getElementById('rGrossD').textContent = fmt(r.impact.gross_increase);
+    document.getElementById('rTaxC').textContent = fmt(r.current.tax);
+    document.getElementById('rTaxN').textContent = fmt(r.new.tax);
+    document.getElementById('rTaxD').textContent = fmt(Number(r.new.tax) - Number(r.current.tax));
+    document.getElementById('rPenC').textContent = fmt(r.current.pension);
+    document.getElementById('rPenN').textContent = fmt(r.new.pension);
+    document.getElementById('rPenD').textContent = fmt(Number(r.new.pension) - Number(r.current.pension));
+    document.getElementById('rNetC').textContent = fmt(r.current.net);
+    document.getElementById('rNetN').textContent = fmt(r.new.net);
+    document.getElementById('rNetD').textContent = fmt(r.impact.net_monthly_change);
+}
+
+async function calculateNewHire() {
+    const data = {
+        basic_salary: parseFloat(document.getElementById('nh_basic').value),
+        allowances: parseFloat(document.getElementById('nh_allow').value),
+        transport_allowance: parseFloat(document.getElementById('nh_transport').value),
+        employee_name: document.getElementById('nh_name').value || 'New Employee',
+    };
+    const r = await apiCall('impact/new-hire', data);
+    if (r.error) { alert(r.error); return; }
+
+    document.getElementById('nhResult').style.display = 'block';
+    document.getElementById('nhEmployerMonthly').textContent = fmt(r.monthly.employer_cost);
+    document.getElementById('nhNetMonthly').textContent = fmt(r.monthly.net);
+    document.getElementById('nhEmployerAnnual').textContent = fmt(r.annual.employer_cost);
+    document.getElementById('nhBasic').textContent = fmt(r.monthly.basic);
+    document.getElementById('nhAllow').textContent = fmt(r.monthly.allowances);
+    document.getElementById('nhGross').textContent = fmt(r.monthly.gross);
+    document.getElementById('nhPenEmp').textContent = fmt(r.monthly.pension_employee);
+    document.getElementById('nhPenEmpr').textContent = fmt(r.monthly.pension_employer);
+    document.getElementById('nhTax').textContent = fmt(r.monthly.tax);
+    document.getElementById('nhNet').textContent = fmt(r.monthly.net);
+}
+
+async function calculateAllowance() {
+    const data = {
+        basic_salary: parseFloat(document.getElementById('ac_basic').value),
+        current_amount: parseFloat(document.getElementById('ac_current').value),
+        new_amount: parseFloat(document.getElementById('ac_new').value),
+        allowance_type: document.getElementById('ac_type').value,
+    };
+    const r = await apiCall('impact/allowance-change', data);
+    if (r.error) { alert(r.error); return; }
+
+    document.getElementById('acResult').style.display = 'block';
+    document.getElementById('acNetMonthly').textContent = fmt(r.impact.net_monthly_change);
+    document.getElementById('acEmployerMonthly').textContent = fmt(r.impact.employer_monthly_change);
+    document.getElementById('acAmountChange').textContent = fmt(r.impact.amount_change);
+    document.getElementById('acExempt').textContent = fmt(Number(r.exempt_new) - Number(r.exempt_current));
+    document.getElementById('acTaxChange').textContent = fmt(r.impact.tax_change);
+    document.getElementById('acNetChange').textContent = fmt(r.impact.net_monthly_change);
+    document.getElementById('acAnnual').textContent = fmt(r.impact.net_annual_change);
+}
+
+async function calculateTermination() {
+    const data = {
+        basic_salary: parseFloat(document.getElementById('term_basic').value),
+        allowances: parseFloat(document.getElementById('term_allow').value),
+        start_date: document.getElementById('term_start').value,
+        end_date: new Date().toISOString().split('T')[0],
+        reason: document.getElementById('term_reason').value,
+        employee_name: document.getElementById('term_name').value || 'Employee',
+    };
+    const r = await apiCall('impact/termination', data);
+    if (r.error) { alert(r.error); return; }
+
+    document.getElementById('termResult').style.display = 'block';
+    document.getElementById('termTotalCost').textContent = fmt(r.company_cost);
+    document.getElementById('termNetPayout').textContent = fmt(r.breakdown.net_payout);
+    document.getElementById('termYears').textContent = r.years_of_service + ' years';
+    document.getElementById('termOutstanding').textContent = fmt(r.breakdown.outstanding_salary);
+    document.getElementById('termSeverance').textContent = fmt(r.breakdown.severance);
+    document.getElementById('termLeave').textContent = fmt(r.breakdown.leave_encashment);
+    document.getElementById('termEarnings').textContent = fmt(r.breakdown.total_earnings);
+    document.getElementById('termPension').textContent = fmt(r.breakdown.pension_deduction);
+    document.getElementById('termTax').textContent = fmt(r.breakdown.tax);
+    document.getElementById('termNet').textContent = fmt(r.breakdown.net_payout);
+
+    document.getElementById('termCapNote').style.display = r.cap_applied ? 'block' : 'none';
+    if (r.cap_applied) {
+        document.getElementById('termCapText').textContent = 'Severance capped at 12 months: ' + fmt(r.cap);
+    }
+    document.getElementById('termNoSeverance').style.display = r.eligible ? 'none' : 'block';
+}
+</script>
+{% endblock %}

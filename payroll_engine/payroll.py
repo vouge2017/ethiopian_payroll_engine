@@ -37,7 +37,8 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
                       overtime_entries: list = None,
                       for_date=None,
                       deductions: list = None,
-                      allowance_records: list = None) -> dict:
+                      allowance_records: list = None,
+                      sick_leave_reduction: Decimal = Decimal('0')) -> dict:
     """
     Calculate complete payroll for one employee.
 
@@ -45,6 +46,7 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         Gross (basic + allowances + overtime)
         → Subtract pension (7% of basic ONLY — not affected by overtime)
         → Calculate exempt allowances (transport cap, hardship, etc.)
+        → Apply sick leave reduction (if employee exceeded tier 1)
         → Calculate tax on remainder
         → Subtract tax
         → Apply post-tax deductions (cost-sharing, court orders, etc.)
@@ -57,12 +59,14 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         for_date: Optional date for rule versioning
         deductions: List of EmployeeDeduction objects (optional, applied post-tax)
         allowance_records: List of EmployeeAllowance objects (optional, for exemption calculation)
+        sick_leave_reduction: Amount to deduct for sick leave pay reduction (optional)
+            When employee exceeds 30 sick days, pay drops to 50%. This is the reduction amount.
 
     Returns:
         Dict with: gross, taxable, tax, pension_employee, pension_employer,
                    net, tax_explanation, overtime_pay, overtime_total_hours,
-                   total_deductions, deduction_details, exempt_allowances, taxable_allowances
-        All monetary values are Decimal.
+                   total_deductions, deduction_details, exempt_allowances, taxable_allowances,
+                   sick_leave_reduction
 
     Raises:
         ValueError: If basic_salary is negative
@@ -153,10 +157,15 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
                     'warning': ded.warning_message,
                 })
 
-    # Step 10: Final net = Net before deductions - post-tax deductions
-    net = net_before_deductions - total_deductions
+    # Step 10: Apply sick leave reduction (if employee exceeded tier 1)
+    sick_leave_reduction = _D(sick_leave_reduction)
+    net_after_sick = net_before_deductions - sick_leave_reduction
+    net_after_sick = max(Decimal('0'), net_after_sick)  # Cannot go below zero
 
-    # Step 11: Tax explanation (bilingual)
+    # Step 11: Final net = Net after sick reduction - post-tax deductions
+    net = net_after_sick - total_deductions
+
+    # Step 12: Tax explanation (bilingual)
     tax_explanation = explain_tax_amharic(taxable, for_date)
 
     return {
@@ -166,6 +175,7 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         'pension_employee': emp_pen,
         'pension_employer': empr_pen,
         'net_before_deductions': net_before_deductions.quantize(Q, rounding=ROUND_HALF_UP),
+        'sick_leave_reduction': sick_leave_reduction.quantize(Q, rounding=ROUND_HALF_UP),
         'total_deductions': total_deductions.quantize(Q, rounding=ROUND_HALF_UP),
         'deduction_details': deduction_details,
         'net': net.quantize(Q, rounding=ROUND_HALF_UP),

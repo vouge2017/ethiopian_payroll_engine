@@ -68,6 +68,9 @@
             </a>
             <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-bar-chart me-2"></i>{{ _('reports') }}
+            <a href="{{ url_for('main.impact_calculator') }}" class="{% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
+                <i class="bi bi-calculator me-2"></i>Impact Calculator
+            </a>
             </a>
             {% if current_user.role == 'owner' %}
             <a href="{{ url_for('main.team_settings') }}" class="{% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">

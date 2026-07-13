@@ -1869,6 +1869,14 @@ def reject_leave(leave_id):
     return redirect(url_for('main.employee_leave_balance', emp_id=leave.employee_id))
 
 
+@main.route('/impact')
+@login_required
+@role_required('owner', 'accountant')
+def impact_calculator():
+    """Management impact calculator - see financial impact before deciding."""
+    return render_template('impact_calculator.html', year=date.today().year)
+
+
 @main.route('/reports')
 @login_required
 @role_required('owner', 'accountant')

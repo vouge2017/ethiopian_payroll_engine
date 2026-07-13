@@ -22,6 +22,9 @@ Q = Decimal('0.01')
 DEFAULT_EMPLOYEE_RATE = Decimal('0.07')
 DEFAULT_EMPLOYER_RATE = Decimal('0.11')
 
+# Cache for pension rates
+_rates_cache = {}
+
 
 def _D(value) -> Decimal:
     """Safely convert any numeric type to Decimal."""
@@ -37,19 +40,28 @@ def _get_rates(for_date=None) -> Tuple[Decimal, Decimal]:
     """
     Fetch pension rates from the database.
     Falls back to hardcoded defaults if no TaxRule exists.
+    Caches result to avoid repeated DB queries.
 
     Returns:
         (employee_rate: Decimal, employer_rate: Decimal)
     """
+    cache_key = str(for_date) if for_date else 'default'
+    if cache_key in _rates_cache:
+        return _rates_cache[cache_key]
+
     try:
         from payroll_engine.models import TaxRule
         rule = TaxRule.get_active_rule(for_date)
         if rule:
-            return _D(rule.pension_employee_rate), _D(rule.pension_employer_rate)
+            result = _D(rule.pension_employee_rate), _D(rule.pension_employer_rate)
+            _rates_cache[cache_key] = result
+            return result
     except Exception:
         pass
 
-    return DEFAULT_EMPLOYEE_RATE, DEFAULT_EMPLOYER_RATE
+    result = (DEFAULT_EMPLOYEE_RATE, DEFAULT_EMPLOYER_RATE)
+    _rates_cache[cache_key] = result
+    return result
 
 
 def employee_pension(basic_salary, for_date=None) -> Decimal:

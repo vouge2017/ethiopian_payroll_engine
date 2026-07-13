@@ -197,8 +197,8 @@ def index():
         payslips = Payslip.query.filter_by(payroll_run_id=last_completed.id).all()
         if payslips:
             total_net = sum(p.net_pay for p in payslips)
-            total_gross = sum(p.gross_pay for p in payslips)
-            total_tax = sum(p.income_tax for p in payslips)
+            total_gross = sum(p.gross_salary for p in payslips)
+            total_tax = sum(p.tax for p in payslips)
             avg_salary = total_net / len(payslips) if payslips else 0
             last_month_summary = {
                 'period': last_completed.reference or last_completed.run_date.strftime('%B %Y'),

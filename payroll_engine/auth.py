@@ -149,6 +149,7 @@ def register():
         email = request.form.get('email', '').strip().lower() or None
         password = request.form.get('password', '')
         password2 = request.form.get('password2', '')
+        company_name = request.form.get('company_name', '').strip() or None
 
         # Validate required fields
         if not phone or not password:
@@ -181,10 +182,22 @@ def register():
             flash('Email already registered.', 'danger')
             return redirect(url_for('auth.register'))
 
-        # Create user (no company yet — they'll create/join after login)
+        # Create company if name provided (backward-compatible one-step flow)
+        company = None
+        if company_name:
+            existing_company = Company.query.filter_by(name=company_name).first()
+            if existing_company:
+                flash('A company with that name already exists.', 'danger')
+                return redirect(url_for('auth.register'))
+            company = Company(name=company_name)
+            db.session.add(company)
+            db.session.flush()
+
+        # Create user
         user = User(
             email=email,
             phone=normalized_phone,
+            company_id=company.id if company else None,
             role='owner'
         )
         user.set_password(password)

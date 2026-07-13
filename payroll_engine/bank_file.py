@@ -77,7 +77,7 @@ ACCOUNT_PATTERNS = {
     'telebirr': {
         'name': 'Telebirr / Mobile Wallet',
         'pattern': r'^(0?9|0?7)\d{8}$',
-        'description': '9 digits starting with 9 or 7 (or 10 with leading 0)',
+        'description': '09 or 07 followed by 8 digits',
         'example': '912345678',
     },
     'mpesa': {

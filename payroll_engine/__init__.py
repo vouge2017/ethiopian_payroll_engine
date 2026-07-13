@@ -150,7 +150,7 @@ def create_app():
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
     # HTTPS enforcement via Flask-Talisman
-    if not app.debug:
+    if not app.debug and not app.config.get('TESTING', False) and os.environ.get('FLASK_ENV') != 'testing':
         from flask_talisman import Talisman
         Talisman(
             app,

@@ -97,6 +97,6 @@
         </div>
     </div>
     {% from "_pagination.html" import render_pagination %}
-    {{ render_pagination(pagination, 'main.list_employees', q=search, archived=('1' if show_archived else '')) }}
+    {{ render_pagination(pagination, 'main.list_employees', extra={'q': search, 'archived': ('1' if show_archived else '')}) }}
 </div>
 {% endblock %}

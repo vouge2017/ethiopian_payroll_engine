@@ -42,7 +42,7 @@ def client(app):
     return app.test_client()
 
 
-def _register(client, phone='0911234567', password='password123', company='SecureCo'):
+def _register(client, phone='0911234567', password='SecurePass123!', company='SecureCo'):
     return client.post('/auth/register', data={
         'phone': phone,
         'email': f'{phone}@test.com',
@@ -52,7 +52,7 @@ def _register(client, phone='0911234567', password='password123', company='Secur
     }, follow_redirects=True)
 
 
-def _login(client, phone='0911234567', password='password123', next_url=None, follow=False):
+def _login(client, phone='0911234567', password='SecurePass123!', next_url=None, follow=False):
     from urllib.parse import quote
     url = '/auth/login'
     if next_url is not None:
@@ -64,7 +64,7 @@ def _login(client, phone='0911234567', password='password123', next_url=None, fo
     )
 
 
-def _register_and_login(client, phone='0911234567', password='password123', company='SecureCo'):
+def _register_and_login(client, phone='0911234567', password='SecurePass123!', company='SecureCo'):
     _register(client, phone=phone, password=password, company=company)
     return _login(client, phone=phone, password=password, follow=True)
 

@@ -38,8 +38,8 @@ def test_register_creates_new_company(client, app):
     response = client.post('/auth/register', data={
         'phone': '0911234567',
         'email': 'alice@test.com',
-        'password': 'password123',
-        'password2': 'password123',
+        'password': 'SecurePass123!',
+        'password2': 'SecurePass123!',
         'company_name': 'New Company',
     }, follow_redirects=True)
 
@@ -65,8 +65,8 @@ def test_register_rejects_existing_company_name(client, app):
     response = client.post('/auth/register', data={
         'phone': '0922345678',
         'email': 'attacker@test.com',
-        'password': 'password123',
-        'password2': 'password123',
+        'password': 'SecurePass123!',
+        'password2': 'SecurePass123!',
         'company_name': 'Existing Company',
     }, follow_redirects=True)
 
@@ -90,8 +90,8 @@ def test_register_rejects_case_variation(client, app):
     response = client.post('/auth/register', data={
         'phone': '0933456789',
         'email': 'attacker@test.com',
-        'password': 'password123',
-        'password2': 'password123',
+        'password': 'SecurePass123!',
+        'password2': 'SecurePass123!',
         'company_name': 'my company',  # different case
     }, follow_redirects=True)
 
@@ -107,16 +107,16 @@ def test_register_duplicate_email_rejected(client, app):
     client.post('/auth/register', data={
         'phone': '0911234567',
         'email': 'alice@test.com',
-        'password': 'password123',
-        'password2': 'password123',
+        'password': 'SecurePass123!',
+        'password2': 'SecurePass123!',
         'company_name': 'Company A',
     })
 
     response = client.post('/auth/register', data={
         'phone': '0922345678',
         'email': 'alice@test.com',
-        'password': 'password456',
-        'password2': 'password456',
+        'password': 'SecurePass456!',
+        'password2': 'SecurePass456!',
         'company_name': 'Company B',
     }, follow_redirects=True)
 
@@ -130,8 +130,8 @@ def test_register_short_password_rejected(client, app):
     response = client.post('/auth/register', data={
         'phone': '0911234567',
         'email': 'alice@test.com',
-        'password': 'short',
-        'password2': 'short',
+        'password': 'Sh0!rt',
+        'password2': 'Sh0!rt',
         'company_name': 'Company A',
     }, follow_redirects=True)
 
@@ -145,8 +145,8 @@ def test_register_password_mismatch_rejected(client, app):
     response = client.post('/auth/register', data={
         'phone': '0911234567',
         'email': 'alice@test.com',
-        'password': 'password123',
-        'password2': 'different456',
+        'password': 'SecurePass123!',
+        'password2': 'DifferentPass456!',
         'company_name': 'Company A',
     }, follow_redirects=True)
 

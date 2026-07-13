@@ -35,7 +35,7 @@ def validate_ethiopian_phone(phone: str) -> tuple:
 
     Returns:
         (is_valid, normalized, error_message)
-        normalized is the number in 9XXXXXXXX or 7XXXXXXXX format (9 digits),
+        normalized is the number in 0XXXXXXXXX format (10 digits with leading 0),
         or None if invalid.
     """
     if not phone:
@@ -44,16 +44,16 @@ def validate_ethiopian_phone(phone: str) -> tuple:
     # Strip all spaces
     cleaned = phone.replace(' ', '')
 
-    # Normalize to 9 digits (strip leading 0 and country code)
+    # Normalize to 10 digits with leading 0 (0XXXXXXXXX)
     patterns = [
-        (r'^\+2510(9\d{8})$', '{}'),     # +2510911234567 → 911234567
-        (r'^\+2510(7\d{8})$', '{}'),     # +2510711234567 → 711234567
-        (r'^\+251(9\d{8})$', '{}'),      # +251911234567 → 911234567
-        (r'^\+251(7\d{8})$', '{}'),      # +251711234567 → 711234567
-        (r'^0(9\d{8})$', '{}'),           # 0911234567 → 911234567
-        (r'^0(7\d{8})$', '{}'),           # 0711234567 → 711234567
-        (r'^(9\d{8})$', '{}'),            # 911234567 → 911234567
-        (r'^(7\d{8})$', '{}'),            # 711234567 → 711234567
+        (r'^\+2510(9\d{8})$', '0{}'),    # +2510911234567 → 0911234567
+        (r'^\+2510(7\d{8})$', '0{}'),    # +2510711234567 → 0711234567
+        (r'^\+251(9\d{8})$', '0{}'),     # +251911234567 → 0911234567
+        (r'^\+251(7\d{8})$', '0{}'),     # +251711234567 → 0711234567
+        (r'^0(9\d{8})$', '0{}'),          # 0911234567 → 0911234567
+        (r'^0(7\d{8})$', '0{}'),          # 0711234567 → 0711234567
+        (r'^(9\d{8})$', '0{}'),           # 911234567 → 0911234567
+        (r'^(7\d{8})$', '0{}'),           # 711234567 → 0711234567
     ]
 
     for pattern, fmt in patterns:

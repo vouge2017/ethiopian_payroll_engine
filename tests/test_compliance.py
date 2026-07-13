@@ -24,11 +24,11 @@ from datetime import date
 
 # --- Deadline defaults ---
 
-def test_erca_deadline_is_8th():
-    """ERCA filing deadline must be the 8th, not the 15th."""
+def test_erca_deadline_is_25th():
+    """ERCA filing deadline must be the 25th of the following month."""
     payroll_date = date(2025, 7, 1)
     dl = _default_erca_deadline(payroll_date)
-    assert dl.day == 8, f"Expected day 8, got {dl.day}"
+    assert dl.day == 25, f"Expected day 25, got {dl.day}"
     assert dl.month == 8  # August (month after July)
 
 def test_pension_deadline_is_15th():
@@ -39,10 +39,10 @@ def test_pension_deadline_is_15th():
     assert dl.month == 8
 
 def test_erca_deadline_december():
-    """December payroll → ERCA deadline January 8th of next year."""
+    """December payroll → ERCA deadline January 25th of next year."""
     payroll_date = date(2025, 12, 31)
     dl = _default_erca_deadline(payroll_date)
-    assert dl.day == 8
+    assert dl.day == 25
     assert dl.month == 1
     assert dl.year == 2026
 
@@ -58,7 +58,7 @@ def test_pension_deadline_december():
 # --- Constants ---
 
 def test_erca_constant():
-    assert ERCA_FILING_DEADLINE_DAY == 8
+    assert ERCA_FILING_DEADLINE_DAY == 25
 
 def test_pension_constant():
     assert PENSION_DEADLINE_DAY == 15
@@ -107,7 +107,7 @@ def test_status_messages():
 def test_upcoming_deadlines():
     """Get upcoming deadlines for a July payroll."""
     deadlines = get_upcoming_deadlines('2025-07-01')
-    assert deadlines['erca_deadline'] == '2025-08-08'
+    assert deadlines['erca_deadline'] == '2025-08-25'
     assert deadlines['pension_deadline'] == '2025-08-15'
     assert 'erca_days_left' in deadlines
     assert 'pension_days_left' in deadlines

@@ -323,14 +323,160 @@ class Employee(db.Model):
     # Relationships
     payroll_entries = db.relationship('Payslip', backref='employee', lazy=True)
     attendance_records = db.relationship('Attendance', backref='employee', lazy=True)
-    leave_requests = db.relationship('Leave', backref='employee', lazy=True)
 
     @property
     def gross_salary(self):
         return self.basic_salary + self.allowances
 
+    @property
+    def total_allowances(self):
+        """Sum of all individual allowances (if EmployeeAllowance records exist)."""
+        if self.allowance_records:
+            return sum(a.amount for a in self.allowance_records if a.is_active)
+        return self.allowances
+
+    @property
+    def transport_allowance(self):
+        """Get transport allowance amount."""
+        for a in self.allowance_records:
+            if a.allowance_type == 'transport' and a.is_active:
+                return a.amount
+        return Decimal('0')
+
+    @property
+    def hardship_allowance(self):
+        """Get hardship allowance amount."""
+        for a in self.allowance_records:
+            if a.allowance_type == 'hardship' and a.is_active:
+                return a.amount
+        return Decimal('0')
+
     def __repr__(self):
         return f'<Employee {self.employee_id}: {self.name}>'
+
+
+class EmployeeAllowance(db.Model):
+    """Individual allowance records per employee.
+
+    Enables:
+    - Allowance type breakdown (transport, hardship, housing, etc.)
+    - Per-type tax exemption calculation
+    - Regulatory compliance (transport cap, hardship zones)
+    - What-if scenario previews
+
+    The Employee.allowances field is kept for backward compatibility.
+    If EmployeeAllowance records exist, they take precedence.
+    """
+    query_class = TenantQuery
+
+    # Allowance type choices
+    TYPE_TRANSPORT = 'transport'
+    TYPE_HARDSHIP = 'hardship'
+    TYPE_HOUSING = 'housing'
+    TYPE_COMMUNICATION = 'communication'
+    TYPE_PER_DIEM = 'per_diem'
+    TYPE_MEDICAL = 'medical'
+    TYPE_FOOD = 'food'
+    TYPE_EDUCATION = 'education'
+    TYPE_UNIFORM = 'uniform'
+    TYPE_OTHER = 'other'
+
+    ALLOWANCE_TYPES = [
+        (TYPE_TRANSPORT, 'Transport Allowance'),
+        (TYPE_HARDSHIP, 'Hardship/Weather Allowance'),
+        (TYPE_HOUSING, 'Housing Allowance'),
+        (TYPE_COMMUNICATION, 'Communication Allowance'),
+        (TYPE_PER_DIEM, 'Per Diem'),
+        (TYPE_MEDICAL, 'Medical Allowance'),
+        (TYPE_FOOD, 'Food & Beverage'),
+        (TYPE_EDUCATION, 'Education Allowance'),
+        (TYPE_UNIFORM, 'Uniform Allowance'),
+        (TYPE_OTHER, 'Other Allowance'),
+    ]
+
+    # Tax treatment
+    TAX_TAXABLE = 'taxable'
+    TAX_EXEMPT = 'exempt'
+    TAX_PARTIAL = 'partial'
+
+    TAX_TREATMENTS = [
+        (TAX_TAXABLE, 'Fully Taxable'),
+        (TAX_EXEMPT, 'Fully Exempt'),
+        (TAX_PARTIAL, 'Partially Exempt (with cap)'),
+    ]
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+
+    # What type
+    allowance_type = db.Column(db.String(30), nullable=False)  # One of ALLOWANCE_TYPES keys
+    custom_type_name = db.Column(db.String(100), nullable=True)  # For 'other' type
+
+    # How much
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    calculation_basis = db.Column(db.String(20), nullable=False, default='fixed')  # fixed, percentage
+    percentage_of = db.Column(db.String(20), nullable=True)  # basic_salary, gross_salary
+
+    # Tax treatment
+    tax_treatment = db.Column(db.String(20), nullable=False, default=TAX_TAXABLE)
+    exempt_cap_amount = db.Column(db.Numeric(12, 2), nullable=True)  # Max exempt amount (ETB)
+    exempt_cap_percent = db.Column(db.Numeric(5, 2), nullable=True)  # Max exempt as % of salary
+    exempt_cap_basis = db.Column(db.String(20), nullable=True)  # basic_salary, gross_salary
+
+    # Status
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    effective_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+
+    # Regulatory reference
+    regulation_reference = db.Column(db.String(200), nullable=True)  # e.g., "Directive No. 21/2001"
+
+    # Audit
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    employee = db.relationship('Employee', backref=db.backref('allowance_records', lazy=True))
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "tax_treatment IN ('taxable', 'exempt', 'partial')",
+            name='ck_allowance_tax_treatment'
+        ),
+        db.CheckConstraint(
+            "calculation_basis IN ('fixed', 'percentage')",
+            name='ck_allowance_calc_basis'
+        ),
+    )
+
+    @property
+    def type_label(self):
+        """Human-readable allowance type."""
+        labels = dict(self.ALLOWANCE_TYPES)
+        return labels.get(self.allowance_type, self.allowance_type)
+
+    @property
+    def calculated_exempt_amount(self):
+        """Calculate the tax-exempt portion of this allowance."""
+        from decimal import Decimal
+        if self.tax_treatment == self.TAX_TAXABLE:
+            return Decimal('0')
+        if self.tax_treatment == self.TAX_EXEMPT:
+            return self.amount
+        # Partial exemption - apply cap
+        if self.exempt_cap_amount:
+            return min(self.amount, self.exempt_cap_amount)
+        return Decimal('0')
+
+    @property
+    def taxable_amount(self):
+        """Calculate the taxable portion of this allowance."""
+        from decimal import Decimal
+        return self.amount - self.calculated_exempt_amount
+
+    def __repr__(self):
+        return f'<EmployeeAllowance {self.allowance_type} {self.amount} for employee {self.employee_id}>'
 
 
 class PayrollRun(db.Model):
@@ -400,6 +546,65 @@ class Payslip(db.Model):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
 
 
+class FinalSettlement(db.Model):
+    """Final settlement record for terminated employees.
+
+    Stores all earnings and deductions for the final payment:
+    - Outstanding salary (prorated to last working day)
+    - Severance pay
+    - Unused leave encashment
+    - Pending deductions (loans, cost-sharing, etc.)
+    """
+    query_class = TenantQuery
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+
+    # Termination details
+    termination_reason = db.Column(db.String(30), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)  # Employment start
+    end_date = db.Column(db.Date, nullable=False)  # Last working day
+    years_of_service = db.Column(db.Numeric(6, 2), nullable=False)
+
+    # Earnings
+    outstanding_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    severance_pay = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    leave_encashment = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    total_earnings = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+
+    # Deductions
+    pension_deduction = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    tax_on_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    pending_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    deduction_details = db.Column(db.JSON, nullable=True)  # Breakdown of deductions
+    total_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+
+    # Net payment
+    net_final_payment = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+
+    # Payment
+    payment_method = db.Column(db.String(50), nullable=True)  # bank_transfer, cash, telebirr
+    payment_reference = db.Column(db.String(100), nullable=True)  # Bank ref, confirmation #
+    paid_at = db.Column(db.DateTime, nullable=True)
+    paid_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # Documents
+    pdf_file_path = db.Column(db.String(255), nullable=True)  # Settlement PDF
+
+    # Audit
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    employee = db.relationship('Employee', backref=db.backref('settlements', lazy=True))
+    creator = db.relationship('User', foreign_keys=[created_by], backref=db.backref('created_settlements', lazy=True))
+    payer = db.relationship('User', foreign_keys=[paid_by], backref=db.backref('paid_settlements', lazy=True))
+
+    def __repr__(self):
+        return f'<FinalSettlement {self.id} for employee {self.employee_id}>'
+
+
 class PayrollDraft(db.Model):
     """Stores computed payroll data between upload and approval.
 
@@ -429,16 +634,83 @@ class Attendance(db.Model):
 
 
 class Leave(db.Model):
+    query_class = TenantQuery
+
     id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
-    leave_type = db.Column(db.String(50), nullable=False)  # e.g., annual, sick, maternity
+    leave_type = db.Column(db.String(50), nullable=False)  # annual, sick, maternity, paternity, special, unpaid, custom
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, approved, rejected
+    days_requested = db.Column(db.Integer, nullable=False)  # Calculated from dates
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending, approved, rejected, cancelled
+    reason = db.Column(db.Text, nullable=True)
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    rejection_reason = db.Column(db.Text, nullable=True)
+    medical_certificate = db.Column(db.String(255), nullable=True)  # Path to uploaded document
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
+    # Relationships
+    employee = db.relationship('Employee', backref=db.backref('leave_requests', lazy=True))
+    approver = db.relationship('User', backref=db.backref('approved_leaves', lazy=True))
+
     def __repr__(self):
         return f'<Leave {self.leave_type} for {self.employee_id} from {self.start_date} to {self.end_date}>'
+
+
+class LeaveBalance(db.Model):
+    """Tracks leave balances per employee per year.
+
+    Auto-accrues annual leave based on years of service.
+    Tracks sick leave within 12-month periods.
+    Enforces statutory minimums.
+    """
+    query_class = TenantQuery
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    leave_type = db.Column(db.String(50), nullable=False)
+    year = db.Column(db.Integer, nullable=False)  # Calendar year for annual; employment year for sick
+
+    # Balance
+    entitled = db.Column(db.Integer, nullable=False, default=0)  # Total days entitled
+    taken = db.Column(db.Integer, nullable=False, default=0)  # Days taken
+    carried_forward = db.Column(db.Integer, nullable=False, default=0)  # From previous year
+
+    # For sick leave: tier tracking
+    sick_tier1_days = db.Column(db.Integer, nullable=False, default=0)  # Days at 100% pay
+    sick_tier2_days = db.Column(db.Integer, nullable=False, default=0)  # Days at 50% pay
+    sick_tier3_days = db.Column(db.Integer, nullable=False, default=0)  # Days at 0% pay
+
+    # Company policy override
+    company_policy_days = db.Column(db.Integer, nullable=True)  # If set, uses this instead of statutory min
+
+    # Audit
+    last_accrual_date = db.Column(db.Date, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    employee = db.relationship('Employee', backref=db.backref('leave_balances', lazy=True))
+
+    @property
+    def remaining(self):
+        """Days remaining."""
+        return max(0, self.entitled + self.carried_forward - self.taken)
+
+    @property
+    def is_exhausted(self):
+        """Whether all leave has been used."""
+        return self.remaining <= 0
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'employee_id', 'leave_type', 'year', name='uq_leave_balance'),
+    )
+
+    def __repr__(self):
+        return f'<LeaveBalance {self.leave_type} {self.year} for employee {self.employee_id}>'
 
 
 class OvertimeEntry(db.Model):

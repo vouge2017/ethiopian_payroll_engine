@@ -36,13 +36,15 @@ def _D(value) -> Decimal:
 def calculate_payroll(basic_salary, allowances=Decimal('0'),
                       overtime_entries: list = None,
                       for_date=None,
-                      deductions: list = None) -> dict:
+                      deductions: list = None,
+                      allowance_records: list = None) -> dict:
     """
     Calculate complete payroll for one employee.
 
     Enforces deduction order:
         Gross (basic + allowances + overtime)
         → Subtract pension (7% of basic ONLY — not affected by overtime)
+        → Calculate exempt allowances (transport cap, hardship, etc.)
         → Calculate tax on remainder
         → Subtract tax
         → Apply post-tax deductions (cost-sharing, court orders, etc.)
@@ -50,15 +52,16 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
 
     Args:
         basic_salary: Monthly basic salary in ETB
-        allowances: Monthly allowances in ETB (default 0)
+        allowances: Monthly allowances in ETB (default 0) — used if no allowance_records
         overtime_entries: List of dicts with 'hours' and 'type' keys (optional)
         for_date: Optional date for rule versioning
         deductions: List of EmployeeDeduction objects (optional, applied post-tax)
+        allowance_records: List of EmployeeAllowance objects (optional, for exemption calculation)
 
     Returns:
         Dict with: gross, taxable, tax, pension_employee, pension_employer,
                    net, tax_explanation, overtime_pay, overtime_total_hours,
-                   total_deductions, deduction_details
+                   total_deductions, deduction_details, exempt_allowances, taxable_allowances
         All monetary values are Decimal.
 
     Raises:
@@ -72,10 +75,38 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
     if allowances < 0:
         raise ValueError(f"allowances cannot be negative: {allowances}")
 
-    # Step 1: Base gross
-    base_gross = basic_salary + allowances
+    # Step 1: Calculate allowance breakdown with exemptions
+    exempt_allowances = Decimal('0')
+    taxable_allowances = Decimal('0')
+    allowance_details = []
 
-    # Step 2: Overtime (added to gross BEFORE tax)
+    if allowance_records:
+        for record in allowance_records:
+            if not record.is_active:
+                continue
+            exempt_amount = record.calculated_exempt_amount
+            taxable_amount = record.taxable_amount
+            exempt_allowances += exempt_amount
+            taxable_allowances += taxable_amount
+            allowance_details.append({
+                'type': record.allowance_type,
+                'type_label': record.type_label,
+                'amount': record.amount,
+                'exempt': exempt_amount,
+                'taxable': taxable_amount,
+                'tax_treatment': record.tax_treatment,
+            })
+        total_allowances = exempt_allowances + taxable_allowances
+    else:
+        # Fallback: treat all allowances as taxable (backward compatibility)
+        total_allowances = allowances
+        taxable_allowances = allowances
+        exempt_allowances = Decimal('0')
+
+    # Step 2: Base gross
+    base_gross = basic_salary + total_allowances
+
+    # Step 3: Overtime (added to gross BEFORE tax)
     overtime_pay = Decimal('0')
     overtime_total_hours = Decimal('0')
     overtime_result = None
@@ -84,24 +115,25 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         overtime_pay = overtime_result['total_pay']
         overtime_total_hours = overtime_result['total_hours']
 
-    # Step 3: Total gross (including overtime)
+    # Step 4: Total gross (including overtime)
     gross = base_gross + overtime_pay
 
-    # Step 4: Pension (BEFORE tax — legal requirement)
-    # Pension is on basic salary ONLY, not affected by overtime
+    # Step 5: Pension (BEFORE tax — legal requirement)
+    # Pension is on basic salary ONLY, not affected by overtime or allowances
     emp_pen = employee_pension(basic_salary, for_date)
     empr_pen = employer_pension(basic_salary, for_date)
 
-    # Step 5: Taxable = Gross - Pension
-    taxable = gross - emp_pen
+    # Step 6: Taxable = Gross - Pension - Exempt Allowances
+    taxable = gross - emp_pen - exempt_allowances
+    taxable = max(Decimal('0'), taxable)  # Cannot be negative
 
-    # Step 6: Tax on taxable amount
+    # Step 7: Tax on taxable amount
     tax = calculate_tax(taxable, for_date)
 
-    # Step 7: Net before post-tax deductions
+    # Step 8: Net before post-tax deductions
     net_before_deductions = gross - tax - emp_pen
 
-    # Step 8: Post-tax deductions (cost-sharing, court orders, penalties, loans)
+    # Step 9: Post-tax deductions (cost-sharing, court orders, penalties, loans)
     total_deductions = Decimal('0')
     deduction_details = []
     if deductions:
@@ -121,10 +153,10 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
                     'warning': ded.warning_message,
                 })
 
-    # Step 9: Final net = Net before deductions - post-tax deductions
+    # Step 10: Final net = Net before deductions - post-tax deductions
     net = net_before_deductions - total_deductions
 
-    # Step 10: Tax explanation (bilingual)
+    # Step 11: Tax explanation (bilingual)
     tax_explanation = explain_tax_amharic(taxable, for_date)
 
     return {
@@ -141,4 +173,7 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         'overtime_pay': overtime_pay,
         'overtime_total_hours': overtime_total_hours,
         'overtime_result': overtime_result,
+        'exempt_allowances': exempt_allowances.quantize(Q, rounding=ROUND_HALF_UP),
+        'taxable_allowances': taxable_allowances.quantize(Q, rounding=ROUND_HALF_UP),
+        'allowance_details': allowance_details,
     }

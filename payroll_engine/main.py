@@ -16,7 +16,8 @@ from datetime import date, datetime
 from payroll_engine import db
 from payroll_engine.models import (
     Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
-    AuditLog, PayrollValidationResult, OvertimeEntry
+    AuditLog, PayrollValidationResult, OvertimeEntry, FinalSettlement,
+    EmployeeAllowance, Leave, LeaveBalance
 )
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
@@ -1105,7 +1106,10 @@ def employee_detail(emp_id):
                            deductions=deductions,
                            active_deductions=active_deductions,
                            inactive_deductions=inactive_deductions,
-                           deduction_types=EmployeeDeduction.DEDUCTION_TYPES)
+                           deduction_types=EmployeeDeduction.DEDUCTION_TYPES,
+                           allowance_records=emp.allowance_records,
+                           allowance_types=EmployeeAllowance.ALLOWANCE_TYPES,
+                           tax_treatments=EmployeeAllowance.TAX_TREATMENTS)
 
 
 @main.route('/employees/<int:emp_id>/overtime', methods=['POST'])
@@ -1150,6 +1154,113 @@ def delete_overtime(entry_id):
     db.session.delete(entry)
     db.session.commit()
     flash('Overtime entry deleted.', 'info')
+    return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+
+# --- Employee Allowances ---
+
+@main.route('/employees/<int:emp_id>/allowances/add', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def add_allowance(emp_id):
+    """Add an allowance to an employee with tax treatment."""
+    from decimal import Decimal, InvalidOperation
+
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=_company_id()
+    ).first_or_404()
+
+    allowance_type = request.form.get('allowance_type', '').strip()
+    custom_type_name = request.form.get('custom_type_name', '').strip() or None
+    amount_str = request.form.get('amount', '0').strip()
+    tax_treatment = request.form.get('tax_treatment', 'taxable').strip()
+    exempt_cap_str = request.form.get('exempt_cap_amount', '').strip()
+    regulation_ref = request.form.get('regulation_reference', '').strip() or None
+
+    # Validate
+    valid_types = [t[0] for t in EmployeeAllowance.ALLOWANCE_TYPES]
+    if allowance_type not in valid_types:
+        flash('Invalid allowance type.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    try:
+        amount = Decimal(amount_str)
+    except (InvalidOperation, ValueError):
+        flash('Invalid amount.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+    if amount <= 0:
+        flash('Amount must be positive.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    valid_treatments = [t[0] for t in EmployeeAllowance.TAX_TREATMENTS]
+    if tax_treatment not in valid_treatments:
+        flash('Invalid tax treatment.', 'danger')
+        return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    exempt_cap = None
+    if exempt_cap_str:
+        try:
+            exempt_cap = Decimal(exempt_cap_str)
+        except (InvalidOperation, ValueError):
+            flash('Invalid exempt cap amount.', 'danger')
+            return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+    # Apply regulatory rules for known types
+    if allowance_type == 'transport':
+        # Transport: exempt up to ETB 2,200 or 25% of basic (whichever is lower)
+        cap = min(Decimal('2200'), emp.basic_salary * Decimal('0.25'))
+        tax_treatment = 'partial'
+        exempt_cap = cap
+        regulation_ref = regulation_ref or 'Income Tax Proclamation - Transport Allowance Exemption'
+    elif allowance_type == 'hardship':
+        # Hardship: zone-based, partial exemption
+        tax_treatment = 'partial'
+        regulation_ref = regulation_ref or 'Directive No. 21/2001, 102/2007'
+
+    allowance = EmployeeAllowance(
+        company_id=_company_id(),
+        employee_id=emp.id,
+        allowance_type=allowance_type,
+        custom_type_name=custom_type_name,
+        amount=amount,
+        tax_treatment=tax_treatment,
+        exempt_cap_amount=exempt_cap,
+        regulation_reference=regulation_ref,
+        is_active=True,
+    )
+    db.session.add(allowance)
+
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='allowance_added',
+        details={
+            'employee_id': emp.employee_id,
+            'employee_name': emp.name,
+            'allowance_type': allowance_type,
+            'amount': str(amount),
+            'tax_treatment': tax_treatment,
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f'{allowance.type_label} of ETB {amount:,.2f} added for {emp.name}.', 'success')
+    return redirect(url_for('main.employee_detail', emp_id=emp_id))
+
+
+@main.route('/allowances/<int:allowance_id>/delete', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def delete_allowance(allowance_id):
+    """Delete an allowance record."""
+    allowance = EmployeeAllowance.query.filter_by(
+        id=allowance_id, company_id=_company_id()
+    ).first_or_404()
+    emp_id = allowance.employee_id
+    db.session.delete(allowance)
+    db.session.commit()
+    flash('Allowance removed.', 'info')
     return redirect(url_for('main.employee_detail', emp_id=emp_id))
 
 
@@ -1421,8 +1532,10 @@ def reactivate_employee(emp_id):
 @login_required
 @role_required('owner', 'accountant')
 def terminate_employee(emp_id):
-    """Terminate an employee with severance calculation."""
-    from payroll_engine.severance import calculate_severance, TerminationReason, format_severance_for_payslip
+    """Terminate an employee with severance calculation and final settlement."""
+    from payroll_engine.severance import TerminationReason
+    from payroll_engine.services.settlement_service import create_settlement_record, calculate_settlement
+
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(), is_deleted=False
     ).first_or_404()
@@ -1436,7 +1549,6 @@ def terminate_employee(emp_id):
             flash('Invalid termination reason.', 'danger')
             return redirect(url_for('main.terminate_employee', emp_id=emp.id))
 
-        # Owner must confirm with password
         if not password or not current_user.check_password(password):
             flash('Incorrect password. Termination cancelled.', 'danger')
             return redirect(url_for('main.terminate_employee', emp_id=emp.id))
@@ -1450,14 +1562,29 @@ def terminate_employee(emp_id):
                 flash('Invalid date format.', 'danger')
                 return redirect(url_for('main.terminate_employee', emp_id=emp.id))
 
-        # Calculate severance
-        start = emp.start_date or emp.created_at.date() if emp.created_at else date.today()
-        sev_result = calculate_severance(emp.basic_salary, start, end_date, reason)
+        # Create settlement using service
+        settlement = create_settlement_record(
+            employee=emp,
+            termination_reason=reason,
+            end_date=end_date,
+            company_id=_company_id(),
+            created_by=current_user.id,
+            db_session=db.session,
+        )
 
         # Soft-delete the employee
         emp.is_deleted = True
         emp.deleted_at = datetime.utcnow()
         emp.deleted_by = current_user.id
+
+        # Deactivate all pending deductions
+        from payroll_engine.models import EmployeeDeduction
+        active_deductions = EmployeeDeduction.query.filter_by(
+            employee_id=emp.id, company_id=_company_id(), is_active=True
+        ).all()
+        for ded in active_deductions:
+            ded.is_active = False
+            ded.stopped_reason = f'Employee terminated ({reason})'
 
         # Audit log
         log = AuditLog(
@@ -1469,24 +1596,25 @@ def terminate_employee(emp_id):
                 'name': emp.name,
                 'reason': reason,
                 'end_date': end_date.isoformat(),
-                'years_of_service': sev_result['years_of_service'],
-                'severance_eligible': sev_result['eligible'],
-                'severance_amount': sev_result['final_amount'],
+                'years_of_service': str(settlement.years_of_service),
+                'severance_eligible': settlement.severance_pay > 0,
+                'severance_amount': str(settlement.severance_pay),
+                'settlement_id': settlement.id,
+                'net_final_payment': str(settlement.net_final_payment),
             }
         )
         db.session.add(log)
         db.session.commit()
 
-        if sev_result['eligible']:
-            flash(f'{emp.name} terminated. Severance: ETB {sev_result["final_amount"]:,.2f} ({sev_result["years_of_service"]} years of service).', 'warning')
-        else:
-            flash(f'{emp.name} terminated. Reason: {reason}. No severance payable.', 'info')
-        return redirect(url_for('main.employee_detail', emp_id=emp.id))
+        flash(f'{emp.name} terminated. Final settlement: ETB {settlement.net_final_payment:,.2f} '
+              f'(Outstanding: {settlement.outstanding_salary:,.2f} + Severance: {settlement.severance_pay:,.2f} + '
+              f'Leave: {settlement.leave_encashment:,.2f} - Deductions: {settlement.total_deductions:,.2f}).', 'warning')
+        return redirect(url_for('main.settlement_detail', settlement_id=settlement.id))
 
     # GET: show termination form with severance preview
+    from payroll_engine.severance import calculate_severance
     today = date.today()
     start = emp.start_date or (emp.created_at.date() if emp.created_at else today)
-    # Preview for each reason
     previews = {}
     for r in TerminationReason.ALL:
         result = calculate_severance(emp.basic_salary, start, today, r)
@@ -1498,6 +1626,247 @@ def terminate_employee(emp_id):
                            today=today,
                            previews=previews,
                            termination_reasons=TerminationReason.ALL)
+
+
+@main.route('/settlements/<int:settlement_id>')
+@login_required
+def settlement_detail(settlement_id):
+    """Show final settlement details."""
+    from payroll_engine.models import FinalSettlement
+    settlement = FinalSettlement.query.filter_by(
+        id=settlement_id, company_id=_company_id()
+    ).first_or_404()
+    return render_template('settlement_detail.html',
+                           settlement=settlement,
+                           employee=settlement.employee,
+                           year=date.today().year)
+
+
+# --- Leave Management ---
+
+@main.route('/employees/<int:emp_id>/leave')
+@login_required
+def employee_leave_balance(emp_id):
+    """Show leave balances for an employee."""
+    from payroll_engine.leave import calculate_leave_balance, LeaveType
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=_company_id()
+    ).first_or_404()
+
+    year = request.args.get('year', date.today().year, type=int)
+
+    # Calculate balances for all leave types
+    balances = {}
+    for leave_type in [LeaveType.ANNUAL, LeaveType.SICK, LeaveType.MATERNITY, LeaveType.PATERNITY, LeaveType.SPECIAL]:
+        # Get actual taken days from Leave records
+        taken = db.session.query(db.func.sum(Leave.days_requested)).filter(
+            Leave.employee_id == emp.id,
+            Leave.leave_type == leave_type,
+            Leave.status == 'approved',
+            db.extract('year', Leave.start_date) == year
+        ).scalar() or 0
+
+        balances[leave_type] = calculate_leave_balance(
+            employee_start_date=emp.start_date or emp.created_at.date(),
+            leave_type=leave_type,
+            leave_taken=taken,
+            year=year,
+        )
+
+    # Get leave history
+    leaves = Leave.query.filter_by(employee_id=emp.id) \
+        .order_by(Leave.applied_at.desc()).limit(20).all()
+
+    return render_template('employee_leave.html',
+                           employee=emp,
+                           balances=balances,
+                           leaves=leaves,
+                           year=year,
+                           current_year=date.today().year)
+
+
+@main.route('/employees/<int:emp_id>/leave/request', methods=['POST'])
+@login_required
+def request_leave(emp_id):
+    """Request leave for an employee."""
+    from payroll_engine.leave import validate_leave_request, calculate_leave_balance, LeaveType
+    from datetime import datetime as dt
+
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=_company_id()
+    ).first_or_404()
+
+    leave_type = request.form.get('leave_type', '').strip()
+    start_date_str = request.form.get('start_date', '').strip()
+    end_date_str = request.form.get('end_date', '').strip()
+    reason = request.form.get('reason', '').strip() or None
+
+    # Validate dates
+    try:
+        start_date = dt.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = dt.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+        return redirect(url_for('main.employee_leave_balance', emp_id=emp_id))
+
+    days_requested = (end_date - start_date).days + 1
+    if days_requested <= 0:
+        flash('End date must be after start date.', 'danger')
+        return redirect(url_for('main.employee_leave_balance', emp_id=emp_id))
+
+    # Get current balance
+    taken = db.session.query(db.func.sum(Leave.days_requested)).filter(
+        Leave.employee_id == emp.id,
+        Leave.leave_type == leave_type,
+        Leave.status == 'approved',
+        db.extract('year', Leave.start_date) == date.today().year
+    ).scalar() or 0
+
+    balance = calculate_leave_balance(
+        employee_start_date=emp.start_date or emp.created_at.date(),
+        leave_type=leave_type,
+        leave_taken=taken,
+    )
+
+    # Validate request
+    validation = validate_leave_request(
+        leave_type=leave_type,
+        start_date=start_date,
+        end_date=end_date,
+        balance=balance,
+        employee_name=emp.name,
+    )
+
+    if not validation['valid']:
+        for error in validation['errors']:
+            flash(error, 'danger')
+        return redirect(url_for('main.employee_leave_balance', emp_id=emp_id))
+
+    for warning in validation.get('warnings', []):
+        flash(warning, 'warning')
+
+    # Create leave request
+    leave = Leave(
+        company_id=_company_id(),
+        employee_id=emp.id,
+        leave_type=leave_type,
+        start_date=start_date,
+        end_date=end_date,
+        days_requested=days_requested,
+        reason=reason,
+        status='pending',
+    )
+    db.session.add(leave)
+
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='leave_requested',
+        details={
+            'employee_id': emp.employee_id,
+            'leave_type': leave_type,
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+            'days': days_requested,
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f'Leave request submitted: {days_requested} days of {leave_type} leave.', 'success')
+    return redirect(url_for('main.employee_leave_balance', emp_id=emp_id))
+
+
+@main.route('/leave/<int:leave_id>/approve', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def approve_leave(leave_id):
+    """Approve a leave request."""
+    leave = Leave.query.filter_by(
+        id=leave_id, company_id=_company_id()
+    ).first_or_404()
+
+    if leave.status != 'pending':
+        flash('This leave request is not pending.', 'danger')
+        return redirect(url_for('main.employee_leave_balance', emp_id=leave.employee_id))
+
+    leave.status = 'approved'
+    leave.approved_by = current_user.id
+    leave.approved_at = datetime.utcnow()
+
+    # Update leave balance
+    balance = LeaveBalance.query.filter_by(
+        company_id=_company_id(),
+        employee_id=leave.employee_id,
+        leave_type=leave.leave_type,
+        year=date.today().year,
+    ).first()
+
+    if not balance:
+        balance = LeaveBalance(
+            company_id=_company_id(),
+            employee_id=leave.employee_id,
+            leave_type=leave.leave_type,
+            year=date.today().year,
+        )
+        db.session.add(balance)
+
+    balance.taken = (balance.taken or 0) + leave.days_requested
+
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='leave_approved',
+        details={
+            'leave_id': leave.id,
+            'employee_id': leave.employee_id,
+            'leave_type': leave.leave_type,
+            'days': leave.days_requested,
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.', 'success')
+    return redirect(url_for('main.employee_leave_balance', emp_id=leave.employee_id))
+
+
+@main.route('/leave/<int:leave_id>/reject', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def reject_leave(leave_id):
+    """Reject a leave request."""
+    leave = Leave.query.filter_by(
+        id=leave_id, company_id=_company_id()
+    ).first_or_404()
+
+    if leave.status != 'pending':
+        flash('This leave request is not pending.', 'danger')
+        return redirect(url_for('main.employee_leave_balance', emp_id=leave.employee_id))
+
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('Please provide a reason for rejection.', 'danger')
+        return redirect(url_for('main.employee_leave_balance', emp_id=leave.employee_id))
+
+    leave.status = 'rejected'
+    leave.rejection_reason = reason
+
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='leave_rejected',
+        details={
+            'leave_id': leave.id,
+            'employee_id': leave.employee_id,
+            'reason': reason,
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f'Leave request rejected.', 'warning')
+    return redirect(url_for('main.employee_leave_balance', emp_id=leave.employee_id))
 
 
 @main.route('/reports')

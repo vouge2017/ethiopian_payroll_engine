@@ -2,7 +2,7 @@
 Compliance Scoring Module
 
 Evaluates payroll compliance based on:
-  - ERCA tax filing deadline: 8th of the following month
+  - ERCA tax filing deadline: 25th of the following month
   - Pension contribution deadline: 15th of the following month
   - Disbursement timeliness: net pay due within 5 days of month end
 
@@ -14,7 +14,7 @@ from datetime import date, datetime
 from typing import Tuple
 
 # Deadlines (day of month)
-ERCA_FILING_DEADLINE_DAY = 8   # ERCA filing due by 8th of following month
+ERCA_FILING_DEADLINE_DAY = 25  # ERCA filing due by 25th of following month
 PENSION_DEADLINE_DAY = 15      # Pension contributions due by 15th
 DISBURSEMENT_DEADLINE_DAYS_AFTER_MONTH_END = 5
 
@@ -62,7 +62,7 @@ def compute_compliance_score(
     else:
         pension_dl = _default_pension_deadline(payroll_dt)
 
-    # ERCA tax filing deadline: 8th of the month following payroll
+    # ERCA tax filing deadline: 25th of the month following payroll
     if tax_deadline:
         try:
             tax_dl = datetime.strptime(tax_deadline, '%Y-%m-%d').date()
@@ -101,7 +101,7 @@ def _default_pension_deadline(payroll_date: date) -> date:
 
 
 def _default_erca_deadline(payroll_date: date) -> date:
-    """ERCA tax filing due by the 8th of the month following payroll."""
+    """ERCA tax filing due by the 25th of the month following payroll."""
     if payroll_date.month == 12:
         return date(payroll_date.year + 1, 1, ERCA_FILING_DEADLINE_DAY)
     return date(payroll_date.year, payroll_date.month + 1, ERCA_FILING_DEADLINE_DAY)

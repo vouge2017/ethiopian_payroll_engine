@@ -196,6 +196,147 @@
         </div>
     </div>
 
+    <!-- Allowances Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Allowances</h5>
+            {% if employee.allowance_records %}
+            <span class="badge bg-light text-dark">{{ employee.allowance_records|length }} type(s)</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Add Allowance Form -->
+            <form method="POST" action="{{ url_for('main.add_allowance', emp_id=employee.id) }}" class="row g-2 mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="allowance_type" required id="allowance_type_select">
+                        <option value="">Type...</option>
+                        {% for key, label in allowance_types %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control form-control-sm" name="amount" placeholder="Amount (ETB)" step="0.01" min="0.01" required>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="tax_treatment">
+                        {% for key, label in tax_treatments %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" name="exempt_cap_amount" placeholder="Exempt cap (ETB)">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" name="regulation_reference" placeholder="Reg. reference">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus me-1"></i>Add</button>
+                </div>
+            </form>
+
+            <!-- Allowance Summary -->
+            {% if allowance_records %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Amount (ETB)</th>
+                            <th>Tax Treatment</th>
+                            <th>Exempt Cap</th>
+                            <th>Taxable</th>
+                            <th>Regulation</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for allowance in allowance_records %}
+                        {% if allowance.is_active %}
+                        <tr>
+                            <td>
+                                <strong>{{ allowance.type_label }}</strong>
+                                {% if allowance.custom_type_name %}
+                                <small class="text-muted d-block">{{ allowance.custom_type_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td>ETB {{ '%.2f'|format(allowance.amount) }}</td>
+                            <td>
+                                {% if allowance.tax_treatment == 'exempt' %}
+                                <span class="badge bg-success">Exempt</span>
+                                {% elif allowance.tax_treatment == 'partial' %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Taxable</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if allowance.exempt_cap_amount %}
+                                ETB {{ '%.2f'|format(allowance.exempt_cap_amount) }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>ETB {{ '%.2f'|format(allowance.taxable_amount) }}</td>
+                            <td>
+                                {% if allowance.regulation_reference %}
+                                <small class="text-muted">{{ allowance.regulation_reference }}</small>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('main.delete_allowance', allowance_id=allowance.id) }}" style="display:inline"
+                                      onsubmit="return confirm('Remove this allowance?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center py-2">
+                                <small class="text-muted">Total Allowances</small>
+                                <h5 class="mb-0">ETB {{ '%.2f'|format(employee.total_allowances) }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center py-2">
+                                <small class="text-muted">Tax-Exempt Portion</small>
+                                <h5 class="mb-0 text-success">ETB {{ '%.2f'|format(employee.allowance_records|selectattr('is_active')|map(attribute='calculated_exempt_amount')|sum) }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center py-2">
+                                <small class="text-muted">Taxable Portion</small>
+                                <h5 class="mb-0 text-danger">ETB {{ '%.2f'|format(employee.allowance_records|selectattr('is_active')|map(attribute='taxable_amount')|sum) }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-wallet2 fs-3 d-block mb-2"></i>
+                No allowances configured. Add transport, hardship, or other allowances above.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Deductions Section -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-warning text-dark">

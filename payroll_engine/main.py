@@ -126,6 +126,85 @@ def setup_company():
     return render_template('setup_company.html')
 
 
+# --- Multi-Company Dashboard ---
+
+@main.route('/companies')
+@login_required
+def companies_dashboard():
+    """
+    Multi-company dashboard for accountants managing multiple clients.
+    Shows all companies with payroll status, deadlines, and quick actions.
+    """
+    from payroll_engine.compliance import get_upcoming_deadlines
+    from payroll_engine.models import PayrollRun, Payslip
+
+    user_companies = current_user.companies
+    company_cards = []
+
+    for company in user_companies:
+        if company is None:
+            continue
+
+        # Latest payroll run
+        latest_run = PayrollRun.query.filter_by(
+            company_id=company.id
+        ).order_by(PayrollRun.created_at.desc()).first()
+
+        # Employee count
+        emp_count = Employee.query.filter_by(
+            company_id=company.id, is_deleted=False
+        ).count()
+
+        # Last payroll totals
+        last_gross = Decimal('0')
+        last_net = Decimal('0')
+        last_status = 'No payroll'
+        if latest_run:
+            last_status = latest_run.status.replace('_', ' ').title()
+            payslips = Payslip.query.filter_by(payroll_run_id=latest_run.id).all()
+            last_gross = sum(p.gross_salary for p in payslips)
+            last_net = sum(p.net_pay for p in payslips)
+
+        # Upcoming deadlines
+        payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
+        deadlines = get_upcoming_deadlines(payroll_date)
+
+        # Role for this company
+        role = current_user.get_role_for_company(company.id)
+
+        company_cards.append({
+            'company': company,
+            'role': role,
+            'emp_count': emp_count,
+            'latest_run': latest_run,
+            'last_status': last_status,
+            'last_gross': last_gross,
+            'last_net': last_net,
+            'deadlines': deadlines,
+        })
+
+    return render_template(
+        'companies_dashboard.html',
+        company_cards=company_cards,
+        year=date.today().year,
+    )
+
+
+@main.route('/companies/<int:company_id>/switch', methods=['GET', 'POST'])
+@main.route('/switch-company/<int:company_id>', methods=['GET'])
+@login_required
+def switch_company(company_id):
+    """Switch active company context."""
+    if not current_user.can_access_company(company_id):
+        abort(403)
+    session['active_company_id'] = company_id
+    company = Company.query.get(company_id)
+    flash(f'Switched to {company.name}.', 'success')
+    return redirect(url_for('main.index'))
+
+
+
+
 # --- Demo Mode ---
 
 @main.route('/demo')
@@ -2401,21 +2480,6 @@ def link_employee_user():
 
 # --- Company Switcher (for multi-company accountants) ---
 
-@main.route('/switch-company/<int:company_id>')
-@login_required
-def switch_company(company_id):
-    """Switch to a different company (for multi-company accountants).
-
-    Stores the active company in the session so it is per-browser-session
-    rather than mutating the user's database record.
-    """
-    if not current_user.can_access_company(company_id):
-        flash('You do not have access to that company.', 'danger')
-        return redirect(url_for('main.index'))
-    session['active_company_id'] = company_id
-    company = Company.query.get(company_id)
-    flash(f'Switched to {company.name}.', 'success')
-    return redirect(url_for('main.index'))
 
 
 # --- Employee Self-Service Portal ---

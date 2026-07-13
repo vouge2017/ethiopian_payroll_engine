@@ -57,6 +57,11 @@
             <a href="{{ url_for('main.index') }}" class="{% if request.endpoint == 'main.index' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-speedometer2 me-2"></i>{{ _('dashboard') }}
             </a>
+            {% if current_user.companies|length > 1 %}
+            <a href="{{ url_for('main.companies_dashboard') }}" class="{% if 'companies' in request.endpoint %}active{% endif %}" role="menuitem">
+                <i class="bi bi-buildings me-2"></i>My Companies
+            </a>
+            {% endif %}
             <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-people me-2"></i>{{ _('employees') }}
             </a>

@@ -33,6 +33,55 @@ def _D(value) -> Decimal:
         return Decimal('0')
 
 
+def calculate_prorated_salary(monthly_salary, start_date, end_date=None) -> Decimal:
+    """
+    Prorate salary for partial-month employment.
+
+    Ethiopian convention: 30 days/month. If an employee starts mid-month,
+    they're paid for the days worked.
+
+    Formula: (monthly_salary / 30) × days_worked
+
+    Args:
+        monthly_salary: Full monthly salary (basic or allowances)
+        start_date: Employment start date (date or YYYY-MM-DD string)
+        end_date: End of pay period (defaults to last day of start_date's month)
+
+    Returns:
+        Prorated salary amount in ETB, as Decimal
+    """
+    from datetime import date as _date, datetime as _dt
+
+    monthly_salary = _D(monthly_salary)
+    if monthly_salary <= 0:
+        return Decimal('0')
+
+    if isinstance(start_date, str):
+        start_date = _dt.strptime(start_date, '%Y-%m-%d').date()
+    if isinstance(end_date, str):
+        end_date = _dt.strptime(end_date, '%Y-%m-%d').date()
+
+    if end_date is None:
+        # Default to last day of start_date's month
+        if start_date.month == 12:
+            end_date = _date(start_date.year + 1, 1, 1) - _date.resolution
+        else:
+            end_date = _date(start_date.year, start_date.month + 1, 1) - _date.resolution
+
+    if end_date < start_date:
+        return Decimal('0')
+
+    # Days worked = end_date - start_date + 1 (inclusive)
+    days_worked = (end_date - start_date).days + 1
+    days_in_month = 30  # Ethiopian convention
+
+    if days_worked >= days_in_month:
+        return monthly_salary  # Full month, no proration needed
+
+    prorated = (monthly_salary / Decimal(str(days_in_month))) * Decimal(str(days_worked))
+    return prorated.quantize(Q, rounding=ROUND_HALF_UP)
+
+
 def calculate_payroll(basic_salary, allowances=Decimal('0'),
                       overtime_entries: list = None,
                       for_date=None,

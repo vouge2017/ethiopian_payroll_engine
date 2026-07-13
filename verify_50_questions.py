@@ -327,25 +327,34 @@ with app.app_context():
 
 # Q26: Are allowances tax-exempt based on type?
 with app.app_context():
-    # Transport allowance has a cap (e.g., ETB 600/month exempt)
-    transport = EmployeeAllowance.query.filter_by(employee_id=emp_id, allowance_type='transport').first()
-    if hasattr(transport, 'calculated_exempt_amount'):
-        exempt = transport.calculated_exempt_amount
-        taxable_amt = transport.taxable_amount
-        ok(26, f"Transport: exempt={exempt}, taxable={taxable_amt} (of {transport.amount})")
+    transport = EmployeeAllowance(
+        employee_id=emp_id, company_id=co_id,
+        allowance_type='transport', amount=Decimal('2000'),
+        tax_treatment='partial', exempt_cap_amount=Decimal('600'),
+        is_active=True
+    )
+    hardship = EmployeeAllowance(
+        employee_id=emp_id, company_id=co_id,
+        allowance_type='hardship', amount=Decimal('1500'),
+        tax_treatment='exempt',
+        is_active=True
+    )
+    db.session.add_all([transport, hardship])
+    db.session.commit()
+    if transport.calculated_exempt_amount == Decimal('600') and hardship.calculated_exempt_amount == Decimal('1500'):
+        ok(26, f"Transport: 600 exempt of 2000 (cap), Hardship: 1500 fully exempt")
     else:
-        not_implemented(26, "Allowance exemption calculation not yet wired")
+        fail(26, f"Transport exempt={transport.calculated_exempt_amount}, Hardship exempt={hardship.calculated_exempt_amount}")
 
 # Q27: Does it handle mid-month hires (proration)?
-# Check if payroll.py has proration logic
-import inspect
-from payroll_engine import payroll as payroll_mod
-src = inspect.getsource(payroll_mod)
-has_proration = 'prorat' in src.lower()
-if has_proration:
-    ok(27, "Proration logic found in payroll.py")
+from payroll_engine.payroll import calculate_prorated_salary
+# Employee starts on the 20th — 12 days worked (20th to 31st inclusive)
+prorated = calculate_prorated_salary(10000, '2025-07-20')
+# Expected: 10000/30 * 12 = 4000.00
+if prorated == Decimal('4000.00'):
+    ok(27, f"Mid-month proration: 10000 starting 20th = {prorated} (12/30 days)")
 else:
-    not_implemented(27, "No proration for mid-month hires — not in payroll.py")
+    fail(27, f"Proration for 20th start = {prorated}, expected 4000.00")
 
 # Q28: Can it track deductions (cost-sharing, court orders)?
 from payroll_engine.models import EmployeeDeduction
@@ -576,11 +585,18 @@ else:
     fail(49, "No row-level locking found")
 
 # Q50: Can it handle concurrent payroll runs?
-# Check that the payroll approval flow has proper locking
-if 'with_for_update' in main_src and 'btn' in main_src and 'disabled' in main_src:
-    ok(50, "Concurrent approval protection: row lock + client-side button disable")
+# Verify: (1) row lock, (2) status guard, (3) client-side button disable
+with open(os.path.join(os.path.dirname(__file__), 'payroll_engine', 'main.py')) as f:
+    main_src = f.read()
+with open(os.path.join(os.path.dirname(__file__), 'payroll_engine', 'templates', 'payroll_confirm.html')) as f:
+    confirm_src = f.read()
+has_row_lock = 'with_for_update' in main_src
+has_status_guard = "run.status not in ('review', 'pending_approval')" in main_src or 'not ready for approval' in main_src
+has_button_disable = 'btn.disabled = true' in confirm_src and 'Processing' in confirm_src
+if has_row_lock and has_status_guard and has_button_disable:
+    ok(50, "Concurrent protection: row lock + status guard + client button disable")
 else:
-    not_implemented(50, "Concurrent run protection partial — row lock exists but button guard unclear")
+    fail(50, f"Missing: row_lock={has_row_lock}, status_guard={has_status_guard}, button_disable={has_button_disable}")
 
 
 # ============================================================

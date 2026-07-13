@@ -382,119 +382,198 @@
 </div>
 
 <script>
-function fmt(n) { return 'ETB ' + Number(n).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+function fmt(n) {
+    const num = Number(n);
+    if (isNaN(num)) return 'ETB 0.00';
+    return 'ETB ' + num.toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function getNum(id) {
+    const v = parseFloat(document.getElementById(id).value);
+    return isNaN(v) ? 0 : v;
+}
+
+function setLoading(btn, loading) {
+    if (loading) {
+        btn.disabled = true;
+        btn._origText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Calculating...';
+    } else {
+        btn.disabled = false;
+        btn.innerHTML = btn._origText || btn.innerHTML;
+    }
+}
+
+function showError(msg) {
+    const el = document.createElement('div');
+    el.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 end-0 m-3';
+    el.style.zIndex = '9999';
+    el.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 5000);
+}
 
 async function apiCall(endpoint, data) {
-    const resp = await fetch('/api/v1/' + endpoint, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    });
-    return resp.json();
+    try {
+        const resp = await fetch('/api/v1/' + endpoint, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        if (!resp.ok) {
+            showError('Server error: ' + resp.status);
+            return null;
+        }
+        const r = await resp.json();
+        if (r.error) {
+            showError(r.error);
+            return null;
+        }
+        return r;
+    } catch (e) {
+        showError('Network error. Check your connection.');
+        return null;
+    }
 }
 
 async function calculateRaise() {
-    const data = {
-        current_basic: parseFloat(document.getElementById('cur_basic').value),
-        current_allowances: parseFloat(document.getElementById('cur_allow').value),
-        new_basic: parseFloat(document.getElementById('new_basic').value),
-        new_allowances: parseFloat(document.getElementById('new_allow').value),
-    };
-    const r = await apiCall('impact/salary-raise', data);
-    if (r.error) { alert(r.error); return; }
+    const btn = event.target.closest('button');
+    setLoading(btn, true);
+    try {
+        const data = {
+            current_basic: getNum('cur_basic'),
+            current_allowances: getNum('cur_allow'),
+            new_basic: getNum('new_basic'),
+            new_allowances: getNum('new_allow'),
+        };
+        if (data.new_basic < 0 || data.new_allowances < 0) {
+            showError('Salary cannot be negative.');
+            return;
+        }
+        const r = await apiCall('impact/salary-raise', data);
+        if (!r) return;
 
-    document.getElementById('raiseResult').style.display = 'block';
-    document.getElementById('raiseNetMonthly').textContent = fmt(r.impact.net_monthly_change);
-    document.getElementById('raiseNetAnnual').textContent = fmt(r.impact.net_annual_change);
-    document.getElementById('raiseEmployerMonthly').textContent = fmt(r.impact.employer_monthly_change);
-    document.getElementById('raiseEmployerAnnual').textContent = fmt(r.impact.employer_annual_change);
-
-    document.getElementById('rGrossC').textContent = fmt(r.current.gross);
-    document.getElementById('rGrossN').textContent = fmt(r.new.gross);
-    document.getElementById('rGrossD').textContent = fmt(r.impact.gross_increase);
-    document.getElementById('rTaxC').textContent = fmt(r.current.tax);
-    document.getElementById('rTaxN').textContent = fmt(r.new.tax);
-    document.getElementById('rTaxD').textContent = fmt(Number(r.new.tax) - Number(r.current.tax));
-    document.getElementById('rPenC').textContent = fmt(r.current.pension);
-    document.getElementById('rPenN').textContent = fmt(r.new.pension);
-    document.getElementById('rPenD').textContent = fmt(Number(r.new.pension) - Number(r.current.pension));
-    document.getElementById('rNetC').textContent = fmt(r.current.net);
-    document.getElementById('rNetN').textContent = fmt(r.new.net);
-    document.getElementById('rNetD').textContent = fmt(r.impact.net_monthly_change);
+        document.getElementById('raiseResult').style.display = 'block';
+        document.getElementById('raiseNetMonthly').textContent = fmt(r.impact.net_monthly_change);
+        document.getElementById('raiseNetAnnual').textContent = fmt(r.impact.net_annual_change);
+        document.getElementById('raiseEmployerMonthly').textContent = fmt(r.impact.employer_monthly_change);
+        document.getElementById('raiseEmployerAnnual').textContent = fmt(r.impact.employer_annual_change);
+        document.getElementById('rGrossC').textContent = fmt(r.current.gross);
+        document.getElementById('rGrossN').textContent = fmt(r.new.gross);
+        document.getElementById('rGrossD').textContent = fmt(r.impact.gross_increase);
+        document.getElementById('rTaxC').textContent = fmt(r.current.tax);
+        document.getElementById('rTaxN').textContent = fmt(r.new.tax);
+        document.getElementById('rTaxD').textContent = fmt(Number(r.new.tax) - Number(r.current.tax));
+        document.getElementById('rPenC').textContent = fmt(r.current.pension);
+        document.getElementById('rPenN').textContent = fmt(r.new.pension);
+        document.getElementById('rPenD').textContent = fmt(Number(r.new.pension) - Number(r.current.pension));
+        document.getElementById('rNetC').textContent = fmt(r.current.net);
+        document.getElementById('rNetN').textContent = fmt(r.new.net);
+        document.getElementById('rNetD').textContent = fmt(r.impact.net_monthly_change);
+    } finally {
+        setLoading(btn, false);
+    }
 }
 
 async function calculateNewHire() {
-    const data = {
-        basic_salary: parseFloat(document.getElementById('nh_basic').value),
-        allowances: parseFloat(document.getElementById('nh_allow').value),
-        transport_allowance: parseFloat(document.getElementById('nh_transport').value),
-        employee_name: document.getElementById('nh_name').value || 'New Employee',
-    };
-    const r = await apiCall('impact/new-hire', data);
-    if (r.error) { alert(r.error); return; }
+    const btn = event.target.closest('button');
+    setLoading(btn, true);
+    try {
+        const data = {
+            basic_salary: getNum('nh_basic'),
+            allowances: getNum('nh_allow'),
+            transport_allowance: getNum('nh_transport'),
+            employee_name: document.getElementById('nh_name').value || 'New Employee',
+        };
+        if (data.basic_salary <= 0) {
+            showError('Basic salary must be greater than 0.');
+            return;
+        }
+        const r = await apiCall('impact/new-hire', data);
+        if (!r) return;
 
-    document.getElementById('nhResult').style.display = 'block';
-    document.getElementById('nhEmployerMonthly').textContent = fmt(r.monthly.employer_cost);
-    document.getElementById('nhNetMonthly').textContent = fmt(r.monthly.net);
-    document.getElementById('nhEmployerAnnual').textContent = fmt(r.annual.employer_cost);
-    document.getElementById('nhBasic').textContent = fmt(r.monthly.basic);
-    document.getElementById('nhAllow').textContent = fmt(r.monthly.allowances);
-    document.getElementById('nhGross').textContent = fmt(r.monthly.gross);
-    document.getElementById('nhPenEmp').textContent = fmt(r.monthly.pension_employee);
-    document.getElementById('nhPenEmpr').textContent = fmt(r.monthly.pension_employer);
-    document.getElementById('nhTax').textContent = fmt(r.monthly.tax);
-    document.getElementById('nhNet').textContent = fmt(r.monthly.net);
+        document.getElementById('nhResult').style.display = 'block';
+        document.getElementById('nhEmployerMonthly').textContent = fmt(r.monthly.employer_cost);
+        document.getElementById('nhNetMonthly').textContent = fmt(r.monthly.net);
+        document.getElementById('nhEmployerAnnual').textContent = fmt(r.annual.employer_cost);
+        document.getElementById('nhBasic').textContent = fmt(r.monthly.basic);
+        document.getElementById('nhAllow').textContent = fmt(r.monthly.allowances);
+        document.getElementById('nhGross').textContent = fmt(r.monthly.gross);
+        document.getElementById('nhPenEmp').textContent = fmt(r.monthly.pension_employee);
+        document.getElementById('nhPenEmpr').textContent = fmt(r.monthly.pension_employer);
+        document.getElementById('nhTax').textContent = fmt(r.monthly.tax);
+        document.getElementById('nhNet').textContent = fmt(r.monthly.net);
+    } finally {
+        setLoading(btn, false);
+    }
 }
 
 async function calculateAllowance() {
-    const data = {
-        basic_salary: parseFloat(document.getElementById('ac_basic').value),
-        current_amount: parseFloat(document.getElementById('ac_current').value),
-        new_amount: parseFloat(document.getElementById('ac_new').value),
-        allowance_type: document.getElementById('ac_type').value,
-    };
-    const r = await apiCall('impact/allowance-change', data);
-    if (r.error) { alert(r.error); return; }
+    const btn = event.target.closest('button');
+    setLoading(btn, true);
+    try {
+        const data = {
+            basic_salary: getNum('ac_basic'),
+            current_amount: getNum('ac_current'),
+            new_amount: getNum('ac_new'),
+            allowance_type: document.getElementById('ac_type').value,
+        };
+        const r = await apiCall('impact/allowance-change', data);
+        if (!r) return;
 
-    document.getElementById('acResult').style.display = 'block';
-    document.getElementById('acNetMonthly').textContent = fmt(r.impact.net_monthly_change);
-    document.getElementById('acEmployerMonthly').textContent = fmt(r.impact.employer_monthly_change);
-    document.getElementById('acAmountChange').textContent = fmt(r.impact.amount_change);
-    document.getElementById('acExempt').textContent = fmt(Number(r.exempt_new) - Number(r.exempt_current));
-    document.getElementById('acTaxChange').textContent = fmt(r.impact.tax_change);
-    document.getElementById('acNetChange').textContent = fmt(r.impact.net_monthly_change);
-    document.getElementById('acAnnual').textContent = fmt(r.impact.net_annual_change);
+        document.getElementById('acResult').style.display = 'block';
+        document.getElementById('acNetMonthly').textContent = fmt(r.impact.net_monthly_change);
+        document.getElementById('acEmployerMonthly').textContent = fmt(r.impact.employer_monthly_change);
+        document.getElementById('acAmountChange').textContent = fmt(r.impact.amount_change);
+        document.getElementById('acExempt').textContent = fmt(Number(r.exempt_new) - Number(r.exempt_current));
+        document.getElementById('acTaxChange').textContent = fmt(r.impact.tax_change);
+        document.getElementById('acNetChange').textContent = fmt(r.impact.net_monthly_change);
+        document.getElementById('acAnnual').textContent = fmt(r.impact.net_annual_change);
+    } finally {
+        setLoading(btn, false);
+    }
 }
 
 async function calculateTermination() {
-    const data = {
-        basic_salary: parseFloat(document.getElementById('term_basic').value),
-        allowances: parseFloat(document.getElementById('term_allow').value),
-        start_date: document.getElementById('term_start').value,
-        end_date: new Date().toISOString().split('T')[0],
-        reason: document.getElementById('term_reason').value,
-        employee_name: document.getElementById('term_name').value || 'Employee',
-    };
-    const r = await apiCall('impact/termination', data);
-    if (r.error) { alert(r.error); return; }
+    const btn = event.target.closest('button');
+    setLoading(btn, true);
+    try {
+        const startDate = document.getElementById('term_start').value;
+        if (!startDate) {
+            showError('Start date is required.');
+            return;
+        }
+        const data = {
+            basic_salary: getNum('term_basic'),
+            allowances: getNum('term_allow'),
+            start_date: startDate,
+            end_date: new Date().toISOString().split('T')[0],
+            reason: document.getElementById('term_reason').value,
+            employee_name: document.getElementById('term_name').value || 'Employee',
+        };
+        const r = await apiCall('impact/termination', data);
+        if (!r) return;
 
-    document.getElementById('termResult').style.display = 'block';
-    document.getElementById('termTotalCost').textContent = fmt(r.company_cost);
-    document.getElementById('termNetPayout').textContent = fmt(r.breakdown.net_payout);
-    document.getElementById('termYears').textContent = r.years_of_service + ' years';
-    document.getElementById('termOutstanding').textContent = fmt(r.breakdown.outstanding_salary);
-    document.getElementById('termSeverance').textContent = fmt(r.breakdown.severance);
-    document.getElementById('termLeave').textContent = fmt(r.breakdown.leave_encashment);
-    document.getElementById('termEarnings').textContent = fmt(r.breakdown.total_earnings);
-    document.getElementById('termPension').textContent = fmt(r.breakdown.pension_deduction);
-    document.getElementById('termTax').textContent = fmt(r.breakdown.tax);
-    document.getElementById('termNet').textContent = fmt(r.breakdown.net_payout);
+        document.getElementById('termResult').style.display = 'block';
+        document.getElementById('termTotalCost').textContent = fmt(r.company_cost);
+        document.getElementById('termNetPayout').textContent = fmt(r.breakdown.net_payout);
+        document.getElementById('termYears').textContent = r.years_of_service + ' years';
+        document.getElementById('termOutstanding').textContent = fmt(r.breakdown.outstanding_salary);
+        document.getElementById('termSeverance').textContent = fmt(r.breakdown.severance);
+        document.getElementById('termLeave').textContent = fmt(r.breakdown.leave_encashment);
+        document.getElementById('termEarnings').textContent = fmt(r.breakdown.total_earnings);
+        document.getElementById('termPension').textContent = fmt(r.breakdown.pension_deduction);
+        document.getElementById('termTax').textContent = fmt(r.breakdown.tax);
+        document.getElementById('termNet').textContent = fmt(r.breakdown.net_payout);
 
-    document.getElementById('termCapNote').style.display = r.cap_applied ? 'block' : 'none';
-    if (r.cap_applied) {
-        document.getElementById('termCapText').textContent = 'Severance capped at 12 months: ' + fmt(r.cap);
+        document.getElementById('termCapNote').style.display = r.cap_applied ? 'block' : 'none';
+        if (r.cap_applied) {
+            document.getElementById('termCapText').textContent = 'Severance capped at 12 months: ' + fmt(r.cap);
+        }
+        document.getElementById('termNoSeverance').style.display = r.eligible ? 'none' : 'block';
+    } finally {
+        setLoading(btn, false);
     }
-    document.getElementById('termNoSeverance').style.display = r.eligible ? 'none' : 'block';
 }
 </script>
 {% endblock %}

@@ -71,6 +71,9 @@
             <a href="{{ url_for('main.payroll_runs') }}" class="{% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-clock-history me-2"></i>{{ _('payroll_runs') }}
             </a>
+            <a href="{{ url_for('main.leave_management') }}" class="{% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
+                <i class="bi bi-calendar-event me-2"></i>Leave
+            </a>
             <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-bar-chart me-2"></i>{{ _('reports') }}
             <a href="{{ url_for('main.impact_calculator') }}" class="{% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">

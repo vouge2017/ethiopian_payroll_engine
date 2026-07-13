@@ -1141,9 +1141,27 @@ def payroll_spreadsheet():
 
         # Calculate payroll
         ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
+
+        # Check for approved unpaid leave this month
+        month_end = date.today()
+        if date.today().month == 12:
+            next_month = date(date.today().year + 1, 1, 1)
+        else:
+            next_month = date(date.today().year, date.today().month + 1, 1)
+        month_end = next_month - date.resolution
+
+        unpaid_deduction = _calculate_unpaid_leave_deduction(
+            emp, _company_id(), month_start, month_end
+        )
+
+        # Check for approved sick leave reduction
+        from payroll_engine.services.leave_service import get_sick_leave_pay_reduction
+        sick_reduction = get_sick_leave_pay_reduction(emp, _company_id(), db.session)
+
         result = calculate_payroll(
             emp.basic_salary, emp.allowances,
             overtime_entries=ot_list if ot_list else None,
+            sick_leave_reduction=sick_reduction + unpaid_deduction,
         )
 
         total_gross += result['gross']
@@ -2225,6 +2243,93 @@ def reject_leave(leave_id):
 
     flash(f'Leave request rejected.', 'warning')
     return redirect(url_for('main.employee_leave_balance', emp_id=leave.employee_id))
+
+
+
+
+# --- Company-Wide Leave Management ---
+
+@main.route('/leave')
+@login_required
+@role_required('owner', 'accountant')
+def leave_management():
+    """Company-wide leave management page. Shows all leave requests."""
+    status_filter = request.args.get('status', '').strip()
+    type_filter = request.args.get('type', '').strip()
+
+    query = Leave.query.filter(Leave.company_id == _company_id())
+
+    if status_filter:
+        query = query.filter(Leave.status == status_filter)
+    if type_filter:
+        query = query.filter(Leave.leave_type == type_filter)
+
+    leaves = query.order_by(Leave.applied_at.desc()).limit(100).all()
+
+    # Summary counts
+    pending_count = Leave.query.filter_by(company_id=_company_id(), status='pending').count()
+    approved_this_month = Leave.query.filter(
+        Leave.company_id == _company_id(),
+        Leave.status == 'approved',
+        Leave.start_date >= date.today().replace(day=1),
+    ).count()
+
+    return render_template(
+        'leave_management.html',
+        leaves=leaves,
+        pending_count=pending_count,
+        approved_this_month=approved_this_month,
+        status_filter=status_filter,
+        type_filter=type_filter,
+        year=date.today().year,
+    )
+
+
+def _calculate_unpaid_leave_deduction(employee, company_id, pay_period_start, pay_period_end):
+    """Calculate salary deduction for unpaid leave days in a pay period.
+
+    For each approved unpaid leave day that overlaps with the pay period,
+    deduct the daily rate from salary.
+
+    Args:
+        employee: Employee record
+        company_id: Company ID
+        pay_period_start: Start of pay period (date)
+        pay_period_end: End of pay period (date)
+
+    Returns:
+        Decimal amount to deduct from salary
+    """
+    # Get all approved unpaid leave that overlaps with the pay period
+    unpaid_leaves = Leave.query.filter(
+        Leave.company_id == company_id,
+        Leave.employee_id == employee.id,
+        Leave.leave_type == LeaveType.UNPAID,
+        Leave.status == 'approved',
+        Leave.start_date <= pay_period_end,
+        Leave.end_date >= pay_period_start,
+    ).all()
+
+    if not unpaid_leaves:
+        return Decimal('0')
+
+    # Calculate overlapping days
+    total_unpaid_days = 0
+    for leave in unpaid_leaves:
+        overlap_start = max(leave.start_date, pay_period_start)
+        overlap_end = min(leave.end_date, pay_period_end)
+        if overlap_start <= overlap_end:
+            total_unpaid_days += (overlap_end - overlap_start).days + 1
+
+    if total_unpaid_days <= 0:
+        return Decimal('0')
+
+    # Daily rate = monthly salary / 30
+    monthly_salary = Decimal(str(employee.basic_salary)) + Decimal(str(employee.allowances))
+    daily_rate = monthly_salary / Decimal('30')
+    deduction = daily_rate * Decimal(str(total_unpaid_days))
+
+    return deduction.quantize(Decimal('0.01'))
 
 
 @main.route('/impact')

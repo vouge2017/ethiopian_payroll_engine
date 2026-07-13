@@ -1287,12 +1287,57 @@ def payroll_spreadsheet():
     for ot in all_ot:
         ot_by_emp[ot.employee_id].append(ot)
 
-    # Batch-load unpaid leave deductions
+    # Batch-load ALL approved leave for this month (avoid N+1)
+    from payroll_engine.leave import LeaveType
     if date.today().month == 12:
         next_month = date(date.today().year + 1, 1, 1)
     else:
         next_month = date(date.today().year, date.today().month + 1, 1)
     month_end_batch = next_month - date.resolution
+
+    all_leave = Leave.query.filter(
+        Leave.company_id == _company_id(),
+        Leave.status == 'approved',
+        Leave.start_date <= month_end_batch,
+        Leave.end_date >= month_start,
+    ).all()
+
+    # Group leave by employee and type
+    leave_by_emp = defaultdict(list)
+    for lv in all_leave:
+        leave_by_emp[lv.employee_id].append(lv)
+
+    # Pre-compute deductions for all employees
+    unpaid_deductions = {}  # employee_id → Decimal
+    sick_reductions = {}    # employee_id → Decimal
+    for emp in employees:
+        # Unpaid leave deduction
+        emp_unpaid = [lv for lv in leave_by_emp.get(emp.id, []) if lv.leave_type == LeaveType.UNPAID]
+        unpaid_days = 0
+        for lv in emp_unpaid:
+            overlap_start = max(lv.start_date, month_start)
+            overlap_end = min(lv.end_date, month_end_batch)
+            if overlap_start <= overlap_end:
+                unpaid_days += (overlap_end - overlap_start).days + 1
+        if unpaid_days > 0:
+            daily = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
+            unpaid_deductions[emp.id] = (daily * Decimal(str(unpaid_days))).quantize(Decimal('0.01'))
+        else:
+            unpaid_deductions[emp.id] = Decimal('0')
+
+        # Sick leave reduction (tiered)
+        from payroll_engine.services.leave_service import SICK_TIER_1_DAYS
+        emp_sick = [lv for lv in leave_by_emp.get(emp.id, []) if lv.leave_type == LeaveType.SICK]
+        total_sick_this_year = sum(lv.days_requested for lv in emp_sick if lv.start_date.year == date.today().year)
+        if total_sick_this_year > SICK_TIER_1_DAYS:
+            month_sick = sum(lv.days_requested for lv in emp_sick if lv.start_date >= month_start)
+            if month_sick > 0:
+                daily = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
+                sick_reductions[emp.id] = (daily * Decimal(str(month_sick)) * Decimal('0.5')).quantize(Decimal('0.01'))
+            else:
+                sick_reductions[emp.id] = Decimal('0')
+        else:
+            sick_reductions[emp.id] = Decimal('0')
 
     rows = []
     total_gross = Decimal('0')
@@ -1305,27 +1350,19 @@ def payroll_spreadsheet():
         for ot in emp_ot:
             ot_by_type[ot.overtime_type] = float(ot.hours)
 
-        # Calculate payroll
         ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
 
-        unpaid_deduction = _calculate_unpaid_leave_deduction(
-            emp, _company_id(), month_start, month_end_batch
-        )
-
-        # Check for approved sick leave reduction
-        from payroll_engine.services.leave_service import get_sick_leave_pay_reduction
-        sick_reduction = get_sick_leave_pay_reduction(emp, _company_id(), db.session)
+        total_reduction = unpaid_deductions.get(emp.id, Decimal('0')) + sick_reductions.get(emp.id, Decimal('0'))
 
         # Calculate payroll based on employee type
         if emp.employee_type == 'daily' and emp.daily_rate:
             from payroll_engine.payroll import calculate_daily_worker_payroll
-            days_worked = 26  # Default; can be overridden by attendance system
-            result = calculate_daily_worker_payroll(emp.daily_rate, days_worked)
+            result = calculate_daily_worker_payroll(emp.daily_rate, 26)
         else:
             result = calculate_payroll(
                 emp.basic_salary, emp.allowances,
                 overtime_entries=ot_list if ot_list else None,
-                sick_leave_reduction=sick_reduction + unpaid_deduction,
+                sick_leave_reduction=total_reduction,
             )
 
         total_gross += result['gross']

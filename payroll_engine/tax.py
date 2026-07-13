@@ -37,6 +37,9 @@ DEFAULT_BRACKETS: List[Tuple[Decimal, Decimal]] = [
 
 DEFAULT_PERSONAL_RELIEF = Decimal('150')  # ETB monthly personal relief
 
+# Cache for tax brackets (rules rarely change during a request)
+_brackets_cache = {}
+
 
 def _D(value) -> Decimal:
     """Safely convert any numeric type to Decimal."""
@@ -52,10 +55,15 @@ def _get_brackets_and_relief(for_date=None):
     """
     Fetch tax brackets and personal relief from the database.
     Falls back to hardcoded defaults if no TaxRule exists.
+    Caches result to avoid repeated DB queries during payroll calculation.
 
     Returns:
         (brackets: list of (Decimal, Decimal), personal_relief: Decimal)
     """
+    cache_key = str(for_date) if for_date else 'default'
+    if cache_key in _brackets_cache:
+        return _brackets_cache[cache_key]
+
     try:
         from payroll_engine.models import TaxRule
         rule = TaxRule.get_active_rule(for_date)
@@ -64,12 +72,16 @@ def _get_brackets_and_relief(for_date=None):
             for b in rule.brackets:
                 upper = Decimal('Infinity') if b['max'] is None else _D(b['max'])
                 brackets.append((upper, _D(b['rate'])))
-            return brackets, _D(rule.personal_relief)
+            result = (brackets, _D(rule.personal_relief))
+            _brackets_cache[cache_key] = result
+            return result
     except Exception:
         # Database not available (e.g., during tests without app context)
         pass
 
-    return DEFAULT_BRACKETS, DEFAULT_PERSONAL_RELIEF
+    result = (DEFAULT_BRACKETS, DEFAULT_PERSONAL_RELIEF)
+    _brackets_cache[cache_key] = result
+    return result
 
 
 def calculate_tax(gross_salary, for_date=None) -> Decimal:

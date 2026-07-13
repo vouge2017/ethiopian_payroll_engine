@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Payroll Spreadsheet — Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-0"><i class="bi bi-table"></i> Payroll Spreadsheet</h4>
+            <small class="text-muted">Edit overtime, absences, advances, and bonus inline — like Excel.</small>
+        </div>
+        <div>
+            <a href="{{ url_for('main.payroll_upload') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-upload"></i> CSV Upload
+            </a>
+        </div>
+    </div>
+
+    {% if rows %}
+    <form method="POST" action="{{ url_for('main.payroll_spreadsheet') }}" id="spreadsheet-form">
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm table-hover" id="payroll-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="sticky-col" style="min-width:120px">Employee</th>
+                        <th class="text-end" style="min-width:90px">Basic Salary</th>
+                        <th class="text-end" style="min-width:80px">Allowances</th>
+                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Regular day OT (1.25x)">OT Day</th>
+                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Night OT (1.5x)">OT Night</th>
+                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Holiday OT (2x)">OT Hol.</th>
+                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Rest+Holiday OT (2.5x)">OT Rest</th>
+                        <th class="text-center bg-info text-dark" style="min-width:70px">Absences</th>
+                        <th class="text-center bg-success text-dark" style="min-width:90px">Advance</th>
+                        <th class="text-center bg-success text-dark" style="min-width:80px">Bonus</th>
+                        <th class="text-end" style="min-width:100px">Gross</th>
+                        <th class="text-end" style="min-width:80px">Pension 7%</th>
+                        <th class="text-end" style="min-width:80px">Tax</th>
+                        <th class="text-end bg-light" style="min-width:100px"><strong>Net Pay</strong></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr {% if row.exceeds_ot_limit %}class="table-danger"{% endif %}>
+                        <td class="sticky-col">
+                            <input type="hidden" name="emp_id" value="{{ row.emp.id }}">
+                            <strong>{{ row.emp.name }}</strong><br>
+                            <small class="text-muted">{{ row.emp.employee_id }}</small>
+                        </td>
+                        <td class="text-end">{{ "{:,.2f}".format(row.emp.basic_salary) }}</td>
+                        <td class="text-end">{{ "{:,.2f}".format(row.emp.allowances) }}</td>
+
+                        <!-- Editable: Overtime hours -->
+                        <td class="text-center">
+                            <input type="number" name="emp_{{ row.emp.id }}_ot_day"
+                                   value="{{ row.ot_day }}" min="0" max="200" step="0.5"
+                                   class="form-control form-control-sm text-center ot-input"
+                                   data-emp="{{ row.emp.id }}">
+                        </td>
+                        <td class="text-center">
+                            <input type="number" name="emp_{{ row.emp.id }}_ot_night"
+                                   value="{{ row.ot_night }}" min="0" max="200" step="0.5"
+                                   class="form-control form-control-sm text-center ot-input"
+                                   data-emp="{{ row.emp.id }}">
+                        </td>
+                        <td class="text-center">
+                            <input type="number" name="emp_{{ row.emp.id }}_ot_holiday"
+                                   value="{{ row.ot_holiday }}" min="0" max="200" step="0.5"
+                                   class="form-control form-control-sm text-center ot-input"
+                                   data-emp="{{ row.emp.id }}">
+                        </td>
+                        <td class="text-center">
+                            <input type="number" name="emp_{{ row.emp.id }}_ot_rest"
+                                   value="{{ row.ot_rest }}" min="0" max="200" step="0.5"
+                                   class="form-control form-control-sm text-center ot-input"
+                                   data-emp="{{ row.emp.id }}">
+                        </td>
+
+                        <!-- Editable: Absences -->
+                        <td class="text-center">
+                            <input type="number" name="emp_{{ row.emp.id }}_absences"
+                                   value="0" min="0" max="31" step="1"
+                                   class="form-control form-control-sm text-center">
+                        </td>
+
+                        <!-- Editable: Advance -->
+                        <td class="text-center">
+                            <input type="number" name="emp_{{ row.emp.id }}_advance"
+                                   value="0" min="0" step="100"
+                                   class="form-control form-control-sm text-center advance-input"
+                                   data-emp="{{ row.emp.id }}">
+                        </td>
+
+                        <!-- Editable: Bonus -->
+                        <td class="text-center">
+                            <input type="number" name="emp_{{ row.emp.id }}_bonus"
+                                   value="0" min="0" step="100"
+                                   class="form-control form-control-sm text-center">
+                        </td>
+
+                        <!-- Calculated fields -->
+                        <td class="text-end calculated">{{ "{:,.2f}".format(row.gross) }}</td>
+                        <td class="text-end calculated">{{ "{:,.2f}".format(row.pension) }}</td>
+                        <td class="text-end calculated">{{ "{:,.2f}".format(row.tax) }}</td>
+                        <td class="text-end bg-light calculated"><strong>{{ "{:,.2f}".format(row.net) }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr class="fw-bold">
+                        <td colspan="10" class="text-end">TOTALS:</td>
+                        <td class="text-end">{{ "{:,.2f}".format(total_gross) }}</td>
+                        <td class="text-end"></td>
+                        <td class="text-end">{{ "{:,.2f}".format(total_tax) }}</td>
+                        <td class="text-end bg-light">{{ "{:,.2f}".format(total_net) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
+            <div>
+                <span class="badge bg-warning text-dark">Yellow columns</span> = editable (OT, absences, advances, bonus)
+                <span class="badge bg-secondary ms-2">Grey columns</span> = auto-calculated
+            </div>
+            <div>
+                <button type="submit" name="action" value="save" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Save All Changes
+                </button>
+                <button type="submit" name="action" value="calculate" class="btn btn-outline-success ms-2">
+                    <i class="bi bi-calculator"></i> Save & Recalculate
+                </button>
+            </div>
+        </div>
+    </form>
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-people" style="font-size:3rem;color:#ccc"></i>
+        <h5 class="mt-3 text-muted">No employees yet</h5>
+        <p class="text-muted">Add employees first, then use this spreadsheet to process payroll.</p>
+        <a href="{{ url_for('main.add_employee') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add First Employee
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.sticky-col {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
+    border-right: 2px solid #dee2e6;
+}
+.table-dark .sticky-col {
+    background: #212529;
+}
+#payroll-table input[type="number"] {
+    width: 70px;
+    padding: 2px 4px;
+    font-size: 0.85rem;
+}
+#payroll-table td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+#payroll-table .calculated {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+.table-responsive {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+</style>
+
+<script>
+// Auto-tab to next input on Enter
+document.querySelectorAll('#payroll-table input[type="number"]').forEach(input => {
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const inputs = Array.from(document.querySelectorAll('#payroll-table input[type="number"]'));
+            const idx = inputs.indexOf(this);
+            if (idx < inputs.length - 1) {
+                inputs[idx + 1].focus();
+                inputs[idx + 1].select();
+            }
+        }
+        // Arrow key navigation
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            const inputs = Array.from(document.querySelectorAll('#payroll-table input[type="number"]'));
+            const idx = inputs.indexOf(this);
+            const cols = 7; // number of editable columns per row
+            const target = e.key === 'ArrowDown' ? idx + cols : idx - cols;
+            if (target >= 0 && target < inputs.length) {
+                inputs[target].focus();
+                inputs[target].select();
+            }
+        }
+    });
+    // Select all on focus
+    input.addEventListener('focus', function() { this.select(); });
+});
+</script>
+{% endblock %}

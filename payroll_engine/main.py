@@ -933,6 +933,156 @@ def approve_payroll():
         return redirect(url_for('main.payroll_upload'))
 
 
+# --- Spreadsheet-Style Payroll Editor ---
+
+@main.route('/payroll/spreadsheet', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def payroll_spreadsheet():
+    """
+    Spreadsheet-style payroll editor.
+    Shows ALL employees in a single editable table.
+    Accountant can edit overtime, absences, advances, and bonus inline.
+    """
+    from payroll_engine.overtime import MAX_OVERTIME_HOURS_MONTH
+    from payroll_engine.payroll import calculate_payroll
+    from decimal import Decimal, InvalidOperation
+
+    if request.method == 'POST':
+        action = request.form.get('action', 'save')
+
+        # Collect all employee changes from the form
+        emp_ids = request.form.getlist('emp_id')
+        changes = []
+        for eid in emp_ids:
+            prefix = f'emp_{eid}_'
+            changes.append({
+                'emp_id': int(eid),
+                'ot_day': request.form.get(f'{prefix}ot_day', '0').strip() or '0',
+                'ot_night': request.form.get(f'{prefix}ot_night', '0').strip() or '0',
+                'ot_holiday': request.form.get(f'{prefix}ot_holiday', '0').strip() or '0',
+                'ot_rest': request.form.get(f'{prefix}ot_rest', '0').strip() or '0',
+                'absences': request.form.get(f'{prefix}absences', '0').strip() or '0',
+                'advance': request.form.get(f'{prefix}advance', '0').strip() or '0',
+                'bonus': request.form.get(f'{prefix}bonus', '0').strip() or '0',
+            })
+
+        # Save overtime entries
+        from payroll_engine.models import OvertimeEntry, EmployeeDeduction
+        today = date.today()
+
+        for change in changes:
+            emp = Employee.query.filter_by(
+                id=change['emp_id'], company_id=_company_id()
+            ).first()
+            if not emp:
+                continue
+
+            # Save overtime entries for this month
+            for ot_type, ot_key in [('day', 'ot_day'), ('night', 'ot_night'),
+                                      ('holiday', 'ot_holiday'), ('rest_day_holiday', 'ot_rest')]:
+                try:
+                    hours = Decimal(change[ot_key])
+                except (InvalidOperation, ValueError):
+                    hours = Decimal('0')
+                if hours > 0:
+                    ot = OvertimeEntry(
+                        employee_id=emp.id,
+                        company_id=_company_id(),
+                        date=today,
+                        hours=hours,
+                        overtime_type=ot_type,
+                    )
+                    db.session.add(ot)
+
+            # Save advance as a one-time deduction
+            try:
+                advance = Decimal(change['advance'])
+            except (InvalidOperation, ValueError):
+                advance = Decimal('0')
+            if advance > 0:
+                ded = EmployeeDeduction(
+                    company_id=_company_id(),
+                    employee_id=emp.id,
+                    deduction_type='advance',
+                    label=f'Advance {today.strftime("%B %Y")}',
+                    amount_mode='fixed',
+                    amount=advance,
+                    tracking_mode='date_bounded',
+                    start_date=today,
+                    is_active=True,
+                    created_by=current_user.id,
+                )
+                db.session.add(ded)
+
+        db.session.commit()
+
+        if action == 'calculate':
+            flash('Changes saved. Review calculations below.', 'success')
+        else:
+            flash(f'{len(changes)} employee records updated.', 'success')
+        return redirect(url_for('main.payroll_spreadsheet'))
+
+    # GET — show the spreadsheet
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    # Calculate current month overtime for each employee
+    month_start = date.today().replace(day=1)
+
+    rows = []
+    total_gross = Decimal('0')
+    total_tax = Decimal('0')
+    total_net = Decimal('0')
+
+    for emp in employees:
+        # Get existing overtime for this month
+        ot_entries = OvertimeEntry.query.filter(
+            OvertimeEntry.employee_id == emp.id,
+            OvertimeEntry.company_id == _company_id(),
+            OvertimeEntry.date >= month_start,
+        ).all()
+
+        ot_by_type = {'day': 0, 'night': 0, 'holiday': 0, 'rest_day_holiday': 0}
+        for ot in ot_entries:
+            ot_by_type[ot.overtime_type] = float(ot.hours)
+
+        # Calculate payroll
+        ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
+        result = calculate_payroll(
+            emp.basic_salary, emp.allowances,
+            overtime_entries=ot_list if ot_list else None,
+        )
+
+        total_gross += result['gross']
+        total_tax += result['tax']
+        total_net += result['net']
+
+        rows.append({
+            'emp': emp,
+            'ot_day': ot_by_type.get('day', 0),
+            'ot_night': ot_by_type.get('night', 0),
+            'ot_holiday': ot_by_type.get('holiday', 0),
+            'ot_rest': ot_by_type.get('rest_day_holiday', 0),
+            'gross': result['gross'],
+            'tax': result['tax'],
+            'pension': result['pension_employee'],
+            'net': result['net'],
+            'ot_pay': result['overtime_pay'],
+            'exceeds_ot_limit': result['overtime_total_hours'] > MAX_OVERTIME_HOURS_MONTH if result['overtime_total_hours'] else False,
+        })
+
+    return render_template(
+        'payroll_spreadsheet.html',
+        rows=rows,
+        total_gross=total_gross,
+        total_tax=total_tax,
+        total_net=total_net,
+        year=date.today().year,
+    )
+
+
 @main.route('/payroll/runs')
 @login_required
 def payroll_runs():

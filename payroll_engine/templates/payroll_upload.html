@@ -35,6 +35,12 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
                     <h5 class="mb-0"><i class="bi bi-upload me-2"></i>{{ _('upload_csv') }}</h5>
                 </div>
                 <div class="card-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <strong>New:</strong> Want to enter payroll directly? Try the
+                        <a href="{{ url_for('main.payroll_spreadsheet') }}" class="alert-link">Spreadsheet Editor</a>
+                        — edit all employees in one table, like Excel.
+                    </div>
                     <form method="POST" action="{{ url_for('main.payroll_upload') }}" enctype="multipart/form-data" id="uploadForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">

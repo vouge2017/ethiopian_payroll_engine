@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Historical Payroll Import — Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0"><i class="bi bi-clock-history me-2"></i>Historical Payroll Import</h3>
+            <small class="text-muted">Import past months of payroll data so year-to-date summaries work from day one.</small>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upload Form -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-upload me-2"></i>Import CSV</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label">Upload historical payroll CSV</label>
+                            <input type="file" name="file" class="form-control" accept=".csv" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload me-1"></i> Import
+                        </button>
+                    </form>
+
+                    <hr>
+                    <h6>CSV Format</h6>
+                    <p class="small text-muted">Required columns:</p>
+                    <code class="small d-block bg-light p-2 rounded">
+                        employee_id,month,year,basic_salary,allowances,gross,tax,pension,net
+                    </code>
+                    <p class="small text-muted mt-2">
+                        Example row:<br>
+                        <code>EMP001,1,2026,10000,2000,12000,1890,700,9410</code>
+                    </p>
+
+                    <div class="alert alert-info small mt-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Importing the same month twice will update existing records (no duplicates).
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template Download -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <h6><i class="bi bi-download me-1"></i>Download Template</h6>
+                    <p class="small text-muted">Get a CSV template with the correct column headers.</p>
+                    <a href="data:text/csv;charset=utf-8,employee_id%2Cmonth%2Cyear%2Cbasic_salary%2Callowances%2Cgross%2Ctax%2Cpension%2Cnet%0AEMP001%2C1%2C2026%2C10000%2C2000%2C12000%2C1890%2C700%2C9410%0AEMP002%2C1%2C2026%2C5000%2C500%2C5500%2C380%2C350%2C4770%0A"
+                       download="historical_payroll_template.csv"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Download CSV Template
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Imported Data -->
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-database me-2"></i>Imported Data</h5>
+                </div>
+                <div class="card-body">
+                    {% if historical_runs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th class="text-center">Records</th>
+                                    <th>Imported</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for run in historical_runs %}
+                                <tr>
+                                    <td><strong>{{ run.period or run.run_date.strftime('%B %Y') }}</strong></td>
+                                    <td class="text-center">{{ run.payslips|length }}</td>
+                                    <td><small>{{ run.created_at.strftime('%d %b %Y') }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox" style="font-size:2rem;color:#ccc"></i>
+                        <p class="text-muted mt-2">No historical data imported yet.</p>
+                        <p class="small text-muted">Upload a CSV to import past payroll months.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- YTD Preview -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <h6><i class="bi bi-graph-up me-1"></i>Year-to-Date</h6>
+                    <p class="small text-muted">
+                        After importing, the Year-End Summary report will include imported months
+                        alongside current payroll data. This gives accountants full YTD tracking
+                        from the moment they switch to EthioPayroll.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

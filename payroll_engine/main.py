@@ -1024,6 +1024,149 @@ def approve_payroll():
         return redirect(url_for('main.payroll_upload'))
 
 
+# --- Historical Payroll Import ---
+
+@main.route('/payroll/import', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def historical_import():
+    """
+    Import historical payroll data from CSV.
+    Allows accountants to bring in past months so YTD works from day one.
+
+    CSV format: employee_id, month, year, basic_salary, allowances, gross, tax, pension, net
+    """
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file selected.', 'danger')
+            return redirect(request.url)
+
+        file = request.files['file']
+        if file.filename == '' or not file.filename.lower().endswith('.csv'):
+            flash('Please upload a CSV file.', 'danger')
+            return redirect(request.url)
+
+        try:
+            import csv as csv_mod
+            from io import StringIO
+
+            content_bytes = file.read().decode('utf-8-sig')
+            reader = csv_mod.DictReader(StringIO(content_bytes))
+
+            required_cols = {'employee_id', 'month', 'year', 'gross', 'tax', 'pension', 'net'}
+            if not required_cols.issubset(set(reader.fieldnames or [])):
+                missing = required_cols - set(reader.fieldnames or [])
+                flash(f'Missing columns: {", ".join(missing)}', 'danger')
+                return redirect(request.url)
+
+            imported = 0
+            skipped = 0
+            errors = []
+
+            for i, row in enumerate(reader, 1):
+                try:
+                    emp_id = row['employee_id'].strip()
+                    month = int(row['month'])
+                    year = int(row['year'])
+                    gross = Decimal(row['gross'])
+                    tax = Decimal(row['tax'])
+                    pension = Decimal(row['pension'])
+                    net = Decimal(row['net'])
+                    basic = Decimal(row.get('basic_salary', '0') or '0')
+                    allowances = Decimal(row.get('allowances', '0') or '0')
+
+                    # Find the employee
+                    emp = Employee.query.filter_by(
+                        employee_id=emp_id, company_id=_company_id()
+                    ).first()
+                    if not emp:
+                        errors.append(f'Row {i}: Employee {emp_id} not found')
+                        continue
+
+                    # Check for duplicate
+                    period_str = f'{year}-{month:02d}'
+                    existing = PayrollRun.query.filter_by(
+                        company_id=_company_id(), period=period_str, source='import'
+                    ).first()
+
+                    if existing:
+                        # Update existing import
+                        existing_payslip = Payslip.query.filter_by(
+                            payroll_run_id=existing.id, employee_id=emp.id
+                        ).first()
+                        if existing_payslip:
+                            existing_payslip.gross_salary = gross
+                            existing_payslip.tax = tax
+                            existing_payslip.employee_pension = pension
+                            existing_payslip.net_pay = net
+                        else:
+                            ps = Payslip(
+                                payroll_run_id=existing.id,
+                                employee_id=emp.id,
+                                gross_salary=gross, tax=tax,
+                                employee_pension=pension,
+                                employer_pension=Decimal('0'),
+                                net_pay=net,
+                            )
+                            db.session.add(ps)
+                    else:
+                        # Create new historical run
+                        from datetime import datetime as dt
+                        run = PayrollRun(
+                            company_id=_company_id(),
+                            run_date=date(year, month, 1),
+                            status='completed',
+                            source='import',
+                            period=period_str,
+                            reference=f'HIST-{period_str}',
+                        )
+                        db.session.add(run)
+                        db.session.flush()
+
+                        ps = Payslip(
+                            payroll_run_id=run.id,
+                            employee_id=emp.id,
+                            gross_salary=gross, tax=tax,
+                            employee_pension=pension,
+                            employer_pension=Decimal('0'),
+                            net_pay=net,
+                        )
+                        db.session.add(ps)
+
+                    imported += 1
+
+                except (ValueError, KeyError) as e:
+                    errors.append(f'Row {i}: {str(e)}')
+                    skipped += 1
+
+            db.session.commit()
+
+            if imported > 0:
+                flash(f'Imported {imported} payroll records.', 'success')
+            if errors:
+                for err in errors[:5]:
+                    flash(err, 'warning')
+                if len(errors) > 5:
+                    flash(f'... and {len(errors) - 5} more errors.', 'warning')
+
+            return redirect(url_for('main.historical_import'))
+
+        except Exception as e:
+            log_and_flash_error('Could not process the import file.', e)
+            return redirect(request.url)
+
+    # GET — show import page with existing historical data
+    historical_runs = PayrollRun.query.filter_by(
+        company_id=_company_id(), source='import'
+    ).order_by(PayrollRun.run_date.desc()).all()
+
+    return render_template(
+        'historical_import.html',
+        historical_runs=historical_runs,
+        year=date.today().year,
+    )
+
+
 # --- Spreadsheet-Style Payroll Editor ---
 
 @main.route('/payroll/spreadsheet', methods=['GET', 'POST'])

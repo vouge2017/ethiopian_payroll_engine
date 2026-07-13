@@ -489,6 +489,7 @@ class PayrollRun(db.Model):
     run_date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     # Lifecycle: draft → review → pending_approval → processing → completed → locked / failed
     status = db.Column(db.String(20), nullable=False, default='draft')
+    source = db.Column(db.String(20), nullable=False, default='upload')  # 'upload', 'spreadsheet', 'import', 'api'
     approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     approved_at = db.Column(db.DateTime, nullable=True)
     approval_ip = db.Column(db.String(45), nullable=True)

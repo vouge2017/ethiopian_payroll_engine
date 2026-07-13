@@ -1233,6 +1233,123 @@ def unlock_payroll(run_id):
     return redirect(url_for('main.payroll_run_detail', run_id=run.id))
 
 
+@main.route('/payroll/register')
+@login_required
+@role_required('owner', 'accountant')
+def payroll_register():
+    """
+    Payroll register — single-page summary of all employees for the current month.
+    Printable on A4. Shows: ID, Name, Basic, Allowances, OT, Gross, Pension, Tax, Net.
+    """
+    from payroll_engine.payroll import calculate_payroll
+
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    rows = []
+    total_basic = Decimal('0')
+    total_allow = Decimal('0')
+    total_ot = Decimal('0')
+    total_gross = Decimal('0')
+    total_pension = Decimal('0')
+    total_tax = Decimal('0')
+    total_net = Decimal('0')
+
+    for emp in employees:
+        result = calculate_payroll(emp.basic_salary, emp.allowances)
+        rows.append({
+            'emp': emp,
+            'gross': result['gross'],
+            'pension': result['pension_employee'],
+            'tax': result['tax'],
+            'net': result['net'],
+            'ot_pay': result['overtime_pay'],
+        })
+        total_basic += emp.basic_salary
+        total_allow += emp.allowances
+        total_ot += result['overtime_pay']
+        total_gross += result['gross']
+        total_pension += result['pension_employee']
+        total_tax += result['tax']
+        total_net += result['net']
+
+    company = Company.query.get(_company_id())
+
+    return render_template(
+        'payroll_register.html',
+        rows=rows,
+        company=company,
+        total_basic=total_basic,
+        total_allow=total_allow,
+        total_ot=total_ot,
+        total_gross=total_gross,
+        total_pension=total_pension,
+        total_tax=total_tax,
+        total_net=total_net,
+        period=date.today().strftime('%B %Y'),
+        year=date.today().year,
+    )
+
+
+@main.route('/payroll/payslips/batch')
+@login_required
+@role_required('owner', 'accountant')
+def batch_payslips():
+    """
+    Download all payslips for the latest payroll run as a ZIP file.
+    """
+    import zipfile
+    from payroll_engine.pdf import generate_payslip
+
+    # Get the latest completed payroll run
+    run = PayrollRun.query.filter_by(
+        company_id=_company_id(), status='completed'
+    ).order_by(PayrollRun.created_at.desc()).first()
+
+    if not run:
+        flash('No completed payroll run found.', 'warning')
+        return redirect(url_for('main.payroll_runs'))
+
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    if not payslips:
+        flash('No payslips found for this run.', 'warning')
+        return redirect(url_for('main.payroll_runs'))
+
+    # Generate PDFs and create ZIP
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for ps in payslips:
+            emp = ps.employee
+            pdf_path = generate_payslip({
+                'id': emp.employee_id,
+                'name': emp.name,
+                'basic': emp.basic_salary,
+                'allowances': emp.allowances,
+                'gross': ps.gross_salary,
+                'tax': ps.tax,
+                'pension_employee': ps.employee_pension,
+                'pension_employer': ps.employer_pension,
+                'net': ps.net_pay,
+                'bank': emp.bank_or_telebirr or '',
+                'tax_explanation': '',
+            })
+            arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf"
+            zf.write(pdf_path, arcname)
+            os.remove(pdf_path)  # Clean up temp file
+
+    zip_buffer.seek(0)
+    company = Company.query.get(_company_id())
+    filename = f"payslips_{company.name.replace(' ', '_')}_{run.run_date.strftime('%Y%m')}.zip"
+
+    return send_file(
+        zip_buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @main.route('/payroll/runs/<int:run_id>')
 @login_required
 def payroll_run_detail(run_id):

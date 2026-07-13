@@ -101,18 +101,18 @@ class TestVerification4:
 # ============================================================
 # VERIFICATION TEST 5: Overtime calculation
 # 5,000 salary + 8h weekday overtime
-# Expected: Overtime 208.33
-# Hourly = 5000 / 30 / 8 = 20.83
-# 8h * 20.83 * 1.25 = 208.33
+# Expected: Overtime 230.80
+# Hourly = 5000 / 208 = 24.04
+# 8h * 24.04 * 1.25 = 240.40
 # ============================================================
 class TestVerification5:
     def test_overtime_weekday(self):
         pay = calculate_overtime_pay(
             basic_salary=5000, hours=8, overtime_type='day'
         )
-        # hourly = 5000/30/8 = 20.83, 8 * 20.83 * 1.25 = 208.3
-        assert pay == Decimal("208.30"), \
-            f"Overtime should be 208.3, got {pay}"
+        # hourly = 5000/208 = 24.04, 8 * 24.04 * 1.25 = 240.40
+        assert pay == Decimal("240.40"), \
+            f"Overtime should be 240.40, got {pay}"
 
 
 # ============================================================

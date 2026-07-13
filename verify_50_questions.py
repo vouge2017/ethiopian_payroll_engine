@@ -81,23 +81,23 @@ ot_day = calculate_overtime_pay(10000, 4, 'day')
 ot_night = calculate_overtime_pay(10000, 4, 'night')
 ot_holiday = calculate_overtime_pay(10000, 4, 'holiday')
 ot_rest = calculate_overtime_pay(10000, 4, 'rest_day_holiday')
-# hourly = 10000/30/8 = 41.67
-# day: 41.67 * 4 * 1.25 = 208.35
-# night: 41.67 * 4 * 1.50 = 250.02
-# holiday: 41.67 * 4 * 2.00 = 333.36
-# rest: 41.67 * 4 * 2.50 = 416.70
-if ot_day == Decimal('208.35'):
+# hourly = 10000/208 = 48.08 (26 working days × 8 hours)
+# day: 48.08 * 4 * 1.25 = 240.40
+# night: 48.08 * 4 * 1.50 = 288.48
+# holiday: 48.08 * 4 * 2.00 = 384.64
+# rest: 48.08 * 4 * 2.50 = 480.80
+if ot_day == Decimal('240.40'):
     ok(4, f"OT multipliers: day={ot_day}, night={ot_night}, holiday={ot_holiday}, rest={ot_rest}")
 else:
-    fail(4, f"Day OT on 10k/4h = {ot_day}, expected 208.35")
+    fail(4, f"Day OT on 10k/4h = {ot_day}, expected 240.40")
 
-# Q5: Is hourly rate = basic/30/8?
+# Q5: Is hourly rate = basic/208?
 from payroll_engine.overtime import calculate_hourly_rate
 hr = calculate_hourly_rate(10000)
-if hr == Decimal('41.67'):
-    ok(5, f"Hourly rate on 10,000 = {hr} (10000/30/8)")
+if hr == Decimal('48.08'):
+    ok(5, f"Hourly rate on 10,000 = {hr} (10000/208)")
 else:
-    fail(5, f"Hourly rate = {hr}, expected 41.67")
+    fail(5, f"Hourly rate = {hr}, expected 48.08")
 
 # Q6: Does it enforce 20-hour monthly overtime limit?
 from payroll_engine.overtime import calculate_total_overtime

@@ -132,17 +132,17 @@ def test_overtime_delete(company_and_employee):
 # ---------------------------------------------------------------
 
 def test_overtime_pay_weekday():
-    """4h weekday overtime on basic 10,000 → 208.33"""
+    """4h weekday overtime on basic 10,000 → 240.38"""
     from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'day')
-    assert abs(float(pay) - 208.35) < 1.0  # Allow rounding tolerance
+    assert abs(float(pay) - 240.40) < 1.0  # Allow rounding tolerance
 
 
 def test_overtime_pay_night():
     """4h night overtime → 1.5x"""
     from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'night')
-    expected = round(10000 / 30 / 8 * 4 * 1.5, 2)
+    expected = round(10000 / 208 * 4 * 1.5, 2)
     assert abs(float(pay) - expected) < 0.10
 
 
@@ -150,7 +150,7 @@ def test_overtime_pay_holiday():
     """4h holiday overtime → 2x"""
     from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'holiday')
-    expected = round(10000 / 30 / 8 * 4 * 2.0, 2)
+    expected = round(10000 / 208 * 4 * 2.0, 2)
     assert abs(float(pay) - expected) < 0.10
 
 
@@ -158,7 +158,7 @@ def test_overtime_pay_rest_day():
     """4h rest_day_holiday overtime → 2.5x"""
     from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'rest_day_holiday')
-    expected = round(10000 / 30 / 8 * 4 * 2.5, 2)
+    expected = round(10000 / 208 * 4 * 2.5, 2)
     assert abs(float(pay) - expected) < 0.10
 
 
@@ -227,8 +227,8 @@ def test_verification_numbers():
         basic_salary=10000, allowances=2000,
         overtime_entries=[{'hours': 4, 'type': 'day'}]
     )
-    # Overtime pay should be approximately 208.33-208.35
-    assert D('208') < result['overtime_pay'] < D('209')
+    # Overtime pay should be approximately 240.38-240.40
+    assert D('240') < result['overtime_pay'] < D('241')
     # Gross = 12000 + overtime
     assert result['gross'] > D('12200')
     # Pension = 700 (7% of basic 10,000 — NOT affected by overtime)

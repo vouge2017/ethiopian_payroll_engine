@@ -4,7 +4,8 @@ Overtime rate calculation tests.
 Labor Proclamation No. 1156/2019, Article 68:
     Regular day: 1.25x, Night: 1.5x, Holiday: 2.0x, Rest day holiday: 2.5x
 
-Hourly rate = basic_salary / 30 / 8
+Hourly rate = basic_salary / 208 (26 working days × 8 hours)
+Per Ethiopian labor law: 48 hours/week, 6 days/week, 26 days/month.
 """
 import sys
 import os
@@ -24,9 +25,9 @@ D = Decimal
 # --- Hourly rate ---
 
 def test_hourly_rate_basic():
-    """10,000 ETB / 30 days / 8 hours = 41.67 ETB/hour"""
+    """10,000 ETB / 208 hours = 48.08 ETB/hour"""
     rate = calculate_hourly_rate(10000)
-    expected = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    expected = (D('10000') / D('208')).quantize(D('0.01'))
     assert rate == expected, f"Expected {expected}, got {rate}"
 
 def test_hourly_rate_zero():
@@ -36,38 +37,39 @@ def test_hourly_rate_negative():
     assert calculate_hourly_rate(-5000) == D('0')
 
 def test_hourly_rate_15000():
-    """15,000 / 30 / 8 = 62.50"""
+    """15,000 / 208 = 72.12"""
     rate = calculate_hourly_rate(15000)
-    assert rate == D('62.50'), f"Expected 62.50, got {rate}"
+    expected = (D('15000') / D('208')).quantize(D('0.01'))
+    assert rate == expected, f"Expected {expected}, got {rate}"
 
 
 # --- Overtime pay by type ---
 
 def test_overtime_day():
-    """10,000 salary, 4 hours day overtime: 41.67 × 4 × 1.25 = 208.35"""
+    """10,000 salary, 4 hours day overtime: 48.08 × 4 × 1.25 = 240.40"""
     pay = calculate_overtime_pay(10000, 4, 'day')
-    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    hourly = (D('10000') / D('208')).quantize(D('0.01'))
     expected = (hourly * D('4') * D('1.25')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_night():
-    """10,000 salary, 3 hours night: 41.67 × 3 × 1.50 = 187.52"""
+    """10,000 salary, 3 hours night: 48.08 × 3 × 1.50 = 216.36"""
     pay = calculate_overtime_pay(10000, 3, 'night')
-    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    hourly = (D('10000') / D('208')).quantize(D('0.01'))
     expected = (hourly * D('3') * D('1.50')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_holiday():
-    """10,000 salary, 4 hours holiday: 41.67 × 4 × 2.0 = 333.36"""
+    """10,000 salary, 4 hours holiday: 48.08 × 4 × 2.0 = 384.64"""
     pay = calculate_overtime_pay(10000, 4, 'holiday')
-    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    hourly = (D('10000') / D('208')).quantize(D('0.01'))
     expected = (hourly * D('4') * D('2.0')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_rest_day_holiday():
-    """10,000 salary, 2 hours rest day holiday: 41.67 × 2 × 2.5 = 208.35"""
+    """10,000 salary, 2 hours rest day holiday: 48.08 × 2 × 2.5 = 240.40"""
     pay = calculate_overtime_pay(10000, 2, 'rest_day_holiday')
-    hourly = (D('10000') / D('30') / D('8')).quantize(D('0.01'))
+    hourly = (D('10000') / D('208')).quantize(D('0.01'))
     expected = (hourly * D('2') * D('2.5')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
@@ -135,11 +137,11 @@ def test_factory_worker_overtime():
     """
     Factory worker earning 5,000 ETB/month.
     Works 8 hours on a public holiday.
-    Hourly: 5000 / 30 / 8 = 20.83
-    Overtime: 20.83 × 8 × 2.0 = 333.28
+    Hourly: 5000 / 208 = 24.04
+    Overtime: 24.04 × 8 × 2.0 = 384.64
     """
     pay = calculate_overtime_pay(5000, 8, 'holiday')
-    hourly = (D('5000') / D('30') / D('8')).quantize(D('0.01'))
+    hourly = (D('5000') / D('208')).quantize(D('0.01'))
     expected = (hourly * D('8') * D('2.0')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
     assert pay > 0

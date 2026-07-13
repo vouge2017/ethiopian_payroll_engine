@@ -7,7 +7,8 @@ Labor Proclamation No. 1156/2019, Article 68:
     - Public holiday:           2.0x   (Art. 68(3))
     - Rest day + public holiday: 2.5x  (Art. 68(4))
 
-Hourly rate = basic_salary / 30 days / 8 hours
+Hourly rate = basic_salary / 208
+    208 = 26 working days × 8 hours (Ethiopian standard: 6 days/week, 48h/week)
 Overtime pay = hourly_rate × hours × multiplier
 
 Overtime is taxable income (included in gross for ERCA reporting).
@@ -47,8 +48,11 @@ def calculate_hourly_rate(basic_salary) -> Decimal:
     """
     Calculate hourly rate from monthly basic salary.
 
-    Ethiopian convention: 30 days/month, 8 hours/day.
-    Hourly = basic_salary / 30 / 8
+    Ethiopian Labor Proclamation No. 1156/2019:
+    - Standard work week: 48 hours (6 days × 8 hours)
+    - Monthly working days: 26 (6 days × 4.33 weeks)
+    - Monthly working hours: 208 (26 × 8)
+    - Hourly = basic_salary / 208
 
     Args:
         basic_salary: Monthly basic salary in ETB
@@ -59,7 +63,7 @@ def calculate_hourly_rate(basic_salary) -> Decimal:
     basic_salary = _D(basic_salary)
     if basic_salary <= 0:
         return Decimal('0')
-    return (basic_salary / Decimal('30') / Decimal('8')).quantize(Q, rounding=ROUND_HALF_UP)
+    return (basic_salary / Decimal('208')).quantize(Q, rounding=ROUND_HALF_UP)
 
 
 def calculate_overtime_pay(basic_salary, hours, overtime_type: str = 'day') -> Decimal:

@@ -300,6 +300,8 @@ class Employee(db.Model):
     start_date = db.Column(db.Date, nullable=True)  # Employment start date
     basic_salary = db.Column(db.Numeric(12, 2), nullable=False)
     allowances = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0.00'))
+    employee_type = db.Column(db.String(20), nullable=False, default='monthly')  # 'monthly' or 'daily'
+    daily_rate = db.Column(db.Numeric(12, 2), nullable=True)  # For daily workers
     if _HAS_ENCRYPTION:
         bank_account = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
         tin = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)

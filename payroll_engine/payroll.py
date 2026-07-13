@@ -82,6 +82,64 @@ def calculate_prorated_salary(monthly_salary, start_date, end_date=None) -> Deci
     return prorated.quantize(Q, rounding=ROUND_HALF_UP)
 
 
+def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
+    """
+    Calculate payroll for a daily-paid worker.
+
+    Daily workers:
+    - Paid: daily_rate × days_worked
+    - No pension deduction (not covered by pension law)
+    - Tax calculated on gross (no pension deduction first)
+    - No allowances
+
+    Args:
+        daily_rate: Daily pay rate in ETB
+        days_worked: Number of days worked in the month
+
+    Returns:
+        Same dict structure as calculate_payroll
+    """
+    daily_rate = _D(daily_rate)
+    days_worked = _D(days_worked)
+
+    if daily_rate < 0:
+        raise ValueError(f"daily_rate cannot be negative: {daily_rate}")
+    if days_worked < 0:
+        days_worked = Decimal('0')
+
+    gross = (daily_rate * days_worked).quantize(Q, rounding=ROUND_HALF_UP)
+
+    # No pension for daily workers
+    emp_pen = Decimal('0')
+    empr_pen = Decimal('0')
+
+    # Tax on full gross (no pension deduction)
+    taxable = gross
+    tax = calculate_tax(taxable)
+
+    net = gross - tax
+
+    return {
+        'gross': gross,
+        'taxable': taxable.quantize(Q, rounding=ROUND_HALF_UP),
+        'tax': tax,
+        'pension_employee': emp_pen,
+        'pension_employer': empr_pen,
+        'net_before_deductions': net.quantize(Q, rounding=ROUND_HALF_UP),
+        'sick_leave_reduction': Decimal('0'),
+        'total_deductions': Decimal('0'),
+        'deduction_details': [],
+        'net': net.quantize(Q, rounding=ROUND_HALF_UP),
+        'tax_explanation': explain_tax_amharic(taxable),
+        'overtime_pay': Decimal('0'),
+        'overtime_total_hours': Decimal('0'),
+        'overtime_result': None,
+        'exempt_allowances': Decimal('0'),
+        'taxable_allowances': Decimal('0'),
+        'allowance_details': [],
+    }
+
+
 def calculate_payroll(basic_salary, allowances=Decimal('0'),
                       overtime_entries: list = None,
                       for_date=None,

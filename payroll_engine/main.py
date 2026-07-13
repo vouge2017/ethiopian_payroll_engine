@@ -370,6 +370,13 @@ def add_employee():
             allow = Decimal('0')
         bank_account = request.form.get('bank_account', '').strip() or None
         tin = request.form.get('tin', '').strip() or None
+        employee_type = request.form.get('employee_type', 'monthly').strip()
+        try:
+            daily_rate = Decimal(request.form.get('daily_rate', '0') or '0')
+        except (InvalidOperation, ValueError):
+            daily_rate = Decimal('0')
+        if employee_type not in ('monthly', 'daily'):
+            employee_type = 'monthly'
 
         # Validate and normalize phone
         phone = None
@@ -430,6 +437,8 @@ def add_employee():
             bank_account=bank_account,
             bank_or_telebirr=bank,
             tin=tin,
+            employee_type=employee_type,
+            daily_rate=daily_rate if employee_type == 'daily' else None,
             company_id=_company_id()
         )
         db.session.add(emp)
@@ -1301,11 +1310,18 @@ def payroll_spreadsheet():
         from payroll_engine.services.leave_service import get_sick_leave_pay_reduction
         sick_reduction = get_sick_leave_pay_reduction(emp, _company_id(), db.session)
 
-        result = calculate_payroll(
-            emp.basic_salary, emp.allowances,
-            overtime_entries=ot_list if ot_list else None,
-            sick_leave_reduction=sick_reduction + unpaid_deduction,
-        )
+        # Calculate payroll based on employee type
+        if emp.employee_type == 'daily' and emp.daily_rate:
+            from payroll_engine.payroll import calculate_daily_worker_payroll
+            # Daily workers: get days worked from attendance or default to 26
+            days_worked = 26  # Default; can be overridden by attendance system
+            result = calculate_daily_worker_payroll(emp.daily_rate, days_worked)
+        else:
+            result = calculate_payroll(
+                emp.basic_salary, emp.allowances,
+                overtime_entries=ot_list if ot_list else None,
+                sick_leave_reduction=sick_reduction + unpaid_deduction,
+            )
 
         total_gross += result['gross']
         total_tax += result['tax']

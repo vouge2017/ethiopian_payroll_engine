@@ -129,8 +129,8 @@ def test_reset_password_weak_password_rejected(client, ctx):
     db.session.commit()
 
     resp = client.post(f'/auth/reset-password/{token}', data={
-        'password': 'password',
-        'password2': 'password',
+        'password': 'Password1',
+        'password2': 'Password1',
     }, follow_redirects=True)
     assert resp.status_code == 200
     assert b'too common' in resp.data.lower()

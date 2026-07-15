@@ -209,7 +209,7 @@ def employee_detail(emp_id):
         id=emp_id, company_id=_company_id()
     ).first_or_404()
     payslips = Payslip.query.filter_by(employee_id=emp.id) \
-        .order_by(Payslip.generated_at.desc()).all()
+        .order_by(Payslip.generated_at.desc()).limit(50).all()
     # Overtime entries for current month
     today = date.today()
     month_start = today.replace(day=1)

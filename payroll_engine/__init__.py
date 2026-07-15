@@ -98,9 +98,19 @@ def create_app():
     app.config['LOG_LEVEL'] = os.environ.get('LOG_LEVEL', 'INFO').upper()
 
     _configure_logging(app)
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'json_serializer': lambda obj, **kwargs: __import__('json').dumps(obj, default=_json_serializer, **kwargs)
+    engine_options = {
+        'json_serializer': lambda obj, **kwargs: __import__('json').dumps(obj, default=_json_serializer, **kwargs),
     }
+    # Connection pooling (only for non-SQLite — SQLite in-memory doesn't support these)
+    db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if not db_url.startswith('sqlite'):
+        engine_options.update({
+            'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', '5')),
+            'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', '10')),
+            'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', '30')),
+            'pool_recycle': int(os.environ.get('SQLALCHEMY_POOL_RECYCLE', '300')),
+        })
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
     csrf.init_app(app)
     limiter.init_app(app)
     login_manager.init_app(app)

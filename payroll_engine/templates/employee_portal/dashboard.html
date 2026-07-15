@@ -50,7 +50,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>{{ _('recent_payslips') }}</h5>
-            <a href="{{ url_for('main.my_payslips') }}" class="btn btn-sm btn-light">{{ _('view_all') }}</a>
+            <a href="{{ url_for('portal.my_payslips') }}" class="btn btn-sm btn-light">{{ _('view_all') }}</a>
         </div>
         <div class="card-body p-0">
             {% if recent_payslips %}
@@ -73,7 +73,7 @@
                             <td>ETB {{ '%.2f'|format(p.tax + p.employee_pension) }}</td>
                             <td><strong>ETB {{ '%.2f'|format(p.net_pay) }}</strong></td>
                             <td>
-                                <a href="{{ url_for('main.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ url_for('portal.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 {% if p.pdf_file_path %}

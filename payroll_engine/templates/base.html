@@ -43,13 +43,13 @@
         <nav class="flex-column" id="sidebarNav" role="menu">
             {% if current_user.role == 'employee' %}
             <!-- Employee portal navigation -->
-            <a href="{{ url_for('main.employee_dashboard') }}" class="{% if request.endpoint == 'main.employee_dashboard' %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('portal.employee_dashboard') }}" class="{% if request.endpoint == 'portal.employee_dashboard' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-speedometer2 me-2"></i>{{ _('my_dashboard') }}
             </a>
-            <a href="{{ url_for('main.my_payslips') }}" class="{% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('portal.my_payslips') }}" class="{% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-receipt me-2"></i>{{ _('my_payslips') }}
             </a>
-            <a href="{{ url_for('main.my_profile') }}" class="{% if request.endpoint == 'main.my_profile' %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('portal.my_profile') }}" class="{% if request.endpoint == 'portal.my_profile' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-person me-2"></i>{{ _('my_profile') }}
             </a>
             {% else %}
@@ -74,14 +74,14 @@
             <a href="{{ url_for('main.leave_management') }}" class="{% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-calendar-event me-2"></i>Leave
             </a>
-            <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('reports.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-bar-chart me-2"></i>{{ _('reports') }}
-            <a href="{{ url_for('main.impact_calculator') }}" class="{% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('reports.impact_calculator') }}" class="{% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-calculator me-2"></i>Impact Calculator
             </a>
             </a>
             {% if current_user.role == 'owner' %}
-            <a href="{{ url_for('main.team_settings') }}" class="{% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('settings.team_settings') }}" class="{% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-gear me-2"></i>{{ _('team') }}
             </a>
             {% endif %}

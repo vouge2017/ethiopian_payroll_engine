@@ -4,7 +4,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
-            <a href="{{ url_for('main.reports') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            <a href="{{ url_for('reports.reports') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
             <i class="bi bi-shield-lock me-2"></i>Audit Log
         </h3>
         <span class="badge bg-secondary fs-6">{{ logs|length }} entries</span>
@@ -78,6 +78,6 @@
     </div>
     {% endif %}
     {% from "_pagination.html" import render_pagination %}
-    {{ render_pagination(pagination, 'main.audit_log') }}
+    {{ render_pagination(pagination, 'reports.audit_log') }}
 </div>
 {% endblock %}

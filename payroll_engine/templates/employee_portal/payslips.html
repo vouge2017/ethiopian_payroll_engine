@@ -4,7 +4,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
-            <a href="{{ url_for('main.employee_dashboard') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            <a href="{{ url_for('portal.employee_dashboard') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
             {{ _('my_payslips') }}
         </h3>
     </div>
@@ -34,7 +34,7 @@
                             <td>{{ '%.2f'|format(p.employee_pension) }}</td>
                             <td><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
                             <td>
-                                <a href="{{ url_for('main.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                <a href="{{ url_for('portal.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary me-1">
                                     <i class="bi bi-eye"></i> View
                                 </a>
                                 {% if p.pdf_file_path %}

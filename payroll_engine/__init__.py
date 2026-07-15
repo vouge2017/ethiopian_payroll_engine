@@ -180,6 +180,12 @@ def create_app():
         )
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
+    from .reports_bp import reports_bp
+    app.register_blueprint(reports_bp)
+    from .settings_bp import settings_bp
+    app.register_blueprint(settings_bp)
+    from .portal_bp import portal_bp
+    app.register_blueprint(portal_bp)
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
     @app.route('/healthz')

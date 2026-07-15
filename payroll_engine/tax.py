@@ -37,8 +37,11 @@ DEFAULT_BRACKETS: List[Tuple[Decimal, Decimal]] = [
 
 DEFAULT_PERSONAL_RELIEF = Decimal('150')  # ETB monthly personal relief
 
-# Cache for tax brackets (rules rarely change during a request)
+# Cache for tax brackets with TTL (5 minutes)
+# Rules can change via admin UI — cache must not persist stale data forever
 _brackets_cache = {}
+_brackets_cache_ttl = 300  # seconds
+_brackets_cache_timestamps = {}
 
 
 def _D(value) -> Decimal:
@@ -61,8 +64,15 @@ def _get_brackets_and_relief(for_date=None):
         (brackets: list of (Decimal, Decimal), personal_relief: Decimal)
     """
     cache_key = str(for_date) if for_date else 'default'
+    import time
+    now = time.time()
     if cache_key in _brackets_cache:
-        return _brackets_cache[cache_key]
+        cached_time = _brackets_cache_timestamps.get(cache_key, 0)
+        if now - cached_time < _brackets_cache_ttl:
+            return _brackets_cache[cache_key]
+        # Cache expired — invalidate
+        del _brackets_cache[cache_key]
+        del _brackets_cache_timestamps[cache_key]
 
     try:
         from payroll_engine.models import TaxRule
@@ -74,6 +84,7 @@ def _get_brackets_and_relief(for_date=None):
                 brackets.append((upper, _D(b['rate'])))
             result = (brackets, _D(rule.personal_relief))
             _brackets_cache[cache_key] = result
+            _brackets_cache_timestamps[cache_key] = now
             return result
     except Exception:
         # Database not available (e.g., during tests without app context)
@@ -81,6 +92,7 @@ def _get_brackets_and_relief(for_date=None):
 
     result = (DEFAULT_BRACKETS, DEFAULT_PERSONAL_RELIEF)
     _brackets_cache[cache_key] = result
+    _brackets_cache_timestamps[cache_key] = now
     return result
 
 

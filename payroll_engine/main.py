@@ -991,9 +991,12 @@ def approve_payroll():
         run.status = 'completed'
         db.session.commit()
 
-        # Compliance scoring
+        # Compliance scoring — use actual approval time as disbursement proxy
         run_date_str = run.run_date.isoformat()
-        score, status = compute_compliance_score(payroll_date=run_date_str)
+        score, status = compute_compliance_score(
+            payroll_date=run_date_str,
+            disbursement_date=run.approved_at.date().isoformat() if run.approved_at else None,
+        )
 
         # Audit log
         log = AuditLog(
@@ -1015,7 +1018,7 @@ def approve_payroll():
         PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
         db.session.commit()
 
-        flash(f'Payroll ready for review! {len(employees_data)} employees, compliance score {score}%. Review and approve to process.', 'success')
+        flash(f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%.', 'success')
         return redirect(url_for('main.payroll_run_detail', run_id=run.id))
 
     except Exception as e:

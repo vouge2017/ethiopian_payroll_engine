@@ -414,9 +414,13 @@ def _check_active_deductions(data: List[Dict], company_id: int,
                         hint='Reduce deduction amounts or stop one of the deductions.',
                     ))
 
-    except Exception:
-        # Database not available during tests or CSV-only validation
-        pass
+    except Exception as e:
+        # Database not available during tests or CSV-only validation.
+        # Log so operators can see when deduction checks silently skipped.
+        import logging
+        logging.getLogger('payroll_engine.validation').warning(
+            'Deduction validation skipped (DB unavailable): %s', e
+        )
 
 
 def get_summary(results: List[ValidationResult]) -> Dict[str, Any]:

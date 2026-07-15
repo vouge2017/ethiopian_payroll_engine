@@ -34,18 +34,18 @@ jobs:
 
       - name: Run tests
         env:
-          DATABASE_URL: sqlite:///:memory:
-          CELERY_BROKER_URL: memory://
-          SECRET_KEY: test-secret-key-for-ci-only
-          FLASK_ENV: testing
+          DATABASE_URL: "sqlite:///:memory:"
+          CELERY_BROKER_URL: "memory://"
+          SECRET_KEY: "test-secret-key-for-ci-only"
+          FLASK_ENV: "testing"
         run: |
           python -m pytest -v --tb=short
 
       - name: Verify app starts
         env:
-          DATABASE_URL: sqlite:///:memory:
-          CELERY_BROKER_URL: memory://
-          SECRET_KEY: test-secret-key-for-ci-only
-          FLASK_ENV: testing
+          DATABASE_URL: "sqlite:///:memory:"
+          CELERY_BROKER_URL: "memory://"
+          SECRET_KEY: "test-secret-key-for-ci-only"
+          FLASK_ENV: "testing"
         run: |
           python -c "from payroll_engine import create_app; app = create_app(); print('App created OK')"

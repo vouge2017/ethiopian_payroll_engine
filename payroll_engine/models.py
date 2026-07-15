@@ -248,6 +248,9 @@ class User(UserMixin, db.Model):
     # Password reset tokens
     reset_token_hash = db.Column(db.String(64), nullable=True)
     reset_token_expires = db.Column(db.DateTime, nullable=True)
+    # MFA / TOTP
+    totp_secret = db.Column(db.String(32), nullable=True)
+    mfa_enabled = db.Column(db.Boolean, default=False, nullable=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -288,6 +291,39 @@ class User(UserMixin, db.Model):
         """Invalidate the reset token after use."""
         self.reset_token_hash = None
         self.reset_token_expires = None
+
+    def generate_totp_secret(self) -> str:
+        """Generate a new TOTP secret and store it. Returns the secret."""
+        import pyotp
+        secret = pyotp.random_base32()
+        self.totp_secret = secret
+        return secret
+
+    def get_totp_uri(self, issuer: str = 'EthioPayroll') -> str:
+        """Get the TOTP provisioning URI for QR code generation."""
+        import pyotp
+        if not self.totp_secret:
+            return ''
+        totp = pyotp.TOTP(self.totp_secret)
+        identifier = self.phone or self.email or f'user-{self.id}'
+        return totp.provisioning_uri(name=identifier, issuer_name=issuer)
+
+    def verify_totp(self, code: str) -> bool:
+        """Verify a TOTP code. Returns True if valid."""
+        import pyotp
+        if not self.totp_secret or not self.mfa_enabled:
+            return True  # MFA not enabled — always pass
+        totp = pyotp.TOTP(self.totp_secret)
+        return totp.verify(code, valid_window=1)
+
+    def enable_mfa(self):
+        """Enable MFA after verifying the first code."""
+        self.mfa_enabled = True
+
+    def disable_mfa(self):
+        """Disable MFA and clear the secret."""
+        self.mfa_enabled = False
+        self.totp_secret = None
 
     def get_role_for_company(self, company_id):
         """Get user's role for a specific company."""

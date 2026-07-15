@@ -884,6 +884,13 @@ def approve_payroll():
         flash('Incorrect password. Approval cancelled.', 'danger')
         return redirect(url_for('main.payroll_confirm', run_id=int(run_id)))
 
+    # MFA verification (if enabled)
+    if current_user.mfa_enabled:
+        totp_code = request.form.get('totp_code', '').strip()
+        if not totp_code or not current_user.verify_totp(totp_code):
+            flash('Invalid MFA code. Approval cancelled.', 'danger')
+            return redirect(url_for('main.payroll_confirm', run_id=int(run_id)))
+
     # SELECT ... FOR UPDATE — prevents double-approval on concurrent requests
     run = PayrollRun.query.filter_by(
         id=int(run_id), company_id=_company_id()

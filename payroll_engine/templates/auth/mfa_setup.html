@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Set Up MFA — EthioPayroll{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 520px; margin-top: 2rem;">
+  <div class="card">
+    <h2>🔐 Set Up Two-Factor Authentication</h2>
+    <p>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.):</p>
+
+    <div class="text-center my-3">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ uri | urlencode }}"
+           alt="QR Code" class="border rounded" style="width: 200px; height: 200px;">
+    </div>
+
+    <p class="text-muted small">Can't scan? Enter this secret manually: <code>{{ secret }}</code></p>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label for="code">Verification Code</label>
+        <input type="text" id="code" name="code" class="form-control"
+               placeholder="Enter 6-digit code" pattern="[0-9]{6}" maxlength="6" required autofocus
+               autocomplete="one-time-code">
+        <div class="form-text">Enter the 6-digit code shown in your authenticator app to confirm setup.</div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Enable MFA</button>
+    </form>
+
+    <p style="margin-top: 1rem; text-align: center;">
+      <a href="{{ url_for('main.index') }}">Skip for now</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

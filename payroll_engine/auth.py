@@ -416,3 +416,76 @@ def reset_password(token):
         return redirect(url_for('auth.login'))
 
     return render_template('auth/reset_password.html', token=token)
+
+
+# --- MFA / TOTP Setup ---
+
+@auth.route('/mfa/setup', methods=['GET', 'POST'])
+@login_required
+def mfa_setup():
+    """Set up TOTP-based MFA."""
+    if current_user.mfa_enabled:
+        flash('MFA is already enabled.', 'info')
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        if not code:
+            flash('Please enter the 6-digit code from your authenticator app.', 'danger')
+            return redirect(url_for('auth.mfa_setup'))
+
+        # During setup, verify directly against the secret (not via verify_totp which bypasses when mfa_enabled=False)
+        import pyotp
+        totp = pyotp.TOTP(current_user.totp_secret)
+        if totp.verify(code, valid_window=1):
+            current_user.enable_mfa()
+            db.session.commit()
+            flash('MFA enabled successfully!', 'success')
+            return redirect(url_for('main.index'))
+        else:
+            flash('Invalid code. Please try again.', 'danger')
+            return redirect(url_for('auth.mfa_setup'))
+
+    # Generate secret if not already set
+    if not current_user.totp_secret:
+        current_user.generate_totp_secret()
+        db.session.commit()
+
+    uri = current_user.get_totp_uri()
+    return render_template('auth/mfa_setup.html', uri=uri, secret=current_user.totp_secret)
+
+
+@auth.route('/mfa/verify', methods=['GET', 'POST'])
+@login_required
+def mfa_verify():
+    """Verify TOTP code before sensitive action (e.g., payroll approval)."""
+    next_url = request.args.get('next', '') or request.form.get('next', '')
+
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        if current_user.verify_totp(code):
+            # Mark MFA as verified for this session
+            from flask import session
+            session['mfa_verified'] = True
+            if next_url:
+                from payroll_engine.security import safe_redirect_target
+                return redirect(safe_redirect_target(next_url))
+            return redirect(url_for('main.index'))
+        else:
+            flash('Invalid code. Please try again.', 'danger')
+
+    return render_template('auth/mfa_verify.html', next_url=next_url)
+
+
+@auth.route('/mfa/disable', methods=['POST'])
+@login_required
+def mfa_disable():
+    """Disable MFA (requires current TOTP code)."""
+    code = request.form.get('code', '').strip()
+    if not current_user.verify_totp(code):
+        flash('Invalid code. MFA was not disabled.', 'danger')
+        return redirect(url_for('main.index'))
+    current_user.disable_mfa()
+    db.session.commit()
+    flash('MFA disabled.', 'info')
+    return redirect(url_for('main.index'))

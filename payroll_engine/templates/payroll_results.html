@@ -44,6 +44,28 @@
                 </button>
             </form>
             {% endif %}
+
+            <!-- Disbursement tracking -->
+            {% if run.status == 'completed' and run.disbursement_status == 'pending' %}
+            <form method="POST" action="{{ url_for('payroll.mark_disbursed', run_id=run.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-info" title="Mark as disbursed — bank file has been sent">
+                    <i class="bi bi-bank me-1"></i> Mark Disbursed
+                </button>
+            </form>
+            {% elif run.disbursement_status == 'disbursed' %}
+            <span class="badge bg-info"><i class="bi bi-bank me-1"></i> Disbursed</span>
+            <form method="POST" action="{{ url_for('payroll.confirm_payment', run_id=run.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-success" title="Confirm bank has processed payment">
+                    <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                </button>
+            </form>
+            {% elif run.disbursement_status == 'confirmed' %}
+            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Payment Confirmed</span>
+            {% elif run.disbursement_status == 'failed' %}
+            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Payment Failed</span>
+            {% endif %}
         </div>
     </div>
 

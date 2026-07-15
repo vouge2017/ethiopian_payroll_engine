@@ -199,7 +199,11 @@ class TenantQuery(db.Query):
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    is_demo = db.Column(db.Boolean, default=False, nullable=False)  # Demo companies flagged
+    address = db.Column(db.String(300), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    tin = db.Column(db.String(20), nullable=True)  # Tax Identification Number
+    logo_path = db.Column(db.String(500), nullable=True)  # Path to uploaded logo
+    is_demo = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -390,6 +394,8 @@ class Employee(db.Model):
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    invite_token = db.Column(db.String(64), nullable=True, unique=True)
+    invite_expires = db.Column(db.DateTime, nullable=True)
 
     # employee_id is unique PER TENANT, not globally
     __table_args__ = (
@@ -571,6 +577,10 @@ class PayrollRun(db.Model):
     approval_ip = db.Column(db.String(45), nullable=True)
     locked_at = db.Column(db.DateTime, nullable=True)
     locked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    disbursement_status = db.Column(db.String(20), nullable=False, default='pending')  # pending, file_downloaded, disbursed, confirmed, failed
+    disbursed_at = db.Column(db.DateTime, nullable=True)
+    disbursed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    disbursement_notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships

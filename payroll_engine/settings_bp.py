@@ -17,6 +17,41 @@ def _require_company():
         return redirect(url_for('main.setup_company'))
 
 
+@settings_bp.route('/settings/company', methods=['GET', 'POST'])
+@role_required('owner')
+def company_profile():
+    """Edit company branding: name, address, TIN, logo."""
+    import os
+    from werkzeug.utils import secure_filename
+
+    company = Company.query.get(_company_id())
+
+    if request.method == 'POST':
+        company.name = request.form.get('name', company.name).strip()
+        company.address = request.form.get('address', '').strip() or None
+        company.phone = request.form.get('phone', '').strip() or None
+        company.tin = request.form.get('tin', '').strip() or None
+
+        # Handle logo upload
+        logo = request.files.get('logo')
+        if logo and logo.filename:
+            filename = secure_filename(logo.filename)
+            if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                flash('Logo must be a PNG or JPG image.', 'danger')
+                return redirect(url_for('settings.company_profile'))
+            upload_dir = os.path.join('payroll_engine', 'static', 'uploads', 'logos')
+            os.makedirs(upload_dir, exist_ok=True)
+            filepath = os.path.join(upload_dir, f'logo_{company.id}_{filename}')
+            logo.save(filepath)
+            company.logo_path = f'uploads/logos/logo_{company.id}_{filename}'
+
+        db.session.commit()
+        flash('Company profile updated.', 'success')
+        return redirect(url_for('settings.company_profile'))
+
+    return render_template('company_profile.html', company=company)
+
+
 @settings_bp.route('/settings/team')
 @role_required('owner')
 def team_settings():

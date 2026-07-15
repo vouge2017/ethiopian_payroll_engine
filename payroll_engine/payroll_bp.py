@@ -831,6 +831,78 @@ def unlock_payroll(run_id):
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 
+@payroll_bp.route('/payroll/runs/<int:run_id>/disburse', methods=['POST'])
+@login_required
+@role_required('owner')
+def mark_disbursed(run_id):
+    """Mark a payroll run as disbursed (bank file sent to bank)."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+    if run.status != 'completed':
+        flash('Only completed runs can be marked as disbursed.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    notes = request.form.get('notes', '').strip()
+    run.disbursement_status = 'disbursed'
+    run.disbursed_at = datetime.utcnow()
+    run.disbursed_by = current_user.id
+    run.disbursement_notes = notes or None
+
+    from payroll_engine.shared import create_audit_log, create_notification
+    create_audit_log(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='payroll_disbursed',
+        details={'run_id': run.id, 'reference': run.reference, 'notes': notes}
+    )
+    create_notification(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        message=f'Payroll {run.reference} marked as disbursed.',
+        type='info',
+        link=f'/payroll/runs/{run.id}',
+    )
+    db.session.commit()
+
+    flash(f'Payroll {run.reference} marked as disbursed. Bank file has been sent.', 'success')
+    return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>/confirm-payment', methods=['POST'])
+@login_required
+@role_required('owner')
+def confirm_payment(run_id):
+    """Confirm that bank has processed the payment."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+    if run.disbursement_status != 'disbursed':
+        flash('Can only confirm disbursed runs.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    run.disbursement_status = 'confirmed'
+
+    from payroll_engine.shared import create_audit_log, create_notification
+    create_audit_log(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='payment_confirmed',
+        details={'run_id': run.id, 'reference': run.reference}
+    )
+    create_notification(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        message=f'Payment confirmed for payroll {run.reference}.',
+        type='success',
+        link=f'/payroll/runs/{run.id}',
+    )
+    db.session.commit()
+
+    flash(f'Payment confirmed for {run.reference}.', 'success')
+    return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+
 @payroll_bp.route('/payroll/register')
 @login_required
 @role_required('owner', 'accountant')

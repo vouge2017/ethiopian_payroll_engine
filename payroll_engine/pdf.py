@@ -14,20 +14,19 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor, black, white
 from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Register NotoSansEthiopic font (covers both Ethiopic and Latin glyphs)
+# Register NotoSansEthiopic font
 _FONT_DIR = os.path.join(os.path.dirname(__file__), 'fonts')
 _FONT_PATH = os.path.join(_FONT_DIR, 'NotoSansEthiopic-Regular.ttf')
 _FONT_REGISTERED = False
 
 def _ensure_font():
-    """Register the font once. Safe to call multiple times."""
     global _FONT_REGISTERED
     if _FONT_REGISTERED:
         return
@@ -35,28 +34,26 @@ def _ensure_font():
         pdfmetrics.registerFont(TTFont('NotoSansEthiopic', _FONT_PATH))
         _FONT_REGISTERED = True
 
-# Register on module load
 _ensure_font()
 
-# Font names — use NotoSansEthiopic for everything (covers Latin + Ethiopic)
 FONT = 'NotoSansEthiopic'
-FONT_BOLD = 'NotoSansEthiopic'  # No bold variant available; same font
-
 PRIMARY = HexColor('#1a5276')
 ACCENT = HexColor('#2e86c1')
 LIGHT_BG = HexColor('#eaf2f8')
 DARK_BG = HexColor('#1a5276')
+NET_BG = HexColor('#148f77')
 
 
-def generate_payslip(emp: dict, output_dir: str = None) -> str:
+def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) -> str:
     """
     Generate a PDF payslip for a single employee.
 
     Args:
         emp: Employee dict with keys: id, name, basic, allowances, gross,
              tax, pension_employee, pension_employer, net, bank,
-             tax_explanation
-        output_dir: Directory to save PDF (defaults to current directory)
+             tax_explanation, department, position, period
+        output_dir: Directory to save PDF
+        company: Company dict with keys: name, address, phone, tin, logo_path
 
     Returns:
         Absolute path to the generated PDF file
@@ -70,103 +67,175 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
     filename = f"payslip_{emp['id']}_{date.today().strftime('%Y%m%d')}.pdf"
     filepath = os.path.join(output_dir, filename)
 
+    # Company defaults
+    company = company or {}
+    company_name = company.get('name', 'Company')
+    company_address = company.get('address', '')
+    company_tin = company.get('tin', '')
+    company_phone = company.get('phone', '')
+    logo_path = company.get('logo_path', '')
+
+    # Employee defaults
+    department = emp.get('department', '')
+    position = emp.get('position', '')
+    period = emp.get('period', date.today().strftime('%B %Y'))
+
     doc = SimpleDocTemplate(
         filepath,
         pagesize=A4,
-        rightMargin=20 * mm,
-        leftMargin=20 * mm,
-        topMargin=20 * mm,
-        bottomMargin=20 * mm,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=15 * mm,
+        bottomMargin=15 * mm,
     )
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         'CustomTitle', parent=styles['Title'],
-        fontName=FONT, textColor=PRIMARY, fontSize=18, spaceAfter=4
+        fontName=FONT, textColor=PRIMARY, fontSize=16, spaceAfter=2
     )
     subtitle_style = ParagraphStyle(
         'CustomSubtitle', parent=styles['Normal'],
         fontName=FONT, textColor=ACCENT, fontSize=10,
-        alignment=TA_CENTER, spaceAfter=12
+        alignment=TA_CENTER, spaceAfter=6
     )
     section_style = ParagraphStyle(
         'Section', parent=styles['Heading3'],
-        fontName=FONT, textColor=PRIMARY, fontSize=11,
-        spaceBefore=10, spaceAfter=4
+        fontName=FONT, textColor=PRIMARY, fontSize=10,
+        spaceBefore=8, spaceAfter=3
     )
     normal_style = ParagraphStyle(
         'NormalCustom', parent=styles['Normal'],
-        fontName=FONT, fontSize=9, spaceAfter=2
+        fontName=FONT, fontSize=8, spaceAfter=2
+    )
+    label_style = ParagraphStyle(
+        'Label', parent=styles['Normal'],
+        fontName=FONT, fontSize=8, textColor=PRIMARY
+    )
+    value_style = ParagraphStyle(
+        'Value', parent=styles['Normal'],
+        fontName=FONT, fontSize=8
     )
 
     elements = []
 
-    # Header
-    elements.append(Paragraph("ETHIOPIAN PAYROLL ENGINE", title_style))
-    elements.append(Paragraph("Monthly Payslip / ወርሃዊ ደመወዝ ወረቀት", subtitle_style))
-    elements.append(Spacer(1, 8))
+    # ── HEADER: Logo + Company Info ──
+    header_data = []
 
-    # Employee Info Table
+    # Logo column
+    if logo_path and os.path.exists(logo_path):
+        try:
+            logo_img = Image(logo_path, height=18 * mm, width=18 * mm)
+            logo_img.hAlign = 'LEFT'
+        except Exception:
+            logo_img = Paragraph(f"<b>{company_name[0]}</b>", title_style)
+    else:
+        # First letter circle as placeholder
+        logo_img = Paragraph(
+            f'<font size="20" color="#1a5276"><b>{company_name[0].upper()}</b></font>',
+            ParagraphStyle('LogoLetter', alignment=TA_CENTER, fontName=FONT)
+        )
+
+    # Company info column
+    company_lines = [f"<b>{company_name}</b>"]
+    if company_address:
+        company_lines.append(company_address)
+    if company_tin:
+        company_lines.append(f"TIN: {company_tin}")
+    if company_phone:
+        company_lines.append(f"Tel: {company_phone}")
+    company_info = Paragraph("<br/>".join(company_lines),
+                             ParagraphStyle('CompanyInfo', fontName=FONT, fontSize=9, alignment=TA_LEFT))
+
+    # Period column
+    period_info = Paragraph(
+        f"<b>Payslip</b><br/>{period}",
+        ParagraphStyle('Period', fontName=FONT, fontSize=9, alignment=TA_RIGHT, textColor=PRIMARY)
+    )
+
+    header_data.append([logo_img, company_info, period_info])
+    header_table = Table(header_data, colWidths=[22 * mm, 100 * mm, 48 * mm])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+        ('ALIGN', (2, 0), (2, 0), 'RIGHT'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(header_table)
+
+    # Divider line
+    divider = Table([['']], colWidths=[170 * mm], rowHeights=[1])
+    divider.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 1.5, PRIMARY),
+    ]))
+    elements.append(divider)
+    elements.append(Spacer(1, 6))
+
+    # ── EMPLOYEE INFO ──
     info_data = [
-        ['Employee ID / መለያ:', emp['id'],
-         'Date / ቀን:', datetime.now().strftime('%Y-%m-%d')],
-        ['Name / ስም:', emp['name'],
-         'Department / ክፍል:', 'General'],
+        ['Employee ID:', emp['id'], 'Name:', emp['name']],
+        ['Department:', department or '—', 'Position:', position or '—'],
+        ['Pay Period:', period, 'Payment Method:', emp.get('bank', '—')],
     ]
-    info_table = Table(info_data, colWidths=[35 * mm, 50 * mm, 35 * mm, 50 * mm])
+    info_table = Table(info_data, colWidths=[28 * mm, 55 * mm, 28 * mm, 59 * mm])
     info_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), FONT),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('TEXTCOLOR', (0, 0), (0, -1), PRIMARY),
         ('TEXTCOLOR', (2, 0), (2, -1), PRIMARY),
         ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
         ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BACKGROUND', (0, 0), (-1, -1), LIGHT_BG),
     ]))
     elements.append(info_table)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 8))
 
-    # Earnings
-    elements.append(Paragraph("Earnings / ገቢ", section_style))
+    # ── EARNINGS ──
+    elements.append(Paragraph("Earnings", section_style))
     earnings_data = [
-        ['Description / መግለጫ', 'Amount (ETB) / መጠን (ብር)'],
-        ['Basic Salary / መሰረታዊ ደመወዝ', f"{emp['basic']:,.2f}"],
-        ['Allowances / አበሪዎች', f"{emp['allowances']:,.2f}"],
-        ['Gross Salary / ጠቅላይ ደመወዝ', f"{emp['gross']:,.2f}"],
+        ['Description', 'Amount (ETB)'],
+        ['Basic Salary', f"{emp['basic']:,.2f}"],
     ]
-    earnings_table = Table(earnings_data, colWidths=[100 * mm, 70 * mm])
+    if emp.get('allowances', 0) > 0:
+        earnings_data.append(['Allowances', f"{emp['allowances']:,.2f}"])
+    if emp.get('ot_pay', 0) > 0:
+        earnings_data.append(['Overtime', f"{emp['ot_pay']:,.2f}"])
+    earnings_data.append(['Gross Salary', f"{emp['gross']:,.2f}"])
+
+    earnings_table = Table(earnings_data, colWidths=[110 * mm, 60 * mm])
     earnings_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), DARK_BG),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
         ('FONTNAME', (0, 0), (-1, -1), FONT),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('BACKGROUND', (0, -1), (-1, -1), LIGHT_BG),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
     elements.append(earnings_table)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 6))
 
-    # Deductions
-    elements.append(Paragraph("Deductions / ከፊዎች", section_style))
+    # ── DEDUCTIONS ──
+    elements.append(Paragraph("Deductions", section_style))
     deductions_data = [
-        ['Description / መግለጫ', 'Amount (ETB) / መጠን (ብር)'],
+        ['Description', 'Amount (ETB)'],
     ]
 
-    # Pension line
+    # Pension
     deductions_data.append(
-        ['Employee Pension (7%) / የሰራተኛ እቅድ', f"{emp['pension_employee']:,.2f}"]
+        ['Employee Pension (7%)', f"{emp['pension_employee']:,.2f}"]
     )
 
-    # Tax line with bracket breakdown if available
+    # Tax with bracket breakdown
     tax_breakdown = emp.get('tax_breakdown')
     if tax_breakdown and tax_breakdown.get('brackets'):
         deductions_data.append(
-            [f"Income Tax / የገቢ ታክስ", f"{emp['tax']:,.2f}"]
+            ['Income Tax', f"{emp['tax']:,.2f}"]
         )
-        # Add bracket lines (indented)
         for b in tax_breakdown['brackets']:
             if b['rate_pct'] == 0:
                 label = f"  {b['rate_pct']}% on first {b['upper']:,.0f}"
@@ -177,63 +246,63 @@ def generate_payslip(emp: dict, output_dir: str = None) -> str:
             deductions_data.append([label, f"{b['bracket_tax']:,.2f}"])
         if tax_breakdown.get('personal_relief', 0) > 0:
             deductions_data.append(
-                ['  Personal relief / የግል ነፃ እረፍት', f"-{tax_breakdown['personal_relief']:,.2f}"]
+                ['  Personal Relief', f"-{tax_breakdown['personal_relief']:,.2f}"]
             )
     else:
         deductions_data.append(
-            ['Income Tax / የገቢ ታክስ', f"{emp['tax']:,.2f}"]
+            ['Income Tax', f"{emp['tax']:,.2f}"]
         )
 
+    total_deductions = emp['tax'] + emp['pension_employee']
     deductions_data.append(
-        ['Total Deductions / ጠቅላይ ከፊዎች',
-         f"{emp['tax'] + emp['pension_employee']:,.2f}"]
+        ['Total Deductions', f"{total_deductions:,.2f}"]
     )
-    deductions_table = Table(deductions_data, colWidths=[100 * mm, 70 * mm])
+    deductions_table = Table(deductions_data, colWidths=[110 * mm, 60 * mm])
     deductions_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), DARK_BG),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
         ('FONTNAME', (0, 0), (-1, -1), FONT),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('BACKGROUND', (0, -1), (-1, -1), LIGHT_BG),
         ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
     elements.append(deductions_table)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 8))
 
-    # Net Pay
-    elements.append(Paragraph("Net Pay / ንፅ ደመወዝ", section_style))
-    net_data = [['Net Pay / ንፅ ደመወዝ (ETB)', f"{emp['net']:,.2f}"]]
-    net_table = Table(net_data, colWidths=[100 * mm, 70 * mm])
+    # ── NET PAY ──
+    net_data = [['NET PAY (ETB)', f"{emp['net']:,.2f}"]]
+    net_table = Table(net_data, colWidths=[110 * mm, 60 * mm])
     net_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), PRIMARY),
+        ('BACKGROUND', (0, 0), (-1, -1), NET_BG),
         ('TEXTCOLOR', (0, 0), (-1, -1), white),
         ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('TOPPADDING', (0, 0), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
     ]))
     elements.append(net_table)
-    elements.append(Spacer(1, 15))
+    elements.append(Spacer(1, 12))
 
-    # Payment method
-    payment_method = emp.get('bank', 'Not specified')
+    # ── FOOTER ──
+    footer_style = ParagraphStyle(
+        'Footer', parent=styles['Normal'],
+        fontName=FONT, fontSize=7, textColor=HexColor('#888888'),
+        alignment=TA_CENTER
+    )
     elements.append(Paragraph(
-        f"Payment Method / የክፍያ ዘዴ: {payment_method}",
-        normal_style
+        f"This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።",
+        footer_style
     ))
-    elements.append(Spacer(1, 10))
-
-    # Footer
-    elements.append(Paragraph(
-        "This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።",
-        ParagraphStyle('Footer', parent=styles['Normal'],
-                       fontName=FONT, fontSize=7,
-                       textColor=HexColor('#888888'), alignment=TA_CENTER)
-    ))
+    if company_tin:
+        elements.append(Paragraph(
+            f"{company_name} — TIN: {company_tin}",
+            footer_style
+        ))
 
     doc.build(elements)
     return filepath

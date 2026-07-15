@@ -3,10 +3,11 @@
 Extracted from payroll_bp.py to separate business logic from HTTP handling.
 The route handler handles auth/flash/redirects; this service handles the data.
 """
+import os
 from datetime import datetime
 from payroll_engine import db
 from payroll_engine.models import (
-    Employee, PayrollRun, Payslip, PayrollDraft,
+    Company, Employee, PayrollRun, Payslip, PayrollDraft,
     PayrollValidationResult,
 )
 from payroll_engine.pdf import generate_payslip
@@ -74,6 +75,16 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         )
     employees_data = draft.employee_data
 
+    # Load company info for payslip branding
+    company = Company.query.get(company_id)
+    company_info = {
+        'name': company.name if company else 'Company',
+        'address': company.address if company else '',
+        'tin': company.tin if company else '',
+        'phone': company.phone if company else '',
+        'logo_path': os.path.join('payroll_engine', 'static', company.logo_path) if company and company.logo_path else '',
+    }
+
     try:
         run.status = 'processing'
         run.approved_by = user_id
@@ -112,8 +123,14 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     emp.tin = emp_data['tin']
                 db.session.flush()
 
+            # Enrich emp_data with employee details for PDF
+            emp_data_enriched = dict(emp_data)
+            emp_data_enriched['department'] = emp.department if emp else ''
+            emp_data_enriched['position'] = emp.position if emp else ''
+            emp_data_enriched['period'] = run.period or run.run_date.strftime('%B %Y') if run.run_date else ''
+
             # Generate PDF
-            pdf_path = generate_payslip(emp_data)
+            pdf_path = generate_payslip(emp_data_enriched, company=company_info)
 
             payslip = Payslip(
                 payroll_run_id=run.id,

@@ -11,6 +11,16 @@
         <div>
             <span class="badge bg-secondary me-2">{{ employee.employee_id }}</span>
             {% if not employee.is_deleted %}
+            {% if not employee.user_id %}
+            <form method="POST" action="{{ url_for('employees.generate_invite', emp_id=employee.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-info me-1" title="Generate invite link for employee to create their own account">
+                    <i class="bi bi-link-45deg me-1"></i> Invite
+                </button>
+            </form>
+            {% else %}
+            <span class="badge bg-success me-1"><i class="bi bi-person-check"></i> Has Account</span>
+            {% endif %}
             <a href="{{ url_for('employees.edit_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-primary me-1">
                 <i class="bi bi-pencil me-1"></i>Edit
             </a>

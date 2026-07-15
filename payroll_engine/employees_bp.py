@@ -105,6 +105,105 @@ def export_employees():
     )
 
 
+@employees_bp.route('/employees/<int:emp_id>/invite', methods=['POST'])
+@role_required('owner', 'accountant')
+def generate_invite(emp_id):
+    """Generate an invite link for an employee to self-register."""
+    import secrets
+    from datetime import timedelta
+
+    emp = Employee.query.filter_by(
+        id=emp_id, company_id=_company_id(), is_deleted=False
+    ).first_or_404()
+
+    if emp.user_id:
+        flash('This employee already has an account.', 'warning')
+        return redirect(url_for('employees.employee_detail', emp_id=emp.id))
+
+    # Generate token
+    token = secrets.token_urlsafe(32)
+    emp.invite_token = token
+    emp.invite_expires = datetime.utcnow() + timedelta(hours=48)
+    db.session.commit()
+
+    invite_url = f'{request.host_url}employees/accept-invite/{token}'
+
+    create_notification(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        message=f'Invite link generated for {emp.name}. Share it with them.',
+        type='info',
+    )
+    db.session.commit()
+
+    flash(f'Invite link generated for {emp.name}. Share this link: {invite_url}', 'success')
+    return redirect(url_for('employees.employee_detail', emp_id=emp.id))
+
+
+@employees_bp.route('/employees/accept-invite/<token>', methods=['GET', 'POST'])
+def accept_invite(token):
+    """Employee accepts invite and creates their account."""
+    from payroll_engine.models import User
+    from payroll_engine.password_policy import check_password_strength
+
+    emp = Employee.query.filter_by(invite_token=token).first()
+    if not emp or not emp.invite_expires:
+        flash('Invalid or expired invite link.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    if datetime.utcnow() > emp.invite_expires:
+        flash('This invite link has expired. Ask your admin for a new one.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    if emp.user_id:
+        flash('This employee already has an account.', 'info')
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'POST':
+        phone = request.form.get('phone', '').strip()
+        password = request.form.get('password', '')
+        password2 = request.form.get('password2', '')
+
+        if not phone or not password:
+            flash('Phone and password are required.', 'danger')
+            return render_template('auth/accept_invite.html', token=token, emp=emp)
+
+        if password != password2:
+            flash('Passwords do not match.', 'danger')
+            return render_template('auth/accept_invite.html', token=token, emp=emp)
+
+        is_strong, error = check_password_strength(password)
+        if not is_strong:
+            flash(error, 'danger')
+            return render_template('auth/accept_invite.html', token=token, emp=emp)
+
+        # Check duplicate phone
+        if User.query.filter_by(phone=phone).first():
+            flash('This phone number is already registered.', 'danger')
+            return render_template('auth/accept_invite.html', token=token, emp=emp)
+
+        # Create user account
+        user = User(
+            phone=phone,
+            company_id=emp.company_id,
+            role='employee',
+        )
+        user.set_password(password)
+        db.session.add(user)
+        db.session.flush()
+
+        # Link to employee
+        emp.user_id = user.id
+        emp.invite_token = None
+        emp.invite_expires = None
+        db.session.commit()
+
+        flash('Account created! You can now log in.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/accept_invite.html', token=token, emp=emp)
+
+
 @employees_bp.route('/employees/add', methods=['GET', 'POST'])
 @role_required('owner', 'accountant')
 def add_employee():

@@ -1,0 +1,1072 @@
+import csv as csv_module
+import uuid
+from payroll_engine.validation import validate_payroll_data, get_summary
+from payroll_engine.models import PayrollValidationResult
+
+
+@payroll_bp.route('/payroll/template')
+@login_required
+@role_required('owner', 'accountant')
+def download_csv_template():
+    """Download a CSV template with example data."""
+    import csv
+    import io
+    from flask import Response
+    from payroll_engine.security import prevent_csv_injection
+
+    output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM for Excel compatibility
+    writer = csv.writer(output)
+
+    # Comment rows (ignored by most CSV parsers)
+    writer.writerow(['# bank_account format: bank_name:account_number'])
+    writer.writerow(['# supported banks: cbe, dashen, awash, telebirr'])
+    writer.writerow([])
+
+    # Headers
+    writer.writerow(['employee_id', 'name', 'tin', 'basic_salary', 'allowances',
+                     'bank_account', 'department', 'position'])
+
+    # Example data — values are plain but the function is wired for future use
+    writer.writerow([
+        prevent_csv_injection('EMP001'),
+        prevent_csv_injection('Dawit Mekonnen'),
+        prevent_csv_injection('1234567890'),
+        '10000', '2000',
+        prevent_csv_injection('cbe:1000123456789'),
+        prevent_csv_injection('Sales'),
+        prevent_csv_injection('Sales Manager'),
+    ])
+    writer.writerow([
+        prevent_csv_injection('EMP002'),
+        prevent_csv_injection('Hana Tesfaye'),
+        prevent_csv_injection('0987654321'),
+        '5000', '500',
+        prevent_csv_injection('dashen:2000987654321'),
+        prevent_csv_injection('Factory'),
+        prevent_csv_injection('Worker'),
+    ])
+    writer.writerow([
+        prevent_csv_injection('EMP003'),
+        prevent_csv_injection('Kebede Alemu'),
+        prevent_csv_injection('1122334455'),
+        '15000', '3000',
+        prevent_csv_injection('awash:3000112233445'),
+        prevent_csv_injection('Finance'),
+        prevent_csv_injection('Accountant'),
+    ])
+
+    csv_content = output.getvalue()
+    return Response(
+        csv_content,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename=payroll_template.csv'}
+    )
+
+
+@payroll_bp.route('/payroll/prefilled-csv')
+@login_required
+@role_required('owner', 'accountant')
+def download_prefilled_csv():
+    """Download CSV pre-filled with current employee data."""
+    import csv
+    import io
+    from flask import Response
+    from payroll_engine.security import prevent_csv_injection
+
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM
+    writer = csv.writer(output)
+    writer.writerow(['# Pre-filled with your current employees. Update salaries and upload.'])
+    writer.writerow(['# bank_account format: bank_name:account_number'])
+    writer.writerow([])
+    writer.writerow(['employee_id', 'name', 'tin', 'basic_salary', 'allowances',
+                     'bank_account', 'department', 'position'])
+
+    for emp in employees:
+        writer.writerow([
+            prevent_csv_injection(emp.employee_id or ''),
+            prevent_csv_injection(emp.name or ''),
+            prevent_csv_injection(emp.tin or ''),
+            str(emp.basic_salary or 0),
+            str(emp.allowances or 0),
+            prevent_csv_injection(emp.bank_account or emp.bank_or_telebirr or ''),
+            prevent_csv_injection(emp.department or ''),
+            prevent_csv_injection(emp.position or ''),
+        ])
+
+    if not employees:
+        writer.writerow(['EMP001', 'Example Employee', '1234567890', '5000', '0', '', '', ''])
+
+    csv_content = output.getvalue()
+    return Response(
+        csv_content,
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename=payroll_prefilled.csv'}
+    )
+
+
+@payroll_bp.route('/payroll', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def payroll_upload():
+    """
+    Upload CSV for payroll processing.
+    Creates a DRAFT payroll run and runs validation before any money moves.
+    """
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file selected.', 'danger')
+            return redirect(request.url)
+
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected.', 'danger')
+            return redirect(request.url)
+
+        if not file.filename.lower().endswith('.csv'):
+            flash('Only CSV files are allowed.', 'danger')
+            return redirect(request.url)
+
+        # MIME sniffing — reject non-CSV content
+        mime_header = file.read(512)
+        file.seek(0)
+        if mime_header and not mime_header[:1] in (b'\xef', b'#', b'"', b'\r', b'\n', b' '):
+            decoded = mime_header.decode('utf-8', errors='replace')
+            first_non_space = decoded.lstrip()[:1]
+            if first_non_space and first_non_space not in ('e', 'n', 'b', 'a', 'p', 'd', ',', '"', '#', '\ufeff'):
+                flash('File does not appear to be a valid CSV.', 'danger')
+                return redirect(request.url)
+
+        # Save file
+        filename = secure_filename(file.filename)
+        filename = f"{uuid.uuid4().hex[:8]}_{filename}"
+        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        try:
+            employees_data, row_errors = parse_and_calculate_payroll(filepath)
+
+            limit_msg = check_csv_row_limit(employees_data)
+            if limit_msg:
+                flash(limit_msg, 'danger')
+                return redirect(request.url)
+
+            if row_errors:
+                for err in row_errors[:5]:
+                    flash(err, 'warning')
+                if len(row_errors) > 5:
+                    flash(f'... and {len(row_errors) - 5} more row error(s).', 'warning')
+
+            if not employees_data:
+                raise ValueError('No valid data rows in CSV')
+
+            previous_payslips = get_previous_payslips(_company_id())
+
+            validation_results = validate_payroll_data(
+                employees_data,
+                company_id=_company_id(),
+                previous_payslips=previous_payslips,
+            )
+            summary = get_summary(validation_results)
+
+            period_str = build_period_string()
+            dup = check_duplicate_period(
+                _company_id(),
+                period_str,
+            )
+            if dup:
+                flash(dup[0], 'danger')
+                return redirect(url_for('main.payroll_runs'))
+
+            result = create_payroll_run(
+                company_id=_company_id(),
+                employees_data=employees_data,
+                validation_results=validation_results,
+            )
+
+            return render_template(
+                'validation_results.html',
+                run_id=result['run_id'],
+                results=result['validation_results'],
+                summary=summary,
+                employees=result['employees_data'],
+                total_gross=result['total_gross'],
+                total_tax=result['total_tax'],
+                total_net=result['total_net'],
+                year=date.today().year,
+            )
+
+        except Exception as e:
+            log_and_flash_error(
+                'Could not process the payroll file. Please check the CSV and try again.',
+                e,
+            )
+            return redirect(request.url)
+
+    return render_template('payroll_upload.html', year=date.today().year)
+
+
+@payroll_bp.route('/payroll/<int:run_id>/confirm')
+@login_required
+@role_required('owner', 'accountant')
+def payroll_confirm(run_id):
+    """Show confirmation page before approval. Password re-auth required."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+    if run.status != 'review':
+        flash('This payroll run is not in review status.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    employees_data = draft.employee_data if draft else []
+    total_gross = sum(e.get('gross', 0) for e in employees_data)
+    total_tax = sum(e.get('tax', 0) for e in employees_data)
+    total_pension = sum(e.get('pension_employee', 0) for e in employees_data)
+    total_net = sum(e.get('net', 0) for e in employees_data)
+    blocks = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='BLOCK'
+    ).filter(PayrollValidationResult.overridden == False).all()
+    flags = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='FLAG'
+    ).all()
+    # Add tax breakdown for each employee
+    from payroll_engine.tax import calculate_tax_breakdown
+    for emp in employees_data:
+        taxable = emp.get('gross', 0) - emp.get('pension_employee', 0)
+        emp['tax_breakdown'] = calculate_tax_breakdown(taxable)
+
+    return render_template('payroll_confirm.html',
+                           run=run,
+                           employees=employees_data,
+                           employee_count=len(employees_data),
+                           total_gross=round(total_gross, 2),
+                           total_tax=round(total_tax, 2),
+                           total_pension=round(total_pension, 2),
+                           total_net=round(total_net, 2),
+                           blocks=blocks, flags=flags)
+
+
+@payroll_bp.route('/payroll/<int:run_id>/reject', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def reject_payroll(run_id):
+    """Reject a payroll run and send back to draft with reason."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+    if run.status != 'review':
+        flash('Can only reject payroll in review status.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    reason = request.form.get('reason', '').strip()
+    if not reason:
+        flash('Please provide a reason for rejection.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    run.status = 'draft'
+    # Store rejection reason in audit log
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='payroll_rejected',
+        details={'run_id': run.id, 'reason': reason}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'Payroll rejected: {reason}', 'warning')
+    return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+
+@payroll_bp.route('/payroll/approve', methods=['POST'])
+@login_required
+@role_required('owner')
+@limiter.limit('10 per minute')
+def approve_payroll():
+    """
+    Approve a payroll run and process it.
+    This is the final step — money moves, payslips are generated.
+    """
+    run_id = request.form.get('run_id')
+    password = request.form.get('password', '')
+    if not run_id:
+        flash('Invalid request.', 'danger')
+        return redirect(url_for('main.payroll_runs'))
+
+    # Password re-authentication
+    if not password or not current_user.check_password(password):
+        flash('Incorrect password. Approval cancelled.', 'danger')
+        return redirect(url_for('main.payroll_confirm', run_id=int(run_id)))
+
+    # MFA verification (if enabled)
+    if current_user.mfa_enabled:
+        totp_code = request.form.get('totp_code', '').strip()
+        if not totp_code or not current_user.verify_totp(totp_code):
+            flash('Invalid MFA code. Approval cancelled.', 'danger')
+            return redirect(url_for('main.payroll_confirm', run_id=int(run_id)))
+
+    # SELECT ... FOR UPDATE — prevents double-approval on concurrent requests
+    run = PayrollRun.query.filter_by(
+        id=int(run_id), company_id=_company_id()
+    ).with_for_update().first_or_404()
+
+    if run.status not in ('review', 'pending_approval'):
+        flash('This payroll run is not ready for approval.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+    # Accountant submits for owner approval
+    effective_role = current_user.get_role_for_company(_company_id())
+    if effective_role == 'accountant' and run.status == 'review':
+        run.status = 'pending_approval'
+        db.session.commit()
+        flash('Payroll submitted for owner approval.', 'success')
+        return redirect(url_for('main.payroll_runs'))
+
+    # Handle FLAG overrides
+    flags = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='FLAG'
+    ).all()
+
+    for i, flag in enumerate(flags):
+        override_key = f'override_{i}'
+        reason_key = f'reason_{i}'
+        if request.form.get(override_key):
+            flag.overridden = True
+            flag.override_reason = request.form.get(reason_key, '')
+            flag.overridden_by = current_user.id
+    db.session.flush()
+
+    # Check if any BLOCK issues remain un-overridden
+    blocks = PayrollValidationResult.query.filter_by(
+        payroll_run_id=run.id, severity='BLOCK'
+    ).filter(PayrollValidationResult.overridden == False).all()
+
+    if blocks:
+        db.session.rollback()
+        flash('Cannot process: there are unresolved BLOCK issues.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+    # --- STAGE 4: APPROVE & PROCESS (single transaction) ---
+    # Retrieve payroll data from database (not session)
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    if not draft:
+        db.session.rollback()
+        flash('Payroll data not found. The draft may have been deleted. Please re-upload the CSV.', 'danger')
+        return redirect(url_for('main.payroll_upload'))
+    employees_data = draft.employee_data
+
+    try:
+        run.status = 'processing'
+        run.approved_by = current_user.id
+        run.approved_at = datetime.utcnow()
+        run.approval_ip = request.remote_addr
+
+        # Batch-fetch existing employees to avoid N+1 queries
+        emp_ids = [emp_data['id'] for emp_data in employees_data]
+        existing_emps = Employee.query.filter(
+            Employee.company_id == _company_id(),
+            Employee.employee_id.in_(emp_ids)
+        ).all()
+        emp_by_eid = {e.employee_id: e for e in existing_emps}
+
+        # Generate payslips and employee records
+        for emp_data in employees_data:
+            emp = emp_by_eid.get(emp_data['id'])
+            if not emp:
+                emp = Employee(
+                    employee_id=emp_data['id'],
+                    name=emp_data['name'],
+                    basic_salary=emp_data['basic'],
+                    allowances=emp_data['allowances'],
+                    bank_or_telebirr=emp_data.get('bank', ''),
+                    tin=emp_data.get('tin') or None,
+                    company_id=_company_id(),
+                )
+                db.session.add(emp)
+                db.session.flush()
+                emp_by_eid[emp_data['id']] = emp
+            else:
+                emp.basic_salary = emp_data['basic']
+                emp.allowances = emp_data['allowances']
+                emp.bank_or_telebirr = emp_data.get('bank', '')
+                if emp_data.get('tin'):
+                    emp.tin = emp_data['tin']
+                db.session.flush()
+
+            # Generate PDF
+            pdf_path = generate_payslip(emp_data)
+
+            payslip = Payslip(
+                payroll_run_id=run.id,
+                employee_id=emp.id,
+                pdf_file_path=pdf_path,
+                gross_salary=emp_data['gross'],
+                tax=emp_data['tax'],
+                employee_pension=emp_data['pension_employee'],
+                employer_pension=emp_data['pension_employer'],
+                net_pay=emp_data['net'],
+            )
+            db.session.add(payslip)
+
+        run.status = 'completed'
+
+        # Compliance scoring — use actual approval time as disbursement proxy
+        run_date_str = run.run_date.isoformat()
+        score, status = compute_compliance_score(
+            payroll_date=run_date_str,
+            disbursement_date=run.approved_at.date().isoformat() if run.approved_at else None,
+        )
+
+        # Audit log
+        log = AuditLog(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='payroll_run_completed',
+            details={
+                'run_id': run.id,
+                'employee_count': len(employees_data),
+                'compliance_score': score,
+                'approved_by': current_user.email,
+                'approval_ip': request.remote_addr,
+            }
+        )
+        db.session.add(log)
+
+        # Clean up draft data from database
+        PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
+
+        # Single commit — all or nothing
+        db.session.commit()
+
+        flash(f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%.', 'success')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+    except Exception as e:
+        # Roll back the entire approval attempt
+        db.session.rollback()
+
+        # Log the failure in a separate transaction
+        try:
+            failed_run = PayrollRun.query.get(run.id)
+            if failed_run:
+                failed_run.status = 'failed'
+            fail_log = AuditLog(
+                company_id=_company_id(),
+                user_id=current_user.id,
+                action='payroll_run_failed',
+                details={'run_id': run.id, 'error': str(e)}
+            )
+            db.session.add(fail_log)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        log_and_flash_error(
+            'Payroll approval failed. Please try again or contact support.',
+            e,
+        )
+        return redirect(url_for('main.payroll_upload'))
+
+
+# --- Historical Payroll Import ---
+
+@payroll_bp.route('/payroll/import', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def historical_import():
+    """
+    Import historical payroll data from CSV.
+    Allows accountants to bring in past months so YTD works from day one.
+
+    CSV format: employee_id, month, year, basic_salary, allowances, gross, tax, pension, net
+    """
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file selected.', 'danger')
+            return redirect(request.url)
+
+        file = request.files['file']
+        if file.filename == '' or not file.filename.lower().endswith('.csv'):
+            flash('Please upload a CSV file.', 'danger')
+            return redirect(request.url)
+
+        try:
+            import csv as csv_mod
+            from io import StringIO
+
+            content_bytes = file.read().decode('utf-8-sig')
+            reader = csv_mod.DictReader(StringIO(content_bytes))
+
+            required_cols = {'employee_id', 'month', 'year', 'gross', 'tax', 'pension', 'net'}
+            if not required_cols.issubset(set(reader.fieldnames or [])):
+                missing = required_cols - set(reader.fieldnames or [])
+                flash(f'Missing columns: {", ".join(missing)}', 'danger')
+                return redirect(request.url)
+
+            imported = 0
+            skipped = 0
+            errors = []
+
+            for i, row in enumerate(reader, 1):
+                try:
+                    emp_id = row['employee_id'].strip()
+                    month = int(row['month'])
+                    year = int(row['year'])
+                    gross = Decimal(row['gross'])
+                    tax = Decimal(row['tax'])
+                    pension = Decimal(row['pension'])
+                    net = Decimal(row['net'])
+                    basic = Decimal(row.get('basic_salary', '0') or '0')
+                    allowances = Decimal(row.get('allowances', '0') or '0')
+
+                    # Find the employee
+                    emp = Employee.query.filter_by(
+                        employee_id=emp_id, company_id=_company_id()
+                    ).first()
+                    if not emp:
+                        errors.append(f'Row {i}: Employee {emp_id} not found')
+                        continue
+
+                    # Check for duplicate
+                    period_str = f'{year}-{month:02d}'
+                    existing = PayrollRun.query.filter_by(
+                        company_id=_company_id(), period=period_str, source='import'
+                    ).first()
+
+                    if existing:
+                        # Update existing import
+                        existing_payslip = Payslip.query.filter_by(
+                            payroll_run_id=existing.id, employee_id=emp.id
+                        ).first()
+                        if existing_payslip:
+                            existing_payslip.gross_salary = gross
+                            existing_payslip.tax = tax
+                            existing_payslip.employee_pension = pension
+                            existing_payslip.net_pay = net
+                        else:
+                            ps = Payslip(
+                                payroll_run_id=existing.id,
+                                employee_id=emp.id,
+                                gross_salary=gross, tax=tax,
+                                employee_pension=pension,
+                                employer_pension=Decimal('0'),
+                                net_pay=net,
+                            )
+                            db.session.add(ps)
+                    else:
+                        # Create new historical run
+                        from datetime import datetime as dt
+                        run = PayrollRun(
+                            company_id=_company_id(),
+                            run_date=date(year, month, 1),
+                            status='completed',
+                            source='import',
+                            period=period_str,
+                            reference=f'HIST-{period_str}',
+                        )
+                        db.session.add(run)
+                        db.session.flush()
+
+                        ps = Payslip(
+                            payroll_run_id=run.id,
+                            employee_id=emp.id,
+                            gross_salary=gross, tax=tax,
+                            employee_pension=pension,
+                            employer_pension=Decimal('0'),
+                            net_pay=net,
+                        )
+                        db.session.add(ps)
+
+                    imported += 1
+
+                except (ValueError, KeyError) as e:
+                    errors.append(f'Row {i}: {str(e)}')
+                    skipped += 1
+
+            db.session.commit()
+
+            if imported > 0:
+                flash(f'Imported {imported} payroll records.', 'success')
+            if errors:
+                for err in errors[:5]:
+                    flash(err, 'warning')
+                if len(errors) > 5:
+                    flash(f'... and {len(errors) - 5} more errors.', 'warning')
+
+            return redirect(url_for('main.historical_import'))
+
+        except Exception as e:
+            log_and_flash_error('Could not process the import file.', e)
+            return redirect(request.url)
+
+    # GET — show import page with existing historical data
+    historical_runs = PayrollRun.query.filter_by(
+        company_id=_company_id(), source='import'
+    ).order_by(PayrollRun.run_date.desc()).all()
+
+    return render_template(
+        'historical_import.html',
+        historical_runs=historical_runs,
+        year=date.today().year,
+    )
+
+
+# --- Spreadsheet-Style Payroll Editor ---
+
+@payroll_bp.route('/payroll/spreadsheet', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def payroll_spreadsheet():
+    """
+    Spreadsheet-style payroll editor.
+    Shows ALL employees in a single editable table.
+    Accountant can edit overtime, absences, advances, and bonus inline.
+    """
+    from payroll_engine.overtime import MAX_OVERTIME_HOURS_MONTH
+    from payroll_engine.models import OvertimeEntry, EmployeeDeduction
+    from payroll_engine.payroll import calculate_payroll
+    from decimal import Decimal, InvalidOperation
+
+    if request.method == 'POST':
+        action = request.form.get('action', 'save')
+
+        # Collect all employee changes from the form
+        emp_ids = request.form.getlist('emp_id')
+        changes = []
+        for eid in emp_ids:
+            prefix = f'emp_{eid}_'
+            changes.append({
+                'emp_id': int(eid),
+                'ot_day': request.form.get(f'{prefix}ot_day', '0').strip() or '0',
+                'ot_night': request.form.get(f'{prefix}ot_night', '0').strip() or '0',
+                'ot_holiday': request.form.get(f'{prefix}ot_holiday', '0').strip() or '0',
+                'ot_rest': request.form.get(f'{prefix}ot_rest', '0').strip() or '0',
+                'absences': request.form.get(f'{prefix}absences', '0').strip() or '0',
+                'advance': request.form.get(f'{prefix}advance', '0').strip() or '0',
+                'bonus': request.form.get(f'{prefix}bonus', '0').strip() or '0',
+            })
+
+        # Save overtime entries
+        today = date.today()
+
+        for change in changes:
+            emp = Employee.query.filter_by(
+                id=change['emp_id'], company_id=_company_id()
+            ).first()
+            if not emp:
+                continue
+
+            # Save overtime entries for this month
+            for ot_type, ot_key in [('day', 'ot_day'), ('night', 'ot_night'),
+                                      ('holiday', 'ot_holiday'), ('rest_day_holiday', 'ot_rest')]:
+                try:
+                    hours = Decimal(change[ot_key])
+                except (InvalidOperation, ValueError):
+                    hours = Decimal('0')
+                if hours > 0:
+                    ot = OvertimeEntry(
+                        employee_id=emp.id,
+                        company_id=_company_id(),
+                        date=today,
+                        hours=hours,
+                        overtime_type=ot_type,
+                    )
+                    db.session.add(ot)
+
+            # Save advance as a one-time deduction
+            try:
+                advance = Decimal(change['advance'])
+            except (InvalidOperation, ValueError):
+                advance = Decimal('0')
+            if advance > 0:
+                ded = EmployeeDeduction(
+                    company_id=_company_id(),
+                    employee_id=emp.id,
+                    deduction_type='advance',
+                    label=f'Advance {today.strftime("%B %Y")}',
+                    amount_mode='fixed',
+                    amount=advance,
+                    tracking_mode='date_bounded',
+                    start_date=today,
+                    is_active=True,
+                    created_by=current_user.id,
+                )
+                db.session.add(ded)
+
+        db.session.commit()
+
+        if action == 'calculate':
+            flash('Changes saved. Review calculations below.', 'success')
+        else:
+            flash(f'{len(changes)} employee records updated.', 'success')
+        return redirect(url_for('main.payroll_spreadsheet'))
+
+    # GET — show the spreadsheet
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    # Calculate current month overtime for each employee
+    month_start = date.today().replace(day=1)
+
+    # Batch-load ALL overtime entries for this month (avoid N+1)
+    all_ot = OvertimeEntry.query.filter(
+        OvertimeEntry.company_id == _company_id(),
+        OvertimeEntry.date >= month_start,
+    ).all()
+    from collections import defaultdict
+    ot_by_emp = defaultdict(list)
+    for ot in all_ot:
+        ot_by_emp[ot.employee_id].append(ot)
+
+    # Batch-load ALL approved leave for this month (avoid N+1)
+    from payroll_engine.leave import LeaveType
+    if date.today().month == 12:
+        next_month = date(date.today().year + 1, 1, 1)
+    else:
+        next_month = date(date.today().year, date.today().month + 1, 1)
+    month_end_batch = next_month - date.resolution
+
+    all_leave = Leave.query.filter(
+        Leave.company_id == _company_id(),
+        Leave.status == 'approved',
+        Leave.start_date <= month_end_batch,
+        Leave.end_date >= month_start,
+    ).all()
+
+    # Group leave by employee and type
+    leave_by_emp = defaultdict(list)
+    for lv in all_leave:
+        leave_by_emp[lv.employee_id].append(lv)
+
+    # Pre-compute deductions for all employees
+    unpaid_deductions = {}  # employee_id → Decimal
+    sick_reductions = {}    # employee_id → Decimal
+    for emp in employees:
+        # Unpaid leave deduction
+        emp_unpaid = [lv for lv in leave_by_emp.get(emp.id, []) if lv.leave_type == LeaveType.UNPAID]
+        unpaid_days = 0
+        for lv in emp_unpaid:
+            overlap_start = max(lv.start_date, month_start)
+            overlap_end = min(lv.end_date, month_end_batch)
+            if overlap_start <= overlap_end:
+                unpaid_days += (overlap_end - overlap_start).days + 1
+        if unpaid_days > 0:
+            daily = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
+            unpaid_deductions[emp.id] = (daily * Decimal(str(unpaid_days))).quantize(Decimal('0.01'))
+        else:
+            unpaid_deductions[emp.id] = Decimal('0')
+
+        # Sick leave reduction (tiered)
+        from payroll_engine.services.leave_service import SICK_TIER_1_DAYS
+        emp_sick = [lv for lv in leave_by_emp.get(emp.id, []) if lv.leave_type == LeaveType.SICK]
+        total_sick_this_year = sum(lv.days_requested for lv in emp_sick if lv.start_date.year == date.today().year)
+        if total_sick_this_year > SICK_TIER_1_DAYS:
+            month_sick = sum(lv.days_requested for lv in emp_sick if lv.start_date >= month_start)
+            if month_sick > 0:
+                daily = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
+                sick_reductions[emp.id] = (daily * Decimal(str(month_sick)) * Decimal('0.5')).quantize(Decimal('0.01'))
+            else:
+                sick_reductions[emp.id] = Decimal('0')
+        else:
+            sick_reductions[emp.id] = Decimal('0')
+
+    rows = []
+    total_gross = Decimal('0')
+    total_tax = Decimal('0')
+    total_net = Decimal('0')
+
+    for emp in employees:
+        emp_ot = ot_by_emp.get(emp.id, [])
+        ot_by_type = {'day': 0, 'night': 0, 'holiday': 0, 'rest_day_holiday': 0}
+        for ot in emp_ot:
+            ot_by_type[ot.overtime_type] = float(ot.hours)
+
+        ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
+
+        total_reduction = unpaid_deductions.get(emp.id, Decimal('0')) + sick_reductions.get(emp.id, Decimal('0'))
+
+        # Calculate payroll based on employee type
+        if emp.employee_type == 'daily' and emp.daily_rate:
+            from payroll_engine.payroll import calculate_daily_worker_payroll
+            result = calculate_daily_worker_payroll(emp.daily_rate, 26)
+        else:
+            result = calculate_payroll(
+                emp.basic_salary, emp.allowances,
+                overtime_entries=ot_list if ot_list else None,
+                sick_leave_reduction=total_reduction,
+            )
+
+        total_gross += result['gross']
+        total_tax += result['tax']
+        total_net += result['net']
+
+        rows.append({
+            'emp': emp,
+            'ot_day': ot_by_type.get('day', 0),
+            'ot_night': ot_by_type.get('night', 0),
+            'ot_holiday': ot_by_type.get('holiday', 0),
+            'ot_rest': ot_by_type.get('rest_day_holiday', 0),
+            'gross': result['gross'],
+            'tax': result['tax'],
+            'pension': result['pension_employee'],
+            'net': result['net'],
+            'ot_pay': result['overtime_pay'],
+            'exceeds_ot_limit': result['overtime_total_hours'] > MAX_OVERTIME_HOURS_MONTH if result['overtime_total_hours'] else False,
+        })
+
+    return render_template(
+        'payroll_spreadsheet.html',
+        rows=rows,
+        total_gross=total_gross,
+        total_tax=total_tax,
+        total_net=total_net,
+        year=date.today().year,
+    )
+
+
+@payroll_bp.route('/payroll/runs')
+@login_required
+def payroll_runs():
+    """List payroll runs for the company."""
+    page = request.args.get('page', 1, type=int)
+    pagination = PayrollRun.query.filter_by(company_id=_company_id()) \
+        .order_by(PayrollRun.created_at.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+    return render_template('payroll_runs.html', runs=pagination.items,
+                           pagination=pagination, year=date.today().year)
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>/lock', methods=['POST'])
+@login_required
+@role_required('owner')
+def lock_payroll(run_id):
+    """Lock a completed payroll run — prevents any further changes.
+
+    Only owners can lock. Once locked, no new run can be created for the same period.
+    """
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+    if run.status != 'completed':
+        flash('Can only lock completed payroll runs.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    run.status = 'locked'
+    run.locked_at = datetime.utcnow()
+    run.locked_by = current_user.id
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='payroll_locked',
+        details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'Period {run.period} is now locked. No further changes allowed.', 'success')
+    return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>/unlock', methods=['POST'])
+@login_required
+@role_required('owner')
+def unlock_payroll(run_id):
+    """Unlock a payroll run — allows corrections.
+
+    Only owners can unlock. Use with caution — this removes the period protection.
+    """
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+    if run.status != 'locked':
+        flash('This run is not locked.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    run.status = 'completed'
+    run.locked_at = None
+    run.locked_by = None
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='payroll_unlocked',
+        details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
+    )
+    db.session.add(log)
+    db.session.commit()
+    flash(f'Period {run.period} unlocked. You can now create a correction run.', 'warning')
+    return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+
+
+@payroll_bp.route('/payroll/register')
+@login_required
+@role_required('owner', 'accountant')
+def payroll_register():
+    """
+    Payroll register — single-page summary of all employees for the current month.
+    Printable on A4. Shows: ID, Name, Basic, Allowances, OT, Gross, Pension, Tax, Net.
+    """
+    from payroll_engine.payroll import calculate_payroll
+
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    rows = []
+    total_basic = Decimal('0')
+    total_allow = Decimal('0')
+    total_ot = Decimal('0')
+    total_gross = Decimal('0')
+    total_pension = Decimal('0')
+    total_tax = Decimal('0')
+    total_net = Decimal('0')
+
+    for emp in employees:
+        result = calculate_payroll(emp.basic_salary, emp.allowances)
+        rows.append({
+            'emp': emp,
+            'gross': result['gross'],
+            'pension': result['pension_employee'],
+            'tax': result['tax'],
+            'net': result['net'],
+            'ot_pay': result['overtime_pay'],
+        })
+        total_basic += emp.basic_salary
+        total_allow += emp.allowances
+        total_ot += result['overtime_pay']
+        total_gross += result['gross']
+        total_pension += result['pension_employee']
+        total_tax += result['tax']
+        total_net += result['net']
+
+    company = Company.query.get(_company_id())
+
+    return render_template(
+        'payroll_register.html',
+        rows=rows,
+        company=company,
+        total_basic=total_basic,
+        total_allow=total_allow,
+        total_ot=total_ot,
+        total_gross=total_gross,
+        total_pension=total_pension,
+        total_tax=total_tax,
+        total_net=total_net,
+        period=date.today().strftime('%B %Y'),
+        year=date.today().year,
+    )
+
+
+@payroll_bp.route('/payroll/payslips/batch')
+@login_required
+@role_required('owner', 'accountant')
+def batch_payslips():
+    """
+    Download all payslips for the latest payroll run as a ZIP file.
+    """
+    import zipfile
+    from payroll_engine.pdf import generate_payslip
+
+    # Get the latest completed payroll run
+    run = PayrollRun.query.filter_by(
+        company_id=_company_id(), status='completed'
+    ).order_by(PayrollRun.created_at.desc()).first()
+
+    if not run:
+        flash('No completed payroll run found.', 'warning')
+        return redirect(url_for('main.payroll_runs'))
+
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    if not payslips:
+        flash('No payslips found for this run.', 'warning')
+        return redirect(url_for('main.payroll_runs'))
+
+    # Generate PDFs and create ZIP
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for ps in payslips:
+            emp = ps.employee
+            pdf_path = generate_payslip({
+                'id': emp.employee_id,
+                'name': emp.name,
+                'basic': emp.basic_salary,
+                'allowances': emp.allowances,
+                'gross': ps.gross_salary,
+                'tax': ps.tax,
+                'pension_employee': ps.employee_pension,
+                'pension_employer': ps.employer_pension,
+                'net': ps.net_pay,
+                'bank': emp.bank_or_telebirr or '',
+                'tax_explanation': '',
+            })
+            arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf"
+            zf.write(pdf_path, arcname)
+            os.remove(pdf_path)  # Clean up temp file
+
+    zip_buffer.seek(0)
+    company = Company.query.get(_company_id())
+    filename = f"payslips_{company.name.replace(' ', '_')}_{run.run_date.strftime('%Y%m')}.zip"
+
+    return send_file(
+        zip_buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>')
+@login_required
+def payroll_run_detail(run_id):
+    """Show payroll run details."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+    return render_template('payroll_results.html', run=run, year=date.today().year)
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>/download')
+@login_required
+def download_all_payslips(run_id):
+    """Download all payslips for a run as a ZIP file."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+
+    payslips = run.payslips
+    if not payslips:
+        flash('No payslips found for this run.', 'warning')
+        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+
+    # Create ZIP in memory
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for p in payslips:
+            if p.pdf_file_path and os.path.exists(p.pdf_file_path):
+                emp = p.employee
+                arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf"
+                zf.write(p.pdf_file_path, arcname)
+    memory_file.seek(0)
+
+    return send_file(
+        memory_file,
+        mimetype='zip',
+        as_attachment=True,
+        download_name=f"payslips_run_{run_id}_{run.run_date}.zip"
+    )
+
+
+@payroll_bp.route('/payslips/<int:payslip_id>/download')
+@login_required
+def download_payslip(payslip_id):
+    """Download a single payslip PDF."""
+    payslip = Payslip.query.get_or_404(payslip_id)
+    run = PayrollRun.query.get(payslip.payroll_run_id)
+    if run.company_id != _company_id():
+        abort(403)
+    if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
+        flash('PDF not found.', 'danger')
+        return redirect(url_for('main.payroll_run_detail', run_id=run.id))
+    return send_file(payslip.pdf_file_path, as_attachment=True, download_name=f"payslip_{payslip.id}.pdf")
+
+

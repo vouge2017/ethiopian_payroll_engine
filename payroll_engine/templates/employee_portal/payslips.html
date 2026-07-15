@@ -38,7 +38,7 @@
                                     <i class="bi bi-eye"></i> View
                                 </a>
                                 {% if p.pdf_file_path %}
-                                <a href="{{ url_for('main.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-success">
+                                <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-success">
                                     <i class="bi bi-download"></i> {{ _('pdf') }}
                                 </a>
                                 {% endif %}

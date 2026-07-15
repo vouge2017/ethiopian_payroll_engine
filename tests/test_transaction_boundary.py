@@ -111,7 +111,7 @@ def test_approval_rolls_back_on_pdf_failure(app):
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
 
-        with patch('payroll_engine.main.generate_payslip', side_effect=Exception('PDF generation exploded')):
+        with patch('payroll_engine.payroll_bp.generate_payslip', side_effect=Exception('PDF generation exploded')):
             resp = client.post('/payroll/approve', data={
                 'run_id': run_id,
                 'password': 'TestPass1!',
@@ -154,7 +154,7 @@ def test_approval_rolls_back_on_compliance_failure(app):
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
 
-        with patch('payroll_engine.main.compute_compliance_score', side_effect=Exception('Compliance service down')):
+        with patch('payroll_engine.payroll_bp.compute_compliance_score', side_effect=Exception('Compliance service down')):
             resp = client.post('/payroll/approve', data={
                 'run_id': run_id,
                 'password': 'TestPass1!',

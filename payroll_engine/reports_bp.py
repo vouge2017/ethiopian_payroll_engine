@@ -81,7 +81,7 @@ def download_erca_report(run_id):
     ).first_or_404()
     if run.status != 'completed':
         flash('Can only generate reports for completed payroll runs.', 'warning')
-        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     company = current_user.company
     period = run.run_date.strftime('%B %Y')
@@ -105,7 +105,7 @@ def download_pension_report(run_id):
     ).first_or_404()
     if run.status != 'completed':
         flash('Can only generate reports for completed payroll runs.', 'warning')
-        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     company = current_user.company
     period = run.run_date.strftime('%B %Y')
@@ -164,7 +164,7 @@ def download_bank_file(run_id):
     ).first_or_404()
     if run.status != 'completed':
         flash('Can only generate bank files for completed payroll runs.', 'warning')
-        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     company = current_user.company
     period = run.run_date.strftime('%B %Y')
@@ -205,7 +205,7 @@ def download_bank_file(run_id):
     if blocks:
         error_summary = '; '.join([f"{e['name']}: {e['error']}" for e in blocks[:3]])
         flash(f'Bank file has validation errors: {error_summary}', 'danger')
-        return redirect(url_for('main.payroll_run_detail', run_id=run_id))
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
     flags = [e for e in errors if e.get('severity') == 'FLAG']
     if flags:
         for flag in flags:

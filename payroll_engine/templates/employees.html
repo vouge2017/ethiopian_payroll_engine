@@ -8,15 +8,15 @@
         </h3>
         <div>
             {% if show_archived %}
-            <a href="{{ url_for('main.list_employees') }}" class="btn btn-outline-secondary me-2">
+            <a href="{{ url_for('employees.list_employees') }}" class="btn btn-outline-secondary me-2">
                 <i class="bi bi-arrow-left me-1"></i>Active
             </a>
             {% else %}
-            <a href="{{ url_for('main.list_employees', archived='1') }}" class="btn btn-outline-secondary me-2">
+            <a href="{{ url_for('employees.list_employees', archived='1') }}" class="btn btn-outline-secondary me-2">
                 <i class="bi bi-archive me-1"></i>Archived
             </a>
             {% endif %}
-            <a href="{{ url_for('main.add_employee') }}" class="btn btn-primary">
+            <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
                 <i class="bi bi-person-plus me-1"></i> {{ _('add_employee') }}
             </a>
         </div>
@@ -25,7 +25,7 @@
     <!-- Search -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ url_for('main.list_employees') }}" class="row g-2">
+            <form method="GET" action="{{ url_for('employees.list_employees') }}" class="row g-2">
                 {% if show_archived %}
                 <input type="hidden" name="archived" value="1">
                 {% endif %}
@@ -77,11 +77,11 @@
                             <td>{{ '%.2f'|format(emp.basic_salary) }}</td>
                             <td>{{ '%.2f'|format(emp.gross_salary) }}</td>
                             <td>
-                                <a href="{{ url_for('main.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 {% if show_archived %}
-                                <form method="POST" action="{{ url_for('main.reactivate_employee', emp_id=emp.id) }}" style="display:inline">
+                                <form method="POST" action="{{ url_for('employees.reactivate_employee', emp_id=emp.id) }}" style="display:inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-success" title="{{ _('reactivate') }}">
                                         <i class="bi bi-arrow-counterclockwise"></i>
@@ -100,7 +100,7 @@
                 {% if show_archived %}
                 <p class="mt-2">No archived employees.</p>
                 {% else %}
-                <p class="mt-2">No employees found. <a href="{{ url_for('main.add_employee') }}">{{ _('add_employee') }}</a>.</p>
+                <p class="mt-2">No employees found. <a href="{{ url_for('employees.add_employee') }}">{{ _('add_employee') }}</a>.</p>
                 {% endif %}
             </div>
             {% endif %}

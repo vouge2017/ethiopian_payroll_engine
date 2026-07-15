@@ -10,7 +10,7 @@
                     Payslip — {{ payslip.generated_at.strftime('%B %Y') }}
                 </h3>
                 {% if payslip.pdf_file_path %}
-                <a href="{{ url_for('main.download_payslip', payslip_id=payslip.id) }}" class="btn btn-success">
+                <a href="{{ url_for('payroll.download_payslip', payslip_id=payslip.id) }}" class="btn btn-success">
                     <i class="bi bi-download me-1"></i>{{ _('download') }} {{ _('pdf') }}
                 </a>
                 {% endif %}

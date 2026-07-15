@@ -9,10 +9,10 @@
             <button onclick="window.print()" class="btn btn-primary btn-sm">
                 <i class="bi bi-printer"></i> Print
             </button>
-            <a href="{{ url_for('main.batch_payslips') }}" class="btn btn-outline-success btn-sm ms-2">
+            <a href="{{ url_for('payroll.batch_payslips') }}" class="btn btn-outline-success btn-sm ms-2">
                 <i class="bi bi-file-earmark-zip"></i> Download All Payslips (ZIP)
             </a>
-            <a href="{{ url_for('main.payroll_runs') }}" class="btn btn-outline-secondary btn-sm ms-2">
+            <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-outline-secondary btn-sm ms-2">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

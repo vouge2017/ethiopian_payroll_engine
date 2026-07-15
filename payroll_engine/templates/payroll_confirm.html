@@ -5,7 +5,7 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="d-flex align-items-center mb-4">
-                <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}" class="text-decoration-none text-muted me-2">
+                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="text-decoration-none text-muted me-2">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <h3 class="mb-0">
@@ -144,7 +144,7 @@
                         and payroll will be marked as completed.
                     </div>
 
-                    <form method="POST" action="{{ url_for('main.approve_payroll') }}" id="approve-form">
+                    <form method="POST" action="{{ url_for('payroll.approve_payroll') }}" id="approve-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="run_id" value="{{ run.id }}">
 
@@ -173,7 +173,7 @@
                         </div>
 
                         <div class="d-flex gap-2">
-                            <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}"
+                            <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}"
                                class="btn btn-outline-secondary btn-lg flex-grow-1">
                                 <i class="bi bi-arrow-left me-1"></i>{{ _('cancel') }}
                             </a>
@@ -194,7 +194,7 @@
             </div>
             {% else %}
             <div class="text-center">
-                <a href="{{ url_for('main.payroll_run_detail', run_id=run.id) }}" class="btn btn-secondary btn-lg">
+                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-secondary btn-lg">
                     <i class="bi bi-arrow-left me-1"></i>Back to Review
                 </a>
             </div>

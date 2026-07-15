@@ -62,7 +62,7 @@
                     <hr>
 
                     <!-- Termination Form -->
-                    <form method="POST" action="{{ url_for('main.terminate_employee', emp_id=employee.id) }}"
+                    <form method="POST" action="{{ url_for('employees.terminate_employee', emp_id=employee.id) }}"
                           onsubmit="return confirm('Are you sure you want to terminate {{ employee.name }}? This action will deactivate their account.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -93,7 +93,7 @@
                             <button type="submit" class="btn btn-danger">
                                 <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
                             </button>
-                            <a href="{{ url_for('main.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
+                            <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
                         </div>
                     </form>
                 </div>

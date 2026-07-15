@@ -72,7 +72,7 @@
                     <button type="submit" class="btn btn-outline-primary btn-sm w-100">Filter</button>
                 </div>
                 <div class="col-md-2">
-                    <a href="{{ url_for('main.leave_management') }}" class="btn btn-outline-secondary btn-sm w-100">Clear</a>
+                    <a href="{{ url_for('employees.leave_management') }}" class="btn btn-outline-secondary btn-sm w-100">Clear</a>
                 </div>
             </form>
         </div>
@@ -121,12 +121,12 @@
                             <td><small class="text-muted">{{ leave.reason[:50] if leave.reason else '-' }}</small></td>
                             <td>
                                 {% if leave.status == 'pending' %}
-                                <form method="POST" action="{{ url_for('main.approve_leave', leave_id=leave.id) }}" class="d-inline">
+                                <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" class="d-inline">
                                     <button type="submit" class="btn btn-success btn-sm" title="Approve">
                                         <i class="bi bi-check"></i>
                                     </button>
                                 </form>
-                                <form method="POST" action="{{ url_for('main.reject_leave', leave_id=leave.id) }}" class="d-inline">
+                                <form method="POST" action="{{ url_for('employees.reject_leave', leave_id=leave.id) }}" class="d-inline">
                                     <button type="submit" class="btn btn-danger btn-sm" title="Reject">
                                         <i class="bi bi-x"></i>
                                     </button>

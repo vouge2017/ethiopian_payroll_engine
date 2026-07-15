@@ -181,6 +181,10 @@ def create_app():
         )
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
+    from .employees_bp import employees_bp
+    app.register_blueprint(employees_bp)
+    from .payroll_bp import payroll_bp
+    app.register_blueprint(payroll_bp)
     from .reports_bp import reports_bp
     app.register_blueprint(reports_bp)
     from .settings_bp import settings_bp

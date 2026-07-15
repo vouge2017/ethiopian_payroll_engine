@@ -4,7 +4,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
-            <a href="{{ url_for('main.payroll_upload') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
             Pre-Processing Validation
         </h3>
         <span class="badge bg-{{ 'success' if summary.can_proceed and not summary.requires_approval else 'warning' if summary.can_proceed else 'danger' }} fs-6">
@@ -122,7 +122,7 @@
             <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Review and Approve ({{ flags|length }})</h5>
         </div>
         <div class="card-body p-0">
-            <form method="POST" action="{{ url_for('main.approve_payroll') }}">
+            <form method="POST" action="{{ url_for('payroll.approve_payroll') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="run_id" value="{{ run_id }}">
                 <div class="table-responsive">
@@ -195,11 +195,11 @@
 
     <!-- Action Buttons -->
     <div class="d-flex gap-2">
-        <a href="{{ url_for('main.payroll_upload') }}" class="btn btn-outline-secondary">
+        <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> Back to Upload
         </a>
         {% if summary.can_proceed and not summary.blocks %}
-        <a href="{{ url_for('main.payroll_confirm', run_id=run_id) }}" class="btn btn-primary btn-lg">
+        <a href="{{ url_for('payroll.payroll_confirm', run_id=run_id) }}" class="btn btn-primary btn-lg">
             <i class="bi bi-shield-lock me-1"></i> Review & Confirm
         </a>
         {% elif summary.blocks %}

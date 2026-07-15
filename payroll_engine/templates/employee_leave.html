@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-1">
-                <a href="{{ url_for('main.employee_detail', emp_id=employee.id) }}" class="text-decoration-none text-muted me-2">
+                <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="text-decoration-none text-muted me-2">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 Leave Management — {{ employee.name }}
@@ -134,7 +134,7 @@
                     <h6 class="mb-0"><i class="bi bi-calendar-plus me-2"></i>Request Leave</h6>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('main.request_leave', emp_id=employee.id) }}">
+                    <form method="POST" action="{{ url_for('employees.request_leave', emp_id=employee.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row g-3">
                             <div class="col-md-3">
@@ -212,7 +212,7 @@
                                     <td>{{ leave.applied_at.strftime('%d %b %Y') }}</td>
                                     <td>
                                         {% if leave.status == 'pending' %}
-                                        <form method="POST" action="{{ url_for('main.approve_leave', leave_id=leave.id) }}" style="display:inline">
+                                        <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" style="display:inline">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn btn-sm btn-outline-success" title="Approve">
                                                 <i class="bi bi-check"></i>
@@ -222,7 +222,7 @@
                                                 onclick="document.getElementById('reject-{{ leave.id }}').style.display='block'">
                                             <i class="bi bi-x"></i>
                                         </button>
-                                        <form method="POST" action="{{ url_for('main.reject_leave', leave_id=leave.id) }}" style="display:none" id="reject-{{ leave.id }}">
+                                        <form method="POST" action="{{ url_for('employees.reject_leave', leave_id=leave.id) }}" style="display:none" id="reject-{{ leave.id }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="text" name="reason" placeholder="Reason for rejection" required class="form-control form-control-sm d-inline-block w-auto">
                                             <button type="submit" class="btn btn-sm btn-danger">Reject</button>

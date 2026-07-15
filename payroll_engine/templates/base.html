@@ -62,16 +62,16 @@
                 <i class="bi bi-buildings me-2"></i>My Companies
             </a>
             {% endif %}
-            <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('employees.list_employees') }}" class="{% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-people me-2"></i>{{ _('employees') }}
             </a>
-            <a href="{{ url_for('main.payroll_upload') }}" class="{% if 'payroll' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="{% if 'payroll' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-cloud-upload me-2"></i>{{ _('run_payroll') }}
             </a>
-            <a href="{{ url_for('main.payroll_runs') }}" class="{% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('payroll.payroll_runs') }}" class="{% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-clock-history me-2"></i>{{ _('payroll_runs') }}
             </a>
-            <a href="{{ url_for('main.leave_management') }}" class="{% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('employees.leave_management') }}" class="{% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-calendar-event me-2"></i>Leave
             </a>
             <a href="{{ url_for('reports.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">

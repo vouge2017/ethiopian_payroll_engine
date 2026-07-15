@@ -24,6 +24,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Debug environment
+        run: |
+          python --version
+          pip list
+          echo "DATABASE_URL=$DATABASE_URL"
+          echo "FLASK_ENV=$FLASK_ENV"
+
       - name: Run tests
         env:
           DATABASE_URL: "sqlite:///:memory:"
@@ -31,4 +38,4 @@ jobs:
           SECRET_KEY: "test-secret-key-for-ci-only"
           FLASK_ENV: "testing"
         run: |
-          python -m pytest -v --tb=short
+          python -m pytest -v --tb=long 2>&1 | tail -100

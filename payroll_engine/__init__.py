@@ -126,12 +126,13 @@ def create_app():
     migrate.init_app(app, db)
 
     # Register tenant-scoped models for structural isolation enforcement
-    from .models import Employee, PayrollRun, AuditLog, OvertimeEntry, EmployeeDeduction, TenantQuery
+    from .models import Employee, PayrollRun, AuditLog, OvertimeEntry, EmployeeDeduction, UserCompany, TenantQuery
     TenantQuery.register_model(Employee)
     TenantQuery.register_model(PayrollRun)
     TenantQuery.register_model(AuditLog)
     TenantQuery.register_model(OvertimeEntry)
     TenantQuery.register_model(EmployeeDeduction)
+    TenantQuery.register_model(UserCompany)
 
     @app.before_request
     def set_request_id():

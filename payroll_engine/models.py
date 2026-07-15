@@ -212,12 +212,14 @@ class Company(db.Model):
 
 
 class UserCompany(db.Model):
+    query_class = TenantQuery
+
     """Association between users and companies with role.
 
     Enables multi-company for accountants:
     - One user can belong to multiple companies
     - Each membership has a role (owner, accountant, employee)
-    - TenantQuery still enforces isolation per company
+    - TenantQuery enforces company_id filter on all queries
     """
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -340,7 +342,13 @@ class User(UserMixin, db.Model):
     def companies(self):
         """List of companies this user can access."""
         own = [self.company]
-        extra = [uc.company for uc in self.user_companies]
+        # Set tenant context so TenantQuery allows the cross-company
+        # UserCompany relationship load (user_companies spans companies)
+        TenantQuery.set_tenant_context(self.company_id)
+        try:
+            extra = [uc.company for uc in self.user_companies]
+        finally:
+            TenantQuery.clear_tenant_context()
         # Deduplicate
         seen = set()
         result = []

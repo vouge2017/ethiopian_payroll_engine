@@ -161,8 +161,8 @@ def get_leave_balance(employee: Employee, company_id: int,
         balance = get_or_create_balance(
             company_id, employee.id, leave_type, year, db_session
         )
-        # Use balance.taken if already tracked, otherwise query Leave records
-        taken = balance.taken if balance.taken > 0 else get_leave_taken(
+        # Always derive from Leave table (single source of truth)
+        taken = get_leave_taken(
             company_id, employee.id, leave_type, year, db_session
         )
         balance.taken = taken
@@ -285,13 +285,17 @@ def approve_leave(leave: Leave, approved_by: int, db_session) -> dict:
     leave.status = 'approved'
     leave.approved_by = approved_by
     leave.approved_at = datetime.utcnow()
+    db_session.flush()  # Flush so the DB sum below includes this leave
 
-    # Update balance
+    # Derive balance.taken from the authoritative source (Leave table)
     balance = get_or_create_balance(
         leave.company_id, leave.employee_id,
         leave.leave_type, date.today().year, db_session
     )
-    balance.taken = (balance.taken or 0) + leave.days_requested
+    balance.taken = get_leave_taken(
+        leave.company_id, leave.employee_id,
+        leave.leave_type, date.today().year, db_session
+    )
 
     return {'success': True, 'message': f'Leave approved: {leave.days_requested} days.'}
 

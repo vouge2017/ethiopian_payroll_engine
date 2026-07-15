@@ -112,14 +112,21 @@ def test_leave_annual_balance(app, ids):
 
 
 def test_leave_sick_tiers(app, ids):
-    from payroll_engine.services.leave_service import get_leave_balance, get_or_create_balance
-    cid, _, eid = ids
+    from payroll_engine.services.leave_service import get_leave_balance, get_or_create_balance, approve_leave, request_leave
+    cid, uid, eid = ids
     with app.app_context():
         emp = db.session.get(Employee, eid)
-        bal = get_or_create_balance(cid, eid, 'sick', 2026, db.session)
-        bal.taken = 35
-        db.session.commit()
+        # Create actual approved leave records (source of truth is Leave table)
+        # 35 days of sick leave across two requests
+        r1 = request_leave(emp, cid, 'sick', date(2026, 3, 1), date(2026, 3, 30), 'Illness', db.session)
+        assert r1['success']
+        approve_leave(r1['leave'], uid, db.session)
+        r2 = request_leave(emp, cid, 'sick', date(2026, 4, 1), date(2026, 4, 5), 'Recovery', db.session)
+        assert r2['success']
+        approve_leave(r2['leave'], uid, db.session)
+        # 30 + 5 = 35 days → tier 2 (50% pay)
         r = get_leave_balance(emp, cid, 'sick', 2026, db.session)
+        assert r['taken'] == 35
         assert r['current_tier'] == 2
         assert r['current_pay_percentage'] == 50
 

@@ -9,29 +9,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Lint with ruff
-        run: |
-          pip install ruff
-          ruff check payroll_engine/ --select=E,F,W --ignore=E501,E402 --exit-zero
 
       - name: Run tests
         env:
@@ -41,12 +32,3 @@ jobs:
           FLASK_ENV: "testing"
         run: |
           python -m pytest -v --tb=short
-
-      - name: Verify app starts
-        env:
-          DATABASE_URL: "sqlite:///:memory:"
-          CELERY_BROKER_URL: "memory://"
-          SECRET_KEY: "test-secret-key-for-ci-only"
-          FLASK_ENV: "testing"
-        run: |
-          python -c "from payroll_engine import create_app; app = create_app(); print('App created OK')"

@@ -70,100 +70,20 @@ def list_employees():
 @role_required('owner', 'accountant')
 def add_employee():
     """Add a new employee manually."""
+    from payroll_engine.services.employee_service import parse_employee_form, create_employee
+
     if request.method == 'POST':
-        emp_id = request.form.get('employee_id', '').strip()
-        name = request.form.get('name', '').strip()
-        phone_raw = request.form.get('phone', '').strip()
-        department = request.form.get('department', '').strip() or None
-        position = request.form.get('position', '').strip() or None
-        start_date_str = request.form.get('start_date', '').strip()
-        from decimal import Decimal, InvalidOperation
-        try:
-            basic = Decimal(request.form.get('basic_salary', '0') or '0')
-        except (InvalidOperation, ValueError):
-            basic = Decimal('0')
-        try:
-            allow = Decimal(request.form.get('allowances', '0') or '0')
-        except (InvalidOperation, ValueError):
-            allow = Decimal('0')
-        bank_account = request.form.get('bank_account', '').strip() or None
-        tin = request.form.get('tin', '').strip() or None
-        employee_type = request.form.get('employee_type', 'monthly').strip()
-        try:
-            daily_rate = Decimal(request.form.get('daily_rate', '0') or '0')
-        except (InvalidOperation, ValueError):
-            daily_rate = Decimal('0')
-        if employee_type not in ('monthly', 'daily'):
-            employee_type = 'monthly'
-
-        # Store phone as-is (no format restriction — employee contact, not login)
-        phone = phone_raw or None
-
-        start_date = None
-        if start_date_str:
-            from datetime import datetime as dt
-            try:
-                start_date = dt.strptime(start_date_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
-                return redirect(url_for('employees.add_employee'))
-
-        if not name:
-            flash('Employee name is required.', 'danger')
+        data, error = parse_employee_form(request.form)
+        if error:
+            flash(error, 'danger')
             return redirect(url_for('employees.add_employee'))
 
-        # Auto-generate employee_id if not provided
-        if not emp_id:
-            last_emp = Employee.query.filter_by(
-                company_id=_company_id()
-            ).order_by(Employee.id.desc()).first()
-            if last_emp and last_emp.employee_id.startswith('EMP'):
-                try:
-                    next_num = int(last_emp.employee_id[3:]) + 1
-                except ValueError:
-                    next_num = 1
-            else:
-                next_num = 1
-            emp_id = f'EMP{next_num:03d}'
-
-        existing = Employee.query.filter_by(
-            company_id=_company_id(), employee_id=emp_id
-        ).first()
-        if existing:
-            flash(f'Employee ID {emp_id} already exists.', 'danger')
+        result = create_employee(data, _company_id(), current_user.id)
+        if not result.success:
+            flash(result.error, 'danger')
             return redirect(url_for('employees.add_employee'))
 
-        # Merge bank_account into bank_or_telebirr for backward compat
-        bank = bank_account or ''
-
-        emp = Employee(
-            employee_id=emp_id,
-            name=name,
-            phone=phone,
-            department=department,
-            position=position,
-            start_date=start_date,
-            basic_salary=basic,
-            allowances=allow,
-            bank_account=bank_account,
-            bank_or_telebirr=bank,
-            tin=tin,
-            employee_type=employee_type,
-            daily_rate=daily_rate if employee_type == 'daily' else None,
-            company_id=_company_id()
-        )
-        db.session.add(emp)
-
-        log = AuditLog(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='employee_added',
-            details={'employee_id': emp_id, 'name': name}
-        )
-        db.session.add(log)
-        db.session.commit()
-
-        flash(f'{name} added to your team! You can now include them in payroll runs.', 'success')
+        flash(f'{data['name']} added to your team! You can now include them in payroll runs.', 'success')
         return redirect(url_for('employees.list_employees'))
 
     return render_template('add_employee.html', year=date.today().year)

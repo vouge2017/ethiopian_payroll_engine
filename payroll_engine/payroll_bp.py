@@ -337,6 +337,8 @@ def approve_payroll():
     Approve a payroll run and process it.
     This is the final step — money moves, payslips are generated.
     """
+    from payroll_engine.services.payroll_service import apply_flag_overrides, process_payroll
+
     run_id = request.form.get('run_id')
     password = request.form.get('password', '')
     if not run_id:
@@ -372,149 +374,35 @@ def approve_payroll():
         flash('Payroll submitted for owner approval.', 'success')
         return redirect(url_for('payroll.payroll_runs'))
 
-    # Handle FLAG overrides
-    flags = PayrollValidationResult.query.filter_by(
-        payroll_run_id=run.id, severity='FLAG'
-    ).all()
-
-    for i, flag in enumerate(flags):
-        override_key = f'override_{i}'
-        reason_key = f'reason_{i}'
-        if request.form.get(override_key):
-            flag.overridden = True
-            flag.override_reason = request.form.get(reason_key, '')
-            flag.overridden_by = current_user.id
-    db.session.flush()
-
-    # Check if any BLOCK issues remain un-overridden
-    blocks = PayrollValidationResult.query.filter_by(
-        payroll_run_id=run.id, severity='BLOCK'
-    ).filter(PayrollValidationResult.overridden == False).all()
-
+    # Handle FLAG overrides and check BLOCKs
+    form_data = dict(request.form)
+    form_data['_user_id'] = current_user.id
+    blocks = apply_flag_overrides(run.id, form_data)
     if blocks:
         db.session.rollback()
         flash('Cannot process: there are unresolved BLOCK issues.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    # --- STAGE 4: APPROVE & PROCESS (single transaction) ---
-    # Retrieve payroll data from database (not session)
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
-    if not draft:
-        db.session.rollback()
-        flash('Payroll data not found. The draft may have been deleted. Please re-upload the CSV.', 'danger')
-        return redirect(url_for('payroll.payroll_upload'))
-    employees_data = draft.employee_data
+    # Process payroll (single transaction)
+    result = process_payroll(
+        run=run,
+        company_id=_company_id(),
+        user_id=current_user.id,
+        user_email=current_user.email,
+        request_ip=request.remote_addr,
+    )
 
-    try:
-        run.status = 'processing'
-        run.approved_by = current_user.id
-        run.approved_at = datetime.utcnow()
-        run.approval_ip = request.remote_addr
-
-        # Batch-fetch existing employees to avoid N+1 queries
-        emp_ids = [emp_data['id'] for emp_data in employees_data]
-        existing_emps = Employee.query.filter(
-            Employee.company_id == _company_id(),
-            Employee.employee_id.in_(emp_ids)
-        ).all()
-        emp_by_eid = {e.employee_id: e for e in existing_emps}
-
-        # Generate payslips and employee records
-        for emp_data in employees_data:
-            emp = emp_by_eid.get(emp_data['id'])
-            if not emp:
-                emp = Employee(
-                    employee_id=emp_data['id'],
-                    name=emp_data['name'],
-                    basic_salary=emp_data['basic'],
-                    allowances=emp_data['allowances'],
-                    bank_or_telebirr=emp_data.get('bank', ''),
-                    tin=emp_data.get('tin') or None,
-                    company_id=_company_id(),
-                )
-                db.session.add(emp)
-                db.session.flush()
-                emp_by_eid[emp_data['id']] = emp
-            else:
-                emp.basic_salary = emp_data['basic']
-                emp.allowances = emp_data['allowances']
-                emp.bank_or_telebirr = emp_data.get('bank', '')
-                if emp_data.get('tin'):
-                    emp.tin = emp_data['tin']
-                db.session.flush()
-
-            # Generate PDF
-            pdf_path = generate_payslip(emp_data)
-
-            payslip = Payslip(
-                payroll_run_id=run.id,
-                employee_id=emp.id,
-                pdf_file_path=pdf_path,
-                gross_salary=emp_data['gross'],
-                tax=emp_data['tax'],
-                employee_pension=emp_data['pension_employee'],
-                employer_pension=emp_data['pension_employer'],
-                net_pay=emp_data['net'],
-            )
-            db.session.add(payslip)
-
-        run.status = 'completed'
-
-        # Compliance scoring — use actual approval time as disbursement proxy
-        run_date_str = run.run_date.isoformat()
-        score, status = compute_compliance_score(
-            payroll_date=run_date_str,
-            disbursement_date=run.approved_at.date().isoformat() if run.approved_at else None,
-        )
-
-        # Audit log
-        log = AuditLog(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='payroll_run_completed',
-            details={
-                'run_id': run.id,
-                'employee_count': len(employees_data),
-                'compliance_score': score,
-                'approved_by': current_user.email,
-                'approval_ip': request.remote_addr,
-            }
-        )
-        db.session.add(log)
-
-        # Clean up draft data from database
-        PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
-
-        # Single commit — all or nothing
-        db.session.commit()
-
-        flash(f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%.', 'success')
+    if result.success:
+        flash(result.message, 'success')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
-
-    except Exception as e:
-        # Roll back the entire approval attempt
-        db.session.rollback()
-
-        # Log the failure in a separate transaction
-        try:
-            failed_run = PayrollRun.query.get(run.id)
-            if failed_run:
-                failed_run.status = 'failed'
-            fail_log = AuditLog(
-                company_id=_company_id(),
-                user_id=current_user.id,
-                action='payroll_run_failed',
-                details={'run_id': run.id, 'error': str(e)}
+    else:
+        if result.error:
+            log_and_flash_error(
+                'Payroll approval failed. Please try again or contact support.',
+                Exception(result.error),
             )
-            db.session.add(fail_log)
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-        log_and_flash_error(
-            'Payroll approval failed. Please try again or contact support.',
-            e,
-        )
+        else:
+            flash(result.message, 'danger')
         return redirect(url_for('payroll.payroll_upload'))
 
 

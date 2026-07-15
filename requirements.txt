@@ -19,3 +19,6 @@ pyotp>=2.9.0
 qrcode>=7.0
 pytest>=8.0.0
 pytest-cov>=6.0.0
+
+# Rate limiter storage (uncomment for production with Redis)
+# redis>=5.0.0

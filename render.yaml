@@ -32,6 +32,9 @@ services:
         value: ""
       - key: GOOGLE_CLIENT_SECRET
         value: ""
+      # Uncomment when Redis is added to the deployment:
+      # - key: RATELIMIT_STORAGE_URI
+      #   value: "redis://red-xxxx:6379/1"
     autoDeploy: true
 
 databases:

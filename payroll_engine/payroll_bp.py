@@ -890,6 +890,55 @@ def payroll_register():
     )
 
 
+@payroll_bp.route('/payroll/export')
+@login_required
+@role_required('owner', 'accountant')
+def export_payroll_history():
+    """Export completed payroll runs as CSV."""
+    runs = PayrollRun.query.filter_by(
+        company_id=_company_id()
+    ).filter(
+        PayrollRun.status.in_(['completed', 'locked'])
+    ).order_by(PayrollRun.run_date.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'Reference', 'Period', 'Run Date', 'Status',
+        'Employee Count', 'Total Gross', 'Total Tax',
+        'Total Pension (Employee)', 'Total Pension (Employer)', 'Total Net',
+        'Approved At', 'Approved By',
+    ])
+    for run in runs:
+        payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+        total_gross = sum(p.gross_salary for p in payslips)
+        total_tax = sum(p.tax for p in payslips)
+        total_pension_emp = sum(p.employee_pension for p in payslips)
+        total_pension_empr = sum(p.employer_pension for p in payslips)
+        total_net = sum(p.net_pay for p in payslips)
+        approver = User.query.get(run.approved_by) if run.approved_by else None
+        writer.writerow([
+            run.reference or '', run.period or '',
+            run.run_date.isoformat() if run.run_date else '',
+            run.status, len(payslips),
+            str(total_gross), str(total_tax),
+            str(total_pension_emp), str(total_pension_empr),
+            str(total_net),
+            run.approved_at.isoformat() if run.approved_at else '',
+            approver.email if approver else '',
+        ])
+
+    output.seek(0)
+    company = Company.query.get(_company_id())
+    filename = f'payroll_history_{company.name}_{date.today().isoformat()}.csv'
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @payroll_bp.route('/payroll/payslips/batch')
 @login_required
 @role_required('owner', 'accountant')

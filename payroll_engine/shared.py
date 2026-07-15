@@ -66,3 +66,17 @@ def create_audit_log(company_id, user_id, action, details=None):
     )
     db.session.add(log)
     return log
+
+
+def create_notification(company_id, user_id, message, type='info', link=None):
+    """Create an in-app notification for a user."""
+    from payroll_engine.models import Notification
+    notif = Notification(
+        company_id=company_id,
+        user_id=user_id,
+        message=message,
+        type=type,
+        link=link,
+    )
+    db.session.add(notif)
+    return notif

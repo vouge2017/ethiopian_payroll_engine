@@ -11,7 +11,7 @@ from payroll_engine.models import (
 )
 from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score
-from payroll_engine.shared import create_audit_log
+from payroll_engine.shared import create_audit_log, create_notification
 
 
 class ApprovalResult:
@@ -152,6 +152,15 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Clean up draft
         PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
+
+        # Notify the approver
+        create_notification(
+            company_id=company_id,
+            user_id=user_id,
+            message=f'Payroll processed: {len(employees_data)} employees paid, compliance score {score}%.',
+            type='success',
+            link=f'/payroll/runs/{run.id}',
+        )
 
         # Single commit — all or nothing
         db.session.commit()

@@ -1148,3 +1148,20 @@ class PayrollValidationResult(db.Model):
 
     def __repr__(self):
         return f'<PayrollValidationResult {self.rule_code} for run {self.payroll_run_id}>'
+
+
+class Notification(db.Model):
+    """In-app notification for users."""
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), nullable=False, default='info')  # info, success, warning, danger
+    link = db.Column(db.String(500), nullable=True)  # Optional URL to navigate to
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+
+    def __repr__(self):
+        return f'<Notification {self.id} for user {self.user_id}>'

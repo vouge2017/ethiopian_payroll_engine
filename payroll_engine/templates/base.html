@@ -99,6 +99,33 @@
                 <a href="{{ url_for('auth.set_language', lang='om') }}" 
                    class="text-white-50 {% if current_language == 'om' %}text-white fw-bold{% endif %}">{{ _("oromoo") }}</a>
             </div>
+            {% if current_user.is_authenticated %}
+            {% set unread_count = current_user.notifications|selectattr('is_read', 'false')|list|length %}
+            <div class="mb-2">
+                <div class="dropdown">
+                    <a href="#" class="text-white-50 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-bell me-1"></i> Notifications
+                        {% if unread_count > 0 %}<span class="badge bg-danger">{{ unread_count }}</span>{% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 300px;">
+                        {% set ns = namespace(count=0) %}
+                        {% for notif in current_user.notifications|sort(attribute='created_at', reverse=true) %}
+                        {% if ns.count < 10 %}
+                        <li>
+                            <a class="dropdown-item {% if not notif.is_read %}fw-bold{% endif %}" href="{{ notif.link or '#' }}">
+                                <small class="text-muted">{{ notif.created_at.strftime('%b %d %H:%M') }}</small><br>
+                                {{ notif.message }}
+                            </a>
+                        </li>
+                        {% set ns.count = ns.count + 1 %}
+                        {% endif %}
+                        {% else %}
+                        <li><span class="dropdown-item text-muted">No notifications</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
             <div class="d-flex align-items-center">
                 <i class="bi bi-person-circle me-2"></i>
                 <div>

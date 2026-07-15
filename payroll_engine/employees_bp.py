@@ -1,19 +1,21 @@
 """Employees blueprint: employee CRUD, overtime, allowances, deductions, leave, termination."""
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
-    flash, current_app
+    flash, current_app, send_file
 )
 from flask_login import login_required, current_user
 from datetime import date, datetime
 import os
 import uuid
+import io
+import csv
 
 from payroll_engine import db
 from payroll_engine.models import (
     Employee, Payslip, OvertimeEntry, FinalSettlement,
     EmployeeAllowance, EmployeeDeduction, Leave, LeaveBalance
 )
-from payroll_engine.shared import _company_id, role_required, create_audit_log
+from payroll_engine.shared import _company_id, role_required, create_audit_log, create_notification
 
 
 employees_bp = Blueprint('employees', __name__)
@@ -64,6 +66,43 @@ def list_employees():
                            pagination=pagination, search=search,
                            departments=departments, selected_dept=selected_dept,
                            year=date.today().year, show_archived=show_archived)
+
+
+@employees_bp.route('/employees/export')
+@role_required('owner', 'accountant')
+def export_employees():
+    """Export employee list as CSV."""
+    from payroll_engine.models import Company
+    company = Company.query.get(_company_id())
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'Employee ID', 'Name', 'Phone', 'Department', 'Position',
+        'Start Date', 'Basic Salary', 'Allowances', 'Employee Type',
+        'Bank/Telebirr', 'TIN',
+    ])
+    for emp in employees:
+        writer.writerow([
+            emp.employee_id, emp.name, emp.phone or '',
+            emp.department or '', emp.position or '',
+            emp.start_date.isoformat() if emp.start_date else '',
+            str(emp.basic_salary), str(emp.allowances),
+            emp.employee_type, emp.bank_or_telebirr or '',
+            emp.tin or '',
+        ])
+
+    output.seek(0)
+    filename = f'employees_{company.name}_{date.today().isoformat()}.csv'
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 @employees_bp.route('/employees/add', methods=['GET', 'POST'])
@@ -945,6 +984,13 @@ def approve_leave(leave_id):
             'days': leave.days_requested,
         }
         )
+    create_notification(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        message=f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave for employee #{leave.employee_id}.',
+        type='success',
+        link=f'/employees/{leave.employee_id}/leave',
+    )
     db.session.commit()
 
     flash(f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.', 'success')
@@ -981,6 +1027,13 @@ def reject_leave(leave_id):
             'reason': reason,
         }
         )
+    create_notification(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        message=f'Leave request rejected for employee #{leave.employee_id}: {reason}',
+        type='warning',
+        link=f'/employees/{leave.employee_id}/leave',
+    )
     db.session.commit()
 
     flash(f'Leave request rejected.', 'warning')

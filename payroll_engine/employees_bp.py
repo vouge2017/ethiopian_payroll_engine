@@ -10,10 +10,10 @@ import uuid
 
 from payroll_engine import db
 from payroll_engine.models import (
-    Employee, Payslip, AuditLog, OvertimeEntry, FinalSettlement,
+    Employee, Payslip, OvertimeEntry, FinalSettlement,
     EmployeeAllowance, EmployeeDeduction, Leave, LeaveBalance
 )
-from payroll_engine.shared import _company_id, role_required
+from payroll_engine.shared import _company_id, role_required, create_audit_log
 
 
 employees_bp = Blueprint('employees', __name__)
@@ -176,17 +176,16 @@ def edit_employee(emp_id):
 
         # Log to audit trail (one entry per changed field)
         for change_type, details in changes.items():
-            log = AuditLog(
-                company_id=_company_id(),
-                user_id=current_user.id,
-                action=change_type,
-                details={
+            create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action=change_type,
+            details={
                     'employee_id': emp.employee_id,
                     'employee_name': name,
                     **details,
                 }
-            )
-            db.session.add(log)
+        )
 
         db.session.commit()
 
@@ -208,8 +207,11 @@ def employee_detail(emp_id):
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id()
     ).first_or_404()
-    payslips = Payslip.query.filter_by(employee_id=emp.id) \
-        .order_by(Payslip.generated_at.desc()).limit(50).all()
+    page = request.args.get('page', 1, type=int)
+    payslips_pagination = Payslip.query.filter_by(employee_id=emp.id) \
+        .order_by(Payslip.generated_at.desc()) \
+        .paginate(page=page, per_page=12, error_out=False)
+    payslips = payslips_pagination.items
     # Overtime entries for current month
     today = date.today()
     month_start = today.replace(day=1)
@@ -238,7 +240,8 @@ def employee_detail(emp_id):
     inactive_deductions = [d for d in deductions if not d.is_active]
     years = today.year
     return render_template('employee_detail.html',
-                           employee=emp, payslips=payslips, year=years,
+                           employee=emp, payslips=payslips,
+                           payslips_pagination=payslips_pagination, year=years,
                            overtime_data=overtime_data,
                            total_ot_hours=round(total_ot_hours, 2),
                            total_ot_pay=round(total_ot_pay, 2),
@@ -367,7 +370,7 @@ def add_allowance(emp_id):
     )
     db.session.add(allowance)
 
-    log = AuditLog(
+    create_audit_log(
         company_id=_company_id(),
         user_id=current_user.id,
         action='allowance_added',
@@ -379,7 +382,6 @@ def add_allowance(emp_id):
             'tax_treatment': tax_treatment,
         }
     )
-    db.session.add(log)
     db.session.commit()
 
     flash(f'{allowance.type_label} of ETB {amount:,.2f} added for {emp.name}.', 'success')
@@ -537,7 +539,7 @@ def add_deduction(emp_id):
     )
     db.session.add(deduction)
 
-    log = AuditLog(
+    create_audit_log(
         company_id=_company_id(),
         user_id=current_user.id,
         action='deduction_created',
@@ -552,7 +554,6 @@ def add_deduction(emp_id):
             'reference_number': reference_number,
         }
     )
-    db.session.add(log)
     db.session.commit()
 
     flash(f'Deduction "{label}" added for {emp.name}.', 'success')
@@ -570,19 +571,18 @@ def stop_deduction(ded_id):
     reason = request.form.get('reason', '').strip() or 'Manually stopped'
     ded.is_active = False
     ded.stopped_reason = reason
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='deduction_stopped',
-        details={
+    create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='deduction_stopped',
+            details={
             'deduction_id': ded.id,
             'employee_id': ded.employee_id,
             'deduction_type': ded.deduction_type,
             'label': ded.label,
             'reason': reason,
         }
-    )
-    db.session.add(log)
+        )
     db.session.commit()
     flash(f'Deduction "{ded.label}" stopped.', 'info')
     return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
@@ -597,18 +597,17 @@ def delete_deduction(ded_id):
         id=ded_id, company_id=_company_id()
     ).first_or_404()
     emp_id = ded.employee_id
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='deduction_deleted',
-        details={
+    create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='deduction_deleted',
+            details={
             'deduction_id': ded.id,
             'employee_id': emp_id,
             'label': ded.label,
             'deduction_type': ded.deduction_type,
         }
-    )
-    db.session.add(log)
+        )
     db.session.delete(ded)
     db.session.commit()
     flash(f'Deduction "{ded.label}" deleted.', 'warning')
@@ -625,13 +624,12 @@ def deactivate_employee(emp_id):
     emp.is_deleted = True
     emp.deleted_at = datetime.utcnow()
     emp.deleted_by = current_user.id
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='employee_deactivated',
-        details={'employee_id': emp.employee_id, 'name': emp.name}
-    )
-    db.session.add(log)
+    create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='employee_deactivated',
+            details={'employee_id': emp.employee_id, 'name': emp.name}
+        )
     db.session.commit()
     flash(f'{emp.name} has been deactivated. Payroll history preserved.', 'info')
     return redirect(url_for('employees.list_employees'))
@@ -647,13 +645,12 @@ def reactivate_employee(emp_id):
     emp.is_deleted = False
     emp.deleted_at = None
     emp.deleted_by = None
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='employee_reactivated',
-        details={'employee_id': emp.employee_id, 'name': emp.name}
-    )
-    db.session.add(log)
+    create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='employee_reactivated',
+            details={'employee_id': emp.employee_id, 'name': emp.name}
+        )
     db.session.commit()
     flash(f'{emp.name} has been reactivated.', 'success')
     return redirect(url_for('employees.list_employees'))
@@ -717,11 +714,11 @@ def terminate_employee(emp_id):
             ded.stopped_reason = f'Employee terminated ({reason})'
 
         # Audit log
-        log = AuditLog(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='employee_terminated',
-            details={
+        create_audit_log(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='employee_terminated',
+        details={
                 'employee_id': emp.employee_id,
                 'name': emp.name,
                 'reason': reason,
@@ -732,8 +729,7 @@ def terminate_employee(emp_id):
                 'settlement_id': settlement.id,
                 'net_final_payment': str(settlement.net_final_payment),
             }
-        )
-        db.session.add(log)
+    )
         db.session.commit()
 
         flash(f'{emp.name} terminated. Final settlement: ETB {settlement.net_final_payment:,.2f} '
@@ -885,7 +881,7 @@ def request_leave(emp_id):
     )
     db.session.add(leave)
 
-    log = AuditLog(
+    create_audit_log(
         company_id=_company_id(),
         user_id=current_user.id,
         action='leave_requested',
@@ -897,7 +893,6 @@ def request_leave(emp_id):
             'days': days_requested,
         }
     )
-    db.session.add(log)
     db.session.commit()
 
     flash(f'Leave request submitted: {days_requested} days of {leave_type} leave.', 'success')
@@ -939,18 +934,17 @@ def approve_leave(leave_id):
 
     balance.taken = (balance.taken or 0) + leave.days_requested
 
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='leave_approved',
-        details={
+    create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='leave_approved',
+            details={
             'leave_id': leave.id,
             'employee_id': leave.employee_id,
             'leave_type': leave.leave_type,
             'days': leave.days_requested,
         }
-    )
-    db.session.add(log)
+        )
     db.session.commit()
 
     flash(f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.', 'success')
@@ -977,17 +971,16 @@ def reject_leave(leave_id):
     leave.status = 'rejected'
     leave.rejection_reason = reason
 
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='leave_rejected',
-        details={
+    create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='leave_rejected',
+            details={
             'leave_id': leave.id,
             'employee_id': leave.employee_id,
             'reason': reason,
         }
-    )
-    db.session.add(log)
+        )
     db.session.commit()
 
     flash(f'Leave request rejected.', 'warning')

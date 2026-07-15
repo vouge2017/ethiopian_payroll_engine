@@ -6,7 +6,6 @@ from flask import session, abort, flash, request
 from flask_login import current_user
 from functools import wraps
 from payroll_engine import db
-from payroll_engine.models import AuditLog
 
 
 def _company_id():
@@ -49,3 +48,21 @@ def get_linked_employee():
         company_id=_company_id(),
         is_deleted=False,
     ).first()
+
+
+def create_audit_log(company_id, user_id, action, details=None):
+    """Create an AuditLog with request_id automatically injected."""
+    from flask import g
+    from payroll_engine.models import AuditLog
+    merged_details = dict(details or {})
+    request_id = getattr(g, 'request_id', None)
+    if request_id:
+        merged_details['request_id'] = request_id
+    log = AuditLog(
+        company_id=company_id,
+        user_id=user_id,
+        action=action,
+        details=merged_details,
+    )
+    db.session.add(log)
+    return log

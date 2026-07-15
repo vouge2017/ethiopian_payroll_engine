@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_pagination.html" import render_pagination %}
 {% block title %}Employee Detail - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
 <div class="container-fluid py-4">
@@ -534,6 +535,9 @@
                     </tbody>
                 </table>
             </div>
+            {% if payslips_pagination and payslips_pagination.pages > 1 %}
+            {{ render_pagination(payslips_pagination, 'employees.employee_detail', extra={'emp_id': employee.id}) }}
+            {% endif %}
             {% else %}
             <div class="text-center py-4 text-muted">
                 <p>{{ _('no_payslips') }}</p>

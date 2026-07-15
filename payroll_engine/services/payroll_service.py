@@ -7,10 +7,11 @@ from datetime import datetime
 from payroll_engine import db
 from payroll_engine.models import (
     Employee, PayrollRun, Payslip, PayrollDraft,
-    AuditLog, PayrollValidationResult,
+    PayrollValidationResult,
 )
 from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score
+from payroll_engine.shared import create_audit_log
 
 
 class ApprovalResult:
@@ -136,7 +137,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         )
 
         # Audit log
-        log = AuditLog(
+        create_audit_log(
             company_id=company_id,
             user_id=user_id,
             action='payroll_run_completed',
@@ -148,7 +149,6 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 'approval_ip': request_ip,
             }
         )
-        db.session.add(log)
 
         # Clean up draft
         PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
@@ -173,13 +173,12 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             failed_run = PayrollRun.query.get(run.id)
             if failed_run:
                 failed_run.status = 'failed'
-            fail_log = AuditLog(
+            create_audit_log(
                 company_id=company_id,
                 user_id=user_id,
                 action='payroll_run_failed',
                 details={'run_id': run.id, 'error': str(e)}
             )
-            db.session.add(fail_log)
             db.session.commit()
         except Exception:
             db.session.rollback()

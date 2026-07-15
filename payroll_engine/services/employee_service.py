@@ -5,7 +5,8 @@ Extracted from employees_bp.py to separate business logic from HTTP handling.
 from decimal import Decimal, InvalidOperation
 from datetime import datetime as dt
 from payroll_engine import db
-from payroll_engine.models import Employee, AuditLog
+from payroll_engine.models import Employee
+from payroll_engine.shared import create_audit_log
 
 
 class EmployeeResult:
@@ -115,13 +116,12 @@ def create_employee(data, company_id, user_id):
     )
     db.session.add(emp)
 
-    log = AuditLog(
+    create_audit_log(
         company_id=company_id,
         user_id=user_id,
         action='employee_added',
         details={'employee_id': emp_id, 'name': data['name']}
     )
-    db.session.add(log)
     db.session.commit()
 
     return EmployeeResult(True, employee=emp)

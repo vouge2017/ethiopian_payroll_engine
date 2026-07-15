@@ -215,6 +215,7 @@ def create_app():
     def readyz():
         from sqlalchemy import text
         status = {'self': 'up'}
+        # Check DB connectivity
         try:
             db.session.execute(text('SELECT 1'))
             status['database'] = 'up'
@@ -222,6 +223,15 @@ def create_app():
             status['database'] = 'down'
             current_app.logger.error('readyz DB check failed: %s', e)
             return {'status': 'not_ready', 'checks': status}, 503
+        # Check migration status
+        try:
+            from flask_migrate import current as migration_current
+            with app.app_context():
+                heads = migration_current()
+                status['migrations'] = 'current' if heads else 'unknown'
+        except Exception as e:
+            status['migrations'] = f'error: {e}'
+            current_app.logger.warning('readyz migration check failed: %s', e)
         return {'status': 'ready', 'checks': status}, 200
 
     # Make Ethiopian calendar available in all templates

@@ -17,7 +17,7 @@ from datetime import date, datetime
 from payroll_engine import db
 from payroll_engine.models import (
     Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
-    AuditLog, PayrollValidationResult, OvertimeEntry, FinalSettlement,
+    PayrollValidationResult, OvertimeEntry, FinalSettlement,
     EmployeeAllowance, Leave, LeaveBalance
 )
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
@@ -40,7 +40,7 @@ from payroll_engine.validation import validate_payroll_data, get_summary
 payroll_bp = Blueprint('payroll', __name__)
 
 # Import shared helpers (single source of truth — no duplicates)
-from payroll_engine.shared import _company_id, role_required
+from payroll_engine.shared import _company_id, role_required, create_audit_log
 
 
 @payroll_bp.before_request
@@ -316,13 +316,12 @@ def reject_payroll(run_id):
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
     run.status = 'draft'
     # Store rejection reason in audit log
-    log = AuditLog(
+    create_audit_log(
         company_id=_company_id(),
         user_id=current_user.id,
         action='payroll_rejected',
         details={'run_id': run.id, 'reason': reason}
     )
-    db.session.add(log)
     db.session.commit()
     flash(f'Payroll rejected: {reason}', 'warning')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
@@ -793,13 +792,12 @@ def lock_payroll(run_id):
     run.status = 'locked'
     run.locked_at = datetime.utcnow()
     run.locked_by = current_user.id
-    log = AuditLog(
+    create_audit_log(
         company_id=_company_id(),
         user_id=current_user.id,
         action='payroll_locked',
         details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
     )
-    db.session.add(log)
     db.session.commit()
     flash(f'Period {run.period} is now locked. No further changes allowed.', 'success')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
@@ -822,13 +820,12 @@ def unlock_payroll(run_id):
     run.status = 'completed'
     run.locked_at = None
     run.locked_by = None
-    log = AuditLog(
+    create_audit_log(
         company_id=_company_id(),
         user_id=current_user.id,
         action='payroll_unlocked',
         details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
     )
-    db.session.add(log)
     db.session.commit()
     flash(f'Period {run.period} unlocked. You can now create a correction run.', 'warning')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))

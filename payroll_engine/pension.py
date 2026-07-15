@@ -22,8 +22,17 @@ Q = Decimal('0.01')
 DEFAULT_EMPLOYEE_RATE = Decimal('0.07')
 DEFAULT_EMPLOYER_RATE = Decimal('0.11')
 
-# Cache for pension rates
+# Cache for pension rates with TTL (5 minutes)
+# Call invalidate_pension_cache() after updating TaxRule records
 _rates_cache = {}
+_rates_cache_ttl = 300  # seconds
+_rates_cache_timestamps = {}
+
+
+def invalidate_pension_cache():
+    """Clear the pension rate cache. Call after updating TaxRule records."""
+    _rates_cache.clear()
+    _rates_cache_timestamps.clear()
 
 
 def _D(value) -> Decimal:
@@ -46,8 +55,15 @@ def _get_rates(for_date=None) -> Tuple[Decimal, Decimal]:
         (employee_rate: Decimal, employer_rate: Decimal)
     """
     cache_key = str(for_date) if for_date else 'default'
+    import time
+    now = time.time()
     if cache_key in _rates_cache:
-        return _rates_cache[cache_key]
+        cached_time = _rates_cache_timestamps.get(cache_key, 0)
+        if now - cached_time < _rates_cache_ttl:
+            return _rates_cache[cache_key]
+        # Cache expired — invalidate
+        del _rates_cache[cache_key]
+        del _rates_cache_timestamps[cache_key]
 
     try:
         from payroll_engine.models import TaxRule
@@ -55,12 +71,14 @@ def _get_rates(for_date=None) -> Tuple[Decimal, Decimal]:
         if rule:
             result = _D(rule.pension_employee_rate), _D(rule.pension_employer_rate)
             _rates_cache[cache_key] = result
+            _rates_cache_timestamps[cache_key] = now
             return result
     except Exception:
         pass
 
     result = (DEFAULT_EMPLOYEE_RATE, DEFAULT_EMPLOYER_RATE)
     _rates_cache[cache_key] = result
+    _rates_cache_timestamps[cache_key] = now
     return result
 
 

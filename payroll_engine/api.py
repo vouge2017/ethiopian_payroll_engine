@@ -4,7 +4,7 @@ from functools import wraps
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
 from . import db, limiter
-from .models import Company, User, Employee, PayrollRun, Payslip, Attendance, Leave, AuditLog
+from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLog
 
 api = Blueprint('api', __name__)
 

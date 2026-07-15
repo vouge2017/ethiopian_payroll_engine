@@ -39,9 +39,16 @@ DEFAULT_PERSONAL_RELIEF = Decimal('150')  # ETB monthly personal relief
 
 # Cache for tax brackets with TTL (5 minutes)
 # Rules can change via admin UI — cache must not persist stale data forever
+# Call invalidate_tax_cache() after updating TaxRule in the database
 _brackets_cache = {}
 _brackets_cache_ttl = 300  # seconds
 _brackets_cache_timestamps = {}
+
+
+def invalidate_tax_cache():
+    """Clear the tax bracket cache. Call after updating TaxRule records."""
+    _brackets_cache.clear()
+    _brackets_cache_timestamps.clear()
 
 
 def _D(value) -> Decimal:

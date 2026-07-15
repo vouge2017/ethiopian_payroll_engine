@@ -27,6 +27,7 @@
                         <div class="mb-3">
                             <label for="password" class="form-label">{{ _('password') }}</label>
                             <input type="password" class="form-control" id="password" name="password" required>
+                            <div class="form-text"><a href="{{ url_for('auth.forgot_password') }}">{{ _('forgot_password') if _('forgot_password') != 'forgot_password' else 'Forgot password?' }}</a></div>
                         </div>
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="remember" name="remember">

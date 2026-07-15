@@ -154,6 +154,7 @@ STRINGS_OM = {
 
     # Login & Registration
     'password': 'Jecha Icciitii',
+    'forgot_password': 'Jecha Icciitii dagattanii?',
     'remember_me': 'Na Yaadadhu',
     'email': 'Email',
     'yes': 'Eeyyee',

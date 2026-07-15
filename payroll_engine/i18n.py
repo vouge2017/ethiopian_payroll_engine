@@ -157,6 +157,7 @@ STRINGS = {
 
     # Login & Registration
     'password': 'የይለፍ ቃል',
+    'forgot_password': 'የይለፍ ቃል ረስተዋል?',
     'remember_me': 'አስታውሰኝ',
     'email': 'ኢሜይል',
     'yes': 'አዎ',

@@ -1,6 +1,7 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+import secrets
 from decimal import Decimal
 import re
 import threading
@@ -244,6 +245,9 @@ class User(UserMixin, db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # Null until user creates/joins a company
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Password reset tokens
+    reset_token_hash = db.Column(db.String(64), nullable=True)
+    reset_token_expires = db.Column(db.DateTime, nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -258,6 +262,32 @@ class User(UserMixin, db.Model):
         import string
         alphabet = string.ascii_letters + string.digits
         return ''.join(secrets.choice(alphabet) for _ in range(16))
+
+    def generate_reset_token(self) -> str:
+        """Generate a password reset token. Returns the raw token (show to user).
+        Stores only the SHA-256 hash in the database.
+        """
+        import secrets
+        import hashlib
+        token = secrets.token_urlsafe(32)
+        self.reset_token_hash = hashlib.sha256(token.encode()).hexdigest()
+        self.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        return token
+
+    def verify_reset_token(self, token: str) -> bool:
+        """Verify a reset token against the stored hash. Returns True if valid."""
+        import hashlib
+        if not self.reset_token_hash or not self.reset_token_expires:
+            return False
+        if datetime.utcnow() > self.reset_token_expires:
+            return False
+        expected = hashlib.sha256(token.encode()).hexdigest()
+        return secrets.compare_digest(expected, self.reset_token_hash)
+
+    def clear_reset_token(self):
+        """Invalidate the reset token after use."""
+        self.reset_token_hash = None
+        self.reset_token_expires = None
 
     def get_role_for_company(self, company_id):
         """Get user's role for a specific company."""

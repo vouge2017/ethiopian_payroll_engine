@@ -325,3 +325,94 @@ def google_register():
         email=email,
         google_name=google_name,
     )
+
+
+# --- Password Reset ---
+
+@auth.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit('5 per minute')
+def forgot_password():
+    """Request a password reset token. Accepts phone or email."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        login_id = request.form.get('login_id', '').strip()
+        if not login_id:
+            flash('Please enter your phone number or email.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+
+        # Find user by phone or email
+        user = None
+        cleaned = login_id.replace(' ', '')
+        looks_like_phone = (
+            cleaned.startswith('09') or cleaned.startswith('07') or
+            cleaned.startswith('+251') or
+            (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
+        )
+        if looks_like_phone:
+            is_valid, normalized, _ = validate_ethiopian_phone(login_id)
+            if is_valid:
+                user = User.query.filter_by(phone=normalized).first()
+        if user is None:
+            user = User.query.filter_by(email=login_id.lower()).first()
+
+        # Always show the same message (don't reveal whether account exists)
+        if user:
+            token = user.generate_reset_token()
+            db.session.commit()
+            # TODO: Send token via SMS/email. For now, show it on screen.
+            flash(
+                f'Password reset token generated. '
+                f'In production this would be sent to your phone/email. '
+                f'For now, here it is: {token}',
+                'info',
+            )
+            return redirect(url_for('auth.reset_password', token=token))
+
+        flash('If an account with that phone/email exists, a reset link has been sent.', 'info')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/forgot_password.html')
+
+
+@auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+@limiter.limit('5 per minute')
+def reset_password(token):
+    """Reset password using a valid token."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
+    # Find user by token hash
+    import hashlib
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user = User.query.filter_by(
+        reset_token_hash=token_hash
+    ).first()
+
+    if not user or not user.verify_reset_token(token):
+        flash('Invalid or expired reset token.', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        password2 = request.form.get('password2', '')
+
+        if password != password2:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('auth.reset_password', token=token))
+
+        from payroll_engine.password_policy import check_password_strength
+        is_strong, pw_error = check_password_strength(password)
+        if not is_strong:
+            flash(pw_error, 'danger')
+            return redirect(url_for('auth.reset_password', token=token))
+
+        user.set_password(password)
+        user.clear_reset_token()
+        user.must_change_password = False
+        db.session.commit()
+        flash('Password reset successfully. Please log in.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/reset_password.html', token=token)

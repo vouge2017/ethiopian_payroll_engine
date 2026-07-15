@@ -920,7 +920,7 @@ def approve_payroll():
             flag.overridden = True
             flag.override_reason = request.form.get(reason_key, '')
             flag.overridden_by = current_user.id
-    db.session.commit()
+    db.session.flush()
 
     # Check if any BLOCK issues remain un-overridden
     blocks = PayrollValidationResult.query.filter_by(
@@ -928,26 +928,25 @@ def approve_payroll():
     ).filter(PayrollValidationResult.overridden == False).all()
 
     if blocks:
+        db.session.rollback()
         flash('Cannot process: there are unresolved BLOCK issues.', 'danger')
         return redirect(url_for('main.payroll_run_detail', run_id=run.id))
 
-    # --- STAGE 4: APPROVE & PROCESS ---
-    run.status = 'processing'
-    run.approved_by = current_user.id
-    run.approved_at = datetime.utcnow()
-    run.approval_ip = request.remote_addr
-    db.session.commit()
-
+    # --- STAGE 4: APPROVE & PROCESS (single transaction) ---
     # Retrieve payroll data from database (not session)
     draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
     if not draft:
-        run.status = 'failed'
-        db.session.commit()
+        db.session.rollback()
         flash('Payroll data not found. The draft may have been deleted. Please re-upload the CSV.', 'danger')
         return redirect(url_for('main.payroll_upload'))
     employees_data = draft.employee_data
 
     try:
+        run.status = 'processing'
+        run.approved_by = current_user.id
+        run.approved_at = datetime.utcnow()
+        run.approval_ip = request.remote_addr
+
         # Batch-fetch existing employees to avoid N+1 queries
         emp_ids = [emp_data['id'] for emp_data in employees_data]
         existing_emps = Employee.query.filter(
@@ -996,7 +995,6 @@ def approve_payroll():
             db.session.add(payslip)
 
         run.status = 'completed'
-        db.session.commit()
 
         # Compliance scoring — use actual approval time as disbursement proxy
         run_date_str = run.run_date.isoformat()
@@ -1019,26 +1017,36 @@ def approve_payroll():
             }
         )
         db.session.add(log)
-        db.session.commit()
 
         # Clean up draft data from database
         PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
+
+        # Single commit — all or nothing
         db.session.commit()
 
         flash(f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%.', 'success')
         return redirect(url_for('main.payroll_run_detail', run_id=run.id))
 
     except Exception as e:
-        run.status = 'failed'
-        db.session.commit()
-        log = AuditLog(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='payroll_run_failed',
-            details={'run_id': run.id, 'error': str(e)}
-        )
-        db.session.add(log)
-        db.session.commit()
+        # Roll back the entire approval attempt
+        db.session.rollback()
+
+        # Log the failure in a separate transaction
+        try:
+            failed_run = PayrollRun.query.get(run.id)
+            if failed_run:
+                failed_run.status = 'failed'
+            fail_log = AuditLog(
+                company_id=_company_id(),
+                user_id=current_user.id,
+                action='payroll_run_failed',
+                details={'run_id': run.id, 'error': str(e)}
+            )
+            db.session.add(fail_log)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
         log_and_flash_error(
             'Payroll approval failed. Please try again or contact support.',
             e,

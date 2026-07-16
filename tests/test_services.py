@@ -431,3 +431,87 @@ def test_check_duplicate_period_conflict(app, ids):
         dup = check_duplicate_period(cid, run.period)
         assert dup is not None
         assert 'already exists' in dup[0] or 'locked' in dup[0]
+
+
+# --- SoftDeleteQuery ---
+
+def test_soft_delete_auto_filter(app, ids):
+    """Default query auto-excludes deleted employees."""
+    from payroll_engine.models import Employee, TenantQuery
+    cid, _, eid = ids
+    with app.app_context():
+        emp = db.session.get(Employee, eid)
+        assert emp is not None
+
+        # Soft delete
+        emp.is_deleted = True
+        from datetime import datetime
+        emp.deleted_at = datetime.utcnow()
+        db.session.commit()
+
+        # Default query excludes deleted
+        found = Employee.query.filter_by(company_id=cid).first()
+        assert found is None
+
+        # with_deleted includes deleted
+        found = Employee.with_deleted().filter_by(company_id=cid).first()
+        assert found is not None
+        assert found.is_deleted is True
+
+        # only_deleted returns only deleted
+        deleted = Employee.only_deleted().filter_by(company_id=cid).all()
+        assert len(deleted) == 1
+        assert deleted[0].is_deleted is True
+
+
+def test_soft_delete_count(app, ids):
+    """Count excludes deleted employees."""
+    from payroll_engine.models import Employee
+    cid, _, eid = ids
+    with app.app_context():
+        assert Employee.query.filter_by(company_id=cid).count() == 1
+
+        emp = db.session.get(Employee, eid)
+        emp.is_deleted = True
+        from datetime import datetime
+        emp.deleted_at = datetime.utcnow()
+        db.session.commit()
+
+        assert Employee.query.filter_by(company_id=cid).count() == 0
+        assert Employee.with_deleted().filter_by(company_id=cid).count() == 1
+
+
+def test_soft_delete_paginate(app, ids):
+    """Paginate excludes deleted employees."""
+    from payroll_engine.models import Employee
+    cid, _, eid = ids
+    with app.app_context():
+        emp = db.session.get(Employee, eid)
+        emp.is_deleted = True
+        from datetime import datetime
+        emp.deleted_at = datetime.utcnow()
+        db.session.commit()
+
+        pagination = Employee.query.filter_by(company_id=cid).paginate(page=1, per_page=20)
+        assert pagination.total == 0
+
+        pagination = Employee.with_deleted().filter_by(company_id=cid).paginate(page=1, per_page=20)
+        assert pagination.total == 1
+
+
+def test_soft_delete_bulk_delete_bypass(app, ids):
+    """Bulk delete bypasses auto-filter (intentional cleanup)."""
+    from payroll_engine.models import Employee
+    cid, _, eid = ids
+    with app.app_context():
+        emp = db.session.get(Employee, eid)
+        emp.is_deleted = True
+        from datetime import datetime
+        emp.deleted_at = datetime.utcnow()
+        db.session.commit()
+
+        # Bulk delete should affect ALL records, not just non-deleted
+        Employee.query.filter_by(company_id=cid).delete()
+        db.session.commit()
+
+        assert Employee.with_deleted().filter_by(company_id=cid).count() == 0

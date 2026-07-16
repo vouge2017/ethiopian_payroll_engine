@@ -196,6 +196,97 @@ class TenantQuery(db.Query):
         return _Ctx()
 
 
+class SoftDeleteQuery(TenantQuery):
+    """Query class that auto-filters soft-deleted records.
+
+    Inherits TenantQuery for company_id isolation.
+    Deleted records are excluded unless explicitly requested via
+    with_deleted() or only_deleted().
+
+    Usage:
+        class MyModel(db.Model):
+            query_class = SoftDeleteQuery
+            is_deleted = db.Column(db.Boolean, default=False)
+
+        MyModel.query.all()                    # excludes deleted
+        MyModel.with_deleted().all()           # includes deleted
+        MyModel.only_deleted().all()           # only deleted
+        MyModel.with_deleted().get(42)         # by ID including deleted
+    """
+
+    _with_deleted = False
+
+    def _apply_soft_delete_filter(self):
+        """Apply is_deleted=False filter if the model has the column."""
+        if self._with_deleted:
+            return self
+        # Skip if query already has LIMIT/OFFSET (can't add WHERE after LIMIT)
+        if self._limit_clause is not None or self._offset_clause is not None:
+            return self
+        try:
+            ent = self._entity_from_pre_ent_zero()
+            if ent is not None and hasattr(ent, 'mapper'):
+                mapper = ent.mapper
+                if hasattr(mapper.c, 'is_deleted'):
+                    return self.filter(mapper.c.is_deleted == False)
+        except (AttributeError, IndexError):
+            pass
+        return self
+
+    def all(self):
+        return super(SoftDeleteQuery, self._apply_soft_delete_filter()).all()
+
+    def first(self):
+        return super(SoftDeleteQuery, self._apply_soft_delete_filter()).first()
+
+    def one(self):
+        return super(SoftDeleteQuery, self._apply_soft_delete_filter()).one()
+
+    def one_or_none(self):
+        return super(SoftDeleteQuery, self._apply_soft_delete_filter()).one_or_none()
+
+    def count(self):
+        return super(SoftDeleteQuery, self._apply_soft_delete_filter()).count()
+
+    def delete(self, *args, **kwargs):
+        """Bulk delete bypasses soft-delete filter.
+
+        Bulk deletes are intentional (cleanup, migration). The auto-filter
+        should not silently scope them to non-deleted records only.
+        """
+        # Skip _apply_soft_delete_filter — go straight to TenantQuery.delete
+        return TenantQuery.delete(self, *args, **kwargs)
+
+    def paginate(self, **kwargs):
+        return super(SoftDeleteQuery, self._apply_soft_delete_filter()).paginate(**kwargs)
+
+    def with_deleted(self):
+        """Return query that includes soft-deleted records."""
+        q = self._clone()
+        q._with_deleted = True
+        return q
+
+    def only_deleted(self):
+        """Return query that only includes soft-deleted records."""
+        try:
+            ent = self._entity_from_pre_ent_zero()
+            if ent is not None and hasattr(ent, 'mapper'):
+                mapper = ent.mapper
+                if hasattr(mapper.c, 'is_deleted'):
+                    q = self._clone()
+                    q._with_deleted = True
+                    return q.filter(mapper.c.is_deleted == True)
+        except (AttributeError, IndexError):
+            pass
+        return self
+
+    def _clone(self):
+        """Clone preserves _with_deleted flag."""
+        q = super()._clone()
+        q._with_deleted = self._with_deleted
+        return q
+
+
 class Company(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -367,7 +458,7 @@ class User(UserMixin, db.Model):
 
 
 class Employee(db.Model):
-    query_class = TenantQuery
+    query_class = SoftDeleteQuery
 
     id = db.Column(db.Integer, primary_key=True)
     employee_id = db.Column(db.String(20), nullable=False)  # e.g., EMP001
@@ -432,6 +523,16 @@ class Employee(db.Model):
             if a.allowance_type == 'hardship' and a.is_active:
                 return a.amount
         return Decimal('0')
+
+    @classmethod
+    def with_deleted(cls):
+        """Query that includes soft-deleted employees."""
+        return cls.query.with_deleted()
+
+    @classmethod
+    def only_deleted(cls):
+        """Query that only includes soft-deleted employees."""
+        return cls.query.only_deleted()
 
     def __repr__(self):
         return f'<Employee {self.employee_id}: {self.name}>'

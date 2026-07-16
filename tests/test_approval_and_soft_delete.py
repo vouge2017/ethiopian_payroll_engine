@@ -76,7 +76,7 @@ def test_soft_delete_marks_employee(company_user_employee):
     emp.deleted_by = user.id
     db.session.commit()
 
-    found = Employee.query.filter_by(id=emp.id, company_id=company.id).first()
+    found = Employee.with_deleted().filter_by(id=emp.id, company_id=company.id).first()
     assert found.is_deleted
     assert found.deleted_at is not None
     assert found.deleted_by == user.id
@@ -100,7 +100,7 @@ def test_soft_delete_excludes_from_default_query(company_user_employee):
     assert len(active) == 0
 
     # But still in database
-    all_emps = Employee.query.filter_by(company_id=company.id).all()
+    all_emps = Employee.with_deleted().filter_by(company_id=company.id).all()
     assert len(all_emps) == 1
 
 

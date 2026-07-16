@@ -216,3 +216,218 @@ def test_payroll_backward_compat(app):
         r = calculate_payroll(basic_salary=Decimal('10000'), allowances=Decimal('2000'))
         assert r['gross'] == Decimal('12000.00')
         assert r['exempt_allowances'] == Decimal('0.00')
+
+
+# --- Employee Service ---
+
+def test_parse_employee_form_basic(app):
+    from payroll_engine.services.employee_service import parse_employee_form
+    with app.app_context():
+        data, err = parse_employee_form({
+            'employee_id': 'EMP001',
+            'name': 'Dawit Mekonnen',
+            'phone': '0911000001',
+            'department': 'Finance',
+            'position': 'Accountant',
+            'start_date': '2023-01-15',
+            'basic_salary': '10000',
+            'allowances': '2000',
+            'bank_account': '1000123456789',
+            'tin': '1234567890',
+        })
+        assert err is None
+        assert data['emp_id'] == 'EMP001'
+        assert data['name'] == 'Dawit Mekonnen'
+        assert data['basic'] == Decimal('10000')
+        assert data['allowances'] == Decimal('2000')
+        assert data['start_date'] == date(2023, 1, 15)
+
+
+def test_parse_employee_form_missing_name(app):
+    from payroll_engine.services.employee_service import parse_employee_form
+    with app.app_context():
+        data, err = parse_employee_form({'employee_id': 'EMP001', 'name': ''})
+        assert data is None
+        assert 'name' in err.lower()
+
+
+def test_parse_employee_form_invalid_date(app):
+    from payroll_engine.services.employee_service import parse_employee_form
+    with app.app_context():
+        data, err = parse_employee_form({
+            'employee_id': 'EMP001', 'name': 'Test', 'start_date': 'not-a-date'
+        })
+        assert data is None
+        assert 'date' in err.lower()
+
+
+def test_parse_employee_form_bad_numbers(app):
+    from payroll_engine.services.employee_service import parse_employee_form
+    with app.app_context():
+        data, err = parse_employee_form({
+            'employee_id': 'EMP001', 'name': 'Test',
+            'basic_salary': 'abc', 'allowances': 'xyz'
+        })
+        assert err is None  # falls back to Decimal('0')
+        assert data['basic'] == Decimal('0')
+
+
+def test_parse_employee_form_defaults(app):
+    from payroll_engine.services.employee_service import parse_employee_form
+    with app.app_context():
+        data, err = parse_employee_form({'employee_id': 'E1', 'name': 'Test'})
+        assert err is None
+        assert data['employee_type'] == 'monthly'
+        assert data['department'] is None
+        assert data['phone'] is None
+
+
+def test_create_employee_basic(app, ids):
+    from payroll_engine.services.employee_service import create_employee
+    cid, uid, _ = ids
+    with app.app_context():
+        data = {
+            'emp_id': 'EMP002', 'name': 'New Employee', 'phone': '0922000000',
+            'department': 'IT', 'position': 'Dev', 'start_date': date(2024, 6, 1),
+            'basic': Decimal('8000'), 'allowances': Decimal('1000'),
+            'bank_account': '2000123456789', 'tin': None,
+            'employee_type': 'monthly', 'daily_rate': Decimal('0'),
+        }
+        r = create_employee(data, cid, uid)
+        assert r.success is True
+        assert r.employee.employee_id == 'EMP002'
+        assert r.employee.basic_salary == Decimal('8000')
+
+
+def test_create_employee_auto_id(app, ids):
+    from payroll_engine.services.employee_service import create_employee
+    cid, uid, _ = ids
+    with app.app_context():
+        data = {
+            'emp_id': '', 'name': 'Auto ID Employee', 'phone': None,
+            'department': None, 'position': None, 'start_date': None,
+            'basic': Decimal('5000'), 'allowances': Decimal('0'),
+            'bank_account': None, 'tin': None,
+            'employee_type': 'monthly', 'daily_rate': Decimal('0'),
+        }
+        r = create_employee(data, cid, uid)
+        assert r.success is True
+        assert r.employee.employee_id == 'EMP002'  # next after EMP001
+
+
+def test_create_employee_duplicate(app, ids):
+    from payroll_engine.services.employee_service import create_employee
+    cid, uid, _ = ids
+    with app.app_context():
+        data = {
+            'emp_id': 'EMP001', 'name': 'Dup', 'phone': None,
+            'department': None, 'position': None, 'start_date': None,
+            'basic': Decimal('5000'), 'allowances': Decimal('0'),
+            'bank_account': None, 'tin': None,
+            'employee_type': 'monthly', 'daily_rate': Decimal('0'),
+        }
+        r = create_employee(data, cid, uid)
+        assert r.success is False
+        assert 'already exists' in r.error
+
+
+def test_create_employee_daily(app, ids):
+    from payroll_engine.services.employee_service import create_employee
+    cid, uid, _ = ids
+    with app.app_context():
+        data = {
+            'emp_id': 'DAILY01', 'name': 'Daily Worker', 'phone': None,
+            'department': None, 'position': None, 'start_date': None,
+            'basic': Decimal('0'), 'allowances': Decimal('0'),
+            'bank_account': None, 'tin': None,
+            'employee_type': 'daily', 'daily_rate': Decimal('500'),
+        }
+        r = create_employee(data, cid, uid)
+        assert r.success is True
+        assert r.employee.employee_type == 'daily'
+        assert r.employee.daily_rate == Decimal('500')
+
+
+# --- Payroll Workflow Service ---
+
+def test_check_csv_row_limit_ok(app):
+    from payroll_engine.services.payroll_workflow import check_csv_row_limit
+    with app.app_context():
+        assert check_csv_row_limit([{}] * 100) is None
+
+
+def test_check_csv_row_limit_exceeded(app):
+    from payroll_engine.services.payroll_workflow import check_csv_row_limit
+    with app.app_context():
+        msg = check_csv_row_limit([{}] * 5001)
+        assert msg is not None
+        assert '5001' in msg
+
+
+def test_build_period_string(app):
+    from payroll_engine.services.payroll_workflow import build_period_string
+    with app.app_context():
+        p = build_period_string(date(2026, 7, 16))
+        assert isinstance(p, str)
+        assert '-' in p
+        # Should be Ethiopian calendar format
+        parts = p.split('-')
+        assert len(parts) == 2
+
+
+def test_create_payroll_run_basic(app, ids):
+    from payroll_engine.services.payroll_workflow import create_payroll_run
+    cid, _, _ = ids
+    with app.app_context():
+        employees_data = [{
+            'id': 'EMP001', 'name': 'Dawit Mekonnen',
+            'basic': 10000, 'allowances': 2000,
+            'gross': 12000, 'taxable': 12000, 'tax': 1500,
+            'pension_employee': 840, 'pension_employer': 1320, 'net': 9660,
+        }]
+        result = create_payroll_run(cid, employees_data, [])
+        assert 'run_id' in result
+        assert result['total_gross'] == 12000
+        assert result['total_tax'] == 1500
+        assert result['total_net'] == 9660
+
+
+def test_create_payroll_run_rollback(app, ids):
+    from payroll_engine.services.payroll_workflow import create_payroll_run
+    from payroll_engine.models import PayrollRun
+    cid, _, _ = ids
+    with app.app_context():
+        employees_data = [{'id': 'EMP001', 'name': 'Test', 'basic': 1000,
+                           'allowances': 0, 'gross': 1000, 'taxable': 1000,
+                           'tax': 0, 'pension_employee': 70, 'pension_employer': 110,
+                           'net': 930}]
+        result = create_payroll_run(cid, employees_data, [])
+        run_id = result['run_id']
+        run = db.session.get(PayrollRun, run_id)
+        assert run is not None
+        assert run.status == 'review'
+
+
+def test_check_duplicate_period_none(app, ids):
+    from payroll_engine.services.payroll_workflow import check_duplicate_period
+    cid, _, _ = ids
+    with app.app_context():
+        result = check_duplicate_period(cid, '2018-13')  # unlikely period
+        assert result is None
+
+
+def test_check_duplicate_period_conflict(app, ids):
+    from payroll_engine.services.payroll_workflow import check_duplicate_period, create_payroll_run
+    cid, _, _ = ids
+    with app.app_context():
+        employees_data = [{'id': 'EMP001', 'name': 'Test', 'basic': 1000,
+                           'allowances': 0, 'gross': 1000, 'taxable': 1000,
+                           'tax': 0, 'pension_employee': 70, 'pension_employer': 110,
+                           'net': 930}]
+        result = create_payroll_run(cid, employees_data, [])
+        from payroll_engine.models import PayrollRun
+        run = db.session.get(PayrollRun, result['run_id'])
+        # Now check for duplicate
+        dup = check_duplicate_period(cid, run.period)
+        assert dup is not None
+        assert 'already exists' in dup[0] or 'locked' in dup[0]

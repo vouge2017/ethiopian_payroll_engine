@@ -97,6 +97,9 @@
                 </div>
             </div>
 
+            {% from "_pagination.html" import render_pagination %}
+            {{ render_pagination(pagination, 'payroll.historical_import') }}
+
             <!-- YTD Preview -->
             <div class="card border-0 shadow-sm mt-3">
                 <div class="card-body">

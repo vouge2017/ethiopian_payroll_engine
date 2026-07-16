@@ -1165,7 +1165,11 @@ def leave_management():
     if type_filter:
         query = query.filter(Leave.leave_type == type_filter)
 
-    leaves = query.order_by(Leave.applied_at.desc()).limit(100).all()
+    page = request.args.get('page', 1, type=int)
+    pagination = query.order_by(Leave.applied_at.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    leaves = pagination.items
 
     # Summary counts
     pending_count = Leave.query.filter_by(company_id=_company_id(), status='pending').count()
@@ -1178,6 +1182,7 @@ def leave_management():
     return render_template(
         'leave_management.html',
         leaves=leaves,
+        pagination=pagination,
         pending_count=pending_count,
         approved_this_month=approved_this_month,
         status_filter=status_filter,

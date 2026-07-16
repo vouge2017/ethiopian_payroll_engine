@@ -537,13 +537,18 @@ def historical_import():
             return redirect(request.url)
 
     # GET — show import page with existing historical data
-    historical_runs = PayrollRun.query.filter_by(
+    page = request.args.get('page', 1, type=int)
+    pagination = PayrollRun.query.filter_by(
         company_id=_company_id(), source='import'
-    ).order_by(PayrollRun.run_date.desc()).all()
+    ).order_by(PayrollRun.run_date.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    historical_runs = pagination.items
 
     return render_template(
         'historical_import.html',
         historical_runs=historical_runs,
+        pagination=pagination,
         year=date.today().year,
     )
 

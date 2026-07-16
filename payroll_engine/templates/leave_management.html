@@ -147,6 +147,9 @@
                 <p class="text-muted">Leave requests from employees will appear here.</p>
             </div>
             {% endif %}
+
+            {% from "_pagination.html" import render_pagination %}
+            {{ render_pagination(pagination, 'employees.leave_management', extra={'status': status_filter, 'type': type_filter}) }}
         </div>
     </div>
 </div>

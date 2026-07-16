@@ -146,7 +146,7 @@ def accept_invite(token):
     from payroll_engine.models import User
     from payroll_engine.password_policy import check_password_strength
 
-    emp = Employee.query.filter_by(invite_token=token).first()
+    emp = Employee.query.filter_by(invite_token=token, is_deleted=False).first()
     if not emp or not emp.invite_expires:
         flash('Invalid or expired invite link.', 'danger')
         return redirect(url_for('auth.login'))

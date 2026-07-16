@@ -232,7 +232,8 @@ def add_employee():
 def edit_employee(emp_id):
     """Edit an employee. Logs salary and bank account changes to audit trail."""
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id()
+        id=emp_id, company_id=_company_id(),
+        is_deleted=False
     ).first_or_404()
 
     if request.method == 'POST':
@@ -343,7 +344,8 @@ def employee_detail(emp_id):
     from payroll_engine.models import OvertimeEntry, EmployeeDeduction
     from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id()
+        id=emp_id, company_id=_company_id(),
+        is_deleted=False
     ).first_or_404()
     page = request.args.get('page', 1, type=int)
     payslips_pagination = Payslip.query.filter_by(employee_id=emp.id) \
@@ -398,7 +400,8 @@ def add_overtime(emp_id):
     """Add overtime entry for an employee."""
     from payroll_engine.models import OvertimeEntry
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id()
+        id=emp_id, company_id=_company_id(),
+        is_deleted=False
     ).first_or_404()
     ot_date = request.form.get('date')
     hours = request.form.get('hours', type=float)
@@ -445,7 +448,8 @@ def add_allowance(emp_id):
     from decimal import Decimal, InvalidOperation
 
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id()
+        id=emp_id, company_id=_company_id(),
+        is_deleted=False
     ).first_or_404()
 
     allowance_type = request.form.get('allowance_type', '').strip()
@@ -552,7 +556,8 @@ def add_deduction(emp_id):
     import os, uuid
 
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id()
+        id=emp_id, company_id=_company_id(),
+        is_deleted=False
     ).first_or_404()
 
     deduction_type = request.form.get('deduction_type', '').strip()
@@ -912,7 +917,8 @@ def employee_leave_balance(emp_id):
     """Show leave balances for an employee."""
     from payroll_engine.leave import calculate_leave_balance, LeaveType
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id()
+        id=emp_id, company_id=_company_id(),
+        is_deleted=False
     ).first_or_404()
 
     year = request.args.get('year', date.today().year, type=int)
@@ -954,7 +960,8 @@ def request_leave(emp_id):
     from datetime import datetime as dt
 
     emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id()
+        id=emp_id, company_id=_company_id(),
+        is_deleted=False
     ).first_or_404()
 
     leave_type = request.form.get('leave_type', '').strip()

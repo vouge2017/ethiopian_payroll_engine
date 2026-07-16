@@ -458,7 +458,7 @@ def historical_import():
 
                     # Find the employee
                     emp = Employee.query.filter_by(
-                        employee_id=emp_id, company_id=_company_id()
+                        employee_id=emp_id, company_id=_company_id(), is_deleted=False
                     ).first()
                     if not emp:
                         errors.append(f'Row {i}: Employee {emp_id} not found')
@@ -588,7 +588,7 @@ def payroll_spreadsheet():
 
         for change in changes:
             emp = Employee.query.filter_by(
-                id=change['emp_id'], company_id=_company_id()
+                id=change["emp_id"], company_id=_company_id(), is_deleted=False
             ).first()
             if not emp:
                 continue

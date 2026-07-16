@@ -1,7 +1,9 @@
 import logging
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+
+logger = logging.getLogger('payroll_engine')
 
 from flask import Flask, current_app, g, request
 from flask_sqlalchemy import SQLAlchemy
@@ -204,6 +206,25 @@ def create_app():
         # Update last activity timestamp
         flask_session['_last_active'] = now
 
+    # Daily retention purge — runs once per app instance per day
+    _last_retention_purge = [None]  # mutable container for closure
+
+    @app.before_request
+    def daily_retention_purge():
+        """Purge expired PDF payslips once per day."""
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return
+        today = date.today().isoformat()
+        if _last_retention_purge[0] == today:
+            return
+        _last_retention_purge[0] = today
+        try:
+            from .retention import purge_expired_payslip_pdfs
+            purge_expired_payslip_pdfs(app)
+        except Exception:
+            logger.exception('Retention purge failed')
+
     @app.after_request
     def add_security_headers(response):
         response.headers.set('X-Content-Type-Options', 'nosniff')
@@ -353,5 +374,20 @@ def create_app():
             return {'deadline_alerts': alerts}
         except Exception:
             return {'deadline_alerts': []}
+
+    # Sentry error monitoring (if DSN is set)
+    sentry_dsn = os.environ.get('SENTRY_DSN', '')
+    if sentry_dsn:
+        import sentry_sdk
+        from sentry_sdk.integrations.flask import FlaskIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[FlaskIntegration(), SqlalchemyIntegration()],
+            traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+            environment=env,
+            release=os.environ.get('SENTRY_RELEASE', 'ethiopayroll@unknown'),
+        )
+        logger.info('Sentry error monitoring enabled')
 
     return app

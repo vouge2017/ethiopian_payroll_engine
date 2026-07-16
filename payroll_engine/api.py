@@ -99,7 +99,7 @@ def api_role_required(*roles):
 @login_required
 @company_required
 def list_employees():
-    employees = Employee.query.filter_by(company_id=current_user.company_id).all()
+    employees = Employee.query.filter_by(company_id=current_user.company_id, is_deleted=False).all()
     return jsonify([{
         'id': e.id,
         'employee_id': e.employee_id,
@@ -123,7 +123,8 @@ def create_employee():
         return jsonify({'error': 'Validation failed', 'details': errors}), 422
     existing = Employee.query.filter_by(
         company_id=current_user.company_id,
-        employee_id=data['employee_id']
+        employee_id=data['employee_id'],
+        is_deleted=False,
     ).first()
     if existing:
         return jsonify({'error': 'Employee ID already exists'}), 409
@@ -145,7 +146,7 @@ def create_employee():
 @login_required
 @company_required
 def get_employee(emp_id):
-    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id, is_deleted=False).first_or_404()
     return jsonify({
         'id': emp.id,
         'employee_id': emp.employee_id,
@@ -163,7 +164,7 @@ def get_employee(emp_id):
 @api_role_required('owner', 'accountant')
 @limiter.limit('30 per minute')
 def update_employee(emp_id):
-    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id, is_deleted=False).first_or_404()
     data = request.get_json()
     errors = _validate_employee_data(data, partial=True)
     if errors:
@@ -188,7 +189,7 @@ def update_employee(emp_id):
 @api_role_required('owner')
 @limiter.limit('10 per minute')
 def delete_employee(emp_id):
-    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id, is_deleted=False).first_or_404()
     try:
         db.session.delete(emp)
         db.session.commit()

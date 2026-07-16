@@ -193,7 +193,7 @@ def demo_mode():
 def index():
     """Dashboard home."""
     company = current_user.company
-    employee_count = Employee.query.filter_by(company_id=company.id).count()
+    employee_count = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
     recent_runs = PayrollRun.query.filter_by(company_id=company.id) \
         .order_by(PayrollRun.created_at.desc()) \
         .limit(5).all()

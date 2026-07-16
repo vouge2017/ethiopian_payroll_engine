@@ -27,7 +27,7 @@ def purge_expired_payslip_pdfs(app):
         from payroll_engine.models import Payslip, AuditLog
         expired = Payslip.query.filter(
             Payslip.pdf_file_path.isnot(None),
-            Payslip.created_at < cutoff,
+            Payslip.generated_at < cutoff,
         ).all()
         purged = 0
         for p in expired:

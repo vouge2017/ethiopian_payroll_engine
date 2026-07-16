@@ -32,7 +32,7 @@ def impact_calculator():
 def reports():
     """Compliance and summary reports."""
     company = current_user.company
-    total_employees = Employee.query.filter_by(company_id=company.id).count()
+    total_employees = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
     last_run = PayrollRun.query.filter_by(company_id=company.id, status='completed') \
         .order_by(PayrollRun.created_at.desc()).first()
     payroll_date_str = last_run.run_date.isoformat() if last_run else date.today().isoformat()

@@ -150,12 +150,12 @@ def link_employee_user():
     if request.method == 'POST':
         employee_id = request.form.get('employee_id', type=int)
         user_id = request.form.get('user_id', type=int)
-        emp = Employee.query.filter_by(id=employee_id, company_id=_company_id()).first_or_404()
+        emp = Employee.query.filter_by(id=employee_id, company_id=_company_id(), is_deleted=False).first_or_404()
         user = User.query.get_or_404(user_id)
         if emp.user_id:
             flash('This employee is already linked to a user account.', 'danger')
             return redirect(url_for('settings.link_employee_user'))
-        existing_link = Employee.query.filter_by(user_id=user_id, company_id=_company_id()).first()
+        existing_link = Employee.query.filter_by(user_id=user_id, company_id=_company_id(), is_deleted=False).first()
         if existing_link:
             flash('This user is already linked to another employee.', 'danger')
             return redirect(url_for('settings.link_employee_user'))

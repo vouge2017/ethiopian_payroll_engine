@@ -72,6 +72,10 @@ def login():
             flash('Invalid credentials.', 'danger')
             return redirect(url_for('auth.login'))
         login_user(user, remember=remember)
+        from datetime import datetime
+        session['_login_time'] = datetime.utcnow().timestamp()
+        session['_last_active'] = session['_login_time']
+        session.permanent = True
         if user.must_change_password:
             flash('Please set a new password to continue. Your temporary password needs to be changed.', 'warning')
             return redirect(url_for('auth.change_password'))
@@ -253,6 +257,10 @@ def google_callback():
     if user:
         # Existing user — log them in
         login_user(user)
+        from datetime import datetime
+        session['_login_time'] = datetime.utcnow().timestamp()
+        session['_last_active'] = session['_login_time']
+        session.permanent = True
         flash('Welcome back!', 'success')
         next_page = safe_redirect_target(request.args.get('next'))
         return redirect(next_page)
@@ -317,6 +325,10 @@ def google_register():
         session.pop('google_name', None)
 
         login_user(user)
+        from datetime import datetime
+        session['_login_time'] = datetime.utcnow().timestamp()
+        session['_last_active'] = session['_login_time']
+        session.permanent = True
         flash('Account created with Google!', 'success')
         return redirect(url_for('main.index'))
 

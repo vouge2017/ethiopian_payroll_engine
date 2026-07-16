@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from datetime import datetime, timedelta
 
 from flask import Flask, current_app, g, request
 from flask_sqlalchemy import SQLAlchemy
@@ -135,6 +136,13 @@ def create_app():
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     if not app.debug:
         app.config['SESSION_COOKIE_SECURE'] = True
+
+    # Session timeout: idle timeout (configurable, default30 min)
+    # Absolute max is8 hours — forces re-login even if active
+    idle_minutes = int(os.environ.get('SESSION_IDLE_TIMEOUT_MINUTES', '30'))
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=idle_minutes)
+    app.config['SESSION_TIMEOUT_MINUTES'] = idle_minutes
+    app.config['SESSION_ABSOLUTE_TIMEOUT_HOURS'] = int(os.environ.get('SESSION_ABSOLUTE_TIMEOUT_HOURS', '8'))
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     db.init_app(app)
     migrate.init_app(app, db)
@@ -151,6 +159,50 @@ def create_app():
     @app.before_request
     def set_request_id():
         g.request_id = request.headers.get('X-Request-Id', uuid.uuid4().hex[:12])
+
+    @app.before_request
+    def check_session_timeout():
+        """Enforce idle and absolute session timeout.
+
+        - Idle timeout: session expires after N minutes of inactivity.
+        - Absolute timeout: session expires after N hours regardless of activity.
+        - Skipped for static files and auth routes (login, register, etc.).
+        """
+        from flask import session as flask_session
+        from flask_login import current_user
+
+        # Skip for unauthenticated, static, and auth routes
+        if not current_user.is_authenticated:
+            return
+        endpoint = request.endpoint or ''
+        if endpoint.startswith('static') or endpoint.startswith('auth.'):
+            return
+
+        now = datetime.utcnow().timestamp()
+
+        # Absolute timeout check
+        login_time = flask_session.get('_login_time')
+        if login_time:
+            abs_hours = app.config['SESSION_ABSOLUTE_TIMEOUT_HOURS']
+            if now - login_time > abs_hours * 3600:
+                flask_session.clear()
+                from flask_login import logout_user
+                logout_user()
+                flash('Session expired. Please log in again.', 'warning')
+                return redirect(url_for('auth.login'))
+
+        # Idle timeout check
+        last_active = flask_session.get('_last_active', now)
+        idle_limit = app.config['PERMANENT_SESSION_LIFETIME'].total_seconds()
+        if now - last_active > idle_limit:
+            flask_session.clear()
+            from flask_login import logout_user
+            logout_user()
+            flash('Session expired due to inactivity. Please log in again.', 'warning')
+            return redirect(url_for('auth.login'))
+
+        # Update last activity timestamp
+        flask_session['_last_active'] = now
 
     @app.after_request
     def add_security_headers(response):

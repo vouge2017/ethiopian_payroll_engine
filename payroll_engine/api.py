@@ -77,6 +77,22 @@ def company_required(f):
     return decorated
 
 
+def api_role_required(*roles):
+    """Restrict API access to specific roles. Returns JSON errors."""
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            from flask import session as flask_session
+            from .models import UserCompany
+            company_id = flask_session.get('active_company_id', current_user.company_id)
+            effective_role = current_user.get_role_for_company(company_id)
+            if effective_role not in roles:
+                return jsonify({'error': 'Forbidden', 'required_roles': list(roles), 'your_role': effective_role}), 403
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
+
+
 # --- Employee endpoints ---
 
 @api.route('/employees', methods=['GET'])
@@ -98,6 +114,7 @@ def list_employees():
 @api.route('/employees', methods=['POST'])
 @login_required
 @company_required
+@api_role_required('owner', 'accountant')
 @limiter.limit('30 per minute')
 def create_employee():
     data = request.get_json()
@@ -143,6 +160,7 @@ def get_employee(emp_id):
 @api.route('/employees/<int:emp_id>', methods=['PUT'])
 @login_required
 @company_required
+@api_role_required('owner', 'accountant')
 @limiter.limit('30 per minute')
 def update_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
@@ -167,6 +185,7 @@ def update_employee(emp_id):
 @api.route('/employees/<int:emp_id>', methods=['DELETE'])
 @login_required
 @company_required
+@api_role_required('owner')
 @limiter.limit('10 per minute')
 def delete_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id).first_or_404()
@@ -250,6 +269,7 @@ def download_payslip(payslip_id):
 @api.route('/audit-logs', methods=['GET'])
 @login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def list_audit_logs():
     logs = AuditLog.query.filter_by(company_id=current_user.company_id).order_by(AuditLog.timestamp.desc()).limit(100).all()
     return jsonify([{
@@ -276,6 +296,7 @@ def _convert(obj):
 @api.route('/impact/salary-raise', methods=['POST'])
 @login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def impact_salary_raise():
     """Preview impact of a salary raise."""
     from payroll_engine.impact import preview_salary_raise
@@ -298,6 +319,7 @@ def impact_salary_raise():
 @api.route('/impact/new-hire', methods=['POST'])
 @login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def impact_new_hire():
     """Preview cost of hiring a new employee."""
     from payroll_engine.impact import preview_new_hire
@@ -319,6 +341,7 @@ def impact_new_hire():
 @api.route('/impact/termination', methods=['POST'])
 @login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def impact_termination():
     """Preview cost of terminating an employee."""
     from payroll_engine.impact import preview_termination
@@ -345,6 +368,7 @@ def impact_termination():
 @api.route('/impact/allowance-change', methods=['POST'])
 @login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def impact_allowance_change():
     """Preview impact of changing an allowance."""
     from payroll_engine.impact import preview_allowance_change

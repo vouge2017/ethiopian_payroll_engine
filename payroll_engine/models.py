@@ -1404,6 +1404,28 @@ class ProfileChangeRequest(db.Model):
         return f'<ProfileChangeRequest {self.field_name} for employee {self.employee_id}>'
 
 
+class PayslipAcknowledgment(db.Model):
+    """Track when employees acknowledge receipt of their payslip."""
+    query_class = TenantQuery
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    acknowledged_at = db.Column(db.DateTime, nullable=False)
+    ip_address = db.Column(db.String(45), nullable=True)
+
+    payslip = db.relationship('Payslip', backref=db.backref('acknowledgments', lazy=True))
+    employee = db.relationship('Employee', backref=db.backref('payslip_acknowledgments', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('payslip_id', 'employee_id', name='uq_payslip_ack'),
+    )
+
+    def __repr__(self):
+        return f'<PayslipAcknowledgment payslip={self.payslip_id} employee={self.employee_id}>'
+
+
 class Notification(db.Model):
     """In-app notification for users."""
     id = db.Column(db.Integer, primary_key=True)

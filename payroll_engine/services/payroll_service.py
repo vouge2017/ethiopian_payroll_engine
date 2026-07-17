@@ -171,6 +171,28 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             }
         )
 
+        # Notify each employee that their payslip is ready
+        from payroll_engine.notifications import notify
+        all_payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+        for ps in all_payslips:
+            emp = ps.employee
+            if emp and emp.user_id:
+                try:
+                    notify(
+                        company_id=company_id,
+                        user_id=emp.user_id,
+                        message=f'Your payslip for {run.period or "this month"} is ready. Net pay: ETB {ps.net_pay:,.2f}.',
+                        notif_type='success',
+                        link=f'/my/payslips/{ps.id}',
+                        employee_phone=emp.phone,
+                        whatsapp_message=f'Hello {emp.name}, your salary of ETB {ps.net_pay:,.2f} has been processed. Log in to view your payslip.',
+                    )
+                except Exception as e:
+                    import logging
+                    logging.getLogger('payroll_engine').error(
+                        'Failed to notify employee %s: %s', emp.id, e
+                    )
+
         # Clean up draft
         PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
 

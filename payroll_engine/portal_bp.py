@@ -1,7 +1,7 @@
 """Employee portal blueprint."""
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
-from datetime import date
+from datetime import date, datetime, timezone
 
 from payroll_engine import db
 from payroll_engine.models import Employee, Payslip, OvertimeEntry, Leave
@@ -93,6 +93,8 @@ def my_payslip_detail(payslip_id):
             })
 
     from payroll_engine.payroll import generate_calculation_flow
+    from payroll_engine.models import PayslipAcknowledgment
+
     calc_flow = generate_calculation_flow({
         'gross': payslip.gross_salary,
         'pension_employee': payslip.employee_pension,
@@ -101,11 +103,57 @@ def my_payslip_detail(payslip_id):
         'net': payslip.net_pay,
     })
 
+    # Check acknowledgment status
+    payslip_acknowledged = PayslipAcknowledgment.query.filter_by(
+        payslip_id=payslip.id, employee_id=emp.id, company_id=_company_id()
+    ).first()
+
     return render_template('employee_portal/payslip_detail.html',
                            employee=emp, payslip=payslip,
                            tax_breakdown=tax_breakdown,
                            overtime_details=overtime_details,
-                           calc_flow=calc_flow)
+                           calc_flow=calc_flow,
+                           payslip_acknowledged=payslip_acknowledged)
+
+
+@portal_bp.route('/my/payslips/<int:payslip_id>/acknowledge', methods=['POST'])
+@login_required
+def acknowledge_payslip(payslip_id):
+    """Employee acknowledges receipt of payslip."""
+    from payroll_engine.models import PayslipAcknowledgment
+    from payroll_engine.shared import create_audit_log
+
+    emp = get_linked_employee()
+    if not emp:
+        abort(404)
+
+    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
+
+    # Check if already acknowledged
+    existing = PayslipAcknowledgment.query.filter_by(
+        payslip_id=payslip.id, employee_id=emp.id, company_id=_company_id()
+    ).first()
+    if existing:
+        flash('You already acknowledged this payslip.', 'info')
+        return redirect(url_for('portal.my_payslip_detail', payslip_id=payslip.id))
+
+    ack = PayslipAcknowledgment(
+        company_id=_company_id(),
+        payslip_id=payslip.id,
+        employee_id=emp.id,
+        acknowledged_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        ip_address=request.remote_addr,
+    )
+    db.session.add(ack)
+
+    create_audit_log(
+        _company_id(), current_user.id, 'payslip_acknowledged',
+        {'payslip_id': payslip.id, 'employee_id': emp.id}
+    )
+
+    db.session.commit()
+    flash('Payslip acknowledged. Thank you!', 'success')
+    return redirect(url_for('portal.my_payslip_detail', payslip_id=payslip.id))
 
 
 @portal_bp.route('/my/profile')

@@ -108,3 +108,40 @@ def test_calc_flow_with_overtime():
     gross_step = next(s for s in flow['steps'] if 'Gross' in s['label'])
     # Gross should be higher than basic due to overtime
     assert gross_step['amount'] > Decimal('10000')
+
+
+def test_calc_flow_pension_savings():
+    """Pension-before-tax savings are calculated correctly."""
+    result = calculate_payroll(basic_salary=10000, allowances=2000)
+    flow = generate_calculation_flow(result)
+
+    assert 'pension_savings' in flow
+    assert flow['pension_savings'] > Decimal('0')
+
+    # Verify: savings = tax_without_pension - tax_with_pension
+    from payroll_engine.tax import calculate_tax
+    gross = result['gross']
+    tax_without = calculate_tax(gross)
+    tax_with = result['tax']
+    expected_savings = tax_without - tax_with
+    assert flow['pension_savings'] == expected_savings
+
+
+def test_calc_flow_pension_savings_in_steps():
+    """Pension savings step appears when savings > 0."""
+    result = calculate_payroll(basic_salary=10000, allowances=2000)
+    flow = generate_calculation_flow(result)
+
+    savings_steps = [s for s in flow['steps'] if 'Savings' in s['label']]
+    assert len(savings_steps) == 1
+    assert savings_steps[0]['amount'] > Decimal('0')
+    assert 'without this rule' in savings_steps[0]['note'].lower()
+
+
+def test_calc_flow_no_savings_when_zero_pension():
+    """No savings step when pension is 0 (daily worker)."""
+    result = calculate_payroll(basic_salary=0, allowances=0)
+    flow = generate_calculation_flow(result)
+
+    savings_steps = [s for s in flow['steps'] if 'Savings' in s['label']]
+    assert len(savings_steps) == 0

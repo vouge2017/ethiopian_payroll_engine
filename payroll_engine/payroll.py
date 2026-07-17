@@ -302,14 +302,23 @@ def generate_calculation_flow(result: dict) -> dict:
     Returns a dict with:
         steps: list of {label, amount, note, is_deduction} dicts
         effective_tax_rate: Decimal (percentage)
+        pension_savings: Decimal — how much employee saves from pension-before-tax
         summary: plain-language one-liner
     """
+    from payroll_engine.tax import calculate_tax
+
     gross = _D(result.get('gross', 0))
     pension = _D(result.get('pension_employee', 0))
     exempt = _D(result.get('exempt_allowances', 0))
     taxable = _D(result.get('taxable', 0))
     tax = _D(result.get('tax', 0))
     net = _D(result.get('net', 0))
+
+    # Calculate savings from pension-before-tax rule
+    # Without pension deduction, tax would be on (gross - exempt)
+    # With pension deduction, tax is on (gross - pension - exempt)
+    tax_without_pension = calculate_tax(gross - exempt)
+    pension_savings = tax_without_pension - tax
 
     steps = [
         {
@@ -354,6 +363,18 @@ def generate_calculation_flow(result: dict) -> dict:
         'icon': '🏛️',
     })
 
+    # Show pension savings if meaningful
+    if pension_savings > 0 and pension > 0:
+        steps.append({
+            'label': 'Pension Tax Savings',
+            'amount': pension_savings,
+            'note': f'You save this much because pension is deducted before tax. '
+                    f'Without this rule, tax would be ETB {tax_without_pension:,.2f}',
+            'is_deduction': False,
+            'icon': '💡',
+            'is_highlight': True,
+        })
+
     steps.append({
         'label': 'Net Pay',
         'amount': net,
@@ -374,9 +395,12 @@ def generate_calculation_flow(result: dict) -> dict:
         f"Tax {tax:,.2f} → "
         f"Net {net:,.2f}"
     )
+    if pension_savings > 0:
+        summary += f" (Pension saves you ETB {pension_savings:,.2f}/month in tax)"
 
     return {
         'steps': steps,
         'effective_tax_rate': effective_rate,
+        'pension_savings': pension_savings,
         'summary': summary,
     }

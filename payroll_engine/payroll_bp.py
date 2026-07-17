@@ -592,6 +592,7 @@ def payroll_spreadsheet():
 
         # Save overtime entries
         today = date.today()
+        month_start = today.replace(day=1)
 
         for change in changes:
             emp = Employee.query.filter_by(
@@ -600,13 +601,21 @@ def payroll_spreadsheet():
             if not emp:
                 continue
 
-            # Save overtime entries for this month
+            # Save overtime entries for this month (delete existing first to avoid duplicates)
             for ot_type, ot_key in [('day', 'ot_day'), ('night', 'ot_night'),
                                       ('holiday', 'ot_holiday'), ('rest_day_holiday', 'ot_rest')]:
                 try:
                     hours = Decimal(change[ot_key])
                 except (InvalidOperation, ValueError):
                     hours = Decimal('0')
+
+                OvertimeEntry.query.filter(
+                    OvertimeEntry.employee_id == emp.id,
+                    OvertimeEntry.company_id == _company_id(),
+                    OvertimeEntry.overtime_type == ot_type,
+                    OvertimeEntry.date >= month_start,
+                ).delete()
+
                 if hours > 0:
                     ot = OvertimeEntry(
                         employee_id=emp.id,
@@ -617,11 +626,19 @@ def payroll_spreadsheet():
                     )
                     db.session.add(ot)
 
-            # Save advance as a one-time deduction
+            # Save advance as a one-time deduction (delete existing this month first)
             try:
                 advance = Decimal(change['advance'])
             except (InvalidOperation, ValueError):
                 advance = Decimal('0')
+
+            EmployeeDeduction.query.filter(
+                EmployeeDeduction.employee_id == emp.id,
+                EmployeeDeduction.company_id == _company_id(),
+                EmployeeDeduction.deduction_type == 'advance',
+                EmployeeDeduction.start_date >= month_start,
+            ).delete()
+
             if advance > 0:
                 ded = EmployeeDeduction(
                     company_id=_company_id(),
@@ -774,7 +791,11 @@ def payroll_spreadsheet():
 @role_required('owner', 'accountant')
 @limiter.limit('30 per minute')
 def payroll_spreadsheet_autosave():
-    """Auto-save draft — accepts AJAX form data, returns JSON."""
+    """Auto-save draft — accepts AJAX form data, returns JSON.
+
+    Saves: overtime entries + advance deductions.
+    Absences and bonus require 'Save & Recalculate' (affect payroll computation).
+    """
     from payroll_engine.models import OvertimeEntry, EmployeeDeduction
     from decimal import Decimal, InvalidOperation
 
@@ -795,7 +816,7 @@ def payroll_spreadsheet_autosave():
 
         prefix = f'emp_{eid}_'
 
-        # Save overtime — always delete existing first, then create if hours > 0
+        # --- Overtime: delete existing, re-create if hours > 0 ---
         for ot_type, ot_key in [('day', 'ot_day'), ('night', 'ot_night'),
                                   ('holiday', 'ot_holiday'), ('rest_day_holiday', 'ot_rest')]:
             val = request.form.get(f'{prefix}{ot_key}', '0').strip() or '0'
@@ -804,7 +825,6 @@ def payroll_spreadsheet_autosave():
             except (InvalidOperation, ValueError):
                 hours = Decimal('0')
 
-            # Always delete existing OT for this employee/type/month
             OvertimeEntry.query.filter(
                 OvertimeEntry.employee_id == emp.id,
                 OvertimeEntry.company_id == _company_id(),
@@ -812,7 +832,6 @@ def payroll_spreadsheet_autosave():
                 OvertimeEntry.date >= month_start,
             ).delete()
 
-            # Re-create if hours > 0
             if hours > 0:
                 ot = OvertimeEntry(
                     employee_id=emp.id,
@@ -823,6 +842,36 @@ def payroll_spreadsheet_autosave():
                 )
                 db.session.add(ot)
 
+        # --- Advance: delete existing this month, re-create if amount > 0 ---
+        advance_val = request.form.get(f'{prefix}advance', '0').strip() or '0'
+        try:
+            advance = Decimal(advance_val)
+        except (InvalidOperation, ValueError):
+            advance = Decimal('0')
+
+        # Delete existing advance deductions for this employee this month
+        EmployeeDeduction.query.filter(
+            EmployeeDeduction.employee_id == emp.id,
+            EmployeeDeduction.company_id == _company_id(),
+            EmployeeDeduction.deduction_type == 'advance',
+            EmployeeDeduction.start_date >= month_start,
+        ).delete()
+
+        if advance > 0:
+            ded = EmployeeDeduction(
+                company_id=_company_id(),
+                employee_id=emp.id,
+                deduction_type='advance',
+                label=f'Advance {today.strftime("%B %Y")}',
+                amount_mode='fixed',
+                amount=advance,
+                tracking_mode='date_bounded',
+                start_date=today,
+                is_active=True,
+                created_by=current_user.id,
+            )
+            db.session.add(ded)
+
         saved += 1
 
     db.session.commit()
@@ -830,6 +879,7 @@ def payroll_spreadsheet_autosave():
         'status': 'ok',
         'saved': saved,
         'timestamp': datetime.utcnow().isoformat(),
+        'note': 'Overtime and advances saved. Absences/bonus require Save & Recalculate.',
     })
 
 

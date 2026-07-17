@@ -117,7 +117,9 @@
 
         <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
             <div>
-                <span class="badge bg-warning text-dark">Yellow columns</span> = editable (OT, absences, advances, bonus)
+                <span class="badge bg-warning text-dark">OT columns</span> = auto-saved as you type
+                <span class="badge bg-success text-dark ms-1">Advances</span> = auto-saved as you type
+                <span class="badge bg-info text-dark ms-1">Absences/Bonus</span> = require "Save & Recalculate"
                 <span class="badge bg-secondary ms-2">Grey columns</span> = auto-calculated
             </div>
             <div>
@@ -222,7 +224,7 @@ async function doAutoSave() {
         });
         const data = await resp.json();
         if (data.status === 'ok') {
-            showAutoSaveStatus('saved', '✅ Draft saved');
+            showAutoSaveStatus('saved', '✅ OT & advances saved');
         } else {
             showAutoSaveStatus('error', '❌ Save failed');
         }

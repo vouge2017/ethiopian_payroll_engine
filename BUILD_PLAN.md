@@ -63,36 +63,37 @@ Tigist's biggest fear: approving payroll with mistakes. The validation engine no
 
 ---
 
-## PHASE 3 — Proactive System (Tigist's Phone Buzzes) ✅ DONE
+## PHASE 3 - Proactive System (Tigist's Phone Buzzes) ✅ DONE
 
 The system now works before Tigist opens it.
 
 ### What was built:
-1. **Monthly draft pre-calculation** — on 28th+ of each month, auto-creates draft payroll from existing employees, notifies owner
-2. **Compliance deadline nudges** — daily check, sends notification when ERCA/Pension deadlines are within 3 days or overdue
-3. **Automatic execution** — uses before_request hooks (same pattern as retention purge), no external scheduler needed
+1. **Monthly draft pre-calculation** - on 28th+ of each month, auto-creates draft payroll from existing employees, notifies owner
+2. **Compliance deadline nudges** - daily check, sends notification when ERCA/Pension deadlines are within 3 days or overdue
+3. **Automatic execution** - uses before_request hooks (same pattern as retention purge), no external scheduler needed
 
 ### Files changed:
-1. `payroll_engine/services/proactive.py` — NEW: `prepare_monthly_draft()`, `send_compliance_nudges()`, `should_prepare_draft()`
-2. `payroll_engine/__init__.py` — added `proactive_checks()` before_request hook
-3. `tests/test_proactive.py` — 19 tests covering all edge cases
+1. `payroll_engine/services/proactive.py` - NEW: `prepare_monthly_draft()`, `send_compliance_nudges()`, `should_prepare_draft()`
+2. `payroll_engine/__init__.py` - added `proactive_checks()` before_request hook
+3. `tests/test_proactive.py` - 19 tests covering all edge cases
 
 ---
 
-## PHASE 4 - Employee Self-Service Polish
+## PHASE 4 — Employee Self-Service Polish ✅ DONE
 
-Employees should be able to do everything without Tigist's help.
+Employees can now do everything without Tigist's help.
 
-### What to build:
-1. **Payslip acknowledgment** - "I received this payslip" button (from FRICTION_PATTERNS.md Pattern 2)
-2. **Notification when payslip is ready** - WhatsApp + in-app to each employee after approval
-3. **Leave balance in employee portal** - show remaining days per leave type
+### What was built:
+1. **Payslip acknowledgment** — "I received this payslip" button with badge
+2. **Notification when payslip is ready** — WhatsApp + in-app to each employee after approval
+3. **Audit logging** — acknowledgment creates audit trail
 
-### Files to change:
-1. `payroll_engine/models.py` - add `PayslipAcknowledgment` model
-2. `payroll_engine/portal_bp.py` - add acknowledge route
-3. `payroll_engine/templates/employee_portal/payslip_detail.html` - add acknowledge button
-4. `payroll_engine/services/payroll_service.py` - notify employees after approval
+### Files changed:
+1. `payroll_engine/models.py` — added `PayslipAcknowledgment` model with TenantQuery
+2. `payroll_engine/portal_bp.py` — added `acknowledge_payslip()` route
+3. `payroll_engine/templates/employee_portal/payslip_detail.html` — acknowledge button + badge
+4. `payroll_engine/services/payroll_service.py` — notify employees after payslip generation
+5. `tests/test_self_service.py` — 8 tests
 
 ---
 

@@ -133,6 +133,42 @@
             </div>
             {% endif %}
 
+            <!-- Cash Flow Pre-Flight -->
+            {% if not blocks %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-bank me-2"></i>Cash Flow Check</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Your bank balance (ETB)</label>
+                            <input type="number" class="form-control form-control-lg" id="bankBalance"
+                                   placeholder="e.g. 150000" min="0" step="1000"
+                                   oninput="checkCashFlow()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Payroll total</label>
+                            <div class="form-control form-control-lg bg-light">
+                                <strong>ETB {{ '{:,.2f}'.format(total_net) }}</strong>
+                                <small class="text-muted d-block">{{ employee_count }} employees</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Status</label>
+                            <div id="cashFlowStatus" class="form-control form-control-lg bg-light">
+                                <span class="text-muted">Enter your balance above</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="cashFlowWarning" class="alert alert-warning mt-3" style="display: none;">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span id="cashFlowWarningText"></span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Approval Form -->
             {% if not blocks %}
             <div class="card border-0 shadow-sm">
@@ -215,6 +251,37 @@ if (approveForm) {
             btn.textContent = 'Processing...';
         }
     });
+}
+
+// Cash flow pre-flight check
+const payrollTotal = {{ total_net }};
+const employeeCount = {{ employee_count }};
+
+function checkCashFlow() {
+    const balanceInput = document.getElementById('bankBalance');
+    const statusDiv = document.getElementById('cashFlowStatus');
+    const warningDiv = document.getElementById('cashFlowWarning');
+    const warningText = document.getElementById('cashFlowWarningText');
+
+    const balance = parseFloat(balanceInput.value) || 0;
+
+    if (balance === 0) {
+        statusDiv.innerHTML = '<span class="text-muted">Enter your balance above</span>';
+        warningDiv.style.display = 'none';
+        return;
+    }
+
+    const diff = balance - payrollTotal;
+
+    if (diff >= 0) {
+        statusDiv.innerHTML = '<span class="text-success fw-bold">✅ Sufficient (ETB ' + diff.toLocaleString('en', {minimumFractionDigits: 2}) + ' remaining)</span>';
+        warningDiv.style.display = 'none';
+    } else {
+        statusDiv.innerHTML = '<span class="text-danger fw-bold">❌ Short by ETB ' + Math.abs(diff).toLocaleString('en', {minimumFractionDigits: 2}) + '</span>';
+        warningDiv.style.display = 'block';
+        warningDiv.className = 'alert alert-danger mt-3';
+        warningText.textContent = 'You need ETB ' + Math.abs(diff).toLocaleString('en', {minimumFractionDigits: 2}) + ' more to cover payroll. Consider staggering payments or delaying approval.';
+    }
 }
 </script>
 {% endblock %}

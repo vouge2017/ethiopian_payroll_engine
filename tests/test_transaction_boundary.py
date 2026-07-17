@@ -91,8 +91,9 @@ def _setup_approval_data(app):
 
 def test_approval_rolls_back_on_pdf_failure(app):
     """
-    If PDF generation fails midway through approval, the entire transaction
-    must roll back: no payslips, no 'completed' status, no audit log.
+    If PDF generation fails midway through approval, the payroll should
+    still complete. Payslips are created without PDF paths. The run is
+    marked 'completed' (not 'failed'). Failed PDFs can be retried.
     """
     company_id, user_id, run_id = _setup_approval_data(app)
 
@@ -121,23 +122,18 @@ def test_approval_rolls_back_on_pdf_failure(app):
     with app.app_context():
         run = PayrollRun.query.get(run_id)
 
-        # Run must NOT be 'completed' — rolled back, then marked 'failed'
-        assert run.status == 'failed', f"Expected 'failed', got '{run.status}'"
+        # Run should be 'completed' — PDF failure no longer blocks payroll
+        assert run.status == 'completed', f"Expected 'completed', got '{run.status}'"
 
-        # No payslips should exist
-        payslip_count = Payslip.query.filter_by(payroll_run_id=run_id).count()
-        assert payslip_count == 0, f"Expected 0 payslips, got {payslip_count}"
+        # Payslips should exist (without PDF paths)
+        payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
+        assert len(payslips) > 0, "No payslips created"
+        for ps in payslips:
+            assert ps.pdf_file_path is None, f"Expected no PDF path for {ps.id}"
 
-        # Draft should still exist (not cleaned up)
+        # Draft should be cleaned up
         draft = PayrollDraft.query.filter_by(payroll_run_id=run_id).first()
-        assert draft is not None, "Draft was deleted despite rollback"
-
-        # A failure audit log should exist (written in separate transaction)
-        fail_log = AuditLog.query.filter_by(
-            company_id=company_id, action='payroll_run_failed'
-        ).first()
-        assert fail_log is not None, "No failure audit log written"
-        assert 'PDF generation exploded' in fail_log.details['error']
+        assert draft is None, "Draft was not cleaned up"
 
 
 def test_approval_rolls_back_on_compliance_failure(app):

@@ -1275,6 +1275,74 @@ def disbursement_progress(run_id):
                            bank_summary=summary_list)
 
 
+@payroll_bp.route('/payroll/<int:run_id>/retry-pdf/<int:payslip_id>', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def retry_pdf(run_id, payslip_id):
+    """Retry PDF generation for a single failed payslip."""
+    from payroll_engine.pdf import generate_payslip
+    from payroll_engine.payroll import generate_calculation_flow
+
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+
+    if run.status != 'completed':
+        flash('Can only retry PDFs for completed runs.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    payslip = Payslip.query.filter_by(
+        id=payslip_id, payroll_run_id=run.id
+    ).first_or_404()
+
+    if payslip.pdf_file_path:
+        flash('This payslip already has a PDF. No need to retry.', 'info')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    emp = payslip.employee
+    if not emp:
+        flash('Employee not found for this payslip.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    # Build employee data for PDF
+    company = current_user.company
+    company_info = {
+        'name': company.name if company else 'Company',
+        'address': company.address if company else '',
+        'tin': company.tin if company else '',
+        'phone': company.phone if company else '',
+        'logo_path': os.path.join('payroll_engine', 'static', company.logo_path) if company and company.logo_path else '',
+    }
+
+    emp_data = {
+        'id': emp.employee_id,
+        'name': emp.name,
+        'department': emp.department or '',
+        'position': emp.position or '',
+        'period': run.period or run.run_date.strftime('%B %Y'),
+        'gross': float(payslip.gross_salary),
+        'pension_employee': float(payslip.employee_pension),
+        'taxable': float(payslip.gross_salary - payslip.employee_pension),
+        'tax': float(payslip.tax),
+        'net': float(payslip.net_pay),
+    }
+    emp_data['calc_flow'] = generate_calculation_flow(emp_data)
+
+    try:
+        pdf_path = generate_payslip(emp_data, company=company_info)
+        payslip.pdf_file_path = pdf_path
+        db.session.commit()
+        flash(f'PDF generated for {emp.name}.', 'success')
+    except Exception as e:
+        import logging
+        logging.getLogger('payroll_engine').error(
+            'PDF retry failed for %s: %s', emp.name, e
+        )
+        flash(f'PDF generation failed for {emp.name}: {e}', 'danger')
+
+    return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+
 @payroll_bp.route('/payroll/register')
 @login_required
 @role_required('owner', 'accountant')

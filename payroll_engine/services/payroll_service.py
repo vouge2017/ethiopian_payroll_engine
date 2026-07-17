@@ -100,6 +100,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         emp_by_eid = {e.employee_id: e for e in existing_emps}
 
         # Create/update employees and generate payslips
+        failed_pdfs = []  # Track employees whose PDF generation failed
         for emp_data in employees_data:
             emp = emp_by_eid.get(emp_data['id'])
             if not emp:
@@ -133,13 +134,26 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             from payroll_engine.payroll import generate_calculation_flow
             emp_data_enriched['calc_flow'] = generate_calculation_flow(emp_data)
 
-            # Generate PDF
-            pdf_path = generate_payslip(emp_data_enriched, company=company_info)
+            # Generate PDF — with error handling
+            pdf_path = None
+            try:
+                pdf_path = generate_payslip(emp_data_enriched, company=company_info)
+            except Exception as e:
+                import logging
+                logging.getLogger('payroll_engine').error(
+                    'PDF generation failed for %s (employee %s): %s',
+                    emp.name, emp.employee_id, e
+                )
+                failed_pdfs.append({
+                    'employee_id': emp.employee_id,
+                    'name': emp.name,
+                    'error': str(e),
+                })
 
             payslip = Payslip(
                 payroll_run_id=run.id,
                 employee_id=emp.id,
-                pdf_file_path=pdf_path,
+                pdf_file_path=pdf_path,  # None if PDF failed
                 gross_salary=emp_data['gross'],
                 tax=emp_data['tax'],
                 employee_pension=emp_data['pension_employee'],
@@ -208,9 +222,21 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         # Single commit — all or nothing
         db.session.commit()
 
+        # Build result message
+        success_count = len(employees_data) - len(failed_pdfs)
+        if failed_pdfs:
+            failed_names = ', '.join(f['name'] for f in failed_pdfs)
+            message = (
+                f'Payroll processed! {success_count} of {len(employees_data)} payslips generated. '
+                f'PDF failed for: {failed_names}. '
+                f'You can retry failed PDFs from the payroll detail page.'
+            )
+        else:
+            message = f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%.'
+
         return ApprovalResult(
             success=True,
-            message=f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%.',
+            message=message,
             employee_count=len(employees_data),
             compliance_score=score,
             redirect_to='detail',

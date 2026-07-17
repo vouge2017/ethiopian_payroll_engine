@@ -457,6 +457,68 @@ class User(UserMixin, db.Model):
         return f'<User {self.phone or self.email}>'
 
 
+class ApiKey(db.Model):
+    """API key for programmatic access. Token shown once at creation."""
+    __tablename__ = 'api_key'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False, index=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=True)  # e.g. 'CI pipeline', 'Mobile app'
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('api_keys', lazy='dynamic'))
+    company = db.relationship('Company', backref=db.backref('api_keys', lazy='dynamic'))
+
+    @staticmethod
+    def generate_token():
+        """Generate a random API token. Returns the raw token (show once)."""
+        import secrets
+        return f'ep_{secrets.token_urlsafe(32)}'
+
+    @staticmethod
+    def hash_token(token: str) -> str:
+        """SHA-256 hash of the token for storage."""
+        import hashlib
+        return hashlib.sha256(token.encode()).hexdigest()
+
+    @classmethod
+    def create_for_user(cls, user, company_id, name=None):
+        """Create an API key for a user. Returns (api_key, raw_token)."""
+        raw_token = cls.generate_token()
+        key = cls(
+            user_id=user.id,
+            company_id=company_id,
+            token_hash=cls.hash_token(raw_token),
+            name=name,
+        )
+        db.session.add(key)
+        db.session.commit()
+        return key, raw_token
+
+    @classmethod
+    def lookup(cls, raw_token):
+        """Find an active API key by raw token. Returns (ApiKey, User) or (None, None)."""
+        token_hash = cls.hash_token(raw_token)
+        key = cls.query.filter_by(token_hash=token_hash, is_active=True).first()
+        if key:
+            key.last_used_at = datetime.utcnow()
+            db.session.commit()
+            return key, key.user
+        return None, None
+
+    def revoke(self):
+        """Deactivate this API key."""
+        self.is_active = False
+        db.session.commit()
+
+    def __repr__(self):
+        return f'<ApiKey {self.name or "unnamed"} user={self.user_id}>'
+
+
 class Employee(db.Model):
     query_class = SoftDeleteQuery
 

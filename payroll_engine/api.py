@@ -1,12 +1,60 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g as flask_g
 from flask_login import login_required, current_user
 from functools import wraps
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
+import secrets as _secrets
 from . import db, limiter
-from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLog
+from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLog, ApiKey
 
 api = Blueprint('api', __name__)
+
+def _extract_bearer_token():
+    """Extract Bearer token from Authorization header, or None."""
+    auth = request.headers.get('Authorization', '')
+    if auth.startswith('Bearer '):
+        return auth[7:].strip()
+    return None
+
+
+def api_token_or_login_required(f):
+    """Accept either a valid Bearer API token or a Flask-Login session.
+
+    When a Bearer token is provided:
+      - Look up the ApiKey, set flask_g._api_user / flask_g._api_company_id
+    When no Bearer token:
+      - Fall through to @api_token_or_login_required (session cookie auth).
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = _extract_bearer_token()
+        if token:
+            key, user = ApiKey.lookup(token)
+            if not key:
+                return jsonify({'error': 'Invalid or revoked API token'}), 401
+            flask_g._api_user = user
+            flask_g._api_company_id = key.company_id
+            return f(*args, **kwargs)
+        # No bearer token — require session login
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Authentication required. Use Bearer token or login.'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+def _get_company_id():
+    """Resolve company_id from API token or session."""
+    if hasattr(flask_g, '_api_company_id'):
+        return flask_g._api_company_id
+    from flask import session as flask_session
+    return flask_session.get('active_company_id', current_user.company_id)
+
+
+def _get_current_user():
+    """Resolve current user from API token or session."""
+    if hasattr(flask_g, '_api_user'):
+        return flask_g._api_user
+    return current_user
 
 
 def _validate_employee_data(data, *, partial=False):
@@ -68,24 +116,25 @@ def _validate_employee_data(data, *, partial=False):
 
 
 def company_required(f):
-    """Ensure user belongs to a company."""
+    """Ensure user belongs to a company (session or API token)."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.company_id:
+        user = _get_current_user()
+        cid = _get_company_id()
+        if not user or not cid:
             return jsonify({'error': 'Unauthorized'}), 401
         return f(*args, **kwargs)
     return decorated
 
 
 def api_role_required(*roles):
-    """Restrict API access to specific roles. Returns JSON errors."""
+    """Restrict API access to specific roles. Supports API tokens."""
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            from flask import session as flask_session
-            from .models import UserCompany
-            company_id = flask_session.get('active_company_id', current_user.company_id)
-            effective_role = current_user.get_role_for_company(company_id)
+            user = _get_current_user()
+            company_id = _get_company_id()
+            effective_role = user.get_role_for_company(company_id)
             if effective_role not in roles:
                 return jsonify({'error': 'Forbidden', 'required_roles': list(roles), 'your_role': effective_role}), 403
             return f(*args, **kwargs)
@@ -96,10 +145,10 @@ def api_role_required(*roles):
 # --- Employee endpoints ---
 
 @api.route('/employees', methods=['GET'])
-@login_required
+@api_token_or_login_required
 @company_required
 def list_employees():
-    employees = Employee.query.filter_by(company_id=current_user.company_id, is_deleted=False).all()
+    employees = Employee.query.filter_by(company_id=_get_company_id(), is_deleted=False).all()
     return jsonify([{
         'id': e.id,
         'employee_id': e.employee_id,
@@ -112,7 +161,7 @@ def list_employees():
 
 
 @api.route('/employees', methods=['POST'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 @limiter.limit('30 per minute')
@@ -122,7 +171,7 @@ def create_employee():
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 422
     existing = Employee.query.filter_by(
-        company_id=current_user.company_id,
+        company_id=_get_company_id(),
         employee_id=data['employee_id'],
         is_deleted=False,
     ).first()
@@ -135,7 +184,7 @@ def create_employee():
         allowances=data.get('allowances', 0),
         bank_or_telebirr=data.get('bank_or_telebirr', ''),
         tin=data.get('tin'),
-        company_id=current_user.company_id,
+        company_id=_get_company_id(),
     )
     db.session.add(emp)
     db.session.commit()
@@ -143,10 +192,10 @@ def create_employee():
 
 
 @api.route('/employees/<int:emp_id>', methods=['GET'])
-@login_required
+@api_token_or_login_required
 @company_required
 def get_employee(emp_id):
-    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id, is_deleted=False).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_get_company_id(), is_deleted=False).first_or_404()
     return jsonify({
         'id': emp.id,
         'employee_id': emp.employee_id,
@@ -159,12 +208,12 @@ def get_employee(emp_id):
 
 
 @api.route('/employees/<int:emp_id>', methods=['PUT'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 @limiter.limit('30 per minute')
 def update_employee(emp_id):
-    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id, is_deleted=False).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_get_company_id(), is_deleted=False).first_or_404()
     data = request.get_json()
     errors = _validate_employee_data(data, partial=True)
     if errors:
@@ -184,12 +233,12 @@ def update_employee(emp_id):
 
 
 @api.route('/employees/<int:emp_id>', methods=['DELETE'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner')
 @limiter.limit('10 per minute')
 def delete_employee(emp_id):
-    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id, is_deleted=False).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_get_company_id(), is_deleted=False).first_or_404()
     try:
         db.session.delete(emp)
         db.session.commit()
@@ -202,8 +251,8 @@ def delete_employee(emp_id):
         }), 409
     # Log successful delete
     log = AuditLog(
-        company_id=current_user.company_id,
-        user_id=current_user.id,
+        company_id=_get_company_id(),
+        user_id=_get_current_user().id,
         action='employee_deleted_api',
         details={'employee_id': emp.employee_id, 'employee_name': emp.name}
     )
@@ -215,10 +264,10 @@ def delete_employee(emp_id):
 # --- Payroll Run endpoints ---
 
 @api.route('/payroll-runs', methods=['GET'])
-@login_required
+@api_token_or_login_required
 @company_required
 def list_payroll_runs():
-    runs = PayrollRun.query.filter_by(company_id=current_user.company_id).order_by(PayrollRun.run_date.desc()).all()
+    runs = PayrollRun.query.filter_by(company_id=_get_company_id()).order_by(PayrollRun.run_date.desc()).all()
     return jsonify([{
         'id': r.id,
         'run_date': r.run_date.isoformat(),
@@ -228,10 +277,10 @@ def list_payroll_runs():
 
 
 @api.route('/payroll-runs/<int:run_id>', methods=['GET'])
-@login_required
+@api_token_or_login_required
 @company_required
 def get_payroll_run(run_id):
-    run = PayrollRun.query.filter_by(id=run_id, company_id=current_user.company_id).first_or_404()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=_get_company_id()).first_or_404()
     return jsonify({
         'id': run.id,
         'run_date': run.run_date.isoformat(),
@@ -250,7 +299,7 @@ def get_payroll_run(run_id):
 # --- Payslip endpoints ---
 
 @api.route('/payslips/<int:payslip_id>/download', methods=['GET'])
-@login_required
+@api_token_or_login_required
 @company_required
 def download_payslip(payslip_id):
     from flask import send_file
@@ -258,7 +307,7 @@ def download_payslip(payslip_id):
     payslip = Payslip.query.filter_by(id=payslip_id).first_or_404()
     # Verify company access
     run = PayrollRun.query.get(payslip.payroll_run_id)
-    if run.company_id != current_user.company_id:
+    if run.company_id != _get_company_id():
         return jsonify({'error': 'Forbidden'}), 403
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
         return jsonify({'error': 'PDF not found'}), 404
@@ -268,11 +317,11 @@ def download_payslip(payslip_id):
 # --- Audit Log endpoints ---
 
 @api.route('/audit-logs', methods=['GET'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 def list_audit_logs():
-    logs = AuditLog.query.filter_by(company_id=current_user.company_id).order_by(AuditLog.timestamp.desc()).limit(100).all()
+    logs = AuditLog.query.filter_by(company_id=_get_company_id()).order_by(AuditLog.timestamp.desc()).limit(100).all()
     return jsonify([{
         'id': l.id,
         'action': l.action,
@@ -295,7 +344,7 @@ def _convert(obj):
 
 
 @api.route('/impact/salary-raise', methods=['POST'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 def impact_salary_raise():
@@ -318,7 +367,7 @@ def impact_salary_raise():
 
 
 @api.route('/impact/new-hire', methods=['POST'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 def impact_new_hire():
@@ -340,7 +389,7 @@ def impact_new_hire():
 
 
 @api.route('/impact/termination', methods=['POST'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 def impact_termination():
@@ -367,7 +416,7 @@ def impact_termination():
 
 
 @api.route('/impact/allowance-change', methods=['POST'])
-@login_required
+@api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 def impact_allowance_change():
@@ -386,3 +435,55 @@ def impact_allowance_change():
         return jsonify(_convert(result))
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+
+# --- API Key management ---
+
+@api.route('/api-keys', methods=['GET'])
+@api_token_or_login_required
+@company_required
+def list_api_keys():
+    """List API keys for the current company."""
+    user = _get_current_user()
+    cid = _get_company_id()
+    keys = ApiKey.query.filter_by(user_id=user.id, company_id=cid).all()
+    return jsonify([{
+        'id': k.id,
+        'name': k.name,
+        'is_active': k.is_active,
+        'created_at': k.created_at.isoformat(),
+        'last_used_at': k.last_used_at.isoformat() if k.last_used_at else None,
+    } for k in keys])
+
+
+@api.route('/api-keys', methods=['POST'])
+@api_token_or_login_required
+@company_required
+@api_role_required('owner')
+@limiter.limit('5 per minute')
+def create_api_key():
+    """Create a new API key. Returns the raw token ONCE."""
+    user = _get_current_user()
+    cid = _get_company_id()
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()[:100] or None
+    key, raw_token = ApiKey.create_for_user(user, cid, name=name)
+    return jsonify({
+        'id': key.id,
+        'name': key.name,
+        'token': raw_token,
+        'message': 'Store this token securely. It will NOT be shown again.',
+    }), 201
+
+
+@api.route('/api-keys/<int:key_id>', methods=['DELETE'])
+@api_token_or_login_required
+@company_required
+@api_role_required('owner')
+def revoke_api_key(key_id):
+    """Revoke (deactivate) an API key."""
+    user = _get_current_user()
+    cid = _get_company_id()
+    key = ApiKey.query.filter_by(id=key_id, user_id=user.id, company_id=cid).first_or_404()
+    key.revoke()
+    return jsonify({'message': 'API key revoked'})

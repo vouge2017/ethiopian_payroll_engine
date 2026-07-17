@@ -769,6 +769,65 @@ def payroll_spreadsheet():
     )
 
 
+@payroll_bp.route('/payroll/spreadsheet/autosave', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def payroll_spreadsheet_autosave():
+    """Auto-save draft — accepts AJAX form data, returns JSON."""
+    from payroll_engine.models import OvertimeEntry, EmployeeDeduction
+    from decimal import Decimal, InvalidOperation
+
+    emp_ids = request.form.getlist('emp_id')
+    if not emp_ids:
+        return jsonify({'status': 'empty', 'message': 'No data'}), 400
+
+    today = date.today()
+    saved = 0
+
+    for eid in emp_ids:
+        emp = Employee.query.filter_by(
+            id=int(eid), company_id=_company_id(), is_deleted=False
+        ).first()
+        if not emp:
+            continue
+
+        prefix = f'emp_{eid}_'
+
+        # Save overtime
+        for ot_type, ot_key in [('day', 'ot_day'), ('night', 'ot_night'),
+                                  ('holiday', 'ot_holiday'), ('rest_day_holiday', 'ot_rest')]:
+            val = request.form.get(f'{prefix}{ot_key}', '0').strip() or '0'
+            try:
+                hours = Decimal(val)
+            except (InvalidOperation, ValueError):
+                hours = Decimal('0')
+            if hours > 0:
+                # Delete existing OT for this employee/type/month, then re-save
+                OvertimeEntry.query.filter(
+                    OvertimeEntry.employee_id == emp.id,
+                    OvertimeEntry.company_id == _company_id(),
+                    OvertimeEntry.overtime_type == ot_type,
+                    OvertimeEntry.date >= today.replace(day=1),
+                ).delete()
+                ot = OvertimeEntry(
+                    employee_id=emp.id,
+                    company_id=_company_id(),
+                    date=today,
+                    hours=hours,
+                    overtime_type=ot_type,
+                )
+                db.session.add(ot)
+
+        saved += 1
+
+    db.session.commit()
+    return jsonify({
+        'status': 'ok',
+        'saved': saved,
+        'timestamp': datetime.utcnow().isoformat(),
+    })
+
+
 @payroll_bp.route('/payroll/runs')
 @login_required
 def payroll_runs():

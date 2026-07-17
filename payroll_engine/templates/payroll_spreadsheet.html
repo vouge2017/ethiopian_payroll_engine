@@ -174,8 +174,67 @@
 </style>
 
 <script>
-// Auto-tab to next input on Enter
+// Auto-save indicator
+const autoSaveIndicator = document.createElement('div');
+autoSaveIndicator.id = 'autosave-indicator';
+autoSaveIndicator.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;padding:6px 14px;border-radius:6px;font-size:0.85rem;display:none;';
+document.body.appendChild(autoSaveIndicator);
+
+function showAutoSaveStatus(status, message) {
+    autoSaveIndicator.textContent = message;
+    autoSaveIndicator.style.display = 'block';
+    if (status === 'saving') {
+        autoSaveIndicator.style.background = '#fff3cd';
+        autoSaveIndicator.style.color = '#856404';
+        autoSaveIndicator.style.border = '1px solid #ffc107';
+    } else if (status === 'saved') {
+        autoSaveIndicator.style.background = '#d4edda';
+        autoSaveIndicator.style.color = '#155724';
+        autoSaveIndicator.style.border = '1px solid #28a745';
+    } else {
+        autoSaveIndicator.style.background = '#f8d7da';
+        autoSaveIndicator.style.color = '#721c24';
+        autoSaveIndicator.style.border = '1px solid #dc3545';
+    }
+    setTimeout(() => { autoSaveIndicator.style.display = 'none'; }, 3000);
+}
+
+let autoSaveTimer = null;
+const AUTOSAVE_DELAY = 2000; // 2 seconds debounce
+
+function triggerAutoSave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(doAutoSave, AUTOSAVE_DELAY);
+}
+
+async function doAutoSave() {
+    const form = document.getElementById('spreadsheet-form');
+    if (!form) return;
+
+    showAutoSaveStatus('saving', '⏳ Saving draft...');
+
+    try {
+        const formData = new FormData(form);
+        const resp = await fetch('{{ url_for("payroll.payroll_spreadsheet_autosave") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+        });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            showAutoSaveStatus('saved', '✅ Draft saved');
+        } else {
+            showAutoSaveStatus('error', '❌ Save failed');
+        }
+    } catch (e) {
+        showAutoSaveStatus('error', '❌ Connection lost — draft not saved');
+    }
+}
+
+// Attach auto-save to all editable inputs
 document.querySelectorAll('#payroll-table input[type="number"]').forEach(input => {
+    input.addEventListener('input', triggerAutoSave);
+    // Existing keyboard navigation
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();

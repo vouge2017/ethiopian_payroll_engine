@@ -3,7 +3,6 @@ from flask_login import login_required, current_user
 from functools import wraps
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
-import secrets as _secrets
 from . import db, limiter
 from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLog, ApiKey
 
@@ -23,7 +22,7 @@ def api_token_or_login_required(f):
     When a Bearer token is provided:
       - Look up the ApiKey, set flask_g._api_user / flask_g._api_company_id
     When no Bearer token:
-      - Fall through to @api_token_or_login_required (session cookie auth).
+      - Fall through to session cookie auth.
     """
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -121,7 +120,7 @@ def company_required(f):
     def decorated(*args, **kwargs):
         user = _get_current_user()
         cid = _get_company_id()
-        if not user or not cid:
+        if user is None or not cid:
             return jsonify({'error': 'Unauthorized'}), 401
         return f(*args, **kwargs)
     return decorated
@@ -442,6 +441,7 @@ def impact_allowance_change():
 @api.route('/api-keys', methods=['GET'])
 @api_token_or_login_required
 @company_required
+@limiter.limit('20 per minute')
 def list_api_keys():
     """List API keys for the current company."""
     user = _get_current_user()

@@ -506,7 +506,7 @@ class ApiKey(db.Model):
         key = cls.query.filter_by(token_hash=token_hash, is_active=True).first()
         if key:
             key.last_used_at = datetime.utcnow()
-            db.session.commit()
+            db.session.flush()  # flush, don't commit — let the request own the transaction
             return key, key.user
         return None, None
 

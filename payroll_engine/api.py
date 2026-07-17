@@ -487,3 +487,81 @@ def revoke_api_key(key_id):
     key = ApiKey.query.filter_by(id=key_id, user_id=user.id, company_id=cid).first_or_404()
     key.revoke()
     return jsonify({'message': 'API key revoked'})
+
+
+# --- Bulk Import API ---
+
+@api.route('/employees/bulk', methods=['POST'])
+@api_token_or_login_required
+@company_required
+@api_role_required('owner', 'accountant')
+@limiter.limit('5 per minute')
+def bulk_import_employees():
+    """Bulk import employees from JSON array.
+
+    POST /api/v1/employees/bulk
+    Body: {"employees": [{"name": "...", "phone": "...", "basic_salary": 10000}, ...]}
+
+    Returns: {"imported": N, "errors": [...], "total_errors": M}
+    """
+    from decimal import Decimal, InvalidOperation
+
+    data = request.get_json()
+    if not data or not data.get('employees'):
+        return jsonify({'error': 'No employee data provided'}), 400
+
+    employees = data['employees']
+    if len(employees) > 500:
+        return jsonify({'error': 'Maximum 500 employees per import'}), 400
+
+    cid = _get_company_id()
+    user = _get_current_user()
+    imported = 0
+    errors = []
+
+    for i, emp_data in enumerate(employees):
+        name = (emp_data.get('name') or '').strip()
+        phone = (emp_data.get('phone') or '').strip()
+        salary_raw = emp_data.get('basic_salary', emp_data.get('salary', 0))
+
+        if not name:
+            errors.append({'row': i + 1, 'error': 'missing name'})
+            continue
+
+        try:
+            salary = Decimal(str(salary_raw))
+            if salary < 0:
+                errors.append({'row': i + 1, 'error': 'negative salary'})
+                continue
+        except (InvalidOperation, ValueError):
+            errors.append({'row': i + 1, 'error': f'invalid salary: {salary_raw}'})
+            continue
+
+        emp_id_str = emp_data.get('employee_id', '').strip()
+        if not emp_id_str:
+            existing_count = Employee.query.filter_by(
+                company_id=cid, is_deleted=False
+            ).count()
+            emp_id_str = f'EMP{(existing_count + imported + 1):03d}'
+
+        emp = Employee(
+            employee_id=emp_id_str,
+            name=name,
+            phone=phone or None,
+            basic_salary=salary,
+            allowances=Decimal(str(emp_data.get('allowances', 0))),
+            bank_or_telebirr=emp_data.get('bank_or_telebirr', ''),
+            tin=emp_data.get('tin'),
+            company_id=cid,
+            employee_type=emp_data.get('employee_type', 'monthly'),
+        )
+        db.session.add(emp)
+        imported += 1
+
+    db.session.commit()
+
+    return jsonify({
+        'imported': imported,
+        'errors': errors[:20],
+        'total_errors': len(errors),
+    })

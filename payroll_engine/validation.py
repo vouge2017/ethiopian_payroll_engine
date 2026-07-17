@@ -90,9 +90,12 @@ def validate_payroll_data(employees_data: List[Dict[str, Any]],
     # --- FLAG checks (can override with reason) ---
 
     _check_salary_typos(employees_data, previous_payslips, results)
+    _check_salary_change_significant(employees_data, previous_payslips, results)
     _check_pension_mismatch(employees_data, results)
     _check_tax_mismatch(employees_data, results)
     _check_cash_compliance(employees_data, results)
+    _check_payroll_variance(employees_data, company_id, results)
+    _check_pending_leave_impact(employees_data, company_id, results)
 
     # --- WARN checks (informational) ---
 
@@ -163,7 +166,11 @@ def _check_missing_bank(data: List[Dict], results: List[ValidationResult]):
 
 def _check_salary_typos(data: List[Dict], previous: Dict[str, dict],
                         results: List[ValidationResult]):
-    """FLAG: Salary > 10× previous month or > 500,000 ETB."""
+    """FLAG: Salary > 10× previous month or > 500,000 ETB.
+
+    This catches data entry errors (extra zeros, wrong decimal place).
+    For real salary changes, see _check_salary_change_significant.
+    """
     for emp in data:
         basic = emp.get('basic', 0)
         allowances = emp.get('allowances', 0)
@@ -200,6 +207,170 @@ def _check_salary_typos(data: List[Dict], previous: Dict[str, dict],
                     hint='Check with the employee if this change is correct.',
                     details={'current': total, 'previous': prev_total}
                 ))
+
+
+def _check_salary_change_significant(data: List[Dict], previous: Dict[str, dict],
+                                     results: List[ValidationResult]):
+    """FLAG: Salary changed by more than 30% from previous month.
+
+    Catches real salary changes (raises, demotions) that Tigist should verify.
+    The 10x threshold in _check_salary_typos catches typos; this catches
+    intentional but unusual changes that need confirmation.
+    """
+    if not previous:
+        return
+
+    for emp in data:
+        emp_id = emp.get('id')
+        if emp_id not in previous:
+            continue
+
+        prev = previous[emp_id]
+        prev_total = float(prev.get('basic', 0)) + float(prev.get('allowances', 0))
+        curr_total = float(emp.get('basic', 0)) + float(emp.get('allowances', 0))
+
+        if prev_total <= 0:
+            continue
+
+        change_pct = abs(curr_total - prev_total) / prev_total * 100
+
+        if change_pct > 30:
+            direction = 'increased' if curr_total > prev_total else 'decreased'
+            results.append(ValidationResult(
+                rule_code='SALARY_CHANGE_30PCT',
+                severity='FLAG',
+                message=(
+                    f"{emp.get('name', "Employee")}'s salary {direction} by {change_pct:.0f}% "
+                    f"(ETB {prev_total:,.0f} → ETB {curr_total:,.0f}). "
+                    f'Is this correct?'
+                ),
+                employee_id=emp_id,
+                employee_name=emp.get('name', ''),
+                hint='Verify this salary change with the employee or their contract.',
+                details={
+                    'previous': prev_total,
+                    'current': curr_total,
+                    'change_pct': round(change_pct, 1),
+                }
+            ))
+
+
+def _check_payroll_variance(data: List[Dict], company_id: int,
+                            results: List[ValidationResult]):
+    """FLAG: Total payroll differs from last month by more than 20%.
+
+    A large swing in total payroll is unusual and should be verified.
+    Common causes: new hires, terminations, bonuses, data errors.
+    """
+    if company_id is None:
+        return
+    try:
+        from payroll_engine.models import PayrollRun, Payslip
+        last_run = PayrollRun.query.filter_by(
+            company_id=company_id, status='completed'
+        ).order_by(PayrollRun.run_date.desc()).first()
+        if not last_run:
+            return
+
+        previous_net = sum(float(p.net_pay) for p in last_run.payslips)
+        current_net = sum(float(e.get('net', 0)) for e in data)
+
+        if previous_net <= 0:
+            return
+
+        change_pct = abs(current_net - previous_net) / previous_net * 100
+
+        if change_pct > 20:
+            direction = 'increased' if current_net > previous_net else 'decreased'
+            results.append(ValidationResult(
+                rule_code='PAYROLL_VARIANCE',
+                severity='FLAG',
+                message=(
+                    f'Total payroll {direction} by {change_pct:.0f}% '
+                    f'(ETB {previous_net:,.0f} → ETB {current_net:,.0f}). '
+                    f'Is this correct?'
+                ),
+                hint='Check if new employees were added, salaries changed, or if this is a data error.',
+                details={
+                    'previous_total': previous_net,
+                    'current_total': current_net,
+                    'change_pct': round(change_pct, 1),
+                }
+            ))
+    except Exception:
+        pass
+
+
+def _check_pending_leave_impact(data: List[Dict], company_id: int,
+                                results: List[ValidationResult]):
+    """FLAG: Employee with approved unpaid leave still shows full salary.
+
+    If an employee has approved unpaid leave this month, their salary
+    may need to be prorated. This flags it for Tigist's review.
+    """
+    if company_id is None:
+        return
+    try:
+        from payroll_engine.models import Leave, Employee
+
+        today = date.today()
+        month_start = today.replace(day=1)
+        if today.month == 12:
+            month_end = date(today.year + 1, 1, 1)
+        else:
+            month_end = date(today.year, today.month + 1, 1)
+
+        # Find employees with approved unpaid leave this month
+        unpaid_leaves = Leave.query.filter(
+            Leave.company_id == company_id,
+            Leave.leave_type == 'unpaid',
+            Leave.status == 'approved',
+            Leave.start_date < month_end,
+            Leave.end_date >= month_start,
+        ).all()
+
+        emp_ids_on_leave = {l.employee_id for l in unpaid_leaves}
+        if not emp_ids_on_leave:
+            return
+
+        employees = Employee.query.filter(
+            Employee.company_id == company_id,
+            Employee.id.in_(emp_ids_on_leave),
+            Employee.is_deleted == False,
+        ).all()
+        emp_by_id = {e.id: e for e in employees}
+
+        for leave in unpaid_leaves:
+            emp = emp_by_id.get(leave.employee_id)
+            if not emp:
+                continue
+            # Check if this employee appears in the payroll data with full salary
+            for emp_data in data:
+                if emp_data.get('id') == emp.employee_id:
+                    # Calculate overlap days
+                    overlap_start = max(leave.start_date, month_start)
+                    overlap_end = min(leave.end_date, month_end)
+                    leave_days = (overlap_end - overlap_start).days + 1
+                    if leave_days > 0:
+                        results.append(ValidationResult(
+                            rule_code='PENDING_UNPAID_LEAVE',
+                            severity='FLAG',
+                            message=(
+                                f'{emp.name} has {leave_days} days of approved unpaid leave '
+                                f'({leave.start_date} to {leave.end_date}). '
+                                f'Salary may need prorating.'
+                            ),
+                            employee_id=emp.employee_id,
+                            employee_name=emp.name,
+                            hint=f'Deduct {leave_days} days from salary or use the sick leave reduction field.',
+                            details={
+                                'leave_days': leave_days,
+                                'leave_start': str(leave.start_date),
+                                'leave_end': str(leave.end_date),
+                            }
+                        ))
+    except Exception:
+        pass
 
 
 def _check_pension_mismatch(data: List[Dict], results: List[ValidationResult]):

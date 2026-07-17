@@ -11,7 +11,7 @@
 | # | Task | Why It Matters | Effort |
 |---|---|---|---|
 | 1 | Production Readiness Scoring | Clear 1-10 scores for stakeholders | 30 min |
-| 2 | PDF Generation Failure Handling | Will break at 50+ employees — partial payslips, stuck "processing" status | 2 hours |
+| 2 | PDF Generation Failure Handling | Will break at 50+ employees — partial payslips, stuck "processing" status | 2 hours | ✅ Done |
 | 3 | Ethiopian Calendar Edge Cases | Pagumē (13th month), year boundaries, leap years — real compliance risk | 1 hour |
 | 4 | Performance Testing at 100 Employees | Know your limits before customers hit them | 1 hour |
 | 5 | Print-Optimized Payslips | Ethiopian businesses print payslips — current PDFs aren't optimized for A4 printing | 2 hours |

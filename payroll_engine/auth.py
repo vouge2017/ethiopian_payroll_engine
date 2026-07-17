@@ -205,6 +205,14 @@ def register():
             role='owner'
         )
         user.set_password(password)
+
+        # Apply referral code if present
+        referral_code = session.pop('referral_code', None)
+        if referral_code:
+            referrer = User.query.filter_by(referral_code=referral_code).first()
+            if referrer:
+                user.referred_by = referrer.id
+
         db.session.add(user)
         db.session.commit()
         flash('Account created! Please log in and set up your company.', 'success')

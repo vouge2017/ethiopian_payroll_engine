@@ -275,3 +275,41 @@ def index():
 
 
 # --- Employees ---
+
+
+# --- Referral Program ---
+
+@main.route('/referral')
+@login_required
+def my_referral():
+    """Show referral code and stats."""
+    import secrets
+
+    # Generate referral code if not exists
+    if not current_user.referral_code:
+        current_user.referral_code = f'EP{secrets.token_hex(4).upper()}'
+        db.session.commit()
+
+    # Count referrals
+    from payroll_engine.models import User
+    referral_count = User.query.filter_by(referred_by=current_user.id).count()
+
+    return render_template('referral.html',
+                           referral_code=current_user.referral_code,
+                           referral_count=referral_count)
+
+
+@main.route('/referral/<code>')
+def apply_referral(code):
+    """Apply a referral code during registration."""
+    from payroll_engine.models import User
+    referrer = User.query.filter_by(referral_code=code).first()
+    if not referrer:
+        flash('Invalid referral code.', 'danger')
+        return redirect(url_for('auth.register'))
+
+    # Store in session for use during registration
+    from flask import session
+    session['referral_code'] = code
+    flash(f'You were referred! Sign up to get started.', 'info')
+    return redirect(url_for('auth.register'))

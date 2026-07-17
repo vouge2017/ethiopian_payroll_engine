@@ -351,6 +351,9 @@ class User(UserMixin, db.Model):
     # MFA / TOTP
     totp_secret = db.Column(db.String(32), nullable=True)
     mfa_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    # Referral program
+    referral_code = db.Column(db.String(20), unique=True, nullable=True)
+    referred_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

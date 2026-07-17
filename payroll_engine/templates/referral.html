@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Referral Program — Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="text-center mb-4">
+                <h3><i class="bi bi-gift me-2"></i>Refer a Business</h3>
+                <p class="text-muted">Share your referral link. When they sign up, you both benefit.</p>
+            </div>
+
+            <!-- Referral Code -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body text-center py-4">
+                    <h6 class="text-muted mb-2">Your Referral Code</h6>
+                    <div class="display-6 fw-bold font-monospace text-primary">{{ referral_code }}</div>
+                    <p class="text-muted mt-2 mb-3">Share this code or link:</p>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control font-monospace" id="referral-link"
+                               value="{{ request.host_url }}referral/{{ referral_code }}" readonly>
+                        <button class="btn btn-outline-primary" onclick="copyLink()">
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">People You've Referred</h6>
+                    <div class="display-4 fw-bold">{{ referral_count }}</div>
+                </div>
+            </div>
+
+            <!-- How it works -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">How it works</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">Share your referral link with other business owners</li>
+                        <li class="mb-2">They sign up using your link</li>
+                        <li class="mb-2">You both get credited when they complete their first payroll</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyLink() {
+    const input = document.getElementById('referral-link');
+    input.select();
+    document.execCommand('copy');
+    alert('Link copied!');
+}
+</script>
+{% endblock %}

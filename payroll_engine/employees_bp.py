@@ -1252,3 +1252,138 @@ def _calculate_unpaid_leave_deduction(employee, company_id, pay_period_start, pa
     deduction = daily_rate * Decimal(str(total_unpaid_days))
 
     return deduction.quantize(Decimal('0.01'))
+
+
+# --- Profile Change Request Management (Admin) ---
+
+@employees_bp.route('/profile-changes')
+@role_required('owner', 'accountant')
+def profile_changes():
+    """List all pending profile change requests."""
+    from payroll_engine.models import ProfileChangeRequest
+    from sqlalchemy.orm import joinedload as _joinedload
+
+    status_filter = request.args.get('status', 'pending').strip()
+    query = ProfileChangeRequest.query.options(
+        _joinedload(ProfileChangeRequest.employee),
+        _joinedload(ProfileChangeRequest.requester),
+    ).filter(ProfileChangeRequest.company_id == _company_id())
+
+    if status_filter:
+        query = query.filter(ProfileChangeRequest.status == status_filter)
+
+    page = request.args.get('page', 1, type=int)
+    pagination = query.order_by(ProfileChangeRequest.created_at.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    changes = pagination.items
+
+    pending_count = ProfileChangeRequest.query.filter_by(
+        company_id=_company_id(), status='pending'
+    ).count()
+
+    return render_template(
+        'profile_changes.html',
+        changes=changes,
+        pagination=pagination,
+        pending_count=pending_count,
+        status_filter=status_filter,
+    )
+
+
+@employees_bp.route('/profile-changes/<int:change_id>/approve', methods=['POST'])
+@role_required('owner', 'accountant')
+def approve_profile_change(change_id):
+    """Approve a profile change request and apply the change."""
+    from payroll_engine.models import ProfileChangeRequest
+    from payroll_engine.shared import create_audit_log, create_notification
+
+    change = ProfileChangeRequest.query.filter_by(
+        id=change_id, company_id=_company_id()
+    ).first_or_404()
+
+    if change.status != ProfileChangeRequest.STATUS_PENDING:
+        flash('This request has already been reviewed.', 'warning')
+        return redirect(url_for('employees.profile_changes'))
+
+    # Apply the change to the employee
+    emp = change.employee
+    old_val = getattr(emp, change.field_name, None)
+    setattr(emp, change.field_name, change.new_value)
+
+    # Update request status
+    change.status = ProfileChangeRequest.STATUS_APPROVED
+    change.reviewed_by = current_user.id
+    change.reviewed_at = datetime.utcnow()
+
+    # Audit log
+    create_audit_log(
+        _company_id(), current_user.id, 'profile_change_approved',
+        {
+            'employee_id': emp.id,
+            'field': change.field_name,
+            'old_value': str(old_val),
+            'new_value': change.new_value,
+            'change_request_id': change.id,
+        }
+    )
+
+    # Notify employee
+    if emp.user_id:
+        create_notification(
+            _company_id(), emp.user_id,
+            f'Your {change.field_label} change has been approved.',
+            type='success',
+            link=url_for('portal.my_profile'),
+        )
+
+    db.session.commit()
+    flash(f'Approved {change.field_label} change for {emp.name}.', 'success')
+    return redirect(url_for('employees.profile_changes'))
+
+
+@employees_bp.route('/profile-changes/<int:change_id>/reject', methods=['POST'])
+@role_required('owner', 'accountant')
+def reject_profile_change(change_id):
+    """Reject a profile change request."""
+    from payroll_engine.models import ProfileChangeRequest
+    from payroll_engine.shared import create_audit_log, create_notification
+
+    change = ProfileChangeRequest.query.filter_by(
+        id=change_id, company_id=_company_id()
+    ).first_or_404()
+
+    if change.status != ProfileChangeRequest.STATUS_PENDING:
+        flash('This request has already been reviewed.', 'warning')
+        return redirect(url_for('employees.profile_changes'))
+
+    reason = request.form.get('reason', '').strip() or None
+
+    change.status = ProfileChangeRequest.STATUS_REJECTED
+    change.rejection_reason = reason
+    change.reviewed_by = current_user.id
+    change.reviewed_at = datetime.utcnow()
+
+    create_audit_log(
+        _company_id(), current_user.id, 'profile_change_rejected',
+        {
+            'employee_id': change.employee_id,
+            'field': change.field_name,
+            'new_value': change.new_value,
+            'reason': reason,
+            'change_request_id': change.id,
+        }
+    )
+
+    emp = change.employee
+    if emp.user_id:
+        create_notification(
+            _company_id(), emp.user_id,
+            f'Your {change.field_label} change was rejected. {reason or ""}',
+            type='danger',
+            link=url_for('portal.my_profile'),
+        )
+
+    db.session.commit()
+    flash(f'Rejected {change.field_label} change for {emp.name}.', 'info')
+    return redirect(url_for('employees.profile_changes'))

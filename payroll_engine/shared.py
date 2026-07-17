@@ -6,6 +6,7 @@ from flask import session, abort, flash, request
 from flask_login import current_user
 from functools import wraps
 from payroll_engine import db
+from payroll_engine.models import AuditLog
 
 
 def _company_id():

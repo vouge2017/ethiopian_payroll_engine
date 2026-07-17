@@ -555,6 +555,10 @@ class Employee(db.Model):
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     invite_token = db.Column(db.String(64), nullable=True, unique=True)
     invite_expires = db.Column(db.DateTime, nullable=True)
+    # Employee-editable personal info
+    address = db.Column(db.String(300), nullable=True)
+    emergency_contact = db.Column(db.String(100), nullable=True)
+    emergency_phone = db.Column(db.String(20), nullable=True)
 
     # employee_id is unique PER TENANT, not globally
     __table_args__ = (
@@ -1331,6 +1335,73 @@ class PayrollValidationResult(db.Model):
 
     def __repr__(self):
         return f'<PayrollValidationResult {self.rule_code} for run {self.payroll_run_id}>'
+
+
+class ProfileChangeRequest(db.Model):
+    """Employee-initiated profile change that requires admin approval.
+
+    Employees can request changes to sensitive fields (bank account, TIN,
+    phone, name). An admin/owner/accountant must approve before changes apply.
+    """
+    query_class = TenantQuery
+
+    # Status
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUSES = [STATUS_PENDING, STATUS_APPROVED, STATUS_REJECTED]
+
+    # Fields employees may request to change
+    EDITABLE_FIELDS = [
+        'phone', 'bank_account', 'tin', 'name',
+        'address', 'emergency_contact', 'emergency_phone',
+    ]
+
+    # Fields that are SAFE (no approval needed) — shown but not stored here
+    SAFE_FIELDS = ['address', 'emergency_contact', 'emergency_phone']
+
+    # Fields that REQUIRE approval
+    SENSITIVE_FIELDS = ['phone', 'bank_account', 'tin', 'name']
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+
+    field_name = db.Column(db.String(50), nullable=False)
+    old_value = db.Column(db.Text, nullable=True)
+    new_value = db.Column(db.Text, nullable=False)
+
+    status = db.Column(db.String(20), nullable=False, default=STATUS_PENDING)
+    rejection_reason = db.Column(db.Text, nullable=True)
+
+    # Who requested / who decided
+    requested_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    employee = db.relationship('Employee', backref=db.backref('profile_change_requests', lazy=True))
+    requester = db.relationship('User', foreign_keys=[requested_by], backref=db.backref('profile_change_requests', lazy=True))
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by])
+
+    @property
+    def field_label(self):
+        """Human-readable field name."""
+        labels = {
+            'phone': 'Phone Number',
+            'bank_account': 'Bank Account',
+            'tin': 'TIN',
+            'name': 'Full Name',
+            'address': 'Address',
+            'emergency_contact': 'Emergency Contact',
+            'emergency_phone': 'Emergency Phone',
+        }
+        return labels.get(self.field_name, self.field_name)
+
+    def __repr__(self):
+        return f'<ProfileChangeRequest {self.field_name} for employee {self.employee_id}>'
 
 
 class Notification(db.Model):

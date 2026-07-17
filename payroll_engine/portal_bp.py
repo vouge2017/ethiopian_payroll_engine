@@ -111,13 +111,105 @@ def my_payslip_detail(payslip_id):
 @portal_bp.route('/my/profile')
 def my_profile():
     """Employee's profile view."""
+    from payroll_engine.models import ProfileChangeRequest
     emp = get_linked_employee()
     if not emp:
         flash('Your account is not linked to an employee record.', 'warning')
         return render_template('employee_portal/profile.html', employee=None)
     leaves = Leave.query.filter_by(employee_id=emp.id, company_id=_company_id()) \
         .order_by(Leave.start_date.desc()).limit(10).all()
-    return render_template('employee_portal/profile.html', employee=emp, leaves=leaves)
+    # Mask bank account for display
+    masked_bank = '****'
+    if emp.bank_account:
+        acct = str(emp.bank_account)
+        masked_bank = acct[:4] + '****' + acct[-4:] if len(acct) > 8 else '****'
+    # Get pending change requests
+    pending = ProfileChangeRequest.query.filter_by(
+        employee_id=emp.id, company_id=_company_id(),
+        status=ProfileChangeRequest.STATUS_PENDING
+    ).all()
+    pending_fields = {r.field_name for r in pending}
+    return render_template('employee_portal/profile.html',
+                           employee=emp, leaves=leaves,
+                           masked_bank=masked_bank,
+                           pending_fields=pending_fields,
+                           pending_changes=pending)
+
+
+@portal_bp.route('/my/profile/edit', methods=['GET', 'POST'])
+def edit_profile():
+    """Employee edits their profile. Sensitive fields go through approval."""
+    from payroll_engine.models import ProfileChangeRequest
+    from payroll_engine.shared import create_audit_log
+    emp = get_linked_employee()
+    if not emp:
+        abort(404)
+
+    if request.method == 'GET':
+        # Mask bank account for display
+        masked_bank = '****'
+        if emp.bank_account:
+            acct = str(emp.bank_account)
+            masked_bank = acct[:4] + '****' + acct[-4:] if len(acct) > 8 else '****'
+        return render_template('employee_portal/edit_profile.html',
+                               employee=emp, masked_bank=masked_bank)
+
+    # Process form submission
+    changes_made = []
+    pending = []
+
+    for field in ProfileChangeRequest.EDITABLE_FIELDS:
+        new_val = request.form.get(field, '').strip()
+        if not new_val:
+            continue
+
+        # Get current value
+        old_val = getattr(emp, field, None) or ''
+        if str(old_val).strip() == new_val:
+            continue  # No change
+
+        if field in ProfileChangeRequest.SENSITIVE_FIELDS:
+            # Check if there's already a pending request for this field
+            existing = ProfileChangeRequest.query.filter_by(
+                employee_id=emp.id, company_id=_company_id(),
+                field_name=field, status=ProfileChangeRequest.STATUS_PENDING
+            ).first()
+            if existing:
+                pending.append(field)
+                continue
+
+            # Create approval request
+            req = ProfileChangeRequest(
+                company_id=_company_id(),
+                employee_id=emp.id,
+                field_name=field,
+                old_value=str(old_val),
+                new_value=new_val,
+                requested_by=current_user.id,
+            )
+            db.session.add(req)
+            pending.append(field)
+        else:
+            # Safe field — apply directly
+            setattr(emp, field, new_val)
+            changes_made.append(field)
+
+    db.session.commit()
+
+    if changes_made:
+        create_audit_log(
+            _company_id(), current_user.id, 'profile_updated',
+            {'fields': changes_made, 'employee_id': emp.id}
+        )
+        flash(f'Updated: {", ".join(changes_made)}.', 'success')
+
+    if pending:
+        flash(f'Submitted for approval: {", ".join(pending)}. Your admin will review.', 'info')
+
+    if not changes_made and not pending:
+        flash('No changes detected.', 'warning')
+
+    return redirect(url_for('portal.my_profile'))
 
 
 @portal_bp.route('/my/leave')

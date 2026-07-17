@@ -1099,6 +1099,13 @@ def approve_leave(leave_id):
     )
     db.session.commit()
 
+    # Send WhatsApp notification to employee
+    try:
+        from payroll_engine.notifications import notify_leave_decision
+        notify_leave_decision(leave, 'approved', current_user.phone or current_user.email)
+    except Exception:
+        pass  # Don't fail approval if notification fails
+
     flash(f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.', 'success')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
@@ -1141,6 +1148,13 @@ def reject_leave(leave_id):
         link=f'/employees/{leave.employee_id}/leave',
     )
     db.session.commit()
+
+    # Send WhatsApp notification to employee
+    try:
+        from payroll_engine.notifications import notify_leave_decision
+        notify_leave_decision(leave, 'rejected', current_user.phone or current_user.email)
+    except Exception:
+        pass
 
     flash(f'Leave request rejected.', 'warning')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))

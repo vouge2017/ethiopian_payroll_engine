@@ -394,6 +394,24 @@ def approve_payroll():
     )
 
     if result.success:
+        # Send notifications (in-app + WhatsApp)
+        try:
+            from payroll_engine.notifications import notify_payroll_approved
+            payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+            employees_data = []
+            for ps in payslips:
+                emp = ps.employee
+                employees_data.append({
+                    'name': emp.name if emp else 'Employee',
+                    'phone': emp.phone if emp else None,
+                    'net': float(ps.net_pay),
+                })
+            notify_payroll_approved(_company_id(), employees_data, run.reference or f'Run #{run.id}')
+        except Exception as e:
+            # Don't fail approval if notifications fail
+            import logging
+            logging.getLogger('payroll_engine').error(f'Notification failed: {e}')
+
         flash(result.message, 'success')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
     else:

@@ -158,6 +158,12 @@ def create_app():
     TenantQuery.register_model(EmployeeDeduction)
     TenantQuery.register_model(UserCompany)
 
+    # Template filter: calculation flow for transparent payslips
+    @app.template_filter('calculation_flow')
+    def calculation_flow_filter(result):
+        from payroll_engine.payroll import generate_calculation_flow
+        return generate_calculation_flow(result)
+
     @app.before_request
     def set_request_id():
         g.request_id = request.headers.get('X-Request-Id', uuid.uuid4().hex[:12])

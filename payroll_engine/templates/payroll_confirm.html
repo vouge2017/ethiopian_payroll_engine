@@ -120,6 +120,8 @@
                                     </table>
                                 </div>
                             </div>
+                            <!-- Calculation Flow -->
+                            {% include '_calculation_flow.html' ignore missing %}
                             <div class="text-center mt-2 pt-2 border-top">
                                 <strong>{{ _('net_pay') }}:</strong>
                                 <span class="text-success fw-bold fs-5 ms-2">ETB {{ '%.2f'|format(emp.net) }}</span>

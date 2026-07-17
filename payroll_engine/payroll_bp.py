@@ -282,11 +282,13 @@ def payroll_confirm(run_id):
     flags = PayrollValidationResult.query.filter_by(
         payroll_run_id=run.id, severity='FLAG'
     ).all()
-    # Add tax breakdown for each employee
+    # Add tax breakdown and calculation flow for each employee
     from payroll_engine.tax import calculate_tax_breakdown
+    from payroll_engine.payroll import generate_calculation_flow
     for emp in employees_data:
         taxable = emp.get('gross', 0) - emp.get('pension_employee', 0)
         emp['tax_breakdown'] = calculate_tax_breakdown(taxable)
+        emp['calc_flow'] = generate_calculation_flow(emp)
 
     return render_template('payroll_confirm.html',
                            run=run,
@@ -1045,7 +1047,8 @@ def batch_payslips():
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
         for ps in payslips:
             emp = ps.employee
-            pdf_path = generate_payslip({
+            from payroll_engine.payroll import generate_calculation_flow
+            emp_dict = {
                 'id': emp.employee_id,
                 'name': emp.name,
                 'basic': emp.basic_salary,
@@ -1057,7 +1060,9 @@ def batch_payslips():
                 'net': ps.net_pay,
                 'bank': emp.bank_or_telebirr or '',
                 'tax_explanation': '',
-            })
+            }
+            emp_dict['calc_flow'] = generate_calculation_flow(emp_dict)
+            pdf_path = generate_payslip(emp_dict)
             arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf"
             zf.write(pdf_path, arcname)
             os.remove(pdf_path)  # Clean up temp file

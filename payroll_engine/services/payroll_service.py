@@ -129,6 +129,10 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             emp_data_enriched['position'] = emp.position if emp else ''
             emp_data_enriched['period'] = run.period or run.run_date.strftime('%B %Y') if run.run_date else ''
 
+            # Add calculation flow for transparent PDF
+            from payroll_engine.payroll import generate_calculation_flow
+            emp_data_enriched['calc_flow'] = generate_calculation_flow(emp_data)
+
             # Generate PDF
             pdf_path = generate_payslip(emp_data_enriched, company=company_info)
 

@@ -294,3 +294,90 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
         'taxable_allowances': taxable_allowances.quantize(Q, rounding=ROUND_HALF_UP),
         'allowance_details': allowance_details,
     }
+
+
+def generate_calculation_flow(result: dict) -> dict:
+    """Generate a step-by-step calculation flow from payroll result.
+
+    Returns a dict with:
+        steps: list of {label, amount, note, is_deduction} dicts
+        effective_tax_rate: Decimal (percentage)
+        summary: plain-language one-liner
+    """
+    gross = _D(result.get('gross', 0))
+    pension = _D(result.get('pension_employee', 0))
+    exempt = _D(result.get('exempt_allowances', 0))
+    taxable = _D(result.get('taxable', 0))
+    tax = _D(result.get('tax', 0))
+    net = _D(result.get('net', 0))
+    relief = Decimal('150')  # personal relief
+
+    steps = [
+        {
+            'label': 'Gross Salary',
+            'amount': gross,
+            'note': 'Basic + Allowances + Overtime',
+            'is_deduction': False,
+            'icon': '💰',
+        },
+        {
+            'label': 'Employee Pension (7%)',
+            'amount': pension,
+            'note': f'7% of basic salary — deducted before tax',
+            'is_deduction': True,
+            'icon': '🏦',
+        },
+    ]
+
+    if exempt > 0:
+        steps.append({
+            'label': 'Exempt Allowances',
+            'amount': exempt,
+            'note': 'Tax-free allowances (transport cap, hardship, etc.)',
+            'is_deduction': True,
+            'icon': '📋',
+        })
+
+    steps.append({
+        'label': 'Taxable Income',
+        'amount': taxable,
+        'note': 'Gross − Pension − Exempt Allowances',
+        'is_deduction': False,
+        'icon': '📊',
+        'is_highlight': True,
+    })
+
+    steps.append({
+        'label': 'Income Tax',
+        'amount': tax,
+        'note': 'Progressive brackets (Proclamation 1395/2025)',
+        'is_deduction': True,
+        'icon': '🏛️',
+    })
+
+    steps.append({
+        'label': 'Net Pay',
+        'amount': net,
+        'note': 'What the employee takes home',
+        'is_deduction': False,
+        'icon': '✅',
+        'is_final': True,
+    })
+
+    # Effective tax rate
+    effective_rate = (tax / gross * 100).quantize(Q) if gross > 0 else Decimal('0')
+
+    # Plain-language summary
+    summary = (
+        f"ETB {gross:,.2f} gross → "
+        f"Pension {pension:,.2f} → "
+        f"Taxable {taxable:,.2f} → "
+        f"Tax {tax:,.2f} → "
+        f"Net {net:,.2f}"
+    )
+
+    return {
+        'steps': steps,
+        'effective_tax_rate': effective_rate,
+        'summary': summary,
+    }

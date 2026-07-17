@@ -270,6 +270,24 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
     elements.append(deductions_table)
+    elements.append(Spacer(1, 4))
+
+    # ── CALCULATION FLOW SUMMARY ──
+    flow_data = emp.get('calc_flow')
+    if flow_data and flow_data.get('steps'):
+        flow_parts = []
+        for step in flow_data['steps']:
+            if step.get('is_deduction'):
+                flow_parts.append(f"-{'{:,}'.format(int(step['amount']))}")
+            else:
+                flow_parts.append(f"{'{:,}'.format(int(step['amount']))}")
+        flow_line = ' → '.join(flow_parts)
+        flow_summary = f"Calculation: {flow_line} (Effective rate: {flow_data.get('effective_tax_rate', '?')}%)"
+        elements.append(Paragraph(flow_summary, ParagraphStyle(
+            'FlowSummary', fontName=FONT, fontSize=7, textColor=HexColor('#666666'),
+            alignment=TA_CENTER, spaceAfter=4,
+        )))
+
     elements.append(Spacer(1, 8))
 
     # ── NET PAY ──

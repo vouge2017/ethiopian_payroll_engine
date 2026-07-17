@@ -92,10 +92,20 @@ def my_payslip_detail(payslip_id):
                 'pay': pay,
             })
 
+    from payroll_engine.payroll import generate_calculation_flow
+    calc_flow = generate_calculation_flow({
+        'gross': payslip.gross_salary,
+        'pension_employee': payslip.employee_pension,
+        'taxable': taxable,
+        'tax': payslip.tax,
+        'net': payslip.net_pay,
+    })
+
     return render_template('employee_portal/payslip_detail.html',
                            employee=emp, payslip=payslip,
                            tax_breakdown=tax_breakdown,
-                           overtime_details=overtime_details)
+                           overtime_details=overtime_details,
+                           calc_flow=calc_flow)
 
 
 @portal_bp.route('/my/profile')

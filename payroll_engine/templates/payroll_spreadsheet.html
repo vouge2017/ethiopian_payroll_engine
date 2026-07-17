@@ -16,6 +16,7 @@
 
     {% if rows %}
     <form method="POST" action="{{ url_for('payroll.payroll_spreadsheet') }}" id="spreadsheet-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="table-responsive">
             <table class="table table-bordered table-sm table-hover" id="payroll-table">
                 <thead class="table-dark">

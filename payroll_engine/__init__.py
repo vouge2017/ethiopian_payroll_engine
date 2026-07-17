@@ -430,6 +430,34 @@ def create_app():
         except Exception:
             return {'deadline_alerts': []}
 
+    @app.context_processor
+    def inject_sidebar_counts():
+        """Inject employee count and pending profile changes for sidebar.
+
+        Used to:
+        - Adapt sidebar to company size (hide advanced features for small companies)
+        - Show badge on Profile Requests when there are pending changes
+        """
+        from flask import session as flask_session
+        from flask_login import current_user
+        try:
+            if not current_user.is_authenticated or not current_user.company_id:
+                return {'employee_count': 0, 'pending_profile_changes': 0}
+            company_id = flask_session.get('active_company_id', current_user.company_id)
+            from payroll_engine.models import Employee, ProfileChangeRequest
+            emp_count = Employee.query.filter_by(
+                company_id=company_id, is_deleted=False
+            ).count()
+            pending_changes = ProfileChangeRequest.query.filter_by(
+                company_id=company_id, status='pending'
+            ).count()
+            return {
+                'employee_count': emp_count,
+                'pending_profile_changes': pending_changes,
+            }
+        except Exception:
+            return {'employee_count': 0, 'pending_profile_changes': 0}
+
     # Sentry error monitoring (if DSN is set)
     sentry_dsn = os.environ.get('SENTRY_DSN', '')
     if sentry_dsn:

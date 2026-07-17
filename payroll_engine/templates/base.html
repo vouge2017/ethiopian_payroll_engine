@@ -71,18 +71,29 @@
             <a href="{{ url_for('payroll.payroll_runs') }}" class="{% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-clock-history me-2"></i>{{ _('payroll_runs') }}
             </a>
+            {# Leave management: show if company has > 5 employees #}
+            {% if employee_count > 5 %}
             <a href="{{ url_for('employees.leave_management') }}" class="{% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-calendar-event me-2"></i>Leave
             </a>
+            {% endif %}
+            {# Profile Requests: show only when there are pending changes #}
+            {% if pending_profile_changes > 0 %}
             <a href="{{ url_for('employees.profile_changes') }}" class="{% if 'profile_change' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-person-lines-fill me-2"></i>Profile Requests
+                <span class="badge bg-danger ms-1">{{ pending_profile_changes }}</span>
             </a>
+            {% endif %}
             <a href="{{ url_for('reports.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
-                <i class="bi bi-bar-chart me-2"></i>{{ _('reports') }}
+                <i class="bi bi-bar-chart me-2"></i>
+                {% if employee_count <= 10 %}Compliance &amp; Reports{% else %}{{ _('reports') }}{% endif %}
+            </a>
+            {# Impact Calculator: show for larger companies #}
+            {% if employee_count > 20 %}
             <a href="{{ url_for('reports.impact_calculator') }}" class="{% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-calculator me-2"></i>Impact Calculator
             </a>
-            </a>
+            {% endif %}
             {% if current_user.role == 'owner' %}
             <a href="{{ url_for('settings.team_settings') }}" class="{% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-gear me-2"></i>{{ _('team') }}

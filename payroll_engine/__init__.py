@@ -223,6 +223,8 @@ def create_app():
 
     # Daily retention purge — runs once per app instance per day
     _last_retention_purge = [None]  # mutable container for closure
+    _last_draft_check = [None]  # monthly draft preparation
+    _last_nudge_check = [None]  # compliance nudges
 
     @app.before_request
     def daily_retention_purge():
@@ -239,6 +241,41 @@ def create_app():
             purge_expired_payslip_pdfs(app)
         except Exception:
             logger.exception('Retention purge failed')
+
+    @app.before_request
+    def proactive_checks():
+        """Run proactive checks: monthly draft prep + compliance nudges.
+
+        Uses the same once-per-day pattern as daily_retention_purge.
+        Only runs for authenticated users with a company.
+        """
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return
+        company_id = current_user.company_id
+        if not company_id:
+            return
+
+        today = date.today()
+        today_str = today.isoformat()
+
+        # Monthly draft preparation (on 28th+ of each month)
+        if today.day >= 28 and _last_draft_check[0] != today_str:
+            _last_draft_check[0] = today_str
+            try:
+                from .services.proactive import prepare_monthly_draft
+                prepare_monthly_draft(company_id)
+            except Exception:
+                logger.exception('Monthly draft preparation failed')
+
+        # Compliance nudges (once per day)
+        if _last_nudge_check[0] != today_str:
+            _last_nudge_check[0] = today_str
+            try:
+                from .services.proactive import send_compliance_nudges
+                send_compliance_nudges(company_id)
+            except Exception:
+                logger.exception('Compliance nudges failed')
 
     @app.after_request
     def add_security_headers(response):

@@ -484,6 +484,87 @@ def undo_approval(run_id):
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 
+# --- Adjustment Payslips ---
+
+@payroll_bp.route('/payroll/<int:run_id>/adjustment', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def create_adjustment(run_id):
+    """Create an adjustment payslip for a completed payroll run."""
+    from payroll_engine.payroll import calculate_payroll
+
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+
+    if run.status not in ('completed', 'locked'):
+        flash('Can only adjust completed or locked payroll runs.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    emp_id = request.form.get('employee_id')
+    amount = request.form.get('amount', '0').strip()
+    reason = request.form.get('reason', '').strip()
+
+    if not emp_id or not amount or not reason:
+        flash('Employee, amount, and reason are required.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    try:
+        from decimal import Decimal, InvalidOperation
+        amount = Decimal(amount)
+        if amount <= 0:
+            raise ValueError('Amount must be positive')
+    except (InvalidOperation, ValueError):
+        flash('Invalid amount.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    emp = Employee.query.filter_by(
+        id=int(emp_id), company_id=_company_id(), is_deleted=False
+    ).first_or_404()
+
+    # Find original payslip for this employee in this run
+    original = Payslip.query.filter_by(
+        payroll_run_id=run.id, employee_id=emp.id, payslip_type='regular'
+    ).first()
+
+    # Calculate adjustment (simplified: treat amount as gross, compute tax)
+    result = calculate_payroll(basic_salary=amount, allowances=Decimal('0'))
+
+    # Create adjustment payslip
+    adj = Payslip(
+        payroll_run_id=run.id,
+        employee_id=emp.id,
+        gross_salary=result['gross'],
+        tax=result['tax'],
+        employee_pension=result['pension_employee'],
+        employer_pension=result['pension_employer'],
+        net_pay=result['net'],
+        payslip_type='adjustment',
+        reason=reason,
+        original_payslip_id=original.id if original else None,
+    )
+    db.session.add(adj)
+
+    # Audit log
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='adjustment_payslip_created',
+        details={
+            'run_id': run.id,
+            'employee_id': emp.employee_id,
+            'amount': str(amount),
+            'reason': reason,
+            'adjustment_id': adj.id,
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f'Adjustment of ETB {amount:,.2f} created for {emp.name}. Net: ETB {result["net"]:,.2f}.', 'success')
+    return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+
 # --- Historical Payroll Import ---
 
 @payroll_bp.route('/payroll/import', methods=['GET', 'POST'])

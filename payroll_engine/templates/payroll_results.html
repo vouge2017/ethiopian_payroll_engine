@@ -170,6 +170,80 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Adjustment Payslips -->
+    {% if run.status in ('completed', 'locked') %}
+    {% set adjustments = run.payslips|selectattr('payslip_type', 'eq', 'adjustment')|list %}
+    {% if adjustments %}
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Adjustment Payslips</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee</th>
+                            <th>Reason</th>
+                            <th class="text-end">Gross</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for adj in adjustments %}
+                        <tr>
+                            <td>{{ adj.employee.name if adj.employee else 'N/A' }}</td>
+                            <td>{{ adj.reason }}</td>
+                            <td class="text-end">ETB {{ '{:,.2f}'.format(adj.gross_salary) }}</td>
+                            <td class="text-end">ETB {{ '{:,.2f}'.format(adj.tax) }}</td>
+                            <td class="text-end fw-bold">ETB {{ '{:,.2f}'.format(adj.net_pay) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Create Adjustment Form -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create Adjustment</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('payroll.create_adjustment', run_id=run.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Employee</label>
+                        <select name="employee_id" class="form-select" required>
+                            <option value="">Select employee...</option>
+                            {% for ps in run.payslips|selectattr('payslip_type', 'eq', 'regular')|list %}
+                            <option value="{{ ps.employee_id }}">{{ ps.employee.name if ps.employee else 'N/A' }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Amount (ETB gross)</label>
+                        <input type="number" name="amount" class="form-control" min="1" step="100" required placeholder="e.g. 2000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Reason</label>
+                        <input type="text" name="reason" class="form-control" required placeholder="e.g. Overtime correction">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-plus-circle me-1"></i> Create
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 {% block extra_js %}

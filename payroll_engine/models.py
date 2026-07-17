@@ -791,7 +791,11 @@ class Payslip(db.Model):
     payment_status = db.Column(db.String(30), nullable=False, default='pending_bank_clearance')
     payment_rejection_reason = db.Column(db.Text, nullable=True)
     generated_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    # Adjustment payslip support
+    payslip_type = db.Column(db.String(20), nullable=False, default='regular')  # regular, adjustment
+    reason = db.Column(db.String(255), nullable=True)  # Reason for adjustment
+    original_payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=True)
+
     def __repr__(self):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
 

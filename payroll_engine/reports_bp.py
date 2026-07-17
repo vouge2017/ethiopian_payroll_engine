@@ -234,3 +234,71 @@ def download_bank_file(run_id):
         as_attachment=True,
         download_name=filename
     )
+
+
+@reports_bp.route('/reports/export/leave-balances')
+@login_required
+@role_required('owner', 'accountant')
+def export_leave_balances():
+    """Export leave balances for all employees as CSV."""
+    from payroll_engine.models import Employee, LeaveBalance
+    import csv, io
+    from flask import send_file
+
+    employees = Employee.query.filter_by(
+        company_id=_company_id(), is_deleted=False
+    ).order_by(Employee.name).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Employee ID', 'Name', 'Leave Type', 'Balance (days)'])
+
+    for emp in employees:
+        balances = LeaveBalance.query.filter_by(employee_id=emp.id).all()
+        if balances:
+            for b in balances:
+                writer.writerow([emp.employee_id, emp.name, b.leave_type, str(b.balance)])
+        else:
+            writer.writerow([emp.employee_id, emp.name, 'N/A', '0'])
+
+    output.seek(0)
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'leave_balances_{date.today().isoformat()}.csv',
+    )
+
+
+@reports_bp.route('/reports/export/audit-log')
+@login_required
+@role_required('owner')
+def export_audit_log():
+    """Export audit log as CSV."""
+    from payroll_engine.models import AuditLog
+    import csv, io
+    from flask import send_file
+
+    logs = AuditLog.query.filter_by(
+        company_id=_company_id()
+    ).order_by(AuditLog.timestamp.desc()).limit(1000).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Timestamp', 'User ID', 'Action', 'Details'])
+
+    for log in logs:
+        writer.writerow([
+            log.timestamp.isoformat() if log.timestamp else '',
+            log.user_id,
+            log.action,
+            str(log.details) if log.details else '',
+        ])
+
+    output.seek(0)
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'audit_log_{date.today().isoformat()}.csv',
+    )

@@ -55,6 +55,11 @@
             {% endif %}
 
             <!-- Disbursement tracking -->
+            {% if run.status == 'completed' %}
+            <a href="{{ url_for('payroll.disbursement_progress', run_id=run.id) }}" class="btn btn-sm btn-outline-primary" title="View disbursement progress and download bank files">
+                <i class="bi bi-cash-stack me-1"></i> Disbursement
+            </a>
+            {% endif %}
             {% if run.status == 'completed' and run.disbursement_status == 'pending' %}
             <form method="POST" action="{{ url_for('payroll.mark_disbursed', run_id=run.id) }}" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

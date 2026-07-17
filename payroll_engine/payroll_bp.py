@@ -1211,6 +1211,70 @@ def confirm_payment(run_id):
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 
+@payroll_bp.route('/payroll/<int:run_id>/disbursement')
+@login_required
+@role_required('owner', 'accountant')
+def disbursement_progress(run_id):
+    """Show disbursement progress for a completed payroll run."""
+    from payroll_engine.bank_file import ACCOUNT_PATTERNS
+
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+
+    if run.status != 'completed':
+        flash('Payroll must be completed before disbursement.', 'warning')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+
+    # Build employee list grouped by bank
+    employees = []
+    bank_summary = {}  # bank_key -> {'label': str, 'count': int, 'total': Decimal}
+
+    bank_labels = {
+        'cbe': 'Commercial Bank of Ethiopia (CBE)',
+        'dashen': 'Dashen Bank',
+        'awash': 'Awash Bank',
+        'boa': 'Bank of Abyssinia',
+        'telebirr': 'Telebirr / Mobile Wallet',
+    }
+
+    for ps in payslips:
+        emp = ps.employee
+        bank_raw = (emp.bank_account or emp.bank_or_telebirr or '').strip()
+        bank_key = bank_raw.split(':')[0].lower() if ':' in bank_raw else 'unknown'
+        bank_display = bank_labels.get(bank_key, bank_key.title())
+
+        employees.append({
+            'name': emp.name if emp else 'Unknown',
+            'employee_id': emp.employee_id if emp else '?',
+            'bank_raw': bank_raw,
+            'bank_key': bank_key,
+            'bank_display': bank_display,
+            'net': float(ps.net_pay),
+            'payslip_id': ps.id,
+        })
+
+        if bank_key not in bank_summary:
+            bank_summary[bank_key] = {
+                'label': bank_display,
+                'count': 0,
+                'total': 0.0,
+            }
+        bank_summary[bank_key]['count'] += 1
+        bank_summary[bank_key]['total'] += float(ps.net_pay)
+
+    total_net = sum(e['net'] for e in employees)
+    summary_list = sorted(bank_summary.items(), key=lambda x: x[1]['total'], reverse=True)
+
+    return render_template('disbursement_progress.html',
+                           run=run,
+                           employees=employees,
+                           total_net=total_net,
+                           bank_summary=summary_list)
+
+
 @payroll_bp.route('/payroll/register')
 @login_required
 @role_required('owner', 'accountant')

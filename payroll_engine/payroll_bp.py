@@ -772,6 +772,7 @@ def payroll_spreadsheet():
 @payroll_bp.route('/payroll/spreadsheet/autosave', methods=['POST'])
 @login_required
 @role_required('owner', 'accountant')
+@limiter.limit('30 per minute')
 def payroll_spreadsheet_autosave():
     """Auto-save draft — accepts AJAX form data, returns JSON."""
     from payroll_engine.models import OvertimeEntry, EmployeeDeduction
@@ -782,6 +783,7 @@ def payroll_spreadsheet_autosave():
         return jsonify({'status': 'empty', 'message': 'No data'}), 400
 
     today = date.today()
+    month_start = today.replace(day=1)
     saved = 0
 
     for eid in emp_ids:
@@ -793,7 +795,7 @@ def payroll_spreadsheet_autosave():
 
         prefix = f'emp_{eid}_'
 
-        # Save overtime
+        # Save overtime — always delete existing first, then create if hours > 0
         for ot_type, ot_key in [('day', 'ot_day'), ('night', 'ot_night'),
                                   ('holiday', 'ot_holiday'), ('rest_day_holiday', 'ot_rest')]:
             val = request.form.get(f'{prefix}{ot_key}', '0').strip() or '0'
@@ -801,14 +803,17 @@ def payroll_spreadsheet_autosave():
                 hours = Decimal(val)
             except (InvalidOperation, ValueError):
                 hours = Decimal('0')
+
+            # Always delete existing OT for this employee/type/month
+            OvertimeEntry.query.filter(
+                OvertimeEntry.employee_id == emp.id,
+                OvertimeEntry.company_id == _company_id(),
+                OvertimeEntry.overtime_type == ot_type,
+                OvertimeEntry.date >= month_start,
+            ).delete()
+
+            # Re-create if hours > 0
             if hours > 0:
-                # Delete existing OT for this employee/type/month, then re-save
-                OvertimeEntry.query.filter(
-                    OvertimeEntry.employee_id == emp.id,
-                    OvertimeEntry.company_id == _company_id(),
-                    OvertimeEntry.overtime_type == ot_type,
-                    OvertimeEntry.date >= today.replace(day=1),
-                ).delete()
                 ot = OvertimeEntry(
                     employee_id=emp.id,
                     company_id=_company_id(),

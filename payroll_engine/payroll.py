@@ -310,7 +310,6 @@ def generate_calculation_flow(result: dict) -> dict:
     taxable = _D(result.get('taxable', 0))
     tax = _D(result.get('tax', 0))
     net = _D(result.get('net', 0))
-    relief = Decimal('150')  # personal relief
 
     steps = [
         {

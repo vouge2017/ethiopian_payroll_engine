@@ -1,0 +1,29 @@
+{# Period Selector Component #}
+{# Usage: {% include '_period_selector.html' %} #}
+{# Expects: all_completed_runs (list of PayrollRun), selected_run_id (int or None) #}
+
+{% if all_completed_runs and all_completed_runs|length > 0 %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ request.path }}" id="periodForm" class="d-flex align-items-center gap-3 flex-wrap">
+            <label class="form-label fw-bold mb-0 text-nowrap">
+                <i class="bi bi-calendar me-1"></i>Viewing period:
+            </label>
+            <select name="run_id" class="form-select form-select-sm" style="max-width: 350px;"
+                    onchange="this.form.submit()">
+                <option value="">Latest payroll run</option>
+                {% for run in all_completed_runs %}
+                <option value="{{ run.id }}" {% if selected_run_id == run.id %}selected{% endif %}>
+                    {{ run.reference or ('PR-' + run.run_date.strftime('%Y-%m') + '-%03d'|format(run.id)) }}
+                    — {{ run.period or run.run_date.strftime('%B %Y') }}
+                    ({{ run.payslips|length }} employees)
+                </option>
+                {% endfor %}
+            </select>
+            {% if selected_run_id %}
+            <a href="{{ request.path }}" class="btn btn-sm btn-outline-secondary">Reset to latest</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endif %}

@@ -33,9 +33,25 @@ def reports():
     """Compliance and summary reports."""
     company = current_user.company
     total_employees = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
-    last_run = PayrollRun.query.filter_by(company_id=company.id, status='completed') \
-        .order_by(PayrollRun.created_at.desc()).first()
-    payroll_date_str = last_run.run_date.isoformat() if last_run else date.today().isoformat()
+
+    # All completed runs for period selector
+    all_completed_runs = PayrollRun.query.filter_by(
+        company_id=company.id, status='completed'
+    ).order_by(PayrollRun.run_date.desc()).all()
+
+    # Period selection
+    selected_run_id = request.args.get('run_id', type=int)
+    if selected_run_id:
+        selected_run = PayrollRun.query.filter_by(
+            id=selected_run_id, company_id=company.id, status='completed'
+        ).first()
+        if not selected_run:
+            flash('Payroll run not found.', 'warning')
+            selected_run = all_completed_runs[0] if all_completed_runs else None
+    else:
+        selected_run = all_completed_runs[0] if all_completed_runs else None
+
+    payroll_date_str = selected_run.run_date.isoformat() if selected_run else date.today().isoformat()
     score, status = compute_compliance_score(
         payroll_date=payroll_date_str
     )
@@ -51,7 +67,10 @@ def reports():
         compliance_status=status,
         status_message=status_msg,
         total_employees=total_employees,
-        last_run=last_run,
+        last_run=selected_run,
+        all_completed_runs=all_completed_runs,
+        selected_run=selected_run,
+        selected_run_id=selected_run_id,
         deadlines=deadlines,
         year=date.today().year
     )

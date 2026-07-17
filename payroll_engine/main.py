@@ -194,19 +194,36 @@ def index():
     """Dashboard home."""
     company = current_user.company
     employee_count = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
+
+    # All completed runs for the period selector
+    all_completed_runs = PayrollRun.query.filter_by(
+        company_id=company.id, status='completed'
+    ).order_by(PayrollRun.run_date.desc()).all()
+
+    # Period selection: use ?run_id=X or default to latest
+    selected_run_id = request.args.get('run_id', type=int)
+    if selected_run_id:
+        selected_run = PayrollRun.query.filter_by(
+            id=selected_run_id, company_id=company.id, status='completed'
+        ).first()
+        if not selected_run:
+            flash('Payroll run not found.', 'warning')
+            selected_run = all_completed_runs[0] if all_completed_runs else None
+    else:
+        selected_run = all_completed_runs[0] if all_completed_runs else None
+
     recent_runs = PayrollRun.query.filter_by(company_id=company.id) \
         .order_by(PayrollRun.created_at.desc()) \
         .limit(5).all()
-    # Use the most recent payroll run date for compliance scoring
-    # Falls back to today if no runs exist
-    last_run = recent_runs[0] if recent_runs else None
-    payroll_date_str = last_run.run_date.isoformat() if last_run else date.today().isoformat()
+
+    # Use selected run for compliance scoring
+    payroll_date_str = selected_run.run_date.isoformat() if selected_run else date.today().isoformat()
     score, status = compute_compliance_score(
         payroll_date=payroll_date_str
     )
     status_msg = get_status_message(status)
 
-    # Get upcoming deadlines
+    # Get upcoming deadlines based on selected period
     from payroll_engine.compliance import get_upcoming_deadlines
     deadlines = get_upcoming_deadlines(payroll_date_str)
 
@@ -234,21 +251,18 @@ def index():
         company_id=company.id, status='completed'
     ).count()
 
-    # "What happened last month" summary
+    # "What happened" summary — based on selected run
     last_month_summary = None
-    last_completed = PayrollRun.query.filter_by(
-        company_id=company.id, status='completed'
-    ).order_by(PayrollRun.created_at.desc()).first()
-    if last_completed:
+    if selected_run:
         from payroll_engine.models import Payslip
-        payslips = Payslip.query.filter_by(payroll_run_id=last_completed.id).all()
+        payslips = Payslip.query.filter_by(payroll_run_id=selected_run.id).all()
         if payslips:
             total_net = sum(p.net_pay for p in payslips)
             total_gross = sum(p.gross_salary for p in payslips)
             total_tax = sum(p.tax for p in payslips)
             avg_salary = total_net / len(payslips) if payslips else 0
             last_month_summary = {
-                'period': last_completed.reference or last_completed.run_date.strftime('%B %Y'),
+                'period': selected_run.reference or selected_run.run_date.strftime('%B %Y'),
                 'employee_count': len(payslips),
                 'total_net': total_net,
                 'total_gross': total_gross,
@@ -261,6 +275,9 @@ def index():
         company=company,
         employee_count=employee_count,
         recent_runs=recent_runs,
+        all_completed_runs=all_completed_runs,
+        selected_run=selected_run,
+        selected_run_id=selected_run_id,
         completed_runs_count=completed_runs_count,
         compliance_score=score,
         compliance_status=status,

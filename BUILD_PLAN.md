@@ -97,35 +97,39 @@ Employees can now do everything without Tigist's help.
 
 ---
 
-## PHASE 5 — Disbursement Progress ✅ DONE
+## PHASE 5 - Disbursement Progress ✅ DONE
 
-The gap between “payroll approved” and “employees paid” is now closed.
+The gap between "payroll approved" and "employees paid" is now closed.
 
 ### What was built:
-1. **Disbursement progress page** — shows all employees grouped by bank with download buttons
-2. **Visual progress steps** — Approved → Downloaded → Sent → Confirmed
-3. **Per-bank download** — download CBE file separately from Dashen file
-4. **Notes field** — Tigist can add context when marking as sent
+1. **Disbursement progress page** - shows all employees grouped by bank with download buttons
+2. **Visual progress steps** - Approved → Downloaded → Sent → Confirmed
+3. **Per-bank download** - download CBE file separately from Dashen file
+4. **Notes field** - Tigist can add context when marking as sent
 
 ### Files changed:
-1. `payroll_engine/payroll_bp.py` — added `disbursement_progress()` route
-2. `payroll_engine/templates/disbursement_progress.html` — NEW: full disbursement page
-3. `payroll_engine/templates/payroll_results.html` — added “Disbursement” button link
-4. `tests/test_disbursement.py` — 11 tests
+1. `payroll_engine/payroll_bp.py` - added `disbursement_progress()` route
+2. `payroll_engine/templates/disbursement_progress.html` - NEW: full disbursement page
+3. `payroll_engine/templates/payroll_results.html` - added "Disbursement" button link
+4. `tests/test_disbursement.py` - 11 tests
 
 ---
 
-## PHASE 6 - Size-Appropriate Interface
+## PHASE 6 — Size-Appropriate Interface ✅ DONE
 
-### What to build:
-1. **Sidebar adapts to company size** - hide advanced features for small companies
-2. **Quick Start as default onboarding** - not "Add Employee" one-by-one
-3. **Context-aware labels** - "Compliance & Reports" for small companies, "Reports" for large
+The interface now adapts to company size.
 
-### Files to change:
-1. `payroll_engine/templates/base.html` - conditional sidebar items
-2. `payroll_engine/__init__.py` - inject `employee_count` into context processor
-3. `payroll_engine/templates/dashboard.html` - make Quick Start the primary first-run path
+### What was built:
+1. **Sidebar adapts to company size** — hides Leave for small companies, Impact Calculator for large only
+2. **Quick Start as default onboarding** — paste from Excel is the primary path, step-by-step is collapsed
+3. **Context-aware labels** — “Compliance & Reports” for small companies, “Reports” for large
+4. **Profile Requests** — only shows when there are pending changes (with badge)
+
+### Files changed:
+1. `payroll_engine/__init__.py` — added `inject_sidebar_counts()` context processor
+2. `payroll_engine/templates/base.html` — conditional sidebar items
+3. `payroll_engine/templates/dashboard.html` — Quick Start as primary path
+4. `tests/test_size_interface.py` — 10 tests
 
 ---
 

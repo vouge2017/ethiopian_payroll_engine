@@ -79,36 +79,39 @@ The system now works before Tigist opens it.
 
 ---
 
-## PHASE 4 — Employee Self-Service Polish ✅ DONE
+## PHASE 4 - Employee Self-Service Polish ✅ DONE
 
 Employees can now do everything without Tigist's help.
 
 ### What was built:
-1. **Payslip acknowledgment** — "I received this payslip" button with badge
-2. **Notification when payslip is ready** — WhatsApp + in-app to each employee after approval
-3. **Audit logging** — acknowledgment creates audit trail
+1. **Payslip acknowledgment** - "I received this payslip" button with badge
+2. **Notification when payslip is ready** - WhatsApp + in-app to each employee after approval
+3. **Audit logging** - acknowledgment creates audit trail
 
 ### Files changed:
-1. `payroll_engine/models.py` — added `PayslipAcknowledgment` model with TenantQuery
-2. `payroll_engine/portal_bp.py` — added `acknowledge_payslip()` route
-3. `payroll_engine/templates/employee_portal/payslip_detail.html` — acknowledge button + badge
-4. `payroll_engine/services/payroll_service.py` — notify employees after payslip generation
-5. `tests/test_self_service.py` — 8 tests
+1. `payroll_engine/models.py` - added `PayslipAcknowledgment` model with TenantQuery
+2. `payroll_engine/portal_bp.py` - added `acknowledge_payslip()` route
+3. `payroll_engine/templates/employee_portal/payslip_detail.html` - acknowledge button + badge
+4. `payroll_engine/services/payroll_service.py` - notify employees after payslip generation
+5. `tests/test_self_service.py` - 8 tests
 
 ---
 
-## PHASE 5 - Disbursement Progress
+## PHASE 5 — Disbursement Progress ✅ DONE
 
-The gap between "payroll approved" and "employees paid."
+The gap between “payroll approved” and “employees paid” is now closed.
 
-### What to build:
-1. **Disbursement progress page** - shows all employees grouped by bank with download buttons
-2. **"Mark as disbursed" flow** - clear status progression: pending → file downloaded → disbursed → confirmed
-3. **Per-bank download** - download CBE file separately from Telebirr file
+### What was built:
+1. **Disbursement progress page** — shows all employees grouped by bank with download buttons
+2. **Visual progress steps** — Approved → Downloaded → Sent → Confirmed
+3. **Per-bank download** — download CBE file separately from Dashen file
+4. **Notes field** — Tigist can add context when marking as sent
 
-### Files to change:
-1. `payroll_engine/templates/disbursement_progress.html` - NEW (from FRICTION_PATTERNS.md Pattern 5)
-2. `payroll_engine/payroll_bp.py` - add disbursement route
+### Files changed:
+1. `payroll_engine/payroll_bp.py` — added `disbursement_progress()` route
+2. `payroll_engine/templates/disbursement_progress.html` — NEW: full disbursement page
+3. `payroll_engine/templates/payroll_results.html` — added “Disbursement” button link
+4. `tests/test_disbursement.py` — 11 tests
 
 ---
 

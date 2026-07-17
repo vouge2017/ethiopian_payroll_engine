@@ -4,7 +4,7 @@ from flask import (
     flash, current_app, send_file
 )
 from flask_login import login_required, current_user
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import os
 import uuid
 import io
@@ -123,7 +123,7 @@ def generate_invite(emp_id):
     # Generate token
     token = secrets.token_urlsafe(32)
     emp.invite_token = token
-    emp.invite_expires = datetime.utcnow() + timedelta(hours=48)
+    emp.invite_expires = datetime.now(timezone.utc) + timedelta(hours=48)
     db.session.commit()
 
     invite_url = f'{request.host_url}employees/accept-invite/{token}'
@@ -151,7 +151,7 @@ def accept_invite(token):
         flash('Invalid or expired invite link.', 'danger')
         return redirect(url_for('auth.login'))
 
-    if datetime.utcnow() > emp.invite_expires:
+    if datetime.now(timezone.utc) > emp.invite_expires:
         flash('This invite link has expired. Ask your admin for a new one.', 'danger')
         return redirect(url_for('auth.login'))
 
@@ -765,7 +765,7 @@ def deactivate_employee(emp_id):
         id=emp_id, company_id=_company_id(), is_deleted=False
     ).first_or_404()
     emp.is_deleted = True
-    emp.deleted_at = datetime.utcnow()
+    emp.deleted_at = datetime.now(timezone.utc)
     emp.deleted_by = current_user.id
     create_audit_log(
             company_id=_company_id(),
@@ -844,7 +844,7 @@ def terminate_employee(emp_id):
 
         # Soft-delete the employee
         emp.is_deleted = True
-        emp.deleted_at = datetime.utcnow()
+        emp.deleted_at = datetime.now(timezone.utc)
         emp.deleted_by = current_user.id
 
         # Deactivate all pending deductions
@@ -1058,7 +1058,7 @@ def approve_leave(leave_id):
 
     leave.status = 'approved'
     leave.approved_by = current_user.id
-    leave.approved_at = datetime.utcnow()
+    leave.approved_at = datetime.now(timezone.utc)
 
     # Update leave balance
     balance = LeaveBalance.query.filter_by(
@@ -1314,7 +1314,7 @@ def approve_profile_change(change_id):
     # Update request status
     change.status = ProfileChangeRequest.STATUS_APPROVED
     change.reviewed_by = current_user.id
-    change.reviewed_at = datetime.utcnow()
+    change.reviewed_at = datetime.now(timezone.utc)
 
     # Audit log
     create_audit_log(
@@ -1362,7 +1362,7 @@ def reject_profile_change(change_id):
     change.status = ProfileChangeRequest.STATUS_REJECTED
     change.rejection_reason = reason
     change.reviewed_by = current_user.id
-    change.reviewed_at = datetime.utcnow()
+    change.reviewed_at = datetime.now(timezone.utc)
 
     create_audit_log(
         _company_id(), current_user.id, 'profile_change_rejected',

@@ -6,7 +6,7 @@ and uploaded files. Each purge is audit-logged.
 import logging
 import os
 import shutil
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, timezone
 
 logger = logging.getLogger('payroll_engine.retention')
 
@@ -21,7 +21,7 @@ RETENTION_DAYS = {
 
 def purge_expired_payslip_pdfs(app):
     """Delete PDF payslip files older than the retention window."""
-    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS['payslip_pdf'])
+    cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS['payslip_pdf'])
     with app.app_context():
         from payroll_engine import db
         from payroll_engine.models import Payslip, AuditLog
@@ -53,7 +53,7 @@ def purge_expired_payslip_pdfs(app):
 
 def purge_expired_drafts(app):
     """Delete payroll drafts older than the retention window."""
-    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS['payroll_draft'])
+    cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS['payroll_draft'])
     with app.app_context():
         from payroll_engine import db
         from payroll_engine.models import PayrollDraft, AuditLog
@@ -80,7 +80,7 @@ def purge_expired_uploads(app, upload_folder=None):
     """Delete uploaded files older than the retention window."""
     if upload_folder is None:
         upload_folder = app.config.get('UPLOAD_FOLDER', '/tmp/uploads')
-    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS['uploaded_file'])
+    cutoff = datetime.now(timezone.utc) - timedelta(days=RETENTION_DAYS['uploaded_file'])
     if not os.path.exists(upload_folder):
         return 0
     purged = 0

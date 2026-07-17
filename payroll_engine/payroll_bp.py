@@ -12,7 +12,7 @@ import uuid
 import csv
 import io
 import zipfile
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 from payroll_engine import db
 from payroll_engine.models import (
@@ -463,7 +463,7 @@ def undo_approval(run_id):
         flash('No approval timestamp found.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    elapsed = datetime.utcnow() - run.approved_at
+    elapsed = datetime.now(timezone.utc) - run.approved_at
     if elapsed > timedelta(hours=1):
         flash(
             f'Cannot undo: approval was {int(elapsed.total_seconds() / 60)} minutes ago. '
@@ -1065,7 +1065,7 @@ def payroll_spreadsheet_autosave():
     return jsonify({
         'status': 'ok',
         'saved': saved,
-        'timestamp': datetime.utcnow().isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'note': 'Overtime and advances saved. Absences/bonus require Save & Recalculate.',
     })
 
@@ -1098,7 +1098,7 @@ def lock_payroll(run_id):
         flash('Can only lock completed payroll runs.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
     run.status = 'locked'
-    run.locked_at = datetime.utcnow()
+    run.locked_at = datetime.now(timezone.utc)
     run.locked_by = current_user.id
     create_audit_log(
         company_id=_company_id(),
@@ -1153,7 +1153,7 @@ def mark_disbursed(run_id):
 
     notes = request.form.get('notes', '').strip()
     run.disbursement_status = 'disbursed'
-    run.disbursed_at = datetime.utcnow()
+    run.disbursed_at = datetime.now(timezone.utc)
     run.disbursed_by = current_user.id
     run.disbursement_notes = notes or None
 

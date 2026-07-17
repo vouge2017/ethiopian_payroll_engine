@@ -10,7 +10,7 @@ import hashlib
 import json
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger('payroll_engine.webhooks')
 
@@ -70,7 +70,7 @@ def fire_webhook(company_id, event, data):
 
     payload = {
         'event': event,
-        'timestamp': datetime.utcnow().isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'company_id': company_id,
         'company_name': company_name,
         'data': data,

@@ -8,7 +8,7 @@ Extracted from main.py and leave.py to provide a clean API for:
 - Integration with payroll (sick leave pay reduction)
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Optional
 from payroll_engine import db
@@ -284,7 +284,7 @@ def approve_leave(leave: Leave, approved_by: int, db_session) -> dict:
 
     leave.status = 'approved'
     leave.approved_by = approved_by
-    leave.approved_at = datetime.utcnow()
+    leave.approved_at = datetime.now(timezone.utc)
     db_session.flush()  # Flush so the DB sum below includes this leave
 
     # Derive balance.taken from the authoritative source (Leave table)

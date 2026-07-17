@@ -5,7 +5,7 @@ Creates a temporary company with 5 employees, a completed payroll run,
 and a demo user. No real data, no notifications, no bank file generation.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from payroll_engine import db
 from payroll_engine.models import (
     Company, User, Employee, PayrollRun, Payslip, OvertimeEntry, AuditLog
@@ -73,7 +73,7 @@ def create_demo_data():
     """
     # 0. Cleanup old demos (older than 24 hours)
     from datetime import datetime, timedelta
-    cutoff = datetime.utcnow() - timedelta(hours=24)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
     old_demos = Company.query.filter(
         Company.is_demo == True,
         Company.created_at < cutoff
@@ -155,7 +155,7 @@ def create_demo_data():
         status='completed',
         reference=f'PR-{date.today().strftime("%Y-%m")}-001',
         approved_by=user.id,
-        approved_at=datetime.utcnow(),
+        approved_at=datetime.now(timezone.utc),
     )
     db.session.add(run)
     db.session.commit()

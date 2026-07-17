@@ -149,12 +149,16 @@ def notify_leave_decision(leave, decision, manager_name=None):
     """
     from payroll_engine.models import Employee, User, UserCompany
 
-    emp = Employee.query.filter_by(id=leave.employee_id, is_deleted=False).first()
+    emp = Employee.query.filter_by(
+        id=leave.employee_id, company_id=leave.company_id, is_deleted=False
+    ).first()
     if not emp:
         return
 
     # Find the user linked to this employee
-    user = User.query.filter_by(phone=emp.phone).first()
+    user = User.query.filter_by(id=emp.user_id).first()
+    if not user:
+        user = User.query.filter_by(phone=emp.phone).first()
     if user:
         msg = (
             f'Your {leave.leave_type} leave request '

@@ -72,8 +72,8 @@ def login():
             flash('Invalid credentials.', 'danger')
             return redirect(url_for('auth.login'))
         login_user(user, remember=remember)
-        from datetime import datetime
-        session['_login_time'] = datetime.utcnow().timestamp()
+        from datetime import datetime, timezone
+        session['_login_time'] = datetime.now(timezone.utc).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
         if user.must_change_password:
@@ -265,8 +265,8 @@ def google_callback():
     if user:
         # Existing user — log them in
         login_user(user)
-        from datetime import datetime
-        session['_login_time'] = datetime.utcnow().timestamp()
+        from datetime import datetime, timezone
+        session['_login_time'] = datetime.now(timezone.utc).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
         flash('Welcome back!', 'success')
@@ -333,8 +333,8 @@ def google_register():
         session.pop('google_name', None)
 
         login_user(user)
-        from datetime import datetime
-        session['_login_time'] = datetime.utcnow().timestamp()
+        from datetime import datetime, timezone
+        session['_login_time'] = datetime.now(timezone.utc).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
         flash('Account created with Google!', 'success')

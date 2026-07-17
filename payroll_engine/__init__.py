@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 logger = logging.getLogger('payroll_engine')
 
@@ -186,7 +186,7 @@ def create_app():
         if endpoint.startswith('static') or endpoint.startswith('auth.'):
             return
 
-        now = datetime.utcnow().timestamp()
+        now = datetime.now(timezone.utc).timestamp()
 
         # Absolute timeout check
         login_time = flask_session.get('_login_time')

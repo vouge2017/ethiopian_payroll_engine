@@ -147,16 +147,35 @@ def api_role_required(*roles):
 @api_token_or_login_required
 @company_required
 def list_employees():
-    employees = Employee.query.filter_by(company_id=_get_company_id(), is_deleted=False).all()
-    return jsonify([{
-        'id': e.id,
-        'employee_id': e.employee_id,
-        'name': e.name,
-        'basic_salary': e.basic_salary,
-        'allowances': e.allowances,
-        'bank_or_telebirr': e.bank_or_telebirr,
-        # 'tin': e.tin,  — excluded from list view (sensitive)
-    } for e in employees])
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    per_page = min(per_page, 200)  # hard cap
+
+    query = Employee.query.filter_by(
+        company_id=_get_company_id(), is_deleted=False
+    ).order_by(Employee.name)
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    employees = pagination.items
+
+    return jsonify({
+        'employees': [{
+            'id': e.id,
+            'employee_id': e.employee_id,
+            'name': e.name,
+            'basic_salary': e.basic_salary,
+            'allowances': e.allowances,
+            'bank_or_telebirr': e.bank_or_telebirr,
+        } for e in employees],
+        'pagination': {
+            'page': pagination.page,
+            'per_page': pagination.per_page,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'has_next': pagination.has_next,
+            'has_prev': pagination.has_prev,
+        },
+    })
 
 
 @api.route('/employees', methods=['POST'])

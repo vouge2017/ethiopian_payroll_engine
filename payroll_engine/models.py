@@ -377,7 +377,7 @@ class User(UserMixin, db.Model):
         import hashlib
         token = secrets.token_urlsafe(32)
         self.reset_token_hash = hashlib.sha256(token.encode()).hexdigest()
-        self.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        self.reset_token_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
         return token
 
     def verify_reset_token(self, token: str) -> bool:
@@ -385,7 +385,7 @@ class User(UserMixin, db.Model):
         import hashlib
         if not self.reset_token_hash or not self.reset_token_expires:
             return False
-        if datetime.now(timezone.utc) > self.reset_token_expires:
+        if datetime.now(timezone.utc).replace(tzinfo=None) > self.reset_token_expires:
             return False
         expected = hashlib.sha256(token.encode()).hexdigest()
         return secrets.compare_digest(expected, self.reset_token_hash)
@@ -511,7 +511,7 @@ class ApiKey(db.Model):
         token_hash = cls.hash_token(raw_token)
         key = cls.query.filter_by(token_hash=token_hash, is_active=True).first()
         if key:
-            key.last_used_at = datetime.now(timezone.utc)
+            key.last_used_at = datetime.now(timezone.utc).replace(tzinfo=None)
             db.session.flush()  # flush, don't commit — let the request own the transaction
             return key, key.user
         return None, None
@@ -779,7 +779,7 @@ class PayrollRun(db.Model):
             month_str = self.run_date.strftime('%Y-%m')
             self.reference = f'PR-{month_str}-{self.id:03d}'
         else:
-            month_str = datetime.now(timezone.utc).strftime('%Y-%m')
+            month_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m')
             self.reference = f'PR-{month_str}-{self.id:03d}'
 
     def __repr__(self):

@@ -88,7 +88,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
     try:
         run.status = 'processing'
         run.approved_by = user_id
-        run.approved_at = datetime.now(timezone.utc)
+        run.approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
         run.approval_ip = request_ip
 
         # Batch-fetch existing employees to avoid N+1 queries

@@ -121,7 +121,10 @@ def test_list_employees_with_bearer_token(app):
             'Authorization': f'Bearer {raw_token}'
         })
         assert resp.status_code == 200
-        assert isinstance(resp.get_json(), list)
+        data = resp.get_json()
+        assert isinstance(data, dict)
+        assert 'employees' in data
+        assert 'pagination' in data
 
 
 def test_list_employees_no_auth(app):
@@ -244,7 +247,7 @@ def test_api_token_tenant_isolation(app):
             'Authorization': f'Bearer {raw_token}'
         })
         assert resp.status_code == 200
-        ids = [e['employee_id'] for e in resp.get_json()]
+        ids = [e['employee_id'] for e in resp.get_json()['employees']]
         assert 'OTHER001' not in ids
 
 

@@ -284,7 +284,7 @@ def approve_leave(leave: Leave, approved_by: int, db_session) -> dict:
 
     leave.status = 'approved'
     leave.approved_by = approved_by
-    leave.approved_at = datetime.now(timezone.utc)
+    leave.approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db_session.flush()  # Flush so the DB sum below includes this leave
 
     # Derive balance.taken from the authoritative source (Leave table)

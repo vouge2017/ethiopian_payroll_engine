@@ -3,9 +3,18 @@ import os
 import uuid
 from datetime import date, datetime, timezone, timedelta
 
+def _utcnow():
+    """Return current UTC time as a naive datetime (no timezone info).
+
+    This is what datetime.utcnow() did, without the deprecation warning.
+    We need naive datetimes because SQLAlchemy/SQLite stores naive datetimes,
+    and subtracting aware - naive raises TypeError.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 logger = logging.getLogger('payroll_engine')
 
-from flask import Flask, current_app, g, request
+from flask import Flask, current_app, flash, g, redirect, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager

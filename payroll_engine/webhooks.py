@@ -63,18 +63,23 @@ def fire_webhook(company_id, event, data):
     if not company or not company.webhook_url:
         return
 
+    # Resolve URL and secret before spawning thread (no DB access in thread)
+    url = company.webhook_url
+    secret = company.webhook_secret
+    company_name = company.name
+
     payload = {
         'event': event,
         'timestamp': datetime.utcnow().isoformat(),
         'company_id': company_id,
-        'company_name': company.name,
+        'company_name': company_name,
         'data': data,
     }
 
     # Deliver in background thread (non-blocking)
     thread = threading.Thread(
         target=_deliver,
-        args=(company.webhook_url, payload, company.webhook_secret),
+        args=(url, payload, secret),
         daemon=True,
     )
     thread.start()

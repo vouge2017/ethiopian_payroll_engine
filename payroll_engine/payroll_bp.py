@@ -446,7 +446,7 @@ def undo_approval(run_id):
     """Undo payroll approval within 1 hour. Only if disbursement hasn't started."""
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=_company_id()
-    ).first_or_404()
+    ).with_for_update().first_or_404()
 
     # Only completed runs can be undone
     if run.status != 'completed':
@@ -473,7 +473,6 @@ def undo_approval(run_id):
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     # Undo: delete payslips and their PDFs, revert to review
-    import os
     payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
     for ps in payslips:
         if ps.pdf_file_path and os.path.exists(ps.pdf_file_path):

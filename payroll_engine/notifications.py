@@ -27,7 +27,7 @@ def create_in_app_notification(company_id, user_id, message, notif_type='info', 
         link=link,
     )
     db.session.add(notif)
-    db.session.commit()
+    db.session.flush()  # flush, don't commit — caller owns the transaction
     return notif
 
 
@@ -149,7 +149,7 @@ def notify_leave_decision(leave, decision, manager_name=None):
     """
     from payroll_engine.models import Employee, User, UserCompany
 
-    emp = Employee.query.get(leave.employee_id)
+    emp = Employee.query.filter_by(id=leave.employee_id, is_deleted=False).first()
     if not emp:
         return
 

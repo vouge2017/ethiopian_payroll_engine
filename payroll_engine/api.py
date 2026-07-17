@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify, g as flask_g
 from flask_login import login_required, current_user
 from functools import wraps
-from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
+from sqlalchemy.exc import IntegrityError
 from . import db, limiter
 from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLog, ApiKey
 
@@ -155,7 +155,7 @@ def list_employees():
         'basic_salary': e.basic_salary,
         'allowances': e.allowances,
         'bank_or_telebirr': e.bank_or_telebirr,
-        'tin': e.tin,
+        # 'tin': e.tin,  — excluded from list view (sensitive)
     } for e in employees])
 
 

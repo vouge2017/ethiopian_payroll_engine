@@ -41,6 +41,11 @@ def quick_import():
     imported = 0
     errors = []
 
+    # Count once before loop (avoids N+1 queries)
+    existing_count = Employee.query.filter_by(
+        company_id=company_id, is_deleted=False
+    ).count()
+
     for i, emp_data in enumerate(employees):
         name = (emp_data.get('name') or '').strip()
         phone = (emp_data.get('phone') or '').strip()
@@ -60,17 +65,7 @@ def quick_import():
             continue
 
         # Generate employee ID
-        existing_count = Employee.query.filter_by(
-            company_id=company_id, is_deleted=False
-        ).count()
         emp_id = f'EMP{(existing_count + imported + 1):03d}'
-
-        # Check for duplicate name (warn but don't block)
-        existing = Employee.query.filter_by(
-            company_id=company_id, name=name, is_deleted=False
-        ).first()
-        if existing:
-            emp_id = f'EMP{(existing_count + imported + 1):03d}'
 
         emp = Employee(
             employee_id=emp_id,

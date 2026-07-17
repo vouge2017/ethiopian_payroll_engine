@@ -12,13 +12,13 @@ import uuid
 import csv
 import io
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from payroll_engine import db
 from payroll_engine.models import (
     Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
     PayrollValidationResult, OvertimeEntry, FinalSettlement,
-    EmployeeAllowance, Leave, LeaveBalance
+    EmployeeAllowance, Leave, LeaveBalance, AuditLog
 )
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
@@ -405,6 +405,83 @@ def approve_payroll():
         else:
             flash(result.message, 'danger')
         return redirect(url_for('payroll.payroll_upload'))
+
+
+# --- Undo Approval ---
+
+@payroll_bp.route('/payroll/<int:run_id>/undo-approval', methods=['POST'])
+@login_required
+@role_required('owner')
+def undo_approval(run_id):
+    """Undo payroll approval within 1 hour. Only if disbursement hasn't started."""
+    run = PayrollRun.query.filter_by(
+        id=run_id, company_id=_company_id()
+    ).first_or_404()
+
+    # Only completed runs can be undone
+    if run.status != 'completed':
+        flash('Only completed payroll runs can be undone.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    # Cannot undo if disbursement has started
+    if run.disbursement_status not in ('pending',):
+        flash('Cannot undo: disbursement has already started.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    # 1-hour window
+    if not run.approved_at:
+        flash('No approval timestamp found.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    elapsed = datetime.utcnow() - run.approved_at
+    if elapsed > timedelta(hours=1):
+        flash(
+            f'Cannot undo: approval was {int(elapsed.total_seconds() / 60)} minutes ago. '
+            f'Undo window is 1 hour.',
+            'danger'
+        )
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    # Undo: delete payslips and their PDFs, revert to review
+    import os
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    for ps in payslips:
+        if ps.pdf_file_path and os.path.exists(ps.pdf_file_path):
+            try:
+                os.remove(ps.pdf_file_path)
+            except OSError:
+                pass
+        db.session.delete(ps)
+
+    # Delete draft
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    if draft:
+        db.session.delete(draft)
+
+    # Revert run
+    run.status = 'review'
+    run.approved_by = None
+    run.approved_at = None
+    run.disbursement_status = 'pending'
+    run.disbursed_at = None
+    run.disbursed_by = None
+
+    # Audit log
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='payroll_approval_undone',
+        details={
+            'run_id': run.id,
+            'reference': run.reference,
+            'payslips_deleted': len(payslips),
+        }
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f'Payroll {run.reference} undone. {len(payslips)} payslips deleted. Status reverted to review.', 'success')
+    return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 
 # --- Historical Payroll Import ---

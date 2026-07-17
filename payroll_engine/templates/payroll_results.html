@@ -28,6 +28,15 @@
                 <i class="bi bi-download me-1"></i> {{ _('download') }} All (ZIP)
             </a>
             {% endif %}
+            {% if run.status == 'completed' and run.disbursement_status == 'pending' %}
+            <form method="POST" action="{{ url_for('payroll.undo_approval', run_id=run.id) }}" class="d-inline"
+                  onsubmit="return confirm('Undo this approval? This will delete all payslips and revert to review status.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning" title="Undo approval — reverts to review (1 hour window)">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Undo Approval
+                </button>
+            </form>
+            {% endif %}
             {% if run.status == 'completed' %}
             <form method="POST" action="{{ url_for('payroll.lock_payroll', run_id=run.id) }}" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

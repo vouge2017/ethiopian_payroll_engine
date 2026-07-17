@@ -282,23 +282,40 @@ def _check_payroll_variance(data: List[Dict], company_id: int,
 
         if change_pct > 20:
             direction = 'increased' if current_net > previous_net else 'decreased'
+            diff = abs(current_net - previous_net)
+            # Count employees in each run for context
+            prev_count = len(last_run.payslips)
+            curr_count = len(data)
+            count_note = ''
+            if curr_count != prev_count:
+                count_note = f' ({prev_count} → {curr_count} employees)'
             results.append(ValidationResult(
                 rule_code='PAYROLL_VARIANCE',
                 severity='FLAG',
                 message=(
                     f'Total payroll {direction} by {change_pct:.0f}% '
-                    f'(ETB {previous_net:,.0f} → ETB {current_net:,.0f}). '
+                    f'(ETB {previous_net:,.0f} → ETB {current_net:,.0f}, '
+                    f'difference: ETB {diff:,.0f}){count_note}. '
                     f'Is this correct?'
                 ),
-                hint='Check if new employees were added, salaries changed, or if this is a data error.',
+                hint=(
+                    'Common causes: new hires, terminations, salary changes, '
+                    'bonuses, or data entry errors. '
+                    'Check the employee list for unexpected additions or changes.'
+                ),
                 details={
                     'previous_total': previous_net,
                     'current_total': current_net,
                     'change_pct': round(change_pct, 1),
+                    'previous_count': prev_count,
+                    'current_count': curr_count,
                 }
             ))
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger('payroll_engine.validation').warning(
+            'Payroll variance check skipped: %s', e
+        )
 
 
 def _check_pending_leave_impact(data: List[Dict], company_id: int,
@@ -352,6 +369,10 @@ def _check_pending_leave_impact(data: List[Dict], company_id: int,
                     overlap_end = min(leave.end_date, month_end)
                     leave_days = (overlap_end - overlap_start).days + 1
                     if leave_days > 0:
+                        # Estimate the salary deduction
+                        monthly_gross = float(emp.basic_salary) + float(emp.allowances)
+                        daily_rate = monthly_gross / 30
+                        est_deduction = daily_rate * leave_days
                         results.append(ValidationResult(
                             rule_code='PENDING_UNPAID_LEAVE',
                             severity='FLAG',
@@ -362,15 +383,24 @@ def _check_pending_leave_impact(data: List[Dict], company_id: int,
                             ),
                             employee_id=emp.employee_id,
                             employee_name=emp.name,
-                            hint=f'Deduct {leave_days} days from salary or use the sick leave reduction field.',
+                            hint=(
+                                f'Estimated deduction: ETB {est_deduction:,.0f} '
+                                f'({leave_days} days × ETB {daily_rate:,.0f}/day). '
+                                f'Use the salary proration or sick leave reduction field.'
+                            ),
                             details={
                                 'leave_days': leave_days,
                                 'leave_start': str(leave.start_date),
                                 'leave_end': str(leave.end_date),
+                                'estimated_deduction': round(est_deduction, 2),
+                                'daily_rate': round(daily_rate, 2),
                             }
                         ))
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger('payroll_engine.validation').warning(
+            'Unpaid leave check skipped: %s', e
+        )
 
 
 def _check_pension_mismatch(data: List[Dict], results: List[ValidationResult]):

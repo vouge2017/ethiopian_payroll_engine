@@ -48,18 +48,18 @@ This fixes the most frustrating thing: "I want to see July's data, not August's.
 
 ---
 
-## PHASE 2 — Pre-Approval Validation (Highest ROI)
+## PHASE 2 — Pre-Approval Validation (Highest ROI) ✅ DONE
 
-Tigist's biggest fear: approving payroll with mistakes. The validation engine exists but is missing 3 critical checks.
+Tigist's biggest fear: approving payroll with mistakes. The validation engine now catches 3 additional issues.
 
-### What to build:
-1. **Payroll variance check** — "Total payroll changed 22% from last month" (from FRICTION_PATTERNS.md Pattern 3)
-2. **Salary change 30% detection** — "Abebe's salary went from 10K to 15K" (lowered from 10x threshold)
-3. **Pending unpaid leave detection** — "Dawit has 5 days unpaid leave, salary may need prorating"
+### What was built:
+1. **Payroll variance check** — flags when total payroll changes >20% from last month
+2. **Salary change 30% detection** — flags when individual salary changes >30% (lowered from 10x)
+3. **Pending unpaid leave detection** — flags employees with approved unpaid leave who still show full salary
 
-### Files to change:
-1. `payroll_engine/validation.py` — add 3 new check functions
-2. `payroll_engine/services/payroll_workflow.py` — wire new checks into `validate_payroll_data()`
+### Files changed:
+1. `payroll_engine/validation.py` — added `_check_salary_change_significant()`, `_check_payroll_variance()`, `_check_pending_leave_impact()`
+2. `tests/test_validation_phase2.py` — 19 tests covering all edge cases
 
 ---
 

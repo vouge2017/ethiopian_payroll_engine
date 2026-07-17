@@ -286,6 +286,9 @@ def create_app():
     app.register_blueprint(portal_bp)
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
+
+    from .wizard_bp import wizard_bp
+    app.register_blueprint(wizard_bp)
     @app.route('/healthz')
     def healthz():
         return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200

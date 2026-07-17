@@ -296,7 +296,10 @@ class Company(db.Model):
     logo_path = db.Column(db.String(500), nullable=True)  # Path to uploaded logo
     is_demo = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    # Webhook for external integrations
+    webhook_url = db.Column(db.String(500), nullable=True)
+    webhook_secret = db.Column(db.String(64), nullable=True)  # For HMAC signature verification
+
     # Relationships
     users = db.relationship('User', backref='company', lazy=True)
     employees = db.relationship('Employee', backref='company', lazy=True)

@@ -412,6 +412,18 @@ def approve_payroll():
             import logging
             logging.getLogger('payroll_engine').error(f'Notification failed: {e}')
 
+        # Fire webhook
+        try:
+            from payroll_engine.webhooks import fire_webhook
+            fire_webhook(_company_id(), 'payroll.approved', {
+                'run_id': run.id,
+                'reference': run.reference,
+                'employee_count': len(employees_data),
+                'total_net': sum(e.get('net', 0) for e in employees_data),
+            })
+        except Exception:
+            pass
+
         flash(result.message, 'success')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
     else:

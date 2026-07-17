@@ -31,6 +31,8 @@ def company_profile():
         company.address = request.form.get('address', '').strip() or None
         company.phone = request.form.get('phone', '').strip() or None
         company.tin = request.form.get('tin', '').strip() or None
+        company.webhook_url = request.form.get('webhook_url', '').strip() or None
+        company.webhook_secret = request.form.get('webhook_secret', '').strip() or None
 
         # Handle logo upload
         logo = request.files.get('logo')

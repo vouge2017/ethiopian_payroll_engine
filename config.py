@@ -61,7 +61,8 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    # Respect DATABASE_URL if set (CI uses PostgreSQL); fall back to SQLite for local tests
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///:memory:')
 
 
 config_by_name = {

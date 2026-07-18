@@ -55,12 +55,14 @@ def run_pytest():
         passed_match = re.search(r'(\d+) passed', output)
         failed_match = re.search(r'(\d+) failed', output)
         error_match = re.search(r'(\d+) error', output)
+        skipped_match = re.search(r'(\d+) skipped', output)
         collected_match = re.search(r'collected (\d+) items', output)
 
         passed = int(passed_match.group(1)) if passed_match else 0
         failed = int(failed_match.group(1)) if failed_match else 0
         errors = int(error_match.group(1)) if error_match else 0
-        collected = int(collected_match.group(1)) if collected_match else 0
+        skipped = int(skipped_match.group(1)) if skipped_match else 0
+        collected = int(collected_match.group(1)) if collected_match else (passed + failed + errors + skipped)
 
         # Get failed test names
         failed_tests = []
@@ -75,6 +77,7 @@ def run_pytest():
             'passed': passed,
             'failed': failed,
             'errors': errors,
+            'skipped': skipped,
             'total': collected,
             'failed_tests': failed_tests,
             'raw_output': output[-2000:],  # last 2000 chars

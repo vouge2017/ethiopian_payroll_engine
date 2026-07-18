@@ -243,8 +243,10 @@ def create_app():
             return
         _last_retention_purge[0] = today
         try:
-            from .retention import purge_expired_payslip_pdfs
+            from .retention import purge_expired_payslip_pdfs, purge_expired_drafts, purge_expired_uploads
             purge_expired_payslip_pdfs(app)
+            purge_expired_drafts(app)
+            purge_expired_uploads(app)
         except Exception:
             logger.exception('Retention purge failed')
 

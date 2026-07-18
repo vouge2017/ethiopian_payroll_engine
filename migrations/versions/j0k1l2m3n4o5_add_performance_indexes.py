@@ -9,7 +9,7 @@ from alembic import op
 revision = 'j0k1l2m3n4o5'
 down_revision = 'i9j0k1l2m3n4'
 branch_labels = None
-depends_on = None
+depends_on = ('b8c9d0e1f2a3',)  # employee_deduction table must exist
 
 
 def upgrade():

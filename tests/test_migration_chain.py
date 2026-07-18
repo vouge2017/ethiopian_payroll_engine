@@ -208,15 +208,23 @@ def test_migrations_apply_to_postgres():
     from payroll_engine import create_app, db
     proj_root = os.path.join(os.path.dirname(__file__), '..')
 
-    # Create a Flask app configured for PostgreSQL so env.py's current_app works
-    app = create_app()
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['TEST_DATABASE_URL']
+    # Set DATABASE_URL env var so create_app() reads PG, not SQLite
+    # (conftest.py sets it to sqlite:///:memory: by default)
+    pg_url = os.environ['TEST_DATABASE_URL']
+    os.environ['DATABASE_URL'] = pg_url
+    try:
+        app = create_app()
+    finally:
+        # Restore conftest default for other tests
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = pg_url
     app.config['TESTING'] = True
 
     with app.app_context():
         alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))
         alembic_cfg.set_main_option('script_location', os.path.join(proj_root, 'migrations'))
-        alembic_cfg.set_main_option('sqlalchemy.url', os.environ['TEST_DATABASE_URL'])
+        alembic_cfg.set_main_option('sqlalchemy.url', pg_url)
         try:
             upgrade(alembic_cfg, 'heads')
         except Exception as e:
@@ -231,14 +239,20 @@ def test_migrations_rollback_on_postgres():
     from payroll_engine import create_app, db
     proj_root = os.path.join(os.path.dirname(__file__), '..')
 
-    app = create_app()
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['TEST_DATABASE_URL']
+    pg_url = os.environ['TEST_DATABASE_URL']
+    os.environ['DATABASE_URL'] = pg_url
+    try:
+        app = create_app()
+    finally:
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = pg_url
     app.config['TESTING'] = True
 
     with app.app_context():
         alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))
         alembic_cfg.set_main_option('script_location', os.path.join(proj_root, 'migrations'))
-        alembic_cfg.set_main_option('sqlalchemy.url', os.environ['TEST_DATABASE_URL'])
+        alembic_cfg.set_main_option('sqlalchemy.url', pg_url)
         try:
             upgrade(alembic_cfg, 'heads')
             downgrade(alembic_cfg, 'base')

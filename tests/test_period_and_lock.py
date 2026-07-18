@@ -24,7 +24,7 @@ from payroll_engine.models import (
     AuditLog, TenantQuery, OvertimeEntry
 )
 from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 
 @pytest.fixture
@@ -189,7 +189,7 @@ def test_completed_run_can_be_locked(ctx, company_user):
     db.session.commit()
 
     run.status = 'locked'
-    run.locked_at = datetime.utcnow()
+    run.locked_at = datetime.now(timezone.utc)
     run.locked_by = user.id
     db.session.commit()
 
@@ -203,7 +203,7 @@ def test_locked_run_prevents_new_run(ctx, company_user):
     """A locked run should block new runs for the same period."""
     company, user = company_user
     run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='locked',
-                     locked_at=datetime.utcnow(), locked_by=user.id)
+                     locked_at=datetime.now(timezone.utc), locked_by=user.id)
     run.generate_period()
     db.session.add(run)
     db.session.commit()
@@ -222,7 +222,7 @@ def test_unlock_restores_to_completed(ctx, company_user):
     """Unlocking a run should restore it to completed status."""
     company, user = company_user
     run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='locked',
-                     locked_at=datetime.utcnow(), locked_by=user.id)
+                     locked_at=datetime.now(timezone.utc), locked_by=user.id)
     run.generate_period()
     db.session.add(run)
     db.session.commit()

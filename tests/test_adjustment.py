@@ -7,7 +7,7 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from datetime import datetime
+from datetime import datetime, timezone
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company, User, UserCompany, Employee, PayrollRun, Payslip,
@@ -68,10 +68,10 @@ def _create_completed_run(app, company_id, user_id):
 
         run = PayrollRun(
             company_id=company_id,
-            run_date=datetime.utcnow().date(),
+            run_date=datetime.now(timezone.utc).date(),
             status='completed',
             approved_by=user_id,
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
             disbursement_status='pending',
         )
         db.session.add(run)
@@ -178,7 +178,7 @@ def test_adjustment_only_completed_runs(app, company_user, client):
         db.session.commit()
 
         run = PayrollRun(
-            company_id=cid, run_date=datetime.utcnow().date(), status='review',
+            company_id=cid, run_date=datetime.now(timezone.utc).date(), status='review',
         )
         db.session.add(run)
         db.session.commit()

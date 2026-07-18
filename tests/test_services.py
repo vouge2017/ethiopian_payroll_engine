@@ -1,7 +1,7 @@
 """Tests for Settlement Service, Leave Service, and Allowance Service."""
 import pytest
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import date, timezone, timedelta
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company, User, Employee, Leave, LeaveBalance,
@@ -445,8 +445,8 @@ def test_soft_delete_auto_filter(app, ids):
 
         # Soft delete
         emp.is_deleted = True
-        from datetime import datetime
-        emp.deleted_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        emp.deleted_at = datetime.now(timezone.utc)
         db.session.commit()
 
         # Default query excludes deleted
@@ -473,8 +473,8 @@ def test_soft_delete_count(app, ids):
 
         emp = db.session.get(Employee, eid)
         emp.is_deleted = True
-        from datetime import datetime
-        emp.deleted_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        emp.deleted_at = datetime.now(timezone.utc)
         db.session.commit()
 
         assert Employee.query.filter_by(company_id=cid).count() == 0
@@ -488,8 +488,8 @@ def test_soft_delete_paginate(app, ids):
     with app.app_context():
         emp = db.session.get(Employee, eid)
         emp.is_deleted = True
-        from datetime import datetime
-        emp.deleted_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        emp.deleted_at = datetime.now(timezone.utc)
         db.session.commit()
 
         pagination = Employee.query.filter_by(company_id=cid).paginate(page=1, per_page=20)
@@ -506,8 +506,8 @@ def test_soft_delete_bulk_delete_bypass(app, ids):
     with app.app_context():
         emp = db.session.get(Employee, eid)
         emp.is_deleted = True
-        from datetime import datetime
-        emp.deleted_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        emp.deleted_at = datetime.now(timezone.utc)
         db.session.commit()
 
         # Bulk delete should affect ALL records, not just non-deleted

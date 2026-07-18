@@ -2,7 +2,7 @@
 import sys
 import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
@@ -10,7 +10,7 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Employee, Company, User, TenantQuery, OvertimeEntry, PayrollDraft
@@ -68,7 +68,7 @@ def test_purge_expired_drafts(app, ctx):
     db.session.commit()
     draft_old = PayrollDraft(
         payroll_run_id=run.id, employee_data='{}',
-        created_at=datetime.utcnow() - timedelta(days=200),
+        created_at=datetime.now(timezone.utc) - timedelta(days=200),
     )
     draft_new = PayrollDraft(
         payroll_run_id=run.id, employee_data='{}',

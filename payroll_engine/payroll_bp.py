@@ -590,7 +590,8 @@ def create_adjustment(run_id):
     db.session.add(log)
     db.session.commit()
 
-    flash(f'Adjustment of ETB {amount:,.2f} created for {emp.name}. Net: ETB {result["net"]:,.2f}.', 'success')
+    net = result['net']
+    flash(f'Adjustment of ETB {amount:,.2f} created for {emp.name}. Net: ETB {net:,.2f}.', 'success')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 

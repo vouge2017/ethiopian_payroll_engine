@@ -18,5 +18,7 @@ Authlib==1.7.2
 httpx==0.28.1
 pyotp==2.10.0
 qrcode==8.2
+requests==2.34.2
+sentry-sdk[flask]==2.66.0
 pytest==9.1.1
 pytest-cov==7.1.0

@@ -186,7 +186,7 @@ class TestContextProcessor:
         with app.app_context():
             with app.test_request_context():
                 from flask_login import login_user
-                user = User.query.get(oid)
+                user = db.session.get(User, oid)
                 # Simulate the context processor
                 from payroll_engine.models import Employee
                 count = Employee.query.filter_by(company_id=cid, is_deleted=False).count()

@@ -324,7 +324,7 @@ def download_payslip(payslip_id):
     import os
     payslip = Payslip.query.filter_by(id=payslip_id).first_or_404()
     # Verify company access
-    run = PayrollRun.query.get(payslip.payroll_run_id)
+    run = db.session.get(PayrollRun, payslip.payroll_run_id)
     if run.company_id != _get_company_id():
         return jsonify({'error': 'Forbidden'}), 403
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):

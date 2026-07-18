@@ -24,7 +24,7 @@ def company_profile():
     import os
     from werkzeug.utils import secure_filename
 
-    company = Company.query.get(_company_id())
+    company = db.session.get(Company, _company_id())
 
     if request.method == 'POST':
         company.name = request.form.get('name', company.name).strip()

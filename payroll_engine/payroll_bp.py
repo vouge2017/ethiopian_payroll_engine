@@ -1428,7 +1428,7 @@ def payroll_register():
         total_tax += result['tax']
         total_net += result['net']
 
-    company = Company.query.get(_company_id())
+    company = db.session.get(Company, _company_id())
 
     return render_template(
         'payroll_register.html',
@@ -1472,7 +1472,7 @@ def export_payroll_history():
         total_pension_emp = sum(p.employee_pension for p in payslips)
         total_pension_empr = sum(p.employer_pension for p in payslips)
         total_net = sum(p.net_pay for p in payslips)
-        approver = User.query.get(run.approved_by) if run.approved_by else None
+        approver = db.session.get(User, run.approved_by) if run.approved_by else None
         writer.writerow([
             run.reference or '', run.period or '',
             run.run_date.isoformat() if run.run_date else '',
@@ -1485,7 +1485,7 @@ def export_payroll_history():
         ])
 
     output.seek(0)
-    company = Company.query.get(_company_id())
+    company = db.session.get(Company, _company_id())
     filename = f'payroll_history_{company.name}_{date.today().isoformat()}.csv'
     return send_file(
         io.BytesIO(output.getvalue().encode('utf-8')),
@@ -1545,7 +1545,7 @@ def batch_payslips():
             os.remove(pdf_path)  # Clean up temp file
 
     zip_buffer.seek(0)
-    company = Company.query.get(_company_id())
+    company = db.session.get(Company, _company_id())
     filename = f"payslips_{company.name.replace(' ', '_')}_{run.run_date.strftime('%Y%m')}.zip"
 
     return send_file(
@@ -1602,7 +1602,7 @@ def download_all_payslips(run_id):
 def download_payslip(payslip_id):
     """Download a single payslip PDF."""
     payslip = Payslip.query.get_or_404(payslip_id)
-    run = PayrollRun.query.get(payslip.payroll_run_id)
+    run = db.session.get(PayrollRun, payslip.payroll_run_id)
     if run.company_id != _company_id():
         abort(403)
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):

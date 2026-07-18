@@ -193,7 +193,7 @@ def test_completed_run_can_be_locked(ctx, company_user):
     run.locked_by = user.id
     db.session.commit()
 
-    refreshed = PayrollRun.query.get(run.id)
+    refreshed = db.session.get(PayrollRun, run.id)
     assert refreshed.status == 'locked'
     assert refreshed.locked_at is not None
     assert refreshed.locked_by == user.id
@@ -232,7 +232,7 @@ def test_unlock_restores_to_completed(ctx, company_user):
     run.locked_by = None
     db.session.commit()
 
-    refreshed = PayrollRun.query.get(run.id)
+    refreshed = db.session.get(PayrollRun, run.id)
     assert refreshed.status == 'completed'
     assert refreshed.locked_at is None
 

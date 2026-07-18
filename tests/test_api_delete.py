@@ -82,7 +82,7 @@ def test_delete_employee_without_history(ctx, client, company_user_employee):
     assert resp.get_json()['message'] == 'Deleted'
 
     # Verify employee is gone
-    assert Employee.query.get(emp.id) is None
+    assert db.session.get(Employee, emp.id) is None
 
     # Verify audit log
     log = AuditLog.query.filter_by(
@@ -116,4 +116,4 @@ def test_delete_employee_with_history_returns_409(ctx, client, company_user_empl
     assert 'payroll history' in resp.get_json()['error'].lower()
 
     # Employee should still exist
-    assert Employee.query.get(emp.id) is not None
+    assert db.session.get(Employee, emp.id) is not None

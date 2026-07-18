@@ -345,7 +345,7 @@ def test_stop_deduction_route(ctx, client, company_user_employee):
     }, follow_redirects=True)
     assert resp.status_code == 200
 
-    refreshed = EmployeeDeduction.query.get(ded.id)
+    refreshed = db.session.get(EmployeeDeduction, ded.id)
     assert not refreshed.is_active
     assert refreshed.stopped_reason == 'Paid in full'
 
@@ -368,7 +368,7 @@ def test_delete_deduction_route(ctx, client, company_user_employee):
 
     resp = client.post(f'/deductions/{ded_id}/delete', follow_redirects=True)
     assert resp.status_code == 200
-    assert EmployeeDeduction.query.get(ded_id) is None
+    assert db.session.get(EmployeeDeduction, ded_id) is None
 
 
 # --- Property tests ---

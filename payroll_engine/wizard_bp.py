@@ -14,7 +14,7 @@ wizard_bp = Blueprint('wizard', __name__)
 @role_required('owner', 'accountant')
 def quick_start():
     """Show the Quick Start wizard page."""
-    company = Company.query.get(_company_id())
+    company = db.session.get(Company, _company_id())
     employee_count = Employee.query.filter_by(
         company_id=_company_id(), is_deleted=False
     ).count()

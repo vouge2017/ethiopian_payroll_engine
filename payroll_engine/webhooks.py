@@ -8,6 +8,7 @@ import os
 import hmac
 import hashlib
 import json
+from payroll_engine import db
 import logging
 import threading
 from datetime import datetime, timezone
@@ -59,7 +60,7 @@ def fire_webhook(company_id, event, data):
         return
 
     from payroll_engine.models import Company
-    company = Company.query.get(company_id)
+    company = db.session.get(Company, company_id)
     if not company or not company.webhook_url:
         return
 

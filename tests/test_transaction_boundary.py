@@ -99,7 +99,7 @@ def test_approval_rolls_back_on_pdf_failure(app):
 
     with app.app_context():
         # Verify starting state
-        run = PayrollRun.query.get(run_id)
+        run = db.session.get(PayrollRun, run_id)
         assert run.status == 'review'
         assert Payslip.query.filter_by(payroll_run_id=run_id).count() == 0
         assert PayrollDraft.query.filter_by(payroll_run_id=run_id).first() is not None
@@ -107,7 +107,7 @@ def test_approval_rolls_back_on_pdf_failure(app):
     # Attempt approval with a failing PDF generator
     with app.test_client() as client:
         with app.app_context():
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
@@ -120,7 +120,7 @@ def test_approval_rolls_back_on_pdf_failure(app):
 
     # After failed approval, verify nothing partial persisted
     with app.app_context():
-        run = PayrollRun.query.get(run_id)
+        run = db.session.get(PayrollRun, run_id)
 
         # Run should be 'completed' — PDF failure no longer blocks payroll
         assert run.status == 'completed', f"Expected 'completed', got '{run.status}'"
@@ -145,7 +145,7 @@ def test_approval_rolls_back_on_compliance_failure(app):
 
     with app.test_client() as client:
         with app.app_context():
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
@@ -157,7 +157,7 @@ def test_approval_rolls_back_on_compliance_failure(app):
             }, follow_redirects=False)
 
     with app.app_context():
-        run = PayrollRun.query.get(run_id)
+        run = db.session.get(PayrollRun, run_id)
 
         # Everything rolled back, then marked 'failed'
         assert run.status == 'failed', f"Expected 'failed', got '{run.status}'"
@@ -174,7 +174,7 @@ def test_approval_commits_atomically_on_success(app):
 
     with app.test_client() as client:
         with app.app_context():
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             with client.session_transaction() as sess:
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
@@ -185,7 +185,7 @@ def test_approval_commits_atomically_on_success(app):
         }, follow_redirects=False)
 
     with app.app_context():
-        run = PayrollRun.query.get(run_id)
+        run = db.session.get(PayrollRun, run_id)
 
         # All success conditions
         assert run.status == 'completed'

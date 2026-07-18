@@ -163,7 +163,7 @@ def switch_company(company_id):
     if not current_user.can_access_company(company_id):
         abort(403)
     session['active_company_id'] = company_id
-    company = Company.query.get(company_id)
+    company = db.session.get(Company, company_id)
     flash(f'Switched to {company.name}.', 'success')
     return redirect(url_for('main.index'))
 

@@ -76,7 +76,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
     employees_data = draft.employee_data
 
     # Load company info for payslip branding
-    company = Company.query.get(company_id)
+    company = db.session.get(Company, company_id)
     company_info = {
         'name': company.name if company else 'Company',
         'address': company.address if company else '',
@@ -249,7 +249,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Log the failure in a separate transaction
         try:
-            failed_run = PayrollRun.query.get(run.id)
+            failed_run = db.session.get(PayrollRun, run.id)
             if failed_run:
                 failed_run.status = 'failed'
             create_audit_log(

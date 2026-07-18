@@ -73,7 +73,7 @@ def list_employees():
 def export_employees():
     """Export employee list as CSV."""
     from payroll_engine.models import Company
-    company = Company.query.get(_company_id())
+    company = db.session.get(Company, _company_id())
     employees = Employee.query.filter_by(
         company_id=_company_id(), is_deleted=False
     ).order_by(Employee.name).all()

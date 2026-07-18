@@ -78,4 +78,4 @@ def test_purge_expired_drafts(app, ctx):
     db.session.commit()
     purged = purge_expired_drafts(app)
     assert purged >= 1
-    assert PayrollDraft.query.get(draft_new.id) is not None
+    assert db.session.get(PayrollDraft, draft_new.id) is not None

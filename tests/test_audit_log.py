@@ -253,7 +253,7 @@ def test_audit_log_tamper_detected(app):
         assert results[0][1] is True  # ok before tamper
 
         # Tamper with the hash directly via DB
-        entry = AuditLog.query.get(entry_id)
+        entry = db.session.get(AuditLog, entry_id)
         entry.hash = 'tampered'
         db.session.commit()
 
@@ -333,7 +333,7 @@ def test_audit_log_details_tamper_detected(app):
         original_hash = entry.hash
 
         # Tamper with details
-        entry = AuditLog.query.get(entry_id)
+        entry = db.session.get(AuditLog, entry_id)
         entry.details = {'amount': 9999}
         db.session.commit()
 
@@ -366,7 +366,7 @@ def test_audit_log_previous_hash_tamper_detected(app):
         assert all(ok for _, ok, _ in AuditLog.verify_chain(cid))
 
         # Tamper: swap e2's previous_hash
-        e2 = AuditLog.query.get(e2.id)
+        e2 = db.session.get(AuditLog, e2.id)
         e2.previous_hash = 'fake_hash_value'
         db.session.commit()
 

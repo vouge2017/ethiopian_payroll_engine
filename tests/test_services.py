@@ -93,7 +93,7 @@ def test_settlement_persist(app, ids):
         emp = db.session.get(Employee, eid)
         s = create_settlement_record(emp, TerminationReason.REDUNDANCY, date(2026, 7, 15), cid, uid, db.session)
         db.session.commit()
-        saved = FinalSettlement.query.get(s.id)
+        saved = db.session.get(FinalSettlement, s.id)
         assert saved is not None
         assert saved.net_final_payment > 0
 

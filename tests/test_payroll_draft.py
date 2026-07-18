@@ -107,7 +107,7 @@ def test_draft_survives_session_expiry(ctx):
     db.session.expire_all()
 
     # New "request" — read from DB fresh
-    fresh_draft = PayrollDraft.query.get(draft_id)
+    fresh_draft = db.session.get(PayrollDraft, draft_id)
     assert fresh_draft is not None
     assert fresh_draft.employee_data[0]['id'] == 'EMP001'
     assert fresh_draft.employee_data[0]['net'] == 4177.5

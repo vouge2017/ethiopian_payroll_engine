@@ -13,9 +13,11 @@ def _env_bool(name: str, default: bool = False) -> bool:
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-change-in-production')
     ENABLE_DEMO_MODE = _env_bool('ENABLE_DEMO_MODE', default=False)
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'app.db')
-    )
+    _db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'app.db'))
+    # Fix postgres:// → postgresql:// for SQLAlchemy 2.x
+    if _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(basedir, 'uploads'))
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB

@@ -82,6 +82,9 @@ def create_app():
     if env == 'production':
         secret = os.environ.get('SECRET_KEY', '')
         db_url = os.environ.get('DATABASE_URL', '')
+        # Fix postgres:// → postgresql:// for SQLAlchemy 2.x
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
         enc_key = os.environ.get('DB_ENCRYPTION_KEY', '')
         errors = []
         if not secret or secret in ('dev-change-in-production', 'your-secret-key-here'):
@@ -122,6 +125,9 @@ def create_app():
             'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', '30')),
             'pool_recycle': int(os.environ.get('SQLALCHEMY_POOL_RECYCLE', '300')),
         })
+        # Render PostgreSQL requires SSL
+        if os.environ.get('RENDER') and 'sslmode' not in db_url:
+            engine_options['connect_args'] = {'sslmode': 'require'}
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
     csrf.init_app(app)
     limiter.init_app(app)

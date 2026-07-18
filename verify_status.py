@@ -48,10 +48,6 @@ def run_pytest():
         output = result.stdout + result.stderr
 
         # Parse summary line: "X passed, Y failed, Z errors"
-        summary_match = re.search(
-            r'(\d+) passed.*?(\d+) failed.*?(\d+)',
-            output
-        )
         passed_match = re.search(r'(\d+) passed', output)
         failed_match = re.search(r'(\d+) failed', output)
         error_match = re.search(r'(\d+) error', output)

@@ -205,14 +205,22 @@ def test_migrations_apply_to_postgres():
     """All migrations can be applied to a PostgreSQL database."""
     from alembic.command import upgrade
     from alembic.config import Config
+    from payroll_engine import create_app, db
     proj_root = os.path.join(os.path.dirname(__file__), '..')
-    alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))
-    alembic_cfg.set_main_option('script_location', os.path.join(proj_root, 'migrations'))
-    alembic_cfg.set_main_option('sqlalchemy.url', os.environ['TEST_DATABASE_URL'])
-    try:
-        upgrade(alembic_cfg, 'heads')
-    except Exception as e:
-        pytest.fail(f"Migrations failed to apply on PostgreSQL: {e}")
+
+    # Create a Flask app configured for PostgreSQL so env.py's current_app works
+    app = create_app()
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['TEST_DATABASE_URL']
+    app.config['TESTING'] = True
+
+    with app.app_context():
+        alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))
+        alembic_cfg.set_main_option('script_location', os.path.join(proj_root, 'migrations'))
+        alembic_cfg.set_main_option('sqlalchemy.url', os.environ['TEST_DATABASE_URL'])
+        try:
+            upgrade(alembic_cfg, 'heads')
+        except Exception as e:
+            pytest.fail(f"Migrations failed to apply on PostgreSQL: {e}")
 
 
 @pytest.mark.skipif(not _has_postgres(), reason="PostgreSQL not available (set TEST_DATABASE_URL)")
@@ -220,15 +228,22 @@ def test_migrations_rollback_on_postgres():
     """All migrations can be rolled back on PostgreSQL."""
     from alembic.command import upgrade, downgrade
     from alembic.config import Config
+    from payroll_engine import create_app, db
     proj_root = os.path.join(os.path.dirname(__file__), '..')
-    alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))
-    alembic_cfg.set_main_option('script_location', os.path.join(proj_root, 'migrations'))
-    alembic_cfg.set_main_option('sqlalchemy.url', os.environ['TEST_DATABASE_URL'])
-    try:
-        upgrade(alembic_cfg, 'heads')
-        downgrade(alembic_cfg, 'base')
-    except Exception as e:
-        pytest.fail(f"Migrations rollback failed on PostgreSQL: {e}")
+
+    app = create_app()
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['TEST_DATABASE_URL']
+    app.config['TESTING'] = True
+
+    with app.app_context():
+        alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))
+        alembic_cfg.set_main_option('script_location', os.path.join(proj_root, 'migrations'))
+        alembic_cfg.set_main_option('sqlalchemy.url', os.environ['TEST_DATABASE_URL'])
+        try:
+            upgrade(alembic_cfg, 'heads')
+            downgrade(alembic_cfg, 'base')
+        except Exception as e:
+            pytest.fail(f"Migrations rollback failed on PostgreSQL: {e}")
 
 
 def test_migrations_parse_without_error(migration_dir):

@@ -240,7 +240,7 @@ def _check_salary_change_significant(data: List[Dict], previous: Dict[str, dict]
                 rule_code='SALARY_CHANGE_30PCT',
                 severity='FLAG',
                 message=(
-                    f"{emp.get('name', "Employee")}'s salary {direction} by {change_pct:.0f}% "
+                    f"{emp.get('name', 'Employee')}'s salary {direction} by {change_pct:.0f}% "
                     f"(ETB {prev_total:,.0f} → ETB {curr_total:,.0f}). "
                     f'Is this correct?'
                 ),

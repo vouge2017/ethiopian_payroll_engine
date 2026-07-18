@@ -71,26 +71,29 @@ def my_payslip_detail(payslip_id):
     taxable = payslip.gross_salary - payslip.employee_pension
     tax_breakdown = calculate_tax_breakdown(taxable)
 
-    ot_entries = OvertimeEntry.query.filter_by(
-        employee_id=emp.id, company_id=emp.company_id
-    ).all()
     payslip_month = payslip.generated_at.month if payslip.generated_at else None
     payslip_year = payslip.generated_at.year if payslip.generated_at else None
+
+    ot_entries = OvertimeEntry.query.filter_by(
+        employee_id=emp.id, company_id=emp.company_id
+    ).filter(
+        db.extract('month', OvertimeEntry.date) == payslip_month,
+        db.extract('year', OvertimeEntry.date) == payslip_year,
+    ).all()
     overtime_details = []
     total_ot_pay = 0
     for entry in ot_entries:
-        if entry.date and entry.date.month == payslip_month and entry.date.year == payslip_year:
-            hourly = calculate_hourly_rate(emp.basic_salary)
-            multiplier = OVERTIME_RATES.get(entry.overtime_type, 1.0)
-            pay = round(hourly * entry.hours * multiplier, 2)
-            overtime_details.append({
-                'date': entry.date,
-                'hours': entry.hours,
-                'type': entry.overtime_type,
-                'hourly_rate': hourly,
-                'multiplier': multiplier,
-                'pay': pay,
-            })
+        hourly = calculate_hourly_rate(emp.basic_salary)
+        multiplier = OVERTIME_RATES.get(entry.overtime_type, 1.0)
+        pay = round(hourly * entry.hours * multiplier, 2)
+        overtime_details.append({
+            'date': entry.date,
+            'hours': entry.hours,
+            'type': entry.overtime_type,
+            'hourly_rate': hourly,
+            'multiplier': multiplier,
+            'pay': pay,
+        })
 
     from payroll_engine.payroll import generate_calculation_flow
     from payroll_engine.models import PayslipAcknowledgment

@@ -128,13 +128,14 @@ def verify_data_integrity(db_url):
 def export_database(db_url, output_path):
     """Export database to a file."""
     if 'sqlite' in db_url:
-        # SQLite: just copy the file
-        import shutil
+        # SQLite: check if it's a file-based DB
         db_path = db_url.replace('sqlite:///', '')
-        if os.path.exists(db_path):
-            shutil.copy2(db_path, output_path)
-            return True
-        return False
+        if db_path == ':memory:' or not os.path.exists(db_path):
+            print(f"  ⚠️  SQLite is in-memory or file not found — skipping export")
+            return False
+        import shutil
+        shutil.copy2(db_path, output_path)
+        return True
     else:
         # PostgreSQL: use pg_dump
         try:

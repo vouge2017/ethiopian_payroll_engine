@@ -10,14 +10,12 @@ Shows management the financial impact of decisions BEFORE they happen:
 Simple, clear, actionable. No jargon. Just numbers.
 """
 
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+from decimal import Decimal, InvalidOperation
 from payroll_engine.payroll import calculate_payroll
-from payroll_engine.pension import employee_pension, employer_pension
+from payroll_engine.pension import employee_pension
 from payroll_engine.tax import calculate_tax
-from payroll_engine.severance import calculate_severance, TerminationReason
-from payroll_engine.services.allowance_service import (
-    calculate_transport_exempt_amount, get_effective_allowances
-)
+from payroll_engine.severance import calculate_severance
+from payroll_engine.services.allowance_service import calculate_transport_exempt_amount
 
 
 Q = Decimal('0.01')

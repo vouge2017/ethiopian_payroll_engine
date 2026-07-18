@@ -1,43 +1,24 @@
 """Main blueprint: dashboard, employees, payroll upload/results, reports."""
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
-    flash, send_file, abort, current_app, jsonify, session
+    flash, abort, current_app, session
 )
-from payroll_engine import limiter
 from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
 import os
-import uuid
-import zipfile
-import io
 from datetime import date, datetime
 
 from payroll_engine import db
 from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
-    AuditLog, PayrollValidationResult, OvertimeEntry, FinalSettlement,
-    EmployeeAllowance, Leave, LeaveBalance
+    Company, User, Employee, PayrollRun, Payslip, OvertimeEntry, Leave
 )
-from payroll_engine.tax import calculate_tax, explain_tax_amharic
-from payroll_engine.pension import employee_pension, employer_pension
 from payroll_engine.payroll import calculate_payroll
-from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score, get_status_message
-from payroll_engine.security import log_and_flash_error
-from payroll_engine.services.payroll_workflow import (
-    parse_and_calculate_payroll,
-    check_csv_row_limit,
-    build_period_string,
-    get_previous_payslips,
-    check_duplicate_period,
-    create_payroll_run,
-)
 
 
 main = Blueprint('main', __name__)
 
 # Import shared helpers (single source of truth — no duplicates)
-from payroll_engine.shared import _company_id, role_required
+from payroll_engine.shared import _company_id
 
 
 # --- Company Setup Guard ---

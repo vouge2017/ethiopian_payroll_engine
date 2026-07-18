@@ -225,26 +225,26 @@ def create_app():
         # Update last activity timestamp
         flask_session['_last_active'] = now
 
-    # Daily retention purge — runs once per app instance per day
-    _last_retention_purge = [None]  # mutable container for closure
+    # Daily retention purge — runs once per day (DB-backed, survives restart)
     _last_draft_check = [None]  # monthly draft preparation
     _last_nudge_check = [None]  # compliance nudges
 
     @app.before_request
     def daily_retention_purge():
-        """Purge expired PDF payslips once per day."""
+        """Purge expired artifacts once per day."""
         from flask_login import current_user
         if not current_user.is_authenticated:
             return
         today = date.today().isoformat()
-        if _last_retention_purge[0] == today:
-            return
-        _last_retention_purge[0] = today
         try:
+            from .models import SystemSetting
+            if SystemSetting.get('last_purge_date') == today:
+                return
             from .retention import purge_expired_payslip_pdfs, purge_expired_drafts, purge_expired_uploads
             purge_expired_payslip_pdfs(app)
             purge_expired_drafts(app)
             purge_expired_uploads(app)
+            SystemSetting.set('last_purge_date', today)
         except Exception:
             logger.exception('Retention purge failed')
 

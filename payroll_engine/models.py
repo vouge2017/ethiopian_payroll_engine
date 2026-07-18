@@ -1441,3 +1441,37 @@ class Notification(db.Model):
 
     def __repr__(self):
         return f'<Notification {self.id} for user {self.user_id}>'
+
+
+class SystemSetting(db.Model):
+    """Key-value store for system-wide settings.
+
+    Used for things like last purge date that need to survive
+    app restarts and work across multiple workers.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    @classmethod
+    def get(cls, key, default=None):
+        """Get a setting value by key."""
+        setting = cls.query.filter_by(key=key).first()
+        return setting.value if setting else default
+
+    @classmethod
+    def set(cls, key, value):
+        """Set a setting value by key. Creates or updates."""
+        setting = cls.query.filter_by(key=key).first()
+        if setting:
+            setting.value = str(value)
+            setting.updated_at = datetime.utcnow()
+        else:
+            setting = cls(key=key, value=str(value))
+            db.session.add(setting)
+        db.session.commit()
+        return setting
+
+    def __repr__(self):
+        return f'<SystemSetting {self.key}={self.value}>'

@@ -37,7 +37,6 @@ def load_user(user_id):
     from .models import User
     return User.query.get(int(user_id))
 
-CELERY_BROKER_DEFAULT = "redis:" + chr(47) + chr(47) + "localhost:6379/0"
 
 def _json_serializer(obj):
     """Custom JSON serializer that handles Decimal for db.JSON columns."""
@@ -101,7 +100,6 @@ def create_app():
         from config import _env_bool
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-in-production')
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
-        app.config['CELERY_BROKER_URL'] = os.environ.get('CELERY_BROKER_URL', CELERY_BROKER_DEFAULT)
         app.config['ENABLE_DEMO_MODE'] = _env_bool(
             'ENABLE_DEMO_MODE',
             default=(env == 'development'),

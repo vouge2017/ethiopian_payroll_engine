@@ -22,8 +22,6 @@ class Config:
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', os.path.join(basedir, 'uploads'))
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
-    # Celery
-    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', "redis:" + chr(47) + chr(47) + "localhost:6379/0")
 
 
 class DevelopmentConfig(Config):

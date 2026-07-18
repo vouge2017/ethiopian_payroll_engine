@@ -31,3 +31,6 @@ celerybeat.pid
 # Generated PDFs
 payslip_*.pdf
 *.pdf
+-e 
+# Internal planning docs (contain security gap analysis — not for public repo)
+.mimo/

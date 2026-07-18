@@ -205,21 +205,20 @@ def test_migrations_apply_to_postgres():
     """All migrations can be applied to a PostgreSQL database."""
     from alembic.command import upgrade
     from alembic.config import Config
-    from payroll_engine import create_app, db
+    from flask import Flask
+    from flask_sqlalchemy import SQLAlchemy
+    from flask_migrate import Migrate
     proj_root = os.path.join(os.path.dirname(__file__), '..')
-
-    # Set DATABASE_URL env var so create_app() reads PG, not SQLite
-    # (conftest.py sets it to sqlite:///:memory: by default)
     pg_url = os.environ['TEST_DATABASE_URL']
-    os.environ['DATABASE_URL'] = pg_url
-    try:
-        app = create_app()
-    finally:
-        # Restore conftest default for other tests
-        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
+    # Create a minimal app — bypass create_app() production checks
+    app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = pg_url
     app.config['TESTING'] = True
+    app.config['SECRET_KEY'] = 'test'
+    _db = SQLAlchemy()
+    _db.init_app(app)
+    Migrate(app, _db)
 
     with app.app_context():
         alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))
@@ -236,18 +235,19 @@ def test_migrations_rollback_on_postgres():
     """All migrations can be rolled back on PostgreSQL."""
     from alembic.command import upgrade, downgrade
     from alembic.config import Config
-    from payroll_engine import create_app, db
+    from flask import Flask
+    from flask_sqlalchemy import SQLAlchemy
+    from flask_migrate import Migrate
     proj_root = os.path.join(os.path.dirname(__file__), '..')
-
     pg_url = os.environ['TEST_DATABASE_URL']
-    os.environ['DATABASE_URL'] = pg_url
-    try:
-        app = create_app()
-    finally:
-        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
+    app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = pg_url
     app.config['TESTING'] = True
+    app.config['SECRET_KEY'] = 'test'
+    _db = SQLAlchemy()
+    _db.init_app(app)
+    Migrate(app, _db)
 
     with app.app_context():
         alembic_cfg = Config(os.path.join(proj_root, 'migrations', 'alembic.ini'))

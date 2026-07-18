@@ -221,7 +221,8 @@ def add_employee():
             flash(result.error, 'danger')
             return redirect(url_for('employees.add_employee'))
 
-        flash(f'{data['name']} added to your team! You can now include them in payroll runs.', 'success')
+        name = data['name']
+        flash(f'{name} added to your team! You can now include them in payroll runs.', 'success')
         return redirect(url_for('employees.list_employees'))
 
     return render_template('add_employee.html', year=date.today().year)

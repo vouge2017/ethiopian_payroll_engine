@@ -95,7 +95,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         emp_ids = [emp_data['id'] for emp_data in employees_data]
         existing_emps = Employee.query.filter(
             Employee.company_id == company_id,
-            Employee.employee_id.in_(emp_ids)
+            Employee.employee_id.in_(emp_ids),
+            Employee.is_deleted == False,
         ).all()
         emp_by_eid = {e.employee_id: e for e in existing_emps}
 

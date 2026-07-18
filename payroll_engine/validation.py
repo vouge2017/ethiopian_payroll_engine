@@ -531,7 +531,8 @@ def _check_active_deductions(data: List[Dict], company_id: int,
         from payroll_engine.models import Employee
         employees = Employee.query.filter(
             Employee.company_id == company_id,
-            Employee.employee_id.in_(emp_ids)
+            Employee.employee_id.in_(emp_ids),
+            Employee.is_deleted == False,
         ).all()
         emp_by_eid = {e.employee_id: e for e in employees}
 

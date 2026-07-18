@@ -619,9 +619,13 @@ def historical_import():
         try:
             import csv as csv_mod
             from io import StringIO
+            from payroll_engine.security import prevent_csv_injection
 
             content_bytes = file.read().decode('utf-8-sig')
-            reader = csv_mod.DictReader(StringIO(content_bytes))
+
+            # CSV injection protection
+            safe_content = prevent_csv_injection(content_bytes)
+            reader = csv_mod.DictReader(StringIO(safe_content))
 
             required_cols = {'employee_id', 'month', 'year', 'gross', 'tax', 'pension', 'net'}
             if not required_cols.issubset(set(reader.fieldnames or [])):
@@ -632,6 +636,7 @@ def historical_import():
             imported = 0
             skipped = 0
             errors = []
+            rows_buffer = []  # Buffer all rows before committing
 
             for i, row in enumerate(reader, 1):
                 try:
@@ -645,12 +650,33 @@ def historical_import():
                     basic = Decimal(row.get('basic_salary', '0') or '0')
                     allowances = Decimal(row.get('allowances', '0') or '0')
 
+                    # --- Validation ---
+                    row_errors = []
+
+                    if not (1 <= month <= 12):
+                        row_errors.append(f'month must be 1-12, got {month}')
+                    if not (2000 <= year <= 2100):
+                        row_errors.append(f'year must be 2000-2100, got {year}')
+                    if gross < 0:
+                        row_errors.append(f'gross cannot be negative')
+                    if tax < 0:
+                        row_errors.append(f'tax cannot be negative')
+                    if pension < 0:
+                        row_errors.append(f'pension cannot be negative')
+                    if net < 0:
+                        row_errors.append(f'net cannot be negative')
+
                     # Find the employee
                     emp = Employee.query.filter_by(
                         employee_id=emp_id, company_id=_company_id(), is_deleted=False
                     ).first()
                     if not emp:
-                        errors.append(f'Row {i}: Employee {emp_id} not found')
+                        row_errors.append(f'Employee {emp_id} not found')
+
+                    if row_errors:
+                        for err in row_errors:
+                            errors.append(f'Row {i}: {err}')
+                        skipped += 1
                         continue
 
                     # Check for duplicate
@@ -659,55 +685,71 @@ def historical_import():
                         company_id=_company_id(), period=period_str, source='import'
                     ).first()
 
-                    if existing:
-                        # Update existing import
-                        existing_payslip = Payslip.query.filter_by(
-                            payroll_run_id=existing.id, employee_id=emp.id
-                        ).first()
-                        if existing_payslip:
-                            existing_payslip.gross_salary = gross
-                            existing_payslip.tax = tax
-                            existing_payslip.employee_pension = pension
-                            existing_payslip.net_pay = net
-                        else:
-                            ps = Payslip(
-                                payroll_run_id=existing.id,
-                                employee_id=emp.id,
-                                gross_salary=gross, tax=tax,
-                                employee_pension=pension,
-                                employer_pension=Decimal('0'),
-                                net_pay=net,
-                            )
-                            db.session.add(ps)
-                    else:
-                        # Create new historical run
-                        from datetime import datetime as dt
-                        run = PayrollRun(
-                            company_id=_company_id(),
-                            run_date=date(year, month, 1),
-                            status='completed',
-                            source='import',
-                            period=period_str,
-                            reference=f'HIST-{period_str}',
-                        )
-                        db.session.add(run)
-                        db.session.flush()
-
-                        ps = Payslip(
-                            payroll_run_id=run.id,
-                            employee_id=emp.id,
-                            gross_salary=gross, tax=tax,
-                            employee_pension=pension,
-                            employer_pension=Decimal('0'),
-                            net_pay=net,
-                        )
-                        db.session.add(ps)
-
+                    rows_buffer.append({
+                        'emp': emp, 'emp_id': emp_id, 'month': month, 'year': year,
+                        'gross': gross, 'tax': tax, 'pension': pension, 'net': net,
+                        'basic': basic, 'allowances': allowances,
+                        'period_str': period_str, 'existing': existing,
+                    })
                     imported += 1
 
                 except (ValueError, KeyError) as e:
                     errors.append(f'Row {i}: {str(e)}')
                     skipped += 1
+
+            # Rollback if >50% rows have errors
+            if skipped > 0 and skipped > imported:
+                db.session.rollback()
+                flash(f'Import aborted: {skipped} errors out of {imported + skipped} rows. Fix the CSV and try again.', 'danger')
+                for err in errors[:10]:
+                    flash(err, 'warning')
+                if len(errors) > 10:
+                    flash(f'... and {len(errors) - 10} more errors.', 'warning')
+                return redirect(request.url)
+
+            # Apply buffered rows
+            for buf in rows_buffer:
+                if buf['existing']:
+                    existing_payslip = Payslip.query.filter_by(
+                        payroll_run_id=buf['existing'].id, employee_id=buf['emp'].id
+                    ).first()
+                    if existing_payslip:
+                        existing_payslip.gross_salary = buf['gross']
+                        existing_payslip.tax = buf['tax']
+                        existing_payslip.employee_pension = buf['pension']
+                        existing_payslip.net_pay = buf['net']
+                    else:
+                        ps = Payslip(
+                            payroll_run_id=buf['existing'].id,
+                            employee_id=buf['emp'].id,
+                            gross_salary=buf['gross'], tax=buf['tax'],
+                            employee_pension=buf['pension'],
+                            employer_pension=Decimal('0'),
+                            net_pay=buf['net'],
+                        )
+                        db.session.add(ps)
+                else:
+                    from datetime import datetime as dt
+                    run = PayrollRun(
+                        company_id=_company_id(),
+                        run_date=date(buf['year'], buf['month'], 1),
+                        status='completed',
+                        source='import',
+                        period=buf['period_str'],
+                        reference=f'HIST-{buf["period_str"]}',
+                    )
+                    db.session.add(run)
+                    db.session.flush()
+
+                    ps = Payslip(
+                        payroll_run_id=run.id,
+                        employee_id=buf['emp'].id,
+                        gross_salary=buf['gross'], tax=buf['tax'],
+                        employee_pension=buf['pension'],
+                        employer_pension=Decimal('0'),
+                        net_pay=buf['net'],
+                    )
+                    db.session.add(ps)
 
             db.session.commit()
 
@@ -722,6 +764,7 @@ def historical_import():
             return redirect(url_for('payroll.historical_import'))
 
         except Exception as e:
+            db.session.rollback()
             log_and_flash_error('Could not process the import file.', e)
             return redirect(request.url)
 

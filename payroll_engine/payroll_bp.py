@@ -736,7 +736,7 @@ def historical_import():
                         status='completed',
                         source='import',
                         period=buf['period_str'],
-                        reference=f'HIST-{buf["period_str"]}',
+                        reference='HIST-' + buf['period_str'],
                     )
                     db.session.add(run)
                     db.session.flush()

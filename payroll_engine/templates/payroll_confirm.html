@@ -86,6 +86,7 @@
                             <div class="row">
                                 <div class="col-6">
                                     <h6 class="text-success">{{ _('earnings') }}</h6>
+                                    <div class="table-responsive">
                                     <table class="table table-sm table-borderless mb-0">
                                         <tr><td class="text-muted">{{ _('basic_salary') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.basic) }}</td></tr>
                                         <tr><td class="text-muted">{{ _('allowances') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.allowances) }}</td></tr>
@@ -94,9 +95,11 @@
                                         {% endif %}
                                         <tr class="table-light"><td><strong>{{ _('gross') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.gross) }}</strong></td></tr>
                                     </table>
+</div>
                                 </div>
                                 <div class="col-6">
                                     <h6 class="text-danger">{{ _('deductions') }}</h6>
+                                    <div class="table-responsive">
                                     <table class="table table-sm table-borderless mb-0">
                                         <tr><td class="text-muted">{{ _('employee_pension') }} (7%)</td><td class="text-end">ETB {{ '%.2f'|format(emp.pension_employee) }}</td></tr>
                                         <tr><td class="text-muted">{{ _('income_tax') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.tax) }}</td></tr>
@@ -104,6 +107,7 @@
                                         <tr><td colspan="2">
                                             <details>
                                                 <summary class="text-muted small" style="cursor:pointer"><i class="bi bi-calculator me-1"></i>Show tax brackets</summary>
+                                                <div class="table-responsive">
                                                 <table class="table table-sm table-borderless mt-1 mb-0" style="font-size:0.85em;">
                                                     {% for b in emp.tax_breakdown.brackets %}
                                                     <tr>
@@ -113,11 +117,13 @@
                                                     {% endfor %}
                                                     <tr class="text-muted"><td>Personal relief</td><td class="text-end">-ETB {{ "{:,.2f}".format(emp.tax_breakdown.personal_relief) }}</td></tr>
                                                 </table>
+</div>
                                             </details>
                                         </td></tr>
                                         {% endif %}
                                         <tr class="table-light"><td><strong>{{ _('total_deductions') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.tax + emp.pension_employee) }}</strong></td></tr>
                                     </table>
+</div>
                                 </div>
                             </div>
                             <!-- Calculation Flow -->

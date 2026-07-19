@@ -38,6 +38,7 @@
         </div>
 
         <!-- Detailed steps -->
+        <div class="table-responsive">
         <table class="table table-sm table-borderless mb-0" style="font-size: 0.9em;">
             {% for step in calc_flow.steps %}
             <tr class="{% if step.is_final %}table-success{% elif step.is_highlight %}table-primary-subtle{% endif %}">
@@ -58,6 +59,7 @@
             </tr>
             {% endfor %}
         </table>
+</div>
 
         <!-- Plain-language summary -->
         <div class="mt-2 pt-2 border-top">

@@ -1,7 +1,7 @@
 """Reports & compliance blueprint."""
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
-from datetime import date
+from datetime import date, datetime
 import io
 
 from payroll_engine import db
@@ -321,3 +321,72 @@ def export_audit_log():
         as_attachment=True,
         download_name=f'audit_log_{date.today().isoformat()}.csv',
     )
+
+
+# --- Filing History ---
+
+@reports_bp.route('/filing-history')
+@login_required
+@role_required('owner', 'accountant')
+def filing_history():
+    """Show compliance filing history — when ERCA/pension/PSSA were filed."""
+    from payroll_engine.models import FilingRecord
+    records = FilingRecord.query.filter_by(
+        company_id=_company_id()
+    ).order_by(FilingRecord.filed_at.desc()).limit(50).all()
+    return render_template('filing_history.html', records=records)
+
+
+@reports_bp.route('/filing-history/mark', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def mark_filed():
+    """Mark a compliance filing as done."""
+    from payroll_engine.models import FilingRecord
+    filing_type = request.form.get('filing_type', '').strip()
+    period = request.form.get('period', '').strip()
+    confirmation = request.form.get('confirmation_number', '').strip() or None
+    notes = request.form.get('notes', '').strip() or None
+
+    if filing_type not in ('erca', 'pension', 'pssa'):
+        flash('Invalid filing type.', 'danger')
+        return redirect(url_for('reports.filing_history'))
+
+    if not period:
+        flash('Period is required (e.g. 2026-07).', 'danger')
+        return redirect(url_for('reports.filing_history'))
+
+    existing = FilingRecord.query.filter_by(
+        company_id=_company_id(), filing_type=filing_type, period=period
+    ).first()
+    if existing:
+        existing.confirmation_number = confirmation or existing.confirmation_number
+        existing.notes = notes or existing.notes
+        existing.filed_at = datetime.now(timezone.utc)
+        existing.filed_by = current_user.id
+        db.session.commit()
+        flash(f'Updated {filing_type.upper()} filing for {period}.', 'success')
+    else:
+        record = FilingRecord(
+            company_id=_company_id(),
+            filing_type=filing_type,
+            period=period,
+            filed_by=current_user.id,
+            confirmation_number=confirmation,
+            notes=notes,
+        )
+        db.session.add(record)
+        db.session.commit()
+        flash(f'Marked {filing_type.upper()} filing for {period} as done.', 'success')
+
+    # Log in audit trail
+    log = AuditLog(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='filing_marked',
+        details={'filing_type': filing_type, 'period': period, 'confirmation': confirmation},
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    return redirect(url_for('reports.filing_history'))

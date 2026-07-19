@@ -1475,3 +1475,30 @@ class SystemSetting(db.Model):
 
     def __repr__(self):
         return f'<SystemSetting {self.key}={self.value}>'
+
+
+class FilingRecord(db.Model):
+    """Track compliance filings (ERCA, pension, PSSA).
+
+    Stores when a filing was made, who did it, and the confirmation number.
+    Used to show filing history and prevent duplicate filings.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    filing_type = db.Column(db.String(30), nullable=False)  # 'erca', 'pension', 'pssa'
+    period = db.Column(db.String(20), nullable=False)  # '2026-07' format
+    filed_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    filed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    confirmation_number = db.Column(db.String(100), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    company = db.relationship('Company', backref=db.backref('filing_records', lazy=True))
+    user = db.relationship('User', backref=db.backref('filings_made', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('company_id', 'filing_type', 'period', name='uq_filing_per_period'),
+    )
+
+    def __repr__(self):
+        return f'<FilingRecord {self.filing_type} {self.period}>'

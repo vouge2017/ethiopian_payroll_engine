@@ -6,6 +6,7 @@ from flask import (
 from flask_login import login_required, current_user
 import os
 from datetime import date, datetime
+from decimal import Decimal
 
 from payroll_engine import db
 from payroll_engine.models import (
@@ -251,6 +252,17 @@ def index():
                 'avg_salary': avg_salary,
             }
 
+    # Tax brackets for "How is tax calculated?" section
+    from payroll_engine.tax import DEFAULT_BRACKETS, DEFAULT_PERSONAL_RELIEF
+    tax_brackets = []
+    cumulative = Decimal('0')
+    for upper, rate in DEFAULT_BRACKETS:
+        if upper == Decimal('Infinity'):
+            tax_brackets.append({'lower': cumulative, 'upper': None, 'rate': rate * 100})
+        else:
+            tax_brackets.append({'lower': cumulative, 'upper': upper, 'rate': rate * 100})
+            cumulative = upper
+
     return render_template(
         'dashboard.html',
         company=company,
@@ -269,6 +281,8 @@ def index():
         ot_employee_count=ot_employee_count,
         ot_over_limit=ot_over_limit,
         last_month_summary=last_month_summary,
+        tax_brackets=tax_brackets,
+        personal_relief=DEFAULT_PERSONAL_RELIEF,
     )
 
 

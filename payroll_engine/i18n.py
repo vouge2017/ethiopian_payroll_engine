@@ -202,6 +202,16 @@ STRINGS = {
     'err_bank_file_completed_only': 'የባንክ ፋይል ማዘጋጀት የሚቻለው ለተጠናቀቁ የደመወዝ ስራዎች ብቻ ነው።',
     'err_not_linked': 'መለያዎ ከሰራተኛ መዝገብ ጋር አልተያያዘም። እባክዎ የሰው ኃይል (HR) ባለሙያዎን ያነጋግሩ።',
     'err_both_required': 'ሰራተኛውም ሆነ ተጠቃሚው ያስፈልጋሉ።',
+    'how_tax_calculated': 'ግብር እንዴት ይሰላል?',
+    'tax_explainer_intro': 'የኢትዮጵያ ገቢ ግብር ተከታታይ ብርacket ይጠቀማል ( proclamation ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነሳል፣ የሚተካ ገቢዎን ይቀንሳል።',
+    'bracket': 'ብርacket',
+    'taxable_range': 'የሚተካ ገቢ ክልል',
+    'rate': 'መጠን',
+    'personal_relief': 'የግል ማስታገሻ',
+    'per_month': 'በወር',
+    'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነሳል',
+    'of_basic_salary': 'የመነሻ ደመወዝ',
+    'then_tax': 'ከዚያ ግብር ይሰላል',
 }
 
 

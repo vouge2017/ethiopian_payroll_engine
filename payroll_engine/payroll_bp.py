@@ -1495,6 +1495,54 @@ def export_payroll_history():
     )
 
 
+@payroll_bp.route('/payroll/payslips/export')
+@login_required
+@role_required('owner', 'accountant')
+def export_payslips():
+    """Export individual payslip details as CSV — one row per employee per payslip."""
+    runs = PayrollRun.query.filter_by(
+        company_id=_company_id()
+    ).filter(
+        PayrollRun.status.in_(['completed', 'locked'])
+    ).order_by(PayrollRun.run_date.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'Period', 'Run Reference', 'Employee ID', 'Employee Name',
+        'Department', 'Basic Salary', 'Gross Salary',
+        'Pension (Employee 7%)', 'Pension (Employer 11%)',
+        'Taxable Income', 'Income Tax', 'Total Deductions', 'Net Pay',
+        'Bank Account', 'Payslip Type', 'Status',
+    ])
+    for run in runs:
+        payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+        for ps in payslips:
+            emp = ps.employee
+            taxable = (ps.gross_salary or 0) - (ps.employee_pension or 0)
+            total_deductions = (ps.employee_pension or 0) + (ps.tax or 0)
+            writer.writerow([
+                run.period or '', run.reference or '',
+                emp.employee_id if emp else '', emp.name if emp else '',
+                emp.department if emp else '',
+                str(emp.basic_salary if emp else 0),
+                str(ps.gross_salary), str(ps.employee_pension), str(ps.employer_pension),
+                str(taxable), str(ps.tax), str(total_deductions), str(ps.net_pay),
+                emp.bank_or_telebirr if emp else '',
+                ps.payslip_type or 'regular', run.status,
+            ])
+
+    output.seek(0)
+    company = db.session.get(Company, _company_id())
+    filename = f'payslip_details_{company.name}_{date.today().isoformat()}.csv'
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
 @payroll_bp.route('/payroll/payslips/batch')
 @login_required
 @role_required('owner', 'accountant')

@@ -348,7 +348,7 @@ def mark_filed():
     confirmation = request.form.get('confirmation_number', '').strip() or None
     notes = request.form.get('notes', '').strip() or None
 
-    if filing_type not in ('erca', 'pension', 'pssa'):
+    if filing_type not in ('erca', 'pension'):
         flash('Invalid filing type.', 'danger')
         return redirect(url_for('reports.filing_history'))
 

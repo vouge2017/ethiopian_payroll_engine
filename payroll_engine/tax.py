@@ -24,7 +24,10 @@ from typing import List, Tuple
 # Quantizer for 2 decimal places
 Q = Decimal('0.01')
 
-# Default fallback brackets (Proclamation No. 1395/2025)
+# Default fallback brackets
+# Source: Ethiopian Income Tax (Amendment) Proclamation No. 1395/2025
+# Article 36(1) — Rates of Income Tax
+# https://lawethiopia.com/images/proc1395-2025.pdf
 # Used only when no TaxRule exists in the database
 DEFAULT_BRACKETS: List[Tuple[Decimal, Decimal]] = [
     (Decimal('2000'), Decimal('0.00')),

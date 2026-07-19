@@ -4,6 +4,8 @@ Ethiopian Pension Contribution Calculator
 Based on Ethiopian pension law:
   - Employee contribution: 7% of basic salary
   - Employer contribution: 11% of basic salary
+  - Source: Private Organizations Employees Social Security Proclamation No. 715/2011
+    Article 43 — Contribution Rates
 
 Applies to the basic salary only (not gross).
 Minimum contribution floor: ETB 0 (no negative).

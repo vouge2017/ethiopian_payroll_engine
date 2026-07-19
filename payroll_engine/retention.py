@@ -13,7 +13,7 @@ logger = logging.getLogger('payroll_engine.retention')
 
 # Default retention periods (in days)
 RETENTION_DAYS = {
-    'payslip_pdf': int(os.environ.get('RETENTION_PAYSLIP_PDF_DAYS', '365')),
+    'payslip_pdf': int(os.environ.get('RETENTION_PAYSLIP_PDF_DAYS', '3650')),  # 10 years — Ethiopian tax record retention requirement
     'payroll_draft': int(os.environ.get('RETENTION_PAYROLL_DRAFT_DAYS', '90')),
     'uploaded_file': int(os.environ.get('RETENTION_UPLOAD_FILE_DAYS', '180')),
 }

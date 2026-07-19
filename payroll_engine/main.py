@@ -138,7 +138,7 @@ def companies_dashboard():
 
 
 @main.route('/companies/<int:company_id>/switch', methods=['GET', 'POST'])
-@main.route('/switch-company/<int:company_id>', methods=['GET'])
+@main.route('/switch-company/<int:company_id>', methods=['GET', 'POST'])
 @login_required
 def switch_company(company_id):
     """Switch active company context."""

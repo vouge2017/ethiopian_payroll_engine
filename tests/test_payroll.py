@@ -143,6 +143,22 @@ def test_payroll_no_overflow():
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 
 
+def test_pension_ceiling_at_25000():
+    """Regression: employee at 25,000 ETB basic — pension must be capped at 15,000."""
+    from payroll_engine.pension import employee_pension, employer_pension
+    emp = employee_pension(D('25000'))
+    empr = employer_pension(D('25000'))
+    assert emp == D('1050'), f"Employee pension should be 1050 (7% of 15k ceiling), got {emp}"
+    assert empr == D('1650'), f"Employer pension should be 1650 (11% of 15k ceiling), got {empr}"
+
+    # Full payroll calculation also uses ceiling
+    result = calculate_payroll(basic_salary=25000, allowances=5000)
+    assert result['pension_employee'] == D('1050')
+    assert result['pension_employer'] == D('1650')
+    # Taxable = gross - pension_employee = 30,000 - 1,050 = 28,950
+    assert result['taxable'] == D('28950')
+
+
 # ---------------------------------------------------------------
 # TEST 10: Tax explanation is included
 # ---------------------------------------------------------------

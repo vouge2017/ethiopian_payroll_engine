@@ -152,8 +152,8 @@ STRINGS = {
 
     # Flash Messages
     'how_tax_calculated': 'ግብር እንዴት ይሰላል?',
-    'tax_explainer_intro': 'የኢትዮጵያ ገቢ ግብር ተከታታይ ብርacket ይጠቀማል ( proclamation ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነሳል፣ የሚተካ ገቢዎን ይቀንሳል።',
-    'bracket': 'ብርacket',
+    'tax_explainer_intro': 'የኢትዮጵያ ገቢ ግብር ተከታታይ ደረጃዎችን ይጠቀማል (ህግ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነሳል፣ የሚተካ ገቢዎን ይቀንሳል።',
+    'bracket': 'ደረጃ',
     'taxable_range': 'የሚተካ ገቢ ክልል',
     'rate': 'መጠን',
     'personal_relief': 'የግል ማስታገሻ',

@@ -453,10 +453,10 @@
 
     <!-- How is tax calculated? -->
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent" data-bs-toggle="collapse" data-bs-target="#taxExplainer" style="cursor: pointer;">
+        <div class="card-header bg-transparent" data-bs-toggle="collapse" data-bs-target="#taxExplainer" aria-expanded="false" aria-controls="taxExplainer" style="cursor: pointer;">
             <h5 class="mb-0">
                 <i class="bi bi-calculator me-2"></i>{{ _('how_tax_calculated') or 'How is tax calculated?' }}
-                <i class="bi bi-chevron-down float-end"></i>
+                <i class="bi bi-chevron-down float-end" id="taxChevron"></i>
             </h5>
         </div>
         <div class="collapse" id="taxExplainer">
@@ -546,6 +546,13 @@
     #first-run-wizard .col-md-4 {
         margin-bottom: 12px;
     }
+}
+/* Tax explainer chevron rotation */
+#taxChevron {
+    transition: transform 0.2s ease;
+}
+[data-bs-toggle="collapse"][aria-expanded="true"] #taxChevron {
+    transform: rotate(180deg);
 }
 </style>
 {% endblock %}

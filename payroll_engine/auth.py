@@ -382,9 +382,7 @@ def forgot_password():
         if user:
             token = user.generate_reset_token()
             db.session.commit()
-            # Store token hash so user can paste it on the next page
             # In production, this would be sent via SMS/email
-            session['pending_reset_token_hash'] = hashlib.sha256(token.encode()).hexdigest()
             flash(
                 'If an account with that phone/email exists, a reset code has been generated. '
                 'Enter the code you received to reset your password.',
@@ -439,7 +437,6 @@ def reset_password():
         user.set_password(password)
         user.clear_reset_token()
         user.must_change_password = False
-        session.pop('pending_reset_token_hash', None)
         db.session.commit()
         flash('Password reset successfully. Please log in.', 'success')
         return redirect(url_for('auth.login'))

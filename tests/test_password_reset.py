@@ -52,8 +52,8 @@ def test_forgot_password_with_phone(client, ctx):
         'login_id': '0911111111',
     }, follow_redirects=True)
     assert resp.status_code == 200
-    # Should show generic message (no token exposure)
-    assert b'if an account' in resp.data.lower() or b'reset code' in resp.data.lower()
+    # Must show same message as non-existent user (no enumeration)
+    assert b'if an account' in resp.data.lower() and b'reset link has been sent' in resp.data.lower()
 
     # Verify token was stored
     refreshed = db.session.get(User, user.id)
@@ -78,12 +78,13 @@ def test_forgot_password_with_email(client, ctx):
 
 
 def test_forgot_password_nonexistent_user(client, ctx):
-    """POST with unknown phone still shows generic message (no user enumeration)."""
+    """POST with unknown phone still shows same generic message (no user enumeration)."""
     resp = client.post('/auth/forgot-password', data={
         'login_id': '0999999999',
     }, follow_redirects=True)
     assert resp.status_code == 200
-    assert b'if an account' in resp.data.lower()
+    # Exact same message as existing user (no enumeration)
+    assert b'if an account' in resp.data.lower() and b'reset link has been sent' in resp.data.lower()
 
 
 def test_reset_password_with_valid_token(client, ctx):

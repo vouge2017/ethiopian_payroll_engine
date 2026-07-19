@@ -383,15 +383,10 @@ def forgot_password():
             token = user.generate_reset_token()
             db.session.commit()
             # In production, this would be sent via SMS/email
-            flash(
-                'If an account with that phone/email exists, a reset code has been generated. '
-                'Enter the code you received to reset your password.',
-                'info',
-            )
             # In dev/test, log the token so developers can find it
-            current_app.logger.info(f'Password reset token for {login_id}: {token}')
-            return redirect(url_for('auth.reset_password'))
+            current_app.logger.debug(f'Password reset token for {login_id}: {token}')
 
+        # Same message and redirect whether user exists or not (no enumeration)
         flash('If an account with that phone/email exists, a reset link has been sent.', 'info')
         return redirect(url_for('auth.login'))
 

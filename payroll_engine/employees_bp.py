@@ -55,7 +55,7 @@ def list_employees():
     # Get all departments for the filter dropdown
     departments = [
         r[0] for r in db.session.query(Employee.department)
-        .filter(Employee.company_id == _company_id(), Employee.department.isnot(None), Employee.department != '')
+        .filter(Employee.company_id == _company_id(), Employee.is_deleted == False, Employee.department.isnot(None), Employee.department != '')
         .distinct().order_by(Employee.department).all()
     ]
 

@@ -1,3 +1,4 @@
+import hashlib
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from . import db, limiter
@@ -381,14 +382,17 @@ def forgot_password():
         if user:
             token = user.generate_reset_token()
             db.session.commit()
-            # TODO: Send token via SMS/email. For now, show it on screen.
+            # Store token hash so user can paste it on the next page
+            # In production, this would be sent via SMS/email
+            session['pending_reset_token_hash'] = hashlib.sha256(token.encode()).hexdigest()
             flash(
-                f'Password reset token generated. '
-                f'In production this would be sent to your phone/email. '
-                f'For now, here it is: {token}',
+                'If an account with that phone/email exists, a reset code has been generated. '
+                'Enter the code you received to reset your password.',
                 'info',
             )
-            return redirect(url_for('auth.reset_password', token=token))
+            # In dev/test, log the token so developers can find it
+            current_app.logger.info(f'Password reset token for {login_id}: {token}')
+            return redirect(url_for('auth.reset_password'))
 
         flash('If an account with that phone/email exists, a reset link has been sent.', 'info')
         return redirect(url_for('auth.login'))
@@ -396,46 +400,51 @@ def forgot_password():
     return render_template('auth/forgot_password.html')
 
 
-@auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+@auth.route('/reset-password', methods=['GET', 'POST'])
 @limiter.limit('5 per minute')
-def reset_password(token):
-    """Reset password using a valid token."""
+def reset_password():
+    """Reset password using a token pasted by the user."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
-    # Find user by token hash
-    import hashlib
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    user = User.query.filter_by(
-        reset_token_hash=token_hash
-    ).first()
-
-    if not user or not user.verify_reset_token(token):
-        flash('Invalid or expired reset token.', 'danger')
-        return redirect(url_for('auth.forgot_password'))
-
     if request.method == 'POST':
+        token = request.form.get('token', '').strip()
+        if not token:
+            flash('Please enter the reset code you received.', 'danger')
+            return redirect(url_for('auth.reset_password'))
+
+        # Find user by token hash
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        user = User.query.filter_by(
+            reset_token_hash=token_hash
+        ).first()
+
+        if not user or not user.verify_reset_token(token):
+            flash('Invalid or expired reset code.', 'danger')
+            return redirect(url_for('auth.reset_password'))
+
         password = request.form.get('password', '')
         password2 = request.form.get('password2', '')
 
         if password != password2:
             flash('Passwords do not match.', 'danger')
-            return redirect(url_for('auth.reset_password', token=token))
+            return redirect(url_for('auth.reset_password'))
 
         from payroll_engine.password_policy import check_password_strength
         is_strong, pw_error = check_password_strength(password)
         if not is_strong:
             flash(pw_error, 'danger')
-            return redirect(url_for('auth.reset_password', token=token))
+            return redirect(url_for('auth.reset_password'))
 
         user.set_password(password)
         user.clear_reset_token()
         user.must_change_password = False
+        session.pop('pending_reset_token_hash', None)
         db.session.commit()
         flash('Password reset successfully. Please log in.', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('auth/reset_password.html', token=token)
+    return render_template('auth/reset_password.html')
 
 
 # --- MFA / TOTP Setup ---

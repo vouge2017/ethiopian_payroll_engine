@@ -52,8 +52,8 @@ def test_forgot_password_with_phone(client, ctx):
         'login_id': '0911111111',
     }, follow_redirects=True)
     assert resp.status_code == 200
-    # Should show the token (dev mode)
-    assert b'token' in resp.data.lower()
+    # Should show generic message (no token exposure)
+    assert b'if an account' in resp.data.lower() or b'reset code' in resp.data.lower()
 
     # Verify token was stored
     refreshed = db.session.get(User, user.id)
@@ -87,7 +87,7 @@ def test_forgot_password_nonexistent_user(client, ctx):
 
 
 def test_reset_password_with_valid_token(client, ctx):
-    """POST /auth/reset-password/<token> with valid token resets password."""
+    """POST /auth/reset-password with valid token in form body resets password."""
     user = User(phone='0933333333', role='owner')
     user.set_password('OldPass1!')
     db.session.add(user)
@@ -96,7 +96,8 @@ def test_reset_password_with_valid_token(client, ctx):
     token = user.generate_reset_token()
     db.session.commit()
 
-    resp = client.post(f'/auth/reset-password/{token}', data={
+    resp = client.post('/auth/reset-password', data={
+        'token': token,
         'password': 'NewPass1!',
         'password2': 'NewPass1!',
     }, follow_redirects=True)
@@ -113,7 +114,11 @@ def test_reset_password_with_valid_token(client, ctx):
 
 def test_reset_password_with_invalid_token(client, ctx):
     """POST with invalid token shows error."""
-    resp = client.get('/auth/reset-password/invalidtoken123', follow_redirects=True)
+    resp = client.post('/auth/reset-password', data={
+        'token': 'invalidtoken123',
+        'password': 'NewPass1!',
+        'password2': 'NewPass1!',
+    }, follow_redirects=True)
     assert resp.status_code == 200
     assert b'invalid' in resp.data.lower() or b'expired' in resp.data.lower()
 
@@ -128,7 +133,8 @@ def test_reset_password_weak_password_rejected(client, ctx):
     token = user.generate_reset_token()
     db.session.commit()
 
-    resp = client.post(f'/auth/reset-password/{token}', data={
+    resp = client.post('/auth/reset-password', data={
+        'token': token,
         'password': 'Password1',
         'password2': 'Password1',
     }, follow_redirects=True)
@@ -150,7 +156,8 @@ def test_reset_password_mismatch_rejected(client, ctx):
     token = user.generate_reset_token()
     db.session.commit()
 
-    resp = client.post(f'/auth/reset-password/{token}', data={
+    resp = client.post('/auth/reset-password', data={
+        'token': token,
         'password': 'NewPass1!',
         'password2': 'DifferentPass1!',
     }, follow_redirects=True)

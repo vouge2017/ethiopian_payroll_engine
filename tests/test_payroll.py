@@ -81,11 +81,11 @@ def test_payroll_low_salary():
 # TEST 6: High salary (top bracket)
 # ---------------------------------------------------------------
 def test_payroll_high_salary():
-    """50,000 basic, 10,000 allowances."""
+    """50,000 basic, 10,000 allowances. Pension capped at 15,000 ceiling."""
     result = calculate_payroll(basic_salary=50000, allowances=10000)
     assert result['gross'] == D('60000')
-    assert result['pension_employee'] == D('3500')  # 7% of 50,000
-    assert result['taxable'] == D('56500')  # 60,000 - 3,500
+    assert result['pension_employee'] == D('1050')  # 7% of 15,000 (ceiling)
+    assert result['taxable'] == D('58950')  # 60,000 - 1,050
     assert result['tax'] > 0
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 
@@ -135,10 +135,10 @@ def test_deduction_order_matters():
 # TEST 9: Large salary, no overflow
 # ---------------------------------------------------------------
 def test_payroll_no_overflow():
-    """10,000,000 ETB — should calculate without errors."""
+    """10,000,000 ETB — should calculate without errors. Pension capped."""
     result = calculate_payroll(basic_salary=10000000, allowances=0)
     assert result['gross'] == D('10000000')
-    assert result['pension_employee'] == D('700000')
+    assert result['pension_employee'] == D('1050')  # 7% of 15,000 (ceiling)
     assert result['net'] > 0
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 

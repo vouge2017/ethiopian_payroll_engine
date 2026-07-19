@@ -4,11 +4,16 @@ Ethiopian Pension Contribution Calculator
 Based on Ethiopian pension law:
   - Employee contribution: 7% of basic salary
   - Employer contribution: 11% of basic salary
-  - Source: Private Organizations Employees Social Security Proclamation No. 715/2011
-    Article 43 — Contribution Rates
+  - Source: Private Organizations Employees Social Security Proclamation No. 1268/2022
+    (repealed No. 715/2011)
+  - Maximum insurable salary: ETB 15,000/month (contribution ceiling)
 
 Applies to the basic salary only (not gross).
+Applies ceiling: if basic salary > ETB 15,000, contribution is on ETB 15,000.
 Minimum contribution floor: ETB 0 (no negative).
+
+NOTE: The ETB 15,000 ceiling is from secondary compliance sources.
+Verify against the actual Proclamation 1268/2022 text before production use.
 
 Rates are configurable via the TaxRule database model.
 When no database rule exists, falls back to hardcoded defaults.
@@ -23,6 +28,12 @@ Q = Decimal('0.01')
 # Default fallback rates
 DEFAULT_EMPLOYEE_RATE = Decimal('0.07')
 DEFAULT_EMPLOYER_RATE = Decimal('0.11')
+
+# Maximum insurable salary (contribution ceiling)
+# Source: compliance guides for Proclamation 1268/2022
+# If basic salary exceeds this, contribution is calculated on this amount only
+# VERIFY against actual proclamation text before production use
+PENSION_SALARY_CEILING = Decimal('15000')
 
 # Cache for pension rates with TTL (5 minutes)
 # Call invalidate_pension_cache() after updating TaxRule records
@@ -88,6 +99,9 @@ def employee_pension(basic_salary, for_date=None) -> Decimal:
     """
     Calculate employee's monthly pension contribution (default 7%).
 
+    Applies salary ceiling: if basic_salary > PENSION_SALARY_CEILING,
+    contribution is calculated on the ceiling amount only.
+
     Args:
         basic_salary: Monthly basic salary in ETB
         for_date: Optional date for rule versioning
@@ -98,13 +112,18 @@ def employee_pension(basic_salary, for_date=None) -> Decimal:
     basic_salary = _D(basic_salary)
     if basic_salary <= 0:
         return Decimal('0')
+    # Apply salary ceiling
+    insurable = min(basic_salary, PENSION_SALARY_CEILING)
     rate, _ = _get_rates(for_date)
-    return (basic_salary * rate).quantize(Q, rounding=ROUND_HALF_UP)
+    return (insurable * rate).quantize(Q, rounding=ROUND_HALF_UP)
 
 
 def employer_pension(basic_salary, for_date=None) -> Decimal:
     """
     Calculate employer's monthly pension contribution (default 11%).
+
+    Applies salary ceiling: if basic_salary > PENSION_SALARY_CEILING,
+    contribution is calculated on the ceiling amount only.
 
     Args:
         basic_salary: Monthly basic salary in ETB
@@ -116,8 +135,10 @@ def employer_pension(basic_salary, for_date=None) -> Decimal:
     basic_salary = _D(basic_salary)
     if basic_salary <= 0:
         return Decimal('0')
+    # Apply salary ceiling
+    insurable = min(basic_salary, PENSION_SALARY_CEILING)
     _, rate = _get_rates(for_date)
-    return (basic_salary * rate).quantize(Q, rounding=ROUND_HALF_UP)
+    return (insurable * rate).quantize(Q, rounding=ROUND_HALF_UP)
 
 
 def total_pension(basic_salary, for_date=None) -> Decimal:

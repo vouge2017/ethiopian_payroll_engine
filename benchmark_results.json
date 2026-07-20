@@ -1,0 +1,96 @@
+[
+  {
+    "operation": "Payroll Calculation",
+    "employees": 100,
+    "total_seconds": 0.6373,
+    "per_employee_ms": 6.3726,
+    "per_second": 157.0
+  },
+  {
+    "operation": "Pension Calculation",
+    "employees": 100,
+    "total_seconds": 0.0002,
+    "per_employee_ms": 0.0017,
+    "per_second": 592357.0
+  },
+  {
+    "operation": "Tax Calculation",
+    "employees": 100,
+    "total_seconds": 0.0004,
+    "per_employee_ms": 0.0038,
+    "per_second": 265804.0
+  },
+  {
+    "operation": "ERCA Report (Excel)",
+    "employees": 100,
+    "total_seconds": 0.3735,
+    "per_employee_ms": 3.735,
+    "per_second": 268.0,
+    "file_size_kb": 10.3
+  },
+  {
+    "operation": "PDF Generation (cap 100)",
+    "employees": 100,
+    "total_seconds": 2.7929,
+    "per_employee_ms": 27.9286,
+    "per_second": 36.0
+  },
+  {
+    "operation": "Payroll Calculation",
+    "employees": 500,
+    "total_seconds": 0.0179,
+    "per_employee_ms": 0.0357,
+    "per_second": 27999.0
+  },
+  {
+    "operation": "Pension Calculation",
+    "employees": 500,
+    "total_seconds": 0.0008,
+    "per_employee_ms": 0.0016,
+    "per_second": 628526.0
+  },
+  {
+    "operation": "Tax Calculation",
+    "employees": 500,
+    "total_seconds": 0.0017,
+    "per_employee_ms": 0.0034,
+    "per_second": 296822.0
+  },
+  {
+    "operation": "ERCA Report (Excel)",
+    "employees": 500,
+    "total_seconds": 0.41,
+    "per_employee_ms": 0.8201,
+    "per_second": 1219.0,
+    "file_size_kb": 28.1
+  },
+  {
+    "operation": "Payroll Calculation",
+    "employees": 1000,
+    "total_seconds": 0.0227,
+    "per_employee_ms": 0.0227,
+    "per_second": 43982.0
+  },
+  {
+    "operation": "Pension Calculation",
+    "employees": 1000,
+    "total_seconds": 0.0014,
+    "per_employee_ms": 0.0014,
+    "per_second": 699066.0
+  },
+  {
+    "operation": "Tax Calculation",
+    "employees": 1000,
+    "total_seconds": 0.0032,
+    "per_employee_ms": 0.0032,
+    "per_second": 312395.0
+  },
+  {
+    "operation": "ERCA Report (Excel)",
+    "employees": 1000,
+    "total_seconds": 0.8294,
+    "per_employee_ms": 0.8294,
+    "per_second": 1206.0,
+    "file_size_kb": 50.1
+  }
+]

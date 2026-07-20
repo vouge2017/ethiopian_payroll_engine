@@ -37,6 +37,8 @@ def quick_import():
     if len(employees) > 500:
         return jsonify({'status': 'error', 'message': 'Maximum 500 employees per import'}), 400
 
+    from payroll_engine.models import validate_ethiopian_phone
+
     company_id = _company_id()
     imported = 0
     errors = []
@@ -48,8 +50,17 @@ def quick_import():
 
     for i, emp_data in enumerate(employees):
         name = (emp_data.get('name') or '').strip()
-        phone = (emp_data.get('phone') or '').strip()
+        phone_raw = (emp_data.get('phone') or '').strip()
         salary_raw = emp_data.get('salary', 0)
+
+        # Validate phone if provided
+        phone = None
+        if phone_raw:
+            is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
+            if not is_valid:
+                errors.append(f'Row {i + 1}: {phone_error}')
+                continue
+            phone = normalized_phone
 
         if not name:
             errors.append(f'Row {i + 1}: missing name')
@@ -70,7 +81,7 @@ def quick_import():
         emp = Employee(
             employee_id=emp_id,
             name=name,
-            phone=phone or None,
+            phone=phone,
             basic_salary=salary,
             allowances=Decimal('0'),
             company_id=company_id,

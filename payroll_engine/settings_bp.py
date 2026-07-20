@@ -29,7 +29,19 @@ def company_profile():
     if request.method == 'POST':
         company.name = request.form.get('name', company.name).strip()
         company.address = request.form.get('address', '').strip() or None
-        company.phone = request.form.get('phone', '').strip() or None
+
+        # Validate company phone
+        from payroll_engine.models import validate_ethiopian_phone
+        phone_raw = request.form.get('phone', '').strip()
+        if phone_raw:
+            is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
+            if not is_valid:
+                flash(f'Company phone: {phone_error}', 'danger')
+                return redirect(url_for('settings.company_profile'))
+            company.phone = normalized_phone
+        else:
+            company.phone = None
+
         company.tin = request.form.get('tin', '').strip() or None
         company.webhook_url = request.form.get('webhook_url', '').strip() or None
         company.webhook_secret = request.form.get('webhook_secret', '').strip() or None

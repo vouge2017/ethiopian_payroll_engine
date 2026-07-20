@@ -206,6 +206,7 @@ def edit_profile():
                                employee=emp, masked_bank=masked_bank)
 
     # Process form submission
+    from payroll_engine.models import validate_ethiopian_phone
     changes_made = []
     pending = []
 
@@ -213,6 +214,14 @@ def edit_profile():
         new_val = request.form.get(field, '').strip()
         if not new_val:
             continue
+
+        # Validate phone fields
+        if field in ('phone', 'emergency_phone'):
+            is_valid, normalized, phone_error = validate_ethiopian_phone(new_val)
+            if not is_valid:
+                flash(f'{field.replace("_", " ").title()}: {phone_error}', 'danger')
+                return redirect(url_for('portal.edit_profile'))
+            new_val = normalized
 
         # Get current value
         old_val = getattr(emp, field, None) or ''

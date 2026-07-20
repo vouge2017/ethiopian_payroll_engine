@@ -45,7 +45,14 @@ def parse_employee_form(form_data):
     if employee_type not in ('monthly', 'daily'):
         employee_type = 'monthly'
 
-    phone = phone_raw or None
+    from payroll_engine.models import validate_ethiopian_phone
+
+    phone = None
+    if phone_raw:
+        is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
+        if not is_valid:
+            return None, f'Employee phone: {phone_error}'
+        phone = normalized_phone
 
     start_date = None
     if start_date_str:

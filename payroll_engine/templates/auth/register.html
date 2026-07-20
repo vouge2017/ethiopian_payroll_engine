@@ -11,16 +11,27 @@
             </div>
             <div class="card shadow-sm">
                 <div class="card-body p-4">
-                    <form method="POST" action="{{ url_for('auth.register') }}">
+                    <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="phone" class="form-label">Phone Number *</label>
                             <div class="input-group">
                                 <span class="input-group-text">+251</span>
                                 <input type="tel" class="form-control" id="phone" name="phone"
-                                       required placeholder="9XXXXXXXX">
+                                       required placeholder="9XXXXXXXX"
+                                       pattern="0?[79][0-9]{8}" maxlength="10"
+                                       title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
                             </div>
-                            <div class="form-text">Enter 9 digits starting with 9 or 7</div>
+                            <div class="form-text">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</div>
+                            <div class="invalid-feedback" id="phoneError"></div>
+                            <script>
+                            document.getElementById('phone').addEventListener('input', function(e) {
+                                let v = e.target.value.replace(/\D/g, '');
+                                if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
+                                    e.target.value = v.substring(1);
+                                }
+                            });
+                            </script>
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">{{ _('email') }} <span class="text-muted">(optional)</span></label>
@@ -37,9 +48,66 @@
                             <input type="password" class="form-control" id="password2" name="password2" required>
                         </div>
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">{{ _('register') }}</button>
+                            <button type="button" class="btn btn-primary btn-lg" id="reviewBtn">{{ _('register') }}</button>
                         </div>
                     </form>
+
+                    <!-- Confirmation Modal -->
+                    <div class="modal fade" id="confirmModal" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Confirm Your Details</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-muted mb-3">Please verify your information before creating your account:</p>
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td class="text-muted" style="width:40%">Phone</td>
+                                            <td><strong id="confirmPhone"></strong></td>
+                                        </tr>
+                                        <tr id="confirmEmailRow" style="display:none">
+                                            <td class="text-muted">Email</td>
+                                            <td><strong id="confirmEmail"></strong></td>
+                                        </tr>
+                                    </table>
+                                    <div class="alert alert-info small mb-0">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        You'll use <strong>+251 <span id="confirmPhoneLogin"></span></strong> to log in.
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Edit</button>
+                                    <button type="button" class="btn btn-primary" id="confirmSubmit">Looks Correct — Create Account</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                    document.getElementById('reviewBtn').addEventListener('click', function() {
+                        const form = document.getElementById('registerForm');
+                        if (!form.checkValidity()) { form.reportValidity(); return; }
+                        const pw = document.getElementById('password').value;
+                        const pw2 = document.getElementById('password2').value;
+                        if (pw !== pw2) { alert('Passwords do not match.'); return; }
+                        const phone = document.getElementById('phone').value.replace(/\D/g, '');
+                        if (phone.length < 9 || !['7','9'].includes(phone[0])) {
+                            alert('Phone must be 9 digits starting with 7 or 9.'); return;
+                        }
+                        const display = phone.length === 10 && phone.startsWith('0') ? phone.substring(1) : phone;
+                        document.getElementById('confirmPhone').textContent = '+251 ' + display;
+                        document.getElementById('confirmPhoneLogin').textContent = display;
+                        const email = document.getElementById('email').value;
+                        const emailRow = document.getElementById('confirmEmailRow');
+                        if (email) { emailRow.style.display = ''; document.getElementById('confirmEmail').textContent = email; }
+                        else { emailRow.style.display = 'none'; }
+                        new bootstrap.Modal(document.getElementById('confirmModal')).show();
+                    });
+                    document.getElementById('confirmSubmit').addEventListener('click', function() {
+                        document.getElementById('registerForm').submit();
+                    });
+                    </script>
                 </div>
                 <div class="card-footer text-center bg-light">
                     <small>Already have an account? <a href="{{ url_for('auth.login') }}">{{ _('log_in') }}</a></small>

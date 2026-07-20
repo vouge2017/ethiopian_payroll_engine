@@ -25,7 +25,14 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone</label>
-                                <input type="text" class="form-control" name="phone" value="{{ company.phone or '' }}">
+                                <div class="input-group">
+                                    <span class="input-group-text">+251</span>
+                                    <input type="text" class="form-control" name="phone"
+                                           value="{{ (company.phone[1:] if company.phone and company.phone.startswith('0') else company.phone) or '' }}"
+                                           placeholder="9XXXXXXXX" pattern="[0-9]{9}" maxlength="9"
+                                           title="Enter 9 digits starting with 9 or 7">
+                                </div>
+                                <div class="form-text">9 digits starting with 9 or 7</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Logo (PNG or JPG)</label>

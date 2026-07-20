@@ -524,6 +524,7 @@ def bulk_import_employees():
     Returns: {"imported": N, "errors": [...], "total_errors": M}
     """
     from decimal import Decimal, InvalidOperation
+    from payroll_engine.models import validate_ethiopian_phone
 
     data = request.get_json()
     if not data or not data.get('employees'):
@@ -540,8 +541,17 @@ def bulk_import_employees():
 
     for i, emp_data in enumerate(employees):
         name = (emp_data.get('name') or '').strip()
-        phone = (emp_data.get('phone') or '').strip()
+        phone_raw = (emp_data.get('phone') or '').strip()
         salary_raw = emp_data.get('basic_salary', emp_data.get('salary', 0))
+
+        # Validate phone if provided
+        phone = None
+        if phone_raw:
+            is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
+            if not is_valid:
+                errors.append({'row': i + 1, 'error': phone_error})
+                continue
+            phone = normalized_phone
 
         if not name:
             errors.append({'row': i + 1, 'error': 'missing name'})
@@ -566,7 +576,7 @@ def bulk_import_employees():
         emp = Employee(
             employee_id=emp_id_str,
             name=name,
-            phone=phone or None,
+            phone=phone,
             basic_salary=salary,
             allowances=Decimal(str(emp_data.get('allowances', 0))),
             bank_or_telebirr=emp_data.get('bank_or_telebirr', ''),

@@ -80,9 +80,11 @@
                         <label for="phone" class="form-label">{{ _('phone') }} *</label>
                         <div class="input-group">
                             <span class="input-group-text">+251</span>
-                            <input type="tel" class="form-control" id="phone" name="phone" required placeholder="9XXXXXXXX">
+                            <input type="tel" class="form-control" id="phone" name="phone" required placeholder="9XXXXXXXX"
+                                   pattern="[0-9]{9}" maxlength="9"
+                                   title="Enter 9 digits starting with 9 or 7">
                         </div>
-                        <div class="form-text">Enter 9 digits starting with 9 or 7</div>
+                        <div class="form-text">9 digits starting with 9 or 7. Example: <code>911234567</code></div>
                     </div>
                     <div class="col-md-3">
                         <label for="role" class="form-label">{{ _('role') }} *</label>

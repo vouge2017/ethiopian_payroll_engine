@@ -25,10 +25,18 @@
                                 <div class="input-group">
                                     <span class="input-group-text">+251</span>
                                     <input type="text" class="form-control form-control-lg" id="phone" name="phone"
-                                           placeholder="9XXXXXXXX">
+                                           placeholder="9XXXXXXXX" pattern="0?[79][0-9]{8}" maxlength="10"
+                                           title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
                                 </div>
-                                <div class="form-text">Enter 9 digits starting with 9 or 7</div>
-                                <div class="form-text">Ethio Telecom (09X) or Safaricom (07X)</div>
+                                <div class="form-text">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</div>
+                                <script>
+                                document.getElementById('phone').addEventListener('input', function(e) {
+                                    let v = e.target.value.replace(/\D/g, '');
+                                    if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
+                                        e.target.value = v.substring(1);
+                                    }
+                                });
+                                </script>
                             </div>
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>

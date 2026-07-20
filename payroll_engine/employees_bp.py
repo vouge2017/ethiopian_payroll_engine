@@ -177,14 +177,21 @@ def accept_invite(token):
             flash(error, 'danger')
             return render_template('auth/accept_invite.html', token=token, emp=emp)
 
+        # Validate phone format
+        from payroll_engine.models import validate_ethiopian_phone
+        is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
+        if not is_valid:
+            flash(phone_error, 'danger')
+            return render_template('auth/accept_invite.html', token=token, emp=emp)
+
         # Check duplicate phone
-        if User.query.filter_by(phone=phone).first():
+        if User.query.filter_by(phone=normalized_phone).first():
             flash('This phone number is already registered.', 'danger')
             return render_template('auth/accept_invite.html', token=token, emp=emp)
 
         # Create user account
         user = User(
-            phone=phone,
+            phone=normalized_phone,
             company_id=emp.company_id,
             role='employee',
         )
@@ -254,8 +261,16 @@ def edit_employee(emp_id):
         tin = request.form.get('tin', '').strip() or None
         bank_account = request.form.get('bank_account', '').strip() or None
 
-        # Store phone as-is (no format restriction — employee contact, not login)
-        phone = phone_raw or None
+        # Validate and normalize phone
+        from payroll_engine.models import validate_ethiopian_phone
+        if phone_raw:
+            is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
+            if not is_valid:
+                flash(f'Employee phone: {phone_error}', 'danger')
+                return redirect(url_for('employees.edit_employee', emp_id=emp_id))
+            phone = normalized_phone
+        else:
+            phone = None
 
         if not name:
             flash('Employee name is required.', 'danger')

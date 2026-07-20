@@ -16,9 +16,14 @@
                     <form method="POST">
                         <div class="mb-3">
                             <label class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" name="phone"
-                                   placeholder="09XXXXXXXX" required autofocus>
-                            <small class="text-muted">Ethiopian mobile number for login</small>
+                            <div class="input-group">
+                                <span class="input-group-text">+251</span>
+                                <input type="tel" class="form-control" name="phone"
+                                       placeholder="9XXXXXXXX" required autofocus
+                                       pattern="[0-9]{9}" maxlength="9"
+                                       title="Enter 9 digits starting with 9 or 7">
+                            </div>
+                            <small class="text-muted">9 digits starting with 9 or 7</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Password</label>

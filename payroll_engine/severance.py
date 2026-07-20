@@ -15,6 +15,9 @@ Applies to:
 Does NOT apply to:
     - Resignation
     - Termination for cause (theft, gross misconduct, repeated violation)
+
+The severance cap is configurable via TaxRule.rules_json['severance'].
+When no database rule exists, falls back to hardcoded default (12 months).
 """
 
 from datetime import date, datetime
@@ -22,7 +25,20 @@ from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from typing import Optional
 
 Q = Decimal('0.01')
-MAX_SEVERANCE_MONTHS = 12  # Art. 42 cap
+
+# Default cap per Ethiopian law
+DEFAULT_MAX_SEVERANCE_MONTHS = 12  # Art. 42
+
+# Cache
+_rules_cache = {}
+_rules_cache_ttl = 300
+_rules_cache_timestamps = {}
+
+
+def invalidate_severance_cache():
+    """Clear the severance rules cache."""
+    _rules_cache.clear()
+    _rules_cache_timestamps.clear()
 
 
 def _D(value) -> Decimal:
@@ -33,6 +49,37 @@ def _D(value) -> Decimal:
         return Decimal(str(value))
     except (InvalidOperation, ValueError):
         return Decimal('0')
+
+
+def _get_severance_rules(for_date=None) -> dict:
+    """Fetch severance rules from database, falling back to defaults."""
+    cache_key = str(for_date) if for_date else 'default'
+    import time
+    now = time.time()
+    if cache_key in _rules_cache:
+        cached_time = _rules_cache_timestamps.get(cache_key, 0)
+        if now - cached_time < _rules_cache_ttl:
+            return _rules_cache[cache_key]
+        del _rules_cache[cache_key]
+        del _rules_cache_timestamps[cache_key]
+
+    result = {
+        'max_months': DEFAULT_MAX_SEVERANCE_MONTHS,
+    }
+
+    try:
+        from payroll_engine.models import TaxRule
+        rule = TaxRule.get_active_rule(for_date)
+        if rule:
+            sv = rule.rules_json.get('severance', {})
+            if 'max_months' in sv:
+                result['max_months'] = int(sv['max_months'])
+    except Exception:
+        pass
+
+    _rules_cache[cache_key] = result
+    _rules_cache_timestamps[cache_key] = now
+    return result
 
 
 class TerminationReason:
@@ -71,7 +118,7 @@ def calculate_years_of_service(start_date, end_date) -> Decimal:
 
 
 def calculate_severance(monthly_salary, start_date, end_date,
-                        termination_reason: str) -> dict:
+                        termination_reason: str, for_date=None) -> dict:
     """
     Calculate severance pay for a terminated employee.
 
@@ -80,6 +127,7 @@ def calculate_severance(monthly_salary, start_date, end_date,
         start_date: Employment start date
         end_date: Last working date
         termination_reason: One of TerminationReason constants
+        for_date: Optional date for rule versioning
 
     Returns:
         Dict with: eligible, years_of_service, calculated_amount,
@@ -94,6 +142,8 @@ def calculate_severance(monthly_salary, start_date, end_date,
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
 
     years = calculate_years_of_service(start_date, end_date)
+    rules = _get_severance_rules(for_date)
+    max_months = rules['max_months']
 
     # Check eligibility
     if termination_reason in TerminationReason.SEVERANCE_INELIGIBLE:
@@ -118,7 +168,7 @@ def calculate_severance(monthly_salary, start_date, end_date,
 
     # Calculate
     calculated = monthly_salary * years
-    cap = monthly_salary * MAX_SEVERANCE_MONTHS
+    cap = monthly_salary * max_months
     capped = min(calculated, cap)
     final = capped.quantize(Q, rounding=ROUND_HALF_UP)
 
@@ -128,7 +178,7 @@ def calculate_severance(monthly_salary, start_date, end_date,
         'calculated_amount': calculated.quantize(Q, rounding=ROUND_HALF_UP),
         'capped_amount': cap.quantize(Q, rounding=ROUND_HALF_UP),
         'final_amount': final,
-        'reason': _calculation_explanation(monthly_salary, years, calculated, cap, final),
+        'reason': _calculation_explanation(monthly_salary, years, calculated, cap, final, max_months),
     }
 
 
@@ -140,7 +190,7 @@ def _ineligibility_reason(reason: str) -> str:
     return f"Not eligible for severance: {reason}"
 
 
-def _calculation_explanation(salary, years, calculated, cap, final) -> str:
+def _calculation_explanation(salary, years, calculated, cap, final, max_months) -> str:
     """Generate plain-language explanation of severance calculation."""
     lines = [
         f"Severance calculation (Labor Proclamation 1156/2019, Art. 40-42):",
@@ -149,7 +199,7 @@ def _calculation_explanation(salary, years, calculated, cap, final) -> str:
         f"  Formula: ETB {salary:,.2f} × {years} = ETB {calculated:,.2f}",
     ]
     if calculated > cap:
-        lines.append(f"  Capped at {MAX_SEVERANCE_MONTHS} months: ETB {cap:,.2f}")
+        lines.append(f"  Capped at {max_months} months: ETB {cap:,.2f}")
     lines.append(f"  Severance payable: ETB {final:,.2f}")
     return "\n".join(lines)
 

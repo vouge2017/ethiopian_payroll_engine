@@ -1315,6 +1315,29 @@ class TaxRule(db.Model):
     def expat_pension_exempt(self):
         return self.rules_json.get('pension', {}).get('expat_exemption', False)
 
+    # ---- Overtime rules ----
+    @property
+    def overtime_rates(self):
+        """Dict of overtime type -> multiplier."""
+        return self.rules_json.get('overtime', {}).get('rates', {})
+
+    @property
+    def overtime_max_monthly(self):
+        """Max overtime hours per month."""
+        return self.rules_json.get('overtime', {}).get('max_hours_month', 20)
+
+    # ---- Leave rules ----
+    @property
+    def leave_rules(self):
+        """Dict of leave constants (annual_base, sick_max_days, maternity_days, etc.)."""
+        return self.rules_json.get('leave', {})
+
+    # ---- Severance rules ----
+    @property
+    def severance_max_months(self):
+        """Max severance pay in months."""
+        return self.rules_json.get('severance', {}).get('max_months', 12)
+
 
 class ValidationRule(db.Model):
     """Configurable validation rules for payroll pre-processing."""

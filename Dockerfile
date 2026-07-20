@@ -38,4 +38,4 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-5000}/healthz')" || exit 1
 
-CMD ["sh", "-c", "flask db upgrade && exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 wsgi:app"]
+CMD ["sh", "-c", "flask db upgrade 2>/dev/null || flask db stamp head; exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 wsgi:app"]

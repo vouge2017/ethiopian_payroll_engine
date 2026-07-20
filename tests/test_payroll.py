@@ -11,6 +11,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from decimal import Decimal
+from datetime import date
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.tax import calculate_tax
 
@@ -81,11 +82,11 @@ def test_payroll_low_salary():
 # TEST 6: High salary (top bracket)
 # ---------------------------------------------------------------
 def test_payroll_high_salary():
-    """50,000 basic, 10,000 allowances. Pension capped at 15,000 ceiling."""
+    """50,000 basic, 10,000 allowances. No pension ceiling in Ethiopian law."""
     result = calculate_payroll(basic_salary=50000, allowances=10000)
     assert result['gross'] == D('60000')
-    assert result['pension_employee'] == D('1050')  # 7% of 15,000 (ceiling)
-    assert result['taxable'] == D('58950')  # 60,000 - 1,050
+    assert result['pension_employee'] == D('3500')  # 7% of 50,000 (no ceiling)
+    assert result['taxable'] == D('56500')  # 60,000 - 3,500
     assert result['tax'] > 0
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 
@@ -135,28 +136,71 @@ def test_deduction_order_matters():
 # TEST 9: Large salary, no overflow
 # ---------------------------------------------------------------
 def test_payroll_no_overflow():
-    """10,000,000 ETB — should calculate without errors. Pension capped."""
+    """10,000,000 ETB — should calculate without errors. No pension ceiling."""
     result = calculate_payroll(basic_salary=10000000, allowances=0)
     assert result['gross'] == D('10000000')
-    assert result['pension_employee'] == D('1050')  # 7% of 15,000 (ceiling)
+    assert result['pension_employee'] == D('700000')  # 7% of 10,000,000 (no ceiling)
     assert result['net'] > 0
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 
 
-def test_pension_ceiling_at_25000():
-    """Regression: employee at 25,000 ETB basic — pension must be capped at 15,000."""
+def test_no_pension_ceiling_by_default():
+    """Ethiopian law has no pension ceiling — contributions on full salary."""
     from payroll_engine.pension import employee_pension, employer_pension
     emp = employee_pension(D('25000'))
     empr = employer_pension(D('25000'))
-    assert emp == D('1050'), f"Employee pension should be 1050 (7% of 15k ceiling), got {emp}"
-    assert empr == D('1650'), f"Employer pension should be 1650 (11% of 15k ceiling), got {empr}"
+    assert emp == D('1750'), f"Employee pension should be 1750 (7% of 25000), got {emp}"
+    assert empr == D('2750'), f"Employer pension should be 2750 (11% of 25000), got {empr}"
 
-    # Full payroll calculation also uses ceiling
     result = calculate_payroll(basic_salary=25000, allowances=5000)
-    assert result['pension_employee'] == D('1050')
-    assert result['pension_employer'] == D('1650')
-    # Taxable = gross - pension_employee = 30,000 - 1,050 = 28,950
-    assert result['taxable'] == D('28950')
+    assert result['pension_employee'] == D('1750')
+    assert result['pension_employer'] == D('2750')
+    # Taxable = gross - pension_employee = 30,000 - 1,750 = 28,250
+    assert result['taxable'] == D('28250')
+
+
+def test_pension_ceiling_when_configured():
+    """If a ceiling is set in TaxRule, pension is capped at that amount."""
+    from payroll_engine import create_app, db
+    from payroll_engine.models import TaxRule
+    from payroll_engine.pension import employee_pension, employer_pension, invalidate_pension_cache
+
+    app = create_app()
+    with app.app_context():
+        db.create_all()
+
+        # Create a TaxRule with a 15,000 ceiling
+        rule = TaxRule(
+            version_name='ceiling-test',
+            effective_date=date(2020, 1, 1),
+            status='active',
+            rules_json={
+                'brackets': [{'min': 0, 'max': None, 'rate': 0.10}],
+                'personal_relief': 0,
+                'pension': {
+                    'employee_rate': 0.07,
+                    'employer_rate': 0.11,
+                    'ceiling': 15000,
+                }
+            }
+        )
+        db.session.add(rule)
+        db.session.commit()
+        invalidate_pension_cache()
+
+        try:
+            emp = employee_pension(D('25000'))
+            empr = employer_pension(D('25000'))
+            assert emp == D('1050'), f"With 15k ceiling, employee pension should be 1050, got {emp}"
+            assert empr == D('1650'), f"With 15k ceiling, employer pension should be 1650, got {empr}"
+
+            # Below the ceiling — no capping
+            emp_low = employee_pension(D('10000'))
+            assert emp_low == D('700'), f"Below ceiling, pension should be 700, got {emp_low}"
+        finally:
+            db.session.delete(rule)
+            db.session.commit()
+            invalidate_pension_cache()
 
 
 # ---------------------------------------------------------------

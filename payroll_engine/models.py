@@ -1302,6 +1302,16 @@ class TaxRule(db.Model):
         return self.rules_json.get('pension', {}).get('deduction_order', 'before_tax')
 
     @property
+    def pension_ceiling(self):
+        """Optional pensionable salary ceiling (ETB/month).
+
+        Returns None when there is no ceiling (the default — Ethiopian law
+        does not currently impose one).  Set to a positive number if a
+        ceiling is introduced in the future.
+        """
+        return self.rules_json.get('pension', {}).get('ceiling', None)
+
+    @property
     def expat_pension_exempt(self):
         return self.rules_json.get('pension', {}).get('expat_exemption', False)
 

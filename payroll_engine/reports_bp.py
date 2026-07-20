@@ -104,7 +104,7 @@ def download_erca_report(run_id):
 
     company = current_user.company
     period = run.run_date.strftime('%B %Y')
-    report_bytes = generate_erca_report(run.payslips, company.name, period)
+    report_bytes = generate_erca_report(run.payslips, company.name, period, company=company)
 
     return send_file(
         io.BytesIO(report_bytes),

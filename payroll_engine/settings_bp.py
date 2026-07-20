@@ -194,3 +194,56 @@ def link_employee_user():
 
 # Need to import date for team_settings
 from datetime import date
+
+
+# ---------------------------------------------------------------------------
+# Report Template Settings
+# ---------------------------------------------------------------------------
+
+@settings_bp.route('/settings/reports', methods=['GET', 'POST'])
+@role_required('owner', 'accountant')
+def report_templates():
+    """Configure report column layouts."""
+    from payroll_engine.report_templates import (
+        get_report_template, save_report_template, get_default_template,
+        get_all_available_columns,
+    )
+    company = current_user.company
+
+    if request.method == 'POST':
+        report_type = request.form.get('report_type', 'erca')
+        all_cols = get_all_available_columns(report_type)
+
+        # Build column config from form
+        columns = []
+        for i, col in enumerate(all_cols):
+            key = col['key']
+            enabled = request.form.get(f'enabled_{key}') == 'on'
+            label = request.form.get(f'label_{key}', col['label']).strip() or col['label']
+            order = int(request.form.get(f'order_{key}', i))
+            columns.append({
+                'key': key,
+                'label': label,
+                'enabled': enabled,
+                'order': order,
+            })
+
+        # Sort by order
+        columns.sort(key=lambda c: c['order'])
+
+        save_report_template(company, report_type, columns)
+        db.session.commit()
+        flash('Report template updated.', 'success')
+        return redirect(url_for('settings.report_templates'))
+
+    # GET: show current templates
+    report_type = request.args.get('type', 'erca')
+    template = get_report_template(company, report_type)
+    available = get_all_available_columns(report_type)
+    default = get_default_template(report_type)
+
+    return render_template('settings/report_templates.html',
+                           template=template,
+                           available=available,
+                           default=default,
+                           report_type=report_type)

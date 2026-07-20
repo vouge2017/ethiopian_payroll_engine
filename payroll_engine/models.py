@@ -300,6 +300,10 @@ class Company(db.Model):
     webhook_url = db.Column(db.String(500), nullable=True)
     webhook_secret = db.Column(db.String(64), nullable=True)  # For HMAC signature verification
 
+    # Report templates (JSON) — per-company column configuration
+    # Structure: {"erca": {"columns": [{"key": "tin", "label": "TIN", "enabled": true, "order": 1}, ...]}}
+    report_templates = db.Column(db.JSON, nullable=True)
+
     # Relationships
     users = db.relationship('User', backref='company', lazy=True)
     employees = db.relationship('Employee', backref='company', lazy=True)

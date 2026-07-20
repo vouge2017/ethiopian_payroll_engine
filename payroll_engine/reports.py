@@ -15,18 +15,71 @@ from typing import List, Dict, Any
 
 
 def generate_erca_report(payslips: list, company_name: str,
-                         period: str = None) -> bytes:
+                         period: str = None, company=None) -> bytes:
     """
     Generate ERCA-formatted tax filing report.
+
+    Uses company's report template if available, otherwise uses default columns.
 
     Args:
         payslips: List of Payslip objects with employee relationship loaded
         company_name: Company name for the report header
         period: Period string (e.g., "July 2025"), defaults to current month
+        company: Company instance (for template-aware column configuration)
 
     Returns:
         Excel file as bytes
     """
+    from payroll_engine.report_templates import get_enabled_columns, get_column_value
+
+    # Get columns from template or use defaults
+    if company:
+        columns = get_enabled_columns(company, 'erca')
+    else:
+        # Fallback: use default 9 columns
+        columns = [
+            {'key': 'row_number', 'label': 'No.', 'data_path': '_row_number'},
+            {'key': 'employee_id', 'label': 'Employee ID', 'data_path': 'employee.employee_id'},
+            {'key': 'employee_name', 'label': 'Employee Name', 'data_path': 'employee.name'},
+            {'key': 'tin', 'label': 'TIN', 'data_path': 'employee.tin'},
+            {'key': 'gross_salary', 'label': 'Gross Salary', 'data_path': 'gross'},
+            {'key': 'pension_employee', 'label': 'Pension 7%', 'data_path': 'pension_employee'},
+            {'key': 'taxable_income', 'label': 'Taxable Income', 'data_path': 'taxable'},
+            {'key': 'tax_withheld', 'label': 'Tax Withheld', 'data_path': 'tax'},
+            {'key': 'net_pay', 'label': 'Net Pay', 'data_path': 'net'},
+        ]
+
+    # Identify which columns are numeric (for formatting and totals)
+    NUMERIC_KEYS = {
+        'basic_salary', 'allowances', 'gross_salary', 'overtime_pay',
+        'pension_employee', 'pension_employer', 'taxable_income',
+        'tax_withheld', 'net_pay',
+    }
+
+    # Map data_path to actual payslip attribute names
+    PATH_MAP = {
+        '_row_number': '_row_number',
+        'employee.employee_id': 'employee.employee_id',
+        'employee.name': 'employee.name',
+        'employee.tin': 'employee.tin',
+        'employee.start_date': 'employee.start_date',
+        'employee.department': 'employee.department',
+        'employee.position': 'employee.position',
+        'employee.basic_salary': 'employee.basic_salary',
+        'employee.allowances': 'employee.allowances',
+        'gross': 'gross_salary',
+        'overtime_pay': 'overtime_pay',
+        'pension_employee': 'employee_pension',
+        'pension_employer': 'employer_pension',
+        'taxable': 'taxable',
+        'tax': 'tax',
+        'net': 'net_pay',
+        '_company_tin': '_company_tin',
+        '_company_name': '_company_name',
+        'employee.bank_account': 'employee.bank_account',
+        'employee.bank_or_telebirr': 'employee.bank_or_telebirr',
+    }
+
     try:
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -60,29 +113,29 @@ def generate_erca_report(payslips: list, company_name: str,
     )
     etb_format = '#,##0.00'
 
-    # --- Title block ---
-    ws.merge_cells('A1:I1')
+    # --- Column headers (row 5) ---
+    num_cols = len(columns)
+    col_letter_last = openpyxl.utils.get_column_letter(num_cols)
+
+    # Merge title cells to span all columns
+    ws.merge_cells(f'A1:{col_letter_last}1')
     ws['A1'] = company_name
     ws['A1'].font = title_font
     ws['A1'].alignment = Alignment(horizontal='left', vertical='center')
 
-    ws.merge_cells('A2:I2')
+    ws.merge_cells(f'A2:{col_letter_last}2')
     ws['A2'] = f'ERCA Monthly Tax Filing Report — {period}'
     ws['A2'].font = subtitle_font
 
-    ws.merge_cells('A3:I3')
+    ws.merge_cells(f'A3:{col_letter_last}3')
     ws['A3'] = f'Generated: {date.today().strftime("%d %B %Y")}'
     ws['A3'].font = Font(italic=True, color='666666')
 
-    # --- Column headers (row 5) ---
-    headers = [
-        'No.', 'Employee ID', 'Employee Name', 'TIN',
-        'Gross Salary', 'Pension 7%', 'Taxable Income',
-        'Tax Withheld', 'Net Pay'
-    ]
-    col_widths = [6, 14, 22, 14, 16, 14, 16, 14, 16]
-    for col, (header, width) in enumerate(zip(headers, col_widths), 1):
-        cell = ws.cell(row=5, column=col, value=header)
+    # Auto-calculate column widths based on label length
+    for col_idx, col_cfg in enumerate(columns, 1):
+        width = max(len(col_cfg['label']) + 2, 10)
+        width = min(width, 30)  # cap at 30
+        cell = ws.cell(row=5, column=col_idx, value=col_cfg['label'])
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = header_align
@@ -90,51 +143,90 @@ def generate_erca_report(payslips: list, company_name: str,
         ws.column_dimensions[cell.column_letter].width = width
 
     # --- Data rows ---
-    total_gross = 0
-    total_pension = 0
-    total_taxable = 0
-    total_tax = 0
-    total_net = 0
+    totals = {}  # key -> running total
 
     for i, p in enumerate(payslips, 1):
         emp = p.employee
         taxable = p.gross_salary - p.employee_pension
         row = 5 + i
 
-        ws.cell(row=row, column=1, value=i).alignment = Alignment(horizontal='center')
-        ws.cell(row=row, column=2, value=emp.employee_id).alignment = name_align
-        ws.cell(row=row, column=3, value=emp.name).alignment = name_align
-        ws.cell(row=row, column=4, value=emp.tin or '').alignment = name_align
+        for col_idx, col_cfg in enumerate(columns, 1):
+            key = col_cfg['key']
+            data_path = col_cfg.get('data_path', key)
 
-        for col_idx, val in [(5, p.gross_salary), (6, p.employee_pension),
-                              (7, taxable), (8, p.tax), (9, p.net_pay)]:
+            # Extract value
+            if data_path == '_row_number':
+                val = i
+            elif data_path == 'taxable':
+                val = taxable
+            elif data_path == 'gross_salary':
+                val = p.gross_salary
+            elif data_path == 'pension_employee':
+                val = p.employee_pension
+            elif data_path == 'pension_employer':
+                val = getattr(p, 'employer_pension', 0)
+            elif data_path == 'tax':
+                val = p.tax
+            elif data_path == 'net':
+                val = p.net_pay
+            elif data_path == 'overtime_pay':
+                val = getattr(p, 'overtime_pay', 0)
+            elif data_path == '_company_tin':
+                val = company.tin if company else ''
+            elif data_path == '_company_name':
+                val = company_name
+            elif data_path.startswith('employee.'):
+                attr = data_path.split('.', 1)[1]
+                val = getattr(emp, attr, '')
+                # Handle encrypted fields
+                if attr in ('tin', 'bank_account') and val:
+                    try:
+                        val = str(val)
+                    except Exception:
+                        val = '****'
+                if attr == 'start_date' and val:
+                    val = str(val)
+            else:
+                val = getattr(p, data_path, '')
+
+            if val is None:
+                val = ''
+
             cell = ws.cell(row=row, column=col_idx, value=val)
-            cell.number_format = etb_format
-            cell.alignment = data_align
+            cell.border = thin_border
 
-        # Borders on all cells
-        for col_idx in range(1, 10):
-            ws.cell(row=row, column=col_idx).border = thin_border
-
-        total_gross += p.gross_salary
-        total_pension += p.employee_pension
-        total_taxable += taxable
-        total_tax += p.tax
-        total_net += p.net_pay
+            # Format numeric columns
+            if key in NUMERIC_KEYS and isinstance(val, (int, float)):
+                cell.number_format = etb_format
+                cell.alignment = data_align
+                totals[key] = totals.get(key, 0) + val
+            elif key == 'row_number':
+                cell.alignment = Alignment(horizontal='center')
+            else:
+                cell.alignment = name_align
 
     # --- Totals row ---
     totals_row = 5 + len(payslips) + 1
-    ws.cell(row=totals_row, column=3, value='TOTALS').font = totals_font
-    ws.cell(row=totals_row, column=3).fill = totals_fill
-    ws.cell(row=totals_row, column=3).border = thin_border
-    for col_idx, val in [(5, total_gross), (6, total_pension),
-                          (7, total_taxable), (8, total_tax), (9, total_net)]:
-        cell = ws.cell(row=totals_row, column=col_idx, value=val)
-        cell.font = totals_font
-        cell.fill = totals_fill
-        cell.number_format = etb_format
-        cell.alignment = data_align
-        cell.border = thin_border
+    # Find the first text column for the TOTALS label
+    label_col = 1
+    for col_idx, col_cfg in enumerate(columns, 1):
+        if col_cfg['key'] in ('employee_name', 'employee_id'):
+            label_col = col_idx
+            break
+
+    ws.cell(row=totals_row, column=label_col, value='TOTALS').font = totals_font
+    ws.cell(row=totals_row, column=label_col).fill = totals_fill
+    ws.cell(row=totals_row, column=label_col).border = thin_border
+
+    for col_idx, col_cfg in enumerate(columns, 1):
+        key = col_cfg['key']
+        if key in totals:
+            cell = ws.cell(row=totals_row, column=col_idx, value=totals[key])
+            cell.font = totals_font
+            cell.fill = totals_fill
+            cell.number_format = etb_format
+            cell.alignment = data_align
+            cell.border = thin_border
 
     # --- Print setup ---
     ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)

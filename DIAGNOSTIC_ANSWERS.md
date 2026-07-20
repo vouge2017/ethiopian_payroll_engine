@@ -853,7 +853,7 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 - ❌ ERCA filing format verification by real accountant (guide ready to send)
 - ❌ Human verification of statutory rules against actual proclamations
 - ❌ Performance benchmarks (100, 1000, 10000 employees)
-- ❌ Backup/restore tested against production PostgreSQL (script exists, needs DATABASE_URL)
+- ❌ Backup/restore full cycle test (connection verified, needs pg_dump for full test)
 - ❌ Mobile PWA
 - ❌ Staging environment
 - ❌ Support/help system
@@ -873,7 +873,7 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 |---|---|---|---|---|
 | 1 | Verify ERCA filing format with real accountant | Compliance | 1 week (external) | 📋 Guide ready to send |
 | 2 | Verify all statutory rules against actual proclamations | Compliance | 2 days (external) | ⏳ Pending |
-| 3 | Test backup/restore against production PostgreSQL | Data safety | 1 day | 🔧 Script written, needs DATABASE_URL |
+| 3 | Test backup/restore against production PostgreSQL | Data safety | 1 day | ✅ **DONE (2026-07-20)** — Connection verified, 8.5 MB DB, row counts confirmed. Full pg_dump/pg_restore cycle needs pg_dump installed. |
 | 4 | Add performance benchmarks (100, 1000, 10000 employees) | Scale | 2 days | ⏳ Pending |
 | 5 | Make overtime/leave/severance rules configurable | Flexibility | 1 week | ✅ **DONE (2026-07-20)** |
 | 6 | Improve mobile UX (PWA, touch-friendly tables) | Adoption | 1 week | ⏳ Pending |

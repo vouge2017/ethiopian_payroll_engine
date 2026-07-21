@@ -133,7 +133,7 @@
         <div class="card-body p-0">
             {% if run.payslips %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0" id="payslipTable">
+                <table class="table table-hover mb-0 responsive-card" id="payslipTable">
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
@@ -149,17 +149,17 @@
                     <tbody>
                         {% for p in run.payslips %}
                         <tr>
-                            <td>{{ loop.index }}</td>
-                            <td>{{ p.employee.name }} <small class="text-muted">({{ p.employee.employee_id }})</small></td>
-                            <td>{{ p.employee.department or '-' }}</td>
-                            <td>{{ '%.2f'|format(p.gross_salary) }}</td>
-                            <td>{{ '%.2f'|format(p.tax) }}</td>
-                            <td>{{ '%.2f'|format(p.employee_pension) }}</td>
-                            <td><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
-                            <td>
+                            <td data-label="#">{{ loop.index }}</td>
+                            <td data-label="Name">{{ p.employee.name }} <small class="text-muted">({{ p.employee.employee_id }})</small></td>
+                            <td data-label="Department">{{ p.employee.department or '-' }}</td>
+                            <td data-label="Gross">{{ '%.2f'|format(p.gross_salary) }}</td>
+                            <td data-label="Tax">{{ '%.2f'|format(p.tax) }}</td>
+                            <td data-label="Pension">{{ '%.2f'|format(p.employee_pension) }}</td>
+                            <td data-label="Net Pay"><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
+                            <td data-label="Download">
                                 {% if p.pdf_file_path %}
-                                <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download"></i>
+                                <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary btn-approve-lg">
+                                    <i class="bi bi-download"></i> PDF
                                 </a>
                                 {% endif %}
                             </td>

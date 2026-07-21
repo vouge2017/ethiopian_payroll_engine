@@ -330,4 +330,12 @@
         margin-right: 1rem;
         flex-shrink: 0;
     }
+
+    /* Large tap targets for action buttons (Apple/Google 44px guideline) */
+    .btn-approve-lg {
+        min-height: 44px;
+        min-width: 100%;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }
 }

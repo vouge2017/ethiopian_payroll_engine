@@ -58,7 +58,7 @@
         <div class="card-body p-0">
             {% if employees %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead class="table-light">
                         <tr>
                             <th>ID</th>
@@ -67,27 +67,27 @@
                             <th>{{ _('position') }}</th>
                             <th>{{ _('basic_salary') }} (ETB)</th>
                             <th>{{ _('gross') }} (ETB)</th>
-                            <th>{{ actions }}</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for emp in employees %}
                         <tr>
-                            <td><code>{{ emp.employee_id }}</code></td>
-                            <td>{{ emp.name }}</td>
-                            <td>{{ emp.department or '-' }}</td>
-                            <td>{{ emp.position or '-' }}</td>
-                            <td>{{ '%.2f'|format(emp.basic_salary) }}</td>
-                            <td>{{ '%.2f'|format(emp.gross_salary) }}</td>
-                            <td>
-                                <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-eye"></i>
+                            <td data-label="ID"><code>{{ emp.employee_id }}</code></td>
+                            <td data-label="Name">{{ emp.name }}</td>
+                            <td data-label="Department">{{ emp.department or '-' }}</td>
+                            <td data-label="Position">{{ emp.position or '-' }}</td>
+                            <td data-label="Basic Salary">{{ '%.2f'|format(emp.basic_salary) }}</td>
+                            <td data-label="Gross">{{ '%.2f'|format(emp.gross_salary) }}</td>
+                            <td data-label="Actions">
+                                <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-outline-secondary btn-approve-lg">
+                                    <i class="bi bi-eye"></i> View
                                 </a>
                                 {% if show_archived %}
                                 <form method="POST" action="{{ url_for('employees.reactivate_employee', emp_id=emp.id) }}" style="display:inline">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-success" title="{{ _('reactivate') }}">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    <button type="submit" class="btn btn-sm btn-outline-success btn-approve-lg" title="{{ _('reactivate') }}">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Reactivate
                                     </button>
                                 </form>
                                 {% endif %}

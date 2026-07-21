@@ -879,7 +879,7 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 - ❌ ERCA filing format verification by real accountant (guide ready to send)
 - ❌ Human verification of 34 statutory rules against actual proclamations (checklist ready)
 - ❌ Backup/restore full cycle test (connection verified, needs pg_dump for full drop/restore)
-- ❌ Mobile PWA (touch-friendly tables, offline support)
+- 🔧 Mobile PWA — foundation done (manifest, service worker, offline page, icons). 3 screens converted (payroll results, employee list, leave management). Remaining: branded icons, payroll confirm touch-friendly, Lighthouse audit.
 - ❌ Staging environment (no pre-production testing)
 - ❌ Support/help system (no in-app help, no FAQ)
 - ❌ Integration connectors (bank APIs, ERP, accounting software)
@@ -902,7 +902,7 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 | 3 | Test backup/restore against production PostgreSQL | Data safety | 1 day | ✅ **DONE (2026-07-20)** — Connection verified, 8.5 MB DB. Full cycle needs pg_dump. |
 | 4 | Add performance benchmarks | Scale | 2 days | ✅ **DONE (2026-07-20)** — Core 44k/s, PDF 28ms/emp bottleneck |
 | 5 | Make overtime/leave/severance rules configurable | Flexibility | 1 week | ✅ **DONE (2026-07-20)** — 24 of 46 constants now DB-configurable |
-| 6 | Improve mobile UX (PWA, touch-friendly tables) | Adoption | 1 week | ⏳ **NEXT** — Biggest user-facing gap |
+| 6 | Improve mobile UX (PWA, touch-friendly tables) | Adoption | 1 week | 🔧 **IN PROGRESS** — PWA foundation done, 3 screens converted to responsive-card (2026-07-21) |
 | 7 | Add audit logging for all state changes | Compliance | 3 days | ⏳ Pending |
 | 8 | Set up staging environment | Operations | 1 day | ⏳ Pending |
 | 9 | Document disaster recovery runbook | Operations | 1 day | ✅ **DONE (2026-07-20)** — 7 scenarios covered |
@@ -916,14 +916,14 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 | **Compliance** | 4/10 | **5/10** | ↑ | Rules configurable with legal sources cited. ERCA template system built. Verification package ready for accountant. |
 | **Security** | 7/10 | **8/10** | ↑ | Phone validation across all 10 input points. Registration confirmation modal. OAuth import non-fatal. |
 | **Performance** | 3/10 | **4/10** | ↑ | Benchmarks done. Core engine fast (44k/s). PDF bottleneck identified (28ms/emp). Needs async workers. |
-| **UX** | 5/10 | 5/10 | — | No change. Still needs mobile PWA. |
+| **UX** | 5/10 | **6/10** | ↑ | PWA foundation (manifest, SW, offline page). 3 high-traffic screens converted to responsive-card tables. Icons + large tap targets. |
 | **Scalability** | 3/10 | 3/10 | — | No change. Still needs background workers. |
 | **Maintainability** | 7/10 | **8/10** | ↑ | Hardcoded rules reduced from 31 to 22 (all statutory rules configurable). |
 | **Observability** | 5/10 | 5/10 | — | No change. |
 | **Business Readiness** | 4/10 | **5/10** | ↑ | DR runbook. Backup verified. ERCA template configurable. Verification package ready. |
 | **Enterprise Readiness** | 2/10 | **3/10** | ↑ | Configurable rules. Report templates. Still needs multi-country, SSO, SLA. |
 
-### Overall: **5.2/10** (up from 4.5/10) — Functional prototype with strong foundations. 4 of top 10 priorities completed. Verification package ready for accountant. Performance benchmarked. Needs 3-4 more weeks of hardening.
+### Overall: **5.4/10** (up from 5.2/10) — Functional prototype with strong foundations. 4 of top 10 priorities completed, 1 in progress. Verification package ready for accountant. Performance benchmarked. PWA foundation laid with 3 high-traffic screens mobile-ready. Needs 3-4 more weeks of hardening.
 
 ---
 
@@ -956,7 +956,7 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 |---|---|---|---|
 | 1 | ERCA format verification | 📋 Package ready | Send to accountant |
 | 2 | Statutory rules verification | 📋 Checklist ready | Send to accountant |
-| 3 | Mobile UX (PWA) | ⏳ Next | Developer |
+| 3 | Mobile UX (PWA) | 🔧 In Progress — PWA foundation + 3 screens done | Developer |
 | 4 | Audit logging | ⏳ Pending | Developer |
 | 5 | Staging environment | ⏳ Pending | Developer |
 | 6 | Async PDF generation | ⏳ Pending | Developer |

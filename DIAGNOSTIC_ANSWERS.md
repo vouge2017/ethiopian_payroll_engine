@@ -879,14 +879,13 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 - ✅ Audit logging for login/logout/failed-login — **2026-07-21**
 - ✅ Audit logging for company settings + report template changes — **2026-07-21**
 - ✅ Mobile PWA complete (manifest, SW, icons, responsive-card tables) — **2026-07-21**
+- ✅ Staging environment (separate Render deploy, StagingConfig, seed script) — **2026-07-21**
 
 ### What is missing:
 
 - ❌ ERCA filing format verification by real accountant (guide ready to send)
 - ❌ Human verification of 34 statutory rules against actual proclamations (checklist ready)
 - ❌ Backup/restore full cycle test (connection verified, needs pg_dump for full drop/restore)
-- ✅ Mobile PWA complete — manifest, service worker, offline page, branded EP icons, apple-touch-icon. 3 screens responsive-card (payroll results, employee list, leave management). inputmode on numeric inputs. 12/12 PWA audit. (No browser available for Lighthouse — run manually on deployment.)
-- ✅ Staging environment — separate Render deploy, separate DB, StagingConfig with same validation as production, seed script (2 companies, 45 employees) — **2026-07-21**
 - ❌ Support/help system (no in-app help, no FAQ)
 - ❌ Integration connectors (bank APIs, ERP, accounting software)
 - ❌ Async PDF generation (bottleneck at 28ms/emp, needs background workers)
@@ -909,7 +908,7 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 | 4 | Add performance benchmarks | Scale | 2 days | ✅ **DONE (2026-07-20)** — Core 44k/s, PDF 28ms/emp bottleneck |
 | 5 | Make overtime/leave/severance rules configurable | Flexibility | 1 week | ✅ **DONE (2026-07-20)** — 24 of 46 constants now DB-configurable |
 | 6 | Improve mobile UX (PWA, touch-friendly tables) | Adoption | 1 week | ✅ **DONE (2026-07-21)** — PWA foundation, 3 screens responsive-card, branded icons, 12/12 audit pass |
-| 7 | Add audit logging for all state changes | Compliance | 3 days | ✅ **DONE (2026-07-21)** — 15 of 18 state changes logged. High-risk (login, salary, settings) all covered. |
+| 7 | Add audit logging for all state changes | Compliance | 3 days | ✅ **DONE (2026-07-21)** — 18 action types across 3 blueprints. High-risk (login, salary, settings) all covered. |
 | 8 | Set up staging environment | Operations | 1 day | ✅ **DONE (2026-07-21)** — render-staging.yaml, StagingConfig, seed script, STAGING.md guide |
 | 9 | Document disaster recovery runbook | Operations | 1 day | ✅ **DONE (2026-07-20)** — 7 scenarios covered |
 | 10 | Add async PDF generation (background workers) | Scale | 3 days | ⏳ Pending — PDF bottleneck identified (28ms/emp) |
@@ -925,11 +924,11 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 | **UX** | 5/10 | **7/10** | ↑ | PWA complete (manifest, SW, offline page, branded icons, apple-touch-icon). 3 high-traffic screens responsive-card. inputmode for numeric keyboards. 12/12 PWA audit pass. |
 | **Scalability** | 3/10 | 3/10 | — | No change. Still needs background workers. |
 | **Maintainability** | 7/10 | **8/10** | ↑ | Hardcoded rules reduced from 31 to 22 (all statutory rules configurable). |
-| **Observability** | 5/10 | **7/10** | ↑ | Login/logout/failed-login tracked. Company settings + report template changes tracked. 15 action types across 3 blueprints. Hash chain intact. |
+| **Observability** | 5/10 | **7/10** | ↑ | Login/logout/failed-login tracked. Company settings + report template changes tracked. 18 action types across 3 blueprints. Hash chain intact. |
 | **Business Readiness** | 4/10 | **5/10** | ↑ | DR runbook. Backup verified. ERCA template configurable. Verification package ready. |
 | **Enterprise Readiness** | 2/10 | **3/10** | ↑ | Configurable rules. Report templates. Still needs multi-country, SSO, SLA. |
 
-### Overall: **6.0/10** (up from 5.8/10) — Functional prototype with strong foundations. 7 of top 10 priorities completed. Verification package ready for accountant. Performance benchmarked. Mobile UX complete with PWA support. Audit logging covers 15 of 18 state changes. Staging environment ready for safe testing. Needs 2-3 more weeks of hardening.
+### Overall: **6.0/10** (up from 5.8/10) — Functional prototype with strong foundations. 7 of top 10 priorities completed. Verification package ready for accountant. Performance benchmarked. Mobile UX complete with PWA support. Audit logging covers 18 action types across 3 blueprints. Staging environment ready for safe testing. Needs 2-3 more weeks of hardening.
 
 ---
 
@@ -963,6 +962,6 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 | 1 | ERCA format verification | 📋 Package ready | Send to accountant |
 | 2 | Statutory rules verification | 📋 Checklist ready | Send to accountant |
 | 3 | Mobile UX (PWA) | ✅ Done — 12/12 PWA audit pass | — |
-| 4 | Audit logging | ⏳ Pending | Developer |
+| 4 | Audit logging | ✅ Done — 18 action types across 3 blueprints | — |
 | 5 | Staging environment | ✅ Done — deploy with render-staging.yaml, seed with flask seed-staging | — |
 | 6 | Async PDF generation | ⏳ Pending | Developer |

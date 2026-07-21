@@ -56,6 +56,31 @@ class ProductionConfig(Config):
             )
 
 
+class StagingConfig(Config):
+    """Staging — same strictness as production, but allows demo mode for testing."""
+    DEBUG = False
+    ENABLE_DEMO_MODE = _env_bool('ENABLE_DEMO_MODE', default=True)
+
+    def __init__(self):
+        super().__init__()
+        if self.SECRET_KEY in ('dev-change-in-production', 'your-secret-key-here'):
+            raise ValueError(
+                "SECRET_KEY must be set to a real value in staging. "
+                "Generate one with: python3 -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+        if 'sqlite' in self.SQLALCHEMY_DATABASE_URI:
+            raise ValueError(
+                "DATABASE_URL must be a PostgreSQL connection string in staging. "
+                "Set the DATABASE_URL environment variable."
+            )
+        _db_enc_key = os.environ.get('DB_ENCRYPTION_KEY', '')
+        if not _db_enc_key or _db_enc_key == 'dev-encryption-key-not-for-production-use-only-32b':
+            raise ValueError(
+                "DB_ENCRYPTION_KEY must be set to a real value in staging. "
+                "Generate one with: python3 -c 'import secrets; print(secrets.token_hex(32))'"
+            )
+
+
 class TestingConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
@@ -66,5 +91,6 @@ class TestingConfig(Config):
 config_by_name = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
+    'staging': StagingConfig,
     'testing': TestingConfig,
 }

@@ -87,6 +87,23 @@ def create_app():
             raise RuntimeError('Insecure production configuration: ' + '; '.join(errors))
         from config import ProductionConfig
         app.config.from_object(ProductionConfig())
+    elif env == 'staging':
+        secret = os.environ.get('SECRET_KEY', '')
+        db_url = os.environ.get('DATABASE_URL', '')
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        enc_key = os.environ.get('DB_ENCRYPTION_KEY', '')
+        errors = []
+        if not secret or secret in ('dev-change-in-production', 'your-secret-key-here'):
+            errors.append('SECRET_KEY must be a real value in staging')
+        if not db_url or 'sqlite' in db_url:
+            errors.append('DATABASE_URL must be a PostgreSQL connection string in staging')
+        if not enc_key or enc_key == 'dev-encryption-key-not-for-production-use-only-32b':
+            errors.append('DB_ENCRYPTION_KEY must be a real value in staging')
+        if errors:
+            raise RuntimeError('Insecure staging configuration: ' + '; '.join(errors))
+        from config import StagingConfig
+        app.config.from_object(StagingConfig())
     else:
         from config import _env_bool
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-in-production')

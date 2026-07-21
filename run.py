@@ -41,6 +41,13 @@ def seed_db():
     print(f"  Company: Demo Company")
     print(f"  Employees: {len(employees)}")
 
+@app.cli.command("seed-staging")
+def seed_staging_cmd():
+    """Seed staging database with realistic test data (2 companies, 45 employees)."""
+    from seed_staging import seed
+    seed()
+
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()

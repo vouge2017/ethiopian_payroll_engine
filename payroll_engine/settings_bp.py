@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 
 from payroll_engine import db
 from payroll_engine.models import User, Company, Employee
-from payroll_engine.shared import _company_id, role_required
+from payroll_engine.shared import _company_id, role_required, create_audit_log
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -59,6 +59,13 @@ def company_profile():
             logo.save(filepath)
             company.logo_path = f'uploads/logos/logo_{company.id}_{filename}'
 
+        # Audit: company settings change
+        create_audit_log(
+            company_id=company.id,
+            user_id=current_user.id,
+            action='company_settings_change',
+            details={'fields_updated': ['name', 'address', 'phone', 'tin', 'webhook_url', 'webhook_secret']}
+        )
         db.session.commit()
         flash('Company profile updated.', 'success')
         return redirect(url_for('settings.company_profile'))
@@ -232,6 +239,13 @@ def report_templates():
         columns.sort(key=lambda c: c['order'])
 
         save_report_template(company, report_type, columns)
+        # Audit: report template change
+        create_audit_log(
+            company_id=company.id,
+            user_id=current_user.id,
+            action='report_template_change',
+            details={'report_type': report_type, 'column_count': len(columns)}
+        )
         db.session.commit()
         flash('Report template updated.', 'success')
         return redirect(url_for('settings.report_templates'))

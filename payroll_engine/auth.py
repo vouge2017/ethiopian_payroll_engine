@@ -70,6 +70,15 @@ def login():
                 user = User.query.filter_by(email=login_id.lower()).first()
 
         if not user or not user.check_password(password):
+            # Audit: failed login attempt
+            from payroll_engine.shared import create_audit_log
+            create_audit_log(
+                company_id=user.company_id if user else None,
+                user_id=user.id if user else None,
+                action='login_failed',
+                details={'attempted_id': login_id[:120]}
+            )
+            db.session.commit()
             flash('Invalid credentials.', 'danger')
             return redirect(url_for('auth.login'))
         login_user(user, remember=remember)
@@ -77,6 +86,15 @@ def login():
         session['_login_time'] = datetime.now(timezone.utc).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
+        # Audit: successful login
+        from payroll_engine.shared import create_audit_log
+        create_audit_log(
+            company_id=user.company_id,
+            user_id=user.id,
+            action='login_success',
+            details={'method': 'phone' if looks_like_phone else 'email'}
+        )
+        db.session.commit()
         if user.must_change_password:
             flash('Please set a new password to continue. Your temporary password needs to be changed.', 'warning')
             return redirect(url_for('auth.change_password'))
@@ -93,6 +111,14 @@ def login():
 @auth.route('/logout')
 @login_required
 def logout():
+    # Audit: logout
+    from payroll_engine.shared import create_audit_log
+    create_audit_log(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        action='logout'
+    )
+    db.session.commit()
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))

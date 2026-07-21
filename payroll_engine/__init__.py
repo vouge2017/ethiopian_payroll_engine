@@ -364,6 +364,24 @@ def create_app():
             current_app.logger.warning('readyz migration check failed: %s', e)
         return {'status': 'ready', 'checks': status}, 200
 
+    @app.route('/sw.js')
+    def service_worker():
+        return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}
+
+    @app.route('/offline')
+    def offline():
+        return ("<!doctype html><html><head>"
+               '<meta charset="utf-8">'
+               '<meta name="viewport" content="width=device-width,initial-scale=1">'
+               '<title>Offline — EthioPayroll</title>'
+               '<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f9;color:#333}'
+               '.box{text-align:center;padding:2rem}.box h1{font-size:1.5rem;margin-bottom:.5rem}.box p{color:#666}</style>'
+               '</head><body><div class="box">'
+               '<h1>You\u2019re offline</h1>'
+               '<p>EthioPayroll needs an internet connection to load payroll data.'
+               '<br>Please check your connection and try again.</p>'
+               '</div></body></html>'), 200
+
     # Make Ethiopian calendar available in all templates
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
     from payroll_engine.i18n import get_string

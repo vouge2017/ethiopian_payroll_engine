@@ -298,3 +298,36 @@
         display: none !important;
     }
 }
+
+/* ============================================
+   RESPONSIVE CARD TABLES
+   Add class="responsive-card" to <table> and
+   data-label="Column Name" to each <td>.
+   Below 600px, rows become stacked cards.
+   ============================================ */
+@media (max-width: 600px) {
+    table.responsive-card thead {
+        display: none;
+    }
+    table.responsive-card tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 0.5rem;
+        background: #fff;
+    }
+    table.responsive-card td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.4rem 0;
+        border: none;
+    }
+    table.responsive-card td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #666;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+}

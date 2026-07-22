@@ -36,6 +36,94 @@ def _ensure_font():
 
 _ensure_font()
 
+def _ensure_pdf(payslip, emp, company_info=None):
+    """Ensure a payslip has a generated PDF. Returns the file path.
+
+    Handles race conditions: if two requests hit the same payslip
+    simultaneously, only one generates. The other reads the result.
+
+    State machine: not_generated → generating → generated / failed
+    """
+    from payroll_engine import db
+
+    # Fast path: already generated and file exists
+    if payslip.pdf_status == 'generated' and payslip.pdf_file_path and os.path.exists(payslip.pdf_file_path):
+        return payslip.pdf_file_path
+
+    # Try to claim the 'generating' state (race-condition guard)
+    # Use a DB-level atomic update so only one request wins
+    from sqlalchemy import update
+    from payroll_engine.models import Payslip
+    result = db.session.execute(
+        update(Payslip)
+        .where(Payslip.id == payslip.id, Payslip.pdf_status != 'generating')
+        .values(pdf_status='generating')
+    )
+    db.session.flush()
+
+    if result.rowcount == 0:
+        # Another request claimed it — wait and read the result
+        import time
+        for _ in range(50):  # Up to 5 seconds
+            db.session.expire(payslip)
+            if payslip.pdf_status == 'generated' and payslip.pdf_file_path:
+                return payslip.pdf_file_path
+            if payslip.pdf_status == 'failed':
+                raise RuntimeError(f'PDF generation previously failed for payslip {payslip.id}')
+            time.sleep(0.1)
+        # Timed out — try generating anyway
+
+    # We claimed 'generating' — build the data and generate
+    try:
+        from payroll_engine.payroll import generate_calculation_flow
+
+        emp_data = {
+            'id': emp.employee_id,
+            'name': emp.name,
+            'basic': emp.basic_salary,
+            'allowances': emp.allowances,
+            'gross': payslip.gross_salary,
+            'tax': payslip.tax,
+            'pension_employee': payslip.employee_pension,
+            'pension_employer': payslip.employer_pension,
+            'net': payslip.net_pay,
+            'bank': emp.bank_or_telebirr or '',
+            'department': emp.department or '',
+            'position': emp.position or '',
+            'period': '',
+            'tax_explanation': '',
+        }
+        emp_data['calc_flow'] = generate_calculation_flow(emp_data)
+
+        # Get period from the payroll run
+        from payroll_engine.models import PayrollRun
+        run = db.session.get(PayrollRun, payslip.payroll_run_id)
+        if run:
+            emp_data['period'] = run.period or (run.run_date.strftime('%B %Y') if run.run_date else '')
+
+        if company_info is None:
+            from payroll_engine.models import Company
+            company = db.session.get(Company, run.company_id) if run else None
+            company_info = {
+                'name': company.name if company else 'Company',
+                'address': company.address if company else '',
+                'tin': company.tin if company else '',
+                'phone': company.phone if company else '',
+                'logo_path': os.path.join('payroll_engine', 'static', company.logo_path) if company and company.logo_path else '',
+            }
+
+        pdf_path = generate_payslip(emp_data, company=company_info)
+        payslip.pdf_file_path = pdf_path
+        payslip.pdf_status = 'generated'
+        db.session.flush()
+        return pdf_path
+
+    except Exception as e:
+        payslip.pdf_status = 'failed'
+        db.session.flush()
+        raise
+
+
 FONT = 'NotoSansEthiopic'
 PRIMARY = HexColor('#1a5276')
 ACCENT = HexColor('#2e86c1')

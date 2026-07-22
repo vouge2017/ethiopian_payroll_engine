@@ -795,6 +795,8 @@ class Payslip(db.Model):
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
     pdf_file_path = db.Column(db.String(255))  # Path to the generated PDF
+    # Lazy PDF generation: not_generated → generating → generated / failed
+    pdf_status = db.Column(db.String(20), nullable=False, default='not_generated')
     gross_salary = db.Column(db.Numeric(12, 2), nullable=False)
     tax = db.Column(db.Numeric(12, 2), nullable=False)
     employee_pension = db.Column(db.Numeric(12, 2), nullable=False)

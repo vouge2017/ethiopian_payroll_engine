@@ -89,11 +89,11 @@ def _setup_approval_data(app):
         return company.id, user.id, run.id
 
 
-def test_approval_rolls_back_on_pdf_failure(app):
+def test_approval_succeeds_without_pdf_generation(app):
     """
-    If PDF generation fails midway through approval, the payroll should
-    still complete. Payslips are created without PDF paths. The run is
-    marked 'completed' (not 'failed'). Failed PDFs can be retried.
+    Approval should succeed without generating PDFs.
+    PDFs are generated lazily on download (not at approval time).
+    Payslips are created with pdf_status='not_generated'.
     """
     company_id, user_id, run_id = _setup_approval_data(app)
 
@@ -104,7 +104,7 @@ def test_approval_rolls_back_on_pdf_failure(app):
         assert Payslip.query.filter_by(payroll_run_id=run_id).count() == 0
         assert PayrollDraft.query.filter_by(payroll_run_id=run_id).first() is not None
 
-    # Attempt approval with a failing PDF generator
+    # Attempt approval — no PDF generation happens at approval time
     with app.test_client() as client:
         with app.app_context():
             user = db.session.get(User, user_id)
@@ -112,24 +112,24 @@ def test_approval_rolls_back_on_pdf_failure(app):
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
 
-        with patch('payroll_engine.services.payroll_service.generate_payslip', side_effect=Exception('PDF generation exploded')):
-            resp = client.post('/payroll/approve', data={
-                'run_id': run_id,
-                'password': 'TestPass1!',
-            }, follow_redirects=False)
+        resp = client.post('/payroll/approve', data={
+            'run_id': run_id,
+            'password': 'TestPass1!',
+        }, follow_redirects=False)
 
-    # After failed approval, verify nothing partial persisted
+    # After approval, verify payslips are created with lazy PDF status
     with app.app_context():
         run = db.session.get(PayrollRun, run_id)
 
-        # Run should be 'completed' — PDF failure no longer blocks payroll
+        # Run should be 'completed'
         assert run.status == 'completed', f"Expected 'completed', got '{run.status}'"
 
-        # Payslips should exist (without PDF paths)
+        # Payslips should exist with pdf_status='not_generated'
         payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
         assert len(payslips) > 0, "No payslips created"
         for ps in payslips:
             assert ps.pdf_file_path is None, f"Expected no PDF path for {ps.id}"
+            assert ps.pdf_status == 'not_generated', f"Expected 'not_generated', got '{ps.pdf_status}'"
 
         # Draft should be cleaned up
         draft = PayrollDraft.query.filter_by(payroll_run_id=run_id).first()

@@ -38,6 +38,7 @@ def purge_expired_payslip_pdfs(app):
                 except OSError as e:
                     logger.error('Failed to purge PDF %s: %s', p.pdf_file_path, e)
             p.pdf_file_path = None
+            p.pdf_status = 'not_generated'
         if purged:
             db.session.commit()
             log = AuditLog(

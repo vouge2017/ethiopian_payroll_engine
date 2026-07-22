@@ -10,7 +10,6 @@ from payroll_engine.models import (
     Company, Employee, PayrollRun, Payslip, PayrollDraft,
     PayrollValidationResult,
 )
-from payroll_engine.pdf import generate_payslip
 from payroll_engine.compliance import compute_compliance_score
 from payroll_engine.shared import create_audit_log, create_notification
 
@@ -75,16 +74,6 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         )
     employees_data = draft.employee_data
 
-    # Load company info for payslip branding
-    company = db.session.get(Company, company_id)
-    company_info = {
-        'name': company.name if company else 'Company',
-        'address': company.address if company else '',
-        'tin': company.tin if company else '',
-        'phone': company.phone if company else '',
-        'logo_path': os.path.join('payroll_engine', 'static', company.logo_path) if company and company.logo_path else '',
-    }
-
     try:
         run.status = 'processing'
         run.approved_by = user_id
@@ -100,8 +89,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         ).all()
         emp_by_eid = {e.employee_id: e for e in existing_emps}
 
-        # Create/update employees and generate payslips
-        failed_pdfs = []  # Track employees whose PDF generation failed
+        # Create/update employees and payslips
+        # PDFs are generated lazily on download (not at approval time)
         for emp_data in employees_data:
             emp = emp_by_eid.get(emp_data['id'])
             if not emp:
@@ -125,36 +114,10 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     emp.tin = emp_data['tin']
                 db.session.flush()
 
-            # Enrich emp_data with employee details for PDF
-            emp_data_enriched = dict(emp_data)
-            emp_data_enriched['department'] = emp.department if emp else ''
-            emp_data_enriched['position'] = emp.position if emp else ''
-            emp_data_enriched['period'] = run.period or run.run_date.strftime('%B %Y') if run.run_date else ''
-
-            # Add calculation flow for transparent PDF
-            from payroll_engine.payroll import generate_calculation_flow
-            emp_data_enriched['calc_flow'] = generate_calculation_flow(emp_data)
-
-            # Generate PDF — with error handling
-            pdf_path = None
-            try:
-                pdf_path = generate_payslip(emp_data_enriched, company=company_info)
-            except Exception as e:
-                import logging
-                logging.getLogger('payroll_engine').error(
-                    'PDF generation failed for %s (employee %s): %s',
-                    emp.name, emp.employee_id, e
-                )
-                failed_pdfs.append({
-                    'employee_id': emp.employee_id,
-                    'name': emp.name,
-                    'error': str(e),
-                })
-
             payslip = Payslip(
                 payroll_run_id=run.id,
                 employee_id=emp.id,
-                pdf_file_path=pdf_path,  # None if PDF failed
+                pdf_status='not_generated',  # Lazy: generated on first download
                 gross_salary=emp_data['gross'],
                 tax=emp_data['tax'],
                 employee_pension=emp_data['pension_employee'],
@@ -224,16 +187,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         db.session.commit()
 
         # Build result message
-        success_count = len(employees_data) - len(failed_pdfs)
-        if failed_pdfs:
-            failed_names = ', '.join(f['name'] for f in failed_pdfs)
-            message = (
-                f'Payroll processed! {success_count} of {len(employees_data)} payslips generated. '
-                f'PDF failed for: {failed_names}. '
-                f'You can retry failed PDFs from the payroll detail page.'
-            )
-        else:
-            message = f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%.'
+        message = f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%. PDFs will be generated on download.'
 
         return ApprovalResult(
             success=True,

@@ -23,7 +23,7 @@ from payroll_engine.models import (
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
 from payroll_engine.pension import employee_pension, employer_pension
 from payroll_engine.payroll import calculate_payroll
-from payroll_engine.pdf import generate_payslip
+from payroll_engine.pdf import _ensure_pdf
 from payroll_engine.compliance import compute_compliance_score, get_status_message
 from payroll_engine.security import log_and_flash_error, prevent_csv_injection
 from payroll_engine.services.payroll_workflow import (
@@ -1323,10 +1323,10 @@ def disbursement_progress(run_id):
 @login_required
 @role_required('owner', 'accountant')
 def retry_pdf(run_id, payslip_id):
-    """Retry PDF generation for a single failed payslip."""
-    from payroll_engine.pdf import generate_payslip
-    from payroll_engine.payroll import generate_calculation_flow
+    """Retry PDF generation for a single payslip.
 
+    Resets status to 'not_generated' and generates on-demand.
+    """
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=_company_id()
     ).first_or_404()
@@ -1339,7 +1339,7 @@ def retry_pdf(run_id, payslip_id):
         id=payslip_id, payroll_run_id=run.id
     ).first_or_404()
 
-    if payslip.pdf_file_path:
+    if payslip.pdf_status == 'generated' and payslip.pdf_file_path and os.path.exists(payslip.pdf_file_path):
         flash('This payslip already has a PDF. No need to retry.', 'info')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
@@ -1348,36 +1348,16 @@ def retry_pdf(run_id, payslip_id):
         flash('Employee not found for this payslip.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    # Build employee data for PDF
-    company = current_user.company
-    company_info = {
-        'name': company.name if company else 'Company',
-        'address': company.address if company else '',
-        'tin': company.tin if company else '',
-        'phone': company.phone if company else '',
-        'logo_path': os.path.join('payroll_engine', 'static', company.logo_path) if company and company.logo_path else '',
-    }
-
-    emp_data = {
-        'id': emp.employee_id,
-        'name': emp.name,
-        'department': emp.department or '',
-        'position': emp.position or '',
-        'period': run.period or run.run_date.strftime('%B %Y'),
-        'gross': float(payslip.gross_salary),
-        'pension_employee': float(payslip.employee_pension),
-        'taxable': float(payslip.gross_salary - payslip.employee_pension),
-        'tax': float(payslip.tax),
-        'net': float(payslip.net_pay),
-    }
-    emp_data['calc_flow'] = generate_calculation_flow(emp_data)
+    # Reset status and generate on-demand
+    payslip.pdf_status = 'not_generated'
+    db.session.flush()
 
     try:
-        pdf_path = generate_payslip(emp_data, company=company_info)
-        payslip.pdf_file_path = pdf_path
+        pdf_path = _ensure_pdf(payslip, emp)
         db.session.commit()
         flash(f'PDF generated for {emp.name}.', 'success')
     except Exception as e:
+        db.session.rollback()
         import logging
         logging.getLogger('payroll_engine').error(
             'PDF retry failed for %s: %s', emp.name, e
@@ -1549,9 +1529,9 @@ def export_payslips():
 def batch_payslips():
     """
     Download all payslips for the latest payroll run as a ZIP file.
+    Uses cached PDFs; generates missing ones on-demand.
     """
     import zipfile
-    from payroll_engine.pdf import generate_payslip
 
     # Get the latest completed payroll run
     run = PayrollRun.query.filter_by(
@@ -1567,32 +1547,28 @@ def batch_payslips():
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('payroll.payroll_runs'))
 
-    # Generate PDFs and create ZIP
+    # Create ZIP using cached PDFs, generating missing ones on-demand
     zip_buffer = io.BytesIO()
+    skipped = 0
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
         for ps in payslips:
             emp = ps.employee
-            from payroll_engine.payroll import generate_calculation_flow
-            emp_dict = {
-                'id': emp.employee_id,
-                'name': emp.name,
-                'basic': emp.basic_salary,
-                'allowances': emp.allowances,
-                'gross': ps.gross_salary,
-                'tax': ps.tax,
-                'pension_employee': ps.employee_pension,
-                'pension_employer': ps.employer_pension,
-                'net': ps.net_pay,
-                'bank': emp.bank_or_telebirr or '',
-                'tax_explanation': '',
-            }
-            emp_dict['calc_flow'] = generate_calculation_flow(emp_dict)
-            pdf_path = generate_payslip(emp_dict)
+            if not emp:
+                continue
+            try:
+                pdf_path = _ensure_pdf(ps, emp)
+            except Exception:
+                skipped += 1
+                continue
             arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf"
             zf.write(pdf_path, arcname)
-            os.remove(pdf_path)  # Clean up temp file
 
+    db.session.commit()
     zip_buffer.seek(0)
+
+    if skipped:
+        flash(f'{skipped} PDF(s) failed to generate and were excluded from the ZIP.', 'warning')
+
     company = db.session.get(Company, _company_id())
     filename = f"payslips_{company.name.replace(' ', '_')}_{run.run_date.strftime('%Y%m')}.zip"
 
@@ -1617,7 +1593,11 @@ def payroll_run_detail(run_id):
 @payroll_bp.route('/payroll/runs/<int:run_id>/download')
 @login_required
 def download_all_payslips(run_id):
-    """Download all payslips for a run as a ZIP file."""
+    """Download all payslips for a run as a ZIP file.
+
+    Generates missing PDFs on-demand. For large batches this may take
+    a while — the frontend should show progress.
+    """
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=_company_id()
     ).first_or_404()
@@ -1627,15 +1607,29 @@ def download_all_payslips(run_id):
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
-    # Create ZIP in memory
+    # Create ZIP in memory, generating missing PDFs on-demand
     memory_file = io.BytesIO()
+    generated = 0
+    skipped = 0
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
         for p in payslips:
-            if p.pdf_file_path and os.path.exists(p.pdf_file_path):
-                emp = p.employee
-                arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf"
-                zf.write(p.pdf_file_path, arcname)
+            emp = p.employee
+            if not emp:
+                continue
+            try:
+                pdf_path = _ensure_pdf(p, emp)
+                generated += 1
+            except Exception:
+                skipped += 1
+                continue
+            arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf"
+            zf.write(pdf_path, arcname)
+
+    db.session.commit()
     memory_file.seek(0)
+
+    if skipped:
+        flash(f'{skipped} PDF(s) failed to generate and were excluded from the ZIP.', 'warning')
 
     return send_file(
         memory_file,
@@ -1648,14 +1642,20 @@ def download_all_payslips(run_id):
 @payroll_bp.route('/payslips/<int:payslip_id>/download')
 @login_required
 def download_payslip(payslip_id):
-    """Download a single payslip PDF."""
+    """Download a single payslip PDF. Generates on-demand if not yet cached."""
     payslip = Payslip.query.get_or_404(payslip_id)
     run = db.session.get(PayrollRun, payslip.payroll_run_id)
     if run.company_id != _company_id():
         abort(403)
-    if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
-        flash('PDF not found.', 'danger')
+    try:
+        pdf_path = _ensure_pdf(payslip, payslip.employee)
+        db.session.commit()
+        return send_file(pdf_path, as_attachment=True, download_name=f"payslip_{payslip.id}.pdf")
+    except Exception as e:
+        db.session.rollback()
+        import logging
+        logging.getLogger('payroll_engine').error('PDF generation failed for payslip %s: %s', payslip_id, e)
+        flash(f'PDF generation failed: {e}', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
-    return send_file(payslip.pdf_file_path, as_attachment=True, download_name=f"payslip_{payslip.id}.pdf")
 
 

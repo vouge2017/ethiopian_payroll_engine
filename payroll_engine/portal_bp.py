@@ -28,7 +28,7 @@ def employee_dashboard():
         return render_template('employee_portal/dashboard.html', employee=None)
     latest_payslip = Payslip.query.filter_by(employee_id=emp.id) \
         .order_by(Payslip.generated_at.desc()).first()
-    from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
+    from payroll_engine.overtime import calculate_overtime_pay, DEFAULT_OVERTIME_RATES as OVERTIME_RATES
     month_start = date.today().replace(day=1)
     ot_entries = OvertimeEntry.query.filter_by(
         employee_id=emp.id, company_id=_company_id()
@@ -61,7 +61,7 @@ def my_payslips():
 def my_payslip_detail(payslip_id):
     """View a specific payslip with full breakdown."""
     from payroll_engine.tax import calculate_tax_breakdown
-    from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES, calculate_hourly_rate
+    from payroll_engine.overtime import calculate_overtime_pay, DEFAULT_OVERTIME_RATES as OVERTIME_RATES, calculate_hourly_rate
 
     emp = get_linked_employee()
     if not emp:

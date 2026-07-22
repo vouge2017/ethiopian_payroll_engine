@@ -14,7 +14,7 @@ from severance import (
     calculate_years_of_service,
     calculate_severance,
     TerminationReason,
-    MAX_SEVERANCE_MONTHS,
+    DEFAULT_MAX_SEVERANCE_MONTHS as MAX_SEVERANCE_MONTHS,
 )
 
 

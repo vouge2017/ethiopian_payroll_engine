@@ -14,8 +14,8 @@ from overtime import (
     calculate_hourly_rate,
     calculate_overtime_pay,
     calculate_total_overtime,
-    OVERTIME_RATES,
-    MAX_OVERTIME_HOURS_MONTH,
+    DEFAULT_OVERTIME_RATES as OVERTIME_RATES,
+    DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH,
 )
 from decimal import Decimal
 

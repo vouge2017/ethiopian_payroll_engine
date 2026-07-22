@@ -211,7 +211,7 @@ def index():
 
     # Overtime summary for current month (eager-load employee to avoid N+1)
     from payroll_engine.models import OvertimeEntry
-    from payroll_engine.overtime import MAX_OVERTIME_HOURS_MONTH
+    from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
     from sqlalchemy.orm import joinedload
     month_start = date.today().replace(day=1)
     ot_entries = OvertimeEntry.query.options(

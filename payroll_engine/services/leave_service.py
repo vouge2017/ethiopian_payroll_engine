@@ -16,8 +16,8 @@ from payroll_engine.models import Leave, LeaveBalance, Employee, AuditLog
 from payroll_engine.leave import (
     calculate_leave_balance, validate_leave_request,
     calculate_sick_leave_pay, LeaveType,
-    STATUTORY_ANNUAL_BASE, STATUTORY_ANNUAL_INCREMENT,
-    STATUTORY_SICK_MAX_DAYS, SICK_TIER_1_DAYS, SICK_TIER_2_DAYS
+    DEFAULT_ANNUAL_BASE, DEFAULT_ANNUAL_INCREMENT,
+    DEFAULT_SICK_MAX_DAYS, DEFAULT_SICK_TIER_1_DAYS, DEFAULT_SICK_TIER_2_DAYS
 )
 
 
@@ -85,7 +85,7 @@ def accrue_annual_leave(employee: Employee, company_id: int,
     years_of_service = (date(year, 12, 31) - start).days // 365
 
     # Statutory: 14 days + 1 per year, capped at 30
-    entitled = STATUTORY_ANNUAL_BASE + (years_of_service * STATUTORY_ANNUAL_INCREMENT)
+    entitled = DEFAULT_ANNUAL_BASE + (years_of_service * DEFAULT_ANNUAL_INCREMENT)
     entitled = min(entitled, 30)
 
     # Company policy override
@@ -171,9 +171,9 @@ def get_leave_balance(employee: Employee, company_id: int,
 
         return {
             'leave_type': leave_type,
-            'entitled': STATUTORY_SICK_MAX_DAYS,
+            'entitled': DEFAULT_SICK_MAX_DAYS,
             'taken': taken,
-            'remaining': max(0, STATUTORY_SICK_MAX_DAYS - taken),
+            'remaining': max(0, DEFAULT_SICK_MAX_DAYS - taken),
             'pay_tiers': pay_info['tiers'],
             'current_tier': pay_info['tier'],
             'current_pay_percentage': pay_info['pay_percentage'],
@@ -349,7 +349,7 @@ def get_sick_leave_pay_reduction(employee: Employee, company_id: int,
     today = date.today()
     taken = get_leave_taken(company_id, employee.id, LeaveType.SICK, today.year, db_session)
 
-    if taken <= SICK_TIER_1_DAYS:
+    if taken <= DEFAULT_SICK_TIER_1_DAYS:
         # Within first 30 days - full pay, no reduction
         return Decimal('0')
 
@@ -375,7 +375,7 @@ def get_sick_leave_pay_reduction(employee: Employee, company_id: int,
         return Decimal('0')
 
     # Determine which tier we're in
-    if taken <= SICK_TIER_1_DAYS + SICK_TIER_2_DAYS:
+    if taken <= DEFAULT_SICK_TIER_1_DAYS + DEFAULT_SICK_TIER_2_DAYS:
         # Tier 2: 50% pay → deduct 50% of daily rate × sick days this month
         reduction = (daily_rate * Decimal('0.5') * Decimal(str(month_sick_days))).quantize(Decimal('0.01'))
     else:

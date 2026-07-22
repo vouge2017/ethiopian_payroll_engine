@@ -797,7 +797,7 @@ def payroll_spreadsheet():
     Shows ALL employees in a single editable table.
     Accountant can edit overtime, absences, advances, and bonus inline.
     """
-    from payroll_engine.overtime import MAX_OVERTIME_HOURS_MONTH
+    from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
     from payroll_engine.models import OvertimeEntry, EmployeeDeduction
     from payroll_engine.payroll import calculate_payroll
     from decimal import Decimal, InvalidOperation
@@ -950,7 +950,7 @@ def payroll_spreadsheet():
             unpaid_deductions[emp.id] = Decimal('0')
 
         # Sick leave reduction (tiered)
-        from payroll_engine.services.leave_service import SICK_TIER_1_DAYS
+        from payroll_engine.leave import DEFAULT_SICK_TIER_1_DAYS as SICK_TIER_1_DAYS
         emp_sick = [lv for lv in leave_by_emp.get(emp.id, []) if lv.leave_type == LeaveType.SICK]
         total_sick_this_year = sum(lv.days_requested for lv in emp_sick if lv.start_date.year == date.today().year)
         if total_sick_this_year > SICK_TIER_1_DAYS:

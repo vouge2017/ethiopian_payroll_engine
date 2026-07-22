@@ -18,7 +18,7 @@ os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Employee, Company, User, OvertimeEntry, TenantQuery
-from payroll_engine.overtime import calculate_overtime_pay, calculate_total_overtime, OVERTIME_RATES
+from payroll_engine.overtime import calculate_overtime_pay, calculate_total_overtime, DEFAULT_OVERTIME_RATES as OVERTIME_RATES
 from payroll_engine.payroll import calculate_payroll
 from datetime import date
 

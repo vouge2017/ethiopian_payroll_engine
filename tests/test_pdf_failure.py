@@ -1,8 +1,6 @@
 """
-Tests for Phase 2 of BUILD_PLAN_2 — PDF Generation Failure Handling:
-- PDF failure doesn't break entire payroll
-- Failed PDFs are tracked
-- Retry route works
+Tests for lazy PDF generation — approval no longer generates PDFs.
+PDFs are generated on-demand at download time via _ensure_pdf().
 """
 import sys
 import os
@@ -58,7 +56,6 @@ def _setup(app):
         db.session.add_all([emp1, emp2])
         db.session.flush()
 
-        # Create a review run with draft
         run = PayrollRun(
             company_id=company.id, run_date=date.today(), status='review',
         )
@@ -94,60 +91,15 @@ def _setup(app):
         return company.id, owner.id, run.id
 
 
-# ─── PDF Failure Handling ───
+# ─── Lazy PDF Generation ───
 
 
-class TestPdfFailureHandling:
-    """Test that PDF failure doesn't break entire payroll."""
+class TestLazyPdfGeneration:
+    """Approval no longer generates PDFs. Payslips get pdf_status='not_generated'."""
 
-    @patch('payroll_engine.services.payroll_service.generate_payslip')
-    def test_payroll_completes_when_one_pdf_fails(self, mock_pdf, app):
-        """If one PDF fails, the other should still be created."""
+    def test_approval_succeeds_without_pdf_generation(self, app):
+        """Approval should complete without generating any PDFs."""
         cid, oid, rid = _setup(app)
-
-        # First call fails, second succeeds
-        mock_pdf.side_effect = [Exception('Font file not found'), '/tmp/test.pdf']
-
-        from payroll_engine.services.payroll_service import process_payroll
-        with app.app_context():
-            run = db.session.get(PayrollRun, rid)
-            result = process_payroll(
-                run=run, company_id=cid, user_id=oid,
-                user_email='test@test.com', request_ip='127.0.0.1',
-            )
-
-            assert result.success is True
-            assert '1 of 2' in result.message
-            assert 'Abebe Kebede' in result.message or 'Hana Tesfaye' in result.message
-
-    @patch('payroll_engine.services.payroll_service.generate_payslip')
-    def test_payslip_created_even_when_pdf_fails(self, mock_pdf, app):
-        """Payslip should be created even if PDF generation fails."""
-        cid, oid, rid = _setup(app)
-
-        mock_pdf.side_effect = Exception('Disk full')
-
-        from payroll_engine.services.payroll_service import process_payroll
-        with app.app_context():
-            run = db.session.get(PayrollRun, rid)
-            result = process_payroll(
-                run=run, company_id=cid, user_id=oid,
-                user_email='test@test.com', request_ip='127.0.0.1',
-            )
-
-            # Both payslips should exist (even without PDFs)
-            payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
-            assert len(payslips) == 2
-            # Both should have no PDF path
-            for ps in payslips:
-                assert ps.pdf_file_path is None
-
-    @patch('payroll_engine.services.payroll_service.generate_payslip')
-    def test_success_message_when_all_pdfs_succeed(self, mock_pdf, app):
-        """Normal message when all PDFs generate successfully."""
-        cid, oid, rid = _setup(app)
-
-        mock_pdf.return_value = '/tmp/test.pdf'
 
         from payroll_engine.services.payroll_service import process_payroll
         with app.app_context():
@@ -160,12 +112,27 @@ class TestPdfFailureHandling:
             assert result.success is True
             assert '2 employees paid' in result.message
 
-    @patch('payroll_engine.services.payroll_service.generate_payslip')
-    def test_all_pdfs_fail(self, mock_pdf, app):
-        """If all PDFs fail, payroll still completes."""
+    def test_payslips_created_with_not_generated_status(self, app):
+        """Payslips should be created with pdf_status='not_generated'."""
         cid, oid, rid = _setup(app)
 
-        mock_pdf.side_effect = Exception('System error')
+        from payroll_engine.services.payroll_service import process_payroll
+        with app.app_context():
+            run = db.session.get(PayrollRun, rid)
+            process_payroll(
+                run=run, company_id=cid, user_id=oid,
+                user_email='test@test.com', request_ip='127.0.0.1',
+            )
+
+            payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
+            assert len(payslips) == 2
+            for ps in payslips:
+                assert ps.pdf_file_path is None
+                assert ps.pdf_status == 'not_generated'
+
+    def test_approval_message_mentions_lazy_pdf(self, app):
+        """Success message should indicate PDFs will be generated on download."""
+        cid, oid, rid = _setup(app)
 
         from payroll_engine.services.payroll_service import process_payroll
         with app.app_context():
@@ -176,22 +143,20 @@ class TestPdfFailureHandling:
             )
 
             assert result.success is True
-            assert '0 of 2' in result.message
+            assert 'PDF' in result.message or 'download' in result.message.lower()
 
 
 # ─── Retry Route ───
 
 
 class TestRetryPdf:
-    """Test the PDF retry route."""
+    """Test the PDF retry route with lazy generation."""
 
-    @patch('payroll_engine.services.payroll_service.generate_payslip')
-    def test_retry_generates_pdf(self, mock_pdf, app):
-        """Retry should generate PDF for a failed payslip."""
+    def test_retry_generates_pdf(self, app):
+        """Retry should generate PDF for a payslip with pdf_status='not_generated'."""
         cid, oid, rid = _setup(app)
 
-        # First, complete payroll with all PDFs failing
-        mock_pdf.side_effect = Exception('Font missing')
+        # First, complete payroll (no PDFs generated)
         from payroll_engine.services.payroll_service import process_payroll
         with app.app_context():
             run = db.session.get(PayrollRun, rid)
@@ -200,24 +165,16 @@ class TestRetryPdf:
                 user_email='test@test.com', request_ip='127.0.0.1',
             )
 
-            # Verify PDFs failed
             payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
-            assert payslip.pdf_file_path is None
-
-        # Now retry one PDF — mock the retry route's import
-        mock_pdf.side_effect = None
-        mock_pdf.return_value = '/tmp/retry.pdf'
-
-        with app.app_context():
-            payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
+            assert payslip.pdf_status == 'not_generated'
             payslip_id = payslip.id
 
+        # Now retry — mock _ensure_pdf to simulate successful generation
+        with app.app_context():
             client = app.test_client()
             client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
 
-            # The retry route imports generate_payslip from payroll_engine.pdf
-            # We need to mock that import too
-            with patch('payroll_engine.pdf.generate_payslip', return_value='/tmp/retry.pdf'):
+            with patch('payroll_engine.payroll_bp._ensure_pdf', return_value='/tmp/retry.pdf'):
                 resp = client.post(
                     f'/payroll/{rid}/retry-pdf/{payslip_id}',
                     follow_redirects=True,
@@ -225,24 +182,27 @@ class TestRetryPdf:
                 assert resp.status_code == 200
                 assert b'generated' in resp.data.lower() or b'PDF' in resp.data
 
-    def test_retry_rejects_already_has_pdf(self, app):
-        """Retry should reject if payslip already has a PDF."""
+    def test_retry_rejects_already_generated(self, app):
+        """Retry should reject if payslip already has a generated PDF."""
+        import tempfile
         cid, oid, rid = _setup(app)
 
+        from payroll_engine.services.payroll_service import process_payroll
         with app.app_context():
-            # Complete payroll with PDFs
-            from unittest.mock import patch as mp
-            with mp('payroll_engine.services.payroll_service.generate_payslip') as mock_pdf:
-                mock_pdf.return_value = '/tmp/test.pdf'
-                from payroll_engine.services.payroll_service import process_payroll
-                run = db.session.get(PayrollRun, rid)
-                process_payroll(
-                    run=run, company_id=cid, user_id=oid,
-                    user_email='test@test.com', request_ip='127.0.0.1',
-                )
+            run = db.session.get(PayrollRun, rid)
+            process_payroll(
+                run=run, company_id=cid, user_id=oid,
+                user_email='test@test.com', request_ip='127.0.0.1',
+            )
 
+            # Simulate a previously generated PDF (file must exist on disk)
             payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
-            assert payslip.pdf_file_path is not None
+            tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+            tmp.write(b'%PDF-1.4 test')
+            tmp.close()
+            payslip.pdf_status = 'generated'
+            payslip.pdf_file_path = tmp.name
+            db.session.commit()
 
             client = app.test_client()
             client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
@@ -251,3 +211,5 @@ class TestRetryPdf:
                 follow_redirects=True,
             )
             assert b'already has a PDF' in resp.data
+
+            os.unlink(tmp.name)

@@ -358,7 +358,7 @@ def edit_employee(emp_id):
 def employee_detail(emp_id):
     """Show employee details."""
     from payroll_engine.models import OvertimeEntry, EmployeeDeduction
-    from payroll_engine.overtime import calculate_overtime_pay, OVERTIME_RATES
+    from payroll_engine.overtime import calculate_overtime_pay, DEFAULT_OVERTIME_RATES as OVERTIME_RATES
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(),
         is_deleted=False

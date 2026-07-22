@@ -1547,6 +1547,17 @@ def batch_payslips():
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('payroll.payroll_runs'))
 
+    # Guard: refuse if too many uncached PDFs (would block the request thread)
+    uncached = sum(1 for ps in payslips if ps.pdf_status != 'generated')
+    if uncached > 50:
+        flash(
+            f'{uncached} of {len(payslips)} payslips need PDF generation. '
+            f'Download individual payslips to generate them, or use the run-specific download '
+            f'which handles larger batches.',
+            'warning'
+        )
+        return redirect(url_for('payroll.payroll_runs'))
+
     # Create ZIP using cached PDFs, generating missing ones on-demand
     zip_buffer = io.BytesIO()
     skipped = 0
@@ -1606,6 +1617,15 @@ def download_all_payslips(run_id):
     if not payslips:
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
+
+    # Guard: warn if many uncached PDFs (still proceeds, but user knows it'll be slow)
+    uncached = sum(1 for p in payslips if p.pdf_status != 'generated')
+    if uncached > 100:
+        flash(
+            f'{uncached} of {len(payslips)} payslips need PDF generation. '
+            f'This may take a while. Consider generating individual payslips first.',
+            'warning'
+        )
 
     # Create ZIP in memory, generating missing PDFs on-demand
     memory_file = io.BytesIO()

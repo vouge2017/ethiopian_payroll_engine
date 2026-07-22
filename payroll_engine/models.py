@@ -1516,6 +1516,31 @@ class SystemSetting(db.Model):
         return f'<SystemSetting {self.key}={self.value}>'
 
 
+class PayslipGenerationJob(db.Model):
+    """Tracks per-payslip PDF generation within a batch.
+
+    One row per payslip-in-batch, grouped by batch_id (UUID).
+    RQ job id == this row's id (set after enqueue).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=False, index=True)
+    batch_id = db.Column(db.String(36), nullable=False, index=True)  # UUID
+    status = db.Column(db.String(20), nullable=False, default='queued')  # queued/running/generated/failed
+    error_message = db.Column(db.Text, nullable=True)
+    rq_job_id = db.Column(db.String(64), nullable=True, index=True)  # RQ job id for status tracking
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    payslip = db.relationship('Payslip', backref=db.backref('generation_jobs', lazy=True))
+
+    __table_args__ = (
+        db.Index('ix_genjob_batch_status', 'batch_id', 'status'),
+    )
+
+    def __repr__(self):
+        return f'<PayslipGenerationJob {self.id} payslip={self.payslip_id} batch={self.batch_id} status={self.status}>'
+
+
 class FilingRecord(db.Model):
     """Track compliance filings (ERCA, pension, PSSA).
 

@@ -1529,9 +1529,10 @@ def export_payslips():
 def batch_payslips():
     """
     Download all payslips for the latest payroll run as a ZIP file.
-    Uses cached PDFs; generates missing ones on-demand.
+    Tries RQ background generation first; falls back to inline.
     """
     import zipfile
+    from payroll_engine.tasks import enqueue_batch
 
     # Get the latest completed payroll run
     run = PayrollRun.query.filter_by(
@@ -1547,18 +1548,27 @@ def batch_payslips():
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('payroll.payroll_runs'))
 
-    # Guard: refuse if too many uncached PDFs (would block the request thread)
     uncached = sum(1 for ps in payslips if ps.pdf_status != 'generated')
+
+    # Try RQ background generation for uncached PDFs
+    if uncached > 0:
+        result = enqueue_batch(run.id, _company_id())
+        if result is not None:
+            batch_id, enqueued = result
+            if enqueued > 0:
+                return redirect(url_for('payroll.batch_pdf_status', batch_id=batch_id))
+            # enqueued == 0 means all already cached, fall through to ZIP
+
+    # Inline fallback (RQ unavailable or all cached)
     if uncached > 50:
         flash(
             f'{uncached} of {len(payslips)} payslips need PDF generation. '
-            f'Download individual payslips to generate them, or use the run-specific download '
-            f'which handles larger batches.',
+            f'Download individual payslips to generate them, or configure Redis '
+            f'for background generation.',
             'warning'
         )
         return redirect(url_for('payroll.payroll_runs'))
 
-    # Create ZIP using cached PDFs, generating missing ones on-demand
     zip_buffer = io.BytesIO()
     skipped = 0
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -1601,14 +1611,107 @@ def payroll_run_detail(run_id):
     return render_template('payroll_results.html', run=run, year=date.today().year)
 
 
+@payroll_bp.route('/payroll/batch-pdf/<batch_id>/status')
+@login_required
+def batch_pdf_status(batch_id):
+    """Show PDF generation progress for a batch.
+
+    Returns HTML page with auto-refresh (polls itself every 2s).
+    Once all jobs are done, shows download link.
+    """
+    from payroll_engine.tasks import get_batch_status, get_batch_jobs
+
+    status = get_batch_status(batch_id)
+    jobs = get_batch_jobs(batch_id)
+
+    run_id = request.args.get('run_id', type=int)
+
+    all_done = status.get('queued', 0) == 0 and status.get('running', 0) == 0
+
+    return render_template(
+        'batch_pdf_status.html',
+        batch_id=batch_id,
+        status=status,
+        jobs=jobs,
+        all_done=all_done,
+        run_id=run_id,
+    )
+
+
+@payroll_bp.route('/payroll/batch-pdf/<batch_id>/download')
+@login_required
+def batch_pdf_download(batch_id):
+    """Download the ZIP for a completed batch.
+
+    Assembles ZIP from all generated PDFs in the batch.
+    """
+    import zipfile
+    from payroll_engine.tasks import get_batch_jobs
+
+    jobs = get_batch_jobs(batch_id)
+    if not jobs:
+        flash('Batch not found.', 'danger')
+        return redirect(url_for('payroll.payroll_runs'))
+
+    # Only include successfully generated PDFs
+    generated_jobs = [j for j in jobs if j['status'] == 'generated']
+    if not generated_jobs:
+        flash('No PDFs were generated in this batch.', 'warning')
+        return redirect(url_for('payroll.payroll_runs'))
+
+    memory_file = io.BytesIO()
+    skipped = 0
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for j in generated_jobs:
+            payslip = Payslip.query.get(j['payslip_id'])
+            if not payslip or not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
+                skipped += 1
+                continue
+            emp = payslip.employee
+            arcname = f"payslip_{emp.employee_id}_{emp.name.replace(' ', '_')}.pdf" if emp else f"payslip_{payslip.id}.pdf"
+            zf.write(payslip.pdf_file_path, arcname)
+
+    memory_file.seek(0)
+
+    failed_count = sum(1 for j in jobs if j['status'] == 'failed')
+    if failed_count:
+        flash(f'{failed_count} PDF(s) failed to generate and were excluded from the ZIP.', 'warning')
+    if skipped:
+        flash(f'{skipped} PDF file(s) missing from disk.', 'warning')
+
+    filename = f"payslips_batch_{batch_id[:8]}.zip"
+    return send_file(
+        memory_file,
+        mimetype='zip',
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@payroll_bp.route('/payroll/batch-pdf/<batch_id>/status.json')
+@login_required
+def batch_pdf_status_json(batch_id):
+    """JSON status endpoint for programmatic polling.
+
+    Returns: {queued, running, generated, failed, total, all_done}
+    """
+    from payroll_engine.tasks import get_batch_status
+
+    status = get_batch_status(batch_id)
+    status['all_done'] = status.get('queued', 0) == 0 and status.get('running', 0) == 0
+    return jsonify(status)
+
+
 @payroll_bp.route('/payroll/runs/<int:run_id>/download')
 @login_required
 def download_all_payslips(run_id):
     """Download all payslips for a run as a ZIP file.
 
-    Generates missing PDFs on-demand. For large batches this may take
-    a while — the frontend should show progress.
+    Tries RQ background generation first; falls back to inline.
     """
+    import zipfile
+    from payroll_engine.tasks import enqueue_batch
+
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=_company_id()
     ).first_or_404()
@@ -1618,16 +1721,25 @@ def download_all_payslips(run_id):
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
-    # Guard: warn if many uncached PDFs (still proceeds, but user knows it'll be slow)
     uncached = sum(1 for p in payslips if p.pdf_status != 'generated')
+
+    # Try RQ background generation for uncached PDFs
+    if uncached > 0:
+        result = enqueue_batch(run.id, _company_id())
+        if result is not None:
+            batch_id, enqueued = result
+            if enqueued > 0:
+                return redirect(url_for('payroll.batch_pdf_status', batch_id=batch_id, run_id=run_id))
+            # enqueued == 0 means all already cached, fall through to ZIP
+
+    # Inline fallback (RQ unavailable or all cached)
     if uncached > 100:
         flash(
             f'{uncached} of {len(payslips)} payslips need PDF generation. '
-            f'This may take a while. Consider generating individual payslips first.',
+            f'This may take a while. Consider configuring Redis for background generation.',
             'warning'
         )
 
-    # Create ZIP in memory, generating missing PDFs on-demand
     memory_file = io.BytesIO()
     generated = 0
     skipped = 0

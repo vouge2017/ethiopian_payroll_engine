@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Analytics — {{ year }}{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h3 class="mb-0"><i class="bi bi-graph-up me-2"></i>Analytics — {{ year }}</h3>
+        <div class="d-flex gap-2">
+            <!-- Year selector -->
+            <div class="dropdown">
+                <button class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-calendar me-1"></i>{{ year }}
+                </button>
+                <ul class="dropdown-menu">
+                    {% for y in available_years %}
+                    <li><a class="dropdown-item {% if y == year %}active{% endif %}" href="{{ url_for('reports.analytics', year=y) }}">{{ y }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <a href="{{ url_for('reports.reports') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#dept" role="tab">
+                <i class="bi bi-building me-1"></i>Department Costs
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#overtime" role="tab">
+                <i class="bi bi-clock-history me-1"></i>Overtime
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#leave" role="tab">
+                <i class="bi bi-calendar-event me-1"></i>Leave Utilization
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#headcount" role="tab">
+                <i class="bi bi-people me-1"></i>Headcount
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- ── Department Cost Analysis ── -->
+        <div class="tab-pane fade show active" id="dept" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Department Cost Analysis — {{ year }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if dept_costs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Department</th>
+                                    <th class="text-end">Employees</th>
+                                    <th class="text-end">Gross (ETB)</th>
+                                    <th class="text-end">Tax (ETB)</th>
+                                    <th class="text-end">Pension (ETB)</th>
+                                    <th class="text-end">Net (ETB)</th>
+                                    <th class="text-end">Avg Gross</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dept, data in dept_costs.items() | sort(attribute='0') %}
+                                <tr>
+                                    <td><strong>{{ dept }}</strong></td>
+                                    <td class="text-end">{{ data.count }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(data.gross) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(data.tax) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(data.pension) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(data.net) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(data.gross / data.count) if data.count else '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr>
+                                    <td>Total</td>
+                                    <td class="text-end">{{ dept_costs.values() | sum(attribute='count') }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(dept_costs.values() | sum(attribute='gross')) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(dept_costs.values() | sum(attribute='tax')) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(dept_costs.values() | sum(attribute='pension')) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(dept_costs.values() | sum(attribute='net')) }}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No payroll data for {{ year }}. Complete a payroll run to see department costs.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Overtime Analysis ── -->
+        <div class="tab-pane fade" id="overtime" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Overtime Analysis — {{ year }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if overtime_by_month %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th class="text-end">Employees with OT</th>
+                                    <th class="text-end">Total Hours</th>
+                                    <th class="text-end">Total Amount (ETB)</th>
+                                    <th class="text-end">Avg Hours/Employee</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month, data in overtime_by_month.items() | sort %}
+                                <tr>
+                                    <td><strong>{{ month }}</strong></td>
+                                    <td class="text-end">{{ data.employees }}</td>
+                                    <td class="text-end">{{ "%.1f" | format(data.hours) }}</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(data.amount) }}</td>
+                                    <td class="text-end">{{ "%.1f" | format(data.hours / data.employees) if data.employees else '-' }}</td>
+                                    <td>
+                                        {% if data.hours > 100 %}
+                                        <span class="badge bg-danger">Over yearly limit</span>
+                                        {% elif data.hours > 80 %}
+                                        <span class="badge bg-warning">Approaching limit</span>
+                                        {% else %}
+                                        <span class="badge bg-success">OK</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <strong>Legal limits:</strong> Max 20 hours/month, 100 hours/year per employee.
+                        Source: Proclamation No. 1156/2019, Article 89.
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No overtime data for {{ year }}.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Leave Utilization ── -->
+        <div class="tab-pane fade" id="leave" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Leave Utilization — {{ year }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if leave_data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th class="text-end">Days Taken</th>
+                                    <th class="text-end">Balance</th>
+                                    <th>Utilization</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emp in leave_data | sort(attribute='days_taken', reverse=true) %}
+                                <tr>
+                                    <td>{{ emp.name }}</td>
+                                    <td>{{ emp.department }}</td>
+                                    <td class="text-end">{{ emp.days_taken }}</td>
+                                    <td class="text-end">{{ emp.balance }}</td>
+                                    <td>
+                                        {% set total = emp.days_taken + emp.balance %}
+                                        {% set pct = (emp.days_taken / total * 100) if total > 0 else 0 %}
+                                        <div class="progress" style="height: 20px; min-width: 120px;">
+                                            <div class="progress-bar {% if pct > 80 %}bg-danger{% elif pct > 50 %}bg-warning{% else %}bg-success{% endif %}"
+                                                 style="width: {{ pct }}%">{{ "%.0f" | format(pct) }}%</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No employees found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Headcount ── -->
+        <div class="tab-pane fade" id="headcount" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Headcount Trend — {{ year }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if headcount_by_month %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th class="text-end">Employees Paid</th>
+                                    <th>Change</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set ns = namespace(prev=0) %}
+                                {% for month, count in headcount_by_month.items() | sort %}
+                                <tr>
+                                    <td><strong>{{ month }}</strong></td>
+                                    <td class="text-end">{{ count }}</td>
+                                    <td>
+                                        {% if ns.prev > 0 %}
+                                            {% set diff = count - ns.prev %}
+                                            {% if diff > 0 %}
+                                                <span class="text-success"><i class="bi bi-arrow-up"></i> +{{ diff }}</span>
+                                            {% elif diff < 0 %}
+                                                <span class="text-danger"><i class="bi bi-arrow-down"></i> {{ diff }}</span>
+                                            {% else %}
+                                                <span class="text-muted"><i class="bi bi-dash"></i> 0</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                        {% set ns.prev = count %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4">No payroll data for {{ year }}.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

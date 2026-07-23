@@ -390,3 +390,102 @@ def mark_filed():
     db.session.commit()
 
     return redirect(url_for('reports.filing_history'))
+
+
+# ─── Analytics Reports ────────────────────────────────────────────────────────
+
+
+@reports_bp.route('/reports/analytics')
+@role_required('owner', 'accountant')
+def analytics():
+    """Analytics dashboard with department costs, overtime, leave, headcount."""
+    from payroll_engine.models import Payslip, OvertimeEntry, Leave
+    company = current_user.company
+    cid = company.id
+    year = request.args.get('year', date.today().year, type=int)
+
+    # Get all completed runs for the year
+    runs = PayrollRun.query.filter(
+        PayrollRun.company_id == cid,
+        PayrollRun.status == 'completed',
+        db.extract('year', PayrollRun.run_date) == year,
+    ).order_by(PayrollRun.run_date).all()
+
+    run_ids = [r.id for r in runs]
+
+    # ── Department Cost Analysis ──
+    dept_costs = {}
+    if run_ids:
+        payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
+        for ps in payslips:
+            emp = ps.employee
+            dept = emp.department or 'Unassigned'
+            if dept not in dept_costs:
+                dept_costs[dept] = {'gross': 0, 'tax': 0, 'pension': 0, 'net': 0, 'count': 0}
+            dept_costs[dept]['gross'] += float(ps.gross_salary or 0)
+            dept_costs[dept]['tax'] += float(ps.tax or 0)
+            dept_costs[dept]['pension'] += float(ps.employee_pension or 0)
+            dept_costs[dept]['net'] += float(ps.net_pay or 0)
+            dept_costs[dept]['count'] += 1
+
+    # ── Overtime Analysis ──
+    overtime_by_month = {}
+    if run_ids:
+        for run in runs:
+            month_key = run.run_date.strftime('%Y-%m')
+            entries = OvertimeEntry.query.filter(
+                OvertimeEntry.company_id == cid,
+                db.extract('year', OvertimeEntry.date) == run.run_date.year,
+                db.extract('month', OvertimeEntry.date) == run.run_date.month,
+            ).all()
+            total_hours = sum(float(e.hours or 0) for e in entries)
+            total_amount = sum(float(e.amount or 0) for e in entries)
+            employees_with_ot = len(set(e.employee_id for e in entries))
+            overtime_by_month[month_key] = {
+                'hours': total_hours,
+                'amount': total_amount,
+                'employees': employees_with_ot,
+            }
+
+    # ── Leave Utilization ──
+    employees = Employee.query.filter_by(company_id=cid, is_deleted=False).all()
+    leave_data = []
+    for emp in employees:
+        leaves = Leave.query.filter(
+            Leave.employee_id == emp.id,
+            Leave.status == 'approved',
+            db.extract('year', Leave.start_date) == year,
+        ).all()
+        total_days = sum(l.total_days or 0 for l in leaves)
+        leave_data.append({
+            'name': emp.name,
+            'department': emp.department or 'Unassigned',
+            'days_taken': total_days,
+            'balance': sum(l.total_entitled or 0 for l in emp.leave_balances if l.year == year),
+        })
+
+    # ── Headcount ──
+    headcount_by_month = {}
+    for run in runs:
+        month_key = run.run_date.strftime('%Y-%m')
+        count = len(run.payslips) if run.payslips else 0
+        headcount_by_month[month_key] = count
+
+    # ── Year options ──
+    years = db.session.query(
+        db.func.distinct(db.extract('year', PayrollRun.run_date))
+    ).filter_by(company_id=cid).all()
+    available_years = sorted([int(y[0]) for y in years if y[0]], reverse=True)
+    if not available_years:
+        available_years = [date.today().year]
+
+    return render_template(
+        'analytics.html',
+        year=year,
+        available_years=available_years,
+        dept_costs=dept_costs,
+        overtime_by_month=overtime_by_month,
+        leave_data=leave_data,
+        headcount_by_month=headcount_by_month,
+        runs=runs,
+    )

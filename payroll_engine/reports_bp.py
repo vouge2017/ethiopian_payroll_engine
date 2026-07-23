@@ -399,7 +399,7 @@ def mark_filed():
 @role_required('owner', 'accountant')
 def analytics():
     """Analytics dashboard with department costs, overtime, leave, headcount."""
-    from payroll_engine.models import Payslip, OvertimeEntry, Leave
+    from payroll_engine.models import Payslip, OvertimeEntry, Leave, LeaveBalance
     company = current_user.company
     cid = company.id
     year = request.args.get('year', date.today().year, type=int)
@@ -413,7 +413,7 @@ def analytics():
 
     run_ids = [r.id for r in runs]
 
-    # ── Department Cost Analysis ──
+    # ── Department Cost Analysis (single query) ──
     dept_costs = {}
     if run_ids:
         payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
@@ -428,48 +428,69 @@ def analytics():
             dept_costs[dept]['net'] += float(ps.net_pay or 0)
             dept_costs[dept]['count'] += 1
 
-    # ── Overtime Analysis ──
+    # ── Overtime Analysis (single query for entire year) ──
     overtime_by_month = {}
-    if run_ids:
-        for run in runs:
-            month_key = run.run_date.strftime('%Y-%m')
-            entries = OvertimeEntry.query.filter(
-                OvertimeEntry.company_id == cid,
-                db.extract('year', OvertimeEntry.date) == run.run_date.year,
-                db.extract('month', OvertimeEntry.date) == run.run_date.month,
-            ).all()
-            total_hours = sum(float(e.hours or 0) for e in entries)
-            total_amount = sum(float(e.amount or 0) for e in entries)
-            employees_with_ot = len(set(e.employee_id for e in entries))
-            overtime_by_month[month_key] = {
-                'hours': total_hours,
-                'amount': total_amount,
-                'employees': employees_with_ot,
-            }
+    if runs:
+        first_date = runs[0].run_date
+        last_date = runs[-1].run_date
+        ot_entries = OvertimeEntry.query.filter(
+            OvertimeEntry.company_id == cid,
+            OvertimeEntry.date >= first_date.replace(day=1),
+            OvertimeEntry.date <= last_date,
+        ).all()
+        # Group by month in Python
+        for e in ot_entries:
+            month_key = e.date.strftime('%Y-%m')
+            if month_key not in overtime_by_month:
+                overtime_by_month[month_key] = {'hours': 0, 'amount': 0, 'employees': set()}
+            overtime_by_month[month_key]['hours'] += float(e.hours or 0)
+            overtime_by_month[month_key]['amount'] += float(e.amount or 0)
+            overtime_by_month[month_key]['employees'].add(e.employee_id)
+        # Convert sets to counts
+        for v in overtime_by_month.values():
+            v['employees'] = len(v['employees'])
 
-    # ── Leave Utilization ──
+    # ── Leave Utilization (single query for entire year) ──
     employees = Employee.query.filter_by(company_id=cid, is_deleted=False).all()
+    emp_ids = [e.id for e in employees]
+    emp_map = {e.id: e for e in employees}
+
+    approved_leaves = Leave.query.filter(
+        Leave.employee_id.in_(emp_ids),
+        Leave.status == 'approved',
+        db.extract('year', Leave.start_date) == year,
+    ).all() if emp_ids else []
+
+    leave_days_by_emp = {}
+    for l in approved_leaves:
+        leave_days_by_emp[l.employee_id] = leave_days_by_emp.get(l.employee_id, 0) + (l.total_days or 0)
+
+    leave_balances = LeaveBalance.query.filter(
+        LeaveBalance.company_id == cid,
+        LeaveBalance.year == year,
+    ).all()
+    balance_by_emp = {}
+    for lb in leave_balances:
+        balance_by_emp[lb.employee_id] = balance_by_emp.get(lb.employee_id, 0) + (lb.total_entitled or 0)
+
     leave_data = []
     for emp in employees:
-        leaves = Leave.query.filter(
-            Leave.employee_id == emp.id,
-            Leave.status == 'approved',
-            db.extract('year', Leave.start_date) == year,
-        ).all()
-        total_days = sum(l.total_days or 0 for l in leaves)
         leave_data.append({
             'name': emp.name,
             'department': emp.department or 'Unassigned',
-            'days_taken': total_days,
-            'balance': sum(l.total_entitled or 0 for l in emp.leave_balances if l.year == year),
+            'days_taken': leave_days_by_emp.get(emp.id, 0),
+            'balance': balance_by_emp.get(emp.id, 0),
         })
 
-    # ── Headcount ──
+    # ── Headcount (count payslips per month in Python) ──
     headcount_by_month = {}
-    for run in runs:
-        month_key = run.run_date.strftime('%Y-%m')
-        count = len(run.payslips) if run.payslips else 0
-        headcount_by_month[month_key] = count
+    if run_ids:
+        all_payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
+        run_map = {r.id: r.run_date.strftime('%Y-%m') for r in runs}
+        for ps in all_payslips:
+            month_key = run_map.get(ps.payroll_run_id)
+            if month_key:
+                headcount_by_month[month_key] = headcount_by_month.get(month_key, 0) + 1
 
     # ── Year options ──
     years = db.session.query(

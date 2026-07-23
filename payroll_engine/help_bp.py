@@ -288,9 +288,9 @@ FAQ_DATA = [
             },
             {
                 'anchor': 'record-retention',
+                'question': 'How long must payroll records be kept?',
                 'answer': 'Payroll records (payslips, tax filings) must be retained for **10 years** '
                      'as per Ethiopian tax law. The system automatically manages PDF retention.',
-                'question': 'How long must payroll records be kept?',
             },
         ],
     },

@@ -69,7 +69,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for dept, data in dept_costs.items() | sort(attribute='0') %}
+                                {% for dept, data in dept_costs.items() | sort %}
                                 <tr>
                                     <td><strong>{{ dept }}</strong></td>
                                     <td class="text-end">{{ data.count }}</td>

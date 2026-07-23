@@ -19,5 +19,7 @@ pyotp==2.10.0
 qrcode==8.2
 requests==2.34.2
 sentry-sdk[flask]==2.66.0
+redis==8.0.1
+rq==2.10.0
 pytest==9.1.1
 pytest-cov==7.1.0

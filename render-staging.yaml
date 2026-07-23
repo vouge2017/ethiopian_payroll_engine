@@ -33,10 +33,42 @@ services:
         value: ""
       - key: GOOGLE_CLIENT_SECRET
         value: ""
+      - key: REDIS_URL
+        fromService:
+          name: ethiopayroll-staging-redis
+          property: connectionString
+      - key: RATELIMIT_STORAGE_URI
+        fromService:
+          name: ethiopayroll-staging-redis
+          property: connectionString
+    autoDeploy: true
+
+  - type: worker
+    name: ethiopayroll-staging-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ethiopayroll-staging-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: ethiopayroll-staging-redis
+          property: connectionString
+      - key: FLASK_APP
+        value: wsgi:app
+      - key: DB_ENCRYPTION_KEY
+        generateValue: true
     autoDeploy: true
 
 databases:
   - name: ethiopayroll-staging-db
     plan: starter
     databaseName: ethiopayroll_staging
+    ipAllowList: []
+
+redis:
+  - name: ethiopayroll-staging-redis
+    plan: starter
     ipAllowList: []

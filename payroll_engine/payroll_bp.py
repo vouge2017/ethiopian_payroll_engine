@@ -42,6 +42,13 @@ payroll_bp = Blueprint('payroll', __name__)
 # Import shared helpers (single source of truth — no duplicates)
 from payroll_engine.shared import _company_id, role_required, create_audit_log
 
+# Inline PDF generation caps — when RQ/Redis is unavailable, these cap the number
+# of PDFs generated synchronously to prevent HTTP timeouts.
+# batch_payslips route blocks above this cap (user must download individually or add Redis).
+INLINE_PDF_CAP_BATCH = 50      # ~1.4s at 28ms/PDF — safe for gunicorn 120s timeout
+# download_all route warns above this cap but still proceeds.
+INLINE_PDF_CAP_DOWNLOAD = 100  # ~2.8s at 28ms/PDF — still within timeout
+
 
 @payroll_bp.before_request
 @login_required
@@ -1560,7 +1567,10 @@ def batch_payslips():
             # enqueued == 0 means all already cached, fall through to ZIP
 
     # Inline fallback (RQ unavailable or all cached)
-    if uncached > 50:
+    # CAP: 50 payslips max for inline generation in this route.
+    # Above this threshold, users must configure Redis for background generation.
+    # This prevents HTTP timeouts — 50 payslips × 28ms/PDF ≈ 1.4s (safe for gunicorn 120s timeout).
+    if uncached > INLINE_PDF_CAP_BATCH:
         flash(
             f'{uncached} of {len(payslips)} payslips need PDF generation. '
             f'Download individual payslips to generate them, or configure Redis '
@@ -1733,7 +1743,10 @@ def download_all_payslips(run_id):
             # enqueued == 0 means all already cached, fall through to ZIP
 
     # Inline fallback (RQ unavailable or all cached)
-    if uncached > 100:
+    # CAP: 100 payslips max for inline generation in this route.
+    # Above this, we warn but still proceed (unlike batch_payslips which blocks at 50).
+    # 100 payslips × 28ms/PDF ≈ 2.8s — still within gunicorn timeout.
+    if uncached > INLINE_PDF_CAP_DOWNLOAD:
         flash(
             f'{uncached} of {len(payslips)} payslips need PDF generation. '
             f'This may take a while. Consider configuring Redis for background generation.',

@@ -1,5 +1,5 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
-# Deploys web service + managed Postgres.
+# Deploys web service + worker + managed Postgres + Redis.
 #
 # After deploying, set these in the Render dashboard → Environment:
 #   SECRET_KEY  — generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -31,13 +31,42 @@ services:
         value: ""
       - key: GOOGLE_CLIENT_SECRET
         value: ""
-      # Uncomment when Redis is added to the deployment:
-      # - key: RATELIMIT_STORAGE_URI
-      #   value: "redis://red-xxxx:6379/1"
+      - key: REDIS_URL
+        fromService:
+          name: ethiopian-payroll-redis
+          property: connectionString
+      - key: RATELIMIT_STORAGE_URI
+        fromService:
+          name: ethiopian-payroll-redis
+          property: connectionString
+    autoDeploy: true
+
+  - type: worker
+    name: ethiopian-payroll-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ethiopian-payroll-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: ethiopian-payroll-redis
+          property: connectionString
+      - key: FLASK_APP
+        value: wsgi:app
+      - key: DB_ENCRYPTION_KEY
+        generateValue: true
     autoDeploy: true
 
 databases:
   - name: ethiopian-payroll-db
     plan: starter       # free tier includes automated backups
     databaseName: ethiopayroll
+    ipAllowList: []     # only internal services
+
+redis:
+  - name: ethiopian-payroll-redis
+    plan: starter       # free tier: 25MB, shared CPU
     ipAllowList: []     # only internal services

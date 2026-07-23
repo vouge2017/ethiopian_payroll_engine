@@ -1558,6 +1558,112 @@ class PayslipGenerationJob(db.Model):
         return f'<PayslipGenerationJob {self.id} payslip={self.payslip_id} batch={self.batch_id} status={self.status}>'
 
 
+class LoginAttempt(db.Model):
+    """Track login attempts for brute-force lockout.
+
+    Records every failed login by identifier (phone/email).
+    Lockout: 5 failures in 15 minutes → account locked for 30 minutes.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    identifier = db.Column(db.String(120), nullable=False, index=True)  # phone or email
+    success = db.Column(db.Boolean, nullable=False, default=False)
+    ip_address = db.Column(db.String(45), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Lockout constants
+    MAX_ATTEMPTS = 5
+    LOCKOUT_WINDOW_MINUTES = 15
+    LOCKOUT_DURATION_MINUTES = 30
+
+    __table_args__ = (
+        db.Index('ix_login_attempt_identifier_time', 'identifier', 'created_at'),
+    )
+
+    def __repr__(self):
+        return f'<LoginAttempt {self.identifier} success={self.success} at {self.created_at}>'
+
+    @classmethod
+    def is_locked_out(cls, identifier):
+        """Check if the identifier is currently locked out.
+
+        Returns (is_locked, remaining_seconds) tuple.
+        """
+        from datetime import datetime, timedelta, timezone
+        now = datetime.now(timezone.utc)
+        window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
+
+        # Use naive UTC for SQLite compatibility
+        now_naive = now.replace(tzinfo=None)
+        window_start_naive = window_start.replace(tzinfo=None)
+
+        # Count recent failed attempts
+        recent_failures = cls.query.filter(
+            cls.identifier == identifier,
+            cls.success == False,
+            cls.created_at >= window_start_naive,
+        ).count()
+
+        if recent_failures < cls.MAX_ATTEMPTS:
+            return False, 0
+
+        # Find the last failure to calculate lockout end
+        last_failure = cls.query.filter(
+            cls.identifier == identifier,
+            cls.success == False,
+        ).order_by(cls.created_at.desc()).first()
+
+        if not last_failure:
+            return False, 0
+
+        # Handle both naive and aware datetimes
+        last_failure_time = last_failure.created_at
+        if last_failure_time.tzinfo is None:
+            last_failure_time = last_failure_time.replace(tzinfo=timezone.utc)
+
+        lockout_end = last_failure_time + timedelta(minutes=cls.LOCKOUT_DURATION_MINUTES)
+        if now < lockout_end:
+            remaining = int((lockout_end - now).total_seconds())
+            return True, remaining
+
+        return False, 0
+
+    @classmethod
+    def record_failure(cls, identifier, ip_address=None):
+        """Record a failed login attempt.
+
+        Returns (is_locked, remaining_seconds) after recording.
+        """
+        attempt = cls(identifier=identifier, success=False, ip_address=ip_address)
+        db.session.add(attempt)
+        db.session.flush()
+        return cls.is_locked_out(identifier)
+
+    @classmethod
+    def record_success(cls, identifier):
+        """Record a successful login and clear recent failures for this identifier."""
+        from datetime import datetime, timedelta, timezone
+        now = datetime.now(timezone.utc)
+        window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
+        # Use naive UTC for SQLite compatibility
+        window_start_naive = window_start.replace(tzinfo=None)
+        cls.query.filter(
+            cls.identifier == identifier,
+            cls.success == False,
+            cls.created_at >= window_start_naive,
+        ).delete()
+
+        # Record the success
+        attempt = cls(identifier=identifier, success=True)
+        db.session.add(attempt)
+
+    @classmethod
+    def cleanup_old(cls, days=7):
+        """Delete attempts older than N days (for periodic cleanup)."""
+        from datetime import datetime, timedelta, timezone
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+        cls.query.filter(cls.created_at < cutoff).delete()
+
+
 class FilingRecord(db.Model):
     """Track compliance filings (ERCA, pension, PSSA).
 

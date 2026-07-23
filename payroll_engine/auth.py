@@ -50,6 +50,17 @@ def login():
         password = request.form.get('password', '')
         remember = bool(request.form.get('remember'))
 
+        # Normalize identifier for lockout tracking
+        identifier = login_id.lower().strip() if login_id else ''
+
+        # Check brute-force lockout BEFORE processing
+        from payroll_engine.models import LoginAttempt
+        is_locked, remaining = LoginAttempt.is_locked_out(identifier)
+        if is_locked:
+            minutes = max(1, remaining // 60)
+            flash(f'Account temporarily locked due to too many failed attempts. Try again in {minutes} minute(s).', 'danger')
+            return redirect(url_for('auth.login'))
+
         # Try to find user by phone or email
         user = None
         if login_id:
@@ -70,17 +81,28 @@ def login():
                 user = User.query.filter_by(email=login_id.lower()).first()
 
         if not user or not user.check_password(password):
+            # Record failed attempt and check lockout
+            is_locked, remaining = LoginAttempt.record_failure(identifier, request.remote_addr)
+
             # Audit: failed login attempt
             from payroll_engine.shared import create_audit_log
             create_audit_log(
                 company_id=user.company_id if user else None,
                 user_id=user.id if user else None,
                 action='login_failed',
-                details={'attempted_id': login_id[:120]}
+                details={'attempted_id': login_id[:120], 'locked': is_locked}
             )
             db.session.commit()
-            flash('Invalid credentials.', 'danger')
+
+            if is_locked:
+                minutes = max(1, remaining // 60)
+                flash(f'Too many failed attempts. Account locked for {minutes} minute(s).', 'danger')
+            else:
+                flash('Invalid credentials.', 'danger')
             return redirect(url_for('auth.login'))
+
+        # Successful login — clear lockout counter
+        LoginAttempt.record_success(identifier)
         login_user(user, remember=remember)
         from datetime import datetime, timezone
         session['_login_time'] = datetime.now(timezone.utc).timestamp()

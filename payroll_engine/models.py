@@ -567,6 +567,7 @@ class Employee(db.Model):
     # employee_id is unique PER TENANT, not globally
     __table_args__ = (
         db.UniqueConstraint('company_id', 'employee_id', name='uq_employee_company_empid'),
+        db.Index('ix_employee_company_deleted', 'company_id', 'is_deleted'),
     )
 
     # Relationships
@@ -759,7 +760,11 @@ class PayrollRun(db.Model):
     disbursed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     disbursement_notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
+
+    __table_args__ = (
+        db.Index('ix_payrollrun_company_status', 'company_id', 'status'),
+    )
+
     # Relationships
     payslips = db.relationship('Payslip', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
     validation_results = db.relationship('PayrollValidationResult', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
@@ -811,6 +816,10 @@ class Payslip(db.Model):
     payslip_type = db.Column(db.String(20), nullable=False, default='regular')  # regular, adjustment
     reason = db.Column(db.String(255), nullable=True)  # Reason for adjustment
     original_payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=True)
+
+    __table_args__ = (
+        db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),
+    )
 
     def __repr__(self):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
@@ -921,6 +930,10 @@ class Leave(db.Model):
     medical_certificate = db.Column(db.String(255), nullable=True)  # Path to uploaded document
     applied_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
+    __table_args__ = (
+        db.Index('ix_leave_emp_status_date', 'employee_id', 'status', 'start_date'),
+    )
+
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('leave_requests', lazy=True))
     approver = db.relationship('User', backref=db.backref('approved_leaves', lazy=True))
@@ -994,6 +1007,10 @@ class OvertimeEntry(db.Model):
     hours = db.Column(db.Float, nullable=False)
     overtime_type = db.Column(db.String(20), nullable=False, default='day')  # day, night, holiday, rest_day_holiday
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.Index('ix_overtime_company_date', 'company_id', 'date'),
+    )
 
     # Relationship
     employee = db.relationship('Employee', backref=db.backref('overtime_entries', lazy=True))

@@ -23,6 +23,7 @@ STRINGS = {
     'my_payslips': 'የእኔ የደመወዝ ወረቀቶች',
     'my_profile': 'የእኔ መገለጫ',
     'logout': 'ውጣ',
+    'help': 'እርዳታ',
     'log_in': 'ግባ',
     'register': 'ተመዝገብ',
     'add_employee': 'ሰራተኛ መዝግብ',

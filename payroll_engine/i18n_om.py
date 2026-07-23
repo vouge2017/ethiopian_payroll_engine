@@ -20,6 +20,7 @@ STRINGS_OM = {
     'my_payslips': 'Waraqaa Kaffaltii Koo',
     'my_profile': 'Profaayilii Koo',
     'logout': 'Bahii',
+    'help': 'Gargaarsa',
     'log_in': 'Seeni',
     'register': 'Galmaa\'i',
     'add_employee': 'Hojjetaa Dabali',

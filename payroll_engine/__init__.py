@@ -308,6 +308,29 @@ def create_app():
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
+    # CORS — restrict to configured origins, never wildcard with credentials
+    from flask_cors import CORS
+    cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '').strip()
+    if cors_origins:
+        allowed_origins = [o.strip() for o in cors_origins.split(',') if o.strip()]
+    else:
+        # Default: same-origin only (no cross-origin API access)
+        # Set CORS_ALLOWED_ORIGINS env var to enable cross-origin access
+        # Example: "https://app.ethiopayroll.com,https://staging.ethiopayroll.com"
+        allowed_origins = []
+
+    if allowed_origins:
+        CORS(
+            app,
+            origins=allowed_origins,
+            supports_credentials=True,
+            allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
+            methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            max_age=86400,
+            expose_headers=['X-Total-Count', 'X-Page-Count'],
+        )
+    # else: no CORS headers — same-origin only (secure default)
+
     # HTTPS enforcement via Flask-Talisman
     if not app.debug and not app.config.get('TESTING', False) and os.environ.get('FLASK_ENV') != 'testing':
         from flask_talisman import Talisman

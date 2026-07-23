@@ -98,3 +98,17 @@ def purge_expired_uploads(app, upload_folder=None):
     if purged:
         logger.info('Purged %d expired uploaded files older than %s', purged, cutoff.date())
     return purged
+
+
+def purge_old_login_attempts(app, days=7):
+    """Delete login attempt records older than N days.
+
+    Called periodically to prevent unbounded table growth.
+    Default: 7 days (lockout window is 15 minutes, so 7 days is generous).
+    """
+    with app.app_context():
+        from payroll_engine.models import LoginAttempt
+        deleted = LoginAttempt.cleanup_old(days=days)
+        if deleted:
+            logger.info('Purged %d login attempt records older than %d days', deleted, days)
+        return deleted

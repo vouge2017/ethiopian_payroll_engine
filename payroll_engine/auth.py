@@ -51,7 +51,20 @@ def login():
         remember = bool(request.form.get('remember'))
 
         # Normalize identifier for lockout tracking
+        # Must match the format used in DB lookup to prevent bypass via format variation
         identifier = login_id.lower().strip() if login_id else ''
+        if identifier:
+            cleaned = identifier.replace(' ', '')
+            looks_like_phone = (
+                cleaned.startswith('09') or cleaned.startswith('07') or
+                cleaned.startswith('+251') or
+                (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
+            )
+            if looks_like_phone:
+                from payroll_engine.models import validate_ethiopian_phone
+                is_valid, normalized, _ = validate_ethiopian_phone(identifier)
+                if is_valid:
+                    identifier = normalized
 
         # Check brute-force lockout BEFORE processing
         from payroll_engine.models import LoginAttempt

@@ -253,10 +253,11 @@ def create_app():
             from .models import SystemSetting
             if SystemSetting.get('last_purge_date') == today:
                 return
-            from .retention import purge_expired_payslip_pdfs, purge_expired_drafts, purge_expired_uploads
+            from .retention import purge_expired_payslip_pdfs, purge_expired_drafts, purge_expired_uploads, purge_old_login_attempts
             purge_expired_payslip_pdfs(app)
             purge_expired_drafts(app)
             purge_expired_uploads(app)
+            purge_old_login_attempts(app)
             SystemSetting.set('last_purge_date', today)
         except Exception:
             logger.exception('Retention purge failed')

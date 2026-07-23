@@ -115,6 +115,27 @@ class TestLoginAttemptModel:
             LoginAttempt.cleanup_old(days=7)
             assert LoginAttempt.query.count() == 0
 
+    def test_phone_format_normalization(self, app):
+        """Different phone formats for the same number share lockout counter."""
+        with app.app_context():
+            # These are all the same phone number in different formats
+            formats = ['0910000000', '+251910000000', '910000000']
+            for fmt in formats:
+                from payroll_engine.models import validate_ethiopian_phone
+                is_valid, normalized, _ = validate_ethiopian_phone(fmt)
+                if is_valid:
+                    LoginAttempt.record_failure(normalized)
+
+            # All should resolve to the same normalized phone
+            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            assert is_locked is False  # 3 < 5
+
+            # Two more to hit the limit
+            LoginAttempt.record_failure('0910000000')
+            LoginAttempt.record_failure('0910000000')
+            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            assert is_locked is True  # 5 >= 5
+
     def test_is_locked_out_not_locked(self, app):
         """is_locked_out returns (False, 0) when not locked."""
         with app.app_context():

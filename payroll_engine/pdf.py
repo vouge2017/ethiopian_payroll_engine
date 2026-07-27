@@ -125,11 +125,17 @@ def _ensure_pdf(payslip, emp, company_info=None):
 
 
 FONT = 'NotoSansEthiopic'
-PRIMARY = HexColor('#1a5276')
-ACCENT = HexColor('#2e86c1')
-LIGHT_BG = HexColor('#eaf2f8')
-DARK_BG = HexColor('#1a5276')
-NET_BG = HexColor('#148f77')
+# Updated2026 design system colors
+PRIMARY = HexColor('#2563eb')
+ACCENT = HexColor('#1d4ed8')
+LIGHT_BG = HexColor('#eff6ff')
+DARK_BG = HexColor('#0f172a')
+NET_BG = HexColor('#10b981')
+GRAY = HexColor('#64748b')
+BORDER = HexColor('#e2e8f0')
+SUCCESS = HexColor('#10b981')
+WARNING = HexColor('#f59e0b')
+DANGER = HexColor('#ef4444')
 
 
 def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) -> str:
@@ -259,13 +265,13 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
     elements.append(divider)
     elements.append(Spacer(1, 6))
 
-    # ── EMPLOYEE INFO ──
+    # ── EMPLOYEE INFO (bilingual) ──
     info_data = [
-        ['Employee ID:', emp['id'], 'Name:', emp['name']],
-        ['Department:', department or '—', 'Position:', position or '—'],
-        ['Pay Period:', period, 'Payment Method:', emp.get('bank', '—')],
+        ['Employee ID / የሰራተኛ መለያ:', emp['id'], 'Name / ስም:', emp['name']],
+        ['Department / ክፍል:', department or '—', 'Position / ሹም:', position or '—'],
+        ['Pay Period / የክፍያ ጊዜ:', period, 'Payment / የክፍያ ዘዴ:', emp.get('bank', '—')],
     ]
-    info_table = Table(info_data, colWidths=[28 * mm, 55 * mm, 28 * mm, 59 * mm])
+    info_table = Table(info_data, colWidths=[35 * mm, 48 * mm, 35 * mm, 52 * mm])
     info_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
@@ -281,7 +287,7 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
     elements.append(Spacer(1, 8))
 
     # ── EARNINGS ──
-    elements.append(Paragraph("Earnings", section_style))
+    elements.append(Paragraph("Earnings / ገቢዎች", section_style))
     earnings_data = [
         ['Description', 'Amount (ETB)'],
         ['Basic Salary', f"{emp['basic']:,.2f}"],
@@ -294,21 +300,21 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
 
     earnings_table = Table(earnings_data, colWidths=[110 * mm, 60 * mm])
     earnings_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), DARK_BG),
+        ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
         ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('BACKGROUND', (0, -1), (-1, -1), LIGHT_BG),
-        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
-        ('TOPPADDING', (0, 0), (-1, -1), 2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     elements.append(earnings_table)
     elements.append(Spacer(1, 6))
 
     # ── DEDUCTIONS ──
-    elements.append(Paragraph("Deductions", section_style))
+    elements.append(Paragraph("Deductions / ታ semiclass", section_style))
     deductions_data = [
         ['Description', 'Amount (ETB)'],
     ]
@@ -347,15 +353,15 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
     )
     deductions_table = Table(deductions_data, colWidths=[110 * mm, 60 * mm])
     deductions_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), DARK_BG),
+        ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
         ('TEXTCOLOR', (0, 0), (-1, 0), white),
         ('FONTNAME', (0, 0), (-1, -1), FONT),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('BACKGROUND', (0, -1), (-1, -1), LIGHT_BG),
-        ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#cccccc')),
-        ('TOPPADDING', (0, 0), (-1, -1), 2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     elements.append(deductions_table)
     elements.append(Spacer(1, 4))
@@ -379,7 +385,7 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
     elements.append(Spacer(1, 8))
 
     # ── NET PAY ──
-    net_data = [['NET PAY (ETB)', f"{emp['net']:,.2f}"]]
+    net_data = [['NET PAY / የተቀረ ክፍያ (ETB)', f"{emp['net']:,.2f}"]]
     net_table = Table(net_data, colWidths=[110 * mm, 60 * mm])
     net_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), NET_BG),

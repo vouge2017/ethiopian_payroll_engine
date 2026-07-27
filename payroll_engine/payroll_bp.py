@@ -183,19 +183,22 @@ def payroll_upload():
             flash('No file selected.', 'danger')
             return redirect(request.url)
 
-        if not file.filename.lower().endswith('.csv'):
-            flash('Only CSV files are allowed.', 'danger')
+        if not (file.filename.lower().endswith('.csv') or file.filename.lower().endswith('.xlsx') or file.filename.lower().endswith('.xls')):
+            flash('Only CSV and Excel files are allowed.', 'danger')
             return redirect(request.url)
 
-        # MIME sniffing — reject non-CSV content
+        is_excel = file.filename.lower().endswith(('.xlsx', '.xls'))
+
+        # MIME sniffing — reject non-CSV/non-Excel content
         mime_header = file.read(512)
         file.seek(0)
-        if mime_header and not mime_header[:1] in (b'\xef', b'#', b'"', b'\r', b'\n', b' '):
-            decoded = mime_header.decode('utf-8', errors='replace')
-            first_non_space = decoded.lstrip()[:1]
-            if first_non_space and first_non_space not in ('e', 'n', 'b', 'a', 'p', 'd', ',', '"', '#', '\ufeff'):
-                flash('File does not appear to be a valid CSV.', 'danger')
-                return redirect(request.url)
+        if not is_excel:
+            if mime_header and not mime_header[:1] in (b'\xef', b'#', b'"', b'\r', b'\n', b' '):
+                decoded = mime_header.decode('utf-8', errors='replace')
+                first_non_space = decoded.lstrip()[:1]
+                if first_non_space and first_non_space not in ('e', 'n', 'b', 'a', 'p', 'd', ',', '"', '#', '\ufeff'):
+                    flash('File does not appear to be a valid CSV.', 'danger')
+                    return redirect(request.url)
 
         # Save file
         filename = secure_filename(file.filename)

@@ -510,3 +510,117 @@ def analytics():
         headcount_by_month=headcount_by_month,
         runs=runs,
     )
+
+
+@reports_bp.route('/compare')
+@role_required('owner', 'accountant')
+def payroll_comparison():
+    """Compare two payroll runs side by side."""
+    company_id = _company_id()
+    
+    # Get all completed runs
+    runs = PayrollRun.query.filter_by(
+        company_id=company_id, status='completed'
+    ).order_by(PayrollRun.run_date.desc()).all()
+    
+    if len(runs) < 2:
+        return render_template('payroll_comparison.html',
+            runs=runs,
+            run_a=None,
+            run_b=None,
+            comparison=None,
+            needs_two=True
+        )
+    
+    # Get selected runs or default to latest two
+    run_a_id = request.args.get('run_a', runs[1].id, type=int)
+    run_b_id = request.args.get('run_b', runs[0].id, type=int)
+    
+    run_a = PayrollRun.query.filter_by(id=run_a_id, company_id=company_id).first()
+    run_b = PayrollRun.query.filter_by(id=run_b_id, company_id=company_id).first()
+    
+    if not run_a or not run_b:
+        flash('Payroll run not found.', 'warning')
+        return redirect(url_for('reports.reports'))
+    
+    from payroll_engine.models import Payslip
+    
+    # Get payslips for both runs
+    payslips_a = Payslip.query.filter_by(payroll_run_id=run_a.id).all()
+    payslips_b = Payslip.query.filter_by(payroll_run_id=run_b.id).all()
+    
+    # Build employee-level comparison
+    from payroll_engine.models import Employee
+    
+    emp_map = {}
+    for ps in payslips_a:
+        emp = Employee.query.get(ps.employee_id)
+        if emp:
+            emp_map[ps.employee_id] = {
+                'name': emp.name,
+                'emp_id': emp.employee_id,
+                'department': emp.department or '',
+                'a_gross': ps.gross_salary or 0,
+                'a_tax': ps.tax or 0,
+                'a_pension': ps.employee_pension or 0,
+                'a_net': ps.net_pay or 0,
+                'b_gross': 0,
+                'b_tax': 0,
+                'b_pension': 0,
+                'b_net': 0,
+            }
+    
+    for ps in payslips_b:
+        if ps.employee_id in emp_map:
+            emp_map[ps.employee_id]['b_gross'] = ps.gross_salary or 0
+            emp_map[ps.employee_id]['b_tax'] = ps.tax or 0
+            emp_map[ps.employee_id]['b_pension'] = ps.employee_pension or 0
+            emp_map[ps.employee_id]['b_net'] = ps.net_pay or 0
+        else:
+            emp = Employee.query.get(ps.employee_id)
+            if emp:
+                emp_map[ps.employee_id] = {
+                    'name': emp.name,
+                    'emp_id': emp.employee_id,
+                    'department': emp.department or '',
+                    'a_gross': 0, 'a_tax': 0, 'a_pension': 0, 'a_net': 0,
+                    'b_gross': ps.gross_salary or 0,
+                    'b_tax': ps.tax or 0,
+                    'b_pension': ps.employee_pension or 0,
+                    'b_net': ps.net_pay or 0,
+                }
+    
+    # Calculate totals
+    totals = {
+        'a_gross': sum(e['a_gross'] for e in emp_map.values()),
+        'a_tax': sum(e['a_tax'] for e in emp_map.values()),
+        'a_pension': sum(e['a_pension'] for e in emp_map.values()),
+        'a_net': sum(e['a_net'] for e in emp_map.values()),
+        'b_gross': sum(e['b_gross'] for e in emp_map.values()),
+        'b_tax': sum(e['b_tax'] for e in emp_map.values()),
+        'b_pension': sum(e['b_pension'] for e in emp_map.values()),
+        'b_net': sum(e['b_net'] for e in emp_map.values()),
+    }
+    totals['gross_change'] = totals['b_gross'] - totals['a_gross']
+    totals['tax_change'] = totals['b_tax'] - totals['a_tax']
+    totals['net_change'] = totals['b_net'] - totals['a_net']
+    totals['headcount_a'] = len(payslips_a)
+    totals['headcount_b'] = len(payslips_b)
+    totals['headcount_change'] = totals['headcount_b'] - totals['headcount_a']
+    
+    if totals['a_gross'] > 0:
+        totals['gross_change_pct'] = (totals['gross_change'] / totals['a_gross'] * 100)
+    else:
+        totals['gross_change_pct'] = 0
+    
+    # Employee list sorted by change
+    employees = sorted(emp_map.values(), key=lambda e: abs(e['b_net'] - e['a_net']), reverse=True)
+    
+    return render_template('payroll_comparison.html',
+        runs=runs,
+        run_a=run_a,
+        run_b=run_b,
+        employees=employees,
+        totals=totals,
+        needs_two=False
+    )

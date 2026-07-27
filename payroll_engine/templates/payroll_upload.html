@@ -52,9 +52,9 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
                             <div class="mb-3">
                                 <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--text-tertiary);"></i>
                             </div>
-                            <p class="fw-semibold mb-1" id="dropText">Drag & drop your CSV file here</p>
+                            <p class="fw-semibold mb-1" id="dropText">Drag & drop your CSV or Excel file here</p>
                             <p class="text-muted small mb-0" id="fileInfo">or click to browse</p>
-                            <input class="d-none" type="file" id="file" name="file" accept=".csv" required>
+                            <input class="d-none" type="file" id="file" name="file" accept=".csv,.xlsx,.xls" required>
                         </div>
 
                         <div id="inlineError" class="alert alert-danger d-none py-2 small mb-3"></div>
@@ -105,13 +105,13 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
         clearError();
         if (!file) {
             fileInfo.textContent = 'or click to browse';
-            dropText.textContent = 'Drag & drop your CSV file here';
+            dropText.textContent = 'Drag & drop your CSV or Excel file here';
             submitBtn.disabled = true;
             return;
         }
         const ext = file.name.split('.').pop().toLowerCase();
         if (ext !== 'csv') {
-            showError('Only .csv files are accepted.');
+            showError('Only .csv and .xlsx files are accepted.');
             return;
         }
         if (file.size === 0) {

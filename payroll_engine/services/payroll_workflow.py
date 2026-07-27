@@ -13,30 +13,58 @@ from payroll_engine.tax import calculate_tax_breakdown
 
 
 def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
-    """Parse a CSV file and calculate payroll for each row.
+    """Parse a CSV or Excel file and calculate payroll for each row.
 
     Returns:
         (employees_data, row_errors) where employees_data is a list of dicts
         with calculated payroll fields, and row_errors is a list of error strings.
     """
+    import os
     employees_data = []
     row_errors = []
 
-    with open(filepath, newline='', encoding='utf-8') as f:
-        reader = csv_module.DictReader(f)
+    # Detect file type
+    ext = os.path.splitext(filepath)[1].lower()
+    is_excel = ext in ('.xlsx', '.xls')
+
+    if is_excel:
+        from payroll_engine.excel_import import read_xlsx, parse_salary
+        rows = read_xlsx(filepath)
+        if not rows:
+            raise ValueError('Excel file is empty or has no data')
+        required = ['employee_id', 'name', 'basic_salary', 'allowances']
+        available = set(rows[0].keys()) if rows else set()
+        missing = [col for col in required if col not in available]
+        if missing:
+            raise ValueError(f'Missing required columns: {", ".join(missing)}')
+        reader_iter = enumerate(rows, start=2)
+    else:
+        import csv as csv_module
+        f_handle = open(filepath, newline='', encoding='utf-8')
+        reader = csv_module.DictReader(f_handle)
         if not reader.fieldnames:
+            f_handle.close()
             raise ValueError('CSV file is empty or has no headers')
         required = ['employee_id', 'name', 'basic_salary', 'allowances']
         missing = [col for col in required if col not in reader.fieldnames]
         if missing:
+            f_handle.close()
             raise ValueError(f'Missing required columns: {", ".join(missing)}')
+        reader_iter = enumerate(reader, start=2)
 
-        for row_idx, row in enumerate(reader, start=2):
+    try:
+        for row_idx, row in reader_iter:
             try:
-                basic_raw = row.get('basic_salary', '0') or '0'
-                allow_raw = row.get('allowances', '0') or '0'
-                basic = float(basic_raw)
-                allow = float(allow_raw)
+                if is_excel:
+                    basic_raw = row.get('basic_salary', 0) or 0
+                    allow_raw = row.get('allowances', 0) or 0
+                    basic = float(parse_salary(basic_raw))
+                    allow = float(parse_salary(allow_raw))
+                else:
+                    basic_raw = row.get('basic_salary', '0') or '0'
+                    allow_raw = row.get('allowances', '0') or '0'
+                    basic = float(basic_raw)
+                    allow = float(allow_raw)
                 if not (math.isfinite(basic) and math.isfinite(allow)):
                     raise ValueError('NaN or Infinity')
             except (ValueError, TypeError):
@@ -49,12 +77,12 @@ def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
             result = calculate_payroll(basic, allow)
             tax_bd = calculate_tax_breakdown(result['taxable'])
             employees_data.append({
-                'id': row.get('employee_id', '').strip(),
-                'name': row.get('name', '').strip(),
-                'phone': row.get('phone', '').strip(),
-                'department': row.get('department', '').strip(),
-                'position': row.get('position', '').strip(),
-                'start_date': row.get('start_date', '').strip(),
+                'id': str(row.get('employee_id', '')).strip(),
+                'name': str(row.get('name', '')).strip(),
+                'phone': str(row.get('phone', '')).strip(),
+                'department': str(row.get('department', '')).strip(),
+                'position': str(row.get('position', '')).strip(),
+                'start_date': str(row.get('start_date', '')).strip(),
                 'basic': basic,
                 'allowances': allow,
                 'gross': result['gross'],
@@ -63,11 +91,14 @@ def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
                 'pension_employee': result['pension_employee'],
                 'pension_employer': result['pension_employer'],
                 'net': result['net'],
-                'bank_account': row.get('bank_account', '').strip(),
-                'bank': row.get('bank_or_telebirr', '').strip(),
-                'tin': row.get('tin', '').strip(),
+                'bank_account': str(row.get('bank_account', '')).strip(),
+                'bank': str(row.get('bank_or_telebirr', '')).strip(),
+                'tin': str(row.get('tin', '')).strip(),
                 'tax_breakdown': tax_bd,
             })
+    finally:
+        if not is_excel:
+            f_handle.close()
 
     return employees_data, row_errors
 

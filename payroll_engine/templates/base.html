@@ -121,6 +121,9 @@
                 <a href="{{ url_for('accounting.accounting_home') }}" class="nav-link {% if 'accounting' in request.endpoint %}active{% endif %}" role="menuitem">
                     <i class="bi bi-journal-text"></i><span>Accounting</span>
                 </a>
+                <a href="{{ url_for('reports.payroll_comparison') }}" class="nav-link {% if 'comparison' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <i class="bi bi-bar-chart-steps"></i><span>Compare</span>
+                </a>
                 {% if employee_count > 20 %}
                 <a href="{{ url_for('reports.impact_calculator') }}" class="nav-link {% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
                     <i class="bi bi-calculator"></i><span>Impact Calculator</span>

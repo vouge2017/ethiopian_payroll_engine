@@ -63,6 +63,12 @@
             <a href="{{ url_for('portal.my_profile') }}" class="nav-link {% if request.endpoint == 'portal.my_profile' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-person"></i><span>{{ _('my_profile') }}</span>
             </a>
+            <a href="{{ url_for('selfservice.ytd_earnings') }}" class="nav-link {% if 'ytd' in request.endpoint %}active{% endif %}" role="menuitem">
+                <i class="bi bi-graph-up"></i><span>YTD Earnings</span>
+            </a>
+            <a href="{{ url_for('selfservice.tax_certificate') }}" class="nav-link {% if 'tax_certificate' in request.endpoint %}active{% endif %}" role="menuitem">
+                <i class="bi bi-file-earmark-text"></i><span>Tax Certificate</span>
+            </a>
             <a href="{{ url_for('help.help_center') }}" class="nav-link {% if 'help' in request.endpoint %}active{% endif %}" role="menuitem">
                 <i class="bi bi-question-circle"></i><span>{{ _('help') }}</span>
             </a>

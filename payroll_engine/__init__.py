@@ -386,12 +386,32 @@ def create_app():
     app.register_blueprint(accounting_bp)
     from .calendar_bp import calendar_bp
     app.register_blueprint(calendar_bp)
+    from .selfservice_bp import selfservice_bp
+    app.register_blueprint(selfservice_bp)
     @app.cli.command('seed-holidays')
     def seed_holidays_cmd():
         """Seed Ethiopian national holidays."""
         from payroll_engine.holidays import seed_holidays
         added = seed_holidays()
         print(f'Seeded {added} holidays.')
+
+    # Push notification endpoints
+    @app.route('/api/vapid-key')
+    def vapid_key():
+        from payroll_engine.push import get_vapid_public_key
+        return {'key': get_vapid_public_key()}
+
+    @app.route('/api/push/subscribe', methods=['POST'])
+    def push_subscribe():
+        from flask_login import current_user, login_required
+        if not current_user.is_authenticated:
+            return {'error': 'Unauthorized'}, 401
+        from payroll_engine.push import save_subscription
+        data = request.get_json()
+        if data:
+            save_subscription(current_user.id, data)
+            return {'status': 'ok'}
+        return {'error': 'No subscription data'}, 400
 
     @app.route('/healthz')
     def healthz():

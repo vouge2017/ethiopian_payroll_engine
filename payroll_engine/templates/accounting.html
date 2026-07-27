@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Accounting Export — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Accounting Export</h2>
+        <p class="text-muted mb-0">Generate journal entries for your accounting software</p>
+    </div>
+
+    {% if runs %}
+    <div class="card">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">Completed Payroll Runs</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Period</th>
+                            <th>Date</th>
+                            <th class="text-end">Payslips</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                        <tr>
+                            <td><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') }}</code></td>
+                            <td>{{ run.period or run.run_date.strftime('%B %Y') }}</td>
+                            <td>{{ run.run_date.strftime('%Y-%m-%d') }}</td>
+                            <td class="text-end">{{ run.payslips|length }}</td>
+                            <td>
+                                <a href="{{ url_for('accounting.preview_journal', run_id=run.id) }}" class="btn btn-sm btn-ghost">
+                                    <i class="bi bi-eye me-1"></i>Preview
+                                </a>
+                                <div class="dropdown d-inline">
+                                    <button class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="bi bi-download me-1"></i>Export
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{{ url_for('accounting.export_journal', run_id=run.id, format='generic') }}">Generic CSV</a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('accounting.export_journal', run_id=run.id, format='quickbooks') }}">QuickBooks IIF</a></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('accounting.export_journal', run_id=run.id, format='peachtree') }}">Peachtree CSV</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-journal-text"></i></div>
+            <h4>No completed payroll runs</h4>
+            <p>Complete a payroll run to generate journal entries.</p>
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+                <i class="bi bi-cloud-upload me-1"></i>Run Payroll
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Info -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-2">How It Works</h6>
+            <p class="text-muted small mb-3">Each payroll run generates a balanced journal entry:</p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background: var(--bg-tertiary);">
+                        <div class="fw-semibold mb-1 text-danger">Debits</div>
+                        <ul class="mb-0 small text-muted">
+                            <li><strong>5100</strong> — Salary Expense (gross)</li>
+                            <li><strong>5200</strong> — Employer Pension Expense</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background: var(--bg-tertiary);">
+                        <div class="fw-semibold mb-1 text-success">Credits</div>
+                        <ul class="mb-0 small text-muted">
+                            <li><strong>2100</strong> — PAYE Tax Payable</li>
+                            <li><strong>2200</strong> — Pension Payable (Employee)</li>
+                            <li><strong>2210</strong> — Pension Payable (Employer)</li>
+                            <li><strong>1000</strong> — Bank/Cash (net pay)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                Account numbers are examples. Adjust them to match your chart of accounts.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

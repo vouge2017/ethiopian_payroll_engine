@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Import Attendance — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1">Import Attendance</h2>
+                <p class="text-muted mb-0">Upload attendance data from biometric devices or spreadsheets</p>
+            </div>
+
+            <!-- Supported Formats -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Supported Formats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 rounded-3" style="background: var(--bg-tertiary);">
+                                <div class="fw-semibold mb-1">ZKTeco</div>
+                                <small class="text-muted">UserID, Name, Date, Time, Status</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 rounded-3" style="background: var(--bg-tertiary);">
+                                <div class="fw-semibold mb-1">Simple</div>
+                                <small class="text-muted">employee_id, date, hours_worked</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 rounded-3" style="background: var(--bg-tertiary);">
+                                <div class="fw-semibold mb-1">Punch</div>
+                                <small class="text-muted">employee_id, date, clock_in, clock_out</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('attendance.download_template') }}" class="btn btn-ghost btn-sm">
+                            <i class="bi bi-download me-1"></i>Download Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Upload CSV</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('attendance.attendance_import') }}" enctype="multipart/form-data" id="uploadForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3" style="border: 2px dashed var(--border-medium); cursor: pointer; background: var(--bg-secondary);">
+                            <div class="mb-3">
+                                <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--text-tertiary);"></i>
+                            </div>
+                            <p class="fw-semibold mb-1" id="dropText">Drag & drop your CSV file here</p>
+                            <p class="text-muted small mb-0" id="fileInfo">or click to browse</p>
+                            <input class="d-none" type="file" id="file" name="file" accept=".csv" required>
+                        </div>
+                        <div id="inlineError" class="alert alert-danger d-none py-2 small mb-3"></div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled style="height: 52px;">
+                                <i class="bi bi-upload me-2"></i>Import Attendance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-2">Tips</h6>
+                    <ul class="mb-0 small text-muted">
+                        <li>Employee IDs in the CSV must match your employee records</li>
+                        <li>Supported date formats: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY</li>
+                        <li>ZKTeco devices: the system auto-detects the format</li>
+                        <li>Existing records for the same date will be updated</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('file');
+    const fileInfo = document.getElementById('fileInfo');
+    const submitBtn = document.getElementById('submitBtn');
+    const inlineError = document.getElementById('inlineError');
+    const dropText = document.getElementById('dropText');
+
+    function showError(msg) { inlineError.textContent = msg; inlineError.classList.remove('d-none'); submitBtn.disabled = true; }
+    function clearError() { inlineError.classList.add('d-none'); }
+
+    function handleFile(file) {
+        clearError();
+        if (!file) { fileInfo.textContent = 'or click to browse'; dropText.textContent = 'Drag & drop your CSV file here'; submitBtn.disabled = true; return; }
+        if (!file.name.endsWith('.csv')) { showError('Only .csv files accepted.'); return; }
+        fileInfo.textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        dropText.textContent = 'File selected ✓';
+        dropZone.style.borderColor = 'var(--color-success)';
+        dropZone.style.background = 'var(--color-success-light)';
+        submitBtn.disabled = false;
+    }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--brand-primary)'; });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-medium)'; });
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-medium)'; if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); } });
+    fileInput.addEventListener('change', function() { if (this.files.length) handleFile(this.files[0]); });
+    document.getElementById('uploadForm').addEventListener('submit', function() { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importing...'; });
+})();
+</script>
+{% endblock %}

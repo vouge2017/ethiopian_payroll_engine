@@ -91,6 +91,9 @@
                 <a href="{{ url_for('payroll.payroll_runs') }}" class="nav-link {% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
                     <i class="bi bi-clock-history"></i><span>{{ _('payroll_runs') }}</span>
                 </a>
+                <a href="{{ url_for('attendance.attendance_list') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <i class="bi bi-calendar-check"></i><span>Attendance</span>
+                </a>
                 {% if employee_count > 5 %}
                 <a href="{{ url_for('employees.leave_management') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
                     <i class="bi bi-calendar-event"></i><span>Leave</span>
@@ -111,6 +114,9 @@
                 </a>
                 <a href="{{ url_for('reports.analytics') }}" class="nav-link {% if 'analytics' in request.endpoint %}active{% endif %}" role="menuitem">
                     <i class="bi bi-graph-up"></i><span>Analytics</span>
+                </a>
+                <a href="{{ url_for('accounting.accounting_home') }}" class="nav-link {% if 'accounting' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <i class="bi bi-journal-text"></i><span>Accounting</span>
                 </a>
                 {% if employee_count > 20 %}
                 <a href="{{ url_for('reports.impact_calculator') }}" class="nav-link {% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">

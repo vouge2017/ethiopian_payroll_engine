@@ -380,6 +380,10 @@ def create_app():
     app.register_blueprint(wizard_bp)
     from .help_bp import help_bp
     app.register_blueprint(help_bp)
+    from .attendance_bp import attendance_bp
+    app.register_blueprint(attendance_bp)
+    from .accounting_bp import accounting_bp
+    app.register_blueprint(accounting_bp)
     @app.route('/healthz')
     def healthz():
         return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200

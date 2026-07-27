@@ -17,30 +17,9 @@ Usage:
 """
 
 from datetime import date, timedelta
+from payroll_engine.models import Holiday
 from payroll_engine import db
 from payroll_engine.models import Company
-
-
-class Holiday(db.Model):
-    """Ethiopian public/company holidays."""
-    __tablename__ = 'holiday'
-
-    id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # None = national
-    name = db.Column(db.String(100), nullable=False)
-    name_am = db.Column(db.String(200), nullable=True)  # Amharic name
-    holiday_date = db.Column(db.Date, nullable=False)
-    is_national = db.Column(db.Boolean, default=True)  # National vs company-specific
-    is_recurring = db.Column(db.Boolean, default=False)  # Same date every year
-    description = db.Column(db.String(255), nullable=True)
-
-    __table_args__ = (
-        db.Index('ix_holiday_date', 'holiday_date'),
-        db.Index('ix_holiday_company', 'company_id'),
-    )
-
-    def __repr__(self):
-        return f'<Holiday {self.name} on {self.holiday_date}>'
 
 
 # Ethiopian National Holidays (fixed Gregorian dates)

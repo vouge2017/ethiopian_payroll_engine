@@ -1,198 +1,140 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - Ethiopian Payroll Engine{% endblock %}
+{% block title %}Dashboard — EthioPayroll{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
+    <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="mb-0">{{ _('dashboard') }}</h3>
-            <small class="text-muted">{{ today_eth }}</small>
+            <h2 class="fw-bold mb-1">Dashboard</h2>
+            <p class="text-muted mb-0">{{ today_eth }}</p>
         </div>
-        <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary w-sm-100">
-            <i class="bi bi-cloud-upload me-1"></i> {{ _('run_payroll') }}
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost">
+                <i class="bi bi-person-plus me-1"></i>Add Employee
+            </a>
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+                <i class="bi bi-cloud-upload me-1"></i>{{ _('run_payroll') }}
+            </a>
+        </div>
     </div>
 
-    <!-- Period Selector -->
-    {% if all_completed_runs and all_completed_runs|length > 0 %}
-    {% include '_period_selector.html' %}
-    {% endif %}
-
-    <!-- Summary Cards -->
+    <!-- Metric Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">{{ _('employees') }}</h6>
-                        <h3 class="mb-0">{{ employee_count }}</h3>
-                    </div>
-                    <i class="bi bi-people text-primary" style="font-size: 2.5rem;"></i>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-icon blue"><i class="bi bi-people"></i></div>
+                <div class="metric-label">Employees</div>
+                <div class="metric-value">{{ employee_count }}</div>
+                {% if employee_count > 0 %}
+                <div class="metric-trend up"><i class="bi bi-arrow-up"></i> Active</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in" style="animation-delay: 50ms;">
+                <div class="metric-icon green"><i class="bi bi-shield-check"></i></div>
+                <div class="metric-label">Compliance</div>
+                <div class="metric-value">{{ compliance_score|round(0)|int }}%</div>
+                <div class="metric-trend {{ 'up' if compliance_status == 'green' else 'down' if compliance_status == 'red' else 'neutral' }}">
+                    {% if compliance_status == 'green' %}<i class="bi bi-check-circle-fill"></i> On track
+                    {% elif compliance_status == 'yellow' %}<i class="bi bi-exclamation-circle"></i> {{ status_message }}
+                    {% else %}<i class="bi bi-exclamation-triangle"></i> {{ status_message }}{% endif %}
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">{{ _('compliance') }}</h6>
-                        <h3 class="mb-0">
-                            <span class="badge bg-{{ 'success' if compliance_status == 'green' else 'warning' if compliance_status == 'yellow' else 'danger' }}">
-                                {{ compliance_score|round(1) }}%
-                            </span>
-                        </h3>
-                        <small class="text-muted">{{ status_message }}</small>
-                    </div>
-                    <i class="bi bi-shield-check text-success" style="font-size: 2.5rem;"></i>
-                </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in" style="animation-delay: 100ms;">
+                <div class="metric-icon cyan"><i class="bi bi-clock-history"></i></div>
+                <div class="metric-label">Payroll Runs</div>
+                <div class="metric-value">{{ recent_runs|length }}</div>
+                {% if recent_runs|length > 0 %}
+                <div class="metric-trend neutral"><i class="bi bi-arrow-right"></i> {{ recent_runs[0].period or 'Latest' }}</div>
+                {% endif %}
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">{{ _('payroll_runs') }}</h6>
-                        <h3 class="mb-0">{{ recent_runs|length }}</h3>
-                        <small class="text-muted">{{ _('recent_runs') }}</small>
-                    </div>
-                    <i class="bi bi-clock-history text-info" style="font-size: 2.5rem;"></i>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in" style="animation-delay: 150ms;">
+                <div class="metric-icon amber"><i class="bi bi-calendar-check"></i></div>
+                <div class="metric-label">Overtime</div>
+                <div class="metric-value">{{ ot_total_hours or 0 }}h</div>
+                {% if ot_employee_count > 0 %}
+                <div class="metric-trend {{ 'down' if ot_over_limit else 'up' }}">
+                    {% if ot_over_limit %}<i class="bi bi-exclamation-triangle"></i> Over limit{% else %}<i class="bi bi-check-circle"></i> Within limit{% endif %}
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body d-flex align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="text-muted mb-1">{{ _('quick_actions') }}</h6>
-                        <a href="{{ url_for('employees.add_employee') }}" class="btn btn-sm btn-outline-primary me-1">+ Employee</a>
-                        <a href="{{ url_for('employees.list_employees') }}" class="btn btn-sm btn-outline-secondary">{{ _('view_all') }}</a>
-                    </div>
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- What Happened Last Month -->
+    <!-- Charts Row -->
     {% if last_month_summary %}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="mb-3"><i class="bi bi-clock-history me-2"></i>Last Payroll: {{ last_month_summary.period }}</h5>
-            <div class="row">
-                <div class="col-md-8">
-                    <p class="mb-2">
-                        <strong>{{ last_month_summary.employee_count }} employees</strong> paid.
-                        Total net: <strong>ETB {{ "{:,.2f}".format(last_month_summary.total_net) }}</strong>.
-                        Average salary: <strong>ETB {{ "{:,.2f}".format(last_month_summary.avg_salary) }}</strong>.
-                    </p>
-                    <p class="mb-0 text-muted">
-                        Gross: ETB {{ "{:,.2f}".format(last_month_summary.total_gross) }} ·
-                        Tax withheld: ETB {{ "{:,.2f}".format(last_month_summary.total_tax) }}
-                    </p>
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card animate-fade-in">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Payroll Summary — {{ last_month_summary.period }}</h5>
                 </div>
-                <div class="col-md-4 text-end">
-                    <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-list me-1"></i>View all runs
-                    </a>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="text-muted small mb-1">Gross</div>
+                                <div class="fw-bold">ETB {{ "{:,.0f}".format(last_month_summary.total_gross) }}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="text-muted small mb-1">Tax Withheld</div>
+                                <div class="fw-bold text-warning">ETB {{ "{:,.0f}".format(last_month_summary.total_tax) }}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="text-muted small mb-1">Net Paid</div>
+                                <div class="fw-bold text-success">ETB {{ "{:,.0f}".format(last_month_summary.total_net) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="payrollBreakdownChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card animate-fade-in" style="animation-delay: 50ms;">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Deductions Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="deductionsChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- First-Run Wizard -->
     {% if completed_runs_count == 0 %}
-    <div class="card border-primary shadow-sm mb-4" id="first-run-wizard">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-magic me-2"></i>Welcome! Here's how to run your first payroll</h5>
-        </div>
-        <div class="card-body">
-            <!-- Primary path: Quick Start (paste from Excel) -->
-            <div class="text-center mb-4 p-4 border border-primary rounded" style="background: linear-gradient(135deg, #e8f4fd, #f0f8ff);">
-                <h4 class="mb-2"><i class="bi bi-lightning text-primary me-2"></i>Fastest way: Paste from Excel</h4>
-                <p class="text-muted mb-3">Copy your employee list from Excel and paste it here. Name, phone, salary — one per line. Done in 2 minutes.</p>
-                <a href="{{ url_for('wizard.quick_start') }}" class="btn btn-primary btn-lg">
-                    <i class="bi bi-lightning me-2"></i>Quick Start — Paste Employee Data
+    <!-- First-Run Wizard -->
+    <div class="card border-0 mb-4" style="background: linear-gradient(135deg, var(--brand-primary-soft) 0%, #f0f9ff 100%); border: 2px solid var(--brand-primary-light) !important;">
+        <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-3 mb-3" style="width: 64px; height: 64px; background: var(--brand-primary); box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);">
+                    <i class="bi bi-lightning-charge text-white fs-3"></i>
+                </div>
+                <h3 class="fw-bold">Welcome! Let's run your first payroll</h3>
+                <p class="text-muted mb-0">Paste your employee data from Excel — done in 2 minutes.</p>
+            </div>
+            <div class="text-center">
+                <a href="{{ url_for('wizard.quick_start') }}" class="btn btn-primary btn-lg me-2" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
+                    <i class="bi bi-lightning me-2"></i>Quick Start
+                </a>
+                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost btn-lg" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
+                    <i class="bi bi-person-plus me-2"></i>Add One by One
                 </a>
             </div>
-
-            <!-- Secondary path: step by step -->
-            <details class="mb-0">
-                <summary class="text-muted" style="cursor: pointer;">
-                    <small>Or add employees one by one (slower)</small>
-                </summary>
-                <div class="row g-3 mt-3">
-                    <div class="col-md-4">
-                        <div class="card h-100 {% if employee_count > 0 %}border-success{% else %}border-secondary{% endif %}">
-                            <div class="card-body text-center">
-                                <div class="mb-2">
-                                    {% if employee_count > 0 %}
-                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
-                                    {% else %}
-                                    <span class="badge bg-secondary rounded-circle" style="font-size: 1.2rem; width: 32px; height: 32px; line-height: 24px;">1</span>
-                                    {% endif %}
-                                </div>
-                                <h6 class="card-title small">Add employees</h6>
-                                {% if employee_count > 0 %}
-                                <span class="badge bg-success">✓ {{ employee_count }} added</span>
-                                {% else %}
-                                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-person-plus me-1"></i> Add Employee
-                                </a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 {% if recent_runs|length > 0 %}border-success{% elif employee_count > 0 %}border-secondary{% else %}border-light{% endif %}">
-                            <div class="card-body text-center">
-                                <div class="mb-2">
-                                    {% if recent_runs|length > 0 %}
-                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
-                                    {% elif employee_count > 0 %}
-                                    <span class="badge bg-secondary rounded-circle" style="font-size: 1.2rem; width: 32px; height: 32px; line-height: 24px;">2</span>
-                                    {% else %}
-                                    <span class="badge bg-light text-muted rounded-circle" style="font-size: 1.2rem; width: 32px; height: 32px; line-height: 24px;">2</span>
-                                    {% endif %}
-                                </div>
-                                <h6 class="card-title small">Upload CSV</h6>
-                                {% if recent_runs|length > 0 %}
-                                <span class="badge bg-success">✓ Done</span>
-                                {% elif employee_count > 0 %}
-                                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-cloud-upload me-1"></i> Upload
-                                </a>
-                                {% else %}
-                                <button class="btn btn-outline-light btn-sm text-muted" disabled>Add employees first</button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 {% if completed_runs_count > 0 %}border-success{% elif recent_runs|length > 0 %}border-secondary{% else %}border-light{% endif %}">
-                            <div class="card-body text-center">
-                                <div class="mb-2">
-                                    {% if completed_runs_count > 0 %}
-                                    <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
-                                    {% elif recent_runs|length > 0 %}
-                                    <span class="badge bg-secondary rounded-circle" style="font-size: 1.2rem; width: 32px; height: 32px; line-height: 24px;">3</span>
-                                    {% else %}
-                                    <span class="badge bg-light text-muted rounded-circle" style="font-size: 1.2rem; width: 32px; height: 32px; line-height: 24px;">3</span>
-                                    {% endif %}
-                                </div>
-                                <h6 class="card-title small">Review & approve</h6>
-                                {% if completed_runs_count > 0 %}
-                                <span class="badge bg-success">✓ Done</span>
-                                {% elif recent_runs|length > 0 %}
-                                <a href="{{ url_for('payroll.payroll_confirm', run_id=recent_runs[0].id) }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-shield-lock me-1"></i> Review
-                                </a>
-                                {% else %}
-                                <button class="btn btn-outline-light btn-sm text-muted" disabled>Upload CSV first</button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </details>
         </div>
     </div>
     {% endif %}
@@ -201,243 +143,113 @@
     {% if deadlines %}
     <div class="row g-3 mb-4">
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
+            <div class="card animate-fade-in">
                 <div class="card-body">
-                    <h6 class="text-muted">{{ _('erca_filing') }}</h6>
-                    <h4>{{ eth_date(deadlines.erca_deadline[:10]|default(deadlines.erca_deadline, true)) if deadlines.erca_deadline else 'N/A' }}</h4>
-                    <span class="badge bg-{{ deadlines.erca_status }}">
-                        {% if deadlines.erca_days_left < 0 %}OVERDUE by {{ deadlines.erca_days_left|abs }} days{% else %}{{ deadlines.erca_days_left }} days remaining{% endif %}
-                    </span>
-                    <a href="{{ url_for('reports.download_erca_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary mt-2">
-                        <i class="bi bi-download me-1"></i>Download ERCA File
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-muted small fw-semibold">ERCA Filing</div>
+                            <div class="fw-bold">{{ eth_date(deadlines.erca_deadline[:10]|default(deadlines.erca_deadline, true)) if deadlines.erca_deadline else 'N/A' }}</div>
+                        </div>
+                        <span class="badge {{ 'badge-success' if deadlines.erca_days_left > 7 else 'badge-warning' if deadlines.erca_days_left > 0 else 'badge-danger' }}">
+                            {% if deadlines.erca_days_left < 0 %}OVERDUE{% else %}{{ deadlines.erca_days_left }}d{% endif %}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('reports.download_erca_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="bi bi-download me-1"></i>Download ERCA
                     </a>
-                    <a href="{{ url_for('reports.filing_history') }}" class="btn btn-sm btn-outline-secondary mt-2 ms-1">
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card animate-fade-in" style="animation-delay: 50ms;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-muted small fw-semibold">PSSA Remittance</div>
+                            <div class="fw-bold">{{ eth_date(deadlines.pssa_deadline[:10]|default(deadlines.pssa_deadline, true)) if deadlines.pssa_deadline else 'N/A' }}</div>
+                        </div>
+                        <span class="badge {{ 'badge-success' if deadlines.pssa_days_left > 7 else 'badge-warning' if deadlines.pssa_days_left > 0 else 'badge-danger' }}">
+                            {% if deadlines.pssa_days_left < 0 %}OVERDUE{% else %}{{ deadlines.pssa_days_left }}d{% endif %}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('reports.download_pension_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="bi bi-download me-1"></i>Download Pension
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card animate-fade-in" style="animation-delay: 100ms;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-muted small fw-semibold">Disbursement</div>
+                            <div class="fw-bold">{{ eth_date(deadlines.pension_deadline[:10]|default(deadlines.pension_deadline, true)) if deadlines.pension_deadline else 'N/A' }}</div>
+                        </div>
+                        <span class="badge {{ 'badge-success' if deadlines.pension_days_left > 7 else 'badge-warning' if deadlines.pension_days_left > 0 else 'badge-danger' }}">
+                            {% if deadlines.pension_days_left < 0 %}OVERDUE{% else %}{{ deadlines.pension_days_left }}d{% endif %}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('reports.filing_history') }}" class="btn btn-sm btn-ghost w-100 mt-2">
                         <i class="bi bi-clock-history me-1"></i>Filing History
                     </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-muted">{{ _('pssa_remittance') }}</h6>
-                    <h4>{{ eth_date(deadlines.pssa_deadline[:10]|default(deadlines.pssa_deadline, true)) if deadlines.pssa_deadline else 'N/A' }}</h4>
-                    <span class="badge bg-{{ deadlines.pssa_status }}">
-                        {% if deadlines.pssa_days_left < 0 %}OVERDUE by {{ deadlines.pssa_days_left|abs }} days{% else %}{{ deadlines.pssa_days_left }} days remaining{% endif %}
-                    </span>
-                    <a href="{{ url_for('reports.download_pension_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary mt-2">
-                        <i class="bi bi-download me-1"></i>Download Pension Report
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h6 class="text-muted">{{ _('pension_deadline') }}</h6>
-                    <h4>{{ eth_date(deadlines.pension_deadline[:10]|default(deadlines.pension_deadline, true)) if deadlines.pension_deadline else 'N/A' }}</h4>
-                    <span class="badge bg-{{ deadlines.pension_status }}">
-                        {% if deadlines.pension_days_left < 0 %}OVERDUE by {{ deadlines.pension_days_left|abs }} days{% else %}{{ deadlines.pension_days_left }} days remaining{% endif %}
-                    </span>
+    </div>
+    {% endif %}
+
+    <!-- Overtime Alert -->
+    {% if ot_over_limit %}
+    <div class="alert alert-danger mb-4 animate-fade-in">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+            <div>
+                <strong>Overtime Limit Exceeded</strong>
+                <div class="small mt-1">
+                    {% for item in ot_over_limit %}
+                    <span class="badge bg-danger me-1">{{ item.name }}: {{ item.hours }}h</span>
+                    {% endfor %}
                 </div>
             </div>
         </div>
     </div>
     {% endif %}
-
-    <!-- Compliance Action Checklist -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i>Action Checklist</h5>
-        </div>
-        <div class="card-body">
-            <div class="list-group list-group-flush">
-                {% if employee_count == 0 %}
-                <div class="list-group-item d-flex align-items-center">
-                    <i class="bi bi-circle text-muted me-3"></i>
-                    <div>
-                        <strong>Add your first employee</strong>
-                        <div class="text-muted small">Start by adding employee details, salary, and bank info.</div>
-                    </div>
-                    <a href="{{ url_for('employees.add_employee') }}" class="btn btn-sm btn-outline-primary ms-auto">Add</a>
-                </div>
-                {% endif %}
-                {% if recent_runs|length == 0 and employee_count > 0 %}
-                <div class="list-group-item d-flex align-items-center">
-                    <i class="bi bi-circle text-muted me-3"></i>
-                    <div>
-                        <strong>Run your first payroll</strong>
-                        <div class="text-muted small">Upload a CSV or use the template to process payroll.</div>
-                    </div>
-                    <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-sm btn-outline-primary ms-auto">Run</a>
-                </div>
-                {% endif %}
-                {% if deadlines %}
-                    {% if deadlines.erca_days_left is defined and deadlines.erca_days_left < 7 %}
-                    <div class="list-group-item d-flex align-items-center">
-                        <i class="bi bi-exclamation-circle text-warning me-3"></i>
-                        <div>
-                            <strong>ERCA filing due soon</strong>
-                            <div class="text-muted small">{{ deadlines.erca_days_left }} days remaining. Download the report and file with ERCA.</div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% if deadlines.pension_days_left is defined and deadlines.pension_days_left < 7 %}
-                    <div class="list-group-item d-flex align-items-center">
-                        <i class="bi bi-exclamation-circle text-warning me-3"></i>
-                        <div>
-                            <strong>Pension remittance due soon</strong>
-                            <div class="text-muted small">{{ deadlines.pension_days_left }} days remaining. Remit pension contributions to PSSA.</div>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endif %}
-                {% if compliance_score < 100 %}
-                <div class="list-group-item d-flex align-items-center">
-                    <i class="bi bi-info-circle text-info me-3"></i>
-                    <div>
-                        <strong>Compliance score: {{ compliance_score|round(0)|int }}%</strong>
-                        <div class="text-muted small">{{ status_message }}</div>
-                    </div>
-                </div>
-                {% endif %}
-                {% if employee_count > 0 and recent_runs|length > 0 and compliance_score == 100 %}
-                <div class="list-group-item d-flex align-items-center">
-                    <i class="bi bi-check-circle-fill text-success me-3"></i>
-                    <div>
-                        <strong>All caught up!</strong>
-                        <div class="text-muted small">No pending actions. Your payroll is up to date.</div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Overtime This Month -->
-    {% if ot_employee_count > 0 %}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }}</h5>
-            <span class="badge bg-light text-dark">{{ ot_total_hours }}h total</span>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-4">
-                    <h6 class="text-muted">{{ _('total_hours') }}</h6>
-                    <h3>{{ ot_total_hours }}h</h3>
-                </div>
-                <div class="col-md-4">
-                    <h6 class="text-muted">{{ _('employees') }}</h6>
-                    <h3>{{ ot_employee_count }}</h3>
-                </div>
-                <div class="col-md-4">
-                    {% if ot_over_limit %}
-                    <h6 class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>{{ _('over_limit') }}</h6>
-                    <ul class="mb-0">
-                        {% for item in ot_over_limit %}
-                        <li>{{ item.name }}: <strong>{{ item.hours }}h</strong></li>
-                        {% endfor %}
-                    </ul>
-                    {% else %}
-                    <h6 class="text-success"><i class="bi bi-check-circle me-1"></i>{{ status }}</h6>
-                    <p class="text-success mb-0">All within 20h limit</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- How Tax Works -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="bi bi-calculator me-2"></i>How Tax Works
-                <button class="btn btn-sm btn-outline-secondary ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#taxExplainer">
-                    Show/Hide
-                </button>
-            </h5>
-        </div>
-        <div class="collapse" id="taxExplainer">
-            <div class="card-body">
-                <p class="mb-2"><strong>Ethiopian Income Tax (2025/2026)</strong> — Proclamation No. 1395/2025</p>
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Tax Brackets (Monthly)</h6>
-                        <table class="table table-sm">
-                            <tr><td>ETB 0 – 2,000</td><td><span class="badge bg-success">0%</span></td></tr>
-                            <tr><td>ETB 2,001 – 4,000</td><td><span class="badge bg-info">15%</span></td></tr>
-                            <tr><td>ETB 4,001 – 7,000</td><td><span class="badge bg-info">20%</span></td></tr>
-                            <tr><td>ETB 7,001 – 10,000</td><td><span class="badge bg-warning">25%</span></td></tr>
-                            <tr><td>ETB 10,001 – 14,000</td><td><span class="badge bg-warning">30%</span></td></tr>
-                            <tr><td>ETB 14,001+</td><td><span class="badge bg-danger">35%</span></td></tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>How Your Payroll Is Calculated</h6>
-                        <ol class="small">
-                            <li><strong>Gross</strong> = Basic Salary + Allowances + Overtime</li>
-                            <li><strong>Pension</strong> = 7% of Basic Salary <em>(deducted before tax)</em></li>
-                            <li><strong>Taxable</strong> = Gross − Pension − Exempt Allowances</li>
-                            <li><strong>Tax</strong> = Progressive brackets on Taxable − ETB 150 relief</li>
-                            <li><strong>Net Pay</strong> = Gross − Pension − Tax − Other Deductions</li>
-                        </ol>
-                        <p class="small text-muted mb-0">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Pension is deducted <em>before</em> tax — this is a legal requirement that reduces your tax burden.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Recent Payroll Runs -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('recent_payroll_runs') }}</h5>
+    <div class="card animate-fade-in">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Payroll Runs</h5>
+            <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-sm btn-ghost">View All</a>
         </div>
         <div class="card-body p-0">
             {% if recent_runs %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th>{{ _('date') }}</th>
-                            <th>{{ _('status') }}</th>
-                            <th>{{ _('payslips') }}</th>
-                            <th>{{ actions }}</th>
+                            <th>Reference</th>
+                            <th>Period</th>
+                            <th>Status</th>
+                            <th>Payslips</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for run in recent_runs %}
                         <tr>
+                            <td><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</code></td>
+                            <td>{{ run.period or run.run_date.strftime('%B %Y') }}</td>
                             <td>
-                                <strong>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</strong>
-                                {% if run.period %}
-                                    <br><small class="text-muted">{{ run.period }} · {{ eth_date(run.run_date) }}</small>
-                                {% else %}
-                                    <br><small class="text-muted">{{ eth_date(run.run_date) }}</small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if run.status == 'locked' %}
-                                    <span class="badge bg-dark"><i class="bi bi-lock-fill"></i> locked</span>
-                                {% elif run.status == 'completed' %}
-                                    <span class="badge bg-success">completed</span>
-                                {% elif run.status == 'processing' %}
-                                    <span class="badge bg-warning">processing</span>
-                                {% elif run.status == 'failed' %}
-                                    <span class="badge bg-danger">failed</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ run.status }}</span>
-                                {% endif %}
+                                {% if run.status == 'completed' %}<span class="badge badge-success">Completed</span>
+                                {% elif run.status == 'locked' %}<span class="badge bg-dark">Locked</span>
+                                {% elif run.status == 'processing' %}<span class="badge badge-warning">Processing</span>
+                                {% else %}<span class="badge badge-info">{{ run.status|capitalize }}</span>{% endif %}
                             </td>
                             <td>{{ run.payslips|length }}</td>
                             <td>
-                                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i> View
+                                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-sm btn-ghost">
+                                    <i class="bi bi-eye me-1"></i>View
                                 </a>
                             </td>
                         </tr>
@@ -446,116 +258,109 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                <p class="mt-2">{{ _('no_runs') }} <a href="{{ url_for('payroll.payroll_upload') }}">{{ _('run_payroll') }}</a>.</p>
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                <h4>No payroll runs yet</h4>
+                <p>Run your first payroll to see it here.</p>
+                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+                    <i class="bi bi-cloud-upload me-1"></i>Run Payroll
+                </a>
             </div>
             {% endif %}
-        </div>
-    </div>
-
-    <!-- How is tax calculated? -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-transparent" data-bs-toggle="collapse" data-bs-target="#taxExplainer" aria-expanded="false" aria-controls="taxExplainer" style="cursor: pointer;">
-            <h5 class="mb-0">
-                <i class="bi bi-calculator me-2"></i>{{ _('how_tax_calculated') or 'How is tax calculated?' }}
-                <i class="bi bi-chevron-down float-end" id="taxChevron"></i>
-            </h5>
-        </div>
-        <div class="collapse" id="taxExplainer">
-            <div class="card-body">
-                <p class="text-muted mb-3">{{ _('tax_explainer_intro') or 'Ethiopian income tax uses progressive brackets (Proclamation No. 1395/2025). Pension is deducted before tax, reducing your taxable income.' }}</p>
-
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>{{ _('bracket') or 'Bracket' }}</th>
-                                <th>{{ _('taxable_range') or 'Taxable Income Range' }}</th>
-                                <th>{{ _('rate') or 'Rate' }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for b in tax_brackets %}
-                            <tr>
-                                <td>{{ loop.index }}</td>
-                                <td>
-                                    {% if b.upper is none %}
-                                        Above ETB {{ '{:,.0f}'.format(b.lower) }}
-                                    {% else %}
-                                        ETB {{ '{:,.0f}'.format(b.lower) }} – {{ '{:,.0f}'.format(b.upper) }}
-                                    {% endif %}
-                                </td>
-                                <td>{{ b.rate|int }}%</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <div class="card bg-light">
-                            <div class="card-body py-2">
-                                <small class="text-muted">{{ _('personal_relief') or 'Personal Relief' }}</small>
-                                <div class="fw-bold">ETB {{ '{:,.0f}'.format(personal_relief) }} {{ _('per_month') or 'per month' }}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card bg-light">
-                            <div class="card-body py-2">
-                                <small class="text-muted">{{ _('pension_before_tax') or 'Pension is deducted before tax' }}</small>
-                                <div class="fw-bold">7% {{ _('of_basic_salary') or 'of basic salary' }} → {{ _('then_tax') or 'then tax is calculated' }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<style>
-/* Mobile optimizations */
-@media (max-width: 768px) {
-    .container-fluid {
-        padding-left: 12px;
-        padding-right: 12px;
-    }
-    /* Stack summary cards vertically */
-    .row.g-3 .col-md-3 {
-        margin-bottom: 8px;
-    }
-    /* Make buttons full-width on mobile */
-    .btn-primary.w-sm-100 {
-        width: 100%;
-    }
-    /* Compact summary cards */
-    .card-body {
-        padding: 0.75rem;
-    }
-    /* Make payroll table scroll */
-    .table-responsive {
-        font-size: 0.85rem;
-    }
-    /* Larger touch targets */
-    .btn {
-        min-height: 44px;
-    }
-    /* Hide the wizard on mobile if payroll already done */
-    #first-run-wizard .col-md-4 {
-        margin-bottom: 12px;
-    }
+{% block extra_js %}
+{% if last_month_summary %}
+<script>
+// Payroll Breakdown Bar Chart
+const payrollCtx = document.getElementById('payrollBreakdownChart');
+if (payrollCtx) {
+    new Chart(payrollCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Gross', 'Pension', 'Tax', 'Net'],
+            datasets: [{
+                label: 'ETB',
+                data: [
+                    {{ last_month_summary.total_gross }},
+                    {{ last_month_summary.total_gross - last_month_summary.total_net - last_month_summary.total_tax }},
+                    {{ last_month_summary.total_tax }},
+                    {{ last_month_summary.total_net }}
+                ],
+                backgroundColor: ['#2563eb', '#f59e0b', '#ef4444', '#10b981'],
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    titleFont: { weight: '600' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (ctx) => `ETB ${ctx.parsed.y.toLocaleString()}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (v) => `ETB ${(v/1000).toFixed(0)}k`
+                    }
+                }
+            }
+        }
+    });
 }
-/* Tax explainer chevron rotation */
-#taxChevron {
-    transition: transform 0.2s ease;
+
+// Deductions Donut Chart
+const dedCtx = document.getElementById('deductionsChart');
+if (dedCtx) {
+    new Chart(dedCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Net Pay', 'Tax', 'Pension'],
+            datasets: [{
+                data: [
+                    {{ last_month_summary.total_net }},
+                    {{ last_month_summary.total_tax }},
+                    {{ last_month_summary.total_gross - last_month_summary.total_net - last_month_summary.total_tax }}
+                ],
+                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                borderWidth: 0,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 16 }
+                },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (ctx) => `${ctx.label}: ETB ${ctx.parsed.toLocaleString()}`
+                    }
+                }
+            }
+        }
+    });
 }
-[data-bs-toggle="collapse"][aria-expanded="true"] #taxChevron {
-    transform: rotate(180deg);
-}
-</style>
+</script>
+{% endif %}
 {% endblock %}

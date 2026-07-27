@@ -1,86 +1,81 @@
 {% extends "base.html" %}
-{% block title %}My Dashboard - Ethiopian Payroll Engine{% endblock %}
+{% block title %}My Dashboard — EthioPayroll{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
-    <h3 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>{{ _('my_dashboard') }}</h3>
+<div class="p-4 p-md-5">
+    <h2 class="fw-bold mb-4">My Dashboard</h2>
 
     {% if employee %}
-    <!-- Summary Cards -->
+    <!-- Metric Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">{{ _('latest_net_pay') }}</h6>
-                    {% if latest_payslip %}
-                    <h3 class="text-success">ETB {{ '%.2f'|format(latest_payslip.net_pay) }}</h3>
-                    <small class="text-muted">{{ latest_payslip.generated_at.strftime('%B %Y') }}</small>
-                    {% else %}
-                    <h3 class="text-muted">—</h3>
-                    <small class="text-muted">{{ _('no_payslips') }}</small>
-                    {% endif %}
-                </div>
+        <div class="col-md-4 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-icon green"><i class="bi bi-wallet2"></i></div>
+                <div class="metric-label">Latest Net Pay</div>
+                {% if latest_payslip %}
+                <div class="metric-value text-success">ETB {{ '{:,.0f}'.format(latest_payslip.net_pay) }}</div>
+                <div class="metric-trend neutral">{{ latest_payslip.generated_at.strftime('%B %Y') }}</div>
+                {% else %}
+                <div class="metric-value text-muted">—</div>
+                <div class="metric-trend neutral">No payslips yet</div>
+                {% endif %}
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">{{ _('overtime_this_month') }}</h6>
-                    <h3>{{ ot_hours }}h</h3>
-                    {% if ot_pay > 0 %}
-                    <small class="text-muted">ETB {{ '%.2f'|format(ot_pay) }}</small>
-                    {% endif %}
-                    {% if ot_hours > 20 %}
-                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle"></i> Over 20h limit</div>
-                    {% endif %}
-                </div>
+        <div class="col-md-4 col-6">
+            <div class="card metric-card animate-fade-in" style="animation-delay: 50ms;">
+                <div class="metric-icon blue"><i class="bi bi-clock"></i></div>
+                <div class="metric-label">Overtime This Month</div>
+                <div class="metric-value">{{ ot_hours }}h</div>
+                {% if ot_pay > 0 %}
+                <div class="metric-trend neutral">ETB {{ '{:,.0f}'.format(ot_pay) }}</div>
+                {% endif %}
+                {% if ot_hours > 20 %}
+                <div class="metric-trend down"><i class="bi bi-exclamation-triangle"></i> Over 20h limit</div>
+                {% endif %}
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body text-center">
-                    <h6 class="text-muted">{{ _('employee_id') }}</h6>
-                    <h3>{{ employee.employee_id }}</h3>
-                    <small class="text-muted">{{ employee.name }}</small>
-                </div>
+        <div class="col-md-4 col-6">
+            <div class="card metric-card animate-fade-in" style="animation-delay: 100ms;">
+                <div class="metric-icon cyan"><i class="bi bi-person-badge"></i></div>
+                <div class="metric-label">Employee ID</div>
+                <div class="metric-value" style="font-size: var(--text-xl);">{{ employee.employee_id }}</div>
+                <div class="metric-trend neutral">{{ employee.name }}</div>
             </div>
         </div>
     </div>
 
     <!-- Recent Payslips -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>{{ _('recent_payslips') }}</h5>
-            <a href="{{ url_for('portal.my_payslips') }}" class="btn btn-sm btn-light">{{ _('view_all') }}</a>
+    <div class="card animate-fade-in">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Payslips</h5>
+            <a href="{{ url_for('portal.my_payslips') }}" class="btn btn-sm btn-ghost">View All</a>
         </div>
         <div class="card-body p-0">
             {% if recent_payslips %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th>{{ _('period') }}</th>
-                            <th>{{ _('gross') }}</th>
-                            <th>{{ _('deductions') }}</th>
-                            <th>{{ _('net_pay') }}</th>
+                            <th>Period</th>
+                            <th class="text-end">Gross</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Net Pay</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in recent_payslips %}
+                        {% for ps in recent_payslips %}
                         <tr>
-                            <td>{{ p.generated_at.strftime('%B %Y') }}</td>
-                            <td>ETB {{ '%.2f'|format(p.gross_salary) }}</td>
-                            <td>ETB {{ '%.2f'|format(p.tax + p.employee_pension) }}</td>
-                            <td><strong>ETB {{ '%.2f'|format(p.net_pay) }}</strong></td>
-                            <td>
-                                <a href="{{ url_for('portal.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary">
+                            <td><strong>{{ ps.payroll_run.period or ps.generated_at.strftime('%B %Y') }}</strong></td>
+                            <td class="text-end">ETB {{ '{:,.0f}'.format(ps.gross_pay) }}</td>
+                            <td class="text-end text-warning">ETB {{ '{:,.0f}'.format(ps.tax) }}</td>
+                            <td class="text-end fw-bold text-success">ETB {{ '{:,.0f}'.format(ps.net_pay) }}</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('portal.my_payslip_detail', payslip_id=ps.id) }}" class="btn btn-sm btn-ghost">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                {% if p.pdf_file_path %}
-                                <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-success">
+                                <a href="{{ url_for('portal.download_my_payslip', payslip_id=ps.id) }}" class="btn btn-sm btn-ghost">
                                     <i class="bi bi-download"></i>
                                 </a>
-                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -88,16 +83,21 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-4 text-muted">
-                <p>{{ _('no_payslips') }}</p>
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-receipt"></i></div>
+                <h4>No payslips yet</h4>
+                <p>Your payslips will appear here after your employer runs payroll.</p>
             </div>
             {% endif %}
         </div>
     </div>
     {% else %}
-    <div class="alert alert-warning">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        Your employee record is not linked to this account. Contact your administrator.
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-person"></i></div>
+            <h4>Profile not linked</h4>
+            <p>Your account isn't linked to an employee record yet. Contact your HR administrator.</p>
+        </div>
     </div>
     {% endif %}
 </div>

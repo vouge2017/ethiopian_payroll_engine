@@ -1,67 +1,75 @@
 {% extends "base.html" %}
-{% block title %}Run Payroll - Ethiopian Payroll Engine{% endblock %}
+{% block title %}Run Payroll — EthioPayroll{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <h3 class="mb-4"><i class="bi bi-cloud-upload me-2"></i>{{ _('run_payroll') }}</h3>
+        <div class="col-md-7 col-lg-6">
+            <!-- Page Header -->
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1">Run Payroll</h2>
+                <p class="text-muted mb-0">Upload your employee data to process this month's payroll</p>
+            </div>
 
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ _('csv_format') }}</h5>
-                    <div>
-                        <a href="{{ url_for('payroll.download_prefilled_csv') }}" class="btn btn-success btn-sm me-1">
-                            <i class="bi bi-magic me-1"></i>Pre-filled CSV
+            <!-- CSV Format Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">CSV Format</h5>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('payroll.download_prefilled_csv') }}" class="btn btn-sm btn-success">
+                            <i class="bi bi-magic me-1"></i>Pre-filled
                         </a>
-                        <a href="{{ url_for('payroll.download_csv_template') }}" class="btn btn-light btn-sm">
-                            <i class="bi bi-download me-1"></i>Blank template
+                        <a href="{{ url_for('payroll.download_csv_template') }}" class="btn btn-sm btn-ghost">
+                            <i class="bi bi-download me-1"></i>Blank
                         </a>
                     </div>
                 </div>
                 <div class="card-body">
-                    <p class="small text-muted">Your CSV must include these columns:</p>
-                    <pre class="bg-light p-2 rounded small">employee_id,name,tin,basic_salary,allowances,bank_account,department,position
+                    <pre class="mb-3" style="font-size: 0.8rem;">employee_id,name,tin,basic_salary,allowances,bank_account,department,position
 EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manager</pre>
-                    <p class="small text-muted mt-2 mb-0">
-                        <strong>Required:</strong> employee_id, name, tin, basic_salary, allowances<br>
-                        <strong>Optional:</strong> bank_account, department, position<br>
-                        <strong>bank_account format:</strong> bank_name:account_number (cbe, dashen, awash, telebirr)
-                    </p>
+                    <div class="d-flex flex-wrap gap-3 small text-muted">
+                        <span><strong>Required:</strong> employee_id, name, tin, basic_salary, allowances</span>
+                        <span><strong>Optional:</strong> bank_account, department, position</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="bi bi-upload me-2"></i>{{ _('upload_csv') }}</h5>
+            <!-- Upload Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Upload CSV</h5>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info mb-3">
-                        <i class="bi bi-lightbulb me-1"></i>
-                        <strong>New:</strong> Want to enter payroll directly? Try the
-                        <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="alert-link">Spreadsheet Editor</a>
-                        — edit all employees in one table, like Excel.
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        <strong>Tip:</strong> Try the <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="alert-link">Spreadsheet Editor</a> — edit employees directly in a table, like Excel.
                     </div>
+
                     <form method="POST" action="{{ url_for('payroll.payroll_upload') }}" enctype="multipart/form-data" id="uploadForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="mb-3">
-                            <label for="file" class="form-label">{{ _('select_csv') }}</label>
-                            <div id="dropZone" class="border border-2 border-dashed rounded p-5 text-center" style="border-style: dashed !important; cursor: pointer; transition: background 0.2s;">
-                                <i class="bi bi-cloud-arrow-up fs-1 text-muted d-block mb-2"></i>
-                                <p class="mb-1 text-muted" id="dropText">Drag & drop your CSV file here, or click to browse</p>
-                                <p class="small text-muted mb-0" id="fileInfo">No file selected</p>
-                                <input class="d-none" type="file" id="file" name="file" accept=".csv" required>
+
+                        <!-- Drop Zone -->
+                        <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3" style="border: 2px dashed var(--border-medium); cursor: pointer; transition: all var(--transition-fast); background: var(--bg-secondary);">
+                            <div class="mb-3">
+                                <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--text-tertiary);"></i>
                             </div>
-                            <div id="inlineError" class="alert alert-danger mt-2 d-none py-2 small mb-0"></div>
+                            <p class="fw-semibold mb-1" id="dropText">Drag & drop your CSV file here</p>
+                            <p class="text-muted small mb-0" id="fileInfo">or click to browse</p>
+                            <input class="d-none" type="file" id="file" name="file" accept=".csv" required>
                         </div>
+
+                        <div id="inlineError" class="alert alert-danger d-none py-2 small mb-3"></div>
+
+                        <!-- Progress -->
                         <div id="progressContainer" class="mb-3 d-none">
-                            <div class="progress" style="height: 25px;">
-                                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
-                                    Processing... Please wait.
-                                </div>
+                            <div class="progress" style="height: 10px;">
+                                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
                             </div>
+                            <small class="text-muted mt-1 d-block">Processing payroll...</small>
                         </div>
+
+                        <!-- Submit -->
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled style="height: 52px;">
                                 <i class="bi bi-cloud-upload me-2"></i>Upload & Process
                             </button>
                         </div>
@@ -72,15 +80,16 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
     </div>
 </div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
 (function() {
-    var dropZone = document.getElementById('dropZone');
-    var fileInput = document.getElementById('file');
-    var fileInfo = document.getElementById('fileInfo');
-    var submitBtn = document.getElementById('submitBtn');
-    var inlineError = document.getElementById('inlineError');
-    var dropText = document.getElementById('dropText');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('file');
+    const fileInfo = document.getElementById('fileInfo');
+    const submitBtn = document.getElementById('submitBtn');
+    const inlineError = document.getElementById('inlineError');
+    const dropText = document.getElementById('dropText');
 
     function showError(msg) {
         inlineError.textContent = msg;
@@ -95,54 +104,33 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
     function handleFile(file) {
         clearError();
         if (!file) {
-            fileInfo.textContent = 'No file selected';
+            fileInfo.textContent = 'or click to browse';
+            dropText.textContent = 'Drag & drop your CSV file here';
             submitBtn.disabled = true;
             return;
         }
-        var ext = file.name.split('.').pop().toLowerCase();
+        const ext = file.name.split('.').pop().toLowerCase();
         if (ext !== 'csv') {
-            showError('Only .csv files are accepted. Please select a CSV file.');
-            fileInfo.textContent = '';
+            showError('Only .csv files are accepted.');
             return;
         }
         if (file.size === 0) {
-            showError('The selected file is empty. Please choose a non-empty CSV file.');
-            fileInfo.textContent = '';
+            showError('The file is empty.');
             return;
         }
-        var sizeKB = (file.size / 1024).toFixed(1);
-        fileInfo.textContent = file.name + ' (' + sizeKB + ' KB)';
-        dropText.textContent = 'File selected — click to change';
+        const sizeKB = (file.size / 1024).toFixed(1);
+        fileInfo.textContent = `${file.name} (${sizeKB} KB)`;
+        dropText.textContent = 'File selected ✓';
+        dropZone.style.borderColor = 'var(--color-success)';
+        dropZone.style.background = 'var(--color-success-light)';
         submitBtn.disabled = false;
     }
 
-    dropZone.addEventListener('click', function() { fileInput.click(); });
-
-    dropZone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.style.background = '#e8f4fd';
-    });
-
-    dropZone.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.style.background = '';
-    });
-
-    dropZone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.style.background = '';
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            handleFile(e.dataTransfer.files[0]);
-        }
-    });
-
-    fileInput.addEventListener('change', function() {
-        if (this.files.length) handleFile(this.files[0]);
-    });
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--brand-primary)'; dropZone.style.background = 'var(--brand-primary-soft)'; });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-medium)'; dropZone.style.background = 'var(--bg-secondary)'; });
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-medium)'; dropZone.style.background = 'var(--bg-secondary)'; if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); } });
+    fileInput.addEventListener('change', function() { if (this.files.length) handleFile(this.files[0]); });
 
     document.getElementById('uploadForm').addEventListener('submit', function() {
         submitBtn.disabled = true;

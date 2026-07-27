@@ -1,251 +1,110 @@
 /*
- * Responsive CSS — EthioPayroll
- * Makes existing templates usable on 360px Android screens.
- * "Usable on a phone" not "beautiful on a phone."
+ * Responsive CSS — EthioPayroll 2026
+ * Works with the new design system.
  */
 
 /* ============================================
    MOBILE: Screens under 768px
    ============================================ */
 @media (max-width: 767.98px) {
-
-    /* --- Sidebar → Top navbar with hamburger --- */
+    /* Sidebar → Top navbar with hamburger */
     .sidebar {
         position: fixed;
         top: 0;
         left: 0;
         width: 100% !important;
-        min-height: auto !important;
         height: auto;
-        z-index: 1050;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        padding: 0.5rem 1rem !important;
+        min-height: auto;
+        z-index: var(--z-sidebar);
     }
 
-    .sidebar .sidebar-brand {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        padding: 0.25rem 0 !important;
-        border-bottom: none !important;
-    }
-
-    .sidebar .sidebar-brand h5 {
-        margin-bottom: 0;
-        font-size: 1rem;
-    }
-
-    .sidebar .sidebar-brand small {
+    .sidebar .sidebar-nav {
         display: none;
+        padding: var(--space-2) var(--space-3);
     }
 
-    .sidebar nav {
-        display: none;
-        width: 100%;
-        flex-direction: column;
-        padding: 0.5rem 0;
-    }
-
-    .sidebar nav.show {
+    .sidebar .sidebar-nav.show {
         display: flex;
     }
 
-    .sidebar nav a {
-        padding: 0.75rem 1rem !important;
-        font-size: 1rem;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .sidebar > div:last-child {
+    .sidebar .sidebar-footer {
         display: none;
     }
 
-    .sidebar > div:last-child.show {
-        display: block;
-        width: 100%;
-        padding: 0.75rem 1rem !important;
+    .sidebar .sidebar-footer.show {
+        display: flex;
     }
 
-    /* Hamburger button */
+    .sidebar.collapsed .sidebar-nav,
+    .sidebar.collapsed .sidebar-footer {
+        display: none;
+    }
+
     .sidebar-toggle {
         display: block !important;
-        background: none;
-        border: none;
-        color: white;
-        font-size: 1.5rem;
-        cursor: pointer;
-        padding: 0.25rem;
     }
 
-    /* Push main content below fixed sidebar */
+    .brand-company {
+        display: none;
+    }
+
     .main-content {
-        margin-top: 56px;
+        margin-left: 0 !important;
+        margin-top: 60px;
     }
 
-    /* --- Tables: horizontal scroll --- */
+    /* Metric cards: 2-column */
+    .col-md-3.col-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .metric-card .metric-value {
+        font-size: var(--text-2xl);
+    }
+
+    .metric-card .metric-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    /* Tables: horizontal scroll */
     .table-responsive {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        border: 1px solid #dee2e6;
-        border-radius: 0.375rem;
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
     }
 
     .table {
         min-width: 500px;
-        font-size: 0.85rem;
+        font-size: var(--text-sm);
     }
 
-    .table th,
-    .table td {
-        padding: 0.5rem 0.4rem;
+    .table th, .table td {
+        padding: var(--space-2) var(--space-3);
         white-space: nowrap;
     }
 
-    /* --- Forms: full-width, larger touch targets --- */
-    .form-control,
-    .form-select {
-        font-size: 1rem;
-        padding: 0.75rem 0.75rem;
+    /* Forms: full width */
+    .form-control, .form-select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        padding: var(--space-3);
         min-height: 44px;
     }
 
     .btn {
         min-height: 44px;
-        font-size: 1rem;
-        padding: 0.6rem 1rem;
+        font-size: var(--text-sm);
     }
 
-    .btn-sm {
-        min-height: 38px;
-        font-size: 0.9rem;
-        padding: 0.4rem 0.75rem;
-    }
-
-    /* --- Dashboard: single column --- */
-    .row {
-        margin-left: -0.5rem;
-        margin-right: -0.5rem;
-    }
-
-    .row > [class*="col-"] {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        margin-bottom: 0.75rem;
-    }
-
-    /* Force single column on mobile */
-    .col-md-3,
-    .col-md-4,
-    .col-md-6,
-    .col-lg-3,
-    .col-lg-4,
-    .col-lg-6 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-
-    /* --- Cards --- */
-    .card {
-        margin-bottom: 0.75rem;
-    }
-
-    .card-body {
-        padding: 0.75rem;
-    }
-
-    .card-header {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.95rem;
-    }
-
-    /* --- Page headers: stack vertically --- */
+    /* Page headers: stack */
     .d-flex.justify-content-between {
         flex-direction: column;
-        gap: 0.5rem;
+        gap: var(--space-3);
     }
 
-    .d-flex.justify-content-between h3,
-    .d-flex.justify-content-between h4 {
-        font-size: 1.25rem;
-        margin-bottom: 0.5rem;
-    }
-
-    /* --- Buttons: full width on mobile --- */
-    .d-flex.justify-content-between .btn,
-    .d-flex.gap-2 .btn {
-        width: 100%;
-        margin-bottom: 0.25rem;
-    }
-
-    /* --- Container: less padding --- */
-    .container-fluid {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
-    }
-
-    .py-4 {
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
-    }
-
-    /* --- Alerts --- */
-    .alert {
-        font-size: 0.9rem;
-        padding: 0.5rem 0.75rem;
-    }
-
-    /* --- Text: readable without zooming --- */
-    body {
-        font-size: 16px;
-    }
-
-    h3 { font-size: 1.3rem; }
-    h4 { font-size: 1.15rem; }
-    h5 { font-size: 1.05rem; }
-
-    /* --- Badge/text --- */
-    .badge {
-        font-size: 0.75rem;
-        padding: 0.35em 0.5em;
-    }
-
-    /* --- Login page: centered, full-width --- */
-    .container.mt-5 {
-        padding-top: 1rem !important;
-    }
-
-    .container.mt-5 .col-md-6,
-    .container.mt-5 .col-md-4 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-
-    /* --- Modal: full screen on mobile --- */
-    .modal-dialog {
-        margin: 0.5rem;
-        max-width: calc(100% - 1rem);
-    }
-
-    /* --- Compliance deadline cards --- */
-    .col-md-4 .card {
-        margin-bottom: 0.5rem;
-    }
-
-    /* --- Payroll results table --- */
-    .table-striped tbody tr {
-        font-size: 0.85rem;
-    }
-
-    /* --- Navigation active state more visible --- */
-    .sidebar nav a.active {
-        background: rgba(255,255,255,0.15);
-        font-weight: 600;
-    }
-
-    /* --- Validation/action buttons: stack vertically --- */
     .d-flex.gap-2 {
         flex-direction: column;
     }
@@ -254,88 +113,163 @@
         width: 100%;
     }
 
-    /* --- Pre element: scrollable on mobile --- */
-    pre {
-        overflow-x: auto;
-        font-size: 0.8rem;
-        padding: 0.5rem;
+    /* Charts: smaller */
+    .chart-container canvas {
+        max-height: 220px;
     }
 
-    /* --- Display numbers smaller on mobile --- */
-    .display-4 {
-        font-size: 2rem;
+    /* Cards: less padding */
+    .card-body {
+        padding: var(--space-4);
     }
 
-    .display-6 {
-        font-size: 1.5rem;
+    /* Padding */
+    .p-4, .p-md-5 {
+        padding: var(--space-4) !important;
+    }
+
+    .p-4.p-md-5 {
+        padding: var(--space-4) !important;
     }
 }
 
 /* ============================================
-   SMALL PHONES: Screens under 360px
+   SMALL PHONES: under 360px
    ============================================ */
 @media (max-width: 359.98px) {
-    body {
-        font-size: 14px;
+    .col-md-3.col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
     }
 
     .table {
         min-width: 400px;
-        font-size: 0.8rem;
-    }
-
-    .btn {
-        font-size: 0.9rem;
-        padding: 0.5rem 0.75rem;
     }
 }
 
 /* ============================================
-   DESKTOP: Keep sidebar working normally
+   TABLETS: 768px - 1024px
+   ============================================ */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .sidebar {
+        width: 72px !important;
+    }
+
+    .sidebar .brand-text,
+    .sidebar .nav-section-label,
+    .sidebar .nav-link span,
+    .sidebar .nav-badge,
+    .sidebar .user-details,
+    .sidebar .lang-switcher {
+        display: none;
+    }
+
+    .sidebar .nav-link {
+        justify-content: center;
+        padding: var(--space-3);
+    }
+
+    .sidebar .nav-link i {
+        font-size: 1.25rem;
+    }
+
+    .sidebar .nav-link.active::before {
+        left: -12px;
+    }
+
+    .main-content {
+        margin-left: 72px !important;
+    }
+}
+
+/* ============================================
+   DESKTOP: above 768px
    ============================================ */
 @media (min-width: 768px) {
     .sidebar-toggle {
         display: none !important;
     }
+
+    .sidebar.collapsed {
+        width: 72px !important;
+    }
+
+    .sidebar.collapsed .brand-text,
+    .sidebar.collapsed .nav-section-label,
+    .sidebar.collapsed .nav-link span,
+    .sidebar.collapsed .nav-badge,
+    .sidebar.collapsed .user-details,
+    .sidebar.collapsed .lang-switcher {
+        display: none;
+    }
+
+    .sidebar.collapsed .nav-link {
+        justify-content: center;
+        padding: var(--space-3);
+    }
+
+    .sidebar.collapsed .nav-link i {
+        font-size: 1.25rem;
+    }
+
+    .sidebar.collapsed .main-content {
+        margin-left: 72px !important;
+    }
 }
 
 /* ============================================
    RESPONSIVE CARD TABLES
-   Add class="responsive-card" to <table> and
-   data-label="Column Name" to each <td>.
-   Below 600px, rows become stacked cards.
    ============================================ */
 @media (max-width: 600px) {
     table.responsive-card thead {
         display: none;
     }
+
     table.responsive-card tr {
         display: block;
-        margin-bottom: 1rem;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 0.5rem;
-        background: #fff;
+        margin-bottom: var(--space-3);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3);
+        background: var(--bg-primary);
     }
+
     table.responsive-card td {
         display: flex;
         justify-content: space-between;
-        padding: 0.4rem 0;
+        padding: var(--space-2) 0;
         border: none;
     }
+
     table.responsive-card td::before {
         content: attr(data-label);
         font-weight: 600;
-        color: #666;
-        margin-right: 1rem;
+        color: var(--text-secondary);
+        margin-right: var(--space-4);
         flex-shrink: 0;
+        font-size: var(--text-sm);
+    }
+}
+
+/* ============================================
+   PRINT
+   ============================================ */
+@media print {
+    .sidebar, .sidebar-toggle, .toast-container, .theme-toggle {
+        display: none !important;
     }
 
-    /* Large tap targets for action buttons (Apple/Google 44px guideline) */
-    .btn-approve-lg {
-        min-height: 44px;
-        min-width: 100%;
-        font-size: 1rem;
-        margin-top: 0.5rem;
+    .main-content {
+        margin-left: 0 !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+
+    body {
+        background: white;
+        color: black;
     }
 }

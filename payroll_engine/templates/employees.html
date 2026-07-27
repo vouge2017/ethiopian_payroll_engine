@@ -1,44 +1,48 @@
 {% extends "base.html" %}
-{% block title %}Employees - Ethiopian Payroll Engine{% endblock %}
+{% block title %}Employees — EthioPayroll{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
+    <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="mb-0">
-            {% if show_archived %}Archived Employees{% else %}{{ _('employees') }}{% endif %}
-        </h3>
         <div>
+            <h2 class="fw-bold mb-1">{% if show_archived %}Archived Employees{% else %}Employees{% endif %}</h2>
+            <p class="text-muted mb-0">{{ employees|length }} {{ 'archived' if show_archived else 'active' }} employees</p>
+        </div>
+        <div class="d-flex gap-2">
             {% if show_archived %}
-            <a href="{{ url_for('employees.list_employees') }}" class="btn btn-outline-secondary me-2">
+            <a href="{{ url_for('employees.list_employees') }}" class="btn btn-ghost">
                 <i class="bi bi-arrow-left me-1"></i>Active
             </a>
             {% else %}
-            <a href="{{ url_for('employees.list_employees', archived='1') }}" class="btn btn-outline-secondary me-2">
+            <a href="{{ url_for('employees.list_employees', archived='1') }}" class="btn btn-ghost">
                 <i class="bi bi-archive me-1"></i>Archived
             </a>
             {% endif %}
-            <a href="{{ url_for('employees.export_employees') }}" class="btn btn-outline-success me-2">
-                <i class="bi bi-download me-1"></i> Export CSV
+            <a href="{{ url_for('employees.export_employees') }}" class="btn btn-ghost">
+                <i class="bi bi-download me-1"></i>Export
             </a>
             <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
-                <i class="bi bi-person-plus me-1"></i> {{ _('add_employee') }}
+                <i class="bi bi-person-plus me-1"></i>{{ _('add_employee') }}
             </a>
         </div>
     </div>
 
-    <!-- Search -->
-    <div class="card border-0 shadow-sm mb-4">
+    <!-- Search & Filter -->
+    <div class="card mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ url_for('employees.list_employees') }}" class="row g-2">
+            <form method="GET" action="{{ url_for('employees.list_employees') }}" class="row g-2 align-items-end">
                 {% if show_archived %}
                 <input type="hidden" name="archived" value="1">
                 {% endif %}
                 <div class="col-md-4">
+                    <label class="form-label">Search</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" name="q" placeholder="Search by name or ID..." value="{{ search }}">
+                        <input type="text" class="form-control" name="q" placeholder="Name or employee ID..." value="{{ search }}">
                     </div>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label">Department</label>
                     <select name="dept" class="form-select">
                         <option value="">All Departments</option>
                         {% for dept in departments %}
@@ -47,26 +51,28 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary w-100">{{ _('search') }}</button>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel me-1"></i>Filter
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Employees Table -->
-    <div class="card border-0 shadow-sm">
+    <div class="card">
         <div class="card-body p-0">
             {% if employees %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0 responsive-card">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th>ID</th>
-                            <th>{{ _('name') }}</th>
-                            <th>{{ _('department') }}</th>
-                            <th>{{ _('position') }}</th>
-                            <th>{{ _('basic_salary') }} (ETB)</th>
-                            <th>{{ _('gross') }} (ETB)</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Basic Salary</th>
+                            <th>Gross</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -74,23 +80,22 @@
                         {% for emp in employees %}
                         <tr>
                             <td data-label="ID"><code>{{ emp.employee_id }}</code></td>
-                            <td data-label="Name">{{ emp.name }}</td>
-                            <td data-label="Department">{{ emp.department or '-' }}</td>
-                            <td data-label="Position">{{ emp.position or '-' }}</td>
-                            <td data-label="Basic Salary">{{ '%.2f'|format(emp.basic_salary) }}</td>
-                            <td data-label="Gross">{{ '%.2f'|format(emp.gross_salary) }}</td>
+                            <td data-label="Name">
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar me-2" style="width: 32px; height: 32px; font-size: 0.75rem; background: var(--brand-primary-light); color: var(--brand-primary);">
+                                        {{ emp.name[0]|upper }}
+                                    </div>
+                                    <strong>{{ emp.name }}</strong>
+                                </div>
+                            </td>
+                            <td data-label="Department">{{ emp.department or '—' }}</td>
+                            <td data-label="Position">{{ emp.position or '—' }}</td>
+                            <td data-label="Basic Salary" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.basic_salary) }}</td>
+                            <td data-label="Gross" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.gross_salary) }}</td>
                             <td data-label="Actions">
-                                <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-outline-secondary btn-approve-lg">
-                                    <i class="bi bi-eye"></i> View
+                                <a href="{{ url_for('employees.employee_detail', employee_id=emp.id) }}" class="btn btn-sm btn-ghost">
+                                    <i class="bi bi-eye"></i>
                                 </a>
-                                {% if show_archived %}
-                                <form method="POST" action="{{ url_for('employees.reactivate_employee', emp_id=emp.id) }}" style="display:inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-success btn-approve-lg" title="{{ _('reactivate') }}">
-                                        <i class="bi bi-arrow-counterclockwise"></i> Reactivate
-                                    </button>
-                                </form>
-                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -98,18 +103,37 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-people" style="font-size: 3rem;"></i>
-                {% if show_archived %}
-                <p class="mt-2">No archived employees.</p>
-                {% else %}
-                <p class="mt-2">No employees found. <a href="{{ url_for('employees.add_employee') }}">{{ _('add_employee') }}</a>.</p>
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-people"></i></div>
+                <h4>{% if search %}No employees found{% else %}No employees yet{% endif %}</h4>
+                <p>{% if search %}Try a different search term.{% else %}Add your first employee to get started with payroll.{% endif %}</p>
+                {% if not search %}
+                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-1"></i>Add Employee
+                </a>
                 {% endif %}
             </div>
             {% endif %}
         </div>
     </div>
-    {% from "_pagination.html" import render_pagination %}
-    {{ render_pagination(pagination, 'main.list_employees', extra={'q': search, 'archived': ('1' if show_archived else '')}) }}
+
+    <!-- Pagination -->
+    {% if total_pages and total_pages > 1 %}
+    <nav class="mt-4" aria-label="Employee pagination">
+        <ul class="pagination justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item"><a class="page-link" href="?page={{ page - 1 }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">Previous</a></li>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            {% if page < total_pages %}
+            <li class="page-item"><a class="page-link" href="?page={{ page + 1 }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %}

@@ -45,7 +45,7 @@
                                     <span class="input-group-text">+251</span>
                                     <input type="text" name="emergency_phone" class="form-control"
                                            value="{{ (employee.emergency_phone[1:] if employee.emergency_phone and employee.emergency_phone.startswith('0') else employee.emergency_phone) or '' }}"
-                                           placeholder="9XXXXXXXX" pattern="[0-9]{9}" maxlength="9"
+                                           placeholder="9XXXXXXXX" pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
                                            title="Enter 9 digits starting with 9 or 7">
                                 </div>
                             </div>
@@ -73,7 +73,7 @@
                                     <span class="input-group-text">+251</span>
                                     <input type="text" name="phone" class="form-control"
                                            value="{{ (employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
-                                           placeholder="9XXXXXXXX" pattern="[0-9]{9}" maxlength="9"
+                                           placeholder="9XXXXXXXX" pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
                                            title="Enter 9 digits starting with 9 or 7">
                                 </div>
                                 <div class="form-text">Current: {{ employee.phone or 'Not set' }}</div>

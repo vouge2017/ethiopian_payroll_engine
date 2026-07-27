@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Payroll Results - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
             <a href="{{ url_for('payroll.payroll_runs') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
@@ -15,11 +15,11 @@
             {% if run.status == 'locked' %}
                 <span class="badge bg-dark"><i class="bi bi-lock-fill"></i> locked</span>
             {% elif run.status == 'completed' %}
-                <span class="badge bg-success">completed</span>
+                <span class="badge badge-success">completed</span>
             {% elif run.status == 'processing' %}
-                <span class="badge bg-warning">processing</span>
+                <span class="badge badge-warning">processing</span>
             {% elif run.status == 'failed' %}
-                <span class="badge bg-danger">failed</span>
+                <span class="badge badge-danger">failed</span>
             {% else %}
                 <span class="badge bg-secondary">{{ run.status }}</span>
             {% endif %}
@@ -68,7 +68,7 @@
                 </button>
             </form>
             {% elif run.disbursement_status == 'disbursed' %}
-            <span class="badge bg-info"><i class="bi bi-bank me-1"></i> Disbursed</span>
+            <span class="badge badge-info"><i class="bi bi-bank me-1"></i> Disbursed</span>
             <form method="POST" action="{{ url_for('payroll.confirm_payment', run_id=run.id) }}" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-success" title="Confirm bank has processed payment">
@@ -76,9 +76,9 @@
                 </button>
             </form>
             {% elif run.disbursement_status == 'confirmed' %}
-            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Payment Confirmed</span>
+            <span class="badge badge-success"><i class="bi bi-check-circle me-1"></i> Payment Confirmed</span>
             {% elif run.disbursement_status == 'failed' %}
-            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i> Payment Failed</span>
+            <span class="badge badge-danger"><i class="bi bi-x-circle me-1"></i> Payment Failed</span>
             {% endif %}
         </div>
     </div>
@@ -90,7 +90,7 @@
     {% set total_net = run.payslips|sum(attribute='net_pay') %}
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('total_employees') }}</h6>
                     <h4>{{ run.payslips|length }}</h4>
@@ -98,7 +98,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('total_gross') }}</h6>
                     <h4>ETB {{ '%.2f'|format(total_gross) }}</h4>
@@ -106,7 +106,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('total_tax') }}</h6>
                     <h4>ETB {{ '%.2f'|format(total_tax) }}</h4>
@@ -114,7 +114,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('total_net') }}</h6>
                     <h4>ETB {{ '%.2f'|format(total_net) }}</h4>
@@ -125,8 +125,8 @@
     {% endif %}
 
     <!-- Payslip Table -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="card">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>{{ _('payslips') }}</h5>
             <input type="text" class="form-control form-control-sm" style="max-width: 200px;" id="searchTable" placeholder="Search...">
         </div>

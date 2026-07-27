@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Leave Management — Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Leave Management</h3>
@@ -12,7 +12,7 @@
     <!-- Summary Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h4 class="text-warning">{{ pending_count }}</h4>
                     <small class="text-muted">Pending Requests</small>
@@ -20,7 +20,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h4 class="text-success">{{ approved_this_month }}</h4>
                     <small class="text-muted">Approved This Month</small>
@@ -28,7 +28,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h4 class="text-info">{{ leaves|selectattr('status', 'equalto', 'approved')|list|length }}</h4>
                     <small class="text-muted">Active (All Time)</small>
@@ -36,7 +36,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h4>{{ leaves|length }}</h4>
                     <small class="text-muted">Total Requests</small>
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card mb-4">
         <div class="card-body">
             <form method="GET" class="row g-2">
                 <div class="col-md-3">
@@ -79,7 +79,7 @@
     </div>
 
     <!-- Leave Table -->
-    <div class="card border-0 shadow-sm">
+    <div class="card">
         <div class="card-body p-0">
             {% if leaves %}
             <div class="table-responsive">

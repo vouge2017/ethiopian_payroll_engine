@@ -2,7 +2,7 @@
 {% from "_pagination.html" import render_pagination %}
 {% block title %}Employee Detail - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
             <a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
@@ -48,7 +48,7 @@
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('basic_salary') }}</h6>
                     <h4>ETB {{ '%.2f'|format(employee.basic_salary) }}</h4>
@@ -56,7 +56,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('allowances') }}</h6>
                     <h4>ETB {{ '%.2f'|format(employee.allowances) }}</h4>
@@ -64,7 +64,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('gross') }}</h6>
                     <h4>ETB {{ '%.2f'|format(employee.gross_salary) }}</h4>
@@ -72,7 +72,7 @@
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('payment') }}</h6>
                     <p class="mb-0">{{ employee.bank_account or employee.bank_or_telebirr or 'Cash' }}</p>
@@ -82,7 +82,7 @@
     </div>
     <div class="row g-3 mb-4">
         <div class="col-md-2">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('phone') }}</h6>
                     <p class="mb-0">{% if employee.phone %}+251 {{ employee.phone }}{% else %}Not set{% endif %}</p>
@@ -90,7 +90,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('department') }}</h6>
                     <p class="mb-0">{{ employee.department or 'Not set' }}</p>
@@ -98,7 +98,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('position') }}</h6>
                     <p class="mb-0">{{ employee.position or 'Not set' }}</p>
@@ -106,7 +106,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('start_date') }}</h6>
                     <p class="mb-0">{{ employee.start_date or 'Not set' }}</p>
@@ -114,7 +114,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('tin') }}</h6>
                     <p class="mb-0">{{ employee.tin or 'Not set' }}</p>
@@ -122,7 +122,7 @@
             </div>
         </div>
         <div class="col-md-2">
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('linked_user') }}</h6>
                     <p class="mb-0">{{ _('yes') if employee.user_id else _('no') }}</p>
@@ -132,8 +132,8 @@
     </div>
 
     <!-- Overtime Section -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="card mb-4">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }}</h5>
             {% if total_ot_hours > 0 %}
             <span class="badge bg-light text-dark">{{ total_ot_hours }}h / ETB {{ '%.2f'|format(total_ot_pay) }}</span>
@@ -208,7 +208,7 @@
     </div>
 
     <!-- Allowances Section -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card mb-4">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Allowances</h5>
             {% if employee.allowance_records %}
@@ -276,7 +276,7 @@
                             <td>ETB {{ '%.2f'|format(allowance.amount) }}</td>
                             <td>
                                 {% if allowance.tax_treatment == 'exempt' %}
-                                <span class="badge bg-success">Exempt</span>
+                                <span class="badge badge-success">Exempt</span>
                                 {% elif allowance.tax_treatment == 'partial' %}
                                 <span class="badge bg-warning text-dark">Partial</span>
                                 {% else %}
@@ -349,7 +349,7 @@
     </div>
 
     <!-- Deductions Section -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card mb-4">
         <div class="card-header bg-warning text-dark">
             <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Deductions</h5>
         </div>
@@ -507,8 +507,8 @@
     </div>
 
     <!-- Payslip History -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-primary text-white">
+    <div class="card">
+        <div class="card-header bg-transparent">
             <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>{{ _('payslip_history') }}</h5>
         </div>
         <div class="card-body p-0">

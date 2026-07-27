@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ _('confirm_payroll_processing') }} - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="d-flex align-items-center mb-4">
@@ -17,8 +17,8 @@
             </div>
 
             <!-- Summary -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
                     <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>{{ _('payroll_summary') }}</h5>
                 </div>
                 <div class="card-body">
@@ -65,7 +65,7 @@
 
             <!-- Employee Breakdown (expandable) -->
             {% if employees %}
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0"><i class="bi bi-people me-2"></i>Employee Breakdown</h5>
                 </div>
@@ -141,7 +141,7 @@
 
             <!-- Cash Flow Pre-Flight -->
             {% if not blocks %}
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header bg-light">
                     <h5 class="mb-0"><i class="bi bi-bank me-2"></i>Cash Flow Check</h5>
                 </div>
@@ -177,7 +177,7 @@
 
             <!-- Approval Form -->
             {% if not blocks %}
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{{ _('confirm_approve') }}</h5>
                 </div>

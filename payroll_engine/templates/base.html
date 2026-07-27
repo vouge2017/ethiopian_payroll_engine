@@ -275,16 +275,24 @@ function updateThemeIcon(theme) {
 // Sidebar Toggle
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
+    const nav = sidebar.querySelector('.sidebar-nav');
+    const footer = sidebar.querySelector('.sidebar-footer');
     const btn = document.querySelector('.sidebar-toggle');
-    const expanded = sidebar.classList.toggle('collapsed');
-    if (btn) btn.setAttribute('aria-expanded', !expanded);
+    const isOpen = nav.classList.toggle('show');
+    if (footer) footer.classList.toggle('show', isOpen);
+    if (btn) btn.setAttribute('aria-expanded', isOpen);
 }
 
 // Close sidebar on mobile link click
 document.querySelectorAll('.sidebar-nav .nav-link').forEach(function(a) {
     a.addEventListener('click', function() {
         if (window.innerWidth < 768) {
-            document.getElementById('sidebar').classList.add('collapsed');
+            var sidebar = document.getElementById('sidebar');
+            sidebar.querySelector('.sidebar-nav').classList.remove('show');
+            var footer = sidebar.querySelector('.sidebar-footer');
+            if (footer) footer.classList.remove('show');
+            var btn = document.querySelector('.sidebar-toggle');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
         }
     });
 });

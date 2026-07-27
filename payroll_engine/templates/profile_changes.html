@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Profile Changes — Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
             <a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
@@ -13,7 +13,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card mb-4">
         <div class="card-body py-2">
             <div class="d-flex gap-2">
                 <a href="{{ url_for('employees.profile_changes', status='pending') }}"
@@ -37,7 +37,7 @@
     </div>
 
     {% if changes %}
-    <div class="card border-0 shadow-sm">
+    <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
@@ -60,7 +60,7 @@
                                 <strong>{{ change.employee.name }}</strong>
                                 <br><small class="text-muted">{{ change.employee.employee_id }}</small>
                             </td>
-                            <td><span class="badge bg-info">{{ change.field_label }}</span></td>
+                            <td><span class="badge badge-info">{{ change.field_label }}</span></td>
                             <td class="text-muted">{{ change.old_value or '—' }}</td>
                             <td><strong>{{ change.new_value }}</strong></td>
                             <td>{{ change.requester.phone or change.requester.email or '—' }}</td>
@@ -69,12 +69,12 @@
                                 {% if change.status == 'pending' %}
                                     <span class="badge bg-warning text-dark">Pending</span>
                                 {% elif change.status == 'approved' %}
-                                    <span class="badge bg-success">Approved</span>
+                                    <span class="badge badge-success">Approved</span>
                                     {% if change.reviewed_at %}
                                     <br><small class="text-muted">{{ change.reviewed_at.strftime('%Y-%m-%d') }}</small>
                                     {% endif %}
                                 {% else %}
-                                    <span class="badge bg-danger">Rejected</span>
+                                    <span class="badge badge-danger">Rejected</span>
                                     {% if change.rejection_reason %}
                                     <br><small class="text-danger">{{ change.rejection_reason[:50] }}</small>
                                     {% endif %}
@@ -152,7 +152,7 @@
     {% endif %}
 
     {% else %}
-    <div class="card border-0 shadow-sm">
+    <div class="card">
         <div class="card-body text-center py-5">
             <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
             <h5 class="mt-3 text-muted">

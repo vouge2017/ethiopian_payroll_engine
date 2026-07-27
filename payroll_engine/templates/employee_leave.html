@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Leave Management - {{ employee.name }}{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-1">
@@ -27,7 +27,7 @@
             <div class="row g-3 mb-4">
                 <!-- Annual Leave -->
                 <div class="col-md-4">
-                    <div class="card border-0 shadow-sm h-100">
+                    <div class="card h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h6 class="text-primary mb-0">Annual Leave</h6>
@@ -50,7 +50,7 @@
 
                 <!-- Sick Leave -->
                 <div class="col-md-4">
-                    <div class="card border-0 shadow-sm h-100">
+                    <div class="card h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h6 class="text-warning mb-0">Sick Leave</h6>
@@ -73,11 +73,11 @@
 
                 <!-- Maternity/Paternity -->
                 <div class="col-md-4">
-                    <div class="card border-0 shadow-sm h-100">
+                    <div class="card h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h6 class="text-success mb-0">Maternity</h6>
-                                <span class="badge bg-success">{{ balances.maternity.remaining }} days</span>
+                                <span class="badge badge-success">{{ balances.maternity.remaining }} days</span>
                             </div>
                             <div class="progress mb-2" style="height: 8px;">
                                 {% set mat_pct = (balances.maternity.taken / balances.maternity.entitled * 100) if balances.maternity.entitled > 0 else 0 %}
@@ -90,7 +90,7 @@
                             <hr class="my-2">
                             <div class="d-flex justify-content-between align-items-start">
                                 <h6 class="text-info mb-0">Paternity</h6>
-                                <span class="badge bg-info">{{ balances.paternity.remaining }} days</span>
+                                <span class="badge badge-info">{{ balances.paternity.remaining }} days</span>
                             </div>
                             <small class="text-muted">Entitled: {{ balances.paternity.entitled }} days</small>
                         </div>
@@ -106,7 +106,7 @@
                     <div class="col-md-4">
                         <strong>Days 1-30:</strong> 100% pay
                         {% if balances.sick.taken <= 30 %}
-                        <span class="badge bg-success">Current</span>
+                        <span class="badge badge-success">Current</span>
                         {% endif %}
                     </div>
                     <div class="col-md-4">
@@ -118,7 +118,7 @@
                     <div class="col-md-4">
                         <strong>Days 91-180:</strong> 0% pay
                         {% if balances.sick.taken > 90 %}
-                        <span class="badge bg-danger">Current</span>
+                        <span class="badge badge-danger">Current</span>
                         {% endif %}
                     </div>
                 </div>
@@ -129,8 +129,8 @@
             {% endif %}
 
             <!-- Request Leave Form -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
                     <h6 class="mb-0"><i class="bi bi-calendar-plus me-2"></i>Request Leave</h6>
                 </div>
                 <div class="card-body">
@@ -172,7 +172,7 @@
             </div>
 
             <!-- Leave History -->
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Leave History</h6>
                 </div>
@@ -204,9 +204,9 @@
                                         {% if leave.status == 'pending' %}
                                         <span class="badge bg-warning text-dark">Pending</span>
                                         {% elif leave.status == 'approved' %}
-                                        <span class="badge bg-success">Approved</span>
+                                        <span class="badge badge-success">Approved</span>
                                         {% elif leave.status == 'rejected' %}
-                                        <span class="badge bg-danger">Rejected</span>
+                                        <span class="badge badge-danger">Rejected</span>
                                         {% endif %}
                                     </td>
                                     <td>{{ leave.applied_at.strftime('%d %b %Y') }}</td>
@@ -248,7 +248,7 @@
 
         <!-- Sidebar: Legal Reference -->
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header">
                     <h6 class="mb-0"><i class="bi bi-book me-2"></i>Legal Reference</h6>
                 </div>
@@ -298,7 +298,7 @@
             </div>
 
             <!-- Company Policy Override -->
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Company Policy</h6>
                 </div>

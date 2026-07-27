@@ -1,13 +1,14 @@
 /*
  * Responsive CSS — EthioPayroll 2026
- * Works with the new design system.
+ * Works with design-system.css sidebar.
+ * Single source of truth for responsive behavior.
  */
 
 /* ============================================
    MOBILE: Screens under 768px
    ============================================ */
 @media (max-width: 767.98px) {
-    /* Sidebar → Top navbar with hamburger */
+    /* Sidebar → collapsed top bar */
     .sidebar {
         position: fixed;
         top: 0;
@@ -16,35 +17,25 @@
         height: auto;
         min-height: auto;
         z-index: var(--z-sidebar);
+        flex-wrap: wrap;
     }
 
-    .sidebar .sidebar-nav {
-        display: none;
-        padding: var(--space-2) var(--space-3);
-    }
-
-    .sidebar .sidebar-nav.show {
-        display: flex;
-    }
-
+    .sidebar .sidebar-nav,
     .sidebar .sidebar-footer {
         display: none;
+        width: 100%;
     }
 
+    .sidebar .sidebar-nav.show,
     .sidebar .sidebar-footer.show {
         display: flex;
     }
 
-    .sidebar.collapsed .sidebar-nav,
-    .sidebar.collapsed .sidebar-footer {
-        display: none;
-    }
-
-    .sidebar-toggle {
+    .sidebar .sidebar-toggle {
         display: block !important;
     }
 
-    .brand-company {
+    .sidebar .brand-company {
         display: none;
     }
 
@@ -87,9 +78,9 @@
         white-space: nowrap;
     }
 
-    /* Forms: full width */
+    /* Forms: prevent iOS zoom */
     .form-control, .form-select {
-        font-size: 16px; /* Prevent zoom on iOS */
+        font-size: 16px;
         padding: var(--space-3);
         min-height: 44px;
     }
@@ -123,7 +114,7 @@
         padding: var(--space-4);
     }
 
-    /* Padding */
+    /* Page padding */
     .p-4, .p-md-5 {
         padding: var(--space-4) !important;
     }
@@ -210,10 +201,6 @@
 
     .sidebar.collapsed .nav-link i {
         font-size: 1.25rem;
-    }
-
-    .sidebar.collapsed .main-content {
-        margin-left: 72px !important;
     }
 }
 

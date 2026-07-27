@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Payslip - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
+<div class="p-4 p-md-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -27,7 +27,7 @@
             </div>
 
             <!-- Summary-first card -->
-            <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;">
+            <div class="card mb-4" style="background: linear-gradient(135deg, #1a5276, #2e86c1); color: white;">
                 <div class="card-body py-3">
                     <div class="row align-items-center">
                         <div class="col-6">
@@ -59,7 +59,7 @@
             </div>
 
             <!-- Employee Info -->
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-6">
@@ -75,7 +75,7 @@
             </div>
 
             <!-- Earnings -->
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>{{ _('earnings') }}</h5>
                 </div>
@@ -106,7 +106,7 @@
             </div>
 
             <!-- Deductions -->
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0"><i class="bi bi-dash-circle me-2"></i>{{ _('deductions') }}</h5>
                 </div>
@@ -203,7 +203,7 @@
             {% include '_calculation_flow.html' ignore missing %}
 
             <!-- Net Pay -->
-            <div class="card border-0 shadow-sm mb-4">
+            <div class="card mb-4">
                 <div class="card-body text-center py-4" style="background: #1a5276; color: white;">
                     <h5 class="mb-1">{{ _('net_pay') }}</h5>
                     <h2 class="mb-0">ETB {{ '%.2f'|format(payslip.net_pay) }}</h2>
@@ -211,7 +211,7 @@
             </div>
 
             <!-- Payment Method -->
-            <div class="card border-0 shadow-sm">
+            <div class="card">
                 <div class="card-body">
                     <strong>{{ _('payment_method') }}:</strong> {{ employee.bank_account or employee.bank_or_telebirr or 'Cash' }}
                 </div>

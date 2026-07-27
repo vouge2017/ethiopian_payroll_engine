@@ -282,11 +282,11 @@ const chartColors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06
 new Chart(document.getElementById('deptCostChart'), {
     type: 'bar',
     data: {
-        labels: [{% for dept in dept_costs.keys() %}'{{ dept }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        labels: {{ dept_costs.keys() | list | tojson }},
         datasets: [
-            { label: 'Gross', data: [{% for d in dept_costs.values() %}{{ d.gross }}{% if not loop.last %},{% endif %}{% endfor %}], backgroundColor: '#2563eb', borderRadius: 6 },
-            { label: 'Tax', data: [{% for d in dept_costs.values() %}{{ d.tax }}{% if not loop.last %},{% endif %}{% endfor %}], backgroundColor: '#ef4444', borderRadius: 6 },
-            { label: 'Net', data: [{% for d in dept_costs.values() %}{{ d.net }}{% if not loop.last %},{% endif %}{% endfor %}], backgroundColor: '#10b981', borderRadius: 6 }
+            { label: 'Gross', data: {{ dept_costs.values() | map(attribute='gross') | list | tojson }}, backgroundColor: '#2563eb', borderRadius: 6 },
+            { label: 'Tax', data: {{ dept_costs.values() | map(attribute='tax') | list | tojson }}, backgroundColor: '#ef4444', borderRadius: 6 },
+            { label: 'Net', data: {{ dept_costs.values() | map(attribute='net') | list | tojson }}, backgroundColor: '#10b981', borderRadius: 6 }
         ]
     },
     options: {
@@ -300,8 +300,8 @@ new Chart(document.getElementById('deptCostChart'), {
 new Chart(document.getElementById('deptPieChart'), {
     type: 'doughnut',
     data: {
-        labels: [{% for dept in dept_costs.keys() %}'{{ dept }}'{% if not loop.last %},{% endif %}{% endfor %}],
-        datasets: [{ data: [{% for d in dept_costs.values() %}{{ d.gross }}{% if not loop.last %},{% endif %}{% endfor %}], backgroundColor: chartColors, borderWidth: 0, hoverOffset: 8 }]
+        labels: {{ dept_costs.keys() | list | tojson }},
+        datasets: [{ data: {{ dept_costs.values() | map(attribute='gross') | list | tojson }}, backgroundColor: chartColors, borderWidth: 0, hoverOffset: 8 }]
     },
     options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { padding: 12 } }, tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8 } } }
 });
@@ -312,10 +312,10 @@ new Chart(document.getElementById('deptPieChart'), {
 new Chart(document.getElementById('overtimeChart'), {
     type: 'line',
     data: {
-        labels: [{% for month in overtime_by_month.keys() | sort %}'{{ month }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        labels: {{ overtime_by_month.keys() | sort | list | tojson }},
         datasets: [
-            { label: 'Hours', data: [{% for d in overtime_by_month.values() %}{{ "%.1f" | format(d.hours) }}{% if not loop.last %},{% endif %}{% endfor %}], borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.3 },
-            { label: 'Amount (ETB)', data: [{% for d in overtime_by_month.values() %}{{ d.amount }}{% if not loop.last %},{% endif %}{% endfor %}], borderColor: '#f59e0b', backgroundColor: 'transparent', yAxisID: 'y1', tension: 0.3 }
+            { label: 'Hours', data: {{ overtime_by_month.values() | map(attribute='hours') | list | tojson }}, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.3 },
+            { label: 'Amount (ETB)', data: {{ overtime_by_month.values() | map(attribute='amount') | list | tojson }}, borderColor: '#f59e0b', backgroundColor: 'transparent', yAxisID: 'y1', tension: 0.3 }
         ]
     },
     options: {
@@ -331,10 +331,10 @@ new Chart(document.getElementById('overtimeChart'), {
 new Chart(document.getElementById('headcountChart'), {
     type: 'line',
     data: {
-        labels: [{% for month in headcount_by_month.keys() | sort %}'{{ month }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        labels: {{ headcount_by_month.keys() | sort | list | tojson }},
         datasets: [{
             label: 'Employees',
-            data: [{% for count in headcount_by_month.values() %}{{ count }}{% if not loop.last %},{% endif %}{% endfor %}],
+            data: {{ headcount_by_month.values() | list | tojson }},
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
             fill: true,

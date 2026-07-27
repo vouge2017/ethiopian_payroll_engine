@@ -384,6 +384,15 @@ def create_app():
     app.register_blueprint(attendance_bp)
     from .accounting_bp import accounting_bp
     app.register_blueprint(accounting_bp)
+    from .calendar_bp import calendar_bp
+    app.register_blueprint(calendar_bp)
+    @app.cli.command('seed-holidays')
+    def seed_holidays_cmd():
+        """Seed Ethiopian national holidays."""
+        from payroll_engine.holidays import seed_holidays
+        added = seed_holidays()
+        print(f'Seeded {added} holidays.')
+
     @app.route('/healthz')
     def healthz():
         return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200

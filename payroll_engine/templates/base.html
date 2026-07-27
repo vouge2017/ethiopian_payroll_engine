@@ -98,6 +98,9 @@
                 <a href="{{ url_for('employees.leave_management') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
                     <i class="bi bi-calendar-event"></i><span>Leave</span>
                 </a>
+                <a href="{{ url_for('calendar.leave_calendar') }}" class="nav-link {% if 'calendar' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <i class="bi bi-calendar3"></i><span>Calendar</span>
+                </a>
                 {% endif %}
                 {% if pending_profile_changes > 0 %}
                 <a href="{{ url_for('employees.profile_changes') }}" class="nav-link {% if 'profile_change' in request.endpoint %}active{% endif %}" role="menuitem">

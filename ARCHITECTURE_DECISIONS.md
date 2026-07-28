@@ -1,750 +1,1106 @@
-# Architecture Decision Record
-### Ethiopian Workforce Platform — Chief Architect Review
+# Architecture Decision Records
+### Ethiopian Workforce Operating System
+**Version:** 2.0
 **Date:** 2026-07-28
-**Scope:** Long-term architectural fitness for 5 years, 10,000 companies, 1M employees, multi-country expansion
-**Codebase:** 171 files, 44 engine modules, 295 database columns across 28 models
+**Scope:** All architectural decisions — why they were made, what they cost, and when they break
+**Review criteria:** Scale (10,000 companies), Performance (1M employees), Flexibility (changing laws), Multi-country (5 African countries), Longevity (5 years)
 
 ---
 
-## Purpose
+## How to Read This Document
 
-This document evaluates every major architectural decision in the current codebase against five criteria:
+Each ADR follows this structure:
 
-1. **Will it survive 10,000 companies?** (Scale)
-2. **Will it survive 1 million employees?** (Performance)
-3. **Will it survive changing labor laws?** (Flexibility)
-4. **Will it survive expansion into Kenya, Ghana, Nigeria?** (Multi-country)
-5. **Will it still be the right decision in 5 years?** (Longevity)
+| Section | Purpose |
+|---------|---------|
+| **Context** | What problem forced this decision |
+| **Decision** | What we chose |
+| **Consequences** | What it costs now and later |
+| **Alternatives** | What we rejected and why |
+| **Risk if deferred** | What happens if we don't fix it |
 
-For each concern, this document provides:
-- Current state (what exists)
-- Why it breaks at scale
-- Recommended fix with trade-offs
-- Implementation phasing (what to do now vs. later)
-- Risk if deferred
-
----
-
-## ADR-001: Ethiopia Is Hardcoded, Not Abstracted
-
-### Current State
-
-Ethiopia-specific values are scattered across 15+ files, not behind a jurisdiction boundary:
-
-| Hardcoded Value | Location | Lines |
-|----------------|----------|-------|
-| `ETB` in display strings | `tax.py`, `pdf.py`, templates | 15+ occurrences |
-| `DEFAULT_PERSONAL_RELIEF = 150` (ETB) | `tax.py:41` | Hardcoded constant |
-| `DEFAULT_MONTHLY_HOURS = 208` (26 days × 8 hrs) | `overtime.py:40` | Ethiopian convention |
-| 6-day work week (26 working days) | `overtime.py`, `leave.py`, `settlement_service.py` | Implicit in multiple calculations |
-| Ethiopian calendar | `ethiopian_calendar.py` (200+ lines) | Core date handling |
-| 10 Ethiopian bank formats | `bank_file.py` (490 lines) | Hardcoded regex patterns |
-| ERCA 9-column format | `reports.py` (552 lines) | Hardcoded report structure |
-| Amharic/Afaan Oromoo strings | `i18n.py`, `i18n_om.py` | Hardcoded translations |
-| `Proclamation No. X/Y` citations | `TaxRule.description` | Ethiopian legal references |
-| Ethiopian phone patterns (`09`, `07`) | `auth.py`, templates, `bank_file.py` | 10+ validation points |
-
-### Why It Breaks
-
-**Kenya scenario:**
-- Currency: KES (Kenyan Shilling), 2 decimal places
-- Tax: KRA PAYE, different brackets, different relief structure
-- Pension: NSSF (tiered, not flat 7%)
-- Health: NHIF (income-based, not percentage)
-- Housing: Housing Levy (1.5% employee + 1.5% employer) — a deduction type that doesn't exist in Ethiopian law
-- Working hours: 45 hrs/week (5-day), not 48 hrs/week (6-day)
-- Banks: M-Pesa (dominant), Equity, KCB, Co-op — different file formats
-- Calendar: Gregorian, not Ethiopian
-- Language: Swahili + English
-
-To support Kenya, we would need to rewrite: `tax.py`, `pension.py`, `overtime.py`, `leave.py`, `bank_file.py`, `reports.py`, `i18n.py`, `ethiopian_calendar.py`, and most templates. That's not adding a country — that's rebuilding the compliance layer.
-
-### Recommended Fix: Jurisdiction Abstraction Layer
-
-**Not full multi-country implementation. Just the boundary.**
-
-```
-payroll_engine/
-├── jurisdictions/
-│   ├── __init__.py              # Jurisdiction registry + base classes
-│   ├── base.py                  # Abstract interfaces
-│   │   ├── TaxCalculator        # Abstract: calculate_tax(taxable_income) → Decimal
-│   │   ├── PensionCalculator    # Abstract: calculate_pension(basic_salary) → (employee, employer)
-│   │   ├── BankFileGenerator    # Abstract: generate(employees) → file
-│   │   ├── ReportGenerator      # Abstract: generate_erca(payslips) → file
-│   │   ├── CalendarAdapter      # Abstract: to_local(gregorian) → local_date
-│   │   └── WorkingHoursConfig   # Abstract: days_per_week, hours_per_day, monthly_hours
-│   ├── ET/
-│   │   ├── __init__.py
-│   │   ├── tax.py               # Ethiopian tax brackets (current logic, moved here)
-│   │   ├── pension.py           # Ethiopian pension (7%/11%, moved here)
-│   │   ├── bank_files.py        # 10 Ethiopian banks (moved from bank_file.py)
-│   │   ├── reports.py           # ERCA format (moved from reports.py)
-│   │   ├── calendar.py          # Ethiopian calendar (moved from ethiopian_calendar.py)
-│   │   ├── working_hours.py     # 26 days, 8 hrs, 208 monthly
-│   │   └── i18n.py              # Amharic, Afaan Oromoo
-│   ├── KE/                      # Placeholder — empty until Kenya expansion
-│   │   └── __init__.py
-│   └── GH/                      # Placeholder — empty until Ghana expansion
-│       └── __init__.py
-├── payroll_engine.py            # Country-agnostic core (no Ethiopia references)
-├── models.py                    # Add jurisdiction_code to Company model
-└── ...
-```
-
-**Company model change:**
-```python
-class Company(db.Model):
-    # Existing fields...
-    jurisdiction_code = db.Column(db.String(5), nullable=False, default='ET')  # ISO 3166-1
-```
-
-**Payroll engine change:**
-```python
-def get_jurisdiction(company):
-    """Resolve jurisdiction adapter for a company."""
-    from payroll_engine.jurdictions import REGISTRY
-    return REGISTRY[company.jurisdiction_code]
-
-def calculate_payroll(employee, company):
-    jurisdiction = get_jurisdiction(company)
-    tax = jurisdiction.tax_calculator.calculate_tax(taxable_income)
-    pension = jurisdiction.pension_calculator.calculate(basic_salary)
-    # ... rest is country-agnostic
-```
-
-### Trade-offs
-
-| Option | Pros | Cons |
-|--------|------|------|
-| **A: Abstract now** | Future countries = configuration, not rewrite. Clean separation. | 2 weeks of work. No visible feature change. Slightly more indirection. |
-| **B: Abstract when needed** | Faster delivery today. Less complexity. | Kenya expansion = 3-month rewrite. Every file touched. Regression risk. |
-| **C: Never abstract** | Simplest. Ethiopia-only is a valid business strategy. | Blocks all African expansion. Limits business to one market. |
-
-**Recommendation: Option A.** The 2-week investment now turns a future 3-month rewrite into a 3-day configuration. If expansion is in the 5-year plan, this is the single highest-ROI architectural investment available.
-
-### Implementation Phasing
-
-| Phase | When | Effort | What |
-|-------|------|--------|------|
-| Phase 1 | Before first pilot | 3 days | Create `jurisdictions/` directory structure. Define abstract base classes. Add `jurisdiction_code` to Company. |
-| Phase 2 | Before first pilot | 1 week | Move Ethiopian logic into `jurisdictions/ET/`. Replace all hardcoded references with jurisdiction calls. |
-| Phase 3 | Before Kenya expansion | 3 days | Create `jurisdictions/KE/` with Kenyan rules. |
-
-### Risk If Deferred
-
-**High.** Every new feature added today without the abstraction layer makes the future migration more expensive. Each hardcoded `ETB`, each Ethiopian-specific calculation, each bank format adds to the migration debt. After 2 more years of development, the abstraction cost doubles.
+**Status codes:**
+- ✅ **Decided** — decision made and implemented
+- 🔄 **In Progress** — decision made, partially implemented
+- ⏳ **Pending** — decision made, not yet implemented
+- ❓ **Open** — decision needed
 
 ---
 
-## ADR-002: Payroll Calculation Is Monolithic, Not Composable
+# Core Engine
 
-### Current State
+## ADR-001: Trust Architecture
 
-`payroll.py:166` — `calculate_payroll()` executes a fixed pipeline:
+**Status:** ✅ Decided
+
+### Context
+
+Ethiopian employers currently trust Excel for payroll. Excel has no audit trail, no tamper detection, and no proof that numbers weren't changed after "approval." The platform must be more trustworthy than Excel — not just more convenient.
+
+Trust requires: every number has evidence, every change has a trail, every approval is immutable, and every audit can be answered.
+
+### Decision
+
+Implement a **layered trust architecture**:
 
 ```
-gross = basic + allowances
-pension = 7% of basic
-taxable = gross - pension
-tax = progressive_brackets(taxable) - personal_relief
-deductions = loans + cost_sharing
-net = gross - pension - tax - deductions
+INPUT → VALIDATION → CALCULATION → CROSSCHECK → APPROVAL → LOCK → OUTPUT → EVIDENCE
 ```
 
-The pipeline is hardcoded. You can change the *values* (via TaxRule) but you cannot:
-- Add a new deduction step (e.g., Kenya's NHIF)
-- Reorder steps (e.g., some countries deduct pension after tax)
-- Add employer-only costs (e.g., employer pension, training levy)
-- Skip a step for certain employee types
+Each layer adds trust:
+1. **Validation** catches bad inputs (missing TINs, invalid accounts)
+2. **Calculation** applies rules with law citations
+3. **Crosscheck** compares independent sources (attendance ↔ payroll ↔ bank ↔ ERCA)
+4. **Approval** requires human confirmation with confidence score
+5. **Lock** makes the payroll immutable
+6. **Output** generates payslips, bank files, ERCA reports
+7. **Evidence** provides formula, inputs, law, timestamp, approver for every number
 
-### Why It Breaks
+**Key invariant:** Once locked, a payroll run cannot be modified. Corrections create adjustment payslips.
 
-**Kenya payroll requires:**
+### Consequences
+
+- Every payslip carries proof of correctness
+- Auditors can verify any number independently
+- The system is more trustworthy than Excel (which has no audit trail)
+- Slightly more complex than a simple "calculate and print" approach
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Trust by reputation | Ethiopian businesses don't trust software by reputation — they trust proof |
+| Trust by encryption | Encryption protects data in transit, not correctness |
+| Trust by access control | Access control prevents unauthorized changes, not errors |
+
+### Risk if deferred
+
+**Critical.** Without trust architecture, the platform is just another Excel alternative. Ethiopian employers will stick with Excel because at least they understand its limitations.
+
+---
+
+## ADR-002: Evidence Layer
+
+**Status:** ✅ Decided
+
+### Context
+
+When an auditor asks "how did you calculate this tax?", the employer must provide: the formula, the inputs, the law reference, the timestamp, and who approved it. Currently this requires digging through Excel files and WhatsApp messages.
+
+### Decision
+
+Every calculation that touches money gets an **evidence definition** in `EVIDENCE_CATALOGUE.md`. Each evidence record contains:
+
 ```
-gross = basic + allowances
-tiered_nssf = calculate_nssf(gross)       # Tier I + Tier II
-nhif = calculate_nhif(gross)              # Income-based, flat bands
-housing_levy = 1.5% of gross              # Employee portion
-taxable = gross - nssf - nhif
-paye = progressive_tax(taxable)           # KRA brackets
-net = gross - nssf - nhif - housing_levy - paye - deductions
+Source: where inputs came from
+Formula: how the number was calculated
+Inputs: exact values used
+Output: the result
+Law: legal authority (proclamation number, article)
+Timestamp: when it was calculated
+Approver: who verified it
+Hash: proof it hasn't been tampered with
 ```
 
-This has **four** statutory deductions where Ethiopia has **one** (pension). The current architecture can't express this without modifying `calculate_payroll()`.
+Evidence is stored on the Payslip record and rendered in PDF payslips and audit packages.
 
-**Nigeria payroll requires:**
-```
-gross = basic + allowances + housing + transport
-pension = 8% of gross (not basic)         # Different base
-nhf = 2.5% of gross                       # National Housing Fund
-cra = calculate_cra(gross)                # Consolidated Relief Allowance
-taxable = gross - pension - nhf - cra
-paye = progressive_tax(taxable)
-net = gross - pension - nhf - paye - deductions
-```
+### Consequences
 
-Different base (gross vs. basic), different number of deductions, different deduction order.
+- Every number is self-documenting
+- Auditors can verify calculations without access to the system
+- Evidence adds ~500 bytes per payslip (JSON snapshot)
+- Law citations must be maintained when proclamations change
 
-### Recommended Fix: Composable Payroll Pipeline
+### Alternatives
 
-**Define payroll as a sequence of steps. Each jurisdiction registers its own pipeline.**
+| Option | Rejected Because |
+|--------|-----------------|
+| Document everything in comments | Comments aren't structured or queryable |
+| Generate evidence on demand | Historical evidence must reflect rules at time of calculation, not current rules |
+| Store evidence separately from payslip | Risk of evidence-payslip mismatch |
+
+### Risk if deferred
+
+**High for compliance.** Without evidence, the system can't defend its calculations during a government audit. The employer faces penalties.
+
+---
+
+## ADR-003: Calculation Engine
+
+**Status:** 🔄 In Progress
+
+### Context
+
+`payroll.py:166` — `calculate_payroll()` executes a fixed pipeline: gross → pension → taxable → tax → deductions → net. The pipeline is hardcoded. You can change values (via TaxRule) but cannot add steps, reorder steps, or skip steps for certain employee types.
+
+Kenya requires 4 statutory deductions (NSSF, NHIF, Housing Levy, PAYE). Nigeria requires different bases (gross vs basic for pension). The current architecture can't express these without modifying the core function.
+
+### Decision
+
+Refactor to a **composable payroll pipeline**:
 
 ```python
-# payroll_engine/pipeline/base.py
-
 class PayrollStep:
-    """A single step in the payroll calculation pipeline."""
-    name: str
-    order: int
-    
     def execute(self, context: PayrollContext) -> PayrollContext:
-        """Execute this step. Returns modified context."""
         raise NotImplementedError
 
-class PayrollContext:
-    """Mutable state passed through the pipeline."""
-    employee: Employee
-    gross: Decimal
-    taxable: Decimal
-    deductions: list  # [(name, amount)]
-    employer_costs: list  # [(name, amount)]
-    net: Decimal
-    steps_log: list  # Audit trail of each step
-```
-
-```python
-# payroll_engine/jurisdictions/ET/pipeline.py
-
 ET_PAYROLL_PIPELINE = [
-    GrossCalculation(),           # gross = basic + allowances
-    PensionDeduction(rate=0.07, base='basic', employer_rate=0.11),
-    TaxableIncomeCalculation(),   # taxable = gross - pension
-    IncomeTax(brackets=ET_BRACKETS, relief=150),
-    LoanDeductions(),
-    NetPayCalculation(),          # net = gross - pension - tax - deductions
-]
-```
-
-```python
-# payroll_engine/jurisdictions/KE/pipeline.py (future)
-
-KE_PAYROLL_PIPELINE = [
     GrossCalculation(),
-    NSSFContribution(tiers=NSSF_TIERS),      # Tier I + II
-    NHIFFund(bands=NHIF_BANDS),              # Income-based
-    HousingLevy(employee_rate=0.015, employer_rate=0.015),
-    TaxableIncomeCalculation(),               # taxable = gross - nssf - nhif
-    IncomeTax(brackets=KRA_BRACKETS, relief=2400),
+    PensionDeduction(rate=0.07, base='basic', employer_rate=0.11),
+    TaxableIncomeCalculation(),
+    IncomeTax(brackets=ET_BRACKETS, relief=150),
     LoanDeductions(),
     NetPayCalculation(),
 ]
 ```
 
-**The engine becomes:**
-```python
-def calculate_payroll(employee, company):
-    jurisdiction = get_jurisdiction(company)
-    context = PayrollContext(employee=employee)
-    
-    for step in jurisdiction.pipeline:
-        context = step.execute(context)
-        context.steps_log.append(step.name)  # Audit trail
-    
-    return context
-```
+Each jurisdiction registers its own pipeline. Adding a country = adding steps, not rewriting the engine.
 
-### Trade-offs
+### Consequences
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **A: Compose now** | Each country is a pipeline config. Adding countries = adding steps. Full audit trail per step. | 1 week refactor. Same external behavior. More abstraction. |
-| **B: Compose when needed** | Simpler today. Fewer files. | Kenya expansion requires rewriting the core calculation function. |
-| **C: Fork per country** | Each country has its own complete `calculate_payroll()`. No shared code. | Massive code duplication. Bug fixes must be applied N times. |
+- Same external behavior (inputs → outputs unchanged)
+- Adding countries is configuration, not code changes
+- Each step gets its own audit trail entry
+- Slightly more indirection (pipeline runner)
 
-**Recommendation: Option A.** The refactor doesn't change behavior — same inputs, same outputs, same tests. It just makes the structure extensible. The pipeline pattern is well-understood and adds an automatic per-step audit trail.
+### Alternatives
 
-### Implementation Phasing
+| Option | Rejected Because |
+|--------|-----------------|
+| Monolithic per-country functions | Bug fixes must be applied N times |
+| Full microservice per deduction | Over-engineering for current scale |
+| Configuration-only (no code) | Some deductions need complex logic (progressive tax) |
 
-| Phase | When | Effort | What |
-|-------|------|--------|------|
-| Phase 1 | Before first pilot | 3 days | Define `PayrollStep`, `PayrollContext`, pipeline runner. |
-| Phase 2 | Before first pilot | 3 days | Refactor `calculate_payroll()` to use ET pipeline. All existing tests must pass unchanged. |
-| Phase 3 | Before Kenya expansion | 2 days | Create KE pipeline. |
+### Risk if deferred
 
-### Risk If Deferred
-
-**Medium.** The current monolithic function works for Ethiopia. But every new feature (e.g., a new deduction type, a new calculation rule) added to the monolithic function increases the refactor cost. After 1 more year, the refactor becomes a rewrite.
+**Medium for Ethiopia, High for expansion.** Every new feature added to the monolithic function increases the refactor cost. After 1 more year, the refactor becomes a rewrite.
 
 ---
 
-## ADR-003: Tenant Isolation Is Application-Level Only
+## ADR-004: Crosscheck Engine
 
-### Current State
+**Status:** ⏳ Pending
 
-`models.py:78` — `TenantQuery` enforces `company_id` filtering at the SQLAlchemy ORM level. This is good — it prevents developer mistakes like forgetting to filter by company.
+### Context
 
-However:
-- No database-level constraints (CHECK, foreign keys, row-level security)
-- No schema isolation (all companies share all tables)
-- No per-company backup/restore capability
-- The `company_id` column is the only boundary between 10,000 companies
+Payroll errors are caught by comparing independent sources: attendance totals should match payroll hours, bank file totals should match net pay, ERCA totals should match tax withheld. Currently, these crosschecks are implicit (user eyeballs the numbers) not systematic.
 
-### Why It Breaks
+### Decision
 
-**At 10,000 companies × 100 employees = 1M employee records:**
+Implement a **crosscheck engine** that compares independently-sourced numbers:
 
-| Problem | Impact |
-|---------|--------|
-| Query performance | `SELECT * FROM employee WHERE company_id = X` scans an index on a 1M-row table. Works, but cross-company reports (analytics, benchmarks) require full table scans. |
-| Data isolation | One ORM bug = full cross-tenant data leak. `TenantQuery` is a safety net, not a security boundary. |
-| Backup/restore | Can't restore Company A without restoring all 10,000 companies. |
-| Compliance data residency | Ethiopian law may require data in Ethiopia. Other countries may have different requirements. Schema-per-tenant enables per-tenant data location. |
-| Noisy neighbor | One company running a massive report can slow down all companies. |
+| Crosscheck | Source A | Source B | Expected |
+|-----------|---------|---------|----------|
+| Attendance ↔ Payroll | Attendance hours | Payroll hours | Match |
+| Bank ↔ Net Pay | Bank file total | Sum of net pay | Match |
+| ERCA ↔ Tax | ERCA report total | Sum of tax withheld | Match |
+| Pension ↔ Gross | Pension report | 7% of basic salary | Match |
+| YTD ↔ Monthly | Sum of monthly payslips | YTD totals | Match |
 
-### Recommended Fix: Phased Tenant Isolation
+Each crosscheck produces: PASS, FAIL, or WARN. Failed crosschecks BLOCK approval.
 
-**Phase 1 (now — before first pilot):** Database-level enforcement.
+### Consequences
 
-```sql
--- Add CHECK constraint ensuring company_id is never null
-ALTER TABLE employee ADD CONSTRAINT chk_employee_company 
-    CHECK (company_id IS NOT NULL);
+- Errors caught before they reach employees or government
+- Confidence score based on crosscheck pass rate
+- Crosschecks add processing time (acceptable for the trust gain)
 
--- Add composite indexes for hot tenant-scoped queries
-CREATE INDEX ix_employee_company_id ON employee(company_id);
-CREATE INDEX ix_payslip_company_run ON payslip(payroll_run_id) 
-    INCLUDE (employee_id, gross_salary, net_pay);
+### Alternatives
 
--- PostgreSQL Row-Level Security (optional, strongest enforcement)
-ALTER TABLE employee ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON employee
-    USING (company_id = current_setting('app.current_company_id')::int);
-```
+| Option | Rejected Because |
+|--------|-----------------|
+| Manual crosschecking | Humans miss errors; this is what we're replacing |
+| Single-source validation | Doesn't catch calculation errors — only input errors |
 
-**Phase 2 (1,000+ companies):** Schema-per-tenant.
+### Risk if deferred
 
-```sql
--- Each company gets its own schema
-CREATE SCHEMA company_42;
-CREATE TABLE company_42.employee (LIKE public.employee INCLUDING ALL);
--- Shared tables (users, tax_rules) stay in public
--- Company-specific tables (employees, payslips) go to company_N
-```
-
-**Phase 3 (10,000+ companies):** Database-per-shard.
-
-```
-Shard 1 (companies 1–3,333):    db-ethiopia-1.rds.amazonaws.com
-Shard 2 (companies 3,334–6,666): db-ethiopia-2.rds.amazonaws.com
-Shard 3 (companies 6,667–10,000): db-kenya-1.rds.amazonaws.com
-```
-
-Application routes to correct shard based on company's jurisdiction and shard mapping.
-
-### Trade-offs
-
-| Phase | Effort | Benefit | When |
-|-------|--------|---------|------|
-| Phase 1 | 2 days | Database-level safety net. Prevents data leaks even if ORM has bugs. | Now |
-| Phase 2 | 2 weeks | Per-company backup/restore. Data isolation. Noisy neighbor protection. | 1,000+ companies |
-| Phase 3 | 1 month | Geographic data residency. Horizontal scaling. | 10,000+ companies |
-
-**Recommendation: Phase 1 now. Phase 2 and 3 only when metrics demand it.**
-
-### Risk If Deferred
-
-**Phase 1:** Medium. Application-level isolation works, but one bug = full cross-tenant leak. Database constraints are cheap insurance.
-
-**Phase 2/3:** Low until scale demands it. Don't over-engineer.
+**Medium.** Without crosschecks, the system catches input errors (validation) but not calculation errors. A wrong tax rate applied to all employees would go undetected until the ERCA filing.
 
 ---
 
-## ADR-004: Money Handling Has No Currency Abstraction
+## ADR-005: Payroll Locking
 
-### Current State
+**Status:** ✅ Decided
 
-- Money stored as `Numeric(12, 2)` — 295 columns across 28 models
-- `ETB` hardcoded in 15+ display strings
-- No central currency formatting
-- No currency conversion
-- `Decimal('0.01')` precision constant used in `settlement_service.py`
+### Context
 
-### Why It Breaks
+After an owner approves payroll, the numbers must be permanently frozen. If an error is discovered later, the system must handle it without modifying the approved payroll. This is the foundation of the trust architecture.
 
-**Multi-country scenario:**
-- ETB: Often displayed without decimals (whole birr). `ETB 15,000` not `ETB 15,000.00`
-- KES: Always 2 decimal places. `KES 15,000.00`
-- NGN: 2 decimal places. `₦15,000.00`
-- GHS: 2 decimal places. `GH₵15,000.00`
+### Decision
 
-Display formatting is scattered. Changing how money appears requires touching every file that displays money.
+**Immutable lock with adjustment payslips:**
 
-**More importantly:** The `Numeric(12, 2)` assumption may not hold:
-- Ethiopian birr in practice: whole numbers (no kobo/santim in daily use)
-- Some mobile money: 4 decimal places
-- Cross-border payments: exchange rate precision matters
+1. PayrollRun has states: `draft → review → pending_approval → processing → completed → locked`
+2. Once `locked`, no field on PayrollRun or its Payslips can be modified
+3. Corrections create **adjustment payslips** linked to originals
+4. Adjustment payslips appear in the next payroll run as line items
+5. Both original and adjustment appear in ERCA filings and audit trails
 
-### Recommended Fix: Central Money Value Object
+**Database enforcement:** Lock status is checked at ORM level. Direct SQL updates are prevented by application-level guards (not database triggers — too expensive for current scale).
 
-```python
-# payroll_engine/money.py
+### Consequences
 
-from decimal import Decimal, ROUND_HALF_UP
-from dataclasses import dataclass
+- Approved payroll is provably immutable
+- Corrections are transparent (linked adjustment records)
+- ERCA filings include both original and adjustments
+- Slightly more complex correction workflow
 
-CURRENCY_CONFIG = {
-    'ETB': {'symbol': 'ETB', 'decimals': 0, 'name': 'Ethiopian Birr'},
-    'KES': {'symbol': 'KES', 'decimals': 2, 'name': 'Kenyan Shilling'},
-    'NGN': {'symbol': '₦', 'decimals': 2, 'name': 'Nigerian Naira'},
-    'GHS': {'symbol': 'GH₵', 'decimals': 2, 'name': 'Ghanaian Cedi'},
-}
+### Alternatives
 
-@dataclass(frozen=True)
-class Money:
-    amount: Decimal
-    currency: str
+| Option | Rejected Because |
+|--------|-----------------|
+| Soft lock (can be unlocked by admin) | Breaks trust — "immutable" must mean immutable |
+| Version history (keep old versions) | Complex, still allows "current version" changes |
+| Database-level triggers | Performance overhead for every write operation |
 
-    def format(self) -> str:
-        config = CURRENCY_CONFIG[self.currency]
-        if config['decimals'] == 0:
-            formatted = f"{self.amount:,.0f}"
-        else:
-            formatted = f"{self.amount:,.{config['decimals']}f}"
-        return f"{config['symbol']} {formatted}"
+### Risk if deferred
 
-    def __add__(self, other):
-        if self.currency != other.currency:
-            raise ValueError(f"Cannot add {self.currency} and {other.currency}")
-        return Money(self.amount + other.amount, self.currency)
-
-    def __sub__(self, other):
-        if self.currency != other.currency:
-            raise ValueError(f"Cannot subtract {other.currency} from {self.currency}")
-        return Money(self.amount - other.amount, self.currency)
-```
-
-**Usage:**
-```python
-# Before (scattered ETB references)
-f"ETB {amount:,.2f}"
-
-# After (centralized, locale-aware)
-Money(amount, company.currency).format()  # "ETB 15,000" or "KES 15,000.00"
-```
-
-### Trade-offs
-
-| Option | Pros | Cons |
-|--------|------|------|
-| **A: Money object now** | All money display is consistent and locale-aware. Type safety (can't accidentally add ETB + KES). | 2 days of work. Need to update display code. |
-| **B: Money object later** | No change today. | Every new display adds another hardcoded `ETB` string. Migration cost grows linearly. |
-
-**Recommendation: Option A.** Low effort, high consistency gain. Even without multi-country, it standardizes ETB display across the app.
-
-### Implementation Phasing
-
-| Phase | When | Effort | What |
-|-------|------|--------|------|
-| Phase 1 | Before first pilot | 1 day | Create `money.py` with `Money` value object and `CURRENCY_CONFIG`. |
-| Phase 2 | Before first pilot | 1 day | Update `pdf.py`, `reports.py`, and key templates to use `Money.format()`. |
-| Phase 3 | Before multi-country | — | Add KES, NGN, GHS to `CURRENCY_CONFIG`. No other changes needed. |
-
-### Risk If Deferred
-
-**Low for Ethiopia-only. Medium for multi-country.** The cost grows linearly with each new display location. Currently 15+ locations. After 1 year of development, likely 50+.
+**Critical.** If payroll can be modified after approval, the entire trust architecture collapses. An auditor can't trust any number because it might have been changed.
 
 ---
 
-## ADR-005: No Event System — Everything Is Synchronous
+## ADR-006: Immutable Audit
 
-### Current State
+**Status:** ✅ Decided
 
-Every payroll action is synchronous:
+### Context
 
-```
-User clicks "Approve Payroll"
-  → Calculate payroll for all employees (blocking)
-  → Generate PDFs for all employees (blocking)
-  → Generate bank file (blocking)
-  → Generate ERCA report (blocking)
-  → Return response to user
-```
+Every state change in the system must be recorded: who did it, when, from what IP, and what changed. The audit log must be tamper-evident — if someone modifies a record, the system must detect it.
 
-At 50 employees: ~5 seconds. At 500 employees: ~50 seconds. At 5,000 employees: ~500 seconds (8 minutes). Browser times out.
+### Decision
 
-The RQ/Redis infrastructure exists (`tasks.py`) but is only connected for PDF generation. Core payroll calculation, ERCA reports, and bank files are synchronous.
-
-### Why It Breaks
-
-| Company Size | Payroll Calc | PDF Gen | Bank File | ERCA Report | Total | Browser Timeout? |
-|-------------|-------------|---------|-----------|-------------|-------|-----------------|
-| 50 employees | 0.5s | 1.4s | 0.1s | 0.2s | 2.2s | ✅ No |
-| 200 employees | 2s | 5.6s | 0.4s | 0.8s | 8.8s | ✅ No |
-| 500 employees | 5s | 14s | 1s | 2s | 22s | ⚠️ Slow |
-| 1,000 employees | 10s | 28s | 2s | 4s | 44s | ❌ Timeout risk |
-| 5,000 employees | 50s | 140s | 10s | 20s | 220s | ❌ Guaranteed timeout |
-
-### Recommended Fix: Event-Driven Pipeline
-
-**Don't make the user wait. Process in background. Notify on completion.**
+**SHA-256 hash chain on AuditLog:**
 
 ```python
-# payroll_engine/events.py
+class AuditLog(db.Model):
+    company_id, user_id, action, timestamp, details (JSON),
+    previous_hash, hash
 
-from enum import Enum
+    def compute_hash(self):
+        raw = previous_hash + company_id + user_id + action + sorted_json(details)
+        return sha256(raw)
 
-class PayrollEvent(Enum):
-    APPROVAL_REQUESTED = "payroll.approval_requested"
-    APPROVED = "payroll.approved"
-    CALCULATION_STARTED = "payroll.calculation_started"
-    CALCULATION_COMPLETED = "payroll.calculation_completed"
-    PDF_GENERATION_STARTED = "payroll.pdf_started"
-    PDF_GENERATION_COMPLETED = "payroll.pdf_completed"
-    BANK_FILE_READY = "payroll.bank_file_ready"
-    ERCA_REPORT_READY = "payroll.erca_ready"
-    COMPLETED = "payroll.completed"
-    FAILED = "payroll.failed"
+# Auto-computed on insert via SQLAlchemy before_insert event
+# Each entry chains to the previous entry's hash
 ```
 
-```python
-# User flow:
-# 1. Click "Approve" → returns immediately with "Processing..." status
-# 2. Background worker: calculate payroll → generate PDFs → generate reports
-# 3. Each step emits an event → updates UI via polling/SSE/WebSocket
-# 4. User sees real-time progress: "Calculating... 450/500 employees done"
-```
+**Verification:** `AuditLog.verify_chain(company_id)` walks every entry and verifies:
+1. `hash` matches computed value
+2. `previous_hash` matches previous entry's hash
+3. First entry has `previous_hash = None`
 
-### Implementation Phasing
+**What's logged:** 18 action types across 3 blueprints (auth, employees, payroll). All state changes, login/logout, failed logins, settings changes.
 
-| Phase | When | Effort | What |
-|-------|------|--------|------|
-| Phase 1 | Before first pilot | 2 days | Move payroll calculation to RQ background task. Return job ID immediately. Add status polling endpoint. |
-| Phase 2 | Before first pilot | 1 day | Move ERCA report and bank file generation to background. |
-| Phase 3 | Before 1,000 employees | 3 days | Add real-time progress updates (SSE or WebSocket). Per-employee progress tracking. |
-| Phase 4 | Scale phase | 1 week | Full event bus (Redis Pub/Sub or Celery). Event sourcing for audit trail. |
+### Consequences
 
-### Trade-offs
+- Tamper-evident audit trail
+- Daily automated verification with alerts on break
+- Audit log entries are never updated or deleted
+- Hash chain adds ~1ms per audit entry (negligible)
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **A: Background now** | No timeout risk at any scale. Better UX (progress tracking). | 2-3 days of work. User must wait for notification instead of seeing instant result. |
-| **B: Background later** | Simpler today. Instant feedback for small companies. | Every day of development adds synchronous code that must be migrated later. |
+### Alternatives
 
-**Recommendation: Option A.** The RQ infrastructure already exists. The migration is small. The timeout risk is real for any company with 200+ employees.
+| Option | Rejected Because |
+|--------|-----------------|
+| Simple append-only log | No tamper detection — entries can be modified |
+| Blockchain anchoring | Overkill for current scale, expensive |
+| Database-level audit triggers | No hash chain, harder to verify completeness |
 
-### Risk If Deferred
+### Risk if deferred
 
-**High.** A pilot company with 500+ employees will hit the timeout on their first payroll run. That's a trust-breaking moment. A payroll system that can't process payroll is worse than Excel.
+**Critical for compliance.** Without tamper-evident audit, the system's records are no more trustworthy than Excel. An auditor can claim records were modified after the fact.
 
 ---
 
-## ADR-006: No Plugin System for Industry-Specific Logic
+# Data
 
-### Current State
+## ADR-007: Employee Identity
 
-All industries use the same Employee model, same payroll calculation, same reports. The `Employee` model has fixed fields:
+**Status:** ✅ Decided
+
+### Context
+
+Ethiopian employees don't have a single universal ID. They have: employee_id (company-internal), TIN (tax, 9-10 digits), phone (09xx or 07xx), bank account (13 digits per bank), and national ID (if they have one). The system must handle all of these correctly.
+
+### Decision
+
+**Employee identity is multi-faceted:**
 
 ```python
 class Employee(db.Model):
-    name, employee_id, department, position, basic_salary, allowances,
-    bank_or_telebirr, tin, phone, email, employment_type, start_date,
-    is_active, is_deleted, ...
+    employee_id = db.Column(db.String(20))    # Company-internal, unique per company
+    tin = db.Column(db.String(20))             # Tax Identification Number
+    phone = db.Column(db.String(20))           # Primary contact, login identifier
+    bank_account = db.Column(db.String(50))    # Encrypted, bank-specific format
+    national_id = db.Column(db.String(30))     # Optional, if provided
 ```
 
-There's no way to add industry-specific fields without modifying the core model.
+- `employee_id` is the primary business key (unique per company)
+- `phone` is the login identifier (unique globally)
+- `tin` is required for ERCA filing
+- `bank_account` is encrypted at rest (AES via sqlalchemy-utils)
+- No single "master ID" — each serves a different purpose
 
-### Why It Breaks
+### Consequences
 
-| Industry | Required Fields | Required Calculations |
-|----------|----------------|----------------------|
-| Construction | Project assignment, site location, hazard level, equipment deductions | Hazard pay (5-25% of basic), site allowance, equipment rental deduction |
-| Manufacturing | Shift type, production line, skill grade, union membership | Shift differential (night +30%), piece-rate bonus, union dues |
-| Hotels | Department (FO/Housekeeping/F&B), tip pooling group, split shift indicator | Tip pooling distribution, split shift premium, service charge |
-| Schools | Academic rank, qualification, teaching hours, campus | Academic calendar (not fiscal), research allowance, teaching load calculation |
-| NGOs | Donor code, project code, cost center, grant period | Donor-specific reporting, project-based cost allocation, grant period restrictions |
+- Employees identified by different IDs in different contexts
+- Phone normalization required (09xx → 2519xx) across 10 input points
+- Bank account validation per-bank (10 Ethiopian banks, different formats)
+- TIN validation (9-10 digits) required before ERCA filing
 
-Adding these to the core `Employee` model would bloat it with fields that 90% of companies don't need.
+### Alternatives
 
-### Recommended Fix: JSON Metadata + Industry Plugins
+| Option | Rejected Because |
+|--------|-----------------|
+| Single national ID as primary key | Many Ethiopians don't have national ID |
+| TIN as primary key | TIN assigned by ERCA, not available at hiring |
+| Phone as primary key | Phone can change; employee_id is stable |
 
-**Step 1: Add `metadata` JSON field to Employee.**
+### Risk if deferred
+
+**Low.** Current approach works. The risk is in phone normalization (already fixed) and TIN validation (already implemented).
+
+---
+
+## ADR-008: Industry Templates
+
+**Status:** ⏳ Pending
+
+### Context
+
+Different industries need different employee fields: construction needs site assignment and hazard level, hotels need shift type and tip pooling, schools need academic rank and teaching hours. Adding all these to the core Employee model would bloat it with fields most companies don't need.
+
+### Decision
+
+**JSON metadata field + future plugin interface:**
 
 ```python
 class Employee(db.Model):
     # ... existing fields ...
     metadata = db.Column(db.JSON, nullable=True)  # Industry-specific data
-```
 
-This is already partially done — `PayrollDraft.employee_data` and `AuditLog.details` use JSON. Extending this to Employee is natural.
-
-**Step 2: Define industry plugin interface (future).**
-
-```python
-# payroll_engine/industries/base.py
-
-class IndustryPlugin:
-    """Base class for industry-specific logic."""
-    
-    def get_extra_employee_fields(self) -> list:
-        """Return additional fields this industry needs."""
-        return []
-    
-    def extend_payroll_calculation(self, context):
-        """Add industry-specific calculations to payroll."""
-        return context
-    
-    def get_extra_reports(self) -> list:
-        """Return industry-specific reports."""
-        return []
-```
-
-**Step 3: Register plugins per company.**
-
-```python
 class Company(db.Model):
     # ... existing fields ...
     industry_code = db.Column(db.String(20), nullable=True)  # 'construction', 'hotel', 'school'
 ```
 
-### Trade-offs
+Industry-specific logic (calculations, reports, validation) will be handled by plugins in the future. For now, the metadata field provides storage without schema changes.
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **A: Metadata + plugin interface now** | Future-proof. Industry fields stored without model changes. | 1 day for metadata field. Plugin interface is just design, no implementation yet. |
-| **B: Metadata only, no plugin interface** | Simple. Just add a JSON column. | Plugin interface needed eventually. Designing it now avoids refactoring later. |
-| **C: Extend core model per industry** | No abstraction. Simple. | Model grows to 100+ columns. Most fields empty for most companies. |
+### Consequences
 
-**Recommendation: Option A.** Adding the `metadata` JSON column is a 1-day migration. The plugin interface is design-only — define the base class, don't implement any plugins yet. This costs almost nothing and prevents the core model from becoming a dumping ground.
+- Industry fields stored without model changes
+- No validation on metadata contents (free-form JSON)
+- Future plugins can read/write metadata
+- Core model stays clean
 
-### Implementation Phasing
+### Alternatives
 
-| Phase | When | Effort | What |
-|-------|------|--------|------|
-| Phase 1 | Before first pilot | 1 day | Add `metadata` JSON column to Employee. Add `industry_code` to Company. |
-| Phase 2 | Before first industry expansion | 2 days | Define `IndustryPlugin` base class. Register plugin loader. |
-| Phase 3 | When specific industry needed | 1 week per industry | Implement industry plugin with fields, calculations, reports. |
+| Option | Rejected Because |
+|--------|-----------------|
+| Extend core model per industry | Model grows to 100+ columns, most empty |
+| Separate table per industry | Complex joins, harder to query |
+| No industry support | Can't serve construction, manufacturing, hotels — Ethiopia's biggest employers |
 
-### Risk If Deferred
+### Risk if deferred
 
-**Low for pilots. High for scale.** Pilots are likely in professional services or retail (simple payroll). But construction and manufacturing are the biggest employers in Ethiopia. Without industry support, the platform can't serve them.
+**Low for pilots, High for scale.** Pilots are likely in professional services (simple payroll). But construction and manufacturing are the biggest employers in Ethiopia.
 
 ---
 
-## ADR-007: No Calculation Snapshot — Historical Accuracy at Risk
+## ADR-009: Multi-Tenant Isolation
 
-### Current State
+**Status:** ✅ Decided (Phase 1)
 
-When a payroll run is completed, the `Payslip` stores the calculated values:
+### Context
+
+All companies share the same database tables. The only boundary between Company A's data and Company B's data is the `company_id` column, enforced by `TenantQuery` at the ORM level. One ORM bug = full cross-tenant data leak.
+
+### Decision
+
+**Phased tenant isolation:**
+
+| Phase | When | Enforcement | Effort |
+|-------|------|-------------|--------|
+| Phase 1 | Now | Application-level (TenantQuery) + DB constraints | Done |
+| Phase 2 | 1,000+ companies | Schema-per-tenant | 2 weeks |
+| Phase 3 | 10,000+ companies | Database-per-shard | 1 month |
+
+**Phase 1 (current):**
+- `TenantQuery` auto-injects `company_id` filter on all queries
+- `register_model()` marks models as tenant-scoped
+- Missing `company_id` raises `RuntimeError` at query time
+- No database-level constraints yet (CHECK, RLS)
+
+### Consequences
+
+- Developer mistakes caught at query time (forgot to filter by company)
+- No database-level safety net (one ORM bug = full leak)
+- No per-company backup/restore capability
+- Works for current scale (100 companies)
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Schema-per-tenant now | 2 weeks of work, no visible benefit at current scale |
+| Database-per-tenant | 10,000 databases = operational nightmare |
+| Row-level security (PostgreSQL) | Requires PostgreSQL, adds complexity |
+
+### Risk if deferred
+
+**Phase 1:** Medium. Application-level isolation works, but one bug = full cross-tenant leak.
+
+---
+
+## ADR-010: Versioned Tax Rules
+
+**Status:** ✅ Decided
+
+### Context
+
+Ethiopian tax brackets can change (Proclamation No. 1395/2025 updated them). Pension rates can change. Overtime rules can change. If rules are hardcoded, every change requires a code deployment. If rules are in the database, historical accuracy is at risk (recalculating June payroll with July rules gives wrong numbers).
+
+### Decision
+
+**TaxRule model with versioning:**
+
+```python
+class TaxRule(db.Model):
+    company_id, rules_json, description, effective_from, effective_to
+```
+
+- Rules stored as JSON (flexible structure)
+- `effective_from` / `effective_to` date range
+- Historical payslips store a `calculation_snapshot` of the rules used
+- New rule versions don't affect historical payslips
+
+**Calculation snapshot on Payslip:**
 
 ```python
 class Payslip(db.Model):
-    gross_salary = db.Column(db.Numeric(12, 2))
-    tax = db.Column(db.Numeric(12, 2))
-    employee_pension = db.Column(db.Numeric(12, 2))
-    net_pay = db.Column(db.Numeric(12, 2))
+    calculation_snapshot = db.Column(db.JSON)  # Frozen rules at time of calculation
+    # Contains: tax_brackets, pension_rates, personal_relief, engine_version, timestamp
 ```
 
-But it does **not** store which tax rules were used. If tax brackets change after a payroll run:
-- Recalculating historical payslips gives different numbers
-- An auditor can't verify that the June payroll used the June tax rates
-- The system can't prove it was correct at the time
+### Consequences
 
-### Why It Breaks
+- Rules can be updated without code changes
+- Historical accuracy preserved via snapshots
+- Multiple companies can have different rules (multi-tenant)
+- Rules are auditable (who changed what, when)
 
-**Scenario:** Ethiopia changes tax brackets on January 1, 2027. A business runs December 2026 payroll using the old brackets. An auditor reviews in March 2027. The system now shows the 2027 brackets. The December payroll looks wrong — but it was correct at the time.
+### Alternatives
 
-Without a snapshot, there's no proof.
+| Option | Rejected Because |
+|--------|-----------------|
+| Hardcoded constants | Every rule change = code deployment |
+| Rules in config files | No versioning, no per-company customization |
+| Rules in database without snapshots | Historical accuracy lost when rules change |
 
-### Recommended Fix: Freeze Calculation Context on Payslip
+### Risk if deferred
+
+**Critical for compliance.** Without versioned rules and snapshots, the system can't prove historical payroll was calculated correctly. An auditor asking "prove June used June's rates" has no answer.
+
+---
+
+# Workflow
+
+## ADR-011: Approval Workflow
+
+**Status:** ✅ Decided
+
+### Context
+
+Payroll must be approved by a human (the business owner) before it's finalized. The approval must be backed by a confidence report showing crosscheck results, and once approved, the payroll must be locked.
+
+### Decision
+
+**Single-level approval with confidence report:**
+
+1. Payroll Officer prepares draft (status: `draft → review`)
+2. Owner reviews confidence report (crosscheck results, month-over-month comparison)
+3. Owner acknowledges warnings (FLAG-severity validation)
+4. Owner taps "Approve" (requires password confirmation)
+5. System locks payroll (status: `processing → completed → locked`)
+6. All outputs generated (payslips, bank file, ERCA report)
+
+**BLOCK-severity validations cannot be overridden.** FLAG-severity can be overridden with reason.
+
+### Consequences
+
+- Clear accountability (owner approves, not the system)
+- Confidence report provides transparency
+- Lock prevents post-approval modifications
+- Single-level approval is simpler than multi-level (appropriate for Ethiopian SMEs)
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Multi-level approval (officer → accountant → owner) | Too complex for SMEs with 10-50 employees |
+| Auto-approval | Defeats the purpose — humans must verify |
+| No approval (process immediately) | No human verification, no confidence report |
+
+### Risk if deferred
+
+**Low.** Current approach works. Multi-level approval is a future enhancement for larger companies.
+
+---
+
+## ADR-012: Payment Lifecycle
+
+**Status:** ✅ Decided
+
+### Context
+
+Payment is a separate domain from payroll calculation. Payroll failures must never reopen payroll. The system must track per-employee payment status (not just "file uploaded") and handle partial failures (197 paid, 3 failed).
+
+### Decision
+
+**Payment Batch with per-employee status tracking:**
+
+```
+PaymentBatch: draft → ready → file_generated → submitted → completed / partial
+Payslip.payment_status: pending → file_generated → submitted → paid / failed → retry
+```
+
+Key rules:
+- Payment batch created from locked payroll
+- Each employee has independent payment status
+- Failed payments can be retried (max 3 times)
+- Reversals create adjustment payslips
+- "Bank file generated" ≠ "bank accepted" ≠ "money transferred" ≠ "employee received"
+
+### Consequences
+
+- Payment failures don't affect approved payroll
+- Partial success handled gracefully (47 paid, 3 failed)
+- Retry workflow with correction tracking
+- Reversal creates audit trail
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Per-file status (not per-employee) | Can't track individual failures |
+| Reopen payroll on failure | Breaks immutability, destroys audit trail |
+| Manual payment tracking (Excel) | Defeats the purpose of the system |
+
+### Risk if deferred
+
+**High.** Without payment lifecycle, the system generates bank files but has no way to track what happened after. Employers resort to WhatsApp and Excel for payment tracking.
+
+---
+
+## ADR-013: Leave Workflow
+
+**Status:** ✅ Decided
+
+### Context
+
+Leave directly affects payroll (unpaid leave reduces salary, maternity leave has specific rules). The leave workflow must integrate with payroll calculation while maintaining its own lifecycle.
+
+### Decision
+
+**Leave request → manager approval → payroll integration:**
+
+```
+Leave: draft → pending → approved / rejected → taken → closed
+```
+
+- Employee requests via portal
+- Manager approves/rejects
+- Approved leave affects payroll (unpaid leave deducted, maternity leave paid)
+- Leave balance tracked per type (annual, sick, maternity, special, unpaid)
+- Balance check before approval (sufficient days)
+
+### Consequences
+
+- Leave data flows into payroll automatically
+- Balance tracking prevents over-allocation
+- Manager approval is the human gate
+- Leave history is auditable
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Leave tracked in Excel (external) | No integration with payroll, manual adjustments |
+| No leave tracking | Can't enforce labor law entitlements |
+| Auto-approve all leave | No manager oversight |
+
+### Risk if deferred
+
+**Medium.** Without integrated leave, payroll officers must manually adjust salary for unpaid leave — error-prone and time-consuming.
+
+---
+
+## ADR-014: Payroll Calendar
+
+**Status:** 🔄 In Progress
+
+### Context
+
+Ethiopian months don't align with Gregorian months. The Ethiopian calendar has 13 months (12 × 30 days + 5-6 Pagume days). Payroll periods must be in Ethiopian months, but bank transactions, ERCA filings, and pension payments use Gregorian dates.
+
+### Decision
+
+**Ethiopian period as primary, Gregorian as display:**
+
+- PayrollRun.period = "YYYY-MM" in Ethiopian calendar (e.g., "2018-10" = Sene 2018)
+- Display shows both: "Sene 2018 (June 2026)"
+- `ethiopian_calendar.py` handles conversion (200+ lines)
+- Deadlines calculated in Gregorian (ERCA: 25th of Gregorian month)
+
+### Consequences
+
+- Payroll aligned with Ethiopian business cycle
+- Display is bilingual (Ethiopian + Gregorian)
+- Calendar conversion adds complexity
+- Some edge cases (Pagume month has 5 or 6 days)
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Gregorian-only | Doesn't match Ethiopian business cycle |
+| Ethiopian-only | Government filings use Gregorian dates |
+| Manual period selection | Error-prone, inconsistent |
+
+### Risk if deferred
+
+**Low.** Calendar conversion already implemented. The risk is in edge cases (Pagume) which need testing.
+
+---
+
+# Technical
+
+## ADR-015: Background Jobs
+
+**Status:** 🔄 In Progress
+
+### Context
+
+Payroll calculation, PDF generation, and report generation are synchronous. At 500+ employees, the browser times out. RQ/Redis infrastructure exists but is only connected for PDF generation.
+
+### Decision
+
+**Background processing for all heavy operations:**
+
+| Operation | Current | Target |
+|-----------|---------|--------|
+| Payroll calculation | Synchronous | Background (RQ) |
+| PDF generation | Background (RQ) | Background (RQ) |
+| Bank file generation | Synchronous | Background (RQ) |
+| ERCA report | Synchronous | Background (RQ) |
+| Audit package | Synchronous | Background (RQ) |
+
+- User clicks "Approve" → returns immediately with job ID
+- Background worker processes: calculate → generate → notify
+- Status polling endpoint for progress updates
+- Future: SSE/WebSocket for real-time progress
+
+### Consequences
+
+- No timeout risk at any scale
+- Better UX (progress tracking)
+- User must wait for notification instead of instant result
+- RQ infrastructure already exists
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Keep synchronous | Timeout at 500+ employees |
+| Celery (instead of RQ) | Heavier, RQ already installed |
+| Inline with timeout increase | Doesn't solve the problem, just delays it |
+
+### Risk if deferred
+
+**High.** A pilot company with 500+ employees will hit the timeout on their first payroll run. That's a trust-breaking moment.
+
+---
+
+## ADR-016: Event Model
+
+**Status:** ⏳ Pending
+
+### Context
+
+The system needs to decouple actions from their side effects. When payroll is approved, multiple things happen: payslips are generated, bank file is created, ERCA report is generated, notifications are sent. Currently these are all in one synchronous function.
+
+### Decision
+
+**Event-driven decoupling (future):**
 
 ```python
-class Payslip(db.Model):
-    # ... existing fields ...
-    
-    # Frozen calculation context (snapshot at time of calculation)
-    calculation_snapshot = db.Column(db.JSON, nullable=True)
-    # Stores:
-    # {
-    #   "tax_rule_version": "2025-v2",
-    #   "tax_brackets": [...],
-    #   "personal_relief": 150,
-    #   "pension_employee_rate": 0.07,
-    #   "pension_employer_rate": 0.11,
-    #   "calculated_at": "2026-06-28T10:30:00Z",
-    #   "engine_version": "1.4.2"
-    # }
+class PayrollEvent(Enum):
+    APPROVED = "payroll.approved"
+    LOCKED = "payroll.locked"
+    PAYMENT_CREATED = "payment.batch.created"
+    PAYMENT_COMPLETED = "payment.batch.completed"
+    FILING_READY = "filing.ready"
 ```
 
-**Benefits:**
-- Historical payslips can always be verified
-- Auditors can see exactly which rules were applied
-- Regulatory changes don't affect historical records
-- Disputes can be resolved by showing the calculation context
+- Events emitted by core actions
+- Listeners handle side effects (notifications, reports, analytics)
+- Events stored for replay/audit
+- Redis Pub/Sub for real-time, DB for persistence
 
-### Trade-offs
+### Consequences
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **A: Snapshot now** | Full audit trail. Historical accuracy guaranteed. | 1 day of work. Slightly larger payslip records (JSON ~500 bytes). |
-| **B: Snapshot later** | Simpler today. | Every month without snapshots is a month of unverifiable payroll. |
+- Actions decoupled from side effects
+- New side effects added without changing core code
+- Event log provides additional audit trail
+- Adds complexity (event ordering, idempotency)
 
-**Recommendation: Option A.** This is compliance infrastructure. One day of work. Permanent peace of mind.
+### Alternatives
 
-### Implementation Phasing
+| Option | Rejected Because |
+|--------|-----------------|
+| Direct function calls | Tight coupling, hard to add new side effects |
+| Full event sourcing | Overkill for current scale |
+| Message queue (RabbitMQ/Kafka) | Overkill, Redis Pub/Sub sufficient |
 
-| Phase | When | Effort | What |
-|-------|------|--------|------|
-| Phase 1 | Before first pilot | 1 day | Add `calculation_snapshot` JSON column to Payslip. Populate during payroll calculation. |
+### Risk if deferred
 
-### Risk If Deferred
+**Low.** Current direct calls work. Event model is a future enhancement for when the system has more integrations.
 
-**High for compliance.** An auditor asking "prove this was correct in June 2026" has no answer without snapshots. This is exactly the kind of thing that separates "software" from "trusted platform."
+---
+
+## ADR-017: Notification Architecture
+
+**Status:** ✅ Decided
+
+### Context
+
+The system needs to notify users about events: payroll ready, leave approved, payment failed, deadline approaching. Notifications must work across channels (in-app, WhatsApp, email) and be configurable per company.
+
+### Decision
+
+**Multi-channel notification system:**
+
+```python
+class Notification(db.Model):
+    company_id, user_id, message, type, link, is_read, created_at
+```
+
+- In-app notifications (always on)
+- WhatsApp (via Business API, future)
+- Email (future)
+- Notification catalogue defines all 37+ notification types
+- Each notification has: trigger, recipient, channel, priority, message template
+
+### Consequences
+
+- Users stay informed without checking the system
+- Notification catalogue prevents ad-hoc notification creation
+- Multi-channel requires integration (WhatsApp Business API)
+- In-app is sufficient for MVP
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Email-only | Ethiopian businesses prefer WhatsApp/SMS |
+| No notifications | Users don't know when action is needed |
+| Push notifications only | Not all users have the app installed |
+
+### Risk if deferred
+
+**Low.** In-app notifications work for MVP. WhatsApp integration is a future enhancement.
 
 ---
 
-## Summary: Architectural Fitness Score
+## ADR-018: API Versioning
 
-| Concern | Current Fitness | At 10K Companies | At 1M Employees | Multi-Country | Decision |
-|---------|----------------|------------------|-----------------|---------------|----------|
-| Jurisdiction abstraction | ❌ Fails | ❌ Fails | ✅ OK | ❌ Fails | **Add boundary now** |
-| Composable pipeline | ❌ Fails | ❌ Fails | ✅ OK | ❌ Fails | **Refactor now** |
-| Tenant isolation | 🟡 OK | ⚠️ Slow | ❌ Fails | ⚠️ Data residency | **Phase 1 now** |
-| Money abstraction | ❌ Fails | ❌ Fails | ✅ OK | ❌ Fails | **Add now** |
-| Event system | ✅ OK | ❌ Timeouts | ❌ Timeouts | ✅ OK | **Background now** |
-| Plugin system | ✅ OK | ✅ OK | ✅ OK | ⚠️ Industry gaps | **Metadata now, plugins later** |
-| Calculation snapshot | ❌ Missing | ❌ Missing | ❌ Missing | ❌ Missing | **Add now** |
+**Status:** ⏳ Pending
 
-**Items to implement before first pilot (total: ~3 weeks):**
-1. Jurisdiction abstraction boundary (1 week)
-2. Composable payroll pipeline (1 week)
-3. Database-level tenant constraints (2 days)
-4. Money value object (1 day)
-5. Background payroll processing (2 days)
-6. Calculation snapshot on payslip (1 day)
-7. Employee metadata JSON field (1 day)
+### Context
 
-**None of these change the product's behavior.** They change the internal structure so that future changes are configuration, not rewrites. The external API, the UI, the tests — all remain the same.
+The system has a REST API (`api.py`) but no versioning strategy. Breaking changes to the API will break integrations. External systems (bank portals, ERCA portal, accounting software) need stable API contracts.
+
+### Decision
+
+**URL-based versioning (future):**
+
+```
+/api/v1/employees
+/api/v1/payroll
+/api/v2/employees  (when breaking changes needed)
+```
+
+- Current API is implicitly v1
+- Breaking changes create v2
+- v1 deprecated with 6-month notice
+- API key authentication (existing)
+
+### Consequences
+
+- Stable contracts for integrations
+- Breaking changes don't break existing users
+- Multiple versions to maintain
+- Documentation must cover all active versions
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Header-based versioning | Harder to test, less discoverable |
+| No versioning | Breaking changes break integrations |
+| GraphQL | Overkill for current needs, harder to cache |
+
+### Risk if deferred
+
+**Low until integrations exist.** Without external integrations, API versioning is premature. Add it when the first bank API or accounting software integration is built.
 
 ---
+
+# Security
+
+## ADR-019: Encryption
+
+**Status:** ✅ Decided
+
+### Context
+
+Employee bank accounts and TINs are sensitive PII. If the database is compromised, these fields must be encrypted at rest. The system must also prevent data exfiltration through API responses.
+
+### Decision
+
+**AES encryption for sensitive fields:**
+
+```python
+# models.py
+from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+
+class Employee(db.Model):
+    bank_account = db.Column(EncryptedType(db.String, enc_key, AesEngine, 'pkcs5'))
+    tin = db.Column(EncryptedType(db.String, enc_key, AesEngine, 'pkcs5'))
+```
+
+- Encryption key from environment variable
+- Key rotation requires re-encryption (manual process)
+- API responses mask bank accounts (last 4 digits only)
+- TIN shown in full (needed for ERCA filing, not considered secret)
+
+### Consequences
+
+- Database compromise doesn't expose bank accounts or TINs
+- Encrypted fields can't be indexed or searched
+- Key management is critical (lost key = lost data)
+- Performance overhead (~1ms per encrypt/decrypt)
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| No encryption | Database breach exposes all bank accounts |
+| Application-level encryption | More code, more bugs |
+| Full database encryption (TDE) | Protects at disk level, not at SQL level |
+
+### Risk if deferred
+
+**High.** Bank account numbers are highly sensitive PII. A breach without encryption = regulatory penalty + reputation damage.
+
+---
+
+## ADR-020: Authentication
+
+**Status:** ✅ Decided
+
+### Context
+
+Ethiopian users are more likely to have a phone number than an email address. The system must support phone-based authentication (OTP) as the primary method, with email/password and Google OAuth as alternatives.
+
+### Decision
+
+**Multi-method authentication:**
+
+| Method | Implementation | Primary Use |
+|--------|---------------|-------------|
+| Phone + OTP | SMS via Twilio/local gateway | Ethiopian users (primary) |
+| Phone + Password | Standard password hashing (scrypt) | Users without SMS |
+| Google OAuth | Flask-Dance | Tech-savvy users |
+| MFA (TOTP) | pyotp, QR code | Sensitive actions (payroll approval) |
+| API Key | Bearer token | External integrations |
+
+**Session management:**
+- 30-minute idle timeout
+- 8-hour absolute timeout
+- Session stored server-side
+
+**Brute-force protection:**
+- 5 failed attempts → 30-minute lockout
+- Phone normalization (09xx → 2519xx) prevents bypass
+
+### Consequences
+
+- Phone-first matches Ethiopian user behavior
+- Multiple methods = more complexity
+- SMS costs money (Twilio rates)
+- MFA optional but recommended for owners
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Email-only | Many Ethiopians don't use email regularly |
+| Password-only | No second factor for sensitive actions |
+| Biometric | Requires mobile app, not available for web |
+
+### Risk if deferred
+
+**Low.** Current authentication works. SMS delivery reliability is the main risk (Ethiopian telecom infrastructure).
+
+---
+
+## ADR-021: Permissions
+
+**Status:** ✅ Decided
+
+### Context
+
+The system has multiple roles: Owner, Payroll Officer, Accountant, Employee (portal). Each role needs different access to different features. The permission model must be simple enough for Ethiopian SMEs but granular enough for compliance.
+
+### Decision
+
+**Role-based access control (RBAC):**
+
+| Role | Payroll | Payments | Filings | Employees | Portal | Settings |
+|------|---------|----------|---------|-----------|--------|----------|
+| Owner | Full | Full | Full | Full | ❌ | Full |
+| Payroll Officer | Create, Edit | Generate | Generate | Full | ❌ | ❌ |
+| Accountant | View | View | File | View | ❌ | ❌ |
+| Employee | ❌ | ❌ | ❌ | ❌ | Own only | ❌ |
+
+- Role assigned per user per company
+- `@role_required('owner', 'accountant')` decorator on routes
+- Portal routes check employee-user link
+- No fine-grained permission model (too complex for SMEs)
+
+### Consequences
+
+- Simple to understand and implement
+- Sufficient for current needs
+- No per-field permissions (all or nothing per role)
+- No delegation workflow (owner must do everything sensitive)
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| ACL (per-resource permissions) | Too complex for SMEs |
+| No roles (everyone is admin) | No separation of duties |
+| Attribute-based access control (ABAC) | Overkill |
+
+### Risk if deferred
+
+**Low.** Current RBAC works. The main risk is that some companies want more granular permissions (e.g., "Payroll Officer can create but not approve"). This is a future enhancement.
+
+---
+
+## ADR-022: Audit Integrity
+
+**Status:** ✅ Decided
+
+### Context
+
+The audit log must prove that records weren't tampered with after the fact. A simple append-only log isn't enough — entries could be modified or deleted. The system needs cryptographic proof of integrity.
+
+### Decision
+
+**SHA-256 hash chain with daily verification:**
+
+- Each AuditLog entry includes `previous_hash` and `hash`
+- Hash computed from: previous_hash + company_id + user_id + action + details
+- `verify_chain()` walks every entry and verifies the chain
+- Daily scheduled task runs verification, alerts on break
+- Hash chain break = critical alert to owner
+
+**What cannot be modified:**
+- AuditLog records (never updated or deleted)
+- Locked PayrollRun records
+- Calculation snapshots on Payslip
+- FilingRecord confirmations
+
+### Consequences
+
+- Tamper-evident audit trail
+- Verification is O(n) per company (fast enough for current scale)
+- No external anchoring (blockchain) — sufficient for Ethiopian compliance
+- Hash chain break detection requires investigation (could be bug, not tampering)
+
+### Alternatives
+
+| Option | Rejected Because |
+|--------|-----------------|
+| Simple append-only log | No tamper detection |
+| Blockchain anchoring | Overkill, expensive, not required by Ethiopian law |
+| Digital signatures per entry | More complex, no benefit over hash chain |
+
+### Risk if deferred
+
+**Critical.** Without hash chain integrity, the audit log is just a table that can be modified. An auditor can't trust it.
+
+---
+
+# Summary
+
+## Architectural Fitness Matrix
+
+| ADR | Decision | Scale | Performance | Flexibility | Multi-Country | Longevity |
+|-----|----------|-------|-------------|-------------|---------------|-----------|
+| 001 Trust Architecture | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 002 Evidence Layer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 003 Calculation Engine | 🔄 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 004 Crosscheck Engine | ⏳ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 005 Payroll Locking | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 006 Immutable Audit | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 007 Employee Identity | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ |
+| 008 Industry Templates | ⏳ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 009 Multi-Tenant | ✅ | ⚠️ | ⚠️ | ✅ | ✅ | ⚠️ |
+| 010 Versioned Tax Rules | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 011 Approval Workflow | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 012 Payment Lifecycle | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 013 Leave Workflow | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 014 Payroll Calendar | 🔄 | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| 015 Background Jobs | 🔄 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 016 Event Model | ⏳ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 017 Notification Arch | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 018 API Versioning | ⏳ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 019 Encryption | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 020 Authentication | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| 021 Permissions | ✅ | ✅ | ✅ | ⚠️ | ✅ | ⚠️ |
+| 022 Audit Integrity | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+**Legend:** ✅ Survives | ⚠️ Needs attention | ❌ Fails
+
+## Items to Implement Before First Pilot
+
+| # | ADR | Effort | Impact |
+|---|-----|--------|--------|
+| 1 | ADR-003: Composable pipeline | 1 week | Enables future country expansion |
+| 2 | ADR-015: Background processing | 2 days | Prevents timeout at 500+ employees |
+| 3 | ADR-008: Employee metadata field | 1 day | Enables industry-specific fields |
+| 4 | ADR-004: Crosscheck engine | 3 days | Catches calculation errors |
 
 ## The One Sentence Test
 
-For every architectural decision, ask:
-
 > **"If we add Kenya tomorrow, do we rewrite this file or configure it?"**
 
-If the answer is "rewrite," the architecture needs to change.
-If the answer is "configure," the architecture is ready.
-
-Today, the answer is "rewrite" for: tax, pension, overtime, leave, bank files, reports, calendar, currency, and language.
-
-That's nine files. Nine rewrites. Or nine configurations.
-
-The choice is made now, or paid for later.
+| Current State | Answer |
+|---------------|--------|
+| Tax calculation | Rewrite (ADR-003 fixes this) |
+| Pension calculation | Rewrite (ADR-003 fixes this) |
+| Bank file generation | Configure (already per-bank) |
+| ERCA report | Rewrite (needs jurisdiction abstraction) |
+| Calendar | Configure (already has adapter) |
+| Currency | Rewrite (ADR-004 in existing doc, needs Money object) |
+| Authentication | Configure (phone patterns differ) |
 
 ---
 
-*Architectural review completed: 2026-07-28*
-*Reviewed against: 10,000 companies, 1M employees, 5 African countries, 5-year horizon*
-*Next review: After first pilot completion*
+*Architecture Decision Records v2.0*
+*22 ADRs across 5 domains*
+*Review date: After first pilot completion*

@@ -63,7 +63,7 @@ Related ADRs
 | PRD-00 | Company Setup & Excel Migration | ✅ Complete |
 | PRD-01 | Hire Employee | ✅ Complete |
 | PRD-02 | Prepare Payroll | ✅ Complete |
-| PRD-03 | Approve & Lock Payroll | Pending |
+| PRD-03 | Approve & Lock Payroll | ✅ Complete |
 | PRD-04 | Pay Employees | Pending |
 | PRD-05 | Government Filing | Pending |
 | PRD-06 | Employee Payslip | Pending |
@@ -97,7 +97,7 @@ Related ADRs
 | J0 | PRD-00 | ADR-001, 002 | ⏳ | ⏳ | PRD done |
 | J1 | PRD-01 | ADR-003 | ⏳ | ⏳ | PRD done |
 | J2 | PRD-02 | ADR-003, 004, 005 | ⏳ | ⏳ | PRD done |
-| J3 | PRD-03 | ADR-004, 005, 006 | ⏳ | ⏳ | Pending |
+| J3 | PRD-03 | ADR-004, 005, 006 | ⏳ | ⏳ | PRD done |
 | J4 | PRD-04 | ADR-003 | ⏳ | ⏳ | Pending |
 | J5 | PRD-05 | ADR-003, 007 | ⏳ | ⏳ | Pending |
 | J6 | PRD-06 | ADR-005, 007 | ⏳ | ⏳ | Pending |

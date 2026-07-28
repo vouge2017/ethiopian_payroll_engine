@@ -361,10 +361,43 @@ Key events:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | PRD-TEMPLATE.md | PRD structure (32 sections) | Product, Engineering |
-| PRD-00 through PRD-09 | 10 journey specifications | Engineering, QA |
+| PRD-00-COMPANY-SETUP-MIGRATION.md | Journey 0: Create company, import from Excel | Engineering, QA |
+| PRD-01-HIRE-EMPLOYEE.md | Journey 1: Add employee, validate, onboard | Engineering, QA |
+| PRD-02-PREPARE-PAYROLL.md | Journey 2: Upload, calculate, validate, draft | Engineering, QA |
+| PRD-03-APPROVE-LOCK-PAYROLL.md | Journey 3: Confidence report, approve, lock | Engineering, QA |
+| PRD-04-PAY-EMPLOYEES.md | Journey 4: Payment batch, bank file, retry, reversal | Engineering, QA |
+| PRD-05-BANK-FILE-GOVERNMENT-FILING.md | Journey 5: ERCA report, pension report, filing history | Engineering, QA |
+| PRD-06-GENERATE-PAYSLIPS.md | Journey 6: PDF generation, Amharic, acknowledgment | Engineering, QA |
+| PRD-07-WORKFORCE-LIFECYCLE.md | Journey 7: Termination, severance, settlement | Engineering, QA |
+| PRD-08-COMPLIANCE-AUDIT.md | Journey 8: Hash chain, corrections, audit packages | Engineering, QA |
+| PRD-09-EMPLOYEE-SELF-SERVICE.md | Journey 9: Portal, leave, profile, tax certificates | Engineering, QA |
+| VERIFICATION_PACKAGE.md | Accountant verification checklist (ERCA +34 rules) | Compliance |
+| ERCA_EXPORT_GUIDE.md | ERCA filing guide for accountants | Compliance |
 | EXECUTION_ROADMAP.md | Build order | All |
 
 ---
 
-*Operating Manual version: 1.1 (updated2026-07-28)*
+## Naming Conventions
+
+Different catalogues use different ID formats. This guide explains how they relate.
+
+| Catalogue | Format | Example | Meaning |
+|-----------|--------|---------|--------|
+| Business Rules | BR-{PRD}-{seq} | BR-04-01 | Rule #1 from PRD-04 (Pay Employees) |
+| Validation Rules | VL-{PRD}-{seq} | VL-04-01 | Validation #1 from PRD-04 |
+| Notifications (main) | N-{seq3} | N-001 | Notification #1 (from NOTIFICATION_CATALOGUE) |
+| Notifications (PRD) | N-{PRD}-{seq} | N-04-01 | Notification #1 from PRD-04 |
+| Analytics (main) | AE-{seq3} | AE-001 | Event #1 (from ANALYTICS_CATALOGUE) |
+| Analytics (payment) | PA-{seq} | PA-001 | Payment analytics event #1 (from PAYMENT_CATALOGUE) |
+| Evidence | EV-{seq} | EV-001 | Evidence definition #1 |
+| State Machines | SM-{seq} | SM-001 | State machine #1 |
+| Payment Events | PE-{seq} | PE-001 | Payment event #1 (from PAYMENT_CATALOGUE) |
+| Payment Notifications | PN-{seq} | PN-001 | Payment notification #1 (from PAYMENT_CATALOGUE) |
+| Payment Analytics | PA-{seq} | PA-001 | Payment analytics #1 (from PAYMENT_CATALOGUE) |
+
+**Cross-reference rule:** PRDs use PRD-prefixed IDs (BR-04-01, VL-04-01, N-04-01). Catalogues define the canonical list. When adding a new rule or notification, add it to both the PRD and the corresponding catalogue.
+
+---
+
+*Operating Manual version: 1.2 (updated 2026-07-28)*
 *This is the handbook for everyone working on the Ethiopian Workforce Operating System.*

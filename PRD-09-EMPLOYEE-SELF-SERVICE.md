@@ -5,6 +5,7 @@
 **Maturity Required:** Level 3
 **Template:** PRD-TEMPLATE.md (32 sections)
 **Foundation:** DATA_MODEL.md, BACKEND_ARCHITECTURE.md, FRONTEND_DESIGN_SYSTEM.md, ENGINEERING_QUALITY_STANDARDS.md
+**ADRs:** ADR-020 (Authentication), ADR-021 (Permissions)
 **Catalogues:** STATE_MACHINE_CATALOGUE.md, NOTIFICATION_CATALOGUE.md, ANALYTICS_CATALOGUE.md, EVIDENCE_CATALOGUE.md
 
 ---

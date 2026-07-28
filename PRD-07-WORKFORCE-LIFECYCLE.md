@@ -5,6 +5,7 @@
 **Maturity Required:** Level 3
 **Template:** PRD-TEMPLATE.md (32 sections)
 **Foundation:** DATA_MODEL.md, BACKEND_ARCHITECTURE.md, FRONTEND_DESIGN_SYSTEM.md, ENGINEERING_QUALITY_STANDARDS.md
+**ADRs:** ADR-005 (Payroll Locking), ADR-007 (Employee Identity)
 **Catalogues:** STATE_MACHINE_CATALOGUE.md, PAYMENT_CATALOGUE.md (RV-001), NOTIFICATION_CATALOGUE.md, ANALYTICS_CATALOGUE.md, EVIDENCE_CATALOGUE.md
 
 ---

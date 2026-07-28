@@ -1,122 +1,190 @@
-# Developer Starter Pack
+# Developer Starter Pack v2
 ### Ethiopian Workforce Operating System
 **Date:** 2026-07-28
 **For:** MimoClaw engineering team
 
 ---
 
-## What This Is
+## How to Use This
 
-A curated set of documents for the engineering team. Not all 74 documents — just the ones they need to make good engineering decisions.
-
-**Read time: ~3 hours total.** After that, you understand the product, the architecture, the rules, and how to contribute.
+Read the **Required** section (2-3 hours). Everything else is reference — look it up when you need it.
 
 ---
 
-## Starter Pack Contents
+## Required (Read Before Coding)
 
-### Tier 1: Read First (Day 1)
+| # | Document | Time | What It Teaches |
+|---|----------|------|-----------------|
+| 1 | `EXECUTIVE_PROJECT_BRIEF.md` | 10 min | What this product is |
+| 2 | `OPERATING_MANUAL.md` | 20 min | Vision, principles, journey map |
+| 3 | `FUNCTIONAL_SPECIFICATION.md` | 30 min | How the product behaves |
+| 4 | `ARCHITECTURE_DECISIONS.md` | 30 min | Why things are the way they are |
+| 5 | `ENGINEERING_QUALITY_STANDARDS.md` | 10 min | Coding standards |
+| 6 | Your assigned PRD (see Current Sprint) | 20 min | What you're building |
+| 7 | `DEVELOPER_PLAYBOOK.md` | 20 min | How to add features |
 
-| # | Document | Time | Purpose |
-|---|----------|------|---------|
-| 1 | `EXECUTIVE_PROJECT_BRIEF.md` | 10 min | What this product is and why it exists |
-| 2 | `OPERATING_MANUAL.md` | 20 min | The handbook — vision, principles, journey map, document map |
-| 3 | `WORKFORCE_OPERATING_SYSTEM_PRINCIPLES.md` | 5 min | 10 rules that govern everything |
-| 4 | `PRD-TEMPLATE.md` | 5 min | How PRDs are structured (32 sections) |
-
-### Tier 2: Understand the System (Day 2)
-
-| # | Document | Time | Purpose |
-|---|----------|------|---------|
-| 5 | `FUNCTIONAL_SPECIFICATION.md` | 30 min | How the product behaves across 10 modules |
-| 6 | `ARCHITECTURE_DECISIONS.md` | 30 min | 22 architectural decisions — why things are the way they are |
-| 7 | `DATA_MODEL.md` | 15 min | Database entities and relationships |
-| 8 | `BACKEND_ARCHITECTURE.md` | 10 min | API standards, error model, conventions |
-| 9 | `ENGINEERING_QUALITY_STANDARDS.md` | 10 min | Coding standards, testing strategy |
-
-### Tier 3: Know the Rules (Day 3)
-
-| # | Document | Time | Purpose |
-|---|----------|------|---------|
-| 10 | `BUSINESS_RULE_CATALOGUE.md` | 15 min | 116 business rules |
-| 11 | `VALIDATION_CATALOGUE.md` | 10 min | 74 validation rules |
-| 12 | `STATE_MACHINE_CATALOGUE.md` | 10 min | 8 state machines |
-| 13 | `PERMISSION_CATALOGUE.md` | 5 min | RBAC matrix |
-| 14 | `API_CATALOGUE.md` | 10 min | All endpoints |
-| 15 | `ERROR_CATALOGUE.md` | 10 min | All error codes |
-
-### Tier 4: Know How to Work (Day 4)
-
-| # | Document | Time | Purpose |
-|---|----------|------|---------|
-| 16 | `DEVELOPER_ONBOARDING_GUIDE.md` | 10 min | How to get started |
-| 17 | `DEVELOPER_PLAYBOOK.md` | 20 min | How to add features, rules, APIs, tests |
-| 18 | `IMPLEMENTATION_CHECKLIST.md` | 5 min | Checklist for every PR |
-| 19 | `DEFINITION_OF_READY.md` | 5 min | When can I start? |
-| 20 | `DEFINITION_OF_DONE.md` | 5 min | When is it finished? |
-| 21 | `PRODUCT_GOVERNANCE_GUIDE.md` | 10 min | Who can change what |
-
-### Tier 5: Ongoing Reference
-
-| # | Document | Purpose |
-|---|----------|---------|
-| 22 | `CONFIGURATION_CATALOGUE.md` | Every configurable setting |
-| 23 | `DECISION_FLOW_CATALOGUE.md` | System decision logic |
-| 24 | `COMPLIANCE_MATRIX.md` | Law → implementation mapping |
-| 25 | `DOMAIN_MODEL.md` | Business concepts explained |
-| 26 | `DECISION_MATRIX.md` | Why products behave as they do |
-| 27 | `TRACEABILITY_MATRIX.md` | End-to-end traceability |
-| 28 | `WEEKLY_PROGRESS_REPORT_TEMPLATE.md` | How to report progress |
-| 29 | `OPEN_QUESTIONS.md` | Where to ask questions |
-| 30 | `DECISION_LOG.md` | Where to record decisions |
-
-### PRDs (Reference as Needed)
-
-| Document | Journey |
-|----------|---------|
-| `PRD-00-COMPANY-SETUP-MIGRATION.md` | Company Setup |
-| `PRD-01-HIRE-EMPLOYEE.md` | Hire Employee |
-| `PRD-02-PREPARE-PAYROLL.md` | Prepare Payroll |
-| `PRD-03-APPROVE-LOCK-PAYROLL.md` | Approve & Lock |
-| `PRD-04-PAY-EMPLOYEES.md` | Pay Employees |
-| `PRD-05-BANK-FILE-GOVERNMENT-FILING.md` | Government Filing |
-| `PRD-06-GENERATE-PAYSLIPS.md` | Generate Payslips |
-| `PRD-07-WORKFORCE-LIFECYCLE.md` | Workforce Lifecycle |
-| `PRD-08-COMPLIANCE-AUDIT.md` | Audit & Compliance |
-| `PRD-09-EMPLOYEE-SELF-SERVICE.md` | Employee Self-Service |
+**Total: ~2.5 hours.** Then start coding.
 
 ---
 
-## What NOT to Read
+## Current Sprint
 
-Don't read these unless specifically asked:
-- `DIAGNOSTIC_ANSWERS.md` (historical)
-- `AUDIT_REPORT_*.md` (historical)
-- `SESSION_SUMMARY_*.md` (historical)
-- `VERIFICATION_PACKAGE.md` (for accountant, not developers)
-- `ERCA_EXPORT_GUIDE.md` (for accountants)
+| Priority | Feature | PRD | Status |
+|----------|---------|-----|--------|
+| P1 | Prepare Payroll | PRD-02 | Code exists, needs review |
+| P2 | Approve & Lock | PRD-03 | Code exists, needs review |
+| P3 | Pay Employees | PRD-04 | PRD complete, not implemented |
+| P4 | Government Filing | PRD-05 | PRD complete, code partial |
+| P5 | Generate Payslips | PRD-06 | Code exists, needs review |
+| P6 | Workforce Lifecycle | PRD-07 | Code exists, needs review |
+| P7 | Audit & Compliance | PRD-08 | PRD complete, not implemented |
+| P8 | Employee Self-Service | PRD-09 | Code exists, needs review |
+
+**Start with your assigned PRD. Don't jump ahead.**
 
 ---
 
-## Quick Reference Card
+## Before You Start (Checklist)
+
+Before writing any code, answer these:
 
 ```
-Need to know...          → Read this
-─────────────────────────────────────────
-What the product does    → EXECUTIVE_PROJECT_BRIEF.md
-How it works             → FUNCTIONAL_SPECIFICATION.md
-Why it's built this way  → ARCHITECTURE_DECISIONS.md
-What the rules are       → BUSINESS_RULE_CATALOGUE.md
-What to validate         → VALIDATION_CATALOGUE.md
-How things change state  → STATE_MACHINE_CATALOGUE.md
-Who can do what          → PERMISSION_CATALOGUE.md
-What APIs exist          → API_CATALOGUE.md
-What errors are possible → ERROR_CATALOGUE.md
-How to add a feature     → DEVELOPER_PLAYBOOK.md
-What to check in a PR    → DEFINITION_OF_DONE.md
-Who decides what         → PRODUCT_GOVERNANCE_GUIDE.md
+- [ ] Which PRD am I implementing?
+- [ ] Which ADRs apply? (check PRD header)
+- [ ] Which Business Rules apply? (PRD section 10)
+- [ ] Which Validation Rules apply? (PRD section 11)
+- [ ] Which State Machine applies? (PRD section 13)
+- [ ] Which APIs are affected? (PRD section 14)
+- [ ] Which database tables change? (PRD section 15)
+- [ ] Which acceptance tests must pass? (PRD section 28)
+- [ ] Are there open questions? (check OPEN_QUESTIONS.md)
+```
+
+If any answer is missing, add it to `OPEN_QUESTIONS.md` and ask before proceeding.
+
+---
+
+## Engineering Expectations
+
+Every completed feature must include:
+
+| Component | Required |
+|-----------|----------|
+| Code implementation | ✅ |
+| Database migration (if needed) | ✅ |
+| API endpoints | ✅ |
+| Validation rules | ✅ |
+| Business rules | ✅ |
+| State machine transitions | ✅ |
+| Audit events | ✅ |
+| Analytics events | ✅ |
+| Error handling | ✅ |
+| Tests (unit + integration) | ✅ |
+| Documentation updates | ✅ |
+
+**Nothing ships without all of these.**
+
+---
+
+## Before You Open a PR (Checklist)
+
+```
+## PR Checklist
+
+### What Changed
+- Feature: {name}
+- PRD: {PRD-xx, sections implemented}
+
+### Business Rules
+- [ ] BR-{xx}-{yy}: {rule description}
+- [ ] BR-{xx}-{yy}: {rule description}
+
+### Validation Rules
+- [ ] VL-{xx}-{yy}: {rule description}
+- [ ] VL-{xx}-{yy}: {rule description}
+
+### APIs
+- [ ] {METHOD} {endpoint}: {what changed}
+
+### Database
+- [ ] {table}: {what changed}
+
+### Tests
+- [ ] {test file}: {what was tested}
+
+### Documentation Updated
+- [ ] PRD updated (if behavior changed)
+- [ ] Business Rule Catalogue (if new rules)
+- [ ] Validation Catalogue (if new validations)
+- [ ] API Catalogue (if new endpoints)
+- [ ] Error Catalogue (if new errors)
+
+### Assumptions
+- {any assumptions needing product confirmation}
 ```
 
 ---
 
-*30 documents. 3 hours. Then you're ready to build.*
+## Working Agreement
+
+1. **PRDs are the source of truth** for feature behavior. If the PRD says one thing and the code says another, the PRD wins.
+2. **ADRs explain why** a design exists. Don't bypass them without approval.
+3. **New business logic requires** corresponding Business Rules and Validation Rules in the catalogues.
+4. **Every change affecting workflows or APIs** must update the relevant documentation.
+5. **If Ethiopian legal requirements are unclear**, stop and ask. Don't assume.
+6. **Product decisions require product owner approval** before implementation.
+7. **If you find a bug**, fix it and add a regression test. Don't just patch.
+8. **If you're unsure about anything**, add it to `OPEN_QUESTIONS.md` and ask.
+
+---
+
+## Current Implementation Status
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| Authentication | ✅ Complete | Phone+OTP, password, OAuth, MFA |
+| Employee Management | ✅ Complete | CRUD, import, validation |
+| Payroll Calculation | 🟡 90% | Core works, needs cross-check engine |
+| Approval Workflow | 🟡 80% | Basic flow works, needs confidence report |
+| Payment Engine | 🔴 Not started | PRD complete, code not written |
+| Government Filing | 🟡 70% | ERCA report exists, needs filing tracking |
+| Payslip Generation | ✅ Complete | PDF generation, acknowledgment |
+| Employee Portal | 🟡 80% | Dashboard, payslips, leave, profile |
+| Termination & Settlement | 🟡 70% | Severance works, needs settlement flow |
+| Audit & Compliance | 🟡 60% | Hash chain exists, needs audit packages |
+| Multi-tenancy | ✅ Complete | TenantQuery enforced |
+| Encryption | ✅ Complete | Bank account + TIN encrypted |
+
+---
+
+## Reference Documents (Look Up When Needed)
+
+| Document | When You Need It |
+|----------|-----------------|
+| `BUSINESS_RULE_CATALOGUE.md` | "What's the rule for this?" |
+| `VALIDATION_CATALOGUE.md` | "What should I validate?" |
+| `STATE_MACHINE_CATALOGUE.md` | "What states does this entity have?" |
+| `PERMISSION_CATALOGUE.md` | "Who can do this?" |
+| `API_CATALOGUE.md` | "What endpoints exist?" |
+| `ERROR_CATALOGUE.md` | "What error code should I use?" |
+| `CONFIGURATION_CATALOGUE.md` | "Is this configurable?" |
+| `DECISION_FLOW_CATALOGUE.md` | "How does the system decide this?" |
+| `COMPLIANCE_MATRIX.md` | "What law requires this?" |
+| `DOMAIN_MODEL.md` | "What does this business concept mean?" |
+| `TRACEABILITY_MATRIX.md` | "Where does this come from?" |
+| `DEFINITION_OF_READY.md` | "Can I start this?" |
+| `DEFINITION_OF_DONE.md` | "Is this finished?" |
+| `PRODUCT_GOVERNANCE_GUIDE.md` | "Who approves this change?" |
+
+---
+
+## Communication
+
+- **Questions** → Add to `OPEN_QUESTIONS.md`
+- **Decisions** → Add to `DECISION_LOG.md`
+- **Progress** → Fill `WEEKLY_PROGRESS_REPORT_TEMPLATE.md` every Friday
+- **Blockers** → Raise immediately, don't wait
+
+---
+
+*Read the7 required documents. Check the sprint. Start coding. Ask questions.*

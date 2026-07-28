@@ -373,6 +373,19 @@ Key events:
 | PRD-09-EMPLOYEE-SELF-SERVICE.md | Journey 9: Portal, leave, profile, tax certificates | Engineering, QA |
 | VERIFICATION_PACKAGE.md | Accountant verification checklist (ERCA +34 rules) | Compliance |
 | ERCA_EXPORT_GUIDE.md | ERCA filing guide for accountants | Compliance |
+
+### Reference Documents
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| FUNCTIONAL_SPECIFICATION.md | How the product behaves across all modules | Engineers, QA, architects |
+| CONFIGURATION_CATALOGUE.md | Every configurable setting with defaults and limits | Engineers, support |
+| DECISION_FLOW_CATALOGUE.md | System decision logic for every major workflow | Engineers, QA, auditors |
+| COMPLIANCE_MATRIX.md | Every law mapped to implementation | Accountants, auditors |
+| TRACEABILITY_MATRIX.md | Vision → Journey → PRD → Rule → API → DB → Test | Engineers, QA, architects |
+| DECISION_MATRIX.md | Why product behavior exists | Engineers, product |
+| DEVELOPER_PLAYBOOK.md | How to add modules, rules, APIs, tests | New engineers |
+| DOMAIN_MODEL.md | Business concepts and relationships | Everyone |
 | EXECUTION_ROADMAP.md | Build order | All |
 
 ---

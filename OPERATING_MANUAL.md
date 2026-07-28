@@ -1,6 +1,6 @@
 # Operating Manual
 ### Ethiopian Workforce Operating System
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-07-28
 **Audience:** Engineers, QA, Product, Sales, Customer Success, Implementation, Investors
 
@@ -320,6 +320,8 @@ Key events:
 
 ## Document Map
 
+### Foundation
+
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | EXECUTIVE_DIRECTIVE.md | Strategic direction | Leadership |
@@ -327,20 +329,42 @@ Key events:
 | COMPANY_OPERATING_SYSTEM.md | Operating model | All |
 | OPERATING_PRINCIPLES.md | Standing rules | All |
 | CUSTOMER_JOURNEY_BLUEPRINT.md | Product vision (frozen) | All |
-| ARCHITECTURE_DECISIONS.md | Technical decisions | Engineering |
+| WORKFORCE_OPERATING_SYSTEM_PRINCIPLES.md | 10 core principles (frozen) | All |
+
+### Architecture
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| ARCHITECTURE_DECISIONS.md | 22 ADRs across 5 domains | Engineering |
 | DATA_MODEL.md | Entity definitions | Engineering |
 | BACKEND_ARCHITECTURE.md | API standards | Engineering |
 | FRONTEND_DESIGN_SYSTEM.md | UI components | Design, Frontend |
 | ENGINEERING_QUALITY_STANDARDS.md | Quality bar | Engineering, QA |
-| STATE_MACHINE_CATALOGUE.md | Lifecycle states | Engineering, QA |
-| NOTIFICATION_CATALOGUE.md | All notifications | Engineering, Product |
-| ANALYTICS_CATALOGUE.md | All analytics events | Engineering, Product |
-| EVIDENCE_CATALOGUE.md | All evidence definitions | Engineering, Compliance |
+
+### Catalogues
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| STATE_MACHINE_CATALOGUE.md | 8 lifecycle states | Engineering, QA |
+| NOTIFICATION_CATALOGUE.md | 37 notifications | Engineering, Product |
+| ANALYTICS_CATALOGUE.md | 52 analytics events | Engineering, Product |
+| EVIDENCE_CATALOGUE.md | 18 evidence definitions | Engineering, Compliance |
+| PAYMENT_CATALOGUE.md | Payment methods, statuses, batch lifecycle | Engineering, Product |
+| VALIDATION_CATALOGUE.md | 68 validation rules | Engineering, QA |
+| BUSINESS_RULE_CATALOGUE.md | 115 business rules | Engineering, Product |
+| PERMISSION_CATALOGUE.md | RBAC matrix (4 roles × 9 areas) | Engineering, Product |
+| API_CATALOGUE.md | 45+ endpoints | Engineering |
+| ERROR_CATALOGUE.md | 50+ error codes | Engineering, QA |
+
+### Specifications
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
 | PRD-TEMPLATE.md | PRD structure (32 sections) | Product, Engineering |
-| PRD-00 through PRD-09 | Journey specifications | Engineering, QA |
+| PRD-00 through PRD-09 | 10 journey specifications | Engineering, QA |
 | EXECUTION_ROADMAP.md | Build order | All |
 
 ---
 
-*Operating Manual version: 1.0*
+*Operating Manual version: 1.1 (updated2026-07-28)*
 *This is the handbook for everyone working on the Ethiopian Workforce Operating System.*

@@ -1,6 +1,7 @@
 # EthioPayroll — Verification Package for Accountant
 
 **Prepared:** 2026-07-20
+**Updated:** 2026-07-29 — Added real ERCA filing data as reference evidence
 **Purpose:** Send this document to an Ethiopian accountant or tax compliance officer for verification.
 **Contains:** ERCA format verification + statutory rule verification checklist
 
@@ -70,6 +71,85 @@ A monthly tax filing report in `.xlsx` (Excel) format with 9 columns:
 | **Tax Withheld** | | **38.25** |
 | **Net Pay** | 3,500 − 245 − 38.25 | **3,216.75** |
 
+---
+
+## ⚠️ REAL ERCA FILING DATA — VERIFIED AGAINST OUR TAX BRACKETS
+
+**Source:** A real Ethiopian company's ERCA filing for Sene (June 2026).
+**File:** `reference_data/real_erca_filing_sene.csv`
+**Employees:** 146 total (29 sampled for verification below)
+
+### Verification Result: Tax Brackets ✅ CONFIRMED
+
+We ran every employee's taxable income through our tax bracket calculation and compared to the filed "Tax withheld" amount. **All 29 sampled employees match exactly when personal relief is NOT subtracted.**
+
+| Employee | Taxable Income | Filed Tax | Our Gross Tax | Match? |
+|----------|---------------|-----------|---------------|--------|
+| Keneni Taa | 29,000 | 8,100 | 8,100 | ✅ |
+| Biruk Mame | 31,000 | 8,800 | 8,800 | ✅ |
+| Thomas Tesfaye | 24,000 | 6,350 | 6,350 | ✅ |
+| Tamrate Zerihun | 45,000 | 13,700 | 13,700 | ✅ |
+| Bezawite Kassaye | 26,000 | 7,050 | 7,050 | ✅ |
+| Surafel Ashenafi | 17,000 | 3,900 | 3,900 | ✅ |
+| Lamrot Balcha | 29,224.20 | 8,178.47 | 8,178.47 | ✅ |
+| Beamlak Temesgen | 9,500 | 1,525 | 1,525 | ✅ |
+| Firehiwot Getahun | 11,500 | 2,100 | 2,100 | ✅ |
+| Webit Fente | 17,156 | 3,954.60 | 3,954.60 | ✅ |
+| Etsubdink Dereje | 5,066 | 513.20 | 513.20 | ✅ |
+| Geremew Nigusse | 25,000 | 6,700 | 6,700 | ✅ |
+| Dawit Ababu | 25,000 | 6,700 | 6,700 | ✅ |
+| Gkidan Asgedom | 28,816.67 | 8,035.83 | 8,035.83 | ✅ |
+| Yidnekachew Tekalegne | 40,517.24 | 12,131.03 | 12,131.03 | ✅ |
+| Tena Belete | 14,000 | 2,850 | 2,850 | ✅ |
+| Yohannes Adisu | 14,933.33 | 3,176.67 | 3,176.67 | ✅ |
+| Akalu Aboneh | 14,000 | 2,850 | 2,850 | ✅ |
+| Ermiyas Shiferaw | 11,333.33 | 2,050.00 | 2,050.00 | ✅ |
+| Webayehu Asefa | 21,333.33 | 5,416.67 | 5,416.67 | ✅ |
+| Kasahun Dejene | 24,533.33 | 6,536.67 | 6,536.67 | ✅ |
+| Berihun Desse | 20,750 | 5,212.50 | 5,212.50 | ✅ |
+| Hafitu Tekuare | 11,000 | 1,950 | 1,950 | ✅ |
+| Belaye Mulugeta | 16,000 | 3,550 | 3,550 | ✅ |
+| Teshoma Deriba | 15,500 | 3,375 | 3,375 | ✅ |
+| Hanna Sleamanuel | 10,700 | 1,860 | 1,860 | ✅ |
+| Abreham baye | 16,000 | 3,550 | 3,550 | ✅ |
+| Nigussie Negeri | 20,000 | 4,950 | 4,950 | ✅ |
+| Ermiyas Tadesse | 16,000 | 3,550 | 3,550 | ✅ |
+
+**Conclusion:** Our tax bracket thresholds (0%, 15%, 20%, 25%, 30%, 35%) are correct and match real-world ERCA filings.
+
+### ⚠️ CRITICAL QUESTION: Personal Relief
+
+The real filing shows **gross tax with NO personal relief subtracted**. Our system subtracts ETB 150 personal relief before withholding.
+
+| Employee | Taxable | Filed Tax (No Relief) | Our System (With −150) | Difference |
+|----------|---------|----------------------|------------------------|------------|
+| Keneni Taa | 29,000 | 8,100 | 7,950 | 150 |
+| Beamlak Temesgen | 9,500 | 1,525 | 1,375 | 150 |
+| Shemsu Yadesa | 3,600 | 240 | 90 | 150 |
+
+**The accountant MUST answer this question:**
+
+> When filing monthly tax with ERCA, should the "Tax Withheld" column show:
+> - **(A)** Gross tax (before personal relief) — matching what this company filed?
+> - **(B)** Net tax (after subtracting ETB 150 personal relief) — what our system currently does?
+>
+> If (A): We need to stop subtracting personal relief in the ERCA export. The employee claims relief at year-end.
+> If (B): This company is overpaying by ETB 150/employee/month.
+
+### Additional Observations from Real Filing
+
+1. **No pension column** — The real filing has columns for: Name, Start Date, End Date, Basic Salary, Transport Allowance, Taxable Transport Allowance, Over Time, Other Taxable Benefit, Total Taxable, Tax Withheld. Our filing adds Pension and Net Pay columns which may not be required by ERCA.
+
+2. **Taxable Transport Allowance column** — ERCA has a separate column for taxable transport allowance. Our system does not have this column. May need to be added.
+
+3. **Overtime is in "Total Taxable"** — In the real filing, overtime is added to Total Taxable (not separated). Our system handles this the same way (overtime is part of taxable income).
+
+4. **No TIN column in real filing** — The real filing does not have a TIN column. Our system includes TIN. May be optional or company-specific.
+
+5. **Column order differs** — Real filing: Name, Start Date, End Date, Basic, Transport, Taxable Transport, Overtime, Other Taxable, Total Taxable, Tax Withheld. Our filing: No., Employee ID, Name, TIN, Gross, Pension, Taxable, Tax, Net Pay.
+
+---
+
 ## ERCA Verification Checklist
 
 | # | Question | Answer Needed |
@@ -81,8 +161,12 @@ A monthly tax filing report in `.xlsx` (Excel) format with 9 columns:
 | 5 | Is employer pension (11%) required in the same filing? | ☐ Yes / ☐ No |
 | 6 | Are there missing columns ERCA requires? | ☐ No / ☐ Yes — list: __________ |
 | 7 | Is personal relief ETB 150/month correct? | ☐ Yes / ☐ No — correct amount: __________ |
-| 8 | Are the tax bracket thresholds correct? | ☐ Yes / ☐ No |
-| 9 | Can you test-upload a sample file to the ERCA portal? | ☐ Yes / ☐ No |
+| 8 | **Should "Tax Withheld" include or exclude personal relief?** | ☐ Include (subtract 150) / ☐ Exclude (show gross tax) — **SEE CRITICAL QUESTION ABOVE** |
+| 9 | Are the tax bracket thresholds correct? | ☐ Yes / ☐ No |
+| 10 | Does ERCA require a "Taxable Transport Allowance" column? | ☐ Yes / ☐ No |
+| 11 | Does ERCA require Start Date and End Date columns? | ☐ Yes / ☐ No |
+| 12 | Is TIN required or optional in the ERCA filing? | ☐ Required / ☐ Optional |
+| 13 | Can you test-upload a sample file to the ERCA portal? | ☐ Yes / ☐ No |
 
 ---
 
@@ -94,13 +178,13 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 
 | # | Rule | Current Value | Proclamation Cited | Verified? | Correct Value? |
 |---|---|---|---|---|---|
-| 1 | Tax bracket 1 | 0–2,000 @ 0% | No. 1395/2025, Art. 36(1) | ☐ | __________ |
-| 2 | Tax bracket 2 | 2,001–4,000 @ 15% | No. 1395/2025, Art. 36(1) | ☐ | __________ |
-| 3 | Tax bracket 3 | 4,001–7,000 @ 20% | No. 1395/2025, Art. 36(1) | ☐ | __________ |
-| 4 | Tax bracket 4 | 7,001–10,000 @ 25% | No. 1395/2025, Art. 36(1) | ☐ | __________ |
-| 5 | Tax bracket 5 | 10,001–14,000 @ 30% | No. 1395/2025, Art. 36(1) | ☐ | __________ |
-| 6 | Tax bracket 6 | 14,001+ @ 35% | No. 1395/2025, Art. 36(1) | ☐ | __________ |
-| 7 | Personal relief | ETB 150/month | No. 1395/2025 | ☐ | __________ |
+| 1 | Tax bracket 1 | 0–2,000 @ 0% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
+| 2 | Tax bracket 2 | 2,001–4,000 @ 15% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
+| 3 | Tax bracket 3 | 4,001–7,000 @ 20% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
+| 4 | Tax bracket 4 | 7,001–10,000 @ 25% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
+| 5 | Tax bracket 5 | 10,001–14,000 @ 30% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
+| 6 | Tax bracket 6 | 14,001+ @ 35% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
+| 7 | Personal relief | ETB 150/month | No. 1395/2025 | ⚠️ **Amount correct, but application method unclear** — see Critical Question in Part 1 | __________ |
 | 8 | Pension employee rate | 7% of basic salary | No. 1268/2022 | ☐ | __________ |
 | 9 | Pension employer rate | 11% of basic salary | No. 1268/2022 | ☐ | __________ |
 | 10 | Pension ceiling | None (no cap) | No. 1268/2022 | ☐ | __________ |
@@ -150,22 +234,30 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 
 ## For the Accountant
 
-1. **Download the official ERCA monthly filing template** from the ERCA portal
-2. **Compare column headers** character-by-character with Part 1
-3. **Verify the tax brackets** against Proclamation No. 1395/2025 (the actual PDF, not summaries)
-4. **Verify pension rates** against Proclamation No. 1268/2022
-5. **Test-upload** a sample file to the ERCA portal
-6. **Fill in the "Correct Value?" column** in Part 2 for each rule
-7. **Return this document** with corrections marked
+1. **Review the real ERCA filing data** in Part 1 — compare column structure to what the portal expects
+2. **Answer the Critical Question** about personal relief (Part 1, "Tax Withheld" — include or exclude ETB 150?)
+3. **Download the official ERCA monthly filing template** from the ERCA portal
+4. **Compare column headers** character-by-character with Part 1
+5. **Verify the tax brackets** against Proclamation No. 1395/2025 (the actual PDF, not summaries)
+6. **Verify pension rates** against Proclamation No. 1268/2022
+7. **Test-upload** a sample file to the ERCA portal
+8. **Fill in the "Correct Value?" column** in Part 2 for each rule
+9. **Return this document** with corrections marked
 
 ## For the Developer
 
 Once the accountant returns this document:
-1. Update any incorrect values in the `TaxRule` database
-2. Update hardcoded defaults in `overtime.py`, `leave.py`, `severance.py`
-3. Adjust ERCA column headers if the portal requires different names
-4. Add any missing columns the ERCA portal requires
-5. Update the `DIAGNOSTIC_ANSWERS.md` compliance score
+1. **Resolve the personal relief question** — this changes how every payslip is calculated
+2. Update any incorrect values in the `TaxRule` database
+3. Update hardcoded defaults in `overtime.py`, `leave.py`, `severance.py`
+4. Adjust ERCA column headers if the portal requires different names
+5. Add any missing columns the ERCA portal requires (e.g., Taxable Transport Allowance, Start/End Date)
+6. Update the `DIAGNOSTIC_ANSWERS.md` compliance score
+
+## Reference Files
+
+- `reference_data/real_erca_filing_sene.csv` — Real ERCA filing (146 employees, Sene/June 2026)
+- `VERIFICATION_PACKAGE.md` — This document
 
 ## Estimated Time
 

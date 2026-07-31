@@ -162,37 +162,45 @@ The real ERCA filing data shows gross tax with NO personal relief subtracted. Th
 
 ## ERCA Verification Checklist
 
-| # | Question | Answer Needed |
-|---|---|---|
-| 1 | Do these 9 column headers match the ERCA portal upload template exactly? | ☐ Yes / ☐ No — correct headers: __________ |
-| 2 | Does the ERCA portal accept `.xlsx` files? | ☐ Yes / ☐ No — required format: __________ |
-| 3 | Is the TIN format correct (9-10 digits)? | ☐ Yes / ☐ No |
-| 4 | Is pension calculated on basic salary or gross salary? | ☐ Basic / ☐ Gross |
-| 5 | Is employer pension (11%) required in the same filing? | ☐ Yes / ☐ No |
-| 6 | Are there missing columns ERCA requires? | ☐ No / ☐ Yes — list: __________ |
-| 7 | Is personal relief ETB 150/month correct? | ☐ Yes / ☐ No — correct amount: __________ |
-| 8 | **Should "Tax Withheld" include or exclude personal relief?** | ☐ Include (subtract 150) / ☐ Exclude (show gross tax) — **SEE CRITICAL QUESTION ABOVE** |
-| 9 | Are the tax bracket thresholds correct? | ☐ Yes / ☐ No |
-| 10 | Does ERCA require a "Taxable Transport Allowance" column? | ☐ Yes / ☐ No |
-| 11 | Does ERCA require Start Date and End Date columns? | ☐ Yes / ☐ No |
-| 12 | Is TIN required or optional in the ERCA filing? | ☐ Required / ☐ Optional |
-| 13 | Can you test-upload a sample file to the ERCA portal? | ☐ Yes / ☐ No |
+**Source:** Real ERCA filing (147 employees, Sene/June 2026) — `reference_data/real_erca_filing_sene.csv`
 
----
+| # | Question | Answer | Source |
+|---|----------|--------|--------|
+| 1 | Column headers match ERCA portal? | ✅ **Yes** — Real filing: Employee Full Name, Start Date, End Date, Basic Salary, Transport Allowance, Taxable Transport Allowance, Over Time, Other Taxable Benefit, Total Taxable, Tax withheld | Real filing CSV |
+| 2 | ERCA accepts .xlsx? | ⚠️ **Likely CSV** — Real filing was uploaded as CSV | Real filing format |
+| 3 | TIN format (9-10 digits)? | ⚠️ **Not in filing** — No TIN column. TIN may be separate or optional | Real filing |
+| 4 | Pension on basic or gross? | ⚠️ **Not in filing** — No pension column. Pension reported separately | Real filing |
+| 5 | Employer pension in same filing? | ❌ **No** — No pension column at all | Real filing |
+| 6 | Missing columns? | ✅ **Yes** — We're MISSING: Start Date, End Date, Transport Allowance, Taxable Transport Allowance, Other Taxable Benefit. We have EXTRA: No., Employee ID, TIN, Pension, Net Pay | Compare |
+| 7 | Personal relief ETB 150? | ✅ **RESOLVED** — No relief in law. Real filing shows gross tax | Law + filing |
+| 8 | Tax Withheld include/exclude relief? | ✅ **RESOLVED** — Gross tax (no relief). Real filing confirms | Real filing |
+| 9 | Tax bracket thresholds correct? | ✅ **RESOLVED** — All 29 sampled employees match | Real filing |
+| 10 | "Taxable Transport Allowance" column? | ✅ **Yes** — Real filing Column 5 | Real filing |
+| 11 | Start/End Date columns? | ✅ **Yes** — Real filing Columns 1, 2 | Real filing |
+| 12 | TIN required or optional? | ⚠️ **Optional** — Real filing has no TIN column | Real filing |
+| 13 | Test-upload to portal? | ✅ **Done** — This CSV was successfully uploaded | User confirmed |
 
-# PART 2: STATUTORY RULES VERIFICATION
+### ⚠️ COLUMN MISMATCH — Our Export vs ERCA Portal
 
-These are ALL the legal rules hardcoded in the system. Each one needs verification against the actual proclamation text.
+| Real ERCA Columns | Our Columns | Status |
+|-------------------|-------------|--------|
+| Employee Full Name | Employee Name | ✅ Similar |
+| Start Date | — | ❌ Missing |
+| End Date | — | ❌ Missing |
+| Basic Salary | Gross Salary | ❌ Different (ERCA wants basic, we send gross) |
+| Transport Allowance | — | ❌ Missing |
+| Taxable Transport Allowance | — | ❌ Missing |
+| Over Time | — | ❌ Missing |
+| Other Taxable Benefit | — | ❌ Missing |
+| Total Taxable | Taxable Income | ✅ Similar |
+| Tax withheld | Tax Withheld | ✅ Match |
+| — | No. | ❌ Extra |
+| — | Employee ID | ❌ Extra |
+| — | TIN | ❌ Extra |
+| — | Pension 7% | ❌ Extra |
+| — | Net Pay | ❌ Extra |
 
-## HIGH PRIORITY — Tax & Pension (affects every payroll)
-
-| # | Rule | Current Value | Proclamation Cited | Verified? | Correct Value? |
-|---|---|---|---|---|---|
-| 1 | Tax bracket 1 | 0–2,000 @ 0% | No. 1395/2025, **Art. 11** (amending 979/2016) | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
-| 2 | Tax bracket 2 | 2,001–4,000 @ 15% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
-| 3 | Tax bracket 3 | 4,001–7,000 @ 20% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
-| 4 | Tax bracket 4 | 7,001–10,000 @ 25% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
-| 5 | Tax bracket 5 | 10,001–14,000 @ 30% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
+**Conclusion:** ERCA export needs redesign to match portal format.
 | 6 | Tax bracket 6 | 14,001+ @ 35% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
 | 7 | Personal relief | ETB 150/month | No. 1395/2025 / 979/2016 | ✅ **Confirmed: no personal relief exists** under 979/2016 (Art. 10(3) prohibits deductions) or 1395/2025 (Art. 11 has bracket table only). If ETB 150 ever existed, it was under an earlier proclamation. System updated. | ✅ Removed |
 | 8 | Pension employee rate | 7% of basic salary | No. 1268/2022, **Art. 10** | ✅ **Verified against proclamation text** | ✅ 7% |

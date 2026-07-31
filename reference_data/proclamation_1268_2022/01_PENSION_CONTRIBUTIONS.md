@@ -17,14 +17,20 @@
 
 This means pension is calculated on the **full salary before tax deduction** (gross salary, not net).
 
+**Employee pension:** 7% of salary
+
+**Employer pension:** 11% of salary
+
 ## Verification Against Our System
 
 | Rule | Proclamation | Our System | Match? |
 |------|-------------|-----------|--------|
-| Employee rate | 7% | 7% of basic salary | ✅ |
-| Employer rate | 11% | 11% of basic salary | ✅ |
+| Employee rate | 7% (Art. 10) | 7% of basic salary | ✅ |
+| Employer rate | 11% (Art. 10) | 11% of basic salary | ✅ |
 | Salary base | "salary" (before tax) | Basic salary | ✅ (basic salary is before deductions) |
-| Ceiling | Not mentioned | None (no cap) | ✅ |
+| Ceiling | Not mentioned in law | None (no cap) | ✅ |
+
+**Source:** Verified directly from the English text of Proclamation 1268/2022 provided by user. Article 10 states: "The contributions payable... shall, based on the salary of the employee of the private organization, be: 1/ by the employer, 11%; 2/ by the employee, 7%."
 
 ## ⚠️ Note on "Salary" vs "Basic Salary"
 

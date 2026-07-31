@@ -91,13 +91,14 @@ Only the **13 ERCA checklist questions** — all statutory rules are now verifie
 
 ## WHAT WE DIDN'T KNOW BEFORE (Now We Know)
 
-1. **Personal relief was never in the law** — we were subtracting ETB 150 that didn't exist
+1. **No personal relief exists** under 979/2016 or 1395/2025 — we were subtracting ETB 150 that had no legal basis in current law
 2. **Overtime rates are wrong** — employees are being underpaid by 20-25%
 3. **Annual leave is wrong** — employees get 2 fewer days in year 1
 4. **Severance formula is too simple** — overpays for longer tenures
 5. **Cash limit was wrong** — 30K should be 50K (fixed)
 6. **Overtime limits are not from this law** — 20/month and 100/year are not in the proclamation
 7. **ERCA column structure differs** — our export doesn't match real filings
+8. **Special leave is 5 days unpaid** (not 3 days) — verified from Art. 81(3)
 
 ---
 

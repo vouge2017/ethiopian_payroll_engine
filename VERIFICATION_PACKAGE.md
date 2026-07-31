@@ -194,7 +194,7 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 | 4 | Tax bracket 4 | 7,001–10,000 @ 25% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
 | 5 | Tax bracket 5 | 10,001–14,000 @ 30% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
 | 6 | Tax bracket 6 | 14,001+ @ 35% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
-| 7 | Personal relief | ETB 150/month | No. 1395/2025 | ✅ **REMOVED** — not in Proclamation 1395/2025 (Art. 11 replaced with bracket table only). Real ERCA filing confirms no relief. System updated. | ✅ Removed |
+| 7 | Personal relief | ETB 150/month | No. 1395/2025 / 979/2016 | ✅ **Confirmed: no personal relief exists** under 979/2016 (Art. 10(3) prohibits deductions) or 1395/2025 (Art. 11 has bracket table only). If ETB 150 ever existed, it was under an earlier proclamation. System updated. | ✅ Removed |
 | 8 | Pension employee rate | 7% of basic salary | No. 1268/2022, **Art. 10** | ✅ **Verified against proclamation text** | ✅ 7% |
 | 9 | Pension employer rate | 11% of basic salary | No. 1268/2022, **Art. 10** | ✅ **Verified against proclamation text** | ✅ 11% |
 | 10 | Pension ceiling | None (no cap) | No. 1268/2022 | ✅ **Verified** — no ceiling mentioned in proclamation | ✅ None |
@@ -226,7 +226,7 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 | 26 | Sick pay tier 3 | Days 91–180: 0% | No. 1156/2019, **Art. 86(3)** | ✅ **Verified against proclamation text** | ✅ 0% |
 | 27 | Maternity leave | 120 days | No. 1156/2019, **Art. 88(3)** | ✅ **Verified** — 30 pre-natal + 90 post-natal = 120 days | ✅ 120 days |
 | 28 | Paternity leave | 3 days | No. 1156/2019, **Art. 81(2)** | ✅ **Verified against proclamation text** | ✅ 3 days |
-| 29 | Special leave | 3 days | No. 1156/2019, **Art. 81(3)** | ✅ **Verified — WRONG! Law says 5 days (unpaid), max 2×/year** | ❌ **5 days unpaid** |
+| 29 | Special leave | 3 days | No. 1156/2019, **Art. 81(3)** | ✅ **Verified from English text** — Law: "leave without pay for up to five consecutive days... may be granted only twice in a budget year" | ❌ **5 days unpaid, max 2×/year** |
 
 ## LOW PRIORITY — Compliance Deadlines
 

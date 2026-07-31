@@ -15,17 +15,15 @@
 | 7,801 – 10,900                    | 30%      |
 | Over 10,900                       | 35%      |
 
-## ⚠️ CRITICAL FINDING: No Personal Relief in Original Law
+## ⚠️ FINDING: No Personal Relief in Current Law
 
 Article 10(3) explicitly states:
 
 > "An employee shall not be allowed a deduction for any expenditure incurred in deriving employment income."
 
-**There is NO personal relief provision in the original 979/2016 law.** No ETB 150 deduction, no tax credit, no employment expense deduction — nothing. The tax is calculated directly on gross employment income at the bracket rates.
+**No personal relief exists under Proclamation 979/2016 or its 2025 amendment.**
 
-Combined with the fact that Proclamation 1395/2025 also has no personal relief (Article 11 replaced with bracket table only), we can now confirm:
-
-**Personal relief (ETB 150) was NEVER in Ethiopian income tax law.** It was likely a misconception or from an older, repealed statute.
+If an ETB 150 relief ever existed, it would have been under an earlier proclamation or directive predating 979/2016. We have no evidence of such a provision in current law.
 
 ## New Article 11 (from Proclamation 1395/2025)
 

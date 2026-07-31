@@ -9,9 +9,8 @@ Progressive tax brackets on monthly taxable salary (ETB):
     10,001 – 14,000: 30%
     14,001+      : 35%
 
-No personal relief — Proclamation 1395/2025 replaced Art. 11 with
-bracket table only. Personal relief (ETB 150) from old 979/2016
-was removed by this amendment.
+No personal relief — not provided under Proclamation 979/2016 or 1395/2025.
+Article 10(3) of 979/2016 prohibits deductions from employment income.
 
 Source: Proclamation No. 1395/2025, effective September 1, 2025.
 Verified by: EY, PwC, DABLO Law, Liku Worku Law Office.

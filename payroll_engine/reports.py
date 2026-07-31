@@ -159,41 +159,14 @@ def generate_erca_report(payslips: list, company_name: str,
         for col_idx, col_cfg in enumerate(columns, 1):
             key = col_cfg['key']
             data_path = col_cfg.get('data_path', key)
+            static_value = col_cfg.get('static_value')
 
-            # Extract value
+            # Extract value — use get_column_value for flexibility
+            val = get_column_value(p, data_path, company, static_value)
+
+            # Handle row number specially
             if data_path == '_row_number':
                 val = i
-            elif data_path == 'taxable':
-                val = taxable
-            elif data_path == 'gross_salary':
-                val = p.gross_salary
-            elif data_path == 'pension_employee':
-                val = p.employee_pension
-            elif data_path == 'pension_employer':
-                val = getattr(p, 'employer_pension', 0)
-            elif data_path == 'tax':
-                val = p.tax
-            elif data_path == 'net':
-                val = p.net_pay
-            elif data_path == 'overtime_pay':
-                val = getattr(p, 'overtime_pay', 0)
-            elif data_path == '_company_tin':
-                val = company.tin if company else ''
-            elif data_path == '_company_name':
-                val = company_name
-            elif data_path.startswith('employee.'):
-                attr = data_path.split('.', 1)[1]
-                val = getattr(emp, attr, '')
-                # Handle encrypted fields
-                if attr in ('tin', 'bank_account') and val:
-                    try:
-                        val = str(val)
-                    except Exception:
-                        val = '****'
-                if attr == 'start_date' and val:
-                    val = str(val)
-            else:
-                val = getattr(p, data_path, '')
 
             if val is None:
                 val = ''

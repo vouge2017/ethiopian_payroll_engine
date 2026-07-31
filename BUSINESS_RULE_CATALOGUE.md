@@ -212,7 +212,7 @@ A business rule defines **what the system must do**, not how. Every rule has:
 | BR-05-02 | Pension payment deadline: 15th of following month | Common practice | PRD-05 |
 | BR-05-03 | Salary disbursement: within 5 days of period end | Common practice | PRD-04 |
 | BR-05-04 | Tax record retention: 10 years | Ethiopian tax law | PRD-08 |
-| BR-05-05 | Cash payment limit: ETB 30,000 | Proclamation 1395/2025 | PRD-04 |
+| BR-05-05 | Cash payment limit: ETB 50,000 | Proclamation 1395/2025, Art. 81 | PRD-04 |
 
 ---
 

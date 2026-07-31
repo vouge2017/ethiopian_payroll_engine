@@ -282,9 +282,9 @@ FAQ_DATA = [
             {
                 'anchor': 'cash-limit',
                 'question': 'What is the cash payment limit?',
-                'answer': 'Ethiopian law requires electronic payment for salaries above **ETB 30,000**. '
-                     'If any employee\'s net pay exceeds this amount, the system will flag it.\n\n'
-                     'Source: Proclamation No. 1395/2025.',
+                'answer': 'Ethiopian law requires electronic payment for salaries above **ETB 50,000**. '
+                     'If any employee's net pay exceeds this amount, the system will flag it.\n\n'
+                     'Source: Proclamation No. 1395/2025, Article 81.',
             },
             {
                 'anchor': 'record-retention',

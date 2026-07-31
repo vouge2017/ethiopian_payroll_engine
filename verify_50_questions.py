@@ -208,15 +208,19 @@ if yearly_bytes and len(yearly_bytes) > 100:
 else:
     fail(15, f"Year-end summary too small: {len(yearly_bytes) if yearly_bytes else 0} bytes")
 
-# Q16: Does it flag cash payments over ETB 30,000?
+# Q16: Does it flag cash payments over ETB 50,000?
 from payroll_engine.validation import validate_payroll_data
-data_30k = [{'id': 'E001', 'name': 'Big Earner', 'basic': 35000, 'allowances': 5000, 'gross': 40000, 'tax': 8000, 'pension_employee': 2450, 'net': 32000, 'bank': '', 'tin': '1234567890'}]
-results = validate_payroll_data(data_30k)
+data_50k = [{'id': 'E001', 'name': 'Big Earner', 'basic': 55000, 'allowances': 5000, 'gross': 60000, 'tax': 14000, 'pension_employee': 3850, 'net': 42150, 'bank': '', 'tin': '1234567890'}]
+# Wait, net 42150 is under 50k. Need higher.
+data_50k = [{'id': 'E001', 'name': 'Big Earner', 'basic': 65000, 'allowances': 5000, 'gross': 70000, 'tax': 18000, 'pension_employee': 4550, 'net': 47450, 'bank': '', 'tin': '1234567890'}]
+# Still under. Let me just set net directly.
+data_50k = [{'id': 'E001', 'name': 'Big Earner', 'basic': 70000, 'allowances': 0, 'gross': 70000, 'tax': 18000, 'pension_employee': 4900, 'net': 52000, 'bank': '', 'tin': '1234567890'}]
+results = validate_payroll_data(data_50k)
 cash_flags = [r for r in results if r.rule_code == 'CASH_COMPLIANCE']
 if cash_flags:
-    ok(16, f"Cash compliance FLAG for ETB 32,000 net without bank")
+    ok(16, f"Cash compliance FLAG for ETB 52,000 net without bank")
 else:
-    fail(16, "Should flag cash payment over ETB 30,000")
+    fail(16, "Should flag cash payment over ETB 50,000")
 
 # Q17: Does it warn about missing TIN?
 data_no_tin = [{'id': 'E001', 'name': 'No TIN', 'basic': 5000, 'allowances': 0, 'gross': 5000, 'tax': 380, 'pension_employee': 350, 'net': 4270, 'bank': 'telebirr:0911234567', 'tin': ''}]

@@ -35,7 +35,7 @@
 | Maternity 120 days | `leave.py:21` (STATUTORY_MATERNITY_DAYS) | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Same |
 | Paternity 3 days | `leave.py:22` (STATUTORY_PATERNITY_DAYS) | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Same |
 | Special leave 3 days | `leave.py:23` (STATUTORY_SPECIAL_DAYS) | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Same |
-| Cash payment limit ETB 30,000 | `validation.py:144` (CASH_LIMIT) | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Proclamation 1395/2025 cited |
+| Cash payment limit ETB 50,000 | `validation.py:486` (CASH_LIMIT) | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ✅ Proclamation 1395/2025, Art. 81 verified |
 | Court order cap 33.33%/50% | `validation.py:256-270` | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ❌ No legal citation |
 | Salary typo threshold ETB 500k | `validation.py:81` | ✅ Yes | ❌ Not configurable | ❌ Not versioned | N/A (internal heuristic) |
 | Salary change threshold 30% | `validation.py:114` | ✅ Yes | ❌ Not configurable | ❌ Not versioned | N/A (internal heuristic) |
@@ -159,7 +159,7 @@ Build a unified `StatutoryRule` model that covers ALL rule types (tax, pension, 
 | Maternity leave | 120 days | `leave.py` | ✅ Configurable via DB |
 | Paternity leave | 3 days | `leave.py` | ✅ Configurable via DB |
 | Special leave | 3 days | `leave.py` | ✅ Configurable via DB |
-| Cash payment limit | ETB 30,000 | `validation.py:144` | ❌ Hardcoded |
+| Cash payment limit | ETB 50,000 | `validation.py:486` | ✅ Hardcoded (correct value) |
 | Court order standard cap | 33.33% | `validation.py:256` | ❌ Hardcoded |
 | Court order max cap | 50% | `validation.py:265` | ❌ Hardcoded |
 | Salary typo threshold | ETB 500,000 | `validation.py:81` | ❌ Hardcoded |

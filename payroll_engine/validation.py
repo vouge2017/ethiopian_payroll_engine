@@ -477,13 +477,14 @@ def _check_missing_tin(data: List[Dict], results: List[ValidationResult]):
 
 
 def _check_cash_compliance(data: List[Dict], results: List[ValidationResult]):
-    """FLAG: Ethiopian law requires electronic payment for salaries above ETB 30,000.
+    """FLAG: Ethiopian law requires electronic payment for salaries above ETB 50,000.
 
-    Per the Income Tax (Amendment) Proclamation No. 1395/2025, cash payments
-    above ETB 30,000 must go through a bank or official electronic channel.
+    Per the Income Tax (Amendment) Proclamation No. 1395/2025, Article 81,
+    cash payments above ETB 50,000 must go through a bank or official
+    electronic channel (account payee cheque, bank draft, or bank transfer).
     This is a FLAG (not BLOCK) — the system informs, the owner decides.
     """
-    CASH_LIMIT = 30000
+    CASH_LIMIT = 50000
     for emp in data:
         net = emp.get('net', 0)
         bank = emp.get('bank', '').strip()

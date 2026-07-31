@@ -31,7 +31,7 @@ This matrix maps every Ethiopian law referenced in the system to its implementat
 | Art. 36(1) | Personal relief: ETB 150/month | tax.py | BR-TAX-07 | VL-PAY-02 | EV-006 | test_payroll.py | PRD-02 | ✅ |
 | Art. 36(1) | Taxable income = gross − pension | tax.py | BR-TAX-08 | VL-PAY-02 | EV-004 | test_payroll.py | PRD-02 | ✅ |
 | — | Tax rules versioned (effective dates) | TaxRule model | BR-TAX-09 | — | EV-005 | test_tax_rules.py | PRD-02 | ✅ |
-| — | Cash payment limit: ETB 30,000 | compliance.py | BR-DLN-05 | — | — | — | PRD-04 | 🔄 |
+| — | Cash payment limit: ETB 50,000 | validation.py | BR-DLN-05 | — | — | — | PRD-04 | ✅ |
 | — | Tax record retention: 10 years | retention.py | BR-AUD-05 | — | — | test_retention.py | PRD-08 | ✅ |
 
 ---

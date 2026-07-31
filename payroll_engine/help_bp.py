@@ -115,9 +115,11 @@ FAQ_DATA = [
                 'anchor': 'overtime-rates',
                 'question': 'How is overtime pay calculated?',
                 'answer': 'Overtime is paid at higher rates than normal working hours:\n\n'
-                     '- **Day overtime:** 1.25× your hourly rate\n'
-                     '- **Night overtime:** 1.50× your hourly rate\n'
-                     '- **Holiday overtime:** 2.0× your hourly rate\n'
+                     '- **Day overtime (6am-10pm):** 1.5× your hourly rate\n'
+                     '- **Night overtime (10pm-6am):** 1.75× your hourly rate\n'
+                     '- **Weekly rest day:** 2.0× your hourly rate\n'
+                     '- **Public holiday:** 2.5× your hourly rate\n\n'
+                     '**Limits:** Max 4 hours/day, 12 hours/week (Art. 67(2)).'
                      '- **Rest day + holiday:** 2.5× your hourly rate\n\n'
                      'Hourly rate = Basic Salary ÷ 208 (26 days × 8 hours)\n\n'
                      'Source: Proclamation No. 1156/2019, Article 68.',

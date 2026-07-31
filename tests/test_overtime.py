@@ -46,17 +46,17 @@ def test_hourly_rate_15000():
 # --- Overtime pay by type ---
 
 def test_overtime_day():
-    """10,000 salary, 4 hours day overtime: 48.08 × 4 × 1.25 = 240.40"""
+    """10,000 salary, 4 hours day overtime: 48.08 × 4 × 1.50 = 288.48"""
     pay = calculate_overtime_pay(10000, 4, 'day')
     hourly = (D('10000') / D('208')).quantize(D('0.01'))
-    expected = (hourly * D('4') * D('1.25')).quantize(D('0.01'))
+    expected = (hourly * D('4') * D('1.50')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_night():
-    """10,000 salary, 3 hours night: 48.08 × 3 × 1.50 = 216.36"""
+    """10,000 salary, 3 hours night: 48.08 × 3 × 1.75 = 252.42"""
     pay = calculate_overtime_pay(10000, 3, 'night')
     hourly = (D('10000') / D('208')).quantize(D('0.01'))
-    expected = (hourly * D('3') * D('1.50')).quantize(D('0.01'))
+    expected = (hourly * D('3') * D('1.75')).quantize(D('0.01'))
     assert pay == expected, f"Expected {expected}, got {pay}"
 
 def test_overtime_holiday():
@@ -101,14 +101,17 @@ def test_total_overtime_mixed():
     assert len(result['warnings']) == 0
 
 def test_total_overtime_exceeds_limit():
-    """Overtime exceeding 20-hour monthly limit triggers warning."""
+    """Overtime exceeding limits triggers warnings for daily, weekly, and monthly."""
     entries = [{'hours': 25, 'type': 'day'}]
     result = calculate_total_overtime(10000, entries)
 
     assert result['total_hours'] == D('25')
     assert result['exceeds_monthly_limit']
-    assert len(result['warnings']) == 1
-    assert '20-hour monthly limit' in result['warnings'][0]
+    # Now warns for daily (25>4), weekly (25>12), and monthly (25>20)
+    assert len(result['warnings']) == 3
+    assert 'daily limit' in result['warnings'][0]
+    assert 'weekly limit' in result['warnings'][1]
+    assert 'monthly limit' in result['warnings'][2]
 
 def test_total_overtime_empty():
     result = calculate_total_overtime(10000, [])
@@ -121,14 +124,17 @@ def test_total_overtime_empty():
 
 def test_rate_multipliers():
     """Verify all rate multipliers match Labor Proclamation 1156/2019."""
-    assert OVERTIME_RATES['day'] == D('1.25')      # Art. 68(1)
-    assert OVERTIME_RATES['night'] == D('1.50')     # Art. 68(2)
-    assert OVERTIME_RATES['holiday'] == D('2.00')   # Art. 68(3)
-    assert OVERTIME_RATES['rest_day_holiday'] == D('2.50')  # Art. 68(4)
+    assert OVERTIME_RATES['day'] == D('1.50')      # Art. 68(1)(a)
+    assert OVERTIME_RATES['night'] == D('1.75')    # Art. 68(1)(b)
+    assert OVERTIME_RATES['holiday'] == D('2.00')   # Art. 68(1)(c)
+    assert OVERTIME_RATES['rest_day_holiday'] == D('2.50')  # Art. 68(1)(d)
 
 def test_monthly_limit():
-    """Verify monthly overtime limit matches Art. 89."""
+    """Verify overtime limits match Ethiopian law."""
     assert MAX_OVERTIME_HOURS_MONTH == 20
+    from payroll_engine.overtime import DEFAULT_MAX_HOURS_DAY, DEFAULT_MAX_HOURS_WEEK
+    assert DEFAULT_MAX_HOURS_DAY == 4   # Art. 67(2)
+    assert DEFAULT_MAX_HOURS_WEEK == 12  # Art. 67(2)
 
 
 # --- Real-world scenario ---

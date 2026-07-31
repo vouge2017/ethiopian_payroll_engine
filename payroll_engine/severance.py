@@ -1,23 +1,34 @@
 """
 Ethiopian Severance Pay Calculator
 
-Labor Proclamation No. 1156/2019, Articles 40-42:
+Labor Proclamation No. 1156/2019, Article 40:
 
-Formula: monthly_salary × years_of_service
-Cap: 12 months of salary (Art. 42)
-Prorated for partial years: (monthly_salary / 365) × days_of_service
+Formula:
+    Year 1: 30 days of average daily wages
+    Each additional year: +1/3 of the base (≈10 days per year)
+    Cap: 12 months of salary (Art. 40(3))
+
+Daily rate = monthly_salary / 30
+
+Example:
+    1 year:  30 days = 1 month
+    2 years: 30 + 10 = 40 days
+    3 years: 30 + 20 = 50 days
+    5 years: 30 + 40 = 70 days
+    10 years: 30 + 90 = 120 days (10 months)
+    Cap: 365 days (12 months)
 
 Applies to:
     - Termination without cause
     - Redundancy
     - Mutual agreement
+    - Other eligible reasons (Art. 39)
 
 Does NOT apply to:
     - Resignation
     - Termination for cause (theft, gross misconduct, repeated violation)
 
-The severance cap is configurable via TaxRule.rules_json['severance'].
-When no database rule exists, falls back to hardcoded default (12 months).
+All constants are configurable via TaxRule.rules_json['severance'].
 """
 
 from datetime import date, datetime
@@ -26,8 +37,10 @@ from typing import Optional
 
 Q = Decimal('0.01')
 
-# Default cap per Ethiopian law
-DEFAULT_MAX_SEVERANCE_MONTHS = 12  # Art. 42
+# Default values per Ethiopian law Art. 40
+DEFAULT_BASE_DAYS = 30           # Art. 40(1): 30 days for first year
+DEFAULT_INCREMENT_FACTOR = Decimal('0.333')  # Art. 40(2): 1/3 increment per year
+DEFAULT_MAX_SEVERANCE_MONTHS = 12  # Art. 40(3): cap at 12 months
 
 # Cache
 _rules_cache = {}
@@ -64,6 +77,8 @@ def _get_severance_rules(for_date=None) -> dict:
         del _rules_cache_timestamps[cache_key]
 
     result = {
+        'base_days': DEFAULT_BASE_DAYS,
+        'increment_factor': DEFAULT_INCREMENT_FACTOR,
         'max_months': DEFAULT_MAX_SEVERANCE_MONTHS,
     }
 
@@ -72,6 +87,10 @@ def _get_severance_rules(for_date=None) -> dict:
         rule = TaxRule.get_active_rule(for_date)
         if rule:
             sv = rule.rules_json.get('severance', {})
+            if 'base_days' in sv:
+                result['base_days'] = int(sv['base_days'])
+            if 'increment_factor' in sv:
+                result['increment_factor'] = _D(sv['increment_factor'])
             if 'max_months' in sv:
                 result['max_months'] = int(sv['max_months'])
     except Exception:
@@ -166,8 +185,38 @@ def calculate_severance(monthly_salary, start_date, end_date,
             'reason': f"Unknown termination reason: '{termination_reason}'",
         }
 
-    # Calculate
-    calculated = monthly_salary * years
+    # Calculate using Art. 40 formula:
+    # Year 1: base_days (30 days)
+    # Each additional year: +increment_factor (1/3) of base_days
+    # Cap: max_months (12 months = 365 days)
+    base_days = Decimal(str(rules['base_days']))
+    increment_factor = rules['increment_factor']
+    max_days = Decimal(str(max_months)) * Decimal('30')  # 12 months = 360 days
+
+    whole_years = int(years)
+    fractional = years - Decimal(str(whole_years))
+
+    # Base: 30 days for first year
+    total_days = base_days
+
+    # Additional years: +1/3 of base per year
+    if whole_years >= 1:
+        additional_years = whole_years - 1
+        total_days += base_days * increment_factor * Decimal(str(additional_years))
+
+    # Prorate partial year
+    if fractional > 0 and whole_years >= 1:
+        total_days += base_days * increment_factor * fractional
+    elif fractional > 0 and whole_years == 0:
+        # Less than 1 year: prorate base
+        total_days = base_days * fractional
+
+    # Cap
+    total_days = min(total_days, max_days)
+
+    # Convert to money: daily_rate × days
+    daily_rate = monthly_salary / Decimal('30')
+    calculated = daily_rate * total_days
     cap = monthly_salary * max_months
     capped = min(calculated, cap)
     final = capped.quantize(Q, rounding=ROUND_HALF_UP)
@@ -192,11 +241,14 @@ def _ineligibility_reason(reason: str) -> str:
 
 def _calculation_explanation(salary, years, calculated, cap, final, max_months) -> str:
     """Generate plain-language explanation of severance calculation."""
+    daily_rate = salary / Decimal('30')
     lines = [
-        f"Severance calculation (Labor Proclamation 1156/2019, Art. 40-42):",
+        f"Severance calculation (Labor Proclamation 1156/2019, Art. 40):",
         f"  Monthly salary: ETB {salary:,.2f}",
+        f"  Daily rate (salary/30): ETB {daily_rate:,.2f}",
         f"  Years of service: {years}",
-        f"  Formula: ETB {salary:,.2f} × {years} = ETB {calculated:,.2f}",
+        f"  Formula: 30 days (year 1) + 10 days per additional year",
+        f"  Calculated: ETB {calculated:,.2f}",
     ]
     if calculated > cap:
         lines.append(f"  Capped at {max_months} months: ETB {cap:,.2f}")

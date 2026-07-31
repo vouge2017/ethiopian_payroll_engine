@@ -2,17 +2,20 @@
 Ethiopian Overtime Rate Calculator
 
 Labor Proclamation No. 1156/2019, Article 68:
-    - Regular day overtime:     1.25x  (Art. 68(1))
-    - Night overtime (10pm-6am): 1.5x  (Art. 68(2))
-    - Public holiday:           2.0x   (Art. 68(3))
-    - Rest day + public holiday: 2.5x  (Art. 68(4))
+    - Regular day overtime (6am-10pm):  1.5x   (Art. 68(1)(a))
+    - Night overtime (10pm-6am):        1.75x  (Art. 68(1)(b))
+    - Weekly rest day:                  2.0x   (Art. 68(1)(c))
+    - Public holiday:                   2.5x   (Art. 68(1)(d))
+
+Overtime limits (Art. 67(2)):
+    - Max 4 hours per day
+    - Max 12 hours per week
 
 Hourly rate = basic_salary / 208
     208 = 26 working days × 8 hours (Ethiopian standard: 6 days/week, 48h/week)
 Overtime pay = hourly_rate × hours × multiplier
 
 Overtime is taxable income (included in gross for ERCA reporting).
-Overtime limit: 20 hours/month, 100 hours/year (Art. 89).
 
 All multipliers and limits are configurable via TaxRule.rules_json['overtime'].
 When no database rule exists, falls back to hardcoded defaults (Ethiopian law).
@@ -24,17 +27,19 @@ from typing import Optional, Dict, Tuple
 # Quantizer for 2 decimal places
 Q = Decimal('0.01')
 
-# Default rate multipliers per Ethiopian labor law
+# Default rate multipliers per Ethiopian labor law Art. 68
 DEFAULT_OVERTIME_RATES = {
-    'day': Decimal('1.25'),           # Regular day overtime
-    'night': Decimal('1.50'),         # Nighttime (10pm-6am)
-    'holiday': Decimal('2.00'),       # Public holiday
-    'rest_day_holiday': Decimal('2.50'),  # Weekly rest day that falls on public holiday
+    'day': Decimal('1.50'),           # Art. 68(1)(a): 6am-10pm
+    'night': Decimal('1.75'),         # Art. 68(1)(b): 10pm-6am
+    'holiday': Decimal('2.00'),       # Art. 68(1)(c): weekly rest day
+    'rest_day_holiday': Decimal('2.50'),  # Art. 68(1)(d): public holiday
 }
 
-# Default legal limits
-DEFAULT_MAX_HOURS_MONTH = 20   # Art. 89(1)
-DEFAULT_MAX_HOURS_YEAR = 100   # Art. 89(2)
+# Default legal limits per Ethiopian labor law Art. 67(2)
+DEFAULT_MAX_HOURS_DAY = 4       # Art. 67(2): max 4 hours per day
+DEFAULT_MAX_HOURS_WEEK = 12     # Art. 67(2): max 12 hours per week
+DEFAULT_MAX_HOURS_MONTH = 20    # Configurable: monthly cap (not in law, for admin control)
+DEFAULT_MAX_HOURS_YEAR = 100    # Configurable: yearly cap (not in law, for admin control)
 
 # Default hourly rate divisor (26 days × 8 hours)
 DEFAULT_MONTHLY_HOURS = Decimal('208')
@@ -68,7 +73,8 @@ def _get_overtime_rules(for_date=None) -> dict:
     Caches result to avoid repeated DB queries.
 
     Returns:
-        Dict with keys: rates, max_hours_month, max_hours_year, monthly_hours
+        Dict with keys: rates, max_hours_day, max_hours_week,
+                        max_hours_month, max_hours_year, monthly_hours
     """
     cache_key = str(for_date) if for_date else 'default'
     import time
@@ -82,6 +88,8 @@ def _get_overtime_rules(for_date=None) -> dict:
 
     result = {
         'rates': dict(DEFAULT_OVERTIME_RATES),
+        'max_hours_day': DEFAULT_MAX_HOURS_DAY,
+        'max_hours_week': DEFAULT_MAX_HOURS_WEEK,
         'max_hours_month': DEFAULT_MAX_HOURS_MONTH,
         'max_hours_year': DEFAULT_MAX_HOURS_YEAR,
         'monthly_hours': DEFAULT_MONTHLY_HOURS,
@@ -95,6 +103,10 @@ def _get_overtime_rules(for_date=None) -> dict:
             if 'rates' in ot_cfg:
                 for key, val in ot_cfg['rates'].items():
                     result['rates'][key] = _D(val)
+            if 'max_hours_day' in ot_cfg:
+                result['max_hours_day'] = int(ot_cfg['max_hours_day'])
+            if 'max_hours_week' in ot_cfg:
+                result['max_hours_week'] = int(ot_cfg['max_hours_week'])
             if 'max_hours_month' in ot_cfg:
                 result['max_hours_month'] = int(ot_cfg['max_hours_month'])
             if 'max_hours_year' in ot_cfg:
@@ -140,10 +152,15 @@ def get_overtime_rates(for_date=None) -> Dict[str, Decimal]:
     return _get_overtime_rules(for_date)['rates']
 
 
-def get_overtime_limits(for_date=None) -> Tuple[int, int]:
-    """Get overtime limits. Returns (max_monthly, max_yearly)."""
+def get_overtime_limits(for_date=None) -> Dict[str, int]:
+    """Get all overtime limits. Returns dict with day, week, month, year keys."""
     rules = _get_overtime_rules(for_date)
-    return rules['max_hours_month'], rules['max_hours_year']
+    return {
+        'day': rules['max_hours_day'],
+        'week': rules['max_hours_week'],
+        'month': rules['max_hours_month'],
+        'year': rules['max_hours_year'],
+    }
 
 
 def calculate_overtime_pay(basic_salary, hours, overtime_type: str = 'day',
@@ -196,11 +213,15 @@ def calculate_total_overtime(basic_salary, overtime_entries: list,
             total_hours: Decimal
             total_pay: Decimal
             entries: list of processed entries
+            exceeds_daily_limit: bool
+            exceeds_weekly_limit: bool
             exceeds_monthly_limit: bool
             warnings: list of warning messages
     """
     rules = _get_overtime_rules(for_date)
     rates = rules['rates']
+    max_daily = rules['max_hours_day']
+    max_weekly = rules['max_hours_week']
     max_monthly = rules['max_hours_month']
 
     total_hours = Decimal('0')
@@ -215,6 +236,13 @@ def calculate_total_overtime(basic_salary, overtime_entries: list,
         if hours <= 0:
             continue
 
+        # Check daily limit per entry
+        if hours > max_daily:
+            warnings.append(
+                f"{ot_type} overtime ({hours}h) exceeds {max_daily}-hour daily limit "
+                f"(Labor Proclamation 1156/2019, Art. 67(2))."
+            )
+
         pay = calculate_overtime_pay(basic_salary, hours, ot_type, for_date)
         total_hours += hours
         total_pay += pay
@@ -226,18 +254,25 @@ def calculate_total_overtime(basic_salary, overtime_entries: list,
             'pay': pay,
         })
 
+    # Check weekly limit
+    if total_hours > max_weekly:
+        warnings.append(
+            f"Overtime ({total_hours}h) exceeds {max_weekly}-hour weekly limit "
+            f"(Labor Proclamation 1156/2019, Art. 67(2))."
+        )
+
     # Check monthly limit
     if total_hours > max_monthly:
         warnings.append(
-            f"Overtime exceeds {max_monthly}-hour monthly limit "
-            f"(Labor Proclamation 1156/2019, Art. 89). "
-            f"Total: {total_hours} hours."
+            f"Overtime ({total_hours}h) exceeds {max_monthly}-hour monthly limit."
         )
 
     return {
         'total_hours': total_hours.quantize(Q, rounding=ROUND_HALF_UP),
         'total_pay': total_pay.quantize(Q, rounding=ROUND_HALF_UP),
         'entries': entries,
+        'exceeds_daily_limit': any(_D(e.get('hours', 0)) > max_daily for e in overtime_entries),
+        'exceeds_weekly_limit': total_hours > max_weekly,
         'exceeds_monthly_limit': total_hours > max_monthly,
         'warnings': warnings,
     }

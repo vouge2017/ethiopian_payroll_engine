@@ -83,7 +83,9 @@ class TestVerification3:
 # ============================================================
 # VERIFICATION TEST 4: Severance calculation
 # 3 years service, 10,000 salary, redundancy
-# Expected: Severance 30,000
+# Art. 40 formula: 30 + 2×10 = 50 days
+# daily = 10000/30 = 333.33
+# Expected: 50 × 333.33 ≈ 16,667
 # ============================================================
 class TestVerification4:
     def test_severance_redundancy(self):
@@ -94,25 +96,26 @@ class TestVerification4:
             termination_reason='redundancy'
         )
         assert result['eligible'] is True
-        assert result['final_amount'] == 30000.0, \
-            f"Severance should be 30000, got {result['final_amount']}"
+        # Allow small rounding difference
+        assert abs(result['final_amount'] - 16667) < 10, \
+            f"Severance should be ~16667, got {result['final_amount']}"
 
 
 # ============================================================
 # VERIFICATION TEST 5: Overtime calculation
 # 5,000 salary + 8h weekday overtime
-# Expected: Overtime 230.80
+# Art. 68(1)(a): day rate = 1.5×
 # Hourly = 5000 / 208 = 24.04
-# 8h * 24.04 * 1.25 = 240.40
+# 8h * 24.04 * 1.50 = 288.48
 # ============================================================
 class TestVerification5:
     def test_overtime_weekday(self):
         pay = calculate_overtime_pay(
             basic_salary=5000, hours=8, overtime_type='day'
         )
-        # hourly = 5000/208 = 24.04, 8 * 24.04 * 1.25 = 240.40
-        assert pay == Decimal("240.40"), \
-            f"Overtime should be 240.40, got {pay}"
+        # hourly = 5000/208 = 24.04, 8 * 24.04 * 1.50 = 288.48
+        assert pay == Decimal("288.48"), \
+            f"Overtime should be 288.48, got {pay}"
 
 
 # ============================================================

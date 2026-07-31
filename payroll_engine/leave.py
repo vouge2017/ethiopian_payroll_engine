@@ -2,14 +2,14 @@
 Ethiopian Leave Management Engine
 
 Labor Proclamation No. 1156/2019:
-    - Annual Leave: 14 days (Year 1), +1 day per additional year
-    - Sick Leave: Max 6 months in 12-month period
-        - Month 1 (day 1-30): 100% pay
-        - Month 2-3 (day 31-90): 50% pay
-        - Month 4-6 (day 91-180): 0% pay
-    - Maternity Leave: 120 days (30 prenatal + 90 postnatal), 100% pay
-    - Paternity Leave: 3 working days, 100% pay
-    - Special Leave: 3 days (marriage, death of spouse/child), 100% pay
+    - Annual Leave: 16 days (Year 1), +1 day per 2 additional years (Art. 77)
+    - Sick Leave: Max 6 months in 12-month period (Art. 85)
+        - Month 1 (day 1-30): 100% pay (Art. 86(1))
+        - Month 2-3 (day 31-90): 50% pay (Art. 86(2))
+        - Month 4-6 (day 91-180): 0% pay (Art. 86(3))
+    - Maternity Leave: 120 days (30 prenatal + 90 postnatal), 100% pay (Art. 88)
+    - Paternity Leave: 3 working days, 100% pay (Art. 81(2))
+    - Special Leave: 5 days unpaid, max 2 times per year (Art. 81(3))
 
 Companies can offer MORE than statutory minimums but not less.
 
@@ -21,18 +21,21 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 # Default statutory minimums (cannot be reduced by company policy)
-DEFAULT_ANNUAL_BASE = 14          # days for year 1
-DEFAULT_ANNUAL_INCREMENT = 1      # +1 day per year of service
-DEFAULT_ANNUAL_MAX = 30           # reasonable cap
+DEFAULT_ANNUAL_BASE = 16          # Art. 77(1)(a): 16 days for year 1
+DEFAULT_ANNUAL_INCREMENT = 1      # Art. 77(1)(b): +1 day per 2 years of service
+DEFAULT_ANNUAL_INCREMENT_YEARS = 2  # Increment applies every 2 years
+DEFAULT_ANNUAL_MAX = 30           # reasonable cap (not in law)
 
-DEFAULT_SICK_MAX_DAYS = 180       # 6 months in 12-month period
-DEFAULT_SICK_TIER_1_DAYS = 30     # 100% pay
-DEFAULT_SICK_TIER_2_DAYS = 60     # 50% pay (days 31-90)
-# Days 91-180: 0% pay
+DEFAULT_SICK_MAX_DAYS = 180       # Art. 85(2): 6 months in 12-month period
+DEFAULT_SICK_TIER_1_DAYS = 30     # Art. 86(1): 100% pay
+DEFAULT_SICK_TIER_2_DAYS = 60     # Art. 86(2): 50% pay (days 31-90)
+# Days 91-180: 0% pay (Art. 86(3))
 
-DEFAULT_MATERNITY_DAYS = 120      # 30 pre + 90 post
-DEFAULT_PATERNITY_DAYS = 3
-DEFAULT_SPECIAL_DAYS = 3          # marriage, bereavement
+DEFAULT_MATERNITY_DAYS = 120      # Art. 88(3): 30 pre + 90 post
+DEFAULT_PATERNITY_DAYS = 3        # Art. 81(2): 3 consecutive days, full pay
+DEFAULT_SPECIAL_DAYS = 5          # Art. 81(3): 5 days unpaid, max 2x/year
+DEFAULT_SPECIAL_UNPAID = True     # Art. 81(3): unpaid
+DEFAULT_SPECIAL_MAX_PER_YEAR = 2  # Art. 81(3): max 2 times per budget year
 
 # Cache for leave rules
 _rules_cache = {}
@@ -61,6 +64,7 @@ def _get_leave_rules(for_date=None) -> dict:
     result = {
         'annual_base': DEFAULT_ANNUAL_BASE,
         'annual_increment': DEFAULT_ANNUAL_INCREMENT,
+        'annual_increment_years': DEFAULT_ANNUAL_INCREMENT_YEARS,
         'annual_max': DEFAULT_ANNUAL_MAX,
         'sick_max_days': DEFAULT_SICK_MAX_DAYS,
         'sick_tier_1_days': DEFAULT_SICK_TIER_1_DAYS,
@@ -68,6 +72,8 @@ def _get_leave_rules(for_date=None) -> dict:
         'maternity_days': DEFAULT_MATERNITY_DAYS,
         'paternity_days': DEFAULT_PATERNITY_DAYS,
         'special_days': DEFAULT_SPECIAL_DAYS,
+        'special_unpaid': DEFAULT_SPECIAL_UNPAID,
+        'special_max_per_year': DEFAULT_SPECIAL_MAX_PER_YEAR,
     }
 
     try:
@@ -102,6 +108,8 @@ def calculate_annual_entitlement(years_of_service: int, company_policy_days: int
                                   for_date=None) -> int:
     """Calculate annual leave entitlement based on years of service.
 
+    Art. 77(1): 16 days for year 1, +1 day per 2 additional years.
+
     Args:
         years_of_service: Complete years of employment
         company_policy_days: Company's policy (must be >= statutory minimum)
@@ -111,7 +119,11 @@ def calculate_annual_entitlement(years_of_service: int, company_policy_days: int
         Annual leave days entitled
     """
     rules = _get_leave_rules(for_date)
-    statutory = rules['annual_base'] + (years_of_service * rules['annual_increment'])
+    increment_years = rules.get('annual_increment_years', 2)
+    # Year 1: base days. After that: +increment per every increment_years
+    additional_years = max(0, years_of_service - 1)
+    increments = additional_years // increment_years
+    statutory = rules['annual_base'] + (increments * rules['annual_increment'])
     statutory = min(statutory, rules['annual_max'])
 
     if company_policy_days is not None:
@@ -305,12 +317,16 @@ def calculate_leave_balance(employee_start_date: date,
 
     elif leave_type == LeaveType.SPECIAL:
         special = rules['special_days']
+        unpaid = rules.get('special_unpaid', True)
+        max_per_year = rules.get('special_max_per_year', 2)
         return {
             'leave_type': leave_type,
             'entitled': special,
             'taken': leave_taken,
             'remaining': max(0, special - leave_taken),
-            'note': 'For marriage or death of spouse/child/close relative',
+            'unpaid': unpaid,
+            'max_per_year': max_per_year,
+            'note': f'Art. 81(3): {special} days {"unpaid" if unpaid else "paid"}, max {max_per_year}x per year. For exceptional/serious events.',
         }
 
     return {

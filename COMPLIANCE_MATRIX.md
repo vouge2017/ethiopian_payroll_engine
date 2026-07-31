@@ -45,7 +45,7 @@ This matrix maps every Ethiopian law referenced in the system to its implementat
 | — | Pension on basic salary, not gross | pension.py | BR-PEN-03 | VL-PAY-02 | EV-002 | test_payroll.py | PRD-02 | ✅ |
 | — | No statutory pension ceiling | pension.py | BR-PEN-04 | — | EV-002 | test_pension_ceiling.py | PRD-02 | ✅ |
 | — | Employer pension not deducted from pay | pension.py | BR-PEN-05 | — | EV-003 | test_payroll.py | PRD-02 | ✅ |
-| — | Pension filing deadline: 15th | compliance.py | BR-DLN-02 | — | — | — | PRD-05 | 🔄 |
+| — | Pension filing deadline: 10th | compliance.py | BR-DLN-02 | — | — | — | PRD-05 | ✅ |
 | — | Pension report includes all employees | reports.py | BR-FL-03 | VL-FL-01 | — | — | PRD-05 | 🔄 |
 
 ---

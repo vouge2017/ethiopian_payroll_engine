@@ -88,7 +88,7 @@ A business rule defines **what the system must do**, not how. Every rule has:
 | BR-05-03 | Pension report includes all employees | Ethiopian pension law | PRD-05 |
 | BR-05-04 | PSSA report follows same format as pension | MOLSA regulation | PRD-05 |
 | BR-05-05 | ERCA filing deadline: 25th of following month | compliance.py | PRD-05 |
-| BR-05-06 | Pension filing deadline: 15th of following month | compliance.py | PRD-05 |
+| BR-05-06 | Pension filing deadline: 10th of following month | compliance.py | PRD-05 |
 | BR-05-07 | TIN mandatory for ERCA filing | ERCA portal requirement | PRD-05 |
 | BR-05-08 | FilingRecord unique per (company_id, filing_type, period) | DB constraint | PRD-05 |
 | BR-05-09 | Amended filings create new record with reference to original | Audit trail | PRD-05 |
@@ -209,7 +209,7 @@ A business rule defines **what the system must do**, not how. Every rule has:
 | ID | Rule | Source | PRD |
 |----|------|--------|-----|
 | BR-05-01 | ERCA filing deadline: 25th of following month | Common practice | PRD-05 |
-| BR-05-02 | Pension payment deadline: 15th of following month | Common practice | PRD-05 |
+| BR-05-02 | Pension payment deadline: 10th of following month | Proclamation 1268/2022, Art. 10(6) | PRD-05 |
 | BR-05-03 | Salary disbursement: within 5 days of period end | Common practice | PRD-04 |
 | BR-05-04 | Tax record retention: 10 years | Ethiopian tax law | PRD-08 |
 | BR-05-05 | Cash payment limit: ETB 50,000 | Proclamation 1395/2025, Art. 81 | PRD-04 |

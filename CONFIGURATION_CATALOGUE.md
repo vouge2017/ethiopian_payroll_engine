@@ -110,7 +110,7 @@ Every configurable value in the system is listed here once. When adding a new se
 | Category | Key | Default | Allowed | Editable By | Approval | Effective | Audit | DB Location | PRD/BR |
 |----------|-----|---------|---------|-------------|----------|-----------|-------|-------------|--------|
 | Filing | erca_deadline_day | 25 | 1-31 | Owner | No | Next filing | Yes | SystemSetting | PRD-05, BR-DLN-01 |
-| Filing | pension_deadline_day | 15 | 1-31 | Owner | No | Next filing | Yes | SystemSetting | PRD-05, BR-DLN-02 |
+| Filing | pension_deadline_day | 10 | 1-31 | Owner | No | Next filing | Yes | SystemSetting | PRD-05, BR-DLN-02 |
 | Filing | erca_report_template | (default9 columns) | Customizable | Owner | No | Next report | Yes | Company.report_templates | PRD-05, BR-FL-02 |
 | Filing | pssa_enabled | false | true/false | Owner | No | Immediate | Yes | Company.settings | PRD-05 |
 

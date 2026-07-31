@@ -3,7 +3,8 @@ Compliance Scoring Module
 
 Evaluates payroll compliance based on:
   - ERCA tax filing deadline: 25th of the following month
-  - Pension contribution deadline: 15th of the following month
+  - Pension contribution deadline: 10th of the following month
+    (Proclamation 1268/2022, Art. 10(6): "first 10 working days")
   - Disbursement timeliness: net pay due within 5 days of month end
 
 Score: 0-100 (percentage of deadlines met on time)
@@ -15,7 +16,7 @@ from typing import Tuple
 
 # Deadlines (day of month)
 ERCA_FILING_DEADLINE_DAY = 25  # ERCA filing due by 25th of following month
-PENSION_DEADLINE_DAY = 15      # Pension contributions due by 15th
+PENSION_DEADLINE_DAY = 10      # Pension due by 10th (Art. 10(6): first 10 working days)
 DISBURSEMENT_DEADLINE_DAYS_AFTER_MONTH_END = 5
 
 

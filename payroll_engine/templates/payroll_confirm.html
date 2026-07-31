@@ -115,7 +115,9 @@
                                                         <td class="text-end">ETB {{ "{:,.2f}".format(b.bracket_tax) }}</td>
                                                     </tr>
                                                     {% endfor %}
+                                                    {% if emp.tax_breakdown.personal_relief > 0 %}
                                                     <tr class="text-muted"><td>Personal relief</td><td class="text-end">-ETB {{ "{:,.2f}".format(emp.tax_breakdown.personal_relief) }}</td></tr>
+                                                    {% endif %}
                                                 </table>
 </div>
                                             </details>

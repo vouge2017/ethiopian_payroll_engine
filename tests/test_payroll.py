@@ -27,8 +27,8 @@ def test_payroll_15000():
     assert result['gross'] == D('15000')
     assert result['pension_employee'] == D('700')  # 7% of 10,000
     assert result['taxable'] == D('14300')  # 15,000 - 700
-    assert result['tax'] == D('2805')  # tax on 14,300
-    assert result['net'] == D('11495')  # 15,000 - 2,805 - 700
+    assert result['tax'] == D('2955')  # tax on 14,300 (no personal relief)
+    assert result['net'] == D('11345')  # 15,000 - 2,955 - 700
 
 
 # ---------------------------------------------------------------

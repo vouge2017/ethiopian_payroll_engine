@@ -57,32 +57,16 @@ FAQ_DATA = [
                      'Source: Proclamation No. 1395/2025, Article 36(1).',
             },
             {
-                'anchor': 'personal-relief',
-                'question': 'What is the personal relief?',
-                'answer': 'Every taxpayer gets ETB 150/month deducted from their gross tax. '
-                     'This means if your calculated tax is less than ETB 150, you pay zero tax. '
-                     'Source: Proclamation No. 1395/2025.',
-            },
-            {
-                'anchor': 'taxable-income',
-                'question': 'How is taxable income calculated?',
-                'answer': 'Taxable Income = Gross Salary − Employee Pension (7%)\n\n'
-                     'The pension contribution is deducted **before** tax is calculated. '
-                     'This means you only pay tax on the amount after pension has been subtracted.',
-            },
-            {
                 'anchor': 'tax-calculation',
                 'question': 'How is my income tax calculated step by step?',
                 'answer': '1. Start with your gross salary\n'
                      '2. Subtract 7% pension → this gives taxable income\n'
                      '3. Apply each tax bracket to portions of taxable income\n'
-                     '4. Add up the tax from each bracket → gross tax\n'
-                     '5. Subtract ETB 150 personal relief → net tax\n\n'
+                     '4. Add up the tax from each bracket → total tax\n\n'
                      'Example: Gross 10,000 ETB\n'
                      '- Pension: 700 (7% of 10,000)\n'
                      '- Taxable: 9,300\n'
-                     '- Tax: 0 + 300 + 600 + 575 + 0 = 1,475\n'
-                     '- After relief: 1,475 − 150 = 1,325 tax',
+                     '- Tax: 0 + 300 + 600 + 575 + 0 = 1,475 tax',
             },
         ],
     },

@@ -37,14 +37,14 @@ class TestVerification1:
     def test_standard_citizen(self):
         result = calculate_payroll(basic_salary=10000, allowances=5000)
         # Gross=15000, Pension=700, Taxable=14300
-        # Tax: 0+300+600+750+1200+105=2955, after 150 relief = 2805
-        # Net: 15000 - 700 - 2805 = 11495
+        # Tax: 0+300+600+750+1200+105=2955 (no personal relief)
+        # Net: 15000 - 700 - 2955 = 11345
         assert result['pension_employee'] == 700.0, \
             f"Pension should be 700, got {result['pension_employee']}"
-        assert result['tax'] == 2805.0, \
-            f"Tax should be 2805, got {result['tax']}"
-        assert result['net'] == 11495.0, \
-            f"Net should be 11495, got {result['net']}"
+        assert result['tax'] == 2955.0, \
+            f"Tax should be 2955, got {result['tax']}"
+        assert result['net'] == 11345.0, \
+            f"Net should be 11345, got {result['net']}"
 
 
 # ============================================================

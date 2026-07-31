@@ -9,7 +9,7 @@ Proclamation No. 1395/2025 brackets:
     10,001 – 14,000: 30%
     14,001+       : 35%
 
-Personal relief: ETB 150
+No personal relief — removed per Proclamation 1395/2025.
 """
 import sys
 import os
@@ -18,7 +18,7 @@ from tax import calculate_tax
 from decimal import Decimal
 
 D = Decimal
-PERSONAL_RELIEF = D('150')
+PERSONAL_RELIEF = D('0')  # Removed — not in Proclamation 1395/2025
 
 
 # --- Zero and negative ---
@@ -33,7 +33,7 @@ def test_tax_negative():
 # --- Bracket 1: 0-2,000 at 0% ---
 
 def test_tax_at_2000():
-    """Top of bracket 1. Tax = 0 (all at 0%) - 150 relief = 0."""
+    """Top of bracket 1. Tax = 0 (all at 0%)."""
     assert calculate_tax(2000) == D('0')
 
 def test_tax_below_2000():
@@ -43,13 +43,13 @@ def test_tax_below_2000():
 # --- Bracket 2: 2,001-4,000 at 15% ---
 
 def test_tax_at_2001():
-    """Just into bracket 2. 1 ETB at 15% = 0.15. Minus 150 relief = 0."""
+    """Just into bracket 2. 1 ETB at 15% = 0.15. No relief."""
     result = calculate_tax(2001)
     expected = max(D('0'), D('1') * D('0.15') - PERSONAL_RELIEF)
     assert result == expected, f"Expected {expected}, got {result}"
 
 def test_tax_at_4000():
-    """Top of bracket 2. 2000 at 0% + 2000 at 15% = 300. Minus 150 = 150."""
+    """Top of bracket 2. 2000 at 0% + 2000 at 15% = 300. No relief: 150."""
     result = calculate_tax(4000)
     expected = max(D('0'), D('2000') * D('0.15') - PERSONAL_RELIEF)
     assert result == expected, f"Expected {expected}, got {result}"
@@ -58,14 +58,14 @@ def test_tax_at_4000():
 # --- Bracket 3: 4,001-7,000 at 20% ---
 
 def test_tax_at_4001():
-    """Just into bracket 3. 2000@0% + 2000@15% + 1@20% = 300.2. Minus 150 = 150.2."""
+    """Just into bracket 3. 2000@0% + 2000@15% + 1@20% = 300.2. No relief: 150.2."""
     result = calculate_tax(4001)
     gross_tax = D('2000') * D('0.15') + D('1') * D('0.20')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
     assert result == expected, f"Expected {expected}, got {result}"
 
 def test_tax_at_7000():
-    """Top of bracket 3. 2000@0% + 2000@15% + 3000@20% = 900. Minus 150 = 750."""
+    """Top of bracket 3. 2000@0% + 2000@15% + 3000@20% = 900. No relief: 750."""
     result = calculate_tax(7000)
     gross_tax = D('2000') * D('0.15') + D('3000') * D('0.20')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
@@ -75,14 +75,14 @@ def test_tax_at_7000():
 # --- Bracket 4: 7,001-10,000 at 25% ---
 
 def test_tax_at_7001():
-    """Just into bracket 4. 2000@0% + 2000@15% + 3000@20% + 1@25% = 900.25. Minus 150 = 750.25."""
+    """Just into bracket 4. 2000@0% + 2000@15% + 3000@20% + 1@25% = 900.25. No relief: 750.25."""
     result = calculate_tax(7001)
     gross_tax = D('2000') * D('0.15') + D('3000') * D('0.20') + D('1') * D('0.25')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
     assert result == expected, f"Expected {expected}, got {result}"
 
 def test_tax_at_10000():
-    """Top of bracket 4. 2000@0% + 2000@15% + 3000@20% + 3000@25% = 1650. Minus 150 = 1500."""
+    """Top of bracket 4. 2000@0% + 2000@15% + 3000@20% + 3000@25% = 1650. No relief: 1500."""
     result = calculate_tax(10000)
     gross_tax = D('2000') * D('0.15') + D('3000') * D('0.20') + D('3000') * D('0.25')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
@@ -92,14 +92,14 @@ def test_tax_at_10000():
 # --- Bracket 5: 10,001-14,000 at 30% ---
 
 def test_tax_at_10001():
-    """Just into bracket 5. Previous + 1@30% = 1650.3. Minus 150 = 1500.3."""
+    """Just into bracket 5. Previous + 1@30% = 1650.3. No relief: 1500.3."""
     result = calculate_tax(10001)
     gross_tax = D('2000') * D('0.15') + D('3000') * D('0.20') + D('3000') * D('0.25') + D('1') * D('0.30')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
     assert result == expected, f"Expected {expected}, got {result}"
 
 def test_tax_at_14000():
-    """Top of bracket 5. Previous + 4000@30% = 2850. Minus 150 = 2700."""
+    """Top of bracket 5. Previous + 4000@30% = 2850. No relief: 2700."""
     result = calculate_tax(14000)
     gross_tax = D('2000') * D('0.15') + D('3000') * D('0.20') + D('3000') * D('0.25') + D('4000') * D('0.30')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
@@ -109,14 +109,14 @@ def test_tax_at_14000():
 # --- Bracket 6: 14,001+ at 35% ---
 
 def test_tax_at_14001():
-    """Just into bracket 6. Previous + 1@35% = 2850.35. Minus 150 = 2700.35."""
+    """Just into bracket 6. Previous + 1@35% = 2850.35. No relief: 2700.35."""
     result = calculate_tax(14001)
     gross_tax = D('2000') * D('0.15') + D('3000') * D('0.20') + D('3000') * D('0.25') + D('4000') * D('0.30') + D('1') * D('0.35')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
     assert result == expected, f"Expected {expected}, got {result}"
 
 def test_tax_at_20000():
-    """High earner. 2000@0% + 2000@15% + 3000@20% + 3000@25% + 4000@30% + 6000@35% = 4950. Minus 150 = 4800."""
+    """High earner. 2000@0% + 2000@15% + 3000@20% + 3000@25% + 4000@30% + 6000@35% = 4950. No relief: 4800."""
     result = calculate_tax(20000)
     gross_tax = D('2000') * D('0.15') + D('3000') * D('0.20') + D('3000') * D('0.25') + D('4000') * D('0.30') + D('6000') * D('0.35')
     expected = max(D('0'), gross_tax - PERSONAL_RELIEF)
@@ -154,11 +154,11 @@ def test_full_payroll_15000():
     assert taxable == D('14300'), f"Expected taxable 14300, got {taxable}"
 
     tax = calculate_tax(taxable)
-    expected_tax = D('2805')
+    expected_tax = D('2955')
     assert tax == expected_tax, f"Expected tax {expected_tax}, got {tax}"
 
     net = gross - tax - emp_pen
-    expected_net = D('11495')
+    expected_net = D('11345')
     assert net == expected_net, f"Expected net {expected_net}, got {net}"
 
 

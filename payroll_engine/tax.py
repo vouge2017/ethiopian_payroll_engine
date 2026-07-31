@@ -9,9 +9,11 @@ Progressive tax brackets on monthly taxable salary (ETB):
     10,001 – 14,000: 30%
     14,001+      : 35%
 
-Relief: A personal relief of ETB 150 is deducted from tax (if tax > 0).
+No personal relief — Proclamation 1395/2025 replaced Art. 11 with
+bracket table only. Personal relief (ETB 150) from old 979/2016
+was removed by this amendment.
 
-Source: Proclamation No. 1395/2025, effective July 7, 2025.
+Source: Proclamation No. 1395/2025, effective September 1, 2025.
 Verified by: EY, PwC, DABLO Law, Liku Worku Law Office.
 
 Rules are configurable via the TaxRule database model.
@@ -38,7 +40,7 @@ DEFAULT_BRACKETS: List[Tuple[Decimal, Decimal]] = [
     (Decimal('Infinity'), Decimal('0.35')),
 ]
 
-DEFAULT_PERSONAL_RELIEF = Decimal('150')  # ETB monthly personal relief
+DEFAULT_PERSONAL_RELIEF = Decimal('0')  # Removed — not in Proclamation 1395/2025
 
 # Cache for tax brackets with TTL (5 minutes)
 # Rules can change via admin UI — cache must not persist stale data forever
@@ -137,9 +139,8 @@ def calculate_tax(gross_salary, for_date=None) -> Decimal:
             tax += taxable_in_bracket * rate
         previous_bound = upper_bound
 
-    # Apply personal relief
-    tax = max(Decimal('0'), tax - personal_relief)
-    return tax.quantize(Q, rounding=ROUND_HALF_UP)
+    tax = tax.quantize(Q, rounding=ROUND_HALF_UP)
+    return max(Decimal('0'), tax)
 
 
 def calculate_tax_breakdown(gross_salary, for_date=None) -> dict:
@@ -190,13 +191,12 @@ def calculate_tax_breakdown(gross_salary, for_date=None) -> dict:
         })
         previous_bound = upper_bound
 
-    gross_tax = tax.quantize(Q, rounding=ROUND_HALF_UP)
-    total_tax = max(Decimal('0'), tax - personal_relief).quantize(Q, rounding=ROUND_HALF_UP)
+    total_tax = tax.quantize(Q, rounding=ROUND_HALF_UP)
 
     return {
         'total_tax': total_tax,
-        'personal_relief': personal_relief,
-        'gross_tax': gross_tax,
+        'personal_relief': Decimal('0'),  # Removed — not in Proclamation 1395/2025
+        'gross_tax': total_tax,
         'brackets': bracket_details,
     }
 
@@ -243,13 +243,10 @@ def explain_tax_amharic(gross_salary, for_date=None) -> str:
         previous_bound = upper_bound
 
     lines.append("-" * 50)
-    lines.append(f"  ጠቅላይ ታክስ ከነፃ እረፍት / Gross Tax: ETB {tax:,.2f}")
-    lines.append(f"  የግል ነፃ እረፍት / Personal Relief: -ETB {personal_relief:,.2f}")
-    net_tax = max(Decimal('0'), tax - personal_relief)
-    lines.append(f"  የሚከፈል ታክስ / Tax Due: ETB {net_tax:,.2f}")
+    lines.append(f"  የሚከፈል ታክስ / Tax Due: ETB {tax:,.2f}")
     lines.append("=" * 50)
 
-    effective_rate = (net_tax / gross_salary * 100) if gross_salary > 0 else Decimal('0')
+    effective_rate = (tax / gross_salary * 100) if gross_salary > 0 else Decimal('0')
     lines.append(
         f"ውጤታዊ ታክስ መጠን / Effective Tax Rate: {effective_rate:.1f}%"
     )

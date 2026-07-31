@@ -357,17 +357,17 @@ def test_full_payroll_flow(ctx, client):
     # 4001-7000: 3000 × 0.20 = 600
     # 7001-10000: 3000 × 0.25 = 750
     # 10001-11300: 1300 × 0.30 = 390
-    # Total: 2040, minus 150 relief = 1890
+    # Total: 2040 (no personal relief)
     tax = calculate_tax(11300)
-    assert tax == 1890.0, f"Tax on 11300 should be 1890, got {tax}"
+    assert tax == 2040.0, f"Tax on 11300 should be 2040, got {tax}"
 
     # Verify tax on 5150 (Hana's taxable)
     # 0-2000: 0
     # 2001-4000: 2000 × 0.15 = 300
     # 4001-5150: 1150 × 0.20 = 230
-    # Total: 530, minus 150 relief = 380
+    # Total: 530 (no personal relief)
     tax_hana = calculate_tax(5150)
-    assert tax_hana == 380.0, f"Tax on 5150 should be 380, got {tax_hana}"
+    assert tax_hana == 530.0, f"Tax on 5150 should be 530, got {tax_hana}"
 
     # Verify tax on 16950 (Kebede's taxable)
     # 0-2000: 0
@@ -376,9 +376,9 @@ def test_full_payroll_flow(ctx, client):
     # 7001-10000: 3000 × 0.25 = 750
     # 10001-14000: 4000 × 0.30 = 1200
     # 14001-16950: 2950 × 0.35 = 1032.5
-    # Total: 3882.5, minus 150 relief = 3732.5
+    # Total: 3882.5 (no personal relief)
     tax_kebede = calculate_tax(16950)
-    assert tax_kebede == 3732.5, f"Tax on 16950 should be 3732.5, got {tax_kebede}"
+    assert tax_kebede == 3882.5, f"Tax on 16950 should be 3882.5, got {tax_kebede}"
 
     # ============================================================
     # DONE

@@ -338,10 +338,6 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
             else:
                 label = f"  {b['rate_pct']}% on next {b['taxable_amount']:,.0f}"
             deductions_data.append([label, f"{b['bracket_tax']:,.2f}"])
-        if tax_breakdown.get('personal_relief', 0) > 0:
-            deductions_data.append(
-                ['  Personal Relief', f"-{tax_breakdown['personal_relief']:,.2f}"]
-            )
     else:
         deductions_data.append(
             ['Income Tax', f"{emp['tax']:,.2f}"]

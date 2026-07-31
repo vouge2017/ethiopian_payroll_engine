@@ -32,33 +32,39 @@ def generate_erca_report(payslips: list, company_name: str,
     """
     from payroll_engine.report_templates import get_enabled_columns, get_column_value
 
-    # Get columns from template or use defaults
+    # Get columns from template or use defaults (ERCA portal format)
     if company:
         columns = get_enabled_columns(company, 'erca')
     else:
-        # Fallback: use default 9 columns
+        # Fallback: use ERCA portal columns
         columns = [
-            {'key': 'row_number', 'label': 'No.', 'data_path': '_row_number'},
-            {'key': 'employee_id', 'label': 'Employee ID', 'data_path': 'employee.employee_id'},
-            {'key': 'employee_name', 'label': 'Employee Name', 'data_path': 'employee.name'},
-            {'key': 'tin', 'label': 'TIN', 'data_path': 'employee.tin'},
-            {'key': 'gross_salary', 'label': 'Gross Salary', 'data_path': 'gross'},
-            {'key': 'pension_employee', 'label': 'Pension 7%', 'data_path': 'pension_employee'},
-            {'key': 'taxable_income', 'label': 'Taxable Income', 'data_path': 'taxable'},
-            {'key': 'tax_withheld', 'label': 'Tax Withheld', 'data_path': 'tax'},
-            {'key': 'net_pay', 'label': 'Net Pay', 'data_path': 'net'},
+            {'key': 'employee_name', 'label': 'Employee Full Name', 'data_path': 'employee.name'},
+            {'key': 'start_date', 'label': 'Start Date', 'data_path': 'employee.start_date'},
+            {'key': 'end_date', 'label': 'End Date', 'data_path': '_end_date'},
+            {'key': 'basic_salary', 'label': 'Basic Salary', 'data_path': 'employee.basic_salary'},
+            {'key': 'transport_allowance', 'label': 'Transport Allowance', 'data_path': '_transport_allowance'},
+            {'key': 'taxable_transport', 'label': 'Taxable Transport Allowance', 'data_path': '_taxable_transport'},
+            {'key': 'overtime_pay', 'label': 'Over Time', 'data_path': 'overtime_pay'},
+            {'key': 'other_taxable', 'label': 'Other Taxable Benefit', 'data_path': '_other_taxable'},
+            {'key': 'total_taxable', 'label': 'Total Taxable', 'data_path': 'taxable'},
+            {'key': 'tax_withheld', 'label': 'Tax withheld', 'data_path': 'tax'},
         ]
 
     # Identify which columns are numeric (for formatting and totals)
     NUMERIC_KEYS = {
         'basic_salary', 'allowances', 'gross_salary', 'overtime_pay',
         'pension_employee', 'pension_employer', 'taxable_income',
-        'tax_withheld', 'net_pay',
+        'tax_withheld', 'net_pay', 'transport_allowance',
+        'taxable_transport', 'other_taxable', 'total_taxable',
     }
 
     # Map data_path to actual payslip attribute names
     PATH_MAP = {
         '_row_number': '_row_number',
+        '_end_date': '_end_date',
+        '_transport_allowance': '_transport_allowance',
+        '_taxable_transport': '_taxable_transport',
+        '_other_taxable': '_other_taxable',
         'employee.employee_id': 'employee.employee_id',
         'employee.name': 'employee.name',
         'employee.tin': 'employee.tin',
@@ -512,22 +518,37 @@ def _generate_yearly_csv(payslips, company_name, year):
 
 
 def _generate_erca_csv(payslips, company_name, period):
-    """Fallback CSV generation if openpyxl not installed."""
+    """Fallback CSV generation if openpyxl not installed.
+    Uses ERCA portal column format.
+    """
     import csv
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['ERCA Tax Filing Report', company_name, period or ''])
-    writer.writerow(['No.', 'Employee ID', 'Name', 'TIN', 'Gross', 'Pension', 'Taxable', 'Tax', 'Net'])
+    # ERCA portal headers
+    writer.writerow([
+        'Employee Full Name', 'Start Date', 'End Date',
+        'Basic Salary', 'Transport Allowance', 'Taxable Transport Allowance',
+        'Over Time', 'Other Taxable Benefit', 'Total Taxable', 'Tax withheld',
+    ])
     for i, p in enumerate(payslips, 1):
         emp = p.employee
-        taxable = p.gross_salary - p.employee_pension
+        basic = float(emp.basic_salary or 0)
+        gross = float(p.gross_salary or 0)
+        transport = max(0, gross - basic)
+        start_date = emp.start_date.strftime('%d/%m/%Y') if emp.start_date else ''
         from payroll_engine.security import prevent_csv_injection
         writer.writerow([
-            i,
-            prevent_csv_injection(emp.employee_id),
             prevent_csv_injection(emp.name),
-            prevent_csv_injection(emp.tin or ''),
-            p.gross_salary, p.employee_pension, taxable, p.tax, p.net_pay,
+            start_date,
+            '',  # End Date
+            basic,
+            transport,  # Transport Allowance
+            transport,  # Taxable Transport Allowance
+            float(p.overtime_pay or 0),  # Over Time
+            0,  # Other Taxable Benefit
+            float(p.taxable or 0),  # Total Taxable
+            float(p.tax or 0),  # Tax withheld
         ])
     return output.getvalue().encode('utf-8')
 

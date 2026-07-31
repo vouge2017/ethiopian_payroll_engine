@@ -16,21 +16,29 @@ from typing import List, Dict, Optional
 # label: default header label
 # data_path: how to extract from a payslip object
 ERCA_COLUMNS = [
+    # ERCA portal columns (in portal order)
+    {'key': 'employee_name', 'label': 'Employee Full Name', 'data_path': 'employee.name'},
+    {'key': 'start_date', 'label': 'Start Date', 'data_path': 'employee.start_date'},
+    {'key': 'end_date', 'label': 'End Date', 'data_path': '_end_date'},
+    {'key': 'basic_salary', 'label': 'Basic Salary', 'data_path': 'employee.basic_salary'},
+    {'key': 'transport_allowance', 'label': 'Transport Allowance', 'data_path': '_transport_allowance'},
+    {'key': 'taxable_transport', 'label': 'Taxable Transport Allowance', 'data_path': '_taxable_transport'},
+    {'key': 'overtime_pay', 'label': 'Over Time', 'data_path': 'overtime_pay'},
+    {'key': 'other_taxable', 'label': 'Other Taxable Benefit', 'data_path': '_other_taxable'},
+    {'key': 'total_taxable', 'label': 'Total Taxable', 'data_path': 'taxable'},
+    {'key': 'tax_withheld', 'label': 'Tax withheld', 'data_path': 'tax'},
+    # Additional columns (not in ERCA portal but useful for internal reports)
     {'key': 'row_number', 'label': 'No.', 'data_path': '_row_number'},
     {'key': 'employee_id', 'label': 'Employee ID', 'data_path': 'employee.employee_id'},
-    {'key': 'employee_name', 'label': 'Employee Name', 'data_path': 'employee.name'},
     {'key': 'tin', 'label': 'TIN', 'data_path': 'employee.tin'},
     {'key': 'employment_date', 'label': 'Employment Date', 'data_path': 'employee.start_date'},
     {'key': 'department', 'label': 'Department', 'data_path': 'employee.department'},
     {'key': 'position', 'label': 'Position', 'data_path': 'employee.position'},
-    {'key': 'basic_salary', 'label': 'Basic Salary', 'data_path': 'employee.basic_salary'},
     {'key': 'allowances', 'label': 'Allowances', 'data_path': 'employee.allowances'},
     {'key': 'gross_salary', 'label': 'Gross Salary', 'data_path': 'gross'},
-    {'key': 'overtime_pay', 'label': 'Overtime Pay', 'data_path': 'overtime_pay'},
     {'key': 'pension_employee', 'label': 'Pension 7%', 'data_path': 'pension_employee'},
     {'key': 'pension_employer', 'label': 'Pension 11% (Employer)', 'data_path': 'pension_employer'},
     {'key': 'taxable_income', 'label': 'Taxable Income', 'data_path': 'taxable'},
-    {'key': 'tax_withheld', 'label': 'Tax Withheld', 'data_path': 'tax'},
     {'key': 'net_pay', 'label': 'Net Pay', 'data_path': 'net'},
     {'key': 'employer_tin', 'label': 'Employer TIN', 'data_path': '_company_tin'},
     {'key': 'employer_name', 'label': 'Employer Name', 'data_path': '_company_name'},
@@ -38,11 +46,12 @@ ERCA_COLUMNS = [
     {'key': 'payment_method', 'label': 'Payment Method', 'data_path': 'employee.bank_or_telebirr'},
 ]
 
-# Default enabled columns for ERCA (what most companies need)
+# Default enabled columns for ERCA — matches the real portal format
+# Source: Real ERCA filing (147 employees, Sene/June 2026)
 ERCA_DEFAULT_ENABLED = [
-    'row_number', 'employee_id', 'employee_name', 'tin',
-    'gross_salary', 'pension_employee', 'taxable_income',
-    'tax_withheld', 'net_pay',
+    'employee_name', 'start_date', 'end_date', 'basic_salary',
+    'transport_allowance', 'taxable_transport', 'overtime_pay',
+    'other_taxable', 'total_taxable', 'tax_withheld',
 ]
 
 
@@ -160,6 +169,29 @@ def get_column_value(payslip, data_path: str, company=None):
         return company.tin if company else ''
     if data_path == '_company_name':
         return company.name if company else ''
+    if data_path == '_end_date':
+        return ''  # Not tracked in our system
+    if data_path == '_transport_allowance':
+        # Calculate transport allowance from gross - basic
+        try:
+            basic = float(payslip.employee.basic_salary or 0)
+            gross = float(payslip.gross_salary or 0)
+            transport = gross - basic
+            return transport if transport > 0 else 0
+        except Exception:
+            return 0
+    if data_path == '_taxable_transport':
+        # Taxable transport allowance — for now, same as transport
+        # (configurable per company in future)
+        try:
+            basic = float(payslip.employee.basic_salary or 0)
+            gross = float(payslip.gross_salary or 0)
+            transport = gross - basic
+            return transport if transport > 0 else 0
+        except Exception:
+            return 0
+    if data_path == '_other_taxable':
+        return 0  # Not tracked separately in our system
 
     # Handle encrypted fields
     if data_path == 'employee.bank_account':

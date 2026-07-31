@@ -136,6 +136,16 @@ The real filing shows **gross tax with NO personal relief subtracted**. Our syst
 > If (A): We need to stop subtracting personal relief in the ERCA export. The employee claims relief at year-end.
 > If (B): This company is overpaying by ETB 150/employee/month.
 
+### ⚠️ CRITICAL FINDING: Personal Relief — NOT IN PROCLAMATION 1395/2025
+
+We reviewed the full text of Proclamation 1395/2025 (the amendment law). **Article 11 was replaced with ONLY the tax bracket table. There is NO personal relief provision.**
+
+The real ERCA filing data shows gross tax with NO personal relief subtracted. This is consistent with the proclamation text.
+
+**To resolve this:** We need the original Proclamation No. 979/2016 to check if personal relief exists in a different article (e.g., old Article 11 or Article 12).
+
+**If personal relief was in old Article 11 only → it was repealed by this amendment.**
+
 ### Additional Observations from Real Filing
 
 1. **No pension column** — The real filing has columns for: Name, Start Date, End Date, Basic Salary, Transport Allowance, Taxable Transport Allowance, Over Time, Other Taxable Benefit, Total Taxable, Tax Withheld. Our filing adds Pension and Net Pay columns which may not be required by ERCA.
@@ -178,13 +188,13 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 
 | # | Rule | Current Value | Proclamation Cited | Verified? | Correct Value? |
 |---|---|---|---|---|---|
-| 1 | Tax bracket 1 | 0–2,000 @ 0% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
-| 2 | Tax bracket 2 | 2,001–4,000 @ 15% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
-| 3 | Tax bracket 3 | 4,001–7,000 @ 20% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
-| 4 | Tax bracket 4 | 7,001–10,000 @ 25% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
-| 5 | Tax bracket 5 | 10,001–14,000 @ 30% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
-| 6 | Tax bracket 6 | 14,001+ @ 35% | No. 1395/2025, Art. 36(1) | ✅ **Verified against real ERCA filing** | __________ |
-| 7 | Personal relief | ETB 150/month | No. 1395/2025 | ⚠️ **Amount correct, but application method unclear** — see Critical Question in Part 1 | __________ |
+| 1 | Tax bracket 1 | 0–2,000 @ 0% | No. 1395/2025, **Art. 11** (amending 979/2016) | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
+| 2 | Tax bracket 2 | 2,001–4,000 @ 15% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
+| 3 | Tax bracket 3 | 4,001–7,000 @ 20% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
+| 4 | Tax bracket 4 | 7,001–10,000 @ 25% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
+| 5 | Tax bracket 5 | 10,001–14,000 @ 30% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
+| 6 | Tax bracket 6 | 14,001+ @ 35% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
+| 7 | Personal relief | ETB 150/month | No. 1395/2025 | ⚠️ **NOT FOUND in Proclamation 1395/2025** — Article 11 was replaced with bracket table only, no personal relief mentioned. Must check original Proclamation 979/2016. See `reference_data/proclamation_1395_2017/01_TAX_BRACKETS.md` | **NEEDS 979/2016** |
 | 8 | Pension employee rate | 7% of basic salary | No. 1268/2022 | ☐ | __________ |
 | 9 | Pension employer rate | 11% of basic salary | No. 1268/2022 | ☐ | __________ |
 | 10 | Pension ceiling | None (no cap) | No. 1268/2022 | ☐ | __________ |
@@ -226,7 +236,7 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 | 31 | Pension payment deadline | 15th of following month | Common practice | ☐ | __________ |
 | 32 | Salary disbursement deadline | 5 days after period end | Common practice | ☐ | __________ |
 | 33 | Tax record retention | 10 years (3650 days) | "Ethiopian tax law" | ☐ | __________ |
-| 34 | Cash payment limit | ETB 30,000 | No. 1395/2025 | ☐ | __________ |
+| 34 | Cash payment limit | ETB 30,000 → **ETB 50,000** | No. 1395/2025, **Art. 81** | ✅ **Verified against proclamation text** — limit is now ETB 50,000. System needs update. See `reference_data/proclamation_1395_2017/02_CASH_PAYMENT_LIMIT.md` | ❌ **50,000 (system has 30,000)** |
 
 ---
 

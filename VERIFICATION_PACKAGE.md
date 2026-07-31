@@ -203,30 +203,30 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 
 | # | Rule | Current Value | Proclamation Cited | Verified? | Correct Value? |
 |---|---|---|---|---|---|
-| 11 | Overtime day rate | 1.25× hourly | No. 1156/2019, Art. 68(1) | ☐ | __________ |
-| 12 | Overtime night rate | 1.50× hourly | No. 1156/2019, Art. 68(2) | ☐ | __________ |
-| 13 | Overtime holiday rate | 2.0× hourly | No. 1156/2019, Art. 68(3) | ☐ | __________ |
-| 14 | Overtime rest+holiday | 2.5× hourly | No. 1156/2019, Art. 68(4) | ☐ | __________ |
-| 15 | Overtime monthly limit | 20 hours | No. 1156/2019, Art. 89 | ☐ | __________ |
-| 16 | Overtime yearly limit | 100 hours | No. 1156/2019, Art. 89 | ☐ | __________ |
-| 17 | Hourly rate divisor | 208 (26 days × 8 hrs) | Ethiopian convention | ☐ | __________ |
-| 18 | Severance formula | salary × years | No. 1156/2019, Art. 40-42 | ☐ | __________ |
-| 19 | Severance cap | 12 months max | No. 1156/2019, Art. 42 | ☐ | __________ |
+| 11 | Overtime day rate | 1.25× hourly | No. 1156/2019, **Art. 68(1)(a)** | ✅ **Verified — WRONG! Law says 1.5×** | ❌ **1.5×** |
+| 12 | Overtime night rate | 1.50× hourly | No. 1156/2019, **Art. 68(1)(b)** | ✅ **Verified — WRONG! Law says 1.75×** | ❌ **1.75×** |
+| 13 | Overtime holiday rate | 2.0× hourly | No. 1156/2019, **Art. 68(1)(c)** | ✅ **Verified against proclamation text** | ✅ 2.0× |
+| 14 | Overtime rest+holiday | 2.5× hourly | No. 1156/2019, **Art. 68(1)(d)** | ✅ **Verified against proclamation text** | ✅ 2.5× |
+| 15 | Overtime monthly limit | 20 hours | No. 1156/2019 | ✅ **NOT IN LAW** — Law says 4 hrs/day, 12 hrs/week (Art. 67(2)). No monthly cap. | ⚠️ Remove or convert |
+| 16 | Overtime yearly limit | 100 hours | No. 1156/2019 | ✅ **NOT IN LAW** — No yearly cap in proclamation | ⚠️ Remove or convert |
+| 17 | Hourly rate divisor | 208 (26 days × 8 hrs) | Ethiopian convention | ☐ Not in this proclamation | __________ |
+| 18 | Severance formula | salary × years | No. 1156/2019, **Art. 40** | ✅ **Verified — WRONG! Law: 30 days year 1, +10 days/year after, 1/3 increment** | ❌ **See Art. 40** |
+| 19 | Severance cap | 12 months max | No. 1156/2019, **Art. 40(3)** | ✅ **Verified against proclamation text** | ✅ 12 months |
 
 ## MEDIUM PRIORITY — Leave Entitlements
 
 | # | Rule | Current Value | Proclamation Cited | Verified? | Correct Value? |
 |---|---|---|---|---|---|
-| 20 | Annual leave (year 1) | 14 days | No. 1156/2019 | ☐ | __________ |
-| 21 | Annual leave increment | +1 day per year | No. 1156/2019 | ☐ | __________ |
-| 22 | Annual leave max | 30 days | "Reasonable cap" | ☐ | __________ |
-| 23 | Sick leave max | 180 days (6 months) | No. 1156/2019 | ☐ | __________ |
-| 24 | Sick pay tier 1 | Days 1–30: 100% | No. 1156/2019 | ☐ | __________ |
-| 25 | Sick pay tier 2 | Days 31–90: 50% | No. 1156/2019 | ☐ | __________ |
-| 26 | Sick pay tier 3 | Days 91–180: 0% | No. 1156/2019 | ☐ | __________ |
-| 27 | Maternity leave | 120 days | No. 1156/2019 | ☐ | __________ |
-| 28 | Paternity leave | 3 days | No. 1156/2019 | ☐ | __________ |
-| 29 | Special leave | 3 days | No. 1156/2019 | ☐ | __________ |
+| 20 | Annual leave (year 1) | 14 days | No. 1156/2019, **Art. 77(1)(a)** | ✅ **Verified — WRONG! Law says 16 days** | ❌ **16 days** |
+| 21 | Annual leave increment | +1 day per year | No. 1156/2019, **Art. 77(1)(b)** | ✅ **Verified — WRONG! Law says +1 day per 2 years** | ❌ **+1 per 2 years** |
+| 22 | Annual leave max | 30 days | "Reasonable cap" | ✅ **Not in law** — no maximum specified | ⚠️ Keep as reasonable cap |
+| 23 | Sick leave max | 180 days (6 months) | No. 1156/2019, **Art. 85(2)** | ✅ **Verified against proclamation text** | ✅ 6 months |
+| 24 | Sick pay tier 1 | Days 1–30: 100% | No. 1156/2019, **Art. 86(1)** | ✅ **Verified against proclamation text** | ✅ 100% |
+| 25 | Sick pay tier 2 | Days 31–90: 50% | No. 1156/2019, **Art. 86(2)** | ✅ **Verified against proclamation text** | ✅ 50% |
+| 26 | Sick pay tier 3 | Days 91–180: 0% | No. 1156/2019, **Art. 86(3)** | ✅ **Verified against proclamation text** | ✅ 0% |
+| 27 | Maternity leave | 120 days | No. 1156/2019, **Art. 88(3)** | ✅ **Verified** — 30 pre-natal + 90 post-natal = 120 days | ✅ 120 days |
+| 28 | Paternity leave | 3 days | No. 1156/2019, **Art. 81(2)** | ✅ **Verified against proclamation text** | ✅ 3 days |
+| 29 | Special leave | 3 days | No. 1156/2019, **Art. 81(3)** | ✅ **Verified — WRONG! Law says 5 days (unpaid), max 2×/year** | ❌ **5 days unpaid** |
 
 ## LOW PRIORITY — Compliance Deadlines
 

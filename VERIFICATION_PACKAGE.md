@@ -194,10 +194,10 @@ These are ALL the legal rules hardcoded in the system. Each one needs verificati
 | 4 | Tax bracket 4 | 7,001–10,000 @ 25% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
 | 5 | Tax bracket 5 | 10,001–14,000 @ 30% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
 | 6 | Tax bracket 6 | 14,001+ @ 35% | No. 1395/2025, **Art. 11** | ✅ **Verified against proclamation text + real ERCA filing** | ✅ Correct |
-| 7 | Personal relief | ETB 150/month | No. 1395/2025 | ⚠️ **NOT FOUND in Proclamation 1395/2025** — Article 11 was replaced with bracket table only, no personal relief mentioned. Must check original Proclamation 979/2016. See `reference_data/proclamation_1395_2017/01_TAX_BRACKETS.md` | **NEEDS 979/2016** |
-| 8 | Pension employee rate | 7% of basic salary | No. 1268/2022 | ☐ | __________ |
-| 9 | Pension employer rate | 11% of basic salary | No. 1268/2022 | ☐ | __________ |
-| 10 | Pension ceiling | None (no cap) | No. 1268/2022 | ☐ | __________ |
+| 7 | Personal relief | ETB 150/month | No. 1395/2025 | ✅ **REMOVED** — not in Proclamation 1395/2025 (Art. 11 replaced with bracket table only). Real ERCA filing confirms no relief. System updated. | ✅ Removed |
+| 8 | Pension employee rate | 7% of basic salary | No. 1268/2022, **Art. 10** | ✅ **Verified against proclamation text** | ✅ 7% |
+| 9 | Pension employer rate | 11% of basic salary | No. 1268/2022, **Art. 10** | ✅ **Verified against proclamation text** | ✅ 11% |
+| 10 | Pension ceiling | None (no cap) | No. 1268/2022 | ✅ **Verified** — no ceiling mentioned in proclamation | ✅ None |
 
 ## MEDIUM PRIORITY — Overtime & Severance
 

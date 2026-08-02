@@ -9,6 +9,9 @@
         </h3>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-secondary fs-6">{{ logs|length }} entries</span>
+            <a href="{{ url_for('reports.export_audit_log') }}" class="btn btn-ghost btn-sm no-print">
+                <i class="bi bi-download me-1"></i>CSV
+            </a>
             <button onclick="window.print()" class="btn btn-ghost btn-sm no-print">
                 <i class="bi bi-printer me-1"></i>Print
             </button>

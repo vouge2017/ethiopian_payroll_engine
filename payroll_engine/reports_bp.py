@@ -513,6 +513,110 @@ def analytics():
     )
 
 
+@reports_bp.route('/reports/analytics/export')
+@login_required
+@role_required('owner', 'accountant')
+def export_analytics():
+    """Export analytics data as CSV (department costs + overtime + leave)."""
+    from payroll_engine.models import Payslip, OvertimeEntry, Leave, LeaveBalance
+    import csv, io
+    from flask import send_file
+
+    company = current_user.company
+    cid = company.id
+    year = request.args.get('year', date.today().year, type=int)
+
+    runs = PayrollRun.query.filter(
+        PayrollRun.company_id == cid,
+        PayrollRun.status == 'completed',
+        db.extract('year', PayrollRun.run_date) == year,
+    ).order_by(PayrollRun.run_date).all()
+    run_ids = [r.id for r in runs]
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # ── Department Costs ──
+    writer.writerow(['DEPARTMENT COSTS'])
+    writer.writerow(['Department', 'Employees', 'Gross (ETB)', 'Tax (ETB)', 'Pension (ETB)', 'Net (ETB)', 'Avg Gross'])
+    if run_ids:
+        payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
+        dept_costs = {}
+        for ps in payslips:
+            emp = ps.employee
+            dept = emp.department or 'Unassigned'
+            if dept not in dept_costs:
+                dept_costs[dept] = {'gross': 0, 'tax': 0, 'pension': 0, 'net': 0, 'count': 0}
+            dept_costs[dept]['gross'] += float(ps.gross_salary or 0)
+            dept_costs[dept]['tax'] += float(ps.tax or 0)
+            dept_costs[dept]['pension'] += float(ps.employee_pension or 0)
+            dept_costs[dept]['net'] += float(ps.net_pay or 0)
+            dept_costs[dept]['count'] += 1
+        for dept, d in sorted(dept_costs.items()):
+            avg = d['gross'] / d['count'] if d['count'] else 0
+            writer.writerow([dept, d['count'], f"{d['gross']:.0f}", f"{d['tax']:.0f}", f"{d['pension']:.0f}", f"{d['net']:.0f}", f"{avg:.0f}"])
+
+    writer.writerow([])
+
+    # ── Overtime by Month ──
+    writer.writerow(['OVERTIME BY MONTH'])
+    writer.writerow(['Month', 'Employees', 'Hours', 'Amount (ETB)', 'Status'])
+    if runs:
+        first_date = runs[0].run_date
+        last_date = runs[-1].run_date
+        ot_entries = OvertimeEntry.query.filter(
+            OvertimeEntry.company_id == cid,
+            OvertimeEntry.date >= first_date.replace(day=1),
+            OvertimeEntry.date <= last_date,
+        ).all()
+        overtime_by_month = {}
+        for e in ot_entries:
+            month_key = e.date.strftime('%Y-%m')
+            if month_key not in overtime_by_month:
+                overtime_by_month[month_key] = {'hours': 0, 'amount': 0, 'employees': set()}
+            overtime_by_month[month_key]['hours'] += float(e.hours or 0)
+            overtime_by_month[month_key]['amount'] += float(e.amount or 0)
+            overtime_by_month[month_key]['employees'].add(e.employee_id)
+        for month_key in sorted(overtime_by_month.keys()):
+            d = overtime_by_month[month_key]
+            hours = d['hours']
+            status = 'Over limit' if hours > 100 else 'Near limit' if hours > 80 else 'OK'
+            writer.writerow([month_key, len(d['employees']), f"{hours:.1f}", f"{d['amount']:.0f}", status])
+
+    writer.writerow([])
+
+    # ── Leave Utilization ──
+    writer.writerow(['LEAVE UTILIZATION'])
+    writer.writerow(['Employee', 'Department', 'Days Taken', 'Balance'])
+    employees = Employee.query.filter_by(company_id=cid, is_deleted=False).all()
+    emp_ids = [e.id for e in employees]
+    if emp_ids:
+        approved_leaves = Leave.query.filter(
+            Leave.employee_id.in_(emp_ids),
+            Leave.status == 'approved',
+            db.extract('year', Leave.start_date) == year,
+        ).all()
+        leave_days = {}
+        for l in approved_leaves:
+            leave_days[l.employee_id] = leave_days.get(l.employee_id, 0) + (l.total_days or 0)
+        balances = LeaveBalance.query.filter(
+            LeaveBalance.company_id == cid, LeaveBalance.year == year
+        ).all()
+        balance_map = {lb.employee_id: lb.total_entitled or 0 for lb in balances}
+        for emp in sorted(employees, key=lambda e: e.name):
+            taken = leave_days.get(emp.id, 0)
+            bal = balance_map.get(emp.id, 0)
+            writer.writerow([emp.name, emp.department or 'Unassigned', taken, bal])
+
+    output.seek(0)
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'analytics_{year}.csv',
+    )
+
+
 @reports_bp.route('/compare')
 @role_required('owner', 'accountant')
 def payroll_comparison():

@@ -19,6 +19,9 @@
                     {% endfor %}
                 </ul>
             </div>
+            <a href="{{ url_for('reports.export_analytics', year=year) }}" class="btn btn-ghost no-print">
+                <i class="bi bi-download me-1"></i>CSV
+            </a>
             <button onclick="window.print()" class="btn btn-ghost no-print">
                 <i class="bi bi-printer me-1"></i>Print
             </button>

@@ -121,7 +121,7 @@ def test_upload_non_csv_extension_rejected(ctx, client, company_user):
     data = {'file': (io.BytesIO(b'foo,bar\n1,2'), 'data.exe')}
     resp = client.post('/payroll', data=data, content_type='multipart/form-data', follow_redirects=True)
     assert resp.status_code == 200
-    assert b'Only CSV files' in resp.data
+    assert b'Only CSV and Excel files are allowed' in resp.data
 
 
 def test_upload_malformed_csv_shows_flash(ctx, client, company_user):

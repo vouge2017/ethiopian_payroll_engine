@@ -18,11 +18,16 @@
             <h2 class="fw-bold mb-1">Reports & Compliance</h2>
             <p class="text-muted mb-0">Download filings, view compliance status, and export data</p>
         </div>
+        <button onclick="window.print()" class="btn btn-ghost no-print">
+            <i class="bi bi-printer me-1"></i>Print
+        </button>
     </div>
 
     <!-- Period Selector -->
     {% if all_completed_runs and all_completed_runs|length > 0 %}
+    <div class="no-print">
     {% include '_period_selector.html' %}
+    </div>
     {% endif %}
 
     <!-- Compliance Metrics -->

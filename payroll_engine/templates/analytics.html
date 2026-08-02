@@ -9,7 +9,7 @@
             <p class="text-muted mb-0">{{ year }} insights for your payroll data</p>
         </div>
         <div class="d-flex gap-2">
-            <div class="dropdown">
+            <div class="dropdown no-print">
                 <button class="btn btn-ghost dropdown-toggle" data-bs-toggle="dropdown">
                     <i class="bi bi-calendar me-1"></i>{{ year }}
                 </button>
@@ -19,7 +19,10 @@
                     {% endfor %}
                 </ul>
             </div>
-            <a href="{{ url_for('reports.reports') }}" class="btn btn-ghost">
+            <button onclick="window.print()" class="btn btn-ghost no-print">
+                <i class="bi bi-printer me-1"></i>Print
+            </button>
+            <a href="{{ url_for('reports.reports') }}" class="btn btn-ghost no-print">
                 <i class="bi bi-arrow-left me-1"></i>Reports
             </a>
         </div>
@@ -86,7 +89,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 dept-cost-table">
                             <thead>
                                 <tr>
                                     <th>Department</th>

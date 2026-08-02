@@ -378,54 +378,195 @@
 }
 
 /* ============================================
-   PRINT
+   PRINT STYLES — All Pages
    ============================================ */
 @media print {
-    /* Hide navigation and UI chrome */
+    /* ── Global: hide navigation & UI chrome ── */
     .sidebar, .sidebar-toggle, .toast-container, .theme-toggle,
-    .bottom-nav, .breadcrumb, .btn, .alert-flash,
-    .sidebar-brand, .sidebar-footer {
+    .bottom-nav, .breadcrumb, .alert-flash,
+    .sidebar-brand, .sidebar-footer,
+    .no-print,
+    [data-confirm],
+    .btn {
         display: none !important;
     }
 
     .main-content {
         margin-left: 0 !important;
-        padding: 0 !important;
-    }
-
-    .card {
-        box-shadow: none !important;
-        border: 1px solid #ddd !important;
-        break-inside: avoid;
+        padding: 0.5cm !important;
+        width: 100% !important;
     }
 
     body {
-        background: white;
-        color: black;
-    }
-}
-
-/* --- Breadcrumbs mobile --- */
-@media (max-width: 767.98px) {
-    .breadcrumb {
-        overflow-x: auto;
-        white-space: nowrap;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        font-size: var(--text-xs);
+        background: white !important;
+        color: black !important;
+        font-size: 11pt;
+        line-height: 1.4;
     }
 
-    .breadcrumb::-webkit-scrollbar {
-        display: none;
+    h2, h3, h4 {
+        color: black !important;
+        page-break-after: avoid;
     }
 
-    .breadcrumb-item + .breadcrumb-item::before {
-        padding: 0 var(--space-1);
+    /* ── Cards ── */
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-bottom: 0.5cm;
     }
-}
 
-/* --- Payslip Print Styles --- */
-@media print {
+    .card-header {
+        background: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 0.4cm !important;
+    }
+
+    /* ── Tables — universal ── */
+    .table {
+        font-size: 9pt;
+        border-collapse: collapse !important;
+    }
+
+    .table th, .table td {
+        padding: 4px 8px !important;
+        border: 1px solid #ddd !important;
+    }
+
+    .table th {
+        background: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-weight: 600;
+    }
+
+    .table-responsive {
+        overflow: visible !important;
+        border: none !important;
+    }
+
+    /* ── Metric cards (reports, dashboard) ── */
+    .metric-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .metric-card .metric-icon {
+        display: none !important;
+    }
+
+    .metric-card .metric-label {
+        font-size: 8pt;
+        color: #666;
+    }
+
+    .metric-card .metric-value {
+        font-size: 14pt;
+        font-weight: 700;
+    }
+
+    .metric-card .metric-trend {
+        font-size: 8pt;
+    }
+
+    /* ── Trust badges ── */
+    .trust-badge {
+        font-size: 8pt;
+        padding: 2px 6px;
+        border: 1px solid #ccc;
+    }
+
+    /* ── Charts: hide canvas ── */
+    canvas, .chart-container {
+        display: none !important;
+    }
+
+    /* ── Tabs: show all content, hide tab nav ── */
+    .nav-tabs, .nav-pills {
+        display: none !important;
+    }
+
+    .tab-pane {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .tab-pane.fade {
+        opacity: 1 !important;
+    }
+
+    /* ── Search / filter forms ── */
+    .card:has(form) {
+        display: none !important;
+    }
+
+    /* ── Pagination ── */
+    nav[aria-label*="pagination"],
+    .pagination {
+        display: none !important;
+    }
+
+    /* ── Empty states ── */
+    .empty-state {
+        display: none !important;
+    }
+
+    /* ── Progress bars ── */
+    .progress {
+        background: #eee !important;
+        border: 1px solid #ccc;
+    }
+
+    .progress-bar {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── Badges ── */
+    .badge {
+        border: 1px solid currentColor;
+        padding: 1px 6px;
+        font-size: 8pt;
+    }
+
+    /* ── Alerts ── */
+    .alert {
+        border: 1px solid #ccc;
+        background: #fafafa !important;
+    }
+
+    /* ── Page header layout ── */
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* ── Links ── */
+    a {
+        color: black !important;
+        text-decoration: none !important;
+    }
+
+    a[href]::after {
+        content: none !important;
+    }
+
+    /* ── Page numbers ── */
+    @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 8pt;
+        color: #999;
+    }
+
+    /* ── Payslip ── */
     .payslip-header {
         text-align: center;
         margin-bottom: 1rem;
@@ -458,14 +599,50 @@
         border-top: 2px solid #333;
     }
 
-    /* Ensure page break doesn't split a payslip */
     .card.payslip {
         break-inside: avoid;
         page-break-inside: avoid;
     }
 
-    /* Print URL after links (useful for download links) */
-    a[href]::after {
-        content: none;
+    /* ── Audit log: details column ── */
+    .audit-log-table td:last-child {
+        max-width: 300px;
+        word-wrap: break-word;
+    }
+
+    /* ── Quick links (reports page) ── */
+    a.card {
+        border: 1px solid #ddd !important;
+        pointer-events: none;
+    }
+
+    /* ── Compliance deadlines: read-only ── */
+    .form-check, .form-switch, .input-group {
+        display: none !important;
+    }
+
+    .form-control, .form-select {
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+}
+
+/* --- Breadcrumbs mobile --- */
+@media (max-width: 767.98px) {
+    .breadcrumb {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        font-size: var(--text-xs);
+    }
+
+    .breadcrumb::-webkit-scrollbar {
+        display: none;
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        padding: 0 var(--space-1);
     }
 }

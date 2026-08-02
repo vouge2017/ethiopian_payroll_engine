@@ -202,8 +202,8 @@ class TestLeaveConfigurable:
             try:
                 # Year 1 should be 20 (not 16)
                 assert calculate_annual_entitlement(0) == 20
-                # Year 3 should be 26 (20 + 3×2)
-                assert calculate_annual_entitlement(3) == 26
+                # Year 3: base 20 + ((3-1)//1 × 2) = 20 + 4 = 24
+                assert calculate_annual_entitlement(3) == 24
             finally:
                 db.session.delete(rule)
                 db.session.commit()

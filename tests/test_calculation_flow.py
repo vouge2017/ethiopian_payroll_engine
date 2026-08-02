@@ -48,9 +48,9 @@ def test_calc_flow_effective_tax_rate():
 
     # Tax on 10000 - 700 (pension) = 9300 taxable
     # Brackets: 2000*0 + 2000*0.15 + 3000*0.20 + 2300*0.25 = 0 + 300 + 600 + 575 = 1475
-    # Relief: 150 → tax = 1325
-    # Effective rate: 1325/10000 = 13.25%
-    assert flow['effective_tax_rate'] == Decimal('13.25')
+    # No personal relief (removed — not in Proclamation 1395/2025)
+    # Effective rate: 1475/10000 = 14.75%
+    assert flow['effective_tax_rate'] == Decimal('14.75')
 
 
 def test_calc_flow_summary_contains_amounts():
@@ -59,7 +59,7 @@ def test_calc_flow_summary_contains_amounts():
     flow = generate_calculation_flow(result)
 
     assert 'gross' in flow['summary'].lower() or str(result['gross']) in flow['summary']
-    assert '7,330.00' in flow['summary']
+    assert '7,180.00' in flow['summary']
 
 
 def test_calc_flow_deduction_flags():

@@ -13,10 +13,27 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <!-- Step 1: Required fields -->
+                        <!-- Ethiopian Name Structure: First + Father + Grandfather -->
                         <div class="mb-3">
-                            <label for="name" class="form-label fw-bold">{{ _('full_name') }} *</label>
-                            <input type="text" class="form-control form-control-lg" id="name" name="name"
-                                   required placeholder="Abebe Kebede" autofocus>
+                            <label class="form-label fw-bold">ስም / Name *</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-lg" id="first_name" name="first_name"
+                                           required placeholder="ስም / First Name" autofocus>
+                                    <div class="form-text">ስም / First Name</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-lg" id="father_name" name="father_name"
+                                   placeholder="የአባት ስም / Father's Name">
+                                    <div class="form-text">የአባት ስም / Father's Name</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-lg" id="grandfather_name" name="grandfather_name"
+                                           placeholder="የአያት ስም / Grandfather's Name">
+                                    <div class="form-text">የአያት ስም / Grandfather's Name</div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="name" name="name" value="">
                         </div>
 
                         <div class="row mb-3">
@@ -114,4 +131,17 @@
         </div>
     </div>
 </div>
+<script>
+// Auto-populate hidden name field from structured Ethiopian name fields
+function updateNameField() {
+    const first = document.getElementById('first_name').value.trim();
+    const father = document.getElementById('father_name').value.trim();
+    const grand = document.getElementById('grandfather_name').value.trim();
+    const parts = [first, father, grand].filter(Boolean);
+    document.getElementById('name').value = parts.join(' ');
+}
+document.getElementById('first_name').addEventListener('input', updateNameField);
+document.getElementById('father_name').addEventListener('input', updateNameField);
+document.getElementById('grandfather_name').addEventListener('input', updateNameField);
+</script>
 {% endblock %}

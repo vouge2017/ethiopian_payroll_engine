@@ -547,7 +547,11 @@ class Employee(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     employee_id = db.Column(db.String(20), nullable=False)  # e.g., EMP001
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False)  # Full name (backward compat)
+    # Ethiopian name structure: First Name + Father's Name + Grandfather's Name
+    first_name = db.Column(db.String(50), nullable=True)
+    father_name = db.Column(db.String(50), nullable=True)
+    grandfather_name = db.Column(db.String(50), nullable=True)
     phone = db.Column(db.String(20), nullable=True)  # Employee phone: 09XXXXXXXX
     department = db.Column(db.String(100), nullable=True)
     position = db.Column(db.String(100), nullable=True)
@@ -586,6 +590,25 @@ class Employee(db.Model):
     # Relationships
     payroll_entries = db.relationship('Payslip', backref='employee', lazy=True)
     attendance_records = db.relationship('Attendance', backref='employee', lazy=True)
+
+    @property
+    def display_name(self):
+        """Best available name: structured Ethiopian name or legacy full name."""
+        if self.first_name:
+            parts = [self.first_name]
+            if self.father_name:
+                parts.append(self.father_name)
+            if self.grandfather_name:
+                parts.append(self.grandfather_name)
+            return ' '.join(parts)
+        return self.name
+
+    def set_name(self, first_name, father_name='', grandfather_name=''):
+        """Set structured name and auto-populate legacy name field."""
+        self.first_name = first_name.strip() or None
+        self.father_name = father_name.strip() or None
+        self.grandfather_name = grandfather_name.strip() or None
+        self.name = self.display_name
 
     @property
     def gross_salary(self):

@@ -21,6 +21,14 @@ def parse_employee_form(form_data):
     """Parse and validate employee form data. Returns (data, error)."""
     emp_id = form_data.get('employee_id', '').strip()
     name = form_data.get('name', '').strip()
+    # Ethiopian name structure
+    first_name = form_data.get('first_name', '').strip()
+    father_name = form_data.get('father_name', '').strip()
+    grandfather_name = form_data.get('grandfather_name', '').strip()
+    # If structured names provided, build full name from them
+    if first_name:
+        parts = [first_name, father_name, grandfather_name]
+        name = ' '.join(p for p in parts if p)
     phone_raw = form_data.get('phone', '').strip()
     department = form_data.get('department', '').strip() or None
     position = form_data.get('position', '').strip() or None
@@ -67,6 +75,9 @@ def parse_employee_form(form_data):
     return {
         'emp_id': emp_id,
         'name': name,
+        'first_name': first_name or None,
+        'father_name': father_name or None,
+        'grandfather_name': grandfather_name or None,
         'phone': phone,
         'department': department,
         'position': position,
@@ -108,6 +119,9 @@ def create_employee(data, company_id, user_id):
     emp = Employee(
         employee_id=emp_id,
         name=data['name'],
+        first_name=data.get('first_name'),
+        father_name=data.get('father_name'),
+        grandfather_name=data.get('grandfather_name'),
         phone=data['phone'],
         department=data['department'],
         position=data['position'],

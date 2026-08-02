@@ -64,7 +64,7 @@
         <div class="card-body p-0">
             {% if employees %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0 responsive-card">
+                <table class="table table-hover mb-0 responsive-card sortable filterable">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -83,9 +83,9 @@
                             <td data-label="Name">
                                 <div class="d-flex align-items-center">
                                     <div class="user-avatar me-2" style="width: 32px; height: 32px; font-size: 0.75rem; background: var(--brand-primary-light); color: var(--brand-primary);">
-                                        {{ emp.name[0]|upper }}
+                                        {{ emp.display_name[0]|upper }}
                                     </div>
-                                    <strong>{{ emp.name }}</strong>
+                                    <strong>{{ emp.display_name }}</strong>
                                 </div>
                             </td>
                             <td data-label="Department">{{ emp.department or '—' }}</td>

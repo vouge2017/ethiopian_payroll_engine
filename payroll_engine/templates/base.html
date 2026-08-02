@@ -383,7 +383,7 @@ if (typeof Chart !== 'undefined') {
         </li>
         {% else %}
         <li class="nav-item">
-            <a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+            <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in request.endpoint %}active{% endif %}">
                 <i class="bi bi-grid-1x2"></i>
                 <span>Home</span>
             </a>

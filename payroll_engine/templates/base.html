@@ -357,5 +357,64 @@ if (typeof Chart !== 'undefined') {
 }
 </script>
 {% block extra_js %}{% endblock %}
+
+<!-- Bottom Navigation Bar (Mobile) -->
+{% if current_user.is_authenticated %}
+<nav class="bottom-nav" aria-label="Quick navigation">
+    <ul class="nav-list">
+        {% if current_user.role == 'employee' %}
+        <li class="nav-item">
+            <a href="{{ url_for('portal.employee_dashboard') }}" class="nav-link {% if request.endpoint == 'portal.employee_dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2"></i>
+                <span>Home</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('portal.my_payslips') }}" class="nav-link {% if 'payslip' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-receipt"></i>
+                <span>Payslips</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('portal.my_profile') }}" class="nav-link {% if request.endpoint == 'portal.my_profile' %}active{% endif %}">
+                <i class="bi bi-person"></i>
+                <span>Profile</span>
+            </a>
+        </li>
+        {% else %}
+        <li class="nav-item">
+            <a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2"></i>
+                <span>Home</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employees' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-people"></i>
+                <span>Staff</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="nav-link">
+                <i class="bi bi-cloud-upload"></i>
+                <span>Payroll</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'reports' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-file-earmark-bar-graph"></i>
+                <span>Reports</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('settings.company_profile') }}" class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-gear"></i>
+                <span>More</span>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 </body>
 </html>

@@ -304,6 +304,19 @@ class Company(db.Model):
     # Structure: {"erca": {"columns": [{"key": "tin", "label": "TIN", "enabled": true, "order": 1}, ...]}}
     report_templates = db.Column(db.JSON, nullable=True)
 
+    # Compliance deadlines (JSON) — per-company configurable deadlines
+    # Structure: {
+    #   "erca_filing_day": 25,         # day of month
+    #   "pension_deadline_day": 10,    # day of month
+    #   "disbursement_days": 5,       # days after month end
+    #   "reminder_days_before": 3,    # send reminder N days before deadline
+    #   "etax_region": "addis_ababa", # eTax regional template
+    #   "custom_deadlines": [         # additional filing types
+    #     {"name": "PSSA", "day": 10, "enabled": true}
+    #   ]
+    # }
+    compliance_deadlines = db.Column(db.JSON, nullable=True)
+
     # Relationships
     users = db.relationship('User', backref='company', lazy=True)
     employees = db.relationship('Employee', backref='company', lazy=True)

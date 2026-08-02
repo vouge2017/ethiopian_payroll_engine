@@ -199,6 +199,78 @@ def link_employee_user():
     return render_template('link_employee_user.html', employees=employees, users=users)
 
 
+# ---------------------------------------------------------------------------
+# Compliance Deadline Settings
+# ---------------------------------------------------------------------------
+
+@settings_bp.route('/settings/compliance', methods=['GET', 'POST'])
+@role_required('owner', 'accountant')
+def compliance_deadlines():
+    """Configure compliance deadlines and reminder settings."""
+    from payroll_engine.compliance import get_company_deadlines, FILING_TYPE_DEFAULTS
+    company = current_user.company
+
+    if request.method == 'POST':
+        deadlines = {}
+
+        # Built-in filing types
+        for ftype in FILING_TYPE_DEFAULTS:
+            day_key = f'day_{ftype}'
+            enabled_key = f'enabled_{ftype}'
+            day = request.form.get(day_key, type=int)
+            enabled = request.form.get(enabled_key) == 'on'
+            if day and 1 <= day <= 28:  # 28 to be safe for all months
+                deadlines[ftype] = {
+                    'day': day,
+                    'enabled': enabled,
+                    'label': FILING_TYPE_DEFAULTS[ftype]['label'],
+                    'label_am': FILING_TYPE_DEFAULTS[ftype]['label_am'],
+                }
+
+        # Disbursement days
+        disb_days = request.form.get('disbursement_days', type=int)
+        if disb_days and 1 <= disb_days <= 30:
+            deadlines['disbursement_days'] = disb_days
+
+        # Reminder window
+        reminder_days = request.form.get('reminder_days_before', type=int)
+        if reminder_days and 1 <= reminder_days <= 14:
+            deadlines['reminder_days_before'] = reminder_days
+
+        # Custom filing types
+        custom = []
+        i = 0
+        while True:
+            name = request.form.get(f'custom_name_{i}', '').strip()
+            day = request.form.get(f'custom_day_{i}', type=int)
+            enabled = request.form.get(f'custom_enabled_{i}') == 'on'
+            if not name:
+                break
+            if day and 1 <= day <= 28:
+                custom.append({'name': name, 'day': day, 'enabled': enabled})
+            i += 1
+        if custom:
+            deadlines['custom_deadlines'] = custom
+
+        company.compliance_deadlines = deadlines
+        create_audit_log(
+            company_id=company.id,
+            user_id=current_user.id,
+            action='compliance_deadlines_change',
+            details={'deadlines': deadlines}
+        )
+        db.session.commit()
+        flash('Compliance deadlines updated.', 'success')
+        return redirect(url_for('settings.compliance_deadlines'))
+
+    # GET
+    current = get_company_deadlines(company)
+    return render_template('settings/compliance_deadlines.html',
+                           company=company,
+                           current=current,
+                           defaults=FILING_TYPE_DEFAULTS)
+
+
 # Need to import date for team_settings
 from datetime import date
 

@@ -179,8 +179,11 @@ def send_compliance_nudges(company_id):
     from payroll_engine.models import PayrollRun, User, UserCompany
     from payroll_engine.compliance import get_upcoming_deadlines
     from payroll_engine.notifications import notify
+    from payroll_engine.models import Company
 
     today = date.today()
+
+    company = db.session.get(Company, company_id)
 
     # Find the latest completed run for compliance dates
     last_run = PayrollRun.query.filter_by(
@@ -188,7 +191,7 @@ def send_compliance_nudges(company_id):
     ).order_by(PayrollRun.run_date.desc()).first()
 
     payroll_date = last_run.run_date.isoformat() if last_run else today.isoformat()
-    deadlines = get_upcoming_deadlines(payroll_date)
+    deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
 
     alerts = []
 

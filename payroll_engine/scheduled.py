@@ -39,7 +39,7 @@ def check_deadlines_and_notify():
             continue
 
         payroll_date = latest_run.run_date.isoformat()
-        deadlines = get_upcoming_deadlines(payroll_date)
+        deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
 
         # Get company owners
         owners = db.session.query(User).join(
@@ -49,15 +49,21 @@ def check_deadlines_and_notify():
             User.role == 'owner'
         ).all()
 
+        # Use company-configurable reminder window
+        from payroll_engine.compliance import get_company_deadlines
+        company_deadlines = get_company_deadlines(company)
+        reminder_days = company_deadlines.get('_reminder_days_before', 3)
+
         # Check each deadline
-        deadline_checks = [
-            ('ERCA Filing', deadlines.get('erca_days_left', 99)),
-            ('Pension Remittance', deadlines.get('pension_days_left', 99)),
-            ('Salary Disbursement', deadlines.get('disbursement_days_left', 99)),
-        ]
+        deadline_checks = []
+        for key, value in deadlines.items():
+            if key.endswith('_days_left'):
+                ftype = key.replace('_days_left', '')
+                label = company_deadlines.get(ftype, {}).get('label', ftype.upper())
+                deadline_checks.append((label, value))
 
         for deadline_name, days_left in deadline_checks:
-            if 0 < days_left <= 3:  # Due within 3 days
+            if 0 < days_left <= reminder_days:  # Due within reminder window
                 for owner in owners:
                     notify_deadline_approaching(
                         user_id=owner.id,

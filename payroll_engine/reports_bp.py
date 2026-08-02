@@ -53,12 +53,13 @@ def reports():
 
     payroll_date_str = selected_run.run_date.isoformat() if selected_run else date.today().isoformat()
     score, status = compute_compliance_score(
+        company=company,
         payroll_date=payroll_date_str
     )
     status_msg = get_status_message(status)
 
     from payroll_engine.compliance import get_upcoming_deadlines
-    deadlines = get_upcoming_deadlines(payroll_date_str)
+    deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date_str)
 
     return render_template(
         'reports.html',

@@ -114,7 +114,7 @@ def companies_dashboard():
 
         # Upcoming deadlines
         payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
-        deadlines = get_upcoming_deadlines(payroll_date)
+        deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
 
         # Role for this company
         role = current_user.get_role_for_company(company.id)
@@ -201,13 +201,14 @@ def index():
     # Use selected run for compliance scoring
     payroll_date_str = selected_run.run_date.isoformat() if selected_run else date.today().isoformat()
     score, status = compute_compliance_score(
+        company=company,
         payroll_date=payroll_date_str
     )
     status_msg = get_status_message(status)
 
     # Get upcoming deadlines based on selected period
     from payroll_engine.compliance import get_upcoming_deadlines
-    deadlines = get_upcoming_deadlines(payroll_date_str)
+    deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date_str)
 
     # Overtime summary for current month (eager-load employee to avoid N+1)
     from payroll_engine.models import OvertimeEntry

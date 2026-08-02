@@ -263,13 +263,13 @@ FAQ_DATA = [
             {
                 'anchor': 'pension-deadline',
                 'question': 'When is the pension payment deadline?',
-                'answer': 'Pension contributions must be paid by the **15th of the following month**.',
+                'answer': 'Pension contributions must be paid by the **deadline configured in your company settings** (default: 10th of the following month, per Proclamation 1268/2022 Art. 10(6)). You can adjust this in Settings → Compliance Deadlines.',
             },
             {
                 'anchor': 'cash-limit',
                 'question': 'What is the cash payment limit?',
                 'answer': 'Ethiopian law requires electronic payment for salaries above **ETB 50,000**. '
-                     'If any employee's net pay exceeds this amount, the system will flag it.\n\n'
+                     'If any employee\'s net pay exceeds this amount, the system will flag it.\n\n'
                      'Source: Proclamation No. 1395/2025, Article 81.',
             },
             {

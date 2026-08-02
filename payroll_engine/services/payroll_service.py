@@ -129,8 +129,11 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         run.status = 'completed'
 
         # Compliance scoring
+        from payroll_engine.models import Company
+        company = db.session.get(Company, company_id)
         run_date_str = run.run_date.isoformat()
         score, status = compute_compliance_score(
+            company=company,
             payroll_date=run_date_str,
             disbursement_date=run.approved_at.date().isoformat() if run.approved_at else None,
         )

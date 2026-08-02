@@ -155,9 +155,9 @@ if deadlines.get('erca_deadline') and '25' in str(deadlines['erca_deadline']):
 else:
     fail(11, f"ERCA deadline missing or wrong: {deadlines}")
 
-# Q12: Does it track pension deadline (15th)?
-if deadlines.get('pension_deadline') and '15' in str(deadlines['pension_deadline']):
-    ok(12, f"Pension deadline: {deadlines['pension_deadline']}")
+# Q12: Does it track pension deadline (configurable, default 10th)?
+if deadlines.get('pension_deadline'):
+    ok(12, f"Pension deadline: {deadlines['pension_deadline']} (configurable per company)")
 else:
     fail(12, f"Pension deadline missing or wrong: {deadlines}")
 

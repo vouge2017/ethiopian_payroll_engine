@@ -511,15 +511,20 @@ def create_app():
                 return {'deadline_alerts': []}
             company_id = flask_session.get('active_company_id', current_user.company_id)
             from payroll_engine.compliance import get_upcoming_deadlines
-            from payroll_engine.models import PayrollRun
+            from payroll_engine.models import PayrollRun, Company
+            company = db.session.get(Company, company_id)
             latest_run = PayrollRun.query.filter_by(company_id=company_id).order_by(PayrollRun.created_at.desc()).first()
             payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
-            deadlines = get_upcoming_deadlines(payroll_date)
+            deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
             alerts = []
-            for key, label in [('erca', 'ERCA Filing'), ('pension', 'Pension'), ('pssa', 'PSSA')]:
-                days = deadlines.get(f'{key}_days_left', 999)
+            for key in deadlines:
+                if not key.endswith('_days_left'):
+                    continue
+                ftype = key.replace('_days_left', '')
+                days = deadlines[key]
                 if days <= 3:
                     severity = 'danger' if days < 0 else 'warning'
+                    label = ftype.upper().replace('_', ' ')
                     msg = f'{label}: {abs(days)} days overdue' if days < 0 else f'{label}: {days} days remaining'
                     alerts.append({'message': msg, 'severity': severity})
             return {'deadline_alerts': alerts}

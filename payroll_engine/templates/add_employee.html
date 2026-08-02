@@ -1,5 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ _('add_employee') }} - Ethiopian Payroll Engine{% endblock %}
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb breadcrumb-sm mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        {% block breadcrumb_items %}
+        <li class="breadcrumb-item"><a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none">Employees</a></li>
+        <li class="breadcrumb-item active">Add Employee</li>
+    {% endblock %}
+    </ol>
+</nav>
+{% endblock %}
 {% block content %}
 <div class="p-4 p-md-5">
     <div class="row justify-content-center">

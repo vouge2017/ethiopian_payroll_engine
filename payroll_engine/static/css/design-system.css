@@ -1282,3 +1282,33 @@ pre {
     from { opacity: 0; transform: translateX(100%); }
     to { opacity: 1; transform: translateX(0); }
 }
+
+/* --- Breadcrumbs --- */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: var(--text-sm);
+}
+
+.breadcrumb-item a {
+    color: var(--text-secondary);
+}
+
+.breadcrumb-item a:hover {
+    color: var(--brand-primary);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "/";
+    color: var(--text-tertiary);
+}
+
+.breadcrumb-sm {
+    font-size: var(--text-xs);
+}

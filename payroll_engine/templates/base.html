@@ -245,6 +245,7 @@
         </div>
         {% endif %}
 
+        {% block breadcrumb %}{% endblock %}
         {% block content %}{% endblock %}
 
 {% if current_user.is_authenticated %}
@@ -357,6 +358,49 @@ if (typeof Chart !== 'undefined') {
 }
 </script>
 {% block extra_js %}{% endblock %}
+
+<!-- Reusable Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalTitle">Confirm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmModalBody">Are you sure?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmModalOk">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Reusable confirmation modal
+function confirmAction(title, message, onConfirm) {
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalBody').textContent = message;
+    const okBtn = document.getElementById('confirmModalOk');
+    okBtn.onclick = () => { modal.hide(); onConfirm(); };
+    modal.show();
+}
+
+// Auto-wire [data-confirm] buttons/links
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-confirm]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            const msg = el.getAttribute('data-confirm');
+            confirmAction('Confirm', msg, () => {
+                if (el.tagName === 'A') window.location.href = el.href;
+                else if (el.form) el.form.submit();
+                else if (el.closest('form')) el.closest('form').submit();
+            });
+        });
+    });
+});
+</script>
 
 <!-- Bottom Navigation Bar (Mobile) -->
 {% if current_user.is_authenticated %}

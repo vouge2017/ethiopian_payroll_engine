@@ -381,17 +381,22 @@
    PRINT
    ============================================ */
 @media print {
-    .sidebar, .sidebar-toggle, .toast-container, .theme-toggle {
+    /* Hide navigation and UI chrome */
+    .sidebar, .sidebar-toggle, .toast-container, .theme-toggle,
+    .bottom-nav, .breadcrumb, .btn, .alert-flash,
+    .sidebar-brand, .sidebar-footer {
         display: none !important;
     }
 
     .main-content {
         margin-left: 0 !important;
+        padding: 0 !important;
     }
 
     .card {
         box-shadow: none !important;
         border: 1px solid #ddd !important;
+        break-inside: avoid;
     }
 
     body {
@@ -416,5 +421,51 @@
 
     .breadcrumb-item + .breadcrumb-item::before {
         padding: 0 var(--space-1);
+    }
+}
+
+/* --- Payslip Print Styles --- */
+@media print {
+    .payslip-header {
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .payslip-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .payslip-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .payslip-table th,
+    .payslip-table td {
+        padding: 0.35rem 0.5rem;
+        border: 1px solid #ddd;
+        font-size: 0.85rem;
+    }
+
+    .payslip-table th {
+        background: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .payslip-total {
+        font-weight: 700;
+        border-top: 2px solid #333;
+    }
+
+    /* Ensure page break doesn't split a payslip */
+    .card.payslip {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* Print URL after links (useful for download links) */
+    a[href]::after {
+        content: none;
     }
 }

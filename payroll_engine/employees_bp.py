@@ -246,6 +246,13 @@ def edit_employee(emp_id):
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
+        # Ethiopian name structure
+        first_name = request.form.get('first_name', '').strip()
+        father_name = request.form.get('father_name', '').strip()
+        grandfather_name = request.form.get('grandfather_name', '').strip()
+        if first_name:
+            parts = [first_name, father_name, grandfather_name]
+            name = ' '.join(p for p in parts if p)
         phone_raw = request.form.get('phone', '').strip()
         from decimal import Decimal, InvalidOperation
         try:
@@ -320,6 +327,9 @@ def edit_employee(emp_id):
 
         # Apply changes
         emp.name = name
+        emp.first_name = first_name or None
+        emp.father_name = father_name or None
+        emp.grandfather_name = grandfather_name or None
         emp.phone = phone
         emp.basic_salary = basic
         emp.allowances = allow

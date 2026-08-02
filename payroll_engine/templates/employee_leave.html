@@ -225,7 +225,7 @@
                                         <form method="POST" action="{{ url_for('employees.reject_leave', leave_id=leave.id) }}" style="display:none" id="reject-{{ leave.id }}">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="text" name="reason" placeholder="Reason for rejection" required class="form-control form-control-sm d-inline-block w-auto">
-                                            <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="Reject this leave request?">Reject</button>
                                         </form>
                                         {% else %}
                                         -

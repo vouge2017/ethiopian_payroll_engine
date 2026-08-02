@@ -24,7 +24,7 @@
             <a href="{{ url_for('employees.edit_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-primary me-1">
                 <i class="bi bi-pencil me-1"></i>Edit
             </a>
-            <a href="{{ url_for('employees.terminate_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-danger me-1">
+            <a href="{{ url_for('employees.terminate_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-danger me-1" data-confirm="Terminate this employee?">
                 <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
             </a>
             <form method="POST" action="{{ url_for('employees.deactivate_employee', emp_id=employee.id) }}" style="display:inline"
@@ -461,7 +461,7 @@
                                 <form method="POST" action="{{ url_for('employees.stop_deduction', ded_id=d.id) }}" class="d-inline" onsubmit="return confirm('Stop this deduction?')">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="reason" value="Manually stopped by {{ current_user.phone or current_user.email }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Stop deduction">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Stop deduction" data-confirm="Stop this deduction?">
                                         <i class="bi bi-stop-circle"></i>
                                     </button>
                                 </form>

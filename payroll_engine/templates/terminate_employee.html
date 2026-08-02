@@ -90,7 +90,7 @@
                         </div>
 
                         <div class="d-grid gap-2 d-md-flex">
-                            <button type="submit" class="btn btn-danger">
+                            <button type="submit" class="btn btn-danger" data-confirm="Confirm termination? This action cannot be easily undone.">
                                 <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
                             </button>
                             <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>

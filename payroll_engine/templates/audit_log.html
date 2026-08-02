@@ -72,9 +72,10 @@
         </div>
     </div>
     {% else %}
-    <div class="text-center py-5 text-muted">
-        <i class="bi bi-shield-lock" style="font-size: 3rem;"></i>
-        <p class="mt-2">No audit entries yet. Changes will appear here as they happen.</p>
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-shield-check"></i></div>
+        <h4>No audit entries yet</h4>
+        <p>Activity logs will appear here as you and your team make changes — employee edits, payroll approvals, leave decisions, and more.</p>
     </div>
     {% endif %}
     {% from "_pagination.html" import render_pagination %}

@@ -7,6 +7,17 @@
         <div>
             <h2 class="fw-bold mb-1">Dashboard</h2>
             <p class="text-muted mb-0">{{ today_eth }}</p>
+            <div class="d-flex gap-2 mt-2">
+                <span class="trust-badge trust-badge-success"><i class="bi bi-shield-check"></i> Tax verified</span>
+                <span class="trust-badge trust-badge-success"><i class="bi bi-check-circle"></i> Pension correct</span>
+                {% if compliance_status == 'green' %}
+                <span class="trust-badge trust-badge-success"><i class="bi bi-patch-check"></i> Compliant</span>
+                {% elif compliance_status == 'yellow' %}
+                <span class="trust-badge trust-badge-warning"><i class="bi bi-exclamation-circle"></i> Check deadlines</span>
+                {% else %}
+                <span class="trust-badge trust-badge-danger"><i class="bi bi-exclamation-triangle"></i> Action needed</span>
+                {% endif %}
+            </div>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost">
@@ -65,6 +76,66 @@
             </div>
         </div>
     </div>
+
+    <!-- Action Needed -->
+    {% set has_actions = false %}
+    {% if deadlines %}
+        {% if deadlines.erca_days_left is defined and deadlines.erca_days_left <= 3 %}{% set has_actions = true %}{% endif %}
+        {% if deadlines.pension_days_left is defined and deadlines.pension_days_left <= 3 %}{% set has_actions = true %}{% endif %}
+        {% if deadlines.pssa_days_left is defined and deadlines.pssa_days_left <= 3 %}{% set has_actions = true %}{% endif %}
+    {% endif %}
+    {% if has_actions or ot_over_limit %}
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <h5 class="fw-bold mb-3"><i class="bi bi-exclamation-circle me-2 text-warning"></i>Action Needed</h5>
+        </div>
+        {% if deadlines.erca_days_left is defined and deadlines.erca_days_left <= 3 %}
+        <div class="col-md-4">
+            <div class="card action-card {{ 'danger' if deadlines.erca_days_left < 0 else '' }}">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-building"></i>
+                        <div>
+                            <div class="fw-bold">ERCA Filing</div>
+                            <div class="text-muted small">{% if deadlines.erca_days_left < 0 %}Overdue by {{ abs(deadlines.erca_days_left) }} days{% else %}Due in {{ deadlines.erca_days_left }} days{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if deadlines.pension_days_left is defined and deadlines.pension_days_left <= 3 %}
+        <div class="col-md-4">
+            <div class="card action-card {{ 'danger' if deadlines.pension_days_left < 0 else '' }}">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-piggy-bank"></i>
+                        <div>
+                            <div class="fw-bold">Pension Remittance</div>
+                            <div class="text-muted small">{% if deadlines.pension_days_left < 0 %}Overdue by {{ abs(deadlines.pension_days_left) }} days{% else %}Due in {{ deadlines.pension_days_left }} days{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if ot_over_limit %}
+        <div class="col-md-4">
+            <div class="card action-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history"></i>
+                        <div>
+                            <div class="fw-bold">Overtime Alert</div>
+                            <div class="text-muted small">{{ ot_employee_count }} employee(s) over monthly limit</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
     <!-- Charts Row -->
     {% if last_month_summary %}

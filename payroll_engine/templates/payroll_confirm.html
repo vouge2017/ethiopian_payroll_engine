@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 {% block title %}{{ _('confirm_payroll_processing') }} - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
+
+<!-- Payroll Wizard Stepper -->
+<div class="wizard-stepper">
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Upload</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Review</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step active">
+        <div class="wizard-step-number">3</div>
+        <span class="wizard-step-label">Confirm</span>
+    </div>
+    <div class="wizard-step-connector"></div>
+    <div class="wizard-step">
+        <div class="wizard-step-number">4</div>
+        <span class="wizard-step-label">Done</span>
+    </div>
+</div>
+
 <div class="p-4 p-md-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
@@ -184,6 +208,12 @@
                     <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{{ _('confirm_approve') }}</h5>
                 </div>
                 <div class="card-body p-4">
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        <span class="trust-badge trust-badge-success"><i class="bi bi-check-circle"></i> Tax calculated</span>
+                        <span class="trust-badge trust-badge-success"><i class="bi bi-check-circle"></i> Pension applied</span>
+                        <span class="trust-badge trust-badge-success"><i class="bi bi-check-circle"></i> Overtime verified</span>
+                        <span class="trust-badge trust-badge-info"><i class="bi bi-shield-check"></i> Compliance checked</span>
+                    </div>
                     <div class="alert alert-info mb-4">
                         <i class="bi bi-info-circle me-2"></i>
                         <strong>This cannot be undone.</strong> Payslips will be generated, bank files will be created,

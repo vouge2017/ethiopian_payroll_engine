@@ -514,3 +514,46 @@ const EthioPayroll = {
 
 // Auto-init on DOM ready
 document.addEventListener('DOMContentLoaded', () => EthioPayroll.init());
+
+
+// =============================================
+// TAB NAVIGATION
+// =============================================
+
+/**
+ * Initialize tab navigation for a container.
+ * @param {string} containerSelector - Selector for the tab container
+ */
+function initTabs(containerSelector) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    const tabs = container.querySelectorAll('.tab-nav-item');
+    const contents = container.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = tab.getAttribute('data-tab');
+
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Show target content
+            contents.forEach(c => {
+                c.classList.toggle('active', c.getAttribute('data-tab') === target);
+            });
+
+            // Update URL hash
+            history.replaceState(null, '', '#' + target);
+        });
+    });
+
+    // Restore from URL hash
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+        const targetTab = container.querySelector(`.tab-nav-item[data-tab="${hash}"]`);
+        if (targetTab) targetTab.click();
+    }
+}

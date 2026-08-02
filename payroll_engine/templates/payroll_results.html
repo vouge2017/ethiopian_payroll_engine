@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 {% block title %}Payroll Results - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
+
+<!-- Payroll Wizard Stepper -->
+<div class="wizard-stepper">
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Upload</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Review</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Confirm</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Done</span>
+    </div>
+</div>
+
 <div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">

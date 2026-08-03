@@ -352,14 +352,19 @@ def create_app():
                     "'self'",
                     "'unsafe-inline'",
                     "https://cdn.jsdelivr.net",
+                    "https://fonts.googleapis.com",
                 ],
                 'font-src': [
                     "'self'",
                     "https://cdn.jsdelivr.net",
+                    "https://fonts.gstatic.com",
                 ],
                 'img-src': "'self' data:",
+                'connect-src': [
+                    "'self'",
+                    "https://cdn.jsdelivr.net",
+                ],
             },
-            content_security_policy_nonce_in=['script-src'],
         )
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)

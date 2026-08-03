@@ -1,0 +1,71 @@
+# docker-compose.yml — Local development environment
+# Starts: Postgres, Redis, Flask app, RQ worker
+#
+# Usage:
+#   cp .env.example .env   # edit with your values
+#   docker-compose up
+#   → http://localhost:5000
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-payroll}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-ethiopayroll}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payroll}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-payroll}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-ethiopayroll}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:-dev-encryption-key-change-in-production}
+      FLASK_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+      - .:/app  # live reload in development
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-payroll}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-ethiopayroll}
+      REDIS_URL: redis://redis:6379/0
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:-dev-encryption-key-change-in-production}
+      FLASK_APP: wsgi:app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:

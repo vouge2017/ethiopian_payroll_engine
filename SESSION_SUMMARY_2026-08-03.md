@@ -172,4 +172,20 @@ python3 run_tests.py --verbose    # show each test name
 
 ---
 
-*Updated: 2026-08-03 18:30 GMT+8*
+## EXPERT QUALITY IMPROVEMENTS
+
+Added to make the project production-grade:
+
+| File | Purpose |
+|---|---|
+| `LICENSE` | MIT license — legally usable |
+| `SECURITY.md` | Vulnerability reporting process |
+| `CHANGELOG.md` | Version history (Keep a Changelog format) |
+| `.env.example` | All env vars documented |
+| `docker-compose.yml` | Full local stack (Postgres + Redis + app + worker) |
+| `pyproject.toml` | Ruff linter config + pytest config |
+| `.github/workflows/ci.yml` | Updated: lint + subprocess tests + coverage + Postgres |
+
+---
+
+*Updated: 2026-08-03 18:50 GMT+8*

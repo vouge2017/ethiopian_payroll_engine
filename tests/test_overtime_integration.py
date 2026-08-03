@@ -132,17 +132,17 @@ def test_overtime_delete(company_and_employee):
 # ---------------------------------------------------------------
 
 def test_overtime_pay_weekday():
-    """4h weekday overtime on basic 10,000 → 240.38"""
+    """4h weekday overtime on basic 10,000 → 288.48 (1.5x rate)"""
     from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'day')
-    assert abs(float(pay) - 240.40) < 1.0  # Allow rounding tolerance
+    assert abs(float(pay) - 288.48) < 1.0  # Allow rounding tolerance
 
 
 def test_overtime_pay_night():
-    """4h night overtime → 1.5x"""
+    """4h night overtime → 1.75x"""
     from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'night')
-    expected = round(10000 / 208 * 4 * 1.5, 2)
+    expected = round(10000 / 208 * 4 * 1.75, 2)
     assert abs(float(pay) - expected) < 0.10
 
 
@@ -227,8 +227,8 @@ def test_verification_numbers():
         basic_salary=10000, allowances=2000,
         overtime_entries=[{'hours': 4, 'type': 'day'}]
     )
-    # Overtime pay should be approximately 240.38-240.40
-    assert D('240') < result['overtime_pay'] < D('241')
+    # Overtime pay should be approximately 288.48 (1.5x rate, 10000/208 rounded to 48.08 * 4 * 1.5)
+    assert D('288') < result['overtime_pay'] < D('289')
     # Gross = 12000 + overtime
     assert result['gross'] > D('12200')
     # Pension = 700 (7% of basic 10,000 — NOT affected by overtime)
@@ -244,20 +244,21 @@ def test_verification_numbers():
 # ---------------------------------------------------------------
 
 def test_overtime_within_limit():
-    """20 hours should not trigger warning."""
+    """20 hours monthly is OK, but daily/weekly limits still flagged."""
     entries = [{'hours': 20, 'type': 'day'}]
     result = calculate_total_overtime(10000, entries)
     assert not result['exceeds_monthly_limit']
-    assert len(result['warnings']) == 0
+    # Daily (4h) and weekly (12h) limits are exceeded
+    assert len(result['warnings']) >= 2
 
 
 def test_overtime_exceeds_limit():
-    """21 hours should trigger FLAG."""
+    """21 hours should trigger monthly flag plus daily/weekly."""
     entries = [{'hours': 21, 'type': 'day'}]
     result = calculate_total_overtime(10000, entries)
     assert result['exceeds_monthly_limit']
-    assert len(result['warnings']) == 1
-    assert '20' in result['warnings'][0]
+    assert len(result['warnings']) >= 3
+    assert '20' in result['warnings'][-1]
 
 
 def test_overtime_no_entries():

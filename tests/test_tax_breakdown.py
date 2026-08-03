@@ -58,11 +58,10 @@ def test_breakdown_all_brackets():
 
 
 def test_breakdown_personal_relief():
-    """Personal relief is shown separately."""
+    """No personal relief in current law — total equals gross tax."""
     bd = calculate_tax_breakdown(5000)
-    assert bd["personal_relief"] == Decimal("150")
-    # gross_tax - 150 = total_tax
-    assert bd["total_tax"] == bd["gross_tax"] - Decimal("150")
+    assert bd["personal_relief"] == Decimal("0")
+    assert bd["total_tax"] == bd["gross_tax"]
 
 
 def test_breakdown_bracket_amounts_sum():
@@ -75,39 +74,22 @@ def test_breakdown_bracket_amounts_sum():
 
 
 def test_dawit_taxable_11300():
-    """Dawit's tax: 11300 taxable → 1890 total."""
+    """Dawit's tax: 11300 taxable → 2040 total (no personal relief)."""
     bd = calculate_tax_breakdown(11300)
-    assert bd['total_tax'] == 1890.0
-    assert bd["personal_relief"] == Decimal("150")
-    # 0% on 2000 = 0
-    # 15% on 2000 = 300
-    # 20% on 3000 = 600
-    # 25% on 3000 = 750
-    # 30% on 1300 = 390
-    # Total: 2040 - 150 = 1890
+    assert bd['total_tax'] == 2040.0
+    assert bd["personal_relief"] == Decimal("0")
     assert len(bd['brackets']) == 5
 
 
 def test_hana_taxable_5150():
-    """Hana's tax: 5150 taxable → 380 total."""
+    """Hana's tax: 5150 taxable → 530 total (no personal relief)."""
     bd = calculate_tax_breakdown(5150)
-    assert bd['total_tax'] == 380.0
-    # 0% on 2000 = 0
-    # 15% on 2000 = 300
-    # 20% on 1150 = 230
-    # Total: 530 - 150 = 380
+    assert bd['total_tax'] == 530.0
     assert len(bd['brackets']) == 3
 
 
 def test_kebede_taxable_16950():
-    """Kebede's tax: 16950 taxable → 3732.50 total."""
+    """Kebede's tax: 16950 taxable → 3882.50 total (no personal relief)."""
     bd = calculate_tax_breakdown(16950)
-    assert bd['total_tax'] == 3732.5
-    # 0% on 2000 = 0
-    # 15% on 2000 = 300
-    # 20% on 3000 = 600
-    # 25% on 3000 = 750
-    # 30% on 4000 = 1200
-    # 35% on 2950 = 1032.5
-    # Total: 3882.5 - 150 = 3732.5
+    assert bd['total_tax'] == 3882.5
     assert len(bd['brackets']) == 6

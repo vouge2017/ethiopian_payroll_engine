@@ -66,7 +66,7 @@
                         {% for ps in recent_payslips %}
                         <tr>
                             <td><strong>{{ ps.payroll_run.period or ps.generated_at.strftime('%B %Y') }}</strong></td>
-                            <td class="text-end">ETB {{ '{:,.0f}'.format(ps.gross_pay) }}</td>
+                            <td class="text-end">ETB {{ '{:,.0f}'.format(ps.gross_salary) }}</td>
                             <td class="text-end text-warning">ETB {{ '{:,.0f}'.format(ps.tax) }}</td>
                             <td class="text-end fw-bold text-success">ETB {{ '{:,.0f}'.format(ps.net_pay) }}</td>
                             <td class="text-end">

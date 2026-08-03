@@ -31,7 +31,7 @@
                         <div class="card text-center h-100">
                             <div class="card-body py-3">
                                 <i class="bi {{ cat.icon or 'bi-question-circle' }} fs-3 text-primary mb-2 d-block"></i>
-                                <div class="fw-semibold small">{{ cat.name }}</div>
+                                <div class="fw-semibold small">{{ cat.title }}</div>
                                 <small class="text-muted">{{ cat.questions|length }} articles</small>
                             </div>
                         </div>
@@ -45,7 +45,7 @@
             <div class="card mb-3 animate-fade-in" id="{{ cat.id }}">
                 <div class="card-header bg-transparent">
                     <h5 class="mb-0">
-                        <i class="bi {{ cat.icon or 'bi-question-circle' }} me-2"></i>{{ cat.name }}
+                        <i class="bi {{ cat.icon or 'bi-question-circle' }} me-2"></i>{{ cat.title }}
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -91,7 +91,7 @@ const resultsDiv = document.getElementById('searchResults');
 const allQuestions = [
     {% for cat in faq_data %}
     {% for q in cat.questions %}
-    { q: "{{ q.q }}", a: `{{ q.a }}`, cat: "{{ cat.name }}", id: "{{ cat.id }}" },
+    { q: "{{ q.q }}", a: `{{ q.a }}`, cat: "{{ cat.title }}", id: "{{ cat.id }}" },
     {% endfor %}
     {% endfor %}
 ];

@@ -159,6 +159,26 @@ def acknowledge_payslip(payslip_id):
     return redirect(url_for('portal.my_payslip_detail', payslip_id=payslip.id))
 
 
+@portal_bp.route('/my/payslips/<int:payslip_id>/download')
+@login_required
+def download_my_payslip(payslip_id):
+    """Download payslip PDF from employee portal."""
+    import os
+    from flask import send_file
+
+    emp = get_linked_employee()
+    if not emp:
+        abort(404)
+    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
+
+    if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
+        flash('PDF not available for this payslip.', 'warning')
+        return redirect(url_for('portal.my_payslip_detail', payslip_id=payslip.id))
+
+    return send_file(payslip.pdf_file_path, as_attachment=True,
+                     download_name=f"payslip_{payslip.id}.pdf")
+
+
 @portal_bp.route('/my/profile')
 def my_profile():
     """Employee's profile view."""

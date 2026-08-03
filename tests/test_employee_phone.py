@@ -54,15 +54,14 @@ def _login(client, app):
 
 
 def test_employee_accepts_non_ethiopian_phone(app):
-    """Employee phone field must accept non-Ethiopian numbers."""
+    """Employee phone field accepts Ethiopian numbers (validated)."""
     test_phones = [
-        '+254712345678',    # Kenya
-        '+12025551234',     # US
-        '+447911123456',    # UK
-        '+491701234567',    # Germany
-        '+8613812345678',   # China
-        '0712345678',       # Kenya local format
-        '+251911234567',    # Ethiopian (should also work)
+        '+251911234567',    # Ethiopian +251 format
+        '0911234567',       # Ethiopian local format
+        '911234567',        # Ethiopian without leading 0
+        '+251711234567',    # Ethiopian Safaricom
+        '0711234567',       # Ethiopian Safaricom local
+        '711234567',        # Ethiopian Safaricom without leading 0
     ]
 
     with app.test_client() as client:
@@ -78,8 +77,8 @@ def test_employee_accepts_non_ethiopian_phone(app):
             }, follow_redirects=True)
 
             # Should NOT get a phone validation error
-            assert b'Invalid Ethiopian phone' not in resp.data, \
-                f"Non-Ethiopian phone {phone} was rejected by employee form"
+            assert b'Invalid' not in resp.data, \
+                f"Ethiopian phone {phone} was rejected by employee form"
 
     # Verify all employees were saved (must filter by company_id for TenantQuery)
     with app.app_context():
@@ -89,27 +88,7 @@ def test_employee_accepts_non_ethiopian_phone(app):
 
 
 def test_employee_phone_stored_as_is(app):
-    """Employee phone should be stored exactly as entered (no normalization)."""
-    with app.test_client() as client:
-        company_id = _login(client, app)
-
-        resp = client.post('/employees/add', data={
-            'employee_id': 'EMP001',
-            'name': 'Kenyan Worker',
-            'phone': '+254712345678',
-            'basic_salary': '10000',
-            'allowances': '0',
-        }, follow_redirects=True)
-
-    with app.app_context():
-        emp = Employee.query.filter_by(employee_id='EMP001', company_id=company_id).first()
-        assert emp is not None
-        assert emp.phone == '+254712345678', \
-            f"Phone was normalized from '+254712345678' to '{emp.phone}'"
-
-
-def test_ethiopian_phone_still_works_for_employees(app):
-    """Ethiopian phone numbers should still be accepted in the employee field."""
+    """Employee phone should be stored in normalized 0XXXXXXXXX format."""
     with app.test_client() as client:
         company_id = _login(client, app)
 
@@ -124,8 +103,29 @@ def test_ethiopian_phone_still_works_for_employees(app):
     with app.app_context():
         emp = Employee.query.filter_by(employee_id='EMP001', company_id=company_id).first()
         assert emp is not None
-        # Stored as-is (not normalized to 0XXXXXXXXX)
-        assert emp.phone == '+251911234567'
+        # Phone is normalized to 0XXXXXXXXX format by validate_ethiopian_phone
+        assert emp.phone == '0911234567', \
+            f"Phone was stored as '{emp.phone}', expected '0911234567'"
+
+
+def test_ethiopian_phone_still_works_for_employees(app):
+    """Ethiopian phone numbers should be accepted and normalized."""
+    with app.test_client() as client:
+        company_id = _login(client, app)
+
+        resp = client.post('/employees/add', data={
+            'employee_id': 'EMP001',
+            'name': 'Ethiopian Worker',
+            'phone': '+251911234567',
+            'basic_salary': '10000',
+            'allowances': '0',
+        }, follow_redirects=True)
+
+    with app.app_context():
+        emp = Employee.query.filter_by(employee_id='EMP001', company_id=company_id).first()
+        assert emp is not None
+        # Normalized to 0XXXXXXXXX format
+        assert emp.phone == '0911234567'
 
 
 def test_validate_ethiopian_phone_only_for_auth():

@@ -122,11 +122,39 @@ bb02fd6 fix: 15 failing tests + template bugs + verification package update
 
 ## WHAT'S NEXT
 
-1. Push commit to GitHub (need token)
-2. Send VERIFICATION_PACKAGE.md to accountant
-3. Async PDF generation (Priority #10 — model exists, needs RQ wiring)
+1. ~~Push commits to GitHub~~ ✅ Done
+2. **Send VERIFICATION_PACKAGE.md to accountant** — this is the gate
+3. ~~Async PDF generation (Priority #10)~~ ✅ Already complete — just needs Render deploy
 4. Fix full-suite hang (database locking issue)
+5. Redeploy on Render (activates Redis + RQ worker)
 
 ---
 
-*Updated: 2026-08-03 17:00 GMT+8*
+## ASYNC PDF GENERATION — STATUS
+
+Reviewed and confirmed **already fully implemented** in previous sessions.
+
+| Component | File | Status |
+|---|---|---|
+| RQ task logic | `payroll_engine/tasks.py` (195 lines) | ✅ Complete |
+| Worker Dockerfile | `Dockerfile.worker` | ✅ Complete |
+| Render blueprint | `render.yaml` (web + worker + Postgres + Redis) | ✅ Complete |
+| Batch status page | `templates/batch_pdf_status.html` | ✅ Complete |
+| Status route | `payroll_bp.py` → `batch_pdf_status` | ✅ Complete |
+| JSON status API | `payroll_bp.py` → `batch_pdf_status_json` | ✅ Complete |
+| Download route | `payroll_bp.py` → `batch_pdf_download` | ✅ Complete |
+| Graceful fallback | Falls back to inline when Redis unavailable | ✅ Complete |
+| Tests | `tests/test_rq_pdf.py` (10 tests) | ✅ All pass |
+
+**How it works:**
+1. User clicks "Download All Payslips"
+2. If Redis is available → enqueues background jobs → redirects to progress page
+3. Progress page auto-refreshes every 2s, shows per-payslip status
+4. When all done → "Download ZIP" button appears
+5. If Redis unavailable → falls back to synchronous inline generation (capped at 50)
+
+**To activate:** Deploy via Render Blueprint. It auto-provisions Redis + worker.
+
+---
+
+*Updated: 2026-08-03 17:40 GMT+8*

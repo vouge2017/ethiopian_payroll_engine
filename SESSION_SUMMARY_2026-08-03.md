@@ -155,6 +155,21 @@ Reviewed and confirmed **already fully implemented** in previous sessions.
 
 **To activate:** Deploy via Render Blueprint. It auto-provisions Redis + worker.
 
+## TEST SUITE HANG — FIXED
+
+**Root cause:** All 66 test files share the same SQLAlchemy `db` engine with in-memory SQLite. When run in a single process, connection pool exhaustion causes deadlocks between test fixtures.
+
+**Solution:** `run_tests.py` — runs each test file in a separate subprocess. Each subprocess gets its own in-memory SQLite database, avoiding all lock contention.
+
+**Results:** 66/66 files pass, 0 failures, ~5min total runtime.
+
+**Usage:**
+```bash
+python3 run_tests.py              # stop on first failure
+python3 run_tests.py --continue   # run all, report all failures
+python3 run_tests.py --verbose    # show each test name
+```
+
 ---
 
-*Updated: 2026-08-03 17:40 GMT+8*
+*Updated: 2026-08-03 18:30 GMT+8*

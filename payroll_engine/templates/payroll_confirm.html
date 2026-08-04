@@ -216,8 +216,17 @@
                     </div>
                     <div class="alert alert-info mb-4">
                         <i class="bi bi-info-circle me-2"></i>
-                        <strong>This cannot be undone.</strong> Payslips will be generated, bank files will be created,
-                        and payroll will be marked as completed.
+                        <strong>What happens when you approve:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>{{ employee_count }} payslips will be generated</li>
+                            <li>Bank file will be created (ETB {{ '{:,.2f}'.format(total_net) }})</li>
+                            <li>ERCA report will be available for download</li>
+                            <li>Employees can view payslips in the portal</li>
+                        </ul>
+                        <div class="mt-2">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>
+                            <strong>Can be undone within 1 hour.</strong> After that, you'll need to create adjustment payslips.
+                        </div>
                     </div>
 
                     <form method="POST" action="{{ url_for('payroll.approve_payroll') }}" id="approve-form">

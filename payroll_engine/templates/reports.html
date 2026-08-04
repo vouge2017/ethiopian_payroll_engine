@@ -65,6 +65,78 @@
         </div>
     </div>
 
+    <!-- Trust Layer: Filing Progress -->
+    {% if filing_progress and filing_progress.steps %}
+    <div class="card mb-4 animate-fade-in">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Filing Status</h5>
+        </div>
+        <div class="card-body">
+            <!-- Next action banner -->
+            {% if filing_progress.is_overdue %}
+            <div class="alert alert-danger mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>{{ filing_progress.next_action }}</strong>
+            </div>
+            {% elif filing_progress.days_remaining is not none and filing_progress.days_remaining <= 7 %}
+            <div class="alert alert-warning mb-3">
+                <i class="bi bi-clock me-2"></i>
+                <strong>{{ filing_progress.next_action }}</strong>
+                {% if filing_progress.days_remaining is not none %}
+                — {{ filing_progress.days_remaining }} days remaining
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Steps -->
+            <div class="d-flex flex-column gap-3">
+                {% for step in filing_progress.steps %}
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0" style="width: 24px; text-align: center;">
+                        {% if step.status == 'done' %}
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        {% elif step.status == 'overdue' %}
+                        <i class="bi bi-x-circle-fill text-danger"></i>
+                        {% else %}
+                        <i class="bi bi-circle text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">{{ step.label }}</div>
+                        <div class="text-muted small">
+                            {% if step.status == 'done' and step.date %}
+                            Completed {{ step.date }}
+                            {% elif step.deadline %}
+                            Due {{ step.deadline }}
+                            {% if step.days_remaining is not none %}
+                            {% if step.days_remaining < 0 %}
+                            <span class="text-danger">({{ step.days_remaining|abs }} days overdue)</span>
+                            {% else %}
+                            ({{ step.days_remaining }} days remaining)
+                            {% endif %}
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if step.action_url and step.status != 'done' %}
+                    <a href="{{ step.action_url }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-download me-1"></i>Download
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if filing_progress.next_action == 'All filings complete!' %}
+            <div class="alert alert-success mt-3 mb-0">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong>All filings complete for this period.</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Download Reports -->
     {% if selected_run %}
     <div class="card mb-4 animate-fade-in">

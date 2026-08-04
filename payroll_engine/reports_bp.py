@@ -61,6 +61,10 @@ def reports():
     from payroll_engine.compliance import get_upcoming_deadlines
     deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date_str)
 
+    # Trust Layer: Filing Progress
+    from payroll_engine.services.trust import get_filing_progress
+    filing_progress = get_filing_progress(company.id)
+
     return render_template(
         'reports.html',
         company=company,
@@ -73,7 +77,8 @@ def reports():
         selected_run=selected_run,
         selected_run_id=selected_run_id,
         deadlines=deadlines,
-        year=date.today().year
+        year=date.today().year,
+        filing_progress=filing_progress,
     )
 
 

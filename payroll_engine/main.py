@@ -264,6 +264,10 @@ def index():
             tax_brackets.append({'lower': cumulative, 'upper': upper, 'rate': rate * 100})
             cumulative = upper
 
+    # Trust Layer: Change Summary
+    from payroll_engine.services.trust import get_payroll_change_summary
+    change_summary = get_payroll_change_summary(company.id)
+
     return render_template(
         'dashboard.html',
         company=company,
@@ -284,6 +288,7 @@ def index():
         last_month_summary=last_month_summary,
         tax_brackets=tax_brackets,
         personal_relief=DEFAULT_PERSONAL_RELIEF,
+        change_summary=change_summary,
     )
 
 

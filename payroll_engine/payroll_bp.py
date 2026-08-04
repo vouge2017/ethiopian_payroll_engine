@@ -42,6 +42,254 @@ payroll_bp = Blueprint('payroll', __name__)
 # Import shared helpers (single source of truth — no duplicates)
 from payroll_engine.shared import _company_id, role_required, create_audit_log
 
+
+# ──────────────────────────────────────────────────────────────────────
+# Payroll Wizard API Endpoints
+# ──────────────────────────────────────────────────────────────────────
+
+@payroll_bp.route('/payroll/api/last-run')
+@login_required
+@role_required('owner', 'accountant')
+def api_last_run():
+    """Return the most recent completed payroll run's employee data as JSON.
+    Used by the 'Use Last Payroll' button to pre-fill the wizard."""
+    from payroll_engine.models import PayrollRun, PayrollDraft
+
+    last_run = PayrollRun.query.filter_by(
+        company_id=_company_id(), status='completed'
+    ).order_by(PayrollRun.run_date.desc()).first()
+
+    if not last_run:
+        return jsonify({'ok': False, 'error': 'No previous payroll run found.'}), 404
+
+    draft = PayrollDraft.query.filter_by(payroll_run_id=last_run.id).first()
+    if not draft or not draft.employee_data:
+        # Fallback: build from payslips
+        employees_data = []
+        for p in last_run.payslips:
+            emp = p.employee
+            if not emp:
+                continue
+            employees_data.append({
+                'id': emp.employee_id or '',
+                'name': emp.name or '',
+                'tin': emp.tin or '',
+                'basic': float(emp.basic_salary or 0),
+                'allowances': float(emp.allowances or 0),
+                'bank_account': emp.bank_account or emp.bank_or_telebirr or '',
+                'department': emp.department or '',
+                'position': emp.position or '',
+            })
+    else:
+        employees_data = []
+        for row in draft.employee_data:
+            employees_data.append({
+                'id': row.get('id', ''),
+                'name': row.get('name', ''),
+                'tin': row.get('tin', ''),
+                'basic': row.get('basic', 0),
+                'allowances': row.get('allowances', 0),
+                'bank_account': row.get('bank_account', ''),
+                'department': row.get('department', ''),
+                'position': row.get('position', ''),
+            })
+
+    # Calculate payroll for preview display
+    from payroll_engine.payroll import calculate_payroll
+    from payroll_engine.tax import calculate_tax_breakdown
+
+    preview_employees = []
+    total_gross = total_tax = total_pension = total_net = 0
+    for e in employees_data:
+        result = calculate_payroll(e['basic'], e['allowances'])
+        total_gross += result['gross']
+        total_tax += result['tax']
+        total_pension += result['pension_employee']
+        total_net += result['net']
+        preview_employees.append({
+            'id': e['id'],
+            'name': e['name'],
+            'tin': e.get('tin', ''),
+            'basic': e['basic'],
+            'allowances': e['allowances'],
+            'gross': result['gross'],
+            'tax': result['tax'],
+            'pension': result['pension_employee'],
+            'net': result['net'],
+            'bank_account': e.get('bank_account', ''),
+            'department': e.get('department', ''),
+        })
+
+    return jsonify({
+        'ok': True,
+        'run_reference': last_run.reference,
+        'run_date': str(last_run.run_date),
+        'period': last_run.period or '',
+        'employee_count': len(preview_employees),
+        'employees': preview_employees,
+        'totals': {
+            'gross': total_gross,
+            'tax': total_tax,
+            'pension': total_pension,
+            'net': total_net,
+        },
+    })
+
+
+@payroll_bp.route('/payroll/api/preview', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def api_preview():
+    """Parse uploaded CSV/Excel and return employee data as JSON.
+    Does NOT create a payroll run — just shows a preview."""
+    if 'file' not in request.files:
+        return jsonify({'ok': False, 'error': 'No file uploaded.'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'ok': False, 'error': 'No file selected.'}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ('csv', 'xlsx', 'xls'):
+        return jsonify({'ok': False, 'error': 'Only CSV and Excel files are accepted.'}), 400
+
+    # Save temp file
+    filename = secure_filename(file.filename)
+    filename = f"{uuid.uuid4().hex[:8]}_{filename}"
+    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    try:
+        employees_data, row_errors = parse_and_calculate_payroll(filepath)
+
+        limit_msg = check_csv_row_limit(employees_data)
+        if limit_msg:
+            return jsonify({'ok': False, 'error': limit_msg}), 400
+
+        if not employees_data:
+            return jsonify({'ok': False, 'error': 'No valid data rows found in file.'}), 400
+
+        # Build preview (strip heavy fields)
+        preview = []
+        for e in employees_data:
+            preview.append({
+                'id': e['id'],
+                'name': e['name'],
+                'tin': e.get('tin', ''),
+                'basic': e['basic'],
+                'allowances': e['allowances'],
+                'gross': e['gross'],
+                'tax': e['tax'],
+                'pension': e['pension_employee'],
+                'net': e['net'],
+                'bank_account': e.get('bank_account', ''),
+                'department': e.get('department', ''),
+            })
+
+        total_gross = sum(e['gross'] for e in employees_data)
+        total_tax = sum(e['tax'] for e in employees_data)
+        total_pension = sum(e['pension_employee'] for e in employees_data)
+        total_net = sum(e['net'] for e in employees_data)
+
+        # Store in session for validation step
+        session['preview_employees'] = employees_data
+        session['preview_filename'] = file.filename
+
+        return jsonify({
+            'ok': True,
+            'filename': file.filename,
+            'employee_count': len(preview),
+            'employees': preview,
+            'row_errors': row_errors[:10],
+            'totals': {
+                'gross': total_gross,
+                'tax': total_tax,
+                'pension': total_pension,
+                'net': total_net,
+            },
+        })
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 400
+    finally:
+        # Clean up temp file
+        try:
+            os.remove(filepath)
+        except OSError:
+            pass
+
+
+@payroll_bp.route('/payroll/api/validate', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def api_validate():
+    """Run validation on previewed data and return results as JSON.
+    Also creates the draft payroll run so confirm step can use it."""
+    employees_data = session.get('preview_employees')
+    if not employees_data:
+        return jsonify({'ok': False, 'error': 'No preview data. Upload a file first.'}), 400
+
+    previous_payslips = get_previous_payslips(_company_id())
+    validation_results = validate_payroll_data(
+        employees_data,
+        company_id=_company_id(),
+        previous_payslips=previous_payslips,
+    )
+    summary = get_summary(validation_results)
+
+    # Check duplicate period
+    period_str = build_period_string()
+    dup = check_duplicate_period(_company_id(), period_str)
+    if dup:
+        return jsonify({'ok': False, 'error': dup[0]}), 409
+
+    # Create the actual payroll run (draft)
+    result = create_payroll_run(
+        company_id=_company_id(),
+        employees_data=employees_data,
+        validation_results=validation_results,
+    )
+
+    # Clear session preview data
+    session.pop('preview_employees', None)
+    session.pop('preview_filename', None)
+
+    # Serialize validation results
+    vr_list = []
+    for vr in validation_results:
+        vr_list.append({
+            'rule_code': vr.rule_code,
+            'severity': vr.severity,
+            'message': vr.message,
+            'hint': getattr(vr, 'hint', ''),
+            'employee_name': getattr(vr, 'employee_name', ''),
+            'employee_id': getattr(vr, 'employee_id', ''),
+        })
+
+    total_gross = sum(e['gross'] for e in employees_data)
+    total_tax = sum(e['tax'] for e in employees_data)
+    total_net = sum(e['net'] for e in employees_data)
+
+    return jsonify({
+        'ok': True,
+        'run_id': result['run_id'],
+        'summary': {
+            'total': summary.get('total', len(vr_list)),
+            'blocks': summary.get('blocks', 0),
+            'flags': summary.get('flags', 0),
+            'warns': summary.get('warns', 0),
+            'can_proceed': summary.get('can_proceed', True),
+            'requires_approval': summary.get('requires_approval', False),
+        },
+        'validation': vr_list,
+        'totals': {
+            'gross': total_gross,
+            'tax': total_tax,
+            'net': total_net,
+            'employees': len(employees_data),
+        },
+    })
+
+
 # Inline PDF generation caps — when RQ/Redis is unavailable, these cap the number
 # of PDFs generated synchronously to prevent HTTP timeouts.
 # batch_payslips route blocks above this cap (user must download individually or add Redis).

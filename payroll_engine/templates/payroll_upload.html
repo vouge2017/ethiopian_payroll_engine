@@ -4,9 +4,7 @@
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb breadcrumb-sm mb-0">
         <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
-        {% block breadcrumb_items %}
         <li class="breadcrumb-item active">Run Payroll</li>
-    {% endblock %}
     </ol>
 </nav>
 {% endblock %}
@@ -14,137 +12,415 @@
 
 <!-- Payroll Wizard Stepper -->
 <div class="wizard-stepper">
-    <div class="wizard-step active">
+    <div class="wizard-step active" id="stepper-upload">
         <div class="wizard-step-number">1</div>
         <span class="wizard-step-label">Upload</span>
     </div>
-    <div class="wizard-step-connector"></div>
-    <div class="wizard-step">
+    <div class="wizard-step-connector" id="conn-upload"></div>
+    <div class="wizard-step" id="stepper-preview">
         <div class="wizard-step-number">2</div>
         <span class="wizard-step-label">Review</span>
     </div>
-    <div class="wizard-step-connector"></div>
-    <div class="wizard-step">
+    <div class="wizard-step-connector" id="conn-preview"></div>
+    <div class="wizard-step" id="stepper-validate">
         <div class="wizard-step-number">3</div>
-        <span class="wizard-step-label">Confirm</span>
+        <span class="wizard-step-label">Validate</span>
     </div>
-    <div class="wizard-step-connector"></div>
-    <div class="wizard-step">
+    <div class="wizard-step-connector" id="conn-validate"></div>
+    <div class="wizard-step" id="stepper-confirm">
         <div class="wizard-step-number">4</div>
-        <span class="wizard-step-label">Done</span>
+        <span class="wizard-step-label">Confirm</span>
     </div>
 </div>
 
-<div class="p-4 p-md-5">
-    <div class="row justify-content-center">
-        <div class="col-md-7 col-lg-6">
-            <!-- Page Header -->
-            <div class="mb-4">
-                <h2 class="fw-bold mb-1">Run Payroll</h2>
-                <p class="text-muted mb-0">Upload your employee data to process this month's payroll</p>
-            </div>
-
-            <!-- CSV Format Card -->
-            <div class="card mb-4">
-                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">CSV Format</h5>
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('payroll.download_prefilled_csv') }}" class="btn btn-sm btn-success">
-                            <i class="bi bi-magic me-1"></i>Pre-filled
-                        </a>
-                        <a href="{{ url_for('payroll.download_csv_template') }}" class="btn btn-sm btn-ghost">
-                            <i class="bi bi-download me-1"></i>Blank
-                        </a>
-                    </div>
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- STEP 1: UPLOAD                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="step-upload" class="wizard-panel">
+    <div class="p-4 p-md-5">
+        <div class="row justify-content-center">
+            <div class="col-md-7 col-lg-6">
+                <div class="mb-4">
+                    <h2 class="fw-bold mb-1">Run Payroll</h2>
+                    <p class="text-muted mb-0">Upload your employee data or use last month's payroll as a starting point</p>
                 </div>
-                <div class="card-body">
-                    <pre class="mb-3" style="font-size: 0.8rem;">employee_id,name,tin,basic_salary,allowances,bank_account,department,position
-EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manager</pre>
-                    <div class="d-flex flex-wrap gap-3 small text-muted">
-                        <span><strong>Required:</strong> employee_id, name, tin, basic_salary, allowances</span>
-                        <span><strong>Optional:</strong> bank_account, department, position</span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Upload Card -->
-            <div class="card mb-4">
-                <div class="card-header bg-transparent">
-                    <h5 class="mb-0">Upload CSV</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info mb-4">
-                        <i class="bi bi-lightbulb me-2"></i>
-                        <strong>Tip:</strong> Try the <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="alert-link">Spreadsheet Editor</a> — edit employees directly in a table, like Excel.
-                    </div>
-
-                    <form method="POST" action="{{ url_for('payroll.payroll_upload') }}" enctype="multipart/form-data" id="uploadForm">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <!-- Drop Zone -->
-                        <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3" style="border: 2px dashed var(--border-medium); cursor: pointer; transition: all var(--transition-fast); background: var(--bg-secondary);">
-                            <div class="mb-3">
-                                <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--text-tertiary);"></i>
-                            </div>
-                            <p class="fw-semibold mb-1" id="dropText">Drag & drop your CSV or Excel file here</p>
-                            <p class="text-muted small mb-0" id="fileInfo">or click to browse</p>
-                            <input class="d-none" type="file" id="file" name="file" accept=".csv,.xlsx,.xls" required>
+                <!-- Quick Start: Use Last Payroll -->
+                <div class="card mb-4 border-primary" id="lastPayrollCard">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="flex-shrink-0">
+                            <i class="bi bi-arrow-repeat text-primary" style="font-size: 2rem;"></i>
                         </div>
-
-                        <div id="inlineError" class="alert alert-danger d-none py-2 small mb-3"></div>
-
-                        <!-- Progress -->
-                        <div id="progressContainer" class="mb-3 d-none">
-                            <div class="progress" style="height: 10px;">
-                                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
-                            </div>
-                            <small class="text-muted mt-1 d-block">Processing payroll...</small>
-                        </div>
-
-                        <!-- Submit -->
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled style="height: 52px;">
-                                <i class="bi bi-cloud-upload me-2"></i>Upload & Process
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">Use Last Payroll</h6>
+                            <p class="text-muted small mb-2">Pre-fill from your most recent completed run. Update salaries before processing.</p>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnUseLast" onclick="loadLastPayroll()">
+                                <i class="bi bi-lightning me-1"></i> Load Last Payroll
                             </button>
                         </div>
-                    </form>
+                        <div id="lastRunInfo" class="text-muted small d-none">
+                            <span id="lastRunRef"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center text-muted small mb-3">— or upload a new file —</div>
+
+                <!-- CSV Format -->
+                <div class="card mb-4">
+                    <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">CSV Format</h5>
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('payroll.download_prefilled_csv') }}" class="btn btn-sm btn-success">
+                                <i class="bi bi-magic me-1"></i>Pre-filled
+                            </a>
+                            <a href="{{ url_for('payroll.download_csv_template') }}" class="btn btn-sm btn-ghost">
+                                <i class="bi bi-download me-1"></i>Blank
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <pre class="mb-3" style="font-size: 0.8rem;">employee_id,name,tin,basic_salary,allowances,bank_account,department,position
+EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manager</pre>
+                        <div class="d-flex flex-wrap gap-3 small text-muted">
+                            <span><strong>Required:</strong> employee_id, name, tin, basic_salary, allowances</span>
+                            <span><strong>Optional:</strong> bank_account, department, position</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Drop Zone -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3" style="border: 2px dashed var(--border-medium); cursor: pointer; transition: all var(--transition-fast); background: var(--bg-secondary);">
+                                <div class="mb-3">
+                                    <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--text-tertiary);"></i>
+                                </div>
+                                <p class="fw-semibold mb-1" id="dropText">Drag & drop your CSV or Excel file here</p>
+                                <p class="text-muted small mb-0" id="fileInfo">or click to browse</p>
+                                <input class="d-none" type="file" id="fileInput" name="file" accept=".csv,.xlsx,.xls">
+                            </div>
+
+                            <div id="uploadError" class="alert alert-danger d-none py-2 small mb-3"></div>
+
+                            <!-- Loading spinner -->
+                            <div id="uploadLoading" class="text-center py-4 d-none">
+                                <div class="spinner-border text-primary mb-2" role="status"></div>
+                                <p class="text-muted mb-0">Parsing your file...</p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Spreadsheet Editor Link -->
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-lightbulb me-2"></i>
+                    <strong>Tip:</strong> Try the <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="alert-link">Spreadsheet Editor</a> — edit employees directly in a table, like Excel.
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- STEP 2: PREVIEW                                                -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="step-preview" class="wizard-panel d-none">
+    <div class="p-4 p-md-5">
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card">
+                    <div class="card-body text-center py-3">
+                        <h6 class="text-muted mb-1">Employees</h6>
+                        <h4 class="mb-0" id="pv-emp-count">—</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card">
+                    <div class="card-body text-center py-3">
+                        <h6 class="text-muted mb-1">Total Gross</h6>
+                        <h4 class="mb-0" id="pv-gross">—</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card">
+                    <div class="card-body text-center py-3">
+                        <h6 class="text-muted mb-1">Tax + Pension</h6>
+                        <h4 class="mb-0" id="pv-deductions">—</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-success">
+                    <div class="card-body text-center py-3">
+                        <h6 class="text-muted mb-1">Total Net</h6>
+                        <h4 class="text-success mb-0" id="pv-net">—</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row Errors -->
+        <div id="pv-errors" class="alert alert-warning d-none mb-4">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span id="pv-errors-text"></span>
+        </div>
+
+        <!-- Source Info -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="mb-0"><i class="bi bi-table me-2"></i>Parsed Data</h5>
+                <small class="text-muted" id="pv-source">From: —</small>
+            </div>
+            <div class="d-flex gap-2">
+                <input type="text" class="form-control form-control-sm" id="pv-search"
+                       placeholder="Search employees..." style="width: 200px;">
+            </div>
+        </div>
+
+        <!-- Preview Table -->
+        <div class="card mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                    <table class="table table-hover table-sm mb-0 responsive-card" id="pv-table">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th>Employee ID</th>
+                                <th>Name</th>
+                                <th class="text-end">Basic (ETB)</th>
+                                <th class="text-end">Allowances</th>
+                                <th class="text-end">Gross</th>
+                                <th class="text-end">Tax</th>
+                                <th class="text-end">Pension</th>
+                                <th class="text-end bg-light">Net Pay</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pv-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="goToStep('upload')">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </button>
+            <button type="button" class="btn btn-ghost" onclick="goToStep('upload'); resetUpload();">
+                <i class="bi bi-x me-1"></i> Clear & Start Over
+            </button>
+            <div class="flex-grow-1"></div>
+            <button type="button" class="btn btn-primary btn-lg" id="btnValidate" onclick="runValidation()">
+                <i class="bi bi-shield-check me-1"></i> Validate & Process
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- STEP 3: VALIDATION RESULTS                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="step-validate" class="wizard-panel d-none">
+    <div class="p-4 p-md-5">
+        <!-- Validation Summary -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card">
+                    <div class="card-body text-center py-3">
+                        <h6 class="text-muted mb-1">Total Checks</h6>
+                        <h4 class="mb-0" id="vr-total">—</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card" id="vr-blocks-card">
+                    <div class="card-body text-center py-3">
+                        <h6 class="mb-1" id="vr-blocks-label">❌ Blocked</h6>
+                        <h4 class="mb-0" id="vr-blocks">—</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card" id="vr-flags-card">
+                    <div class="card-body text-center py-3">
+                        <h6 class="mb-1" id="vr-flags-label">⚠️ Flags</h6>
+                        <h4 class="mb-0" id="vr-flags">—</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card">
+                    <div class="card-body text-center py-3">
+                        <h6 class="text-muted mb-1">ℹ️ Warnings</h6>
+                        <h4 class="mb-0" id="vr-warns">—</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overall Status Badge -->
+        <div class="text-center mb-4">
+            <span class="badge fs-5 px-4 py-2" id="vr-status-badge">—</span>
+        </div>
+
+        <!-- BLOCK Issues -->
+        <div id="vr-blocks-section" class="card border-danger shadow-sm mb-4 d-none">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-x-circle me-2"></i>Must Fix Before Processing (<span id="vr-blocks-count">0</span>)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Employee</th><th>Issue</th><th>What to do?</th></tr>
+                        </thead>
+                        <tbody id="vr-blocks-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLAG Issues -->
+        <div id="vr-flags-section" class="card border-warning shadow-sm mb-4 d-none">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Review and Approve (<span id="vr-flags-count">0</span>)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Employee</th><th>Issue</th><th>What to do?</th></tr>
+                        </thead>
+                        <tbody id="vr-flags-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- WARN Issues -->
+        <div id="vr-warns-section" class="card border-info shadow-sm mb-4 d-none">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informational (<span id="vr-warns-count">0</span>)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Employee</th><th>Note</th><th>What to do?</th></tr>
+                        </thead>
+                        <tbody id="vr-warns-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="vr-loading" class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted">Running validation checks...</p>
+        </div>
+
+        <!-- Actions -->
+        <div id="vr-actions" class="d-flex gap-2 d-none">
+            <button type="button" class="btn btn-outline-secondary" onclick="goToStep('preview')">
+                <i class="bi bi-arrow-left me-1"></i> Back to Data
+            </button>
+            <div class="flex-grow-1"></div>
+            <button type="button" class="btn btn-primary btn-lg" id="btnConfirm" onclick="goToConfirm()">
+                <i class="bi bi-shield-lock me-1"></i> Review & Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function() {
+    'use strict';
+
+    // ── State ──────────────────────────────────────────────────────
+    let previewData = null;   // response from /payroll/api/preview
+    let validationData = null; // response from /payroll/api/validate
+    let runId = null;
+
+    // ── Step Navigation ────────────────────────────────────────────
+    window.goToStep = function(step) {
+        document.querySelectorAll('.wizard-panel').forEach(el => el.classList.add('d-none'));
+        document.getElementById('step-' + step).classList.remove('d-none');
+
+        // Update stepper
+        const steps = ['upload', 'preview', 'validate', 'confirm'];
+        const idx = steps.indexOf(step);
+        steps.forEach((s, i) => {
+            const stepper = document.getElementById('stepper-' + s);
+            const conn = document.getElementById('conn-' + s);
+            if (!stepper) return;
+            stepper.classList.remove('active', 'completed');
+            if (i < idx) stepper.classList.add('completed');
+            else if (i === idx) stepper.classList.add('active');
+            if (conn) {
+                conn.classList.remove('completed');
+                if (i < idx) conn.classList.add('completed');
+            }
+        });
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // ── Upload: File Selection & Drag/Drop ─────────────────────────
     const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('file');
+    const fileInput = document.getElementById('fileInput');
     const fileInfo = document.getElementById('fileInfo');
-    const submitBtn = document.getElementById('submitBtn');
-    const inlineError = document.getElementById('inlineError');
     const dropText = document.getElementById('dropText');
+    const uploadError = document.getElementById('uploadError');
+    const uploadLoading = document.getElementById('uploadLoading');
 
     function showError(msg) {
-        inlineError.textContent = msg;
-        inlineError.classList.remove('d-none');
-        submitBtn.disabled = true;
+        uploadError.textContent = msg;
+        uploadError.classList.remove('d-none');
     }
 
     function clearError() {
-        inlineError.classList.add('d-none');
+        uploadError.classList.add('d-none');
     }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--brand-primary)';
+        dropZone.style.background = 'var(--brand-primary-soft)';
+    });
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border-medium)';
+        dropZone.style.background = 'var(--bg-secondary)';
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border-medium)';
+        dropZone.style.background = 'var(--bg-secondary)';
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+    fileInput.addEventListener('change', function() {
+        if (this.files.length) handleFile(this.files[0]);
+    });
 
     function handleFile(file) {
         clearError();
-        if (!file) {
-            fileInfo.textContent = 'or click to browse';
-            dropText.textContent = 'Drag & drop your CSV or Excel file here';
-            submitBtn.disabled = true;
-            return;
-        }
+        if (!file) return;
         const ext = file.name.split('.').pop().toLowerCase();
-        if (ext !== 'csv') {
+        if (!['csv', 'xlsx', 'xls'].includes(ext)) {
             showError('Only .csv and .xlsx files are accepted.');
             return;
         }
@@ -152,25 +428,300 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
             showError('The file is empty.');
             return;
         }
+        if (file.size > 50 * 1024 * 1024) {
+            showError('File is too large (max 50 MB).');
+            return;
+        }
+
+        // Show file selected state
         const sizeKB = (file.size / 1024).toFixed(1);
         fileInfo.textContent = `${file.name} (${sizeKB} KB)`;
         dropText.textContent = 'File selected ✓';
         dropZone.style.borderColor = 'var(--color-success)';
         dropZone.style.background = 'var(--color-success-light)';
-        submitBtn.disabled = false;
+
+        // Auto-upload for preview
+        uploadFile(file);
     }
 
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--brand-primary)'; dropZone.style.background = 'var(--brand-primary-soft)'; });
-    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-medium)'; dropZone.style.background = 'var(--bg-secondary)'; });
-    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--border-medium)'; dropZone.style.background = 'var(--bg-secondary)'; if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFile(e.dataTransfer.files[0]); } });
-    fileInput.addEventListener('change', function() { if (this.files.length) handleFile(this.files[0]); });
+    // ── Upload → Preview API ───────────────────────────────────────
+    function uploadFile(file) {
+        clearError();
+        uploadLoading.classList.remove('d-none');
 
-    document.getElementById('uploadForm').addEventListener('submit', function() {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
-        document.getElementById('progressContainer').classList.remove('d-none');
-    });
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('csrf_token', document.querySelector('[name="csrf_token"]').value);
+
+        fetch('{{ url_for("payroll.api_preview") }}', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(r => r.json())
+        .then(data => {
+            uploadLoading.classList.add('d-none');
+            if (!data.ok) {
+                showError(data.error || 'Failed to parse file.');
+                return;
+            }
+            previewData = data;
+            renderPreview(data);
+            goToStep('preview');
+        })
+        .catch(err => {
+            uploadLoading.classList.add('d-none');
+            showError('Network error: ' + err.message);
+        });
+    }
+
+    // ── Load Last Payroll ──────────────────────────────────────────
+    window.loadLastPayroll = function() {
+        const btn = document.getElementById('btnUseLast');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading...';
+        clearError();
+
+        fetch('{{ url_for("payroll.api_last_run") }}')
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lightning me-1"></i> Load Last Payroll';
+            if (!data.ok) {
+                showError(data.error || 'No previous payroll found.');
+                return;
+            }
+            // Convert to preview format (server already calculated payroll)
+            const employees = data.employees.map(e => ({
+                id: e.id,
+                name: e.name,
+                tin: e.tin || '',
+                basic: e.basic,
+                allowances: e.allowances,
+                gross: e.gross || 0,
+                tax: e.tax || 0,
+                pension: e.pension || 0,
+                net: e.net || 0,
+                bank_account: e.bank_account || '',
+                department: e.department || '',
+            }));
+
+            previewData = {
+                ok: true,
+                filename: 'Last Payroll (' + data.run_reference + ', ' + data.period + ')',
+                employee_count: employees.length,
+                employees: employees,
+                row_errors: [],
+                totals: data.totals || { gross: 0, tax: 0, pension: 0, net: 0 },
+            };
+
+            // Show info badge
+            document.getElementById('lastRunRef').textContent = data.run_reference + ' · ' + data.period;
+            document.getElementById('lastRunInfo').classList.remove('d-none');
+
+            renderPreview(previewData);
+            goToStep('preview');
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lightning me-1"></i> Load Last Payroll';
+            showError('Network error: ' + err.message);
+        });
+    };
+
+    // ── Render Preview ─────────────────────────────────────────────
+    function renderPreview(data) {
+        document.getElementById('pv-emp-count').textContent = data.employee_count;
+        document.getElementById('pv-source').textContent = 'From: ' + data.filename;
+
+        // Totals
+        const fmt = n => 'ETB ' + Number(n).toLocaleString('en', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if (data.totals.gross > 0) {
+            document.getElementById('pv-gross').textContent = fmt(data.totals.gross);
+            document.getElementById('pv-deductions').textContent = fmt(data.totals.tax + data.totals.pension);
+            document.getElementById('pv-net').textContent = fmt(data.totals.net);
+        } else {
+            document.getElementById('pv-gross').textContent = '—';
+            document.getElementById('pv-deductions').textContent = '—';
+            document.getElementById('pv-net').textContent = '—';
+        }
+
+        // Row errors
+        if (data.row_errors && data.row_errors.length > 0) {
+            document.getElementById('pv-errors').classList.remove('d-none');
+            document.getElementById('pv-errors-text').textContent =
+                data.row_errors.length + ' row(s) had issues: ' + data.row_errors.slice(0, 3).join('; ');
+        } else {
+            document.getElementById('pv-errors').classList.add('d-none');
+        }
+
+        // Table
+        const tbody = document.getElementById('pv-tbody');
+        tbody.innerHTML = '';
+        data.employees.forEach(emp => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td data-label="ID">${esc(emp.id)}</td>
+                <td data-label="Name"><strong>${esc(emp.name)}</strong></td>
+                <td data-label="Basic" class="text-end">${Number(emp.basic).toLocaleString('en', {minimumFractionDigits: 2})}</td>
+                <td data-label="Allow." class="text-end">${Number(emp.allowances).toLocaleString('en', {minimumFractionDigits: 2})}</td>
+                <td data-label="Gross" class="text-end">${emp.gross > 0 ? Number(emp.gross).toLocaleString('en', {minimumFractionDigits: 2}) : '—'}</td>
+                <td data-label="Tax" class="text-end">${emp.tax > 0 ? Number(emp.tax).toLocaleString('en', {minimumFractionDigits: 2}) : '—'}</td>
+                <td data-label="Pension" class="text-end">${emp.pension > 0 ? Number(emp.pension).toLocaleString('en', {minimumFractionDigits: 2}) : '—'}</td>
+                <td data-label="Net" class="text-end fw-bold bg-light">${emp.net > 0 ? Number(emp.net).toLocaleString('en', {minimumFractionDigits: 2}) : '—'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Search
+        document.getElementById('pv-search').addEventListener('keyup', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#pv-tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }
+
+    // ── Run Validation ─────────────────────────────────────────────
+    window.runValidation = function() {
+        goToStep('validate');
+
+        document.getElementById('vr-loading').classList.remove('d-none');
+        document.getElementById('vr-actions').classList.add('d-none');
+        ['vr-blocks-section', 'vr-flags-section', 'vr-warns-section'].forEach(id => {
+            document.getElementById(id).classList.add('d-none');
+        });
+
+        const csrf = document.querySelector('[name="csrf_token"]').value;
+
+        fetch('{{ url_for("payroll.api_validate") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrf,
+            },
+            body: 'csrf_token=' + encodeURIComponent(csrf),
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('vr-loading').classList.add('d-none');
+            document.getElementById('vr-actions').classList.remove('d-none');
+
+            if (!data.ok) {
+                // Show error in the blocks section
+                document.getElementById('vr-blocks-section').classList.remove('d-none');
+                document.getElementById('vr-blocks').textContent = '1';
+                document.getElementById('vr-blocks-count').textContent = '1';
+                document.getElementById('vr-blocks-tbody').innerHTML =
+                    '<tr><td>—</td><td colspan="2">' + esc(data.error) + '</td></tr>';
+                document.getElementById('vr-status-badge').className = 'badge bg-danger fs-5 px-4 py-2';
+                document.getElementById('vr-status-badge').textContent = '❌ BLOCKED';
+                document.getElementById('btnConfirm').disabled = true;
+                return;
+            }
+
+            validationData = data;
+            runId = data.run_id;
+
+            const s = data.summary;
+
+            // Update counters
+            document.getElementById('vr-total').textContent = s.total;
+            document.getElementById('vr-blocks').textContent = s.blocks;
+            document.getElementById('vr-flags').textContent = s.flags;
+            document.getElementById('vr-warns').textContent = s.warns;
+
+            // Card styling
+            const blocksCard = document.getElementById('vr-blocks-card');
+            const flagsCard = document.getElementById('vr-flags-card');
+            blocksCard.className = s.blocks > 0 ? 'card border-danger shadow-sm' : 'card border-success shadow-sm';
+            flagsCard.className = s.flags > 0 ? 'card border-warning shadow-sm' : 'card border-success shadow-sm';
+            document.getElementById('vr-blocks-label').className = s.blocks > 0 ? 'text-danger mb-1' : 'text-success mb-1';
+            document.getElementById('vr-flags-label').className = s.flags > 0 ? 'text-warning mb-1' : 'text-success mb-1';
+
+            // Status badge
+            const badge = document.getElementById('vr-status-badge');
+            if (s.blocks > 0) {
+                badge.className = 'badge bg-danger fs-5 px-4 py-2';
+                badge.textContent = '❌ BLOCKED — Fix issues before processing';
+                document.getElementById('btnConfirm').disabled = true;
+            } else if (s.flags > 0) {
+                badge.className = 'badge bg-warning text-dark fs-5 px-4 py-2';
+                badge.textContent = '⚠️ FLAGS — Review and approve to continue';
+                document.getElementById('btnConfirm').disabled = false;
+            } else {
+                badge.className = 'badge bg-success fs-5 px-4 py-2';
+                badge.textContent = '✅ PASSED — Ready to process';
+                document.getElementById('btnConfirm').disabled = false;
+            }
+
+            // Render issues by severity
+            renderIssues('BLOCK', data.validation);
+            renderIssues('FLAG', data.validation);
+            renderIssues('WARN', data.validation);
+        })
+        .catch(err => {
+            document.getElementById('vr-loading').classList.add('d-none');
+            document.getElementById('vr-actions').classList.remove('d-none');
+            document.getElementById('vr-status-badge').className = 'badge bg-danger fs-5 px-4 py-2';
+            document.getElementById('vr-status-badge').textContent = '❌ Error: ' + err.message;
+        });
+    };
+
+    function renderIssues(severity, validation) {
+        const issues = validation.filter(v => v.severity === severity);
+        const sectionId = 'vr-' + severity.toLowerCase() + 's-section';
+        const tbodyId = 'vr-' + severity.toLowerCase() + 's-tbody';
+        const countId = 'vr-' + severity.toLowerCase() + 's-count';
+
+        if (issues.length === 0) return;
+
+        const section = document.getElementById(sectionId);
+        const tbody = document.getElementById(tbodyId);
+        const count = document.getElementById(countId);
+
+        section.classList.remove('d-none');
+        count.textContent = issues.length;
+
+        tbody.innerHTML = '';
+        issues.forEach(v => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${esc(v.employee_name || v.employee_id || '—')}</strong></td>
+                <td>${esc(v.message)}</td>
+                <td class="text-muted">${esc(v.hint || '')}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ── Go to Confirm Page ─────────────────────────────────────────
+    window.goToConfirm = function() {
+        if (runId) {
+            window.location.href = '/payroll/' + runId + '/confirm';
+        }
+    };
+
+    // ── Reset ──────────────────────────────────────────────────────
+    window.resetUpload = function() {
+        previewData = null;
+        validationData = null;
+        runId = null;
+        fileInput.value = '';
+        fileInfo.textContent = 'or click to browse';
+        dropText.textContent = 'Drag & drop your CSV or Excel file here';
+        dropZone.style.borderColor = 'var(--border-medium)';
+        dropZone.style.background = 'var(--bg-secondary)';
+        clearError();
+        document.getElementById('lastRunInfo').classList.add('d-none');
+    };
+
+    // ── Helpers ────────────────────────────────────────────────────
+    function esc(s) {
+        if (!s) return '';
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
 })();
 </script>
 {% endblock %}

@@ -349,9 +349,12 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
 
     # Step 3: ERCA filing
     erca_deadline = get_deadline_for_type(company, 'erca', run.run_date)
-    erca_record = FilingRecord.query.filter_by(
-        company_id=company_id, filing_type='erca', period=run.period
-    ).first() if hasattr(FilingRecord, 'filing_type') else None
+    try:
+        erca_record = FilingRecord.query.filter_by(
+            company_id=company_id, filing_type='erca', period=run.period
+        ).first()
+    except Exception:
+        erca_record = None
 
     erca_status = 'done' if erca_record else ('overdue' if erca_deadline and today > erca_deadline else 'pending')
     erca_days = (erca_deadline - today).days if erca_deadline else None
@@ -359,17 +362,23 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
     steps.append({
         'label': 'ERCA filing',
         'status': erca_status,
-        'date': str(erca_record.filed_at) if erca_record else None,
+        'date': str(erca_record.filed_at.date()) if erca_record else None,
         'action_url': f'/reports/erca/{run.id}',
+        'mark_url': '/filing-history/mark',
+        'filing_type': 'erca',
+        'period': run.period or '',
         'deadline': str(erca_deadline) if erca_deadline else None,
         'days_remaining': erca_days,
     })
 
     # Step 4: Pension remittance
     pension_deadline = get_deadline_for_type(company, 'pension', run.run_date)
-    pension_record = FilingRecord.query.filter_by(
-        company_id=company_id, filing_type='pension', period=run.period
-    ).first() if hasattr(FilingRecord, 'filing_type') else None
+    try:
+        pension_record = FilingRecord.query.filter_by(
+            company_id=company_id, filing_type='pension', period=run.period
+        ).first()
+    except Exception:
+        pension_record = None
 
     pension_status = 'done' if pension_record else ('overdue' if pension_deadline and today > pension_deadline else 'pending')
     pension_days = (pension_deadline - today).days if pension_deadline else None
@@ -377,8 +386,11 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
     steps.append({
         'label': 'Pension remittance',
         'status': pension_status,
-        'date': str(pension_record.filed_at) if pension_record else None,
+        'date': str(pension_record.filed_at.date()) if pension_record else None,
         'action_url': f'/reports/pension/{run.id}',
+        'mark_url': '/filing-history/mark',
+        'filing_type': 'pension',
+        'period': run.period or '',
         'deadline': str(pension_deadline) if pension_deadline else None,
         'days_remaining': pension_days,
     })

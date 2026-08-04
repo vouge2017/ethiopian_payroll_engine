@@ -119,9 +119,21 @@
                         </div>
                     </div>
                     {% if step.action_url and step.status != 'done' %}
-                    <a href="{{ step.action_url }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-download me-1"></i>Download
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ step.action_url }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download me-1"></i>Download
+                        </a>
+                        {% if step.mark_url %}
+                        <form method="POST" action="{{ step.mark_url }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="filing_type" value="{{ step.filing_type }}">
+                            <input type="hidden" name="period" value="{{ step.period }}">
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="bi bi-check-circle me-1"></i>Mark as Filed
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </div>
                 {% endfor %}

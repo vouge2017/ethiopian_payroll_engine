@@ -473,9 +473,10 @@ const EthioPayroll = {
 
     /**
      * Convert Flask flash messages to toast notifications.
+     * Looks for Bootstrap alerts inside the flash-messages container.
      */
     convertFlashMessages() {
-        document.querySelectorAll('.alert-flash, .flash-message').forEach(el => {
+        document.querySelectorAll('.flash-toast .alert').forEach(el => {
             const message = el.textContent.trim();
             const type = el.classList.contains('alert-danger') ? 'error'
                 : el.classList.contains('alert-success') ? 'success'
@@ -483,6 +484,10 @@ const EthioPayroll = {
                 : 'info';
             this.toast(message, type);
             el.remove();
+        });
+        // Remove the container if empty
+        document.querySelectorAll('.flash-toast').forEach(c => {
+            if (!c.querySelector('.alert')) c.remove();
         });
     },
 

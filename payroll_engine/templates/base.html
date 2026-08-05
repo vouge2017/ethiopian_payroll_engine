@@ -219,15 +219,12 @@
         </div>
         {% endif %}
 
-        <!-- Flash Messages -->
+        <!-- Flash Messages → Toast -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-            <div class="{% if current_user.is_authenticated %}px-4 pt-4{% else %}container{% endif %}">
+            <div class="flash-toast d-none">
                 {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show animate-fade-in" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
+                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
                 {% endfor %}
             </div>
             {% endif %}

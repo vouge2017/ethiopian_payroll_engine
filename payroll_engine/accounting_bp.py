@@ -54,20 +54,20 @@ def _generate_journal_entries(run_id, company_id):
         if not emp:
             continue
         
-        total_gross += ps.gross_pay or Decimal('0')
+        total_gross += ps.gross_salary or Decimal('0')
         total_tax += ps.tax or Decimal('0')
-        total_pension_emp += ps.pension_employee or Decimal('0')
-        total_pension_empr += ps.pension_employer or Decimal('0')
+        total_pension_emp += ps.employee_pension or Decimal('0')
+        total_pension_empr += ps.employer_pension or Decimal('0')
         total_net += ps.net_pay or Decimal('0')
         
         entries.append({
             'employee_id': emp.employee_id,
             'employee_name': emp.name,
             'department': emp.department or '',
-            'gross': ps.gross_pay or Decimal('0'),
+            'gross': ps.gross_salary or Decimal('0'),
             'tax': ps.tax or Decimal('0'),
-            'pension_employee': ps.pension_employee or Decimal('0'),
-            'pension_employer': ps.pension_employer or Decimal('0'),
+            'pension_employee': ps.employee_pension or Decimal('0'),
+            'pension_employer': ps.employer_pension or Decimal('0'),
             'net_pay': ps.net_pay or Decimal('0'),
         })
     

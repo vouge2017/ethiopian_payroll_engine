@@ -8,39 +8,36 @@
 
 ## What's missing (the 3.5 points)
 
-### 1. Integration Test (+0.5 points) 🔲 NEXT
+### 1. Integration Test (+0.5 points) ✅ DONE (2026-08-03)
 
 **One test that proves the entire flow works end-to-end.**
 
-Upload → Calculate → Review (trust components) → Approve → Generate ERCA → Generate Bank File → Mark Filed
-
-Currently each component is unit-tested with mocks. No test proves they work together.
-
-**Build:**
-- [ ] `tests/test_integration_payroll_flow.py`
-- [ ] Uses real SQLite database (not mocks)
-- [ ] Creates company, employees, payroll run
-- [ ] Verifies Change Summary, Narrative, Evidence, Exceptions
-- [ ] Approves payroll
-- [ ] Generates ERCA report
-- [ ] Generates bank file
-- [ ] Marks as filed
-- [ ] Verifies numbers at each step
+**Built:** `tests/test_integration_payroll_flow.py` (271 lines, 2 test cases, 24+ assertions)
+- [x] Uses real SQLite database (not mocks)
+- [x] Creates company, employees, payroll run
+- [x] Verifies Change Summary, Narrative, Evidence, Exceptions
+- [x] Verifies Rule Source, Filing Workspace, Accounting Export, Bank File
+- [x] Marks as filed and verifies
+- [x] Tests blocking issues prevent approval
+- [x] Runs in 5 seconds, no real database needed
 
 ---
 
-### 2. Caching (+0.5 points) 🔲
+### 2. Caching (+0.5 points) ✅ DONE (2026-08-06)
 
 **Dashboard loads in <500ms regardless of company size.**
 
-Currently: every dashboard load computes Change Summary, Narrative, Evidence, Exceptions, Filing from scratch. At 500 employees, this will be slow.
+**Built:**
+- [x] Cache Change Summary result per run_id (TTL: 5 minutes)
+- [x] Cache Evidence result per run_id (TTL: 5 minutes)
+- [x] Cache Exception result per run_id (TTL: 5 minutes)
+- [x] Cache Narrative per run_id (TTL: 5 minutes)
+- [x] Cache Filing Workspace per run_id (TTL: 5 minutes)
+- [x] Invalidate cache on: payroll approve, lock, unlock, undo, employee CRUD, spreadsheet save
+- [x] Cache-Control headers: trust data = private/max-age=300, mutations = no-store
+- [x] 23 tests for cache behavior
 
-**Build:**
-- [ ] Cache Change Summary result per run_id (TTL: 5 minutes)
-- [ ] Cache Evidence result per run_id (TTL: 5 minutes)
-- [ ] Cache Exception result per run_id (TTL: 5 minutes)
-- [ ] Invalidate cache when payroll is approved or employee data changes
-- [ ] Add cache headers to API responses
+**Files:** `payroll_engine/trust_cache.py`, wired into `cockpit.py` and `api.py`
 
 ---
 

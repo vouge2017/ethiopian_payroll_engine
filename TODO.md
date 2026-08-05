@@ -58,16 +58,20 @@
 
 ---
 
-### 4. Rate Limiting on Dashboard API (+0.3 points) 🔲
+### 4. Rate Limiting on Dashboard API (+0.3 points) ✅ DONE (2026-08-06)
 
-**Prevent dashboard API from being hammered.**
+**Prevent API endpoints from being hammered.**
 
-Currently: no rate limit on `/payroll/api/dashboard` or `/payroll/api/cockpit`.
+**Built:**
+- [x] `/api/v1/payroll-runs/<id>/review`: 30/min (REST API, expensive compute)
+- [x] `/payroll/api/cockpit`: 60/min (JSON API, aggregated)
+- [x] `/payroll/api/dashboard`: 60/min (JSON API)
+- [x] HTML pages intentionally NOT rate-limited (login-protected, cached)
+- [x] Auth already rate-limited: login 5/min, register 10/min
+- [x] Write endpoints already rate-limited: 10-30/min
+- [x] 11 tests verifying correct behavior
 
-**Build:**
-- [ ] Add `@limiter.limit('30 per minute')` to dashboard API
-- [ ] Add `@limiter.limit('10 per minute')` to cockpit API
-- [ ] Return 429 with retry-after header
+**Note:** Flask-Limiter uses in-memory storage (resets on restart). For multi-worker, switch to Redis storage.
 
 ---
 

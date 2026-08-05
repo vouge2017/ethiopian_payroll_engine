@@ -1,164 +1,170 @@
-# TODO — Trust Architecture Roadmap
+# TODO — Accountant Operating System Roadmap
 
 **Last updated:** 2026-08-05
-**Philosophy:** Stop thinking in features. Think in Trust Layers.
-
-Every layer answers one question an accountant asks before trusting the system.
+**Philosophy:** The product is not a toolbox. It's a guided workflow that leads the accountant through their entire month-end process with confidence.
 
 ---
 
-## Layer 1 — Visibility: "What changed?" ✅ IN PROGRESS
-
-| Pattern | Status | File |
-|---|---|---|
-| Change Summary | ✅ Implemented (20 tests) | `payroll_engine/change_summary.py` |
-| Payroll Narrative | 🔲 Not started | New file: `payroll_engine/narrative.py` |
-
-**Remaining:**
-- [ ] Wire Change Summary into payroll review template
-- [ ] API endpoint: `GET /api/v1/payroll-runs/<id>/changes`
-- [ ] Payroll Narrative — generate plain-English paragraph from Change Summary
-
----
-
-## Layer 2 — Explanation: "Why did it change?" 🔲
-
-| Pattern | Status | File |
-|---|---|---|
-| Variance Explanation | 🔲 Not started | New file: `payroll_engine/variance.py` |
-| Per-employee drill-down | 🔲 Not started | Template update |
-
-**What to build:**
-- [ ] For each employee with salary change, generate explanation:
-  - "Salary increased from ETB 10,000 to ETB 12,000 because of promotion (approved by HR on 2026-07-15)"
-- [ ] Aggregate explanations into human-readable breakdown:
-  - "Net payroll increased by ETB 43,500: 3 promotions (+18,000), overtime (+14,200), 2 new hires (+8,000), transport allowance (+3,300)"
-- [ ] Link to audit log entries for each change
-- [ ] API endpoint: `GET /api/v1/payroll-runs/<id>/explanation`
-
----
-
-## Layer 3 — Confidence: "Can I trust this?" 🔲
-
-| Pattern | Status | File |
-|---|---|---|
-| Confidence Score | 🔶 Compliance score exists, needs trust layer | `payroll_engine/compliance.py` |
-| Validation Checklist | 🔲 Not started | New file: `payroll_engine/confidence.py` |
-
-**What to build:**
-- [ ] Confidence score = weighted checklist of system checks:
-  - No validation errors (25%)
-  - Tax rules current (20%)
-  - Pension calculated correctly (20%)
-  - No unusual salary variance (15%)
-  - All employees reviewed (10%)
-  - Filing deadline not passed (10%)
-- [ ] Display as percentage with green/yellow/red
-- [ ] Show which checks passed and which failed
-- [ ] API endpoint: `GET /api/v1/payroll-runs/<id>/confidence`
-
----
-
-## Layer 4 — Filing: "Am I ready to submit?" 🔲
-
-| Pattern | Status | File |
-|---|---|---|
-| Filing Workspace | 🔶 FilingRecord model exists | `payroll_engine/models.py` |
-| Filing Progress Tracker | 🔲 Not started | New template: `filing_workspace.html` |
-
-**What to build:**
-- [ ] Single page showing all filing readiness:
-  - Payroll: ✅ Complete
-  - Tax Report: ✅ Ready
-  - Pension Report: ✅ Ready
-  - Bank File: ✅ Ready
-  - Submission Deadline: 3 days remaining
-- [ ] "Generate Filing Package" button (all files in one download)
-- [ ] Deadline countdown with color coding
-- [ ] Mark as filed with confirmation number
-
----
-
-## Layer 5 — Recovery: "What if I'm wrong?" 🔲
-
-| Pattern | Status | File |
-|---|---|---|
-| Undo with time window | 🔶 Undo exists, no time window | `payroll_bp.py` line 700 |
-| Adjustment workflow | 🔶 Adjustment payslip exists | `payroll_bp.py` line 821 |
-
-**What to build:**
-- [ ] Time-bounded undo: "Undo available until 2:43 PM"
-- [ ] Clear messaging: "After that, create Adjustment Payroll"
-- [ ] Adjustment payslip with mandatory reason field
-- [ ] Show adjustment history on original payslip
-- [ ] No contradictory messaging
-
----
-
-## Layer 6 — Narrative: "Tell me the story" 🔲
-
-| Pattern | Status | File |
-|---|---|---|
-| Payroll Narrative | 🔲 Not started | New file: `payroll_engine/narrative.py` |
-
-**What to build:**
-- [ ] Generate plain-English paragraph from Change Summary:
-  > "August payroll includes 128 employees, 2 new hires, 1 resignation, 3 promotions, 12 overtime claims, and no tax rule changes. Total payroll increased by 1.4%, primarily because of overtime and new hires. No unusual variances were detected."
-- [ ] Include on dashboard, payroll review, and filing workspace
-- [ ] API endpoint: `GET /api/v1/payroll-runs/<id>/narrative`
-
----
-
-## The Cockpit Dashboard 🔲
-
-**The landing page answers 5 questions in under 10 seconds:**
-
-1. **What needs my attention today?** → Action items, deadlines, errors
-2. **What changed since last payroll?** → Change Summary (Layer 1)
-3. **Is anything unusual?** → Variance flags (Layer 2)
-4. **Am I ready to file?** → Filing readiness (Layer 4)
-5. **What is blocking me?** → Validation errors, missing data
-
-**Status:** 🔲 Not started
-**File:** New template: `cockpit.html`
-
----
-
-## Priority Order
-
-| # | What | Layer | Why first |
-|---|---|---|---|
-| 1 | Wire Change Summary into payroll review | 1 | Already built, just needs UI |
-| 2 | Payroll Narrative | 6 | Highest impact per line of code |
-| 3 | Variance Explanation | 2 | Explains the "why" behind changes |
-| 4 | Confidence Score | 3 | Builds trust before approval |
-| 5 | Filing Workspace | 4 | Turns reports into guided workflow |
-| 6 | Recovery improvements | 5 | Removes fear of mistakes |
-| 7 | Cockpit Dashboard | All | Combines all layers into one view |
-
----
-
-## Completed (for reference)
-
-- [x] Trust Design System defined (5 patterns, 489 lines)
-- [x] Experience Review completed (716 lines, 12 findings)
-- [x] Customer Journey Blueprint (2,073 lines)
-- [x] Friction Patterns catalog (1,129 lines)
-- [x] Trust Pattern #1: Change Summary (20 tests)
-- [x] Webhook events (7 total with retry)
-- [x] Accounting exports (QuickBooks, Xero, Peachtree, CSV)
-- [x] API endpoints (19 total including accounting + bank file)
-- [x] Backup/restore test suite (38 tests)
-
----
-
-## Long-term Vision
+## Architecture
 
 ```
-Payroll Engine → Knowledge Platform → Trust Platform
-     ↓                  ↓                   ↓
-  Computes          Proves it's         Explains it
-  correctly         legally correct     understandably
+Ethiopian Payroll Platform
+
+┌────────────────────┐
+│  Payroll Engine     │ ← Correct calculations (DONE)
+│  Calculates payroll │
+└────────────────────┘
+        │
+        ▼
+┌────────────────────┐
+│  Knowledge Platform │ ← Verified source of truth (DONE)
+│  Laws, rules, tests │
+└────────────────────┘
+        │
+        ▼
+┌────────────────────┐
+│  Trust Platform     │ ← Explains payroll (IN PROGRESS)
+│  Change summaries,  │
+│  confidence, filing │
+└────────────────────┘
+        │
+        ▼
+┌────────────────────┐
+│  Accountant OS      │ ← Guides monthly work (NEXT)
+│  Workspaces,        │
+│  guided workflows,  │
+│  exception handling │
+└────────────────────┘
 ```
 
-The Trust Platform is the product differentiator. Anyone can build a payroll calculator. Nobody in Ethiopia has built one that accountants actually trust.
+---
+
+## Phase 1 — Payroll Review Workspace 🔲
+
+**The most important screen in the product.**
+
+Everything the accountant needs to review and approve payroll in one view.
+
+| Section | Content | Status |
+|---|---|---|
+| Executive Summary | Employee count, net payroll, delta %, status badge | 🔲 |
+| Payroll Narrative | Plain-English paragraph explaining what happened | 🔲 (engine exists in change_summary.py) |
+| What Changed | New hires, departures, salary changes, overtime, leave | ✅ (change_summary.py — needs UI) |
+| Attention Items | Salary variances >20%, missing data, negative adjustments | 🔲 (variance logic exists, needs exception classification) |
+| Confidence Score | Weighted checklist: validation, tax, pension, variance, review | 🔲 |
+| Next Action | "Ready for Approval" with Approve button | 🔶 (exists, needs trust context) |
+
+**Files to create/modify:**
+- [ ] `payroll_engine/narrative.py` — Generate plain-English summary from Change Summary
+- [ ] `payroll_engine/exceptions.py` — Classify issues by severity (Critical/High/Medium/Low)
+- [ ] `payroll_engine/confidence.py` — Weighted confidence score from system checks
+- [ ] `payroll_engine/templates/payroll_review_workspace.html` — Single-page review experience
+- [ ] `payroll_engine/payroll_bp.py` — Wire all components into review route
+- [ ] API: `GET /api/v1/payroll-runs/<id>/review` — Returns all workspace data
+
+---
+
+## Phase 2 — Trust Layer 🔲
+
+**The accountant can verify every number.**
+
+| Component | Description | Status |
+|---|---|---|
+| Confidence Score | Weighted % from system checks | 🔲 |
+| Compliance Status | Filing deadline, pension deadline, payment deadline | 🔶 (compliance.py exists) |
+| Audit Evidence | Link every number to source (employee record, rule, approval) | 🔲 |
+| Validation Report | List of all checks that passed/failed | 🔲 |
+
+---
+
+## Phase 3 — Filing Workspace 🔲
+
+**Guides the accountant through month-end filing.**
+
+| Step | Status |
+|---|---|
+| Payroll Complete | 🔶 (status tracked) |
+| ERCA Report Ready | 🔶 (export exists) |
+| Pension Report Ready | 🔶 (export exists) |
+| Bank File Ready | 🔶 (export exists) |
+| Submission Deadline | 🔶 (deadlines configurable) |
+| Mark as Filed | 🔶 (FilingRecord model exists) |
+
+**Gap:** No single workspace that shows all steps together. Each is scattered across different pages.
+
+---
+
+## Phase 4 — Recovery Workspace 🔲
+
+**The accountant knows they can fix mistakes.**
+
+| Component | Status |
+|---|---|
+| Time-bounded Undo | 🔶 (undo exists, no time window) |
+| Adjustment Payroll | 🔶 (adjustment payslip exists) |
+| Audit Trail | ✅ (hash-chained audit log) |
+| Clear Messaging | 🔲 ("Undo until 2:43 PM, then create adjustment") |
+
+---
+
+## Phase 5 — Accountant Cockpit 🔲
+
+**The landing page answers 5 questions in 10 seconds.**
+
+1. What needs my attention today?
+2. What changed since last payroll?
+3. Is anything unusual?
+4. Am I ready to file?
+5. What is blocking me?
+
+---
+
+## Exception Intelligence
+
+**Every payroll run classifies issues by severity.**
+
+| Level | Example | Action |
+|---|---|---|
+| Critical | Payroll cannot be approved | Block approval |
+| High | Large unexplained variance (>20%) | Require review |
+| Medium | Missing bank account | Warning, allow proceed |
+| Low | New employee, first payroll | Informational |
+
+**File:** `payroll_engine/exceptions.py` (new)
+
+---
+
+## Priority
+
+| # | What | Why |
+|---|---|---|
+| 1 | **Payroll Narrative** | Highest impact per line of code. Turns numbers into story. |
+| 2 | **Exception Classification** | Prioritizes what deserves attention. |
+| 3 | **Confidence Score** | Builds trust before approval. |
+| 4 | **Payroll Review Workspace** | Combines all Phase 1 into one screen. |
+| 5 | **Filing Workspace** | Guides month-end filing. |
+| 6 | **Recovery Workspace** | Removes fear of mistakes. |
+| 7 | **Accountant Cockpit** | Combines everything into landing page. |
+
+---
+
+## What to STOP building
+
+Per the strategic direction: **pause unrelated engineering features** unless they unblock production.
+
+- ❌ No more webhook events
+- ❌ No more API endpoints for the sake of API endpoints
+- ❌ No more export formats
+- ❌ No more infrastructure improvements
+
+✅ Focus entirely on the workspaces and trust layers.
+
+---
+
+## Validation Gate
+
+After completing Phases 1-3, conduct **usability sessions with real Ethiopian accountants**.
+
+The question is not "does it work?" but "do they prefer it over Excel?"
+
+That's the point where the product is merely correct vs genuinely preferred.

@@ -8,6 +8,28 @@ from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLo
 
 api = Blueprint('api', __name__)
 
+
+@api.after_request
+def add_cache_headers(response):
+    """Add Cache-Control headers to API responses.
+
+    - Trust data (review, cockpit): private, max-age=300 (5 min, matches trust_cache TTL)
+    - Mutations (POST/PUT/DELETE): no-store
+    - Other GET: private, max-age=60
+    """
+    if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    # Trust data endpoints — cache for 5 minutes
+    endpoint = request.endpoint or ''
+    if 'review' in endpoint or 'cockpit' in endpoint or 'dashboard' in endpoint:
+        response.headers['Cache-Control'] = 'private, max-age=300'
+    else:
+        response.headers['Cache-Control'] = 'private, max-age=60'
+
+    return response
+
 def _extract_bearer_token():
     """Extract Bearer token from Authorization header, or None."""
     auth = request.headers.get('Authorization', '')
@@ -215,6 +237,8 @@ def create_employee():
     )
     db.session.add(emp)
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_get_company_id())
     return jsonify({'id': emp.id, 'employee_id': emp.employee_id}), 201
 
 
@@ -267,6 +291,8 @@ def update_employee(emp_id):
         else:
             emp.fayda_fin = None
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_get_company_id())
     return jsonify({'id': emp.id, 'employee_id': emp.employee_id})
 
 
@@ -280,6 +306,8 @@ def delete_employee(emp_id):
     try:
         db.session.delete(emp)
         db.session.commit()
+        from payroll_engine import trust_cache
+        trust_cache.invalidate_trust_cache(_get_company_id())
     except IntegrityError:
         db.session.rollback()
         return jsonify({
@@ -704,15 +732,34 @@ def get_payroll_review(run_id):
     from payroll_engine.narrative import generate_narrative
     from payroll_engine.exceptions import classify_exceptions
     from payroll_engine.evidence import collect_evidence
+    from payroll_engine import trust_cache
 
     cid = _get_company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
 
-    # Compute all trust components
-    change = compute_change_summary(run_id, cid, db, trust_models)
-    narrative = generate_narrative(change) if change else 'No data available.'
-    evidence = collect_evidence(run_id, cid, db, trust_models, change)
-    exceptions = classify_exceptions(run_id, cid, db, trust_models, change)
+    # Try cache first, compute on miss
+    change = trust_cache.get_change_summary(run_id, cid)
+    if change is None:
+        change = compute_change_summary(run_id, cid, db, trust_models)
+        if change:
+            trust_cache.put_change_summary(run_id, cid, change)
+
+    narrative = trust_cache.get_narrative(run_id, cid)
+    if narrative is None:
+        narrative = generate_narrative(change) if change else 'No data available.'
+        trust_cache.put_narrative(run_id, cid, narrative)
+
+    evidence = trust_cache.get_evidence(run_id, cid)
+    if evidence is None:
+        evidence = collect_evidence(run_id, cid, db, trust_models, change)
+        if evidence:
+            trust_cache.put_evidence(run_id, cid, evidence)
+
+    exceptions = trust_cache.get_exceptions(run_id, cid)
+    if exceptions is None:
+        exceptions = classify_exceptions(run_id, cid, db, trust_models, change)
+        if exceptions:
+            trust_cache.put_exceptions(run_id, cid, exceptions)
 
     # Serialize
     def serialize_signal(s):

@@ -17,6 +17,7 @@ from payroll_engine.change_summary import compute_change_summary
 from payroll_engine.narrative import generate_narrative
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
+from payroll_engine import trust_cache
 
 
 @dataclass
@@ -203,10 +204,21 @@ def build_cockpit(company_id, db, models):
     # ─────────────────────────────────────────
 
 
-    change_summary = compute_change_summary(latest_run.id, company_id, db, models)
+    # Try cache first, compute on miss
+    change_summary = trust_cache.get_change_summary(latest_run.id, company_id)
+    if change_summary is None:
+        change_summary = compute_change_summary(latest_run.id, company_id, db, models)
+        if change_summary:
+            trust_cache.put_change_summary(latest_run.id, company_id, change_summary)
+
     if change_summary:
         cockpit.change_summary_available = True
-        cockpit.narrative = generate_narrative(change_summary)
+        # Narrative — try cache
+        narrative = trust_cache.get_narrative(latest_run.id, company_id)
+        if narrative is None:
+            narrative = generate_narrative(change_summary)
+            trust_cache.put_narrative(latest_run.id, company_id, narrative)
+        cockpit.narrative = narrative
         cockpit.headcount_change = change_summary.headcount_change
         cockpit.gross_delta_pct = change_summary.gross_delta_pct
     else:
@@ -247,7 +259,11 @@ def build_cockpit(company_id, db, models):
     # ─────────────────────────────────────────
 
 
-    filing = build_filing_workspace(latest_run.id, company_id, db, models)
+    filing = trust_cache.get_filing_workspace(latest_run.id, company_id)
+    if filing is None:
+        filing = build_filing_workspace(latest_run.id, company_id, db, models)
+        if filing:
+            trust_cache.put_filing_workspace(latest_run.id, company_id, filing)
     if filing:
         cockpit.filing_steps = filing.steps
         cockpit.filing_all_done = filing.all_filed
@@ -258,7 +274,11 @@ def build_cockpit(company_id, db, models):
     # ─────────────────────────────────────────
 
 
-    exceptions = classify_exceptions(latest_run.id, company_id, db, models, change_summary)
+    exceptions = trust_cache.get_exceptions(latest_run.id, company_id)
+    if exceptions is None:
+        exceptions = classify_exceptions(latest_run.id, company_id, db, models, change_summary)
+        if exceptions:
+            trust_cache.put_exceptions(latest_run.id, company_id, exceptions)
     if exceptions.has_blocking:
         cockpit.has_blocking = True
         for issue in exceptions.blocking_issues:

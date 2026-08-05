@@ -385,6 +385,8 @@ def edit_employee(emp_id):
         )
 
         db.session.commit()
+        from payroll_engine import trust_cache
+        trust_cache.invalidate_trust_cache(_company_id())
 
         if changes:
             # Fire webhook for significant changes

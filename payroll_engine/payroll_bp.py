@@ -15,6 +15,7 @@ import zipfile
 from datetime import date, datetime, timezone, timedelta
 
 from payroll_engine import db
+from payroll_engine import trust_cache
 from payroll_engine.models import (
     Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
     PayrollValidationResult, OvertimeEntry, FinalSettlement,
@@ -315,6 +316,28 @@ INLINE_PDF_CAP_DOWNLOAD = 100  # ~2.8s at 28ms/PDF — still within timeout
 def payroll_require_login():
     """All payroll routes require login."""
     pass
+
+
+@payroll_bp.after_request
+def add_cache_headers(response):
+    """Add Cache-Control headers to payroll responses.
+
+    - JSON API endpoints (dashboard, cockpit): private, max-age=300
+    - Mutations (POST): no-store
+    - HTML pages: no-cache (always fresh for user-facing pages)
+    """
+    if request.method == 'POST':
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    # JSON API endpoints — cache for 5 minutes
+    if response.content_type and 'application/json' in response.content_type:
+        response.headers['Cache-Control'] = 'private, max-age=300'
+    else:
+        # HTML pages — no-cache (user should always see fresh data)
+        response.headers['Cache-Control'] = 'no-cache'
+
+    return response
 
 
 
@@ -831,6 +854,7 @@ def approve_payroll():
             pass
 
         flash(result.message, 'success')
+        trust_cache.invalidate_trust_cache(_company_id())
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
     else:
         if result.error:
@@ -914,6 +938,7 @@ def undo_approval(run_id):
     )
     db.session.add(log)
     db.session.commit()
+    trust_cache.invalidate_trust_cache(_company_id())
 
     flash(f'Payroll {run.reference} undone. {len(payslips)} payslips deleted. Status reverted to review.', 'success')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
@@ -1292,6 +1317,7 @@ def payroll_spreadsheet():
                 db.session.add(ded)
 
         db.session.commit()
+        trust_cache.invalidate_trust_cache(_company_id())
 
         if action == 'calculate':
             flash('Changes saved. Review calculations below.', 'success')
@@ -1557,6 +1583,7 @@ def lock_payroll(run_id):
         details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
     )
     db.session.commit()
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Period {run.period} is now locked. No further changes allowed.', 'success')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
@@ -1585,6 +1612,7 @@ def unlock_payroll(run_id):
         details={'run_id': run.id, 'period': run.period, 'reference': run.reference}
     )
     db.session.commit()
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Period {run.period} unlocked. You can now create a correction run.', 'warning')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 

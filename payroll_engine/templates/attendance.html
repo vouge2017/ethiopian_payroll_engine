@@ -89,7 +89,7 @@
                     <tbody>
                         {% for att in data.records|sort(attribute='date', reverse=true) %}
                         <tr>
-                            <td>{{ att.date.strftime('%a, %b %d') }}</td>
+                            <td>{{ eth_date(att.date) }}</td>
                             <td class="text-end fw-semibold">{{ "%.1f"|format(att.hours_worked) }}h</td>
                             <td class="text-end">
                                 {% if att.hours_worked >= 8 %}

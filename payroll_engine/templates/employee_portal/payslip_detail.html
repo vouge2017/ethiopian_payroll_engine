@@ -7,7 +7,7 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="mb-0">
                     <a href="{{ url_for('portal.my_payslips') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
-                    Payslip — {{ payslip.generated_at.strftime('%B %Y') }}
+                    Payslip — {{ eth_only(payslip.generated_at) }}
                 </h3>
                 {% if payslip.pdf_file_path %}
                 <a href="{{ url_for('payroll.download_payslip', payslip_id=payslip.id) }}" class="btn btn-success">
@@ -22,7 +22,7 @@
                     </button>
                 </form>
                 {% else %}
-                <span class="badge bg-success ms-2"><i class="bi bi-check-circle me-1"></i>Acknowledged {{ payslip_acknowledged.acknowledged_at.strftime('%Y-%m-%d') }}</span>
+                <span class="badge bg-success ms-2"><i class="bi bi-check-circle me-1"></i>Acknowledged {{ eth_date(payslip_acknowledged.acknowledged_at) }}</span>
                 {% endif %}
             </div>
 
@@ -37,8 +37,8 @@
                         </div>
                         <div class="col-6 text-end">
                             <p class="small mb-1 opacity-75">{{ _('period') }}</p>
-                            <h5 class="mb-0">{{ payslip.generated_at.strftime('%B %Y') }}</h5>
-                            <small class="opacity-75">{{ _('generated') }}: {{ payslip.generated_at.strftime('%Y-%m-%d') }}</small>
+                            <h5 class="mb-0">{{ eth_only(payslip.generated_at) }}</h5>
+                            <small class="opacity-75">{{ _('generated') }}: {{ eth_date(payslip.generated_at) }}</small>
                         </div>
                     </div>
                     <div class="row mt-3 pt-2" style="border-top: 1px solid rgba(255,255,255,0.3);">
@@ -67,8 +67,8 @@
                             <strong>ID:</strong> {{ employee.employee_id }}
                         </div>
                         <div class="col-6 text-end">
-                            <strong>{{ _('period') }}:</strong> {{ payslip.generated_at.strftime('%B %Y') }}<br>
-                            <strong>Generated:</strong> {{ payslip.generated_at.strftime('%Y-%m-%d') }}
+                            <strong>{{ _('period') }}:</strong> {{ eth_only(payslip.generated_at) }}<br>
+                            <strong>Generated:</strong> {{ eth_date(payslip.generated_at) }}
                         </div>
                     </div>
                 </div>

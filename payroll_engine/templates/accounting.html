@@ -28,8 +28,8 @@
                         {% for run in runs %}
                         <tr>
                             <td><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') }}</code></td>
-                            <td>{{ run.period or run.run_date.strftime('%B %Y') }}</td>
-                            <td>{{ run.run_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ run.period or eth_only(run.run_date) }}</td>
+                            <td>{{ eth_date(run.run_date) }}</td>
                             <td class="text-end">{{ run.payslips|length }}</td>
                             <td>
                                 <a href="{{ url_for('accounting.preview_journal', run_id=run.id) }}" class="btn btn-sm btn-ghost">

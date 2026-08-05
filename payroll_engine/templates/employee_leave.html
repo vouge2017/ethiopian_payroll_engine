@@ -198,7 +198,7 @@
                                             {{ leave.leave_type|title }}
                                         </span>
                                     </td>
-                                    <td>{{ leave.start_date.strftime('%d %b') }} - {{ leave.end_date.strftime('%d %b %Y') }}</td>
+                                    <td>{{ eth_date(leave.start_date) }} - {{ eth_date(leave.end_date) }}</td>
                                     <td>{{ leave.days_requested }}</td>
                                     <td>
                                         {% if leave.status == 'pending' %}
@@ -209,7 +209,7 @@
                                         <span class="badge badge-danger">Rejected</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ leave.applied_at.strftime('%d %b %Y') }}</td>
+                                    <td>{{ eth_date(leave.applied_at) }}</td>
                                     <td>
                                         {% if leave.status == 'pending' %}
                                         <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" style="display:inline">

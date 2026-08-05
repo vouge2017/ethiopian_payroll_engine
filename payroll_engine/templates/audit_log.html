@@ -37,7 +37,7 @@
                         {% for log in logs %}
                         <tr>
                             <td>
-                                <small class="text-muted">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                <small class="text-muted">{{ eth_date(log.timestamp) }} {{ log.timestamp.strftime('%H:%M') }}</small>
                             </td>
                             <td>
                                 {% if 'salary' in log.action %}

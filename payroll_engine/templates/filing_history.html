@@ -35,7 +35,7 @@
                             </span>
                         </td>
                         <td>{{ r.period }}</td>
-                        <td>{{ r.filed_at.strftime('%Y-%m-%d %H:%M') if r.filed_at else '' }}</td>
+                        <td>{{ eth_date(r.filed_at) if r.filed_at else '' }}</td>
                         <td>{{ r.user.email if r.user else '—' }}</td>
                         <td><code>{{ r.confirmation_number or '—' }}</code></td>
                         <td class="text-muted small">{{ r.notes or '' }}</td>

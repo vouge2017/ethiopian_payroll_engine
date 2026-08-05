@@ -5,37 +5,37 @@
 {% block title %}Dashboard — {{ cockpit.company_name }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6 max-w-5xl" id="cockpit">
+<div class="p-4 p-md-5" id="cockpit" style="max-width: 960px; margin: 0 auto;">
 
   <!-- Header -->
-  <div class="flex items-center justify-between mb-8">
+  <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">{{ cockpit.company_name }}</h1>
-      <p class="text-gray-500">
+      <h2 class="fw-bold mb-1">{{ cockpit.company_name }}</h2>
+      <p class="text-muted mb-0">
         {% if cockpit.period %}Period: {{ cockpit.period }} · {% endif %}
         Updated: {{ cockpit.last_updated }}
       </p>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="d-flex align-items-center gap-2">
       {% if cockpit.status == 'ready' %}
-        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
-          ✓ {{ cockpit.status_message }}
+        <span id="status-badge" class="badge badge-success fs-6 px-3 py-2">
+          <i class="bi bi-check-circle me-1"></i> {{ cockpit.status_message }}
         </span>
       {% elif cockpit.status == 'blocked' %}
-        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800">
-          ✕ {{ cockpit.status_message }}
+        <span id="status-badge" class="badge badge-danger fs-6 px-3 py-2">
+          <i class="bi bi-x-circle me-1"></i> {{ cockpit.status_message }}
         </span>
       {% elif cockpit.status == 'attention' %}
-        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-          ⚠ {{ cockpit.status_message }}
+        <span id="status-badge" class="badge badge-warning fs-6 px-3 py-2">
+          <i class="bi bi-exclamation-circle me-1"></i> {{ cockpit.status_message }}
         </span>
       {% else %}
-        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+        <span id="status-badge" class="badge bg-secondary fs-6 px-3 py-2">
           {{ cockpit.status_message }}
         </span>
       {% endif %}
-      <button onclick="refreshCockpit()" class="p-2 text-gray-400 hover:text-gray-600" title="Refresh">
-        ↻
+      <button onclick="refreshCockpit()" class="btn btn-ghost btn-sm" title="Refresh">
+        <i class="bi bi-arrow-clockwise"></i>
       </button>
     </div>
   </div>
@@ -44,208 +44,209 @@
   <!-- Q1: What needs my attention? -->
   <!-- ═══════════════════════════════════════════ -->
 
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-      <span class="text-red-500">🔔</span> What needs my attention?
-    </h2>
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-bell text-danger me-2"></i>What needs my attention?</h5>
 
-    {% if cockpit.attention_items %}
-    <div class="space-y-3" id="attention-list">
-      {% for item in cockpit.attention_items %}
-      <div class="attention-item flex items-start gap-3 p-3 rounded-lg transition-all
-        {% if item.priority == 'urgent' %}bg-red-50 border border-red-200
-        {% elif item.priority == 'important' %}bg-yellow-50 border border-yellow-200
-        {% else %}bg-gray-50 border border-gray-200{% endif %}"
-        data-key="{{ item.key or '' }}">
-        <span class="flex-shrink-0 mt-0.5">
-          {% if item.priority == 'urgent' %}🔴{% elif item.priority == 'important' %}🟡{% else %}🔵{% endif %}
-        </span>
-        <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium text-gray-800">{{ item.title }}</div>
-          <div class="text-xs text-gray-500">{{ item.description }}</div>
+      {% if cockpit.attention_items %}
+      <div id="attention-list">
+        {% for item in cockpit.attention_items %}
+        <div class="attention-item d-flex align-items-start gap-3 p-3 rounded-3 mb-2
+          {% if item.priority == 'urgent' %}bg-danger-subtle border border-danger-subtle
+          {% elif item.priority == 'important' %}bg-warning-subtle border border-warning-subtle
+          {% else %}bg-body-tertiary border{% endif %}"
+          data-key="{{ item.key or '' }}">
+          <span class="flex-shrink-0 mt-1">
+            {% if item.priority == 'urgent' %}<i class="bi bi-exclamation-octagon-fill text-danger"></i>
+            {% elif item.priority == 'important' %}<i class="bi bi-exclamation-triangle-fill text-warning"></i>
+            {% else %}<i class="bi bi-info-circle-fill text-primary"></i>{% endif %}
+          </span>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="fw-semibold small">{{ item.title }}</div>
+            <div class="text-muted small">{{ item.description }}</div>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            {% if item.action_url %}
+            <a href="{{ item.action_url }}" class="btn btn-sm btn-outline-primary">
+              {{ item.action_label or 'View' }} <i class="bi bi-arrow-right"></i>
+            </a>
+            {% endif %}
+            {% if item.key %}
+            <button onclick="dismissItem('{{ item.key }}', this)"
+                    class="btn btn-sm btn-ghost text-muted" title="Dismiss">
+              <i class="bi bi-x"></i>
+            </button>
+            {% endif %}
+          </div>
         </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          {% if item.action_url %}
-          <a href="{{ item.action_url }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
-            {{ item.action_label or 'View' }} →
-          </a>
-          {% endif %}
-          {% if item.key %}
-          <button onclick="dismissItem('{{ item.key }}', this)"
-                  class="text-gray-400 hover:text-gray-600 text-xs px-2 py-1 rounded hover:bg-gray-100"
-                  title="Dismiss">
-            ✕
-          </button>
-          {% endif %}
-        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% else %}
+      <p class="text-muted small mb-0" id="attention-empty">Nothing needs attention right now.</p>
+      {% endif %}
     </div>
-    {% else %}
-    <p class="text-sm text-gray-500" id="attention-empty">Nothing needs attention right now.</p>
-    {% endif %}
   </div>
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- Q2: What changed? -->
   <!-- ═══════════════════════════════════════════ -->
 
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-      <span class="text-blue-500">📊</span> What changed?
-    </h2>
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart text-primary me-2"></i>What changed?</h5>
 
-    <p class="text-sm text-gray-700 leading-relaxed" id="narrative">{{ cockpit.narrative }}</p>
+      <p class="text-body" id="narrative">{{ cockpit.narrative }}</p>
 
-    {% if cockpit.change_summary_available %}
-    <div class="mt-4 flex items-center gap-6 text-sm">
-      <div>
-        <span class="text-gray-400">Employees:</span>
-        <span class="font-medium text-gray-800">{{ cockpit.employee_count }}</span>
-        {% if cockpit.headcount_change != 0 %}
-        <span class="{% if cockpit.headcount_change > 0 %}text-green-600{% else %}text-red-600{% endif %}">
-          ({{ cockpit.headcount_change }}+)
-        </span>
-        {% endif %}
+      {% if cockpit.change_summary_available %}
+      <div class="d-flex gap-4 mt-3 small">
+        <div>
+          <span class="text-muted">Employees:</span>
+          <span class="fw-semibold">{{ cockpit.employee_count }}</span>
+          {% if cockpit.headcount_change != 0 %}
+          <span class="{% if cockpit.headcount_change > 0 %}text-success{% else %}text-danger{% endif %}">
+            ({{ cockpit.headcount_change }}+)
+          </span>
+          {% endif %}
+        </div>
+        <div>
+          <span class="text-muted">Payroll change:</span>
+          <span class="fw-semibold {% if cockpit.gross_delta_pct > 0 %}text-success{% elif cockpit.gross_delta_pct < 0 %}text-danger{% endif %}">
+            {{ cockpit.gross_delta_pct }}%
+          </span>
+        </div>
       </div>
-      <div>
-        <span class="text-gray-400">Payroll change:</span>
-        <span class="font-medium {% if cockpit.gross_delta_pct > 0 %}text-green-600{% elif cockpit.gross_delta_pct < 0 %}text-red-600{% else %}text-gray-800{% endif %}">
-          {{ cockpit.gross_delta_pct }}%
-        </span>
-      </div>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- Q3: Is anything unusual? -->
   <!-- ═══════════════════════════════════════════ -->
 
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-      <span class="text-yellow-500">⚠</span> Is anything unusual?
-    </h2>
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Is anything unusual?</h5>
 
-    {% if cockpit.has_unusual %}
-    <div class="space-y-2" id="unusual-list">
-      {% for item in cockpit.unusual_items %}
-      <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-        <span class="text-yellow-500 flex-shrink-0">⚠</span>
-        <div class="flex-1">
-          <div class="text-sm font-medium text-gray-800">{{ item.title }}</div>
-          <div class="text-xs text-gray-500">{{ item.description }}</div>
+      {% if cockpit.has_unusual %}
+      <div id="unusual-list">
+        {% for item in cockpit.unusual_items %}
+        <div class="d-flex align-items-start gap-3 p-3 rounded-3 mb-2 bg-warning-subtle border border-warning-subtle">
+          <i class="bi bi-exclamation-triangle text-warning flex-shrink-0 mt-1"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">{{ item.title }}</div>
+            <div class="text-muted small">{{ item.description }}</div>
+          </div>
+          {% if item.action_url %}
+          <a href="{{ item.action_url }}" class="btn btn-sm btn-outline-primary flex-shrink-0">
+            {{ item.action_label or 'Review' }} <i class="bi bi-arrow-right"></i>
+          </a>
+          {% endif %}
         </div>
-        {% if item.action_url %}
-        <a href="{{ item.action_url }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
-          {{ item.action_label or 'Review' }} →
-        </a>
-        {% endif %}
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% else %}
+      <p class="text-muted small mb-0" id="unusual-empty">No unusual variances or anomalies detected.</p>
+      {% endif %}
     </div>
-    {% else %}
-    <p class="text-sm text-gray-500" id="unusual-empty">No unusual variances or anomalies detected.</p>
-    {% endif %}
   </div>
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- Q4: Am I ready to file? -->
   <!-- ═══════════════════════════════════════════ -->
 
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-      <span class="text-purple-500">📁</span> Am I ready to file?
-    </h2>
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-folder text-purple me-2" style="color: #8b5cf6;"></i>Am I ready to file?</h5>
 
-    {% if cockpit.filing_steps %}
-    <div class="space-y-2" id="filing-steps">
-      {% for step in cockpit.filing_steps %}
-      <div class="flex items-center gap-3 py-2 {% if not loop.last %}border-b border-gray-100{% endif %}">
-        {% if step.status == 'filed' %}
-          <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs">✓</span>
-        {% elif step.status == 'ready' %}
-          <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs">→</span>
-        {% elif step.status == 'overdue' %}
-          <span class="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs">!</span>
-        {% else %}
-          <span class="w-6 h-6 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs">○</span>
-        {% endif %}
-        <div class="flex-1">
-          <span class="text-sm text-gray-800">{{ step.name }}</span>
-          <span class="text-xs text-gray-400 ml-1">{{ step.name_am }}</span>
-        </div>
-        <div class="text-right">
+      {% if cockpit.filing_steps %}
+      <div id="filing-steps">
+        {% for step in cockpit.filing_steps %}
+        <div class="d-flex align-items-center gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
           {% if step.status == 'filed' %}
-            <span class="text-xs text-green-600 font-medium">Filed</span>
-          {% elif step.status == 'overdue' %}
-            <span class="text-xs text-red-600 font-medium">Overdue</span>
+            <span class="badge bg-success-subtle text-success rounded-circle p-2"><i class="bi bi-check"></i></span>
           {% elif step.status == 'ready' %}
-            {% if step.action_url %}
-              <a href="{{ step.action_url }}" class="text-xs text-blue-600 font-medium hover:text-blue-800">
-                {{ step.action_label or 'Generate' }} →
-              </a>
-            {% endif %}
+            <span class="badge bg-primary-subtle text-primary rounded-circle p-2"><i class="bi bi-arrow-right"></i></span>
+          {% elif step.status == 'overdue' %}
+            <span class="badge bg-danger-subtle text-danger rounded-circle p-2"><i class="bi bi-exclamation"></i></span>
           {% else %}
-            <span class="text-xs text-gray-400">{{ step.detail or 'Waiting' }}</span>
+            <span class="badge bg-secondary-subtle text-secondary rounded-circle p-2"><i class="bi bi-circle"></i></span>
           {% endif %}
+          <div class="flex-grow-1">
+            <span class="small">{{ step.name }}</span>
+            <span class="text-muted small ms-1">{{ step.name_am }}</span>
+          </div>
+          <div class="text-end">
+            {% if step.status == 'filed' %}
+              <span class="badge badge-success">Filed</span>
+            {% elif step.status == 'overdue' %}
+              <span class="badge badge-danger">Overdue</span>
+            {% elif step.status == 'ready' %}
+              {% if step.action_url %}
+                <a href="{{ step.action_url }}" class="btn btn-sm btn-outline-primary">
+                  {{ step.action_label or 'Generate' }} <i class="bi bi-arrow-right"></i>
+                </a>
+              {% endif %}
+            {% else %}
+              <span class="text-muted small">{{ step.detail or 'Waiting' }}</span>
+            {% endif %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
 
-    {% if cockpit.filing_all_done %}
-    <div class="mt-3 p-3 bg-green-50 rounded-lg text-center">
-      <span class="text-green-600 text-sm font-medium">✓ All filings complete for this period.</span>
-    </div>
-    {% endif %}
+      {% if cockpit.filing_all_done %}
+      <div class="alert alert-success text-center mt-3 mb-0 py-2">
+        <i class="bi bi-check-circle me-1"></i> All filings complete for this period.
+      </div>
+      {% endif %}
 
-    {% else %}
-    <p class="text-sm text-gray-500">No filing data available. Complete payroll first.</p>
-    {% endif %}
+      {% else %}
+      <p class="text-muted small mb-0">No filing data available. Complete payroll first.</p>
+      {% endif %}
+    </div>
   </div>
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- Q5: What is blocking me? -->
   <!-- ═══════════════════════════════════════════ -->
 
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-      <span class="text-red-500">🚧</span> What is blocking me?
-    </h2>
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-cone-striped text-danger me-2"></i>What is blocking me?</h5>
 
-    {% if cockpit.has_blocking %}
-    <div class="space-y-3" id="blocking-list">
-      {% for item in cockpit.blocking_items %}
-      <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
-        <span class="text-red-500 flex-shrink-0">🔴</span>
-        <div class="flex-1">
-          <div class="text-sm font-medium text-gray-800">{{ item.title }}</div>
-          <div class="text-xs text-gray-500">{{ item.description }}</div>
+      {% if cockpit.has_blocking %}
+      <div id="blocking-list">
+        {% for item in cockpit.blocking_items %}
+        <div class="d-flex align-items-start gap-3 p-3 rounded-3 mb-2 bg-danger-subtle border border-danger-subtle">
+          <i class="bi bi-x-octagon-fill text-danger flex-shrink-0 mt-1"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">{{ item.title }}</div>
+            <div class="text-muted small">{{ item.description }}</div>
+          </div>
+          {% if item.action_url %}
+          <a href="{{ item.action_url }}" class="btn btn-sm btn-danger flex-shrink-0">
+            {{ item.action_label or 'Fix' }} <i class="bi bi-arrow-right"></i>
+          </a>
+          {% endif %}
         </div>
-        {% if item.action_url %}
-        <a href="{{ item.action_url }}" class="flex-shrink-0 text-sm font-medium text-red-600 hover:text-red-800">
-          {{ item.action_label or 'Fix' }} →
-        </a>
-        {% endif %}
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% else %}
+      <p class="text-muted small mb-0" id="blocking-empty">Nothing is blocking you. All systems operational.</p>
+      {% endif %}
     </div>
-    {% else %}
-    <p class="text-sm text-gray-500" id="blocking-empty">Nothing is blocking you. All systems operational.</p>
-    {% endif %}
   </div>
 
   <!-- Quick Actions -->
-  <div class="flex items-center justify-center gap-4 mt-8">
-    <a href="/payroll/upload" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700">
-      Create Payroll
+  <div class="d-flex justify-content-center gap-3 mt-4">
+    <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary px-4">
+      <i class="bi bi-cloud-upload me-1"></i> Create Payroll
     </a>
-    <a href="/employees" class="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200">
-      Manage Employees
+    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-ghost px-4">
+      <i class="bi bi-people me-1"></i> Manage Employees
     </a>
-    <a href="/reports" class="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200">
-      Reports
+    <a href="{{ url_for('reports.reports') }}" class="btn btn-ghost px-4">
+      <i class="bi bi-bar-chart-line me-1"></i> Reports
     </a>
   </div>
 
@@ -295,12 +296,14 @@ function refreshCockpit() {
       // Update status badge
       const badge = document.getElementById('status-badge');
       if (badge) {
-        badge.textContent = data.status_message;
-        badge.className = 'inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ' +
-          (data.status === 'ready' ? 'bg-green-100 text-green-800' :
-           data.status === 'blocked' ? 'bg-red-100 text-red-800' :
-           data.status === 'attention' ? 'bg-yellow-100 text-yellow-800' :
-           'bg-gray-100 text-gray-800');
+        const icon = data.status === 'ready' ? 'bi-check-circle' :
+                     data.status === 'blocked' ? 'bi-x-circle' :
+                     data.status === 'attention' ? 'bi-exclamation-circle' : 'bi-info-circle';
+        const cls = data.status === 'ready' ? 'badge-success' :
+                    data.status === 'blocked' ? 'badge-danger' :
+                    data.status === 'attention' ? 'badge-warning' : 'bg-secondary';
+        badge.className = `badge ${cls} fs-6 px-3 py-2`;
+        badge.innerHTML = `<i class="bi ${icon} me-1"></i> ${data.status_message}`;
       }
     })
     .catch(err => console.error('Refresh failed:', err));

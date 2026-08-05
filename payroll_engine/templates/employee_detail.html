@@ -109,7 +109,7 @@
             <div class="card">
                 <div class="card-body text-center">
                     <h6 class="text-muted">{{ _('start_date') }}</h6>
-                    <p class="mb-0">{{ employee.start_date or 'Not set' }}</p>
+                    <p class="mb-0">{{ eth_date(employee.start_date) if employee.start_date else 'Not set' }}</p>
                 </div>
             </div>
         </div>
@@ -528,7 +528,7 @@
                     <tbody>
                         {% for p in payslips %}
                         <tr>
-                            <td>{{ p.generated_at.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ eth_only(p.generated_at) }}</td>
                             <td>{{ '%.2f'|format(p.gross_salary) }}</td>
                             <td>{{ '%.2f'|format(p.tax) }}</td>
                             <td>{{ '%.2f'|format(p.employee_pension) }}</td>

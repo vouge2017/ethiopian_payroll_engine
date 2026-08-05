@@ -177,7 +177,7 @@
                 <div class="card-body">
                     <div class="alert alert-info mb-3">
                         <i class="bi bi-info-circle me-2"></i>
-                        Sent to bank on {{ run.disbursed_at.strftime('%Y-%m-%d %H:%M') if run.disbursed_at else 'N/A' }}.
+                        Sent to bank on {{ eth_date(run.disbursed_at) if run.disbursed_at else 'N/A' }}.
                         {% if run.disbursement_notes %}
                         <br>Notes: {{ run.disbursement_notes }}
                         {% endif %}

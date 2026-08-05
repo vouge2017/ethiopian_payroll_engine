@@ -402,7 +402,7 @@
                         {% for run in recent_runs %}
                         <tr>
                             <td><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</code></td>
-                            <td>{{ run.period or run.run_date.strftime('%B %Y') }}</td>
+                            <td>{{ run.period or eth_only(run.run_date) }}</td>
                             <td>
                                 {% if run.status == 'completed' %}<span class="badge badge-success">Completed</span>
                                 {% elif run.status == 'locked' %}<span class="badge bg-dark">Locked</span>

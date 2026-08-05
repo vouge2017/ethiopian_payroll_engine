@@ -15,7 +15,7 @@
                 {% for run in all_completed_runs %}
                 <option value="{{ run.id }}" {% if selected_run_id == run.id %}selected{% endif %}>
                     {{ run.reference or ('PR-' + run.run_date.strftime('%Y-%m') + '-%03d'|format(run.id)) }}
-                    — {{ run.period or run.run_date.strftime('%B %Y') }}
+                    — {{ run.period or eth_only(run.run_date) }}
                     ({{ run.payslips|length }} employees)
                 </option>
                 {% endfor %}

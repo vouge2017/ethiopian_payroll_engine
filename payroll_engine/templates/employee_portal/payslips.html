@@ -28,7 +28,7 @@
                     <tbody>
                         {% for p in payslips %}
                         <tr>
-                            <td>{{ p.generated_at.strftime('%B %Y') }}</td>
+                            <td>{{ eth_only(p.generated_at) }}</td>
                             <td>{{ '%.2f'|format(p.gross_salary) }}</td>
                             <td>{{ '%.2f'|format(p.tax) }}</td>
                             <td>{{ '%.2f'|format(p.employee_pension) }}</td>

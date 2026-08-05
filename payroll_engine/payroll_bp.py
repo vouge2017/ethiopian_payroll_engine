@@ -44,6 +44,7 @@ from payroll_engine.evidence import collect_evidence
 from payroll_engine.filing_workspace import build_filing_workspace
 from payroll_engine.cockpit import build_cockpit
 from payroll_engine.cockpits import build_role_cockpit
+from payroll_engine.dashboard_api import get_dashboard_data
 
 
 payroll_bp = Blueprint('payroll', __name__)
@@ -464,6 +465,19 @@ def role_dashboard():
         return redirect(url_for('payroll.payroll_upload'))
 
     return render_template('role_dashboard.html', dashboard=data, year=date.today().year)
+
+
+@payroll_bp.route('/payroll/api/dashboard')
+@login_required
+def api_dashboard():
+    """Dashboard API — JSON with metrics, trends, widgets.
+
+    Used by role dashboard for dynamic updates and drill-down.
+    """
+    cid = _company_id()
+    from payroll_engine import models as dash_models
+    data = get_dashboard_data(current_user, cid, db, dash_models)
+    return jsonify(data)
 
 
 @payroll_bp.route('/payroll/api/cockpit')

@@ -36,6 +36,12 @@ from payroll_engine.services.payroll_workflow import (
 )
 from payroll_engine.validation import validate_payroll_data, get_summary
 
+# Trust Architecture components
+from payroll_engine.change_summary import compute_change_summary
+from payroll_engine.narrative import generate_narrative
+from payroll_engine.exceptions import classify_exceptions
+from payroll_engine.evidence import collect_evidence
+
 
 payroll_bp = Blueprint('payroll', __name__)
 
@@ -1870,6 +1876,47 @@ def payroll_run_detail(run_id):
         id=run_id, company_id=_company_id()
     ).first_or_404()
     return render_template('payroll_results.html', run=run, year=date.today().year)
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>/review')
+@login_required
+def payroll_review_workspace(run_id):
+    """Payroll Review Workspace — unified trust view.
+
+    Combines: Story → Evidence → Issues → Resolution → Approval
+    """
+    cid = _company_id()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+
+    # Import models module for trust components
+    from payroll_engine import models as trust_models
+
+    # 1. Change Summary — what changed
+    change_summary = compute_change_summary(run_id, cid, db, trust_models)
+
+    # 2. Narrative — plain-English story
+    narrative = generate_narrative(change_summary) if change_summary else 'No data available.'
+
+    # 3. Evidence — trust signals
+    evidence = collect_evidence(run_id, cid, db, trust_models, change_summary)
+
+    # 4. Exceptions — issues with resolution
+    exceptions = classify_exceptions(run_id, cid, db, trust_models, change_summary)
+
+    # Sorted issues for display (critical first)
+    sorted_issues = exceptions.sorted_issues()
+
+    return render_template(
+        'payroll_review_workspace.html',
+        run=run,
+        narrative=narrative,
+        evidence=evidence,
+        exceptions=exceptions,
+        sorted_issues=sorted_issues,
+        change_summary=change_summary,
+        can_approve=exceptions.can_approve,
+        year=date.today().year,
+    )
 
 
 @payroll_bp.route('/payroll/batch-pdf/<batch_id>/status')

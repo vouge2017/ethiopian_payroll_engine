@@ -667,6 +667,73 @@ def get_accounting_export(run_id):
     return resp
 
 
+# --- Payroll Review Workspace API ---
+
+@api.route('/payroll-runs/<int:run_id>/review', methods=['GET'])
+@api_token_or_login_required
+@company_required
+@api_role_required('owner', 'accountant')
+def get_payroll_review(run_id):
+    """Payroll Review Workspace — all trust data in one API call.
+
+    Returns: narrative, evidence, exceptions, change summary, can_approve.
+    """
+    from payroll_engine import models as trust_models
+    from payroll_engine.change_summary import compute_change_summary
+    from payroll_engine.narrative import generate_narrative
+    from payroll_engine.exceptions import classify_exceptions
+    from payroll_engine.evidence import collect_evidence
+
+    cid = _get_company_id()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+
+    # Compute all trust components
+    change = compute_change_summary(run_id, cid, db, trust_models)
+    narrative = generate_narrative(change) if change else 'No data available.'
+    evidence = collect_evidence(run_id, cid, db, trust_models, change)
+    exceptions = classify_exceptions(run_id, cid, db, trust_models, change)
+
+    # Serialize
+    def serialize_signal(s):
+        return {'name': s.name, 'status': s.status, 'category': s.category,
+                'explanation': s.explanation, 'source': s.source, 'detail': s.detail,
+                'blocking': s.blocking}
+
+    def serialize_issue(i):
+        return {'severity': i.severity, 'code': i.code, 'title': i.title,
+                'description': i.description, 'employee_id': i.employee_id,
+                'employee_name': i.employee_name, 'blocking': i.blocking,
+                'impact': i.impact, 'cause': i.cause,
+                'recommendation': i.recommendation, 'action_url': i.action_url,
+                'estimated_time': i.estimated_time}
+
+    return jsonify({
+        'run_id': run.id,
+        'period': run.period,
+        'reference': run.reference,
+        'status': run.status,
+        'narrative': narrative,
+        'can_approve': exceptions.can_approve,
+        'evidence': {
+            'total': evidence.total,
+            'passed': len(evidence.passed),
+            'failed': len(evidence.failed),
+            'warned': len(evidence.warned),
+            'pass_rate': round(evidence.pass_rate, 1),
+            'signals': [serialize_signal(s) for s in evidence.signals],
+        },
+        'exceptions': {
+            'total': exceptions.total,
+            'critical': len(exceptions.critical),
+            'high': len(exceptions.high),
+            'medium': len(exceptions.medium),
+            'low': len(exceptions.low),
+            'summary': exceptions.summary,
+            'issues': [serialize_issue(i) for i in exceptions.sorted_issues()],
+        },
+    })
+
+
 # --- Bank File API ---
 
 @api.route('/payroll-runs/<int:run_id>/bank-file', methods=['GET'])

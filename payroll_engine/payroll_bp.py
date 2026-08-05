@@ -502,6 +502,7 @@ def role_dashboard():
 
 @payroll_bp.route('/payroll/api/dashboard')
 @login_required
+@limiter.limit('60 per minute')
 def api_dashboard():
     """Dashboard API — JSON with metrics, trends, widgets.
 
@@ -515,6 +516,7 @@ def api_dashboard():
 
 @payroll_bp.route('/payroll/api/cockpit')
 @login_required
+@limiter.limit('60 per minute')
 def api_cockpit():
     """Cockpit API — returns JSON for dynamic updates.
 

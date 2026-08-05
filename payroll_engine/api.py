@@ -726,6 +726,7 @@ def get_accounting_export(run_id):
 @api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
+@limiter.limit('30 per minute')
 def get_payroll_review(run_id):
     """Payroll Review Workspace — all trust data in one API call.
 

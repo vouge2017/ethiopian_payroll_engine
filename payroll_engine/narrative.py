@@ -125,28 +125,18 @@ def _delta_text(summary):
     direction = 'increased' if pct > 0 else 'decreased'
     magnitude = abs(pct)
 
-    # Determine primary reason
-    reasons = []
-    if summary.new_hires:
-        n = len(summary.new_hires)
-        suffix = 's' if n != 1 else ''
-        reasons.append(f'{n} new hire{suffix}')
-    if summary.salary_changes:
-        reasons.append('salary changes')
-    if summary.overtime_entries:
-        reasons.append('overtime')
-    if summary.departures:
-        reasons.append('departures')
-    if summary.adjustments:
-        reasons.append('adjustments')
+    # Top 2 reasons by priority: new hires > salary changes > overtime > departures
+    reason_map = [
+        ('new hires', len(summary.new_hires)),
+        ('salary changes', len(summary.salary_changes)),
+        ('overtime', len(summary.overtime_entries)),
+        ('departures', len(summary.departures)),
+        ('adjustments', len(summary.adjustments)),
+    ]
+    top = [name for name, count in reason_map if count > 0][:2]
 
-    if reasons:
-        if len(reasons) == 1:
-            reason_text = f'primarily because of {reasons[0]}'
-        elif len(reasons) == 2:
-            reason_text = f'primarily because of {reasons[0]} and {reasons[1]}'
-        else:
-            reason_text = f'primarily because of {", ".join(reasons[:-1])}, and {reasons[-1]}'
+    if top:
+        reason_text = 'primarily because of ' + (' and '.join(top) if len(top) == 2 else top[0])
     else:
         reason_text = 'due to individual pay changes'
 

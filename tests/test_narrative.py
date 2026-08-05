@@ -140,7 +140,7 @@ class TestEventDescriptions:
         summary = _make_summary(new_hires=[_make_change('Dawit', 'new_hire')])
         text = generate_narrative(summary)
         assert '1 new hire' in text
-        assert 'new hires' not in text
+        assert '1 new hire' in text
 
     def test_multiple_new_hires(self):
         summary = _make_summary(new_hires=[

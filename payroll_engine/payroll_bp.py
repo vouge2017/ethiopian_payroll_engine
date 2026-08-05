@@ -43,6 +43,7 @@ from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.evidence import collect_evidence
 from payroll_engine.filing_workspace import build_filing_workspace
 from payroll_engine.cockpit import build_cockpit
+from payroll_engine.cockpits import build_role_cockpit
 
 
 payroll_bp = Blueprint('payroll', __name__)
@@ -442,6 +443,27 @@ def cockpit():
         return redirect(url_for('payroll.payroll_upload'))
 
     return render_template('cockpit.html', cockpit=data, year=date.today().year)
+
+
+@payroll_bp.route('/payroll/dashboard')
+@login_required
+def role_dashboard():
+    """Role-based dashboard — shows different views based on user role.
+
+    Owner:    Business view — costs, compliance, filing
+    Accountant: Payroll view — calculations, tax, filing, exceptions
+    HR:       People view — headcount, leave, employee data
+    Employee: Self-service — payslip, leave, profile
+    """
+    cid = _company_id()
+    from payroll_engine import models as dash_models
+    data = build_role_cockpit(current_user, cid, db, dash_models)
+
+    if not data:
+        flash('Unable to load dashboard.', 'danger')
+        return redirect(url_for('payroll.payroll_upload'))
+
+    return render_template('role_dashboard.html', dashboard=data, year=date.today().year)
 
 
 @payroll_bp.route('/payroll/api/cockpit')

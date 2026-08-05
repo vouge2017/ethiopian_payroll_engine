@@ -594,3 +594,138 @@ def bulk_import_employees():
         'errors': errors[:20],
         'total_errors': len(errors),
     })
+
+
+# --- Accounting Export API ---
+
+@api.route('/payroll-runs/<int:run_id>/accounting', methods=['GET'])
+@api_token_or_login_required
+@company_required
+@api_role_required('owner', 'accountant')
+def get_accounting_export(run_id):
+    """Get journal entries for a payroll run.
+
+    GET /api/v1/payroll-runs/<id>/accounting?format=json
+
+    format: json (default), csv, iif, xero, peachtree
+    """
+    from payroll_engine.accounting_bp import _generate_journal_entries
+    from flask import Response
+    import csv
+    import io
+
+    cid = _get_company_id()
+    journal = _generate_journal_entries(run_id, cid)
+
+    if not journal:
+        return jsonify({'error': 'No payslips found for this run'}), 404
+
+    fmt = request.args.get('format', 'json')
+
+    if fmt == 'json':
+        # Serialize Decimal values
+        def serialize(obj):
+            if hasattr(obj, '__float__'):
+                return float(obj)
+            return obj
+
+        result = {
+            'reference': journal['reference'],
+            'period': journal['period'],
+            'date': journal['date'],
+            'company': journal['company'],
+            'balanced': journal['balanced'],
+            'totals': {k: float(v) for k, v in journal['totals'].items()},
+            'journal_lines': [
+                {**l, 'debit': float(l['debit']), 'credit': float(l['credit'])}
+                for l in journal['journal_lines']
+            ],
+            'entries': [
+                {**e, 'gross': float(e['gross']), 'tax': float(e['tax']),
+                 'pension_employee': float(e['pension_employee']),
+                 'pension_employer': float(e['pension_employer']),
+                 'net_pay': float(e['net_pay'])}
+                for e in journal['entries']
+            ],
+        }
+        return jsonify(result)
+
+    # CSV/IIF/Xero/Peachtree — return as file download
+    from payroll_engine.accounting_bp import (
+        _export_generic_csv, _export_quickbooks_iif, _export_xero, _export_peachtree
+    )
+    exporters = {
+        'csv': _export_generic_csv,
+        'iif': _export_quickbooks_iif,
+        'xero': _export_xero,
+        'peachtree': _export_peachtree,
+    }
+    if fmt not in exporters:
+        return jsonify({'error': f'Unknown format: {fmt}. Use: json, csv, iif, xero, peachtree'}), 400
+
+    resp = exporters[fmt](journal)
+    return resp
+
+
+# --- Bank File API ---
+
+@api.route('/payroll-runs/<int:run_id>/bank-file', methods=['GET'])
+@api_token_or_login_required
+@company_required
+@api_role_required('owner', 'accountant')
+def get_bank_file(run_id):
+    """Generate bank bulk payment file for a payroll run.
+
+    GET /api/v1/payroll-runs/<id>/bank-file?bank=cbe&format=csv
+
+    bank: cbe, dashen, awash, boa, wegagen, nib, bunna, telebirr
+    format: csv (default), xlsx
+    """
+    from payroll_engine.bank_file import generate_csv, generate_xlsx, validate_payroll_for_bank
+
+    cid = _get_company_id()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+
+    if run.status not in ('completed', 'locked'):
+        return jsonify({'error': 'Run must be completed before generating bank file'}), 400
+
+    payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
+    if not payslips:
+        return jsonify({'error': 'No payslips found'}), 404
+
+    bank = request.args.get('bank', 'cbe')
+    fmt = request.args.get('format', 'csv')
+
+    # Build payment data
+    payments = []
+    for ps in payslips:
+        emp = ps.employee
+        if not emp:
+            continue
+        payments.append({
+            'employee_id': emp.employee_id,
+            'employee_name': emp.name,
+            'account_number': emp.bank_or_telebirr or '',
+            'amount': float(ps.net_pay or 0),
+            'bank': bank,
+        })
+
+    # Validate
+    errors = validate_payroll_for_bank(payments, bank)
+    if errors:
+        return jsonify({'error': 'Validation failed', 'details': errors[:10]}), 400
+
+    if fmt == 'xlsx':
+        xlsx_data = generate_xlsx(payments, bank)
+        return Response(
+            xlsx_data,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={'Content-Disposition': f'attachment; filename=bank_{bank}_{run.reference}.xlsx'}
+        )
+    else:
+        csv_data = generate_csv(payments, bank)
+        return Response(
+            csv_data,
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=bank_{bank}_{run.reference}.csv'}
+        )

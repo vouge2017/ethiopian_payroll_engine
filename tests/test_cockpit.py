@@ -59,18 +59,21 @@ def _setup(company, runs=None, employees=None):
     mock_db = MagicMock()
     mock_models = MagicMock()
 
-    # Company lookup
+    # Company lookup — use a dict to simulate session.get
     def session_get(model, id):
         if id == company.id:
             return company
         return None
-    mock_db.session.get.side_effect = session_get
+    mock_session = MagicMock()
+    mock_session.get.side_effect = session_get
+    mock_db.session = mock_session
 
-    # Runs
-    if runs:
-        mock_models.PayrollRun.query.filter_by.return_value.filter.return_value.order_by.return_value.first.return_value = runs[0]
-    else:
-        mock_models.PayrollRun.query.filter_by.return_value.filter.return_value.order_by.return_value.first.return_value = None
+    # Runs — set up the full chain
+    mock_chain = MagicMock()
+    mock_chain.first.return_value = runs[0] if runs else None
+    mock_models.PayrollRun.query.filter_by.return_value = mock_chain
+    mock_chain.filter.return_value = mock_chain
+    mock_chain.order_by.return_value = mock_chain
 
     # Employees
     mock_models.Employee.query.filter_by.return_value.all.return_value = employees or []

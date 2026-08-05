@@ -444,6 +444,76 @@ def cockpit():
     return render_template('cockpit.html', cockpit=data, year=date.today().year)
 
 
+@payroll_bp.route('/payroll/api/cockpit')
+@login_required
+def api_cockpit():
+    """Cockpit API — returns JSON for dynamic updates.
+
+    Used by the cockpit page for polling and inline actions.
+    """
+    cid = _company_id()
+    from payroll_engine import models as cockpit_models
+    data = build_cockpit(cid, db, cockpit_models)
+
+    if not data:
+        return jsonify({'error': 'Unable to load cockpit data'}), 500
+
+    def serialize_attention(item):
+        return {
+            'priority': item.priority,
+            'title': item.title,
+            'description': item.description,
+            'action_url': item.action_url,
+            'action_label': item.action_label,
+        }
+
+    return jsonify({
+        'company_name': data.company_name,
+        'period': data.period,
+        'last_updated': data.last_updated,
+        'status': data.status,
+        'status_message': data.status_message,
+        'attention_items': [serialize_attention(i) for i in data.attention_items],
+        'narrative': data.narrative,
+        'change_summary_available': data.change_summary_available,
+        'employee_count': data.employee_count,
+        'headcount_change': data.headcount_change,
+        'gross_delta_pct': data.gross_delta_pct,
+        'has_unusual': data.has_unusual,
+        'unusual_items': [serialize_attention(i) for i in data.unusual_items],
+        'filing_steps': [{
+            'name': s.name, 'name_am': s.name_am, 'status': s.status,
+            'deadline': s.deadline, 'days_remaining': s.days_remaining,
+            'action_url': s.action_url, 'action_label': s.action_label,
+        } for s in data.filing_steps],
+        'filing_ready': data.filing_ready,
+        'filing_all_done': data.filing_all_done,
+        'has_blocking': data.has_blocking,
+        'blocking_items': [serialize_attention(i) for i in data.blocking_items],
+    })
+
+
+@payroll_bp.route('/payroll/api/cockpit/dismiss', methods=['POST'])
+@login_required
+def api_cockpit_dismiss():
+    """Dismiss an attention item.
+
+    Stores dismissed items so they don't reappear.
+    """
+    data = request.get_json()
+    item_key = data.get('key') if data else None
+    if not item_key:
+        return jsonify({'error': 'Missing item key'}), 400
+
+    # Store in session for now (persistent storage would use a DB table)
+    dismissed = session.get('cockpit_dismissed', [])
+    if item_key not in dismissed:
+        dismissed.append(item_key)
+        session['cockpit_dismissed'] = dismissed
+
+    return jsonify({'dismissed': item_key})
+
+
 @payroll_bp.route('/payroll', methods=['GET', 'POST'])
 @login_required
 @role_required('owner', 'accountant')

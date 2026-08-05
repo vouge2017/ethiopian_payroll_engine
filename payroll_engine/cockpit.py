@@ -27,6 +27,8 @@ class AttentionItem:
     description: str
     action_url: Optional[str] = None
     action_label: Optional[str] = None
+    key: Optional[str] = None  # Unique key for dismiss tracking
+    score: int = 0      # Priority score (higher = more urgent)
 
 
 @dataclass
@@ -106,10 +108,14 @@ def build_cockpit(company_id, db, models):
         cockpit.attention_items.append(AttentionItem(
             priority='urgent',
             title='No payroll runs',
+            key='no_payroll',
+            score=200,
             description='Create your first payroll run to start using the system.',
             action_url='/payroll/upload',
             action_label='Create Payroll',
         ))
+        # Sort by priority score (highest first)
+        cockpit.attention_items.sort(key=lambda x: x.score, reverse=True)
         return cockpit
 
     cockpit.period = latest_run.period or str(latest_run.run_date)
@@ -129,6 +135,8 @@ def build_cockpit(company_id, db, models):
         cockpit.attention_items.append(AttentionItem(
             priority='urgent',
             title='Payroll draft incomplete',
+            key='draft_payroll',
+            score=100,
             description=f'Payroll for {cockpit.period} is still in draft. Complete and approve it.',
             action_url=f'/payroll/runs/{latest_run.id}/review',
             action_label='Review Payroll',
@@ -139,6 +147,8 @@ def build_cockpit(company_id, db, models):
         cockpit.attention_items.append(AttentionItem(
             priority='important',
             title='Payroll ready for approval',
+            key='ready_for_approval',
+            score=80,
             description=f'Payroll for {cockpit.period} has been calculated. Review and approve.',
             action_url=f'/payroll/runs/{latest_run.id}/review',
             action_label='Review & Approve',
@@ -159,6 +169,8 @@ def build_cockpit(company_id, db, models):
         cockpit.attention_items.append(AttentionItem(
             priority='important',
             title=f'{len(missing_data)} employee(s) with incomplete data',
+            key='missing_data',
+            score=60,
             description=f'Missing: {"; ".join(missing_data[:3])}' + (f' and {len(missing_data)-3} more' if len(missing_data) > 3 else ''),
             action_url='/employees',
             action_label='Review Employees',
@@ -274,5 +286,10 @@ def build_cockpit(company_id, db, models):
     else:
         cockpit.status = 'ready'
         cockpit.status_message = 'Everything looks good. No action needed.'
+
+    # Sort by priority score (highest first)
+    cockpit.attention_items.sort(key=lambda x: x.score, reverse=True)
+    cockpit.unusual_items.sort(key=lambda x: x.score, reverse=True)
+    cockpit.blocking_items.sort(key=lambda x: x.score, reverse=True)
 
     return cockpit

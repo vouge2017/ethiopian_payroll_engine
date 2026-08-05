@@ -1,11 +1,11 @@
 <!-- Accountant Cockpit — Landing Page -->
-<!-- Answers 5 questions in 10 seconds -->
+<!-- Answers 5 questions in 10 seconds. Supports inline actions and polling. -->
 
 {% extends "base.html" %}
 {% block title %}Dashboard — {{ cockpit.company_name }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6 max-w-5xl">
+<div class="container mx-auto px-4 py-6 max-w-5xl" id="cockpit">
 
   <!-- Header -->
   <div class="flex items-center justify-between mb-8">
@@ -18,22 +18,25 @@
     </div>
     <div class="flex items-center gap-3">
       {% if cockpit.status == 'ready' %}
-        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
+        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800">
           ✓ {{ cockpit.status_message }}
         </span>
       {% elif cockpit.status == 'blocked' %}
-        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800">
+        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-red-100 text-red-800">
           ✕ {{ cockpit.status_message }}
         </span>
       {% elif cockpit.status == 'attention' %}
-        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
           ⚠ {{ cockpit.status_message }}
         </span>
       {% else %}
-        <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+        <span id="status-badge" class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
           {{ cockpit.status_message }}
         </span>
       {% endif %}
+      <button onclick="refreshCockpit()" class="p-2 text-gray-400 hover:text-gray-600" title="Refresh">
+        ↻
+      </button>
     </div>
   </div>
 
@@ -47,32 +50,39 @@
     </h2>
 
     {% if cockpit.attention_items %}
-    <div class="space-y-3">
+    <div class="space-y-3" id="attention-list">
       {% for item in cockpit.attention_items %}
-      <div class="flex items-start gap-3 p-3 rounded-lg
+      <div class="attention-item flex items-start gap-3 p-3 rounded-lg transition-all
         {% if item.priority == 'urgent' %}bg-red-50 border border-red-200
         {% elif item.priority == 'important' %}bg-yellow-50 border border-yellow-200
-        {% else %}bg-gray-50 border border-gray-200{% endif %}">
-        <span class="flex-shrink-0 mt-0.5
-          {% if item.priority == 'urgent' %}text-red-500
-          {% elif item.priority == 'important' %}text-yellow-500
-          {% else %}text-gray-400{% endif %}">
+        {% else %}bg-gray-50 border border-gray-200{% endif %}"
+        data-key="{{ item.key or '' }}">
+        <span class="flex-shrink-0 mt-0.5">
           {% if item.priority == 'urgent' %}🔴{% elif item.priority == 'important' %}🟡{% else %}🔵{% endif %}
         </span>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-medium text-gray-800">{{ item.title }}</div>
           <div class="text-xs text-gray-500">{{ item.description }}</div>
         </div>
-        {% if item.action_url %}
-        <a href="{{ item.action_url }}" class="flex-shrink-0 text-sm font-medium text-blue-600 hover:text-blue-800">
-          {{ item.action_label or 'View' }} →
-        </a>
-        {% endif %}
+        <div class="flex items-center gap-2 flex-shrink-0">
+          {% if item.action_url %}
+          <a href="{{ item.action_url }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">
+            {{ item.action_label or 'View' }} →
+          </a>
+          {% endif %}
+          {% if item.key %}
+          <button onclick="dismissItem('{{ item.key }}', this)"
+                  class="text-gray-400 hover:text-gray-600 text-xs px-2 py-1 rounded hover:bg-gray-100"
+                  title="Dismiss">
+            ✕
+          </button>
+          {% endif %}
+        </div>
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <p class="text-sm text-gray-500">Nothing needs attention right now.</p>
+    <p class="text-sm text-gray-500" id="attention-empty">Nothing needs attention right now.</p>
     {% endif %}
   </div>
 
@@ -85,7 +95,7 @@
       <span class="text-blue-500">📊</span> What changed?
     </h2>
 
-    <p class="text-sm text-gray-700 leading-relaxed">{{ cockpit.narrative }}</p>
+    <p class="text-sm text-gray-700 leading-relaxed" id="narrative">{{ cockpit.narrative }}</p>
 
     {% if cockpit.change_summary_available %}
     <div class="mt-4 flex items-center gap-6 text-sm">
@@ -118,7 +128,7 @@
     </h2>
 
     {% if cockpit.has_unusual %}
-    <div class="space-y-2">
+    <div class="space-y-2" id="unusual-list">
       {% for item in cockpit.unusual_items %}
       <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
         <span class="text-yellow-500 flex-shrink-0">⚠</span>
@@ -135,7 +145,7 @@
       {% endfor %}
     </div>
     {% else %}
-    <p class="text-sm text-gray-500">No unusual variances or anomalies detected.</p>
+    <p class="text-sm text-gray-500" id="unusual-empty">No unusual variances or anomalies detected.</p>
     {% endif %}
   </div>
 
@@ -149,7 +159,7 @@
     </h2>
 
     {% if cockpit.filing_steps %}
-    <div class="space-y-2">
+    <div class="space-y-2" id="filing-steps">
       {% for step in cockpit.filing_steps %}
       <div class="flex items-center gap-3 py-2 {% if not loop.last %}border-b border-gray-100{% endif %}">
         {% if step.status == 'filed' %}
@@ -205,7 +215,7 @@
     </h2>
 
     {% if cockpit.has_blocking %}
-    <div class="space-y-3">
+    <div class="space-y-3" id="blocking-list">
       {% for item in cockpit.blocking_items %}
       <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
         <span class="text-red-500 flex-shrink-0">🔴</span>
@@ -222,7 +232,7 @@
       {% endfor %}
     </div>
     {% else %}
-    <p class="text-sm text-gray-500">Nothing is blocking you. All systems operational.</p>
+    <p class="text-sm text-gray-500" id="blocking-empty">Nothing is blocking you. All systems operational.</p>
     {% endif %}
   </div>
 
@@ -240,4 +250,64 @@
   </div>
 
 </div>
+
+<script>
+// Dismiss an attention item
+function dismissItem(key, btn) {
+  const item = btn.closest('.attention-item');
+  if (item) {
+    item.style.opacity = '0.5';
+    item.style.textDecoration = 'line-through';
+  }
+
+  fetch('/payroll/api/cockpit/dismiss', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({key: key})
+  }).then(resp => {
+    if (resp.ok) {
+      setTimeout(() => {
+        item.style.transition = 'all 0.3s';
+        item.style.maxHeight = '0';
+        item.style.padding = '0';
+        item.style.margin = '0';
+        item.style.overflow = 'hidden';
+        setTimeout(() => item.remove(), 300);
+      }, 500);
+    } else {
+      if (item) {
+        item.style.opacity = '1';
+        item.style.textDecoration = 'none';
+      }
+    }
+  });
+}
+
+// Refresh cockpit data via API
+function refreshCockpit() {
+  fetch('/payroll/api/cockpit')
+    .then(resp => resp.json())
+    .then(data => {
+      // Update narrative
+      const narrativeEl = document.getElementById('narrative');
+      if (narrativeEl) narrativeEl.textContent = data.narrative;
+
+      // Update status badge
+      const badge = document.getElementById('status-badge');
+      if (badge) {
+        badge.textContent = data.status_message;
+        badge.className = 'inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ' +
+          (data.status === 'ready' ? 'bg-green-100 text-green-800' :
+           data.status === 'blocked' ? 'bg-red-100 text-red-800' :
+           data.status === 'attention' ? 'bg-yellow-100 text-yellow-800' :
+           'bg-gray-100 text-gray-800');
+      }
+    })
+    .catch(err => console.error('Refresh failed:', err));
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshCockpit, 30000);
+</script>
+
 {% endblock %}

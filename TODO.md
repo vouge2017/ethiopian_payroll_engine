@@ -1,170 +1,180 @@
 # TODO — Accountant Operating System Roadmap
 
 **Last updated:** 2026-08-05
-**Philosophy:** The product is not a toolbox. It's a guided workflow that leads the accountant through their entire month-end process with confidence.
+**Philosophy:** The explanation comes first. The score comes second. Never build a black box.
 
 ---
 
-## Architecture
+## What's Built ✅
+
+| Component | Tests | What it does |
+|---|---|---|
+| Change Summary | 20 | Compares current vs previous payroll |
+| Narrative | 30 | Plain-English paragraph explaining the month |
+| Exception Intelligence | 20 | Classifies issues as Critical/High/Medium/Low |
+
+---
+
+## Sprint 1 — Evidence Engine 🔲 NEXT
+
+**Every trust signal must be explicit and explainable.**
+
+Not a percentage. A checklist the accountant can see.
 
 ```
-Ethiopian Payroll Platform
+Payroll Status
 
-┌────────────────────┐
-│  Payroll Engine     │ ← Correct calculations (DONE)
-│  Calculates payroll │
-└────────────────────┘
-        │
-        ▼
-┌────────────────────┐
-│  Knowledge Platform │ ← Verified source of truth (DONE)
-│  Laws, rules, tests │
-└────────────────────┘
-        │
-        ▼
-┌────────────────────┐
-│  Trust Platform     │ ← Explains payroll (IN PROGRESS)
-│  Change summaries,  │
-│  confidence, filing │
-└────────────────────┘
-        │
-        ▼
-┌────────────────────┐
-│  Accountant OS      │ ← Guides monthly work (NEXT)
-│  Workspaces,        │
-│  guided workflows,  │
-│  exception handling │
-└────────────────────┘
+✓ 128/128 employees processed
+✓ No validation errors
+✓ Tax rules verified (Proclamation 1395/2025)
+✓ Pension rules verified (Proclamation 1268/2022)
+✓ No duplicate payroll
+✓ No critical exceptions
+✓ All mandatory employee data present
+✓ Payroll balanced (debits = credits)
+
+Ready for approval
+```
+
+**Build:**
+- [ ] `payroll_engine/evidence.py` — collects all trust signals
+- [ ] Each signal: name, status (pass/fail/warn), source, explanation
+- [ ] Grouped by category: Validation, Compliance, Data Quality, Integrity
+- [ ] API: `GET /api/v1/payroll-runs/<id>/evidence`
+- [ ] Tests: `tests/test_evidence.py`
+
+**After evidence exists, optionally add:**
+```
+97% — from: Validation ✓, Compliance ✓, Data Quality ✓, Exceptions ✓, Integrity ✓
 ```
 
 ---
 
-## Phase 1 — Payroll Review Workspace 🔲
+## Sprint 2 — Resolution Intelligence 🔲
 
-**The most important screen in the product.**
+**Every issue answers: Impact → Cause → Recommendation → Action.**
 
-Everything the accountant needs to review and approve payroll in one view.
+Not just "Missing Bank Account." Tell the accountant what to do.
 
-| Section | Content | Status |
-|---|---|---|
-| Executive Summary | Employee count, net payroll, delta %, status badge | 🔲 |
-| Payroll Narrative | Plain-English paragraph explaining what happened | 🔲 (engine exists in change_summary.py) |
-| What Changed | New hires, departures, salary changes, overtime, leave | ✅ (change_summary.py — needs UI) |
-| Attention Items | Salary variances >20%, missing data, negative adjustments | 🔲 (variance logic exists, needs exception classification) |
-| Confidence Score | Weighted checklist: validation, tax, pension, variance, review | 🔲 |
-| Next Action | "Ready for Approval" with Approve button | 🔶 (exists, needs trust context) |
+```
+⚠ Missing Bank Account
 
-**Files to create/modify:**
-- [ ] `payroll_engine/narrative.py` — Generate plain-English summary from Change Summary
-- [ ] `payroll_engine/exceptions.py` — Classify issues by severity (Critical/High/Medium/Low)
-- [ ] `payroll_engine/confidence.py` — Weighted confidence score from system checks
-- [ ] `payroll_engine/templates/payroll_review_workspace.html` — Single-page review experience
-- [ ] `payroll_engine/payroll_bp.py` — Wire all components into review route
-- [ ] API: `GET /api/v1/payroll-runs/<id>/review` — Returns all workspace data
+Impact:   Employee cannot receive bank transfer.
+Risk:     High
+Cause:    Bank account field is empty.
+Fix:      Collect bank details or switch to Telebirr.
+Action:   [Update Employee →]
+Time:     2 minutes
+```
 
----
-
-## Phase 2 — Trust Layer 🔲
-
-**The accountant can verify every number.**
-
-| Component | Description | Status |
-|---|---|---|
-| Confidence Score | Weighted % from system checks | 🔲 |
-| Compliance Status | Filing deadline, pension deadline, payment deadline | 🔶 (compliance.py exists) |
-| Audit Evidence | Link every number to source (employee record, rule, approval) | 🔲 |
-| Validation Report | List of all checks that passed/failed | 🔲 |
+**Build:**
+- [ ] Enhance `payroll_engine/exceptions.py` — add impact, cause, recommendation, action_url, estimated_time
+- [ ] Each issue becomes a mini-guide, not just a warning
+- [ ] API: issue objects include resolution fields
+- [ ] Tests: update `test_exceptions.py`
 
 ---
 
-## Phase 3 — Filing Workspace 🔲
+## Sprint 3 — Payroll Review Workspace 🔲
 
-**Guides the accountant through month-end filing.**
+**One unified flow that matches how accountants think.**
 
-| Step | Status |
-|---|---|
-| Payroll Complete | 🔶 (status tracked) |
-| ERCA Report Ready | 🔶 (export exists) |
-| Pension Report Ready | 🔶 (export exists) |
-| Bank File Ready | 🔶 (export exists) |
-| Submission Deadline | 🔶 (deadlines configurable) |
-| Mark as Filed | 🔶 (FilingRecord model exists) |
+```
+Payroll Review — August 2026
 
-**Gap:** No single workspace that shows all steps together. Each is scattered across different pages.
+1. STORY — What happened?
+   [Narrative paragraph]
 
----
+2. EVIDENCE — Why should I trust this?
+   [Evidence checklist]
 
-## Phase 4 — Recovery Workspace 🔲
+3. ISSUES — Anything wrong?
+   [Exception list with resolution]
 
-**The accountant knows they can fix mistakes.**
+4. RESOLUTION — How do I fix it?
+   [Actionable guidance for each issue]
 
-| Component | Status |
-|---|---|
-| Time-bounded Undo | 🔶 (undo exists, no time window) |
-| Adjustment Payroll | 🔶 (adjustment payslip exists) |
-| Audit Trail | ✅ (hash-chained audit log) |
-| Clear Messaging | 🔲 ("Undo until 2:43 PM, then create adjustment") |
+5. APPROVAL — Ready?
+   [Approve button — only if no critical issues]
+```
 
----
-
-## Phase 5 — Accountant Cockpit 🔲
-
-**The landing page answers 5 questions in 10 seconds.**
-
-1. What needs my attention today?
-2. What changed since last payroll?
-3. Is anything unusual?
-4. Am I ready to file?
-5. What is blocking me?
+**Build:**
+- [ ] `payroll_engine/templates/payroll_review_workspace.html`
+- [ ] Route: `GET /payroll/runs/<id>/review`
+- [ ] Combines: Narrative + Evidence + Exceptions + Resolution
+- [ ] Approve button disabled if `report.can_approve is False`
 
 ---
 
-## Exception Intelligence
+## Sprint 4 — Confidence Summary 🔲 (only after Sprint 1-3)
 
-**Every payroll run classifies issues by severity.**
+**If it genuinely helps users, add an overall score.**
 
-| Level | Example | Action |
-|---|---|---|
-| Critical | Payroll cannot be approved | Block approval |
-| High | Large unexplained variance (>20%) | Require review |
-| Medium | Missing bank account | Warning, allow proceed |
-| Low | New employee, first payroll | Informational |
+```
+Confidence: 97%
 
-**File:** `payroll_engine/exceptions.py` (new)
+From:
+✓ Validation (20%)
+✓ Compliance (20%)
+✓ Data Quality (20%)
+✓ Exceptions (20%)
+✓ Payroll Integrity (20%)
+```
+
+Only build this if accountants in usability sessions say they want it.
 
 ---
 
-## Priority
+## Future — Predictive Intelligence 🔲
 
-| # | What | Why |
-|---|---|---|
-| 1 | **Payroll Narrative** | Highest impact per line of code. Turns numbers into story. |
-| 2 | **Exception Classification** | Prioritizes what deserves attention. |
-| 3 | **Confidence Score** | Builds trust before approval. |
-| 4 | **Payroll Review Workspace** | Combines all Phase 1 into one screen. |
-| 5 | **Filing Workspace** | Guides month-end filing. |
-| 6 | **Recovery Workspace** | Removes fear of mistakes. |
-| 7 | **Accountant Cockpit** | Combines everything into landing page. |
+**Before payroll runs, not after.**
+
+```
+Before running payroll:
+
+Expected Net Payroll: ETB 2,847,000
+Expected Change: +1.2%
+Potential Risks: 3
+  - Large overtime: 2 employees
+  - Missing TIN: 1 employee
+
+Payroll likely ready after these fixes.
+```
+
+Fix problems before payroll is calculated.
+
+---
+
+## Future — Per-Employee Narrative 🔲
+
+**Click one employee, see their story.**
+
+```
+Dawit Mekonnen
+
+Salary increased by ETB 2,000.
+Reason: Promotion (approved by HR, 2026-07-15)
+Tax increased because taxable income moved into next bracket.
+Net salary increased by ETB 1,420.
+```
 
 ---
 
 ## What to STOP building
 
-Per the strategic direction: **pause unrelated engineering features** unless they unblock production.
-
 - ❌ No more webhook events
-- ❌ No more API endpoints for the sake of API endpoints
+- ❌ No more API endpoints for the sake of endpoints
 - ❌ No more export formats
 - ❌ No more infrastructure improvements
 
-✅ Focus entirely on the workspaces and trust layers.
+✅ Focus entirely on the Payroll Review Workspace.
 
 ---
 
 ## Validation Gate
 
-After completing Phases 1-3, conduct **usability sessions with real Ethiopian accountants**.
+After Sprint 3, conduct usability sessions with real Ethiopian accountants.
 
-The question is not "does it work?" but "do they prefer it over Excel?"
+Question: "Do they prefer it over Excel?"
 
-That's the point where the product is merely correct vs genuinely preferred.
+Not: "Does it work?"

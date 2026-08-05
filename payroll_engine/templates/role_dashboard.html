@@ -45,14 +45,17 @@
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
       <!-- Total Payroll Cost -->
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:bg-blue-50 cursor-pointer transition-colors"
+           data-drill-down="/payroll/runs/{{ dashboard.period and '1' }}/review">
         <div class="text-sm text-gray-500">Total Payroll</div>
-        <div class="text-2xl font-bold text-gray-900">ETB {{ "{:,.0f}".format(dashboard.owner.total_payroll_cost) }}</div>
+        <div class="text-2xl font-bold text-gray-900" data-metric="Total Payroll Cost">ETB {{ "{:,.0f}".format(dashboard.owner.total_payroll_cost) }}</div>
         {% if dashboard.owner.payroll_change_pct != 0 %}
-        <div class="text-sm {% if dashboard.owner.payroll_change_pct > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+        <div class="text-sm" data-change="Total Payroll Cost"
+             class="{% if dashboard.owner.payroll_change_pct > 0 %}text-green-600{% else %}text-red-600{% endif %}">
           {{ dashboard.owner.payroll_change_pct }}% from last period
         </div>
         {% endif %}
+        <div class="text-xs text-blue-500 mt-1">Click to review →</div>
       </div>
 
       <!-- Compliance Status -->
@@ -412,4 +415,48 @@
   </div>
 
 </div>
+
+<script>
+// Refresh dashboard data via API
+function refreshDashboard() {
+  fetch('/payroll/api/dashboard')
+    .then(resp => resp.json())
+    .then(data => {
+      // Update metrics with drill-down links
+      data.metrics.forEach(metric => {
+        if (metric.drill_down_url) {
+          const el = document.querySelector(`[data-metric="${metric.name}"]`);
+          if (el) {
+            el.href = metric.drill_down_url;
+            el.classList.add('cursor-pointer', 'hover:bg-blue-50');
+          }
+        }
+      });
+
+      // Update trend indicators
+      data.metrics.forEach(metric => {
+        if (metric.change !== 0) {
+          const changeEl = document.querySelector(`[data-change="${metric.name}"]`);
+          if (changeEl) {
+            changeEl.textContent = metric.change_display;
+            changeEl.className = metric.change > 0 ? 'text-green-600' : 'text-red-600';
+          }
+        }
+      });
+    })
+    .catch(err => console.error('Dashboard refresh failed:', err));
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshDashboard, 30000);
+
+// Make metric cards clickable
+document.querySelectorAll('[data-drill-down]').forEach(el => {
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', () => {
+    window.location.href = el.dataset.drillDown;
+  });
+});
+</script>
+
 {% endblock %}

@@ -29,7 +29,7 @@ SEVERITY_ORDER = {CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3}
 
 @dataclass
 class Issue:
-    """A single payroll issue."""
+    """A single payroll issue with resolution guidance."""
     severity: str           # critical, high, medium, low
     code: str               # Machine-readable code (e.g., 'SALARY_VARIANCE')
     title: str              # Short title for display
@@ -38,6 +38,13 @@ class Issue:
     employee_name: Optional[str] = None
     action_required: Optional[str] = None  # What to do about it
     blocking: bool = False  # Does this block approval?
+
+    # Resolution Intelligence fields
+    impact: Optional[str] = None       # What happens if not fixed
+    cause: Optional[str] = None        # Why this issue exists
+    recommendation: Optional[str] = None  # What to do
+    action_url: Optional[str] = None   # Where to go to fix it
+    estimated_time: Optional[str] = None  # How long to fix
 
 
 @dataclass
@@ -153,6 +160,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
             description='This payroll run has no payslips. Add employees before approving.',
             action_required='Add employees to this payroll run',
             blocking=True,
+            impact='Payroll cannot be approved or disbursed without payslips.',
+            cause='No employees were included in this payroll run.',
+            recommendation='Go to the payroll upload page and add employees, or import from CSV.',
+            action_url=f'/payroll/runs/{current_run_id}/upload',
+            estimated_time='5 minutes',
         ))
         return report
 
@@ -176,6 +188,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 employee_name=emp_name,
                 action_required='Review deductions or create adjustment payslip',
                 blocking=True,
+                impact='Employee cannot receive a negative payment. Bank file will be incorrect.',
+                cause='Total deductions (tax + pension + loan + other) exceed gross salary.',
+                recommendation='Review the employee\'s deductions. If a loan deduction is too large, reduce it or split across months. Alternatively, create an adjustment payslip.',
+                action_url=f'/employees/{emp_id}/deductions',
+                estimated_time='3 minutes',
             ))
 
         # CRITICAL: Net pay exceeds gross (impossible)
@@ -189,6 +206,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 employee_name=emp_name,
                 action_required='Check tax and pension calculations',
                 blocking=True,
+                impact='This is a calculation error. The payslip numbers are incorrect.',
+                cause='Tax or pension calculation produced a negative deduction, or gross was entered incorrectly.',
+                recommendation='Verify the employee\'s basic salary and allowances. Check if tax rules are current. Re-run payroll if needed.',
+                action_url=f'/employees/{emp_id}',
+                estimated_time='5 minutes',
             ))
 
         # HIGH: Zero salary
@@ -201,6 +223,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 employee_id=emp_id,
                 employee_name=emp_name,
                 action_required='Verify if employee should be included in this run',
+                impact='Employee will receive no payment this period.',
+                cause='Basic salary is set to 0, or employee was not supposed to be in this run.',
+                recommendation='If employee is on unpaid leave, remove from this run. Otherwise, update their salary.',
+                action_url=f'/employees/{emp_id}/edit',
+                estimated_time='2 minutes',
             ))
 
         # HIGH: Missing bank account
@@ -213,6 +240,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 employee_id=emp_id,
                 employee_name=emp_name,
                 action_required='Add bank account or Telebirr number',
+                impact='Employee cannot receive salary via bank transfer. Bank file will skip this employee.',
+                cause='Bank account or Telebirr number was not entered in the employee profile.',
+                recommendation='Ask the employee for their bank account number or Telebirr ID, then update their profile.',
+                action_url=f'/employees/{emp_id}/edit',
+                estimated_time='2 minutes',
             ))
 
         # MEDIUM: Missing TIN
@@ -225,6 +257,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 employee_id=emp_id,
                 employee_name=emp_name,
                 action_required='Add TIN before filing with ERCA',
+                impact='ERCA filing will be incomplete. The employee cannot be included in the tax report.',
+                cause='TIN was not entered when the employee was added, or the employee has not obtained one yet.',
+                recommendation='Ask the employee for their TIN. If they don\'t have one, they need to register at the nearest ERCA office.',
+                action_url=f'/employees/{emp_id}/edit',
+                estimated_time='2 minutes',
             ))
 
         # MEDIUM: Missing phone
@@ -236,6 +273,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 description=f'{emp_name} has no phone number. Cannot send payslip notification.',
                 employee_id=emp_id,
                 employee_name=emp_name,
+                impact='Employee will not receive WhatsApp/SMS notification when payslip is ready.',
+                cause='Phone number was not entered in the employee profile.',
+                recommendation='Ask the employee for their phone number and update their profile.',
+                action_url=f'/employees/{emp_id}/edit',
+                estimated_time='1 minute',
             ))
 
         # LOW: First payroll for employee
@@ -247,6 +289,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 description=f'{emp_name} is receiving their first payroll. Verify salary and details.',
                 employee_id=emp_id,
                 employee_name=emp_name,
+                impact='No risk, but worth verifying since this is the first payment.',
+                cause='Employee was recently added to the system.',
+                recommendation='Confirm salary, bank account, and tax status are correct before approving.',
+                action_url=f'/employees/{emp_id}',
+                estimated_time='1 minute',
             ))
 
     # HIGH: Unusual variance from change summary
@@ -258,6 +305,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 title='Unusual variance',
                 description=note,
                 action_required='Review and confirm the variance is expected',
+                impact='Total payroll changed significantly. If unexpected, this could indicate a data entry error.',
+                cause='Payroll total changed by more than 20% compared to last period.',
+                recommendation='Review the change summary to understand what caused the variance. If it\'s due to new hires, promotions, or overtime, approve with confidence.',
+                action_url=f'/payroll/runs/{current_run_id}/review',
+                estimated_time='3 minutes',
             ))
 
     # MEDIUM: Large salary change (>20%)
@@ -272,6 +324,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     employee_id=sc.employee_id,
                     employee_name=sc.employee_name,
                     action_required='Verify salary change is approved',
+                    impact=f'Salary changed by {abs(sc.delta_pct):.0f}%. If not approved, this could be a data entry error.',
+                    cause='Employee\'s gross salary changed by more than 20% from last period.',
+                    recommendation='Confirm this salary change was approved by HR. Check the audit log for who made the change.',
+                    action_url=f'/employees/{sc.employee_id}/edit',
+                    estimated_time='2 minutes',
                 ))
 
     # MEDIUM: Cash limit (ETB 50,000)
@@ -286,6 +343,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 employee_id=emp.employee_id,
                 employee_name=emp.name,
                 action_required='Ensure payment is made electronically',
+                impact='Proclamation No. 1395/2025, Article 81: payments above ETB 50,000 must be electronic.',
+                cause=f'Net pay (ETB {ps.net_pay:,.2f}) exceeds the ETB 50,000 cash payment limit.',
+                recommendation='Use bank transfer or Telebirr for this employee. Do not pay in cash.',
+                action_url=f'/payroll/runs/{current_run_id}/bank-file',
+                estimated_time='1 minute',
             ))
 
     return report

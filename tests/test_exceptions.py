@@ -411,3 +411,107 @@ class TestEdgeCases:
 
         # Should work without change summary
         assert isinstance(report, ExceptionReport)
+
+
+# ─────────────────────────────────────────────
+# Tests: Resolution Intelligence
+# ─────────────────────────────────────────────
+
+class TestResolutionIntelligence:
+
+    def test_negative_net_pay_has_resolution(self):
+        emp = _make_employee(1, 'Dawit')
+        ps = _make_payslip(1, gross=10000, tax=12000, net=-2000)
+        run = _make_run()
+
+        mock_db, mock_models = _setup_db(run, [ps], [emp])
+        report = classify_exceptions(1, 1, mock_db, mock_models)
+
+        issue = [i for i in report.issues if i.code == 'NEGATIVE_NET_PAY'][0]
+        assert issue.impact is not None
+        assert issue.cause is not None
+        assert issue.recommendation is not None
+        assert issue.action_url is not None
+        assert issue.estimated_time is not None
+        assert 'deduction' in issue.cause.lower()
+        assert '/employees/' in issue.action_url
+
+    def test_missing_bank_has_resolution(self):
+        emp = _make_employee(1, 'Dawit', bank='')
+        ps = _make_payslip(1)
+        run = _make_run()
+
+        mock_db, mock_models = _setup_db(run, [ps], [emp])
+        report = classify_exceptions(1, 1, mock_db, mock_models)
+
+        issue = [i for i in report.issues if i.code == 'MISSING_BANK_ACCOUNT'][0]
+        assert issue.impact is not None
+        assert 'bank transfer' in issue.impact.lower()
+        assert issue.cause is not None
+        assert issue.recommendation is not None
+        assert issue.action_url is not None
+        assert 'edit' in issue.action_url
+
+    def test_missing_tin_has_resolution(self):
+        emp = _make_employee(1, 'Dawit', tin='')
+        ps = _make_payslip(1)
+        run = _make_run()
+
+        mock_db, mock_models = _setup_db(run, [ps], [emp])
+        report = classify_exceptions(1, 1, mock_db, mock_models)
+
+        issue = [i for i in report.issues if i.code == 'MISSING_TIN'][0]
+        assert issue.impact is not None
+        assert 'erca' in issue.impact.lower()
+        assert issue.recommendation is not None
+        assert 'erca' in issue.recommendation.lower()
+
+    def test_new_employee_has_resolution(self):
+        emp = _make_employee(1, 'Dawit')
+        ps = _make_payslip(1)
+        run = _make_run()
+
+        mock_db, mock_models = _setup_db(run, [ps], [emp])
+
+        with patch('payroll_engine.exceptions._is_first_payroll', return_value=True):
+            report = classify_exceptions(1, 1, mock_db, mock_models)
+
+        issue = [i for i in report.issues if i.code == 'NEW_EMPLOYEE_FIRST_PAYROLL'][0]
+        assert issue.impact is not None
+        assert issue.estimated_time is not None
+
+    def test_all_issues_have_resolution_fields(self):
+        """Every issue should have all resolution fields populated."""
+        emp = _make_employee(1, 'Dawit', bank='', tin='', phone='')
+        ps = _make_payslip(1, gross=0, tax=0, net=0)
+        run = _make_run()
+
+        mock_db, mock_models = _setup_db(run, [ps], [emp])
+
+        with patch('payroll_engine.exceptions._is_first_payroll', return_value=True):
+            report = classify_exceptions(1, 1, mock_db, mock_models)
+
+        for issue in report.issues:
+            assert issue.impact is not None, f'{issue.code}: missing impact'
+            assert issue.cause is not None, f'{issue.code}: missing cause'
+            assert issue.recommendation is not None, f'{issue.code}: missing recommendation'
+            assert issue.action_url is not None, f'{issue.code}: missing action_url'
+            assert issue.estimated_time is not None, f'{issue.code}: missing estimated_time'
+
+    def test_resolution_fields_are_human_readable(self):
+        """Resolution text should be sentences, not codes."""
+        emp = _make_employee(1, 'Dawit')
+        ps = _make_payslip(1, gross=10000, tax=12000, net=-2000)
+        run = _make_run()
+
+        mock_db, mock_models = _setup_db(run, [ps], [emp])
+        report = classify_exceptions(1, 1, mock_db, mock_models)
+
+        issue = report.issues[0]
+        # Impact should be a sentence
+        assert issue.impact[0].isupper()
+        assert issue.impact.endswith('.')
+        # Recommendation should be actionable
+        assert len(issue.recommendation) > 20
+        # Estimated time should mention minutes
+        assert 'minute' in issue.estimated_time

@@ -91,8 +91,6 @@ def prepare_monthly_draft(company_id):
                 issues.append(f"{emp.name}: no bank account")
             if not emp_data['tin']:
                 issues.append(f"{emp.name}: no TIN")
-            if not emp_data['fayda_fin']:
-                issues.append(f"{emp.name}: no Fayda FIN")
 
         except Exception as e:
             logger.error('Failed to calculate payroll for %s: %s', emp.name, e)

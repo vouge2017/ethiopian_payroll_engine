@@ -92,31 +92,14 @@
                                        placeholder="Enter new TIN">
                                 <div class="form-text">Current: {{ employee.tin or 'Not set' }}</div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">Fayda Digital ID</h5>
-                        <div class="row">
                             <div class="col-md-6">
-                                <label class="form-label">Fayda FIN</label>
+                                <label class="form-label">Fayda Digital ID (FIN)</label>
                                 <input type="text" name="fayda_fin" class="form-control"
                                        value=""
                                        placeholder="Enter 12-digit Fayda ID"
                                        maxlength="12" pattern="\d{12}" title="Exactly 12 digits">
                                 <div class="form-text">Current: {{ employee.fayda_fin or 'Not set' }}</div>
                             </div>
-                            <div class="col-md-6"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">{{ _('personal_info') }}</h5>
-                        <div class="row">
                         </div>
                     </div>
                 </div>

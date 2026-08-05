@@ -722,9 +722,18 @@ def approve_payroll():
         id=int(run_id), company_id=_company_id()
     ).with_for_update().first_or_404()
 
-    if run.status not in ('review', 'pending_approval'):
+    if run.status not in ('review', 'pending_approval', 'completed'):
         flash('This payroll run is not ready for approval.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    # Trust Architecture — check for blocking issues before approval
+    from payroll_engine.exceptions import classify_exceptions
+    from payroll_engine import models as trust_models
+    exception_report = classify_exceptions(run.id, _company_id(), db, trust_models)
+    if exception_report.has_blocking:
+        blocking_titles = [i.title for i in exception_report.blocking_issues]
+        flash(f'Cannot approve: {len(blocking_titles)} blocking issue(s): {"; ".join(blocking_titles[:3])}. Resolve them in the Payroll Review first.', 'danger')
+        return redirect(url_for('payroll.payroll_review_workspace', run_id=run.id))
 
     # Accountant submits for owner approval
     effective_role = current_user.get_role_for_company(_company_id())

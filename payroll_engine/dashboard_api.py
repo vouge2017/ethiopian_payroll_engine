@@ -469,8 +469,19 @@ def _build_trends(recent_runs, company_id, db, models):
         'tax_withheld': [],
     }
 
+    # Batch fetch all payslips for recent runs (avoid N+1)
+    run_ids = [r.id for r in recent_runs]
+    all_payslips = Payslip.query.filter(
+        Payslip.payroll_run_id.in_(run_ids)
+    ).all() if run_ids else []
+
+    # Group by run_id
+    payslips_by_run = {}
+    for ps in all_payslips:
+        payslips_by_run.setdefault(ps.payroll_run_id, []).append(ps)
+
     for run in reversed(recent_runs):  # Oldest first
-        payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+        payslips = payslips_by_run.get(run.id, [])
         total_cost = float(sum(ps.gross_salary or 0 for ps in payslips))
         total_net = float(sum(ps.net_pay or 0 for ps in payslips))
         total_tax = float(sum(ps.tax or 0 for ps in payslips))

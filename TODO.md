@@ -95,13 +95,20 @@
 
 This is the biggest gap. No amount of engineering replaces user validation.
 
-**Build:**
+**Built:**
+- [x] Interactive verification flow (`/verification`) — 10 steps, progress tracking
+- [x] Feedback form — accountants can flag issues directly in-app
+- [x] Verification summary — shows all corrections flagged
+- [x] `VERIFICATION_PACKAGE.md` — 15 sections for full review
+- [x] Staging environment ready (Render deploy)
+
+**Remaining (requires humans, not code):**
 - [ ] Find 3-5 Ethiopian accountants willing to test
-- [ ] Give them access to the staging environment
-- [ ] Ask them to complete a full payroll cycle
-- [ ] Observe where they get stuck
-- [ ] Collect feedback on trust components (do they understand the narrative? do they trust the evidence?)
+- [ ] Share staging URL with accountants
+- [ ] Review flagged corrections from verification flow
 - [ ] Fix critical issues found
+
+**Action for you:** Find Ethiopian accountants and share the staging URL. The system is ready for them.
 
 ---
 

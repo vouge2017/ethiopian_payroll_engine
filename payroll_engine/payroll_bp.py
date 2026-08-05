@@ -42,6 +42,7 @@ from payroll_engine.narrative import generate_narrative
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.evidence import collect_evidence
 from payroll_engine.filing_workspace import build_filing_workspace
+from payroll_engine.cockpit import build_cockpit
 
 
 payroll_bp = Blueprint('payroll', __name__)
@@ -418,6 +419,29 @@ def download_prefilled_csv():
         mimetype='text/csv; charset=utf-8',
         headers={'Content-Disposition': 'attachment; filename=payroll_prefilled.csv'}
     )
+
+
+@payroll_bp.route('/payroll/cockpit')
+@login_required
+def cockpit():
+    """Accountant Cockpit — landing page.
+
+    Answers 5 questions in 10 seconds:
+    1. What needs my attention?
+    2. What changed since last payroll?
+    3. Is anything unusual?
+    4. Am I ready to file?
+    5. What is blocking me?
+    """
+    cid = _company_id()
+    from payroll_engine import models as cockpit_models
+    data = build_cockpit(cid, db, cockpit_models)
+
+    if not data:
+        flash('Unable to load cockpit data.', 'danger')
+        return redirect(url_for('payroll.payroll_upload'))
+
+    return render_template('cockpit.html', cockpit=data, year=date.today().year)
 
 
 @payroll_bp.route('/payroll', methods=['GET', 'POST'])

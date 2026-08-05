@@ -13,6 +13,24 @@ from .evidence import collect_evidence
 api = Blueprint('api', __name__)
 
 
+@api.errorhandler(404)
+def api_404(error):
+    """Return JSON 404 instead of HTML for API endpoints."""
+    return jsonify({'error': 'Not found'}), 404
+
+
+@api.errorhandler(400)
+def api_400(error):
+    """Return JSON 400 instead of HTML for API endpoints."""
+    return jsonify({'error': 'Bad request'}), 400
+
+
+@api.errorhandler(422)
+def api_422(error):
+    """Return JSON 422 instead of HTML for API endpoints."""
+    return jsonify({'error': 'Validation failed'}), 422
+
+
 @api.after_request
 def add_cache_headers(response):
     """Add Cache-Control headers to API responses.
@@ -68,11 +86,15 @@ def api_token_or_login_required(f):
 
 
 def _get_company_id():
-    """Resolve company_id from API token or session."""
+    """Resolve company_id from API token or session.
+
+    Returns the company_id int, or None if not set.
+    Does NOT verify the company exists — use company_required for that.
+    """
     if hasattr(flask_g, '_api_company_id'):
         return flask_g._api_company_id
     from flask import session as flask_session
-    return flask_session.get('active_company_id', current_user.company_id)
+    return flask_session.get('active_company_id', current_user.company_id if current_user.is_authenticated else None)
 
 
 def _get_current_user():
@@ -80,6 +102,13 @@ def _get_current_user():
     if hasattr(flask_g, '_api_user'):
         return flask_g._api_user
     return current_user
+
+
+def _company_exists(company_id):
+    """Check if a company exists in the database. Returns True/False."""
+    if not company_id:
+        return False
+    return db.session.query(Company.id).filter_by(id=company_id).first() is not None
 
 
 def _validate_employee_data(data, *, partial=False):
@@ -149,13 +178,15 @@ def _validate_employee_data(data, *, partial=False):
 
 
 def company_required(f):
-    """Ensure user belongs to a company (session or API token)."""
+    """Ensure user belongs to a company that exists in the database."""
     @wraps(f)
     def decorated(*args, **kwargs):
         user = _get_current_user()
         cid = _get_company_id()
         if user is None or not cid:
             return jsonify({'error': 'Unauthorized'}), 401
+        if not _company_exists(cid):
+            return jsonify({'error': 'Company not found', 'detail': 'The company associated with your account no longer exists.'}), 404
         return f(*args, **kwargs)
     return decorated
 

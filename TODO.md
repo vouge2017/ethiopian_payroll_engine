@@ -41,17 +41,20 @@
 
 ---
 
-### 3. Error Boundaries in Templates (+0.5 points) 🔲
+### 3. Error Boundaries in Templates (+0.5 points) ✅ DONE (2026-08-06)
 
 **If a trust component fails, the page still loads.**
 
-Currently: if Change Summary throws an exception, the entire Payroll Review page crashes.
+**Built:**
+- [x] Wrap each section in try/except in the route
+- [x] Show graceful fallback (yellow warning box with "Unable to load [component]")
+- [x] Log the error with full traceback for debugging
+- [x] Never crash the entire page for one component failure
+- [x] Approval button DISABLED when exceptions can't be computed (safety)
+- [x] API returns partial data with errors dict (not 500)
+- [x] 14 tests verifying isolation
 
-**Build:**
-- [ ] Wrap each section in try/except in the route
-- [ ] Show graceful fallback ("Unable to load change summary")
-- [ ] Log the error for debugging
-- [ ] Never crash the entire page for one component failure
+**Files:** `_component_error.html`, `payroll_bp.py`, `cockpit.py`, `api.py`, `payroll_review_workspace.html`, `cockpit.html`
 
 ---
 

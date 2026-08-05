@@ -41,6 +41,7 @@ from payroll_engine.change_summary import compute_change_summary
 from payroll_engine.narrative import generate_narrative
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.evidence import collect_evidence
+from payroll_engine.filing_workspace import build_filing_workspace
 
 
 payroll_bp = Blueprint('payroll', __name__)
@@ -1915,6 +1916,31 @@ def payroll_review_workspace(run_id):
         sorted_issues=sorted_issues,
         change_summary=change_summary,
         can_approve=exceptions.can_approve,
+        year=date.today().year,
+    )
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>/filing')
+@login_required
+def filing_workspace(run_id):
+    """Filing Workspace — guides month-end filing.
+
+    Shows: Payroll → ERCA → Pension → Bank File → Submit
+    """
+    cid = _company_id()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+
+    from payroll_engine import models as trust_models
+    workspace = build_filing_workspace(run_id, cid, db, trust_models)
+
+    if not workspace:
+        flash('Unable to build filing workspace.', 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
+
+    return render_template(
+        'filing_workspace.html',
+        run=run,
+        workspace=workspace,
         year=date.today().year,
     )
 

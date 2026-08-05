@@ -1,0 +1,117 @@
+<!-- Filing Workspace — Month-end filing guidance -->
+<!-- Shows: Payroll → ERCA → Pension → Bank File → Submit -->
+
+{% extends "base.html" %}
+{% block title %}Filing — {{ workspace.period }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-3xl">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Month-End Filing</h1>
+      <p class="text-gray-500">{{ workspace.period }} · {{ run.reference or 'Run #' + run.id|string }}</p>
+    </div>
+    <div class="flex items-center gap-3">
+      {% if workspace.all_filed %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+          ✓ All Filed
+        </span>
+      {% elif workspace.has_overdue %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+          ⚠ Overdue
+        </span>
+      {% else %}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+          {{ workspace.filed_count }}/{{ workspace.total_steps }} Complete
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+    <p class="text-sm text-gray-600">{{ workspace.summary }}</p>
+    {% if workspace.next_deadline %}
+    <p class="text-xs text-gray-400 mt-1">
+      Next deadline: <strong>{{ workspace.next_deadline }}</strong>
+      ({{ workspace.next_deadline_days }} days remaining)
+    </p>
+    {% endif %}
+  </div>
+
+  <!-- Filing Steps -->
+  <div class="space-y-4">
+    {% for step in workspace.steps %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5
+      {% if step.status == 'filed' %}border-l-4 border-l-green-500
+      {% elif step.status == 'overdue' %}border-l-4 border-l-red-500
+      {% elif step.status == 'ready' %}border-l-4 border-l-blue-500
+      {% else %}border-l-4 border-l-gray-300{% endif %}">
+
+      <div class="flex items-center justify-between">
+        <!-- Left: Status + Name -->
+        <div class="flex items-center gap-3">
+          {% if step.status == 'filed' %}
+            <span class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm">✓</span>
+          {% elif step.status == 'overdue' %}
+            <span class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-sm">!</span>
+          {% elif step.status == 'ready' %}
+            <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm">→</span>
+          {% else %}
+            <span class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-sm">○</span>
+          {% endif %}
+          <div>
+            <h3 class="text-base font-semibold text-gray-800">{{ step.name }}</h3>
+            <p class="text-xs text-gray-400">{{ step.name_am }}</p>
+          </div>
+        </div>
+
+        <!-- Right: Action or Status -->
+        <div class="text-right">
+          {% if step.status == 'filed' %}
+            {% if step.confirmation %}
+              <p class="text-sm text-green-600 font-medium">Filed</p>
+              <p class="text-xs text-gray-400">Ref: {{ step.confirmation }}</p>
+            {% elif step.filed_at %}
+              <p class="text-sm text-green-600 font-medium">Filed {{ step.filed_at }}</p>
+            {% else %}
+              <p class="text-sm text-green-600 font-medium">Complete</p>
+            {% endif %}
+          {% elif step.status == 'overdue' %}
+            <p class="text-sm text-red-600 font-medium">Overdue</p>
+            {% if step.deadline %}
+              <p class="text-xs text-red-400">Deadline was {{ step.deadline }}</p>
+            {% endif %}
+          {% elif step.status == 'ready' %}
+            {% if step.action_url %}
+              <a href="{{ step.action_url }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                {{ step.action_label or 'Generate' }} →
+              </a>
+            {% endif %}
+            {% if step.deadline %}
+              <p class="text-xs text-gray-400 mt-1">
+                Deadline: {{ step.deadline }}
+                {% if step.days_remaining is not none %}
+                  ({{ step.days_remaining }} days)
+                {% endif %}
+              </p>
+            {% endif %}
+          {% else %}
+            <p class="text-sm text-gray-400">{{ step.detail or 'Waiting' }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Navigation -->
+  <div class="flex items-center justify-between mt-8 text-sm text-gray-500">
+    <a href="/payroll/runs/{{ run.id }}/review" class="hover:text-gray-700">← Payroll Review</a>
+    <a href="/payroll/runs" class="hover:text-gray-700">All Payroll Runs →</a>
+  </div>
+
+</div>
+{% endblock %}

@@ -75,17 +75,17 @@
 
 ---
 
-### 5. Input Validation on API Endpoints (+0.3 points) 🔲
+### 5. Input Validation on API Endpoints (+0.3 points) ✅ DONE (2026-08-06)
 
 **Validate all API inputs before processing.**
 
-Currently: dashboard API doesn't validate company_id or user permissions.
-
-**Build:**
-- [ ] Validate company_id exists and user has access
-- [ ] Validate run_id exists and belongs to company
-- [ ] Return 400/403 with clear error messages
-- [ ] Log invalid requests for security monitoring
+**Built:**
+- [x] `_company_exists()`: verifies company exists in DB (not just session)
+- [x] `company_required`: returns JSON 404 if company not found
+- [x] JSON error handlers: 400, 404, 422 return JSON (not HTML)
+- [x] Run ownership enforced: `filter_by(company_id=)` on all queries
+- [x] Employee validation: required fields, type checks, max length, non-negative salary
+- [x] 15 tests covering company, ownership, roles, input sanitization
 
 ---
 

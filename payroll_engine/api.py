@@ -111,6 +111,14 @@ def _validate_employee_data(data, *, partial=False):
         elif len(tin_s) not in (9, 10):
             errors.append('TIN must be 9 or 10 digits')
 
+    fin = data.get('fayda_fin')
+    if fin is not None and fin != '':
+        fin_s = str(fin).strip()
+        if not fin_s.isdigit():
+            errors.append('Fayda FIN must contain only digits')
+        elif len(fin_s) != 12:
+            errors.append('Fayda FIN must be exactly 12 digits')
+
     return errors
 
 
@@ -202,6 +210,7 @@ def create_employee():
         allowances=data.get('allowances', 0),
         bank_or_telebirr=data.get('bank_or_telebirr', ''),
         tin=data.get('tin'),
+        fayda_fin=data.get('fayda_fin'),
         company_id=_get_company_id(),
     )
     db.session.add(emp)
@@ -220,6 +229,7 @@ def get_employee(emp_id):
         'name': emp.name,
         'basic_salary': emp.basic_salary,
         'allowances': emp.allowances,
+        'fayda_fin': emp.fayda_fin,
         'bank_or_telebirr': emp.bank_or_telebirr,
         'tin': emp.tin,
     })
@@ -246,6 +256,16 @@ def update_employee(emp_id):
         emp.bank_or_telebirr = data['bank_or_telebirr']
     if 'tin' in data:
         emp.tin = data['tin']
+    if 'fayda_fin' in data:
+        fin = data['fayda_fin']
+        if fin:
+            from payroll_engine.models import validate_fayda_fin
+            is_valid, normalized, error = validate_fayda_fin(str(fin))
+            if not is_valid:
+                return jsonify({'error': f'Fayda FIN: {error}'}), 422
+            emp.fayda_fin = normalized
+        else:
+            emp.fayda_fin = None
     db.session.commit()
     return jsonify({'id': emp.id, 'employee_id': emp.employee_id})
 
@@ -581,6 +601,7 @@ def bulk_import_employees():
             allowances=Decimal(str(emp_data.get('allowances', 0))),
             bank_or_telebirr=emp_data.get('bank_or_telebirr', ''),
             tin=emp_data.get('tin'),
+            fayda_fin=emp_data.get('fayda_fin'),
             company_id=cid,
             employee_type=emp_data.get('employee_type', 'monthly'),
         )

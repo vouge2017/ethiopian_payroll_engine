@@ -102,6 +102,17 @@
 
                                 <div class="row mb-3">
                                     <div class="col-md-6">
+                                        <label for="fayda_fin" class="form-label">Fayda Digital ID (FIN)</label>
+                                        <input type="text" class="form-control" id="fayda_fin" name="fayda_fin"
+                                               placeholder="123456789012" maxlength="12"
+                                               pattern="\d{12}" title="Exactly 12 digits">
+                                        <div class="form-text">12-digit Fayda ID from <a href="https://id.gov.et" target="_blank">id.gov.et</a>. Validates TIN/FIN before ERCA filing.</div>
+                                    </div>
+                                    <div class="col-md-6"></div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
                                         <label for="department" class="form-label">{{ _('department') }}</label>
                                         <input type="text" class="form-control" id="department" name="department"
                                                placeholder="Sales, Factory, Finance...">

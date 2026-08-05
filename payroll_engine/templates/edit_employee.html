@@ -98,6 +98,16 @@
                                 <div class="form-text">For ERCA tax filing</div>
                             </div>
                             <div class="col-md-6">
+                                <label for="fayda_fin" class="form-label">Fayda Digital ID (FIN)</label>
+                                <input type="text" class="form-control" id="fayda_fin" name="fayda_fin"
+                                       value="{{ employee.fayda_fin or '' }}" placeholder="123456789012"
+                                       maxlength="12" pattern="\d{12}" title="Exactly 12 digits">
+                                <div class="form-text">12-digit Fayda ID from <a href="https://id.gov.et" target="_blank">id.gov.et</a></div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
                                 <label for="bank_account" class="form-label">{{ _('bank_account') }}</label>
                                 <input type="text" class="form-control" id="bank_account" name="bank_account"
                                        value="{{ employee.bank_account or '' }}"

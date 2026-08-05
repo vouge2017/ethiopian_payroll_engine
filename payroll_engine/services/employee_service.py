@@ -35,6 +35,7 @@ def parse_employee_form(form_data):
     start_date_str = form_data.get('start_date', '').strip()
     bank_account = form_data.get('bank_account', '').strip() or None
     tin = form_data.get('tin', '').strip() or None
+    fayda_fin = form_data.get('fayda_fin', '').strip() or None
     employee_type = form_data.get('employee_type', 'monthly').strip()
 
     try:
@@ -53,7 +54,7 @@ def parse_employee_form(form_data):
     if employee_type not in ('monthly', 'daily'):
         employee_type = 'monthly'
 
-    from payroll_engine.models import validate_ethiopian_phone
+    from payroll_engine.models import validate_ethiopian_phone, validate_fayda_fin
 
     phone = None
     if phone_raw:
@@ -61,6 +62,13 @@ def parse_employee_form(form_data):
         if not is_valid:
             return None, f'Employee phone: {phone_error}'
         phone = normalized_phone
+
+    # Validate Fayda FIN if provided
+    if fayda_fin:
+        is_valid_fin, normalized_fin, fin_error = validate_fayda_fin(fayda_fin)
+        if not is_valid_fin:
+            return None, f'Fayda FIN: {fin_error}'
+        fayda_fin = normalized_fin
 
     start_date = None
     if start_date_str:
@@ -86,6 +94,7 @@ def parse_employee_form(form_data):
         'allowances': allow,
         'bank_account': bank_account,
         'tin': tin,
+        'fayda_fin': fayda_fin,
         'employee_type': employee_type,
         'daily_rate': daily_rate,
     }, None
@@ -131,6 +140,7 @@ def create_employee(data, company_id, user_id):
         bank_account=data['bank_account'],
         bank_or_telebirr=data['bank_account'] or '',
         tin=data['tin'],
+        fayda_fin=data.get('fayda_fin'),
         employee_type=data['employee_type'],
         daily_rate=data['daily_rate'] if data['employee_type'] == 'daily' else None,
         company_id=company_id,

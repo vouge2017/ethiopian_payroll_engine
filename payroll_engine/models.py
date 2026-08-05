@@ -71,6 +71,35 @@ def validate_ethiopian_phone(phone: str) -> tuple:
     return False, None, 'Invalid Ethiopian phone format. Enter 9 digits starting with 9 or 7.'
 
 
+def validate_fayda_fin(fin: str) -> tuple:
+    """Validate a Fayda Digital Identification Number (FIN).
+
+    Fayda FIN is a 12-digit number issued by Ethiopia's National ID Program (NIDP).
+    Format: exactly 12 numeric digits.
+
+    Args:
+        fin: The FIN string to validate
+
+    Returns:
+        (is_valid, normalized_fin, error_message)
+        - is_valid: True if valid
+        - normalized_fin: Cleaned 12-digit string (or None if invalid)
+        - error_message: Human-readable error (or None if valid)
+    """
+    if not fin:
+        return False, None, 'Fayda FIN cannot be empty.'
+
+    cleaned = re.sub(r'[\s\-]', '', fin.strip())
+
+    if not cleaned.isdigit():
+        return False, None, 'Fayda FIN must contain only digits.'
+
+    if len(cleaned) != 12:
+        return False, None, f'Fayda FIN must be exactly 12 digits. Got {len(cleaned)}.'
+
+    return True, cleaned, None
+
+
 # ---------------------------------------------------------------------------
 # Structural tenant isolation
 # ---------------------------------------------------------------------------
@@ -563,9 +592,11 @@ class Employee(db.Model):
     if _HAS_ENCRYPTION:
         bank_account = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
         tin = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
+        fayda_fin = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
     else:
         bank_account = db.Column(db.String(100), nullable=True)
         tin = db.Column(db.String(20), nullable=True)
+        fayda_fin = db.Column(db.String(20), nullable=True)  # Fayda Digital ID — 12 digits
     bank_or_telebirr = db.Column(db.String(100))  # Legacy: 'telebirr:0912345678' or 'bank:cbe'
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Link to User account
@@ -1445,7 +1476,7 @@ class ProfileChangeRequest(db.Model):
 
     # Fields employees may request to change
     EDITABLE_FIELDS = [
-        'phone', 'bank_account', 'tin', 'name',
+        'phone', 'bank_account', 'tin', 'fayda_fin', 'name',
         'address', 'emergency_contact', 'emergency_phone',
     ]
 
@@ -1453,7 +1484,7 @@ class ProfileChangeRequest(db.Model):
     SAFE_FIELDS = ['address', 'emergency_contact', 'emergency_phone']
 
     # Fields that REQUIRE approval
-    SENSITIVE_FIELDS = ['phone', 'bank_account', 'tin', 'name']
+    SENSITIVE_FIELDS = ['phone', 'bank_account', 'tin', 'fayda_fin', 'name']
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
@@ -1485,6 +1516,7 @@ class ProfileChangeRequest(db.Model):
             'phone': 'Phone Number',
             'bank_account': 'Bank Account',
             'tin': 'TIN',
+            'fayda_fin': 'Fayda Digital ID (FIN)',
             'name': 'Full Name',
             'address': 'Address',
             'emergency_contact': 'Emergency Contact',

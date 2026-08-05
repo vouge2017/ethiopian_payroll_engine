@@ -100,6 +100,7 @@ def validate_payroll_data(employees_data: List[Dict[str, Any]],
     # --- WARN checks (informational) ---
 
     _check_missing_tin(employees_data, results)
+    _check_missing_fayda_fin(employees_data, results)
 
     # --- Deduction checks ---
     _check_active_deductions(employees_data, company_id, results)
@@ -473,6 +474,23 @@ def _check_missing_tin(data: List[Dict], results: List[ValidationResult]):
                 employee_id=emp.get('id'),
                 employee_name=emp_name,
                 hint='Ask the employee for their TIN number before filing.'
+            ))
+
+
+def _check_missing_fayda_fin(data: List[Dict], results: List[ValidationResult]):
+    """HINT: Fayda FIN recommended for ERCA filing validation."""
+    for emp in data:
+        fin = emp.get('fayda_fin', '').strip() if emp.get('fayda_fin') else ''
+        emp_name = emp.get('name', '')
+        if not fin:
+            results.append(ValidationResult(
+                rule_code='MISSING_FAYDA_FIN',
+                severity='HINT',
+                message=f"{emp_name} has no Fayda Digital ID (FIN). "
+                        f"Recommended for ERCA filing validation.",
+                employee_id=emp.get('id'),
+                employee_name=emp_name,
+                hint='Ask the employee for their 12-digit Fayda FIN from id.gov.et.'
             ))
 
 

@@ -89,6 +89,13 @@
                             {% if 'tin' in pending_fields %}<span class="badge bg-warning text-dark ms-2">Change pending</span>{% endif %}
                         </div>
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 text-muted">Fayda FIN</div>
+                        <div class="col-md-8">
+                            {{ employee.fayda_fin or 'Not set' }}
+                            {% if 'fayda_fin' in pending_fields %}<span class="badge bg-warning text-dark ms-2">Change pending</span>{% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
 

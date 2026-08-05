@@ -279,10 +279,11 @@ def edit_employee(emp_id):
         department = request.form.get('department', '').strip() or None
         position = request.form.get('position', '').strip() or None
         tin = request.form.get('tin', '').strip() or None
+        fayda_fin = request.form.get('fayda_fin', '').strip() or None
         bank_account = request.form.get('bank_account', '').strip() or None
 
         # Validate and normalize phone
-        from payroll_engine.models import validate_ethiopian_phone
+        from payroll_engine.models import validate_ethiopian_phone, validate_fayda_fin
         if phone_raw:
             is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
             if not is_valid:
@@ -330,6 +331,23 @@ def edit_employee(emp_id):
                 'new': new_tin,
             }
 
+        # Fayda FIN change
+        old_fin = emp.fayda_fin or ''
+        new_fin = fayda_fin or ''
+        if old_fin != new_fin:
+            # Validate if provided
+            if fayda_fin:
+                is_valid_fin, normalized_fin, fin_error = validate_fayda_fin(fayda_fin)
+                if not is_valid_fin:
+                    flash(f'Fayda FIN: {fin_error}', 'danger')
+                    return redirect(url_for('employees.edit_employee', emp_id=emp_id))
+                fayda_fin = normalized_fin
+                new_fin = fayda_fin
+            changes['fayda_fin_changed'] = {
+                'old': old_fin,
+                'new': new_fin,
+            }
+
         # Name change
         old_name = emp.name
         if name != old_name:
@@ -349,6 +367,7 @@ def edit_employee(emp_id):
         emp.department = department
         emp.position = position
         emp.tin = tin
+        emp.fayda_fin = fayda_fin
         emp.bank_account = bank_account
         emp.bank_or_telebirr = bank_account or ''
 

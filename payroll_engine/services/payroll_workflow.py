@@ -94,6 +94,7 @@ def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
                 'bank_account': str(row.get('bank_account', '')).strip(),
                 'bank': str(row.get('bank_or_telebirr', '')).strip(),
                 'tin': str(row.get('tin', '')).strip(),
+                'fayda_fin': str(row.get('fayda_fin', '')).strip(),
                 'tax_breakdown': tax_bd,
             })
     finally:

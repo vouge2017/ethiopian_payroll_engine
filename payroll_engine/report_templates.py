@@ -38,6 +38,7 @@ COLUMN_LIBRARY = [
     # Employee info
     {'key': 'employee_id', 'label': 'Employee ID', 'data_path': 'employee.employee_id', 'group': 'employee'},
     {'key': 'tin', 'label': 'TIN', 'data_path': 'employee.tin', 'group': 'employee'},
+    {'key': 'fayda_fin', 'label': 'Fayda FIN', 'data_path': 'employee.fayda_fin', 'group': 'employee'},
     {'key': 'department', 'label': 'Department', 'data_path': 'employee.department', 'group': 'employee'},
     {'key': 'position', 'label': 'Position', 'data_path': 'employee.position', 'group': 'employee'},
     {'key': 'employment_date', 'label': 'Employment Date', 'data_path': 'employee.start_date', 'group': 'employee'},
@@ -320,6 +321,11 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
     if data_path == 'employee.tin':
         try:
             return str(payslip.employee.tin) if payslip.employee.tin else ''
+        except Exception:
+            return '****'
+    if data_path == 'employee.fayda_fin':
+        try:
+            return str(payslip.employee.fayda_fin) if payslip.employee.fayda_fin else ''
         except Exception:
             return '****'
 

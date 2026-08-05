@@ -1184,6 +1184,7 @@ def historical_import():
                     db.session.add(ps)
 
             db.session.commit()
+            trust_cache.invalidate_trust_cache(_company_id())
 
             if imported > 0:
                 flash(f'Imported {imported} payroll records.', 'success')

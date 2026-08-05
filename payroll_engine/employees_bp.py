@@ -496,6 +496,8 @@ def add_overtime(emp_id):
     )
     db.session.add(entry)
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Overtime added: {hours}h {ot_type} on {ot_date}.', 'success')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
@@ -510,6 +512,8 @@ def delete_overtime(entry_id):
     emp_id = entry.employee_id
     db.session.delete(entry)
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash('Overtime entry deleted.', 'info')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
@@ -600,6 +604,8 @@ def add_allowance(emp_id):
         }
     )
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
 
     flash(f'{allowance.type_label} of ETB {amount:,.2f} added for {emp.name}.', 'success')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
@@ -615,6 +621,8 @@ def delete_allowance(allowance_id):
     emp_id = allowance.employee_id
     db.session.delete(allowance)
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash('Allowance removed.', 'info')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
@@ -773,6 +781,8 @@ def add_deduction(emp_id):
         }
     )
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
 
     flash(f'Deduction "{label}" added for {emp.name}.', 'success')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
@@ -802,6 +812,8 @@ def stop_deduction(ded_id):
         }
         )
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Deduction "{ded.label}" stopped.', 'info')
     return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
 
@@ -828,6 +840,8 @@ def delete_deduction(ded_id):
         )
     db.session.delete(ded)
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Deduction "{ded.label}" deleted.', 'warning')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
@@ -849,6 +863,8 @@ def deactivate_employee(emp_id):
             details={'employee_id': emp.employee_id, 'name': emp.name}
         )
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'{emp.name} has been deactivated. Payroll history preserved.', 'info')
     return redirect(url_for('employees.list_employees'))
 
@@ -870,6 +886,8 @@ def reactivate_employee(emp_id):
             details={'employee_id': emp.employee_id, 'name': emp.name}
         )
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'{emp.name} has been reactivated.', 'success')
     return redirect(url_for('employees.list_employees'))
 
@@ -949,6 +967,8 @@ def terminate_employee(emp_id):
             }
     )
         db.session.commit()
+        from payroll_engine import trust_cache
+        trust_cache.invalidate_trust_cache(_company_id())
 
         flash(f'{emp.name} terminated. Final settlement: ETB {settlement.net_final_payment:,.2f} '
               f'(Outstanding: {settlement.outstanding_salary:,.2f} + Severance: {settlement.severance_pay:,.2f} + '
@@ -1442,6 +1462,8 @@ def approve_profile_change(change_id):
         )
 
     db.session.commit()
+    from payroll_engine import trust_cache
+    trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Approved {change.field_label} change for {emp.name}.', 'success')
     return redirect(url_for('employees.profile_changes'))
 

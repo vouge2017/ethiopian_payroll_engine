@@ -880,6 +880,10 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 - ✅ Audit logging for company settings + report template changes — **2026-07-21**
 - ✅ Mobile PWA complete (manifest, SW, icons, responsive-card tables) — **2026-07-21**
 - ✅ Staging environment (separate Render deploy, StagingConfig, seed script) — **2026-07-21**
+- ✅ Webhook events (7: payroll.approved, payroll.completed, leave.approved, leave.rejected, employee.created, employee.updated, payslip.generated) with retry logic — **2026-08-05**
+- ✅ Accounting exports (QuickBooks IIF, Xero CSV, Peachtree CSV, generic CSV) — **2026-08-05**
+- ✅ API expansion (19 endpoints: accounting export, bank file generation) — **2026-08-05**
+- ✅ Accounting export tests (43 tests) — **2026-08-05**
 
 ### What is missing:
 
@@ -887,8 +891,8 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 - ❌ Human verification of 34 statutory rules against actual proclamations (checklist ready)
 - ✅ Backup/restore full cycle test — 38 unit tests (mocked pg_dump/restore/psycopg2) + live integration script (2026-08-05). Full cycle requires PostgreSQL + pg_dump; run `verify_backup_live.sh` when available.
 - ❌ Support/help system (no in-app help, no FAQ)
-- ❌ Integration connectors (bank APIs, ERP, accounting software)
-- ❌ Async PDF generation (bottleneck at 28ms/emp, needs background workers)
+- ✅ Integration connectors — Webhooks (7 events with retry), accounting exports (QuickBooks IIF, Xero, Peachtree, generic CSV), bank files (8 Ethiopian banks), REST API (19 endpoints including accounting + bank file generation). 43 accounting tests. **2026-08-05**
+- ✅ Async PDF generation — RQ + Redis + worker + fallback. Fully implemented. **2026-08-03**
 
 ### Risks:
 
@@ -911,7 +915,7 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 | 7 | Add audit logging for all state changes | Compliance | 3 days | ✅ **DONE (2026-07-21)** — 18 action types across 3 blueprints. High-risk (login, salary, settings) all covered. |
 | 8 | Set up staging environment | Operations | 1 day | ✅ **DONE (2026-07-21)** — render-staging.yaml, StagingConfig, seed script, STAGING.md guide |
 | 9 | Document disaster recovery runbook | Operations | 1 day | ✅ **DONE (2026-07-20)** — 7 scenarios covered |
-| 10 | Add async PDF generation (background workers) | Scale | 3 days | ⏳ Pending — PDF bottleneck identified (28ms/emp) |
+| 10 | Add async PDF generation (background workers) | Scale | 3 days | ✅ **DONE (2026-08-03)** — RQ + Redis + worker + fallback. Deploy via Render Blueprint. |
 
 ### Scores (updated 2026-07-20 19:46):
 

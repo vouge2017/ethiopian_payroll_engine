@@ -26,10 +26,10 @@ def _make_payslip(gross=10000, tax=1500, pension_emp=700, pension_empr=1100, net
     """Create a mock payslip."""
     ps = MagicMock()
     ps.employee_id = 1
-    ps.gross_pay = Decimal(str(gross))
+    ps.gross_salary = Decimal(str(gross))
     ps.tax = Decimal(str(tax))
-    ps.pension_employee = Decimal(str(pension_emp))
-    ps.pension_employer = Decimal(str(pension_empr))
+    ps.employee_pension = Decimal(str(pension_emp))
+    ps.employer_pension = Decimal(str(pension_empr))
     ps.net_pay = Decimal(str(net))
     return ps
 

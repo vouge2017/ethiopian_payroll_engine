@@ -137,6 +137,8 @@ def export_journal(run_id):
         return _export_quickbooks_iif(journal)
     elif fmt == 'peachtree':
         return _export_peachtree(journal)
+    elif fmt == 'xero':
+        return _export_xero(journal)
     else:
         return _export_generic_csv(journal)
 
@@ -246,6 +248,45 @@ def _export_peachtree(journal):
         output.getvalue(),
         mimetype='text/csv',
         headers={'Content-Disposition': f'attachment; filename=peachtree_{journal["reference"]}.csv'}
+    )
+
+
+def _export_xero(journal):
+    """Export as Xero-compatible CSV journal import.
+
+    Xero format: JournalDate, JournalNumber, AccountCode, AccountName,
+                 Description, Debit, Credit, TaxType, TrackingName1, TrackingOption1
+    """
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Xero header
+    writer.writerow([
+        'JournalDate', 'JournalNumber', 'AccountCode', 'AccountName',
+        'Description', 'Debit', 'Credit', 'TaxType',
+        'TrackingName1', 'TrackingOption1',
+    ])
+
+    for line in journal['journal_lines']:
+        if line['debit'] > 0 or line['credit'] > 0:
+            writer.writerow([
+                journal['date'],
+                journal['reference'],
+                line['account'],
+                line['name'],
+                f'Payroll {journal["period"]} — {journal["company"]}',
+                f'{line["debit"]:.2f}' if line['debit'] > 0 else '',
+                f'{line["credit"]:.2f}' if line['credit'] > 0 else '',
+                'Tax Exempt' if line['type'] in ('expense', 'asset') else 'No Tax',
+                '',
+                '',
+            ])
+
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename=xero_{journal["reference"]}.csv'}
     )
 
 

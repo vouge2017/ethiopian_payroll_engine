@@ -189,6 +189,22 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         # Single commit — all or nothing
         db.session.commit()
 
+        # Fire webhook — payroll completed
+        try:
+            from payroll_engine.webhooks import fire_webhook
+            fire_webhook(company_id, 'payroll.completed', {
+                'run_id': run.id,
+                'reference': run.reference,
+                'period': run.period,
+                'employee_count': len(employees_data),
+                'total_gross': float(sum(e.get('gross', 0) for e in employees_data)),
+                'total_tax': float(sum(e.get('tax', 0) for e in employees_data)),
+                'total_net': float(sum(e.get('net', 0) for e in employees_data)),
+                'compliance_score': score,
+            })
+        except Exception:
+            pass
+
         # Build result message
         message = f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%. PDFs will be generated on download.'
 

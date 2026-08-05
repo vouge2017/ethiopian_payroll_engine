@@ -229,6 +229,19 @@ def add_employee():
             return redirect(url_for('employees.add_employee'))
 
         name = data['name']
+
+        # Fire webhook
+        try:
+            from payroll_engine.webhooks import fire_webhook
+            fire_webhook(_company_id(), 'employee.created', {
+                'employee_id': data.get('employee_id'),
+                'name': name,
+                'department': data.get('department'),
+                'basic_salary': float(data.get('basic_salary', 0)),
+            })
+        except Exception:
+            pass
+
         flash(f'{name} added to your team! You can now include them in payroll runs.', 'success')
         return redirect(url_for('employees.list_employees'))
 
@@ -355,6 +368,21 @@ def edit_employee(emp_id):
         db.session.commit()
 
         if changes:
+            # Fire webhook for significant changes
+            try:
+                from payroll_engine.webhooks import fire_webhook
+                webhook_data = {
+                    'employee_id': emp.employee_id,
+                    'employee_name': name,
+                    'fields_changed': list(changes.keys()),
+                }
+                if 'salary_changed' in changes:
+                    webhook_data['old_basic'] = float(changes['salary_changed'].get('old_basic', 0))
+                    webhook_data['new_basic'] = float(changes['salary_changed'].get('new_basic', 0))
+                fire_webhook(_company_id(), 'employee.updated', webhook_data)
+            except Exception:
+                pass
+
             field_names = [c.replace('_', ' ') for c in changes.keys()]
             flash(f'{name}\'s profile updated: {", ".join(field_names)}.', 'success')
         else:
@@ -1132,6 +1160,21 @@ def approve_leave(leave_id):
     except Exception:
         pass  # Don't fail approval if notification fails
 
+    # Fire webhook
+    try:
+        from payroll_engine.webhooks import fire_webhook
+        fire_webhook(_company_id(), 'leave.approved', {
+            'leave_id': leave.id,
+            'employee_id': leave.employee_id,
+            'leave_type': leave.leave_type,
+            'days': leave.days_requested,
+            'start_date': str(leave.start_date),
+            'end_date': str(leave.end_date),
+            'approved_by': current_user.id,
+        })
+    except Exception:
+        pass
+
     flash(f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.', 'success')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
@@ -1179,6 +1222,20 @@ def reject_leave(leave_id):
     try:
         from payroll_engine.notifications import notify_leave_decision
         notify_leave_decision(leave, 'rejected', current_user.phone or current_user.email)
+    except Exception:
+        pass
+
+    # Fire webhook
+    try:
+        from payroll_engine.webhooks import fire_webhook
+        fire_webhook(_company_id(), 'leave.rejected', {
+            'leave_id': leave.id,
+            'employee_id': leave.employee_id,
+            'leave_type': leave.leave_type,
+            'days': leave.days_requested,
+            'reason': reason,
+            'rejected_by': current_user.id,
+        })
     except Exception:
         pass
 

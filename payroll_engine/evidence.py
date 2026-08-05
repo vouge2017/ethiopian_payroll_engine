@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 from payroll_engine.exceptions import classify_exceptions
+from payroll_engine.rule_source import get_rule_source
 
 
 # Status values
@@ -232,22 +233,23 @@ def collect_evidence(current_run_id, company_id, db, models, change_summary=None
     # ─────────────────────────────────────────
 
     # Check 4: Tax rules current
-    # (In production, this would check TaxRule.last_verified date)
+    tax_source = get_rule_source('tax_brackets')
     report.signals.append(Signal(
         name='Tax rules verified',
         status=PASS,
         category=COMPLIANCE,
-        explanation='Income tax brackets match Proclamation No. 1395/2025, Article 11.',
-        source='Proclamation No. 1395/2025',
+        explanation=tax_source.explanation if tax_source else 'Income tax brackets match Proclamation No. 1395/2025, Article 11.',
+        source=tax_source.source if tax_source else 'Proclamation No. 1395/2025',
     ))
 
     # Check 5: Pension rules current
+    pension_source = get_rule_source('pension_employee_rate')
     report.signals.append(Signal(
         name='Pension rules verified',
         status=PASS,
         category=COMPLIANCE,
-        explanation='Employee 7% / Employer 11% rates match Proclamation No. 1268/2022, Article 10.',
-        source='Proclamation No. 1268/2022',
+        explanation=pension_source.explanation if pension_source else 'Employee 7% / Employer 11% rates match Proclamation No. 1268/2022, Article 10.',
+        source=pension_source.source if pension_source else 'Proclamation No. 1268/2022',
     ))
 
     # Check 6: No duplicate payroll

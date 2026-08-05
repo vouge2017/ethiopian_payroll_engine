@@ -1,12 +1,72 @@
-# TODO — Path to 10/10 Delivery Readiness
+# TODO — Path to World-Class SaaS
 
 **Last updated:** 2026-08-06
-**Current score:** 9.6/10
-**Target:** 10/10
+**Current score:** 9.6/10 (functional) → Target: 9.5/10 (polished + lovable)
+**Grand Plan:** See `GRAND_PLAN.md` for full details
 
 ---
 
-## What's missing (the 3.5 points)
+## Completed (this session)
+
+- [x] Integration test (+0.5)
+- [x] Trust component caching (+0.5)
+- [x] Error boundaries (+0.5)
+- [x] Rate limiting (+0.3)
+- [x] Input validation (+0.3)
+- [x] Performance benchmark (+0.5)
+- [x] Accountant verification flow (+0.9)
+
+---
+
+## Remaining: Accountant Validation (GATE)
+
+- [ ] Find 3-5 Ethiopian accountants to test
+- [ ] Share staging URL with accountants
+- [ ] Review flagged corrections from verification flow
+- [ ] Fix critical issues found
+
+---
+
+## UI/UX Grand Plan — 5 Phases, 15 Items
+
+### Phase 1: Explainability (HIGHEST priority, 9h)
+- [ ] Sortable data tables (click header → sort → filter)
+- [ ] Inline action buttons on employee list, payroll runs, leave
+- [ ] Print-ready CSS (@media print) for payslips, reports
+- [ ] Empty state components (illustration + action)
+- [ ] Loading skeleton screens
+
+### Phase 2: Professional (HIGH priority, 4h)
+- [ ] Audit all templates for consistent components
+- [ ] Responsive data tables (table → cards on mobile)
+- [ ] Toast notification system for instant feedback
+- [ ] Dark mode toggle in header
+
+### Phase 3: Modern (MEDIUM priority, 5h)
+- [ ] AJAX for approve/reject/delete (no page reload)
+- [ ] Keyboard shortcuts (Ctrl+K search, Esc close)
+- [ ] Guided onboarding wizard
+
+### Phase 4: Power (MEDIUM priority, 5h)
+- [ ] Smart defaults (auto-fill period, auto-suggest bank)
+- [ ] Keyboard shortcut help modal (? key)
+- [ ] Contextual tooltips on complex fields
+
+### Phase 5: Delight (LOW priority, 4h)
+- [ ] Micro-animations (card expand, button press, page transitions)
+- [ ] Success celebration on payroll approval
+- [ ] Contextual help on tax brackets, pension rates
+
+---
+
+## Success Criteria
+
+- [ ] Any Ethiopian user can use the tool without training
+- [ ] Any accountant can verify calculations in-app
+- [ ] The tool works on mobile as well as desktop
+- [ ] The tool looks professional enough to sell globally
+- [ ] The tool is fast (all pages load in <1 second)
+- [ ] The tool is explainable (any user understands it in 30 seconds)
 
 ### 1. Integration Test (+0.5 points) ✅ DONE (2026-08-03)
 

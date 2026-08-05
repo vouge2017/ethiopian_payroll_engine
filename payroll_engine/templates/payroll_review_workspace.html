@@ -31,6 +31,11 @@
   <!-- SECTION 1: STORY — What happened? -->
   <!-- ═══════════════════════════════════════════ -->
 
+  {% if component_errors and component_errors.change_summary %}
+    {% set component_name = 'Change Summary' %}
+    {% set error_message = component_errors.change_summary %}
+    {% include '_component_error.html' with context %}
+  {% else %}
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
       <span class="text-blue-500">📖</span> What Happened
@@ -72,11 +77,17 @@
     </div>
     {% endif %}
   </div>
+  {% endif %}
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- SECTION 2: EVIDENCE — Why should I trust this? -->
   <!-- ═══════════════════════════════════════════ -->
 
+  {% if component_errors and component_errors.evidence %}
+    {% set component_name = 'Trust Evidence' %}
+    {% set error_message = component_errors.evidence %}
+    {% include '_component_error.html' with context %}
+  {% elif evidence %}
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
       <span class="text-green-500">✓</span> Trust Evidence
@@ -107,12 +118,17 @@
       {% endfor %}
     </div>
   </div>
+  {% endif %}
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- SECTION 3: ISSUES — Anything wrong? -->
   <!-- ═══════════════════════════════════════════ -->
 
-  {% if sorted_issues %}
+  {% if component_errors and component_errors.exceptions %}
+    {% set component_name = 'Issues & Exceptions' %}
+    {% set error_message = component_errors.exceptions %}
+    {% include '_component_error.html' with context %}
+  {% elif sorted_issues %}
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
       <span class="text-red-500">⚠</span> Issues
@@ -203,6 +219,22 @@
   <!-- SECTION 4: APPROVAL — Ready? -->
   <!-- ═══════════════════════════════════════════ -->
 
+  {% if component_errors and component_errors.exceptions %}
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+      <span class="text-purple-500">→</span> Approval
+    </h2>
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-yellow-600 font-medium">Cannot verify payroll safety — exception checks failed.</p>
+        <p class="text-xs text-gray-400 mt-1">Review payroll manually before approving.</p>
+      </div>
+      <button disabled class="px-6 py-3 bg-gray-300 text-gray-500 font-semibold rounded-lg cursor-not-allowed">
+        Approve Payroll
+      </button>
+    </div>
+  </div>
+  {% else %}
   <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
       <span class="text-purple-500">→</span> Approval
@@ -233,6 +265,7 @@
     </div>
     {% endif %}
   </div>
+  {% endif %}
 
   <!-- Navigation -->
   <div class="flex items-center justify-between text-sm text-gray-500">

@@ -5,6 +5,10 @@ from decimal import Decimal, InvalidOperation
 from sqlalchemy.exc import IntegrityError
 from . import db, limiter
 from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLog, ApiKey
+from .change_summary import compute_change_summary
+from .narrative import generate_narrative
+from .exceptions import classify_exceptions
+from .evidence import collect_evidence
 
 api = Blueprint('api', __name__)
 
@@ -726,71 +730,108 @@ def get_payroll_review(run_id):
     """Payroll Review Workspace — all trust data in one API call.
 
     Returns: narrative, evidence, exceptions, change summary, can_approve.
+    Each component is wrapped in try/except so partial data is returned on failure.
     """
+    import logging
+    logger = logging.getLogger('payroll_engine')
+
     from payroll_engine import models as trust_models
-    from payroll_engine.change_summary import compute_change_summary
-    from payroll_engine.narrative import generate_narrative
-    from payroll_engine.exceptions import classify_exceptions
-    from payroll_engine.evidence import collect_evidence
     from payroll_engine import trust_cache
 
     cid = _get_company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
 
-    # Try cache first, compute on miss
+    errors = {}
+
+    # Change Summary
     change = trust_cache.get_change_summary(run_id, cid)
     if change is None:
-        change = compute_change_summary(run_id, cid, db, trust_models)
-        if change:
-            trust_cache.put_change_summary(run_id, cid, change)
+        try:
+            change = compute_change_summary(run_id, cid, db, trust_models)
+            if change:
+                trust_cache.put_change_summary(run_id, cid, change)
+        except Exception as e:
+            logger.exception('Error computing change summary for run %d', run_id)
+            errors['change_summary'] = str(e)
 
+    # Narrative
     narrative = trust_cache.get_narrative(run_id, cid)
     if narrative is None:
-        narrative = generate_narrative(change) if change else 'No data available.'
-        trust_cache.put_narrative(run_id, cid, narrative)
+        try:
+            narrative = generate_narrative(change) if change else 'No data available.'
+            trust_cache.put_narrative(run_id, cid, narrative)
+        except Exception as e:
+            logger.exception('Error generating narrative for run %d', run_id)
+            narrative = 'Unable to load narrative.'
+            errors['narrative'] = str(e)
 
+    # Evidence
     evidence = trust_cache.get_evidence(run_id, cid)
     if evidence is None:
-        evidence = collect_evidence(run_id, cid, db, trust_models, change)
-        if evidence:
-            trust_cache.put_evidence(run_id, cid, evidence)
+        try:
+            evidence = collect_evidence(run_id, cid, db, trust_models, change)
+            if evidence:
+                trust_cache.put_evidence(run_id, cid, evidence)
+        except Exception as e:
+            logger.exception('Error collecting evidence for run %d', run_id)
+            errors['evidence'] = str(e)
 
+    # Exceptions
     exceptions = trust_cache.get_exceptions(run_id, cid)
     if exceptions is None:
-        exceptions = classify_exceptions(run_id, cid, db, trust_models, change)
-        if exceptions:
-            trust_cache.put_exceptions(run_id, cid, exceptions)
+        try:
+            exceptions = classify_exceptions(run_id, cid, db, trust_models, change)
+            if exceptions:
+                trust_cache.put_exceptions(run_id, cid, exceptions)
+        except Exception as e:
+            logger.exception('Error classifying exceptions for run %d', run_id)
+            errors['exceptions'] = str(e)
 
-    # Serialize
-    def serialize_signal(s):
-        return {'name': s.name, 'status': s.status, 'category': s.category,
-                'explanation': s.explanation, 'source': s.source, 'detail': s.detail,
-                'blocking': s.blocking}
-
-    def serialize_issue(i):
-        return {'severity': i.severity, 'code': i.code, 'title': i.title,
-                'description': i.description, 'employee_id': i.employee_id,
-                'employee_name': i.employee_name, 'blocking': i.blocking,
-                'impact': i.impact, 'cause': i.cause,
-                'recommendation': i.recommendation, 'action_url': i.action_url,
-                'estimated_time': i.estimated_time}
-
-    return jsonify({
+    # Build response — include whatever succeeded
+    response = {
         'run_id': run.id,
         'period': run.period,
         'reference': run.reference,
         'status': run.status,
         'narrative': narrative,
-        'can_approve': exceptions.can_approve,
-        'evidence': {
+        'errors': errors,
+    }
+
+    # Add can_approve only if exceptions computed successfully
+    if exceptions:
+        response['can_approve'] = exceptions.can_approve
+    else:
+        response['can_approve'] = False  # Conservative: can't approve if we can't verify
+
+    # Add evidence only if it computed successfully
+    if evidence:
+        def serialize_signal(s):
+            return {'name': s.name, 'status': s.status, 'category': s.category,
+                    'explanation': s.explanation, 'source': s.source, 'detail': s.detail,
+                    'blocking': s.blocking}
+
+        response['evidence'] = {
             'total': evidence.total,
             'passed': len(evidence.passed),
             'failed': len(evidence.failed),
             'warned': len(evidence.warned),
             'pass_rate': round(evidence.pass_rate, 1),
             'signals': [serialize_signal(s) for s in evidence.signals],
-        },
-        'exceptions': {
+        }
+    else:
+        response['evidence'] = {'error': 'Unable to load evidence'}
+
+    # Add exceptions only if they computed successfully
+    if exceptions:
+        def serialize_issue(i):
+            return {'severity': i.severity, 'code': i.code, 'title': i.title,
+                    'description': i.description, 'employee_id': i.employee_id,
+                    'employee_name': i.employee_name, 'blocking': i.blocking,
+                    'impact': i.impact, 'cause': i.cause,
+                    'recommendation': i.recommendation, 'action_url': i.action_url,
+                    'estimated_time': i.estimated_time}
+
+        response['exceptions'] = {
             'total': exceptions.total,
             'critical': len(exceptions.critical),
             'high': len(exceptions.high),
@@ -798,8 +839,11 @@ def get_payroll_review(run_id):
             'low': len(exceptions.low),
             'summary': exceptions.summary,
             'issues': [serialize_issue(i) for i in exceptions.sorted_issues()],
-        },
-    })
+        }
+    else:
+        response['exceptions'] = {'error': 'Unable to load exceptions'}
+
+    return jsonify(response)
 
 
 # --- Bank File API ---

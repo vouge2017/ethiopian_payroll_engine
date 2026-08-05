@@ -12,7 +12,10 @@ Aggregates data from all trust components into one view.
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Optional
+import logging
 from payroll_engine.compliance import get_deadline_for_type
+
+logger = logging.getLogger(__name__)
 from payroll_engine.change_summary import compute_change_summary
 from payroll_engine.narrative import generate_narrative
 from payroll_engine.exceptions import classify_exceptions
@@ -61,6 +64,9 @@ class CockpitData:
     # Question 5: What is blocking me?
     blocking_items: list = field(default_factory=list)
     has_blocking: bool = False
+
+    # Error tracking — each component fails independently
+    component_errors: dict = field(default_factory=dict)
 
     # Overall status
     status: str = 'unknown'  # ready, attention, blocked, no_payroll
@@ -203,92 +209,114 @@ def build_cockpit(company_id, db, models):
     # Question 2: What changed?
     # ─────────────────────────────────────────
 
+    try:
+        # Try cache first, compute on miss
+        change_summary = trust_cache.get_change_summary(latest_run.id, company_id)
+        if change_summary is None:
+            change_summary = compute_change_summary(latest_run.id, company_id, db, models)
+            if change_summary:
+                trust_cache.put_change_summary(latest_run.id, company_id, change_summary)
 
-    # Try cache first, compute on miss
-    change_summary = trust_cache.get_change_summary(latest_run.id, company_id)
-    if change_summary is None:
-        change_summary = compute_change_summary(latest_run.id, company_id, db, models)
         if change_summary:
-            trust_cache.put_change_summary(latest_run.id, company_id, change_summary)
-
-    if change_summary:
-        cockpit.change_summary_available = True
-        # Narrative — try cache
-        narrative = trust_cache.get_narrative(latest_run.id, company_id)
-        if narrative is None:
-            narrative = generate_narrative(change_summary)
-            trust_cache.put_narrative(latest_run.id, company_id, narrative)
-        cockpit.narrative = narrative
-        cockpit.headcount_change = change_summary.headcount_change
-        cockpit.gross_delta_pct = change_summary.gross_delta_pct
-    else:
+            cockpit.change_summary_available = True
+            # Narrative — try cache
+            narrative = trust_cache.get_narrative(latest_run.id, company_id)
+            if narrative is None:
+                narrative = generate_narrative(change_summary)
+                trust_cache.put_narrative(latest_run.id, company_id, narrative)
+            cockpit.narrative = narrative
+            cockpit.headcount_change = change_summary.headcount_change
+            cockpit.gross_delta_pct = change_summary.gross_delta_pct
+        else:
+            cockpit.narrative = f'Payroll for {cockpit.period} includes {cockpit.employee_count} employees.'
+    except Exception as e:
+        logger.exception('Error computing change summary for run %d', latest_run.id)
         cockpit.narrative = f'Payroll for {cockpit.period} includes {cockpit.employee_count} employees.'
+        cockpit.component_errors['change_summary'] = str(e)
 
     # ─────────────────────────────────────────
     # Question 3: Is anything unusual?
     # ─────────────────────────────────────────
 
-    if change_summary and change_summary.has_unusual_variance:
-        cockpit.has_unusual = True
-        for note in change_summary.variance_notes:
-            cockpit.unusual_items.append(AttentionItem(
-                priority='important',
-                title='Unusual variance',
-                description=note,
-                action_url=f'/payroll/runs/{latest_run.id}/review',
-                action_label='Review Variance',
-            ))
-
-    # Check for large salary changes
-    if change_summary:
-        for sc in change_summary.salary_changes:
-            if sc.delta_pct and abs(sc.delta_pct) > 20:
+    try:
+        if change_summary and change_summary.has_unusual_variance:
+            cockpit.has_unusual = True
+            for note in change_summary.variance_notes:
                 cockpit.unusual_items.append(AttentionItem(
-                    priority='info',
-                    title=f'Large salary change: {sc.employee_name}',
-                    description=sc.description,
+                    priority='important',
+                    title='Unusual variance',
+                    description=note,
                     action_url=f'/payroll/runs/{latest_run.id}/review',
-                    action_label='Review Change',
+                    action_label='Review Variance',
                 ))
 
-    if not cockpit.unusual_items:
-        cockpit.has_unusual = False
+        # Check for large salary changes
+        if change_summary:
+            for sc in change_summary.salary_changes:
+                if sc.delta_pct and abs(sc.delta_pct) > 20:
+                    cockpit.unusual_items.append(AttentionItem(
+                        priority='info',
+                        title=f'Large salary change: {sc.employee_name}',
+                        description=sc.description,
+                        action_url=f'/payroll/runs/{latest_run.id}/review',
+                        action_label='Review Change',
+                    ))
+
+        if not cockpit.unusual_items:
+            cockpit.has_unusual = False
+    except Exception as e:
+        logger.exception('Error checking unusual items for run %d', latest_run.id)
+        cockpit.component_errors['unusual'] = str(e)
 
     # ─────────────────────────────────────────
     # Question 4: Am I ready to file?
     # ─────────────────────────────────────────
 
-
-    filing = trust_cache.get_filing_workspace(latest_run.id, company_id)
-    if filing is None:
-        filing = build_filing_workspace(latest_run.id, company_id, db, models)
+    try:
+        filing = trust_cache.get_filing_workspace(latest_run.id, company_id)
+        if filing is None:
+            filing = build_filing_workspace(latest_run.id, company_id, db, models)
+            if filing:
+                trust_cache.put_filing_workspace(latest_run.id, company_id, filing)
         if filing:
-            trust_cache.put_filing_workspace(latest_run.id, company_id, filing)
-    if filing:
-        cockpit.filing_steps = filing.steps
-        cockpit.filing_all_done = filing.all_filed
-        cockpit.filing_ready = not filing.has_overdue and latest_run.status in ('completed', 'locked')
+            cockpit.filing_steps = filing.steps
+            cockpit.filing_all_done = filing.all_filed
+            cockpit.filing_ready = not filing.has_overdue and latest_run.status in ('completed', 'locked')
+    except Exception as e:
+        logger.exception('Error building filing workspace for run %d', latest_run.id)
+        cockpit.component_errors['filing'] = str(e)
 
     # ─────────────────────────────────────────
     # Question 5: What is blocking me?
     # ─────────────────────────────────────────
 
-
-    exceptions = trust_cache.get_exceptions(latest_run.id, company_id)
-    if exceptions is None:
-        exceptions = classify_exceptions(latest_run.id, company_id, db, models, change_summary)
-        if exceptions:
-            trust_cache.put_exceptions(latest_run.id, company_id, exceptions)
-    if exceptions.has_blocking:
-        cockpit.has_blocking = True
-        for issue in exceptions.blocking_issues:
-            cockpit.blocking_items.append(AttentionItem(
-                priority='urgent',
-                title=issue.title,
-                description=issue.description,
-                action_url=issue.action_url,
-                action_label='Fix This',
-            ))
+    try:
+        exceptions = trust_cache.get_exceptions(latest_run.id, company_id)
+        if exceptions is None:
+            exceptions = classify_exceptions(latest_run.id, company_id, db, models, change_summary)
+            if exceptions:
+                trust_cache.put_exceptions(latest_run.id, company_id, exceptions)
+        if exceptions.has_blocking:
+            cockpit.has_blocking = True
+            for issue in exceptions.blocking_issues:
+                cockpit.blocking_items.append(AttentionItem(
+                    priority='urgent',
+                    title=issue.title,
+                    description=issue.description,
+                    action_url=issue.action_url,
+                    action_label='Fix This',
+                ))
+    except Exception as e:
+        logger.exception('Error classifying exceptions for run %d', latest_run.id)
+        cockpit.has_blocking = True  # Conservative: assume blocking if we can't check
+        cockpit.blocking_items.append(AttentionItem(
+            priority='urgent',
+            title='Unable to verify payroll issues',
+            description='Could not check for blocking issues. Review payroll manually before approving.',
+            action_url=f'/payroll/runs/{latest_run.id}/review',
+            action_label='Review Manually',
+        ))
+        cockpit.component_errors['exceptions'] = str(e)
 
     # ─────────────────────────────────────────
     # Overall status

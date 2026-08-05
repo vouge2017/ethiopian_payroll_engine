@@ -91,6 +91,11 @@
   <!-- Q2: What changed? -->
   <!-- ═══════════════════════════════════════════ -->
 
+  {% if cockpit.component_errors and cockpit.component_errors.change_summary %}
+    {% set component_name = 'Change Summary' %}
+    {% set error_message = cockpit.component_errors.change_summary %}
+    {% include '_component_error.html' with context %}
+  {% else %}
   <div class="card mb-4 animate-fade-in">
     <div class="card-body">
       <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart text-primary me-2"></i>What changed?</h5>
@@ -118,6 +123,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- Q3: Is anything unusual? -->
@@ -154,6 +160,11 @@
   <!-- Q4: Am I ready to file? -->
   <!-- ═══════════════════════════════════════════ -->
 
+  {% if cockpit.component_errors and cockpit.component_errors.filing %}
+    {% set component_name = 'Filing Status' %}
+    {% set error_message = cockpit.component_errors.filing %}
+    {% include '_component_error.html' with context %}
+  {% else %}
   <div class="card mb-4 animate-fade-in">
     <div class="card-body">
       <h5 class="fw-bold mb-3"><i class="bi bi-folder text-purple me-2" style="color: #8b5cf6;"></i>Am I ready to file?</h5>
@@ -205,11 +216,17 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- Q5: What is blocking me? -->
   <!-- ═══════════════════════════════════════════ -->
 
+  {% if cockpit.component_errors and cockpit.component_errors.exceptions %}
+    {% set component_name = 'Blocking Issues' %}
+    {% set error_message = cockpit.component_errors.exceptions %}
+    {% include '_component_error.html' with context %}
+  {% else %}
   <div class="card mb-4 animate-fade-in">
     <div class="card-body">
       <h5 class="fw-bold mb-3"><i class="bi bi-cone-striped text-danger me-2"></i>What is blocking me?</h5>
@@ -236,6 +253,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
 
   <!-- Quick Actions -->
   <div class="d-flex justify-content-center gap-3 mt-4">

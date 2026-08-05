@@ -460,9 +460,17 @@ def cockpit():
     4. Am I ready to file?
     5. What is blocking me?
     """
+    import logging
+    logger = logging.getLogger('payroll_engine')
+
     cid = _company_id()
     from payroll_engine import models as cockpit_models
-    data = build_cockpit(cid, db, cockpit_models)
+    try:
+        data = build_cockpit(cid, db, cockpit_models)
+    except Exception as e:
+        logger.exception('Error building cockpit for company %d', cid)
+        flash('Unable to load cockpit data. Some sections may be unavailable.', 'warning')
+        data = None
 
     if not data:
         flash('Unable to load cockpit data.', 'danger')
@@ -512,9 +520,16 @@ def api_cockpit():
 
     Used by the cockpit page for polling and inline actions.
     """
+    import logging
+    logger = logging.getLogger('payroll_engine')
+
     cid = _company_id()
     from payroll_engine import models as cockpit_models
-    data = build_cockpit(cid, db, cockpit_models)
+    try:
+        data = build_cockpit(cid, db, cockpit_models)
+    except Exception as e:
+        logger.exception('Error building cockpit API for company %d', cid)
+        return jsonify({'error': 'Unable to load cockpit data', 'details': str(e)}), 500
 
     if not data:
         return jsonify({'error': 'Unable to load cockpit data'}), 500
@@ -551,6 +566,7 @@ def api_cockpit():
         'filing_all_done': data.filing_all_done,
         'has_blocking': data.has_blocking,
         'blocking_items': [serialize_attention(i) for i in data.blocking_items],
+        'component_errors': data.component_errors,
     })
 
 
@@ -2055,27 +2071,59 @@ def payroll_review_workspace(run_id):
     """Payroll Review Workspace — unified trust view.
 
     Combines: Story → Evidence → Issues → Resolution → Approval
+    Each component is wrapped in try/except so one failure doesn't crash the page.
     """
+    import logging
+    logger = logging.getLogger('payroll_engine')
+
     cid = _company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
 
-    # Import models module for trust components
     from payroll_engine import models as trust_models
 
+    # Error tracking — each component fails independently
+    errors = {}
+
     # 1. Change Summary — what changed
-    change_summary = compute_change_summary(run_id, cid, db, trust_models)
+    change_summary = None
+    try:
+        change_summary = compute_change_summary(run_id, cid, db, trust_models)
+    except Exception as e:
+        logger.exception('Error computing change summary for run %d', run_id)
+        errors['change_summary'] = str(e)
 
     # 2. Narrative — plain-English story
-    narrative = generate_narrative(change_summary) if change_summary else 'No data available.'
+    narrative = 'Unable to load narrative.'
+    try:
+        if change_summary:
+            narrative = generate_narrative(change_summary)
+        else:
+            narrative = 'No data available.'
+    except Exception as e:
+        logger.exception('Error generating narrative for run %d', run_id)
+        errors['narrative'] = str(e)
+        narrative = 'Unable to load narrative.'
 
     # 3. Evidence — trust signals
-    evidence = collect_evidence(run_id, cid, db, trust_models, change_summary)
+    evidence = None
+    try:
+        evidence = collect_evidence(run_id, cid, db, trust_models, change_summary)
+    except Exception as e:
+        logger.exception('Error collecting evidence for run %d', run_id)
+        errors['evidence'] = str(e)
 
     # 4. Exceptions — issues with resolution
-    exceptions = classify_exceptions(run_id, cid, db, trust_models, change_summary)
-
-    # Sorted issues for display (critical first)
-    sorted_issues = exceptions.sorted_issues()
+    exceptions = None
+    sorted_issues = []
+    can_approve = False
+    try:
+        exceptions = classify_exceptions(run_id, cid, db, trust_models, change_summary)
+        sorted_issues = exceptions.sorted_issues()
+        can_approve = exceptions.can_approve
+    except Exception as e:
+        logger.exception('Error classifying exceptions for run %d', run_id)
+        errors['exceptions'] = str(e)
+        can_approve = False  # Cannot approve if we can't verify issues
 
     return render_template(
         'payroll_review_workspace.html',
@@ -2085,7 +2133,8 @@ def payroll_review_workspace(run_id):
         exceptions=exceptions,
         sorted_issues=sorted_issues,
         change_summary=change_summary,
-        can_approve=exceptions.can_approve,
+        can_approve=can_approve,
+        component_errors=errors,
         year=date.today().year,
     )
 

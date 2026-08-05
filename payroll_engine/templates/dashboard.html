@@ -35,12 +35,16 @@
     <!-- Metric Cards -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
-            <div class="card metric-card animate-fade-in">
+            <div class="card metric-card animate-fade-in {% if employee_count == 0 %}border-warning{% endif %}">
                 <div class="metric-icon blue"><i class="bi bi-people"></i></div>
                 <div class="metric-label">Employees</div>
                 <div class="metric-value">{{ employee_count }}</div>
                 {% if employee_count > 0 %}
                 <div class="metric-trend up"><i class="bi bi-arrow-up"></i> Active</div>
+                {% else %}
+                <a href="{{ url_for('employees.add_employee') }}" class="metric-trend text-decoration-none" style="color: var(--brand-primary);">
+                    <i class="bi bi-plus-circle"></i> Add first employee
+                </a>
                 {% endif %}
             </div>
         </div>

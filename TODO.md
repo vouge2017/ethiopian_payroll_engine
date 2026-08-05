@@ -1,180 +1,144 @@
-# TODO — Accountant Operating System Roadmap
+# TODO — Path to 10/10 Delivery Readiness
 
 **Last updated:** 2026-08-05
-**Philosophy:** The explanation comes first. The score comes second. Never build a black box.
+**Current score:** 6.5/10
+**Target:** 10/10
 
 ---
 
-## What's Built ✅
+## What's missing (the 3.5 points)
 
-| Component | Tests | What it does |
-|---|---|---|
-| Change Summary | 20 | Compares current vs previous payroll |
-| Narrative | 30 | Plain-English paragraph explaining the month |
-| Exception Intelligence | 20 | Classifies issues as Critical/High/Medium/Low |
+### 1. Integration Test (+0.5 points) 🔲 NEXT
 
----
+**One test that proves the entire flow works end-to-end.**
 
-## Sprint 1 — Evidence Engine 🔲 NEXT
+Upload → Calculate → Review (trust components) → Approve → Generate ERCA → Generate Bank File → Mark Filed
 
-**Every trust signal must be explicit and explainable.**
-
-Not a percentage. A checklist the accountant can see.
-
-```
-Payroll Status
-
-✓ 128/128 employees processed
-✓ No validation errors
-✓ Tax rules verified (Proclamation 1395/2025)
-✓ Pension rules verified (Proclamation 1268/2022)
-✓ No duplicate payroll
-✓ No critical exceptions
-✓ All mandatory employee data present
-✓ Payroll balanced (debits = credits)
-
-Ready for approval
-```
+Currently each component is unit-tested with mocks. No test proves they work together.
 
 **Build:**
-- [ ] `payroll_engine/evidence.py` — collects all trust signals
-- [ ] Each signal: name, status (pass/fail/warn), source, explanation
-- [ ] Grouped by category: Validation, Compliance, Data Quality, Integrity
-- [ ] API: `GET /api/v1/payroll-runs/<id>/evidence`
-- [ ] Tests: `tests/test_evidence.py`
-
-**After evidence exists, optionally add:**
-```
-97% — from: Validation ✓, Compliance ✓, Data Quality ✓, Exceptions ✓, Integrity ✓
-```
+- [ ] `tests/test_integration_payroll_flow.py`
+- [ ] Uses real SQLite database (not mocks)
+- [ ] Creates company, employees, payroll run
+- [ ] Verifies Change Summary, Narrative, Evidence, Exceptions
+- [ ] Approves payroll
+- [ ] Generates ERCA report
+- [ ] Generates bank file
+- [ ] Marks as filed
+- [ ] Verifies numbers at each step
 
 ---
 
-## Sprint 2 — Resolution Intelligence 🔲
+### 2. Caching (+0.5 points) 🔲
 
-**Every issue answers: Impact → Cause → Recommendation → Action.**
+**Dashboard loads in <500ms regardless of company size.**
 
-Not just "Missing Bank Account." Tell the accountant what to do.
-
-```
-⚠ Missing Bank Account
-
-Impact:   Employee cannot receive bank transfer.
-Risk:     High
-Cause:    Bank account field is empty.
-Fix:      Collect bank details or switch to Telebirr.
-Action:   [Update Employee →]
-Time:     2 minutes
-```
+Currently: every dashboard load computes Change Summary, Narrative, Evidence, Exceptions, Filing from scratch. At 500 employees, this will be slow.
 
 **Build:**
-- [ ] Enhance `payroll_engine/exceptions.py` — add impact, cause, recommendation, action_url, estimated_time
-- [ ] Each issue becomes a mini-guide, not just a warning
-- [ ] API: issue objects include resolution fields
-- [ ] Tests: update `test_exceptions.py`
+- [ ] Cache Change Summary result per run_id (TTL: 5 minutes)
+- [ ] Cache Evidence result per run_id (TTL: 5 minutes)
+- [ ] Cache Exception result per run_id (TTL: 5 minutes)
+- [ ] Invalidate cache when payroll is approved or employee data changes
+- [ ] Add cache headers to API responses
 
 ---
 
-## Sprint 3 — Payroll Review Workspace 🔲
+### 3. Error Boundaries in Templates (+0.5 points) 🔲
 
-**One unified flow that matches how accountants think.**
+**If a trust component fails, the page still loads.**
 
-```
-Payroll Review — August 2026
-
-1. STORY — What happened?
-   [Narrative paragraph]
-
-2. EVIDENCE — Why should I trust this?
-   [Evidence checklist]
-
-3. ISSUES — Anything wrong?
-   [Exception list with resolution]
-
-4. RESOLUTION — How do I fix it?
-   [Actionable guidance for each issue]
-
-5. APPROVAL — Ready?
-   [Approve button — only if no critical issues]
-```
+Currently: if Change Summary throws an exception, the entire Payroll Review page crashes.
 
 **Build:**
-- [ ] `payroll_engine/templates/payroll_review_workspace.html`
-- [ ] Route: `GET /payroll/runs/<id>/review`
-- [ ] Combines: Narrative + Evidence + Exceptions + Resolution
-- [ ] Approve button disabled if `report.can_approve is False`
+- [ ] Wrap each section in try/except in the route
+- [ ] Show graceful fallback ("Unable to load change summary")
+- [ ] Log the error for debugging
+- [ ] Never crash the entire page for one component failure
 
 ---
 
-## Sprint 4 — Confidence Summary 🔲 (only after Sprint 1-3)
+### 4. Rate Limiting on Dashboard API (+0.3 points) 🔲
 
-**If it genuinely helps users, add an overall score.**
+**Prevent dashboard API from being hammered.**
 
-```
-Confidence: 97%
+Currently: no rate limit on `/payroll/api/dashboard` or `/payroll/api/cockpit`.
 
-From:
-✓ Validation (20%)
-✓ Compliance (20%)
-✓ Data Quality (20%)
-✓ Exceptions (20%)
-✓ Payroll Integrity (20%)
-```
-
-Only build this if accountants in usability sessions say they want it.
+**Build:**
+- [ ] Add `@limiter.limit('30 per minute')` to dashboard API
+- [ ] Add `@limiter.limit('10 per minute')` to cockpit API
+- [ ] Return 429 with retry-after header
 
 ---
 
-## Future — Predictive Intelligence 🔲
+### 5. Input Validation on API Endpoints (+0.3 points) 🔲
 
-**Before payroll runs, not after.**
+**Validate all API inputs before processing.**
 
-```
-Before running payroll:
+Currently: dashboard API doesn't validate company_id or user permissions.
 
-Expected Net Payroll: ETB 2,847,000
-Expected Change: +1.2%
-Potential Risks: 3
-  - Large overtime: 2 employees
-  - Missing TIN: 1 employee
-
-Payroll likely ready after these fixes.
-```
-
-Fix problems before payroll is calculated.
+**Build:**
+- [ ] Validate company_id exists and user has access
+- [ ] Validate run_id exists and belongs to company
+- [ ] Return 400/403 with clear error messages
+- [ ] Log invalid requests for security monitoring
 
 ---
 
-## Future — Per-Employee Narrative 🔲
+### 6. Real Accountant Validation (+0.9 points) 🔲 GATE
 
-**Click one employee, see their story.**
+**The product is tested by real Ethiopian accountants.**
 
-```
-Dawit Mekonnen
+This is the biggest gap. No amount of engineering replaces user validation.
 
-Salary increased by ETB 2,000.
-Reason: Promotion (approved by HR, 2026-07-15)
-Tax increased because taxable income moved into next bracket.
-Net salary increased by ETB 1,420.
-```
-
----
-
-## What to STOP building
-
-- ❌ No more webhook events
-- ❌ No more API endpoints for the sake of endpoints
-- ❌ No more export formats
-- ❌ No more infrastructure improvements
-
-✅ Focus entirely on the Payroll Review Workspace.
+**Build:**
+- [ ] Find 3-5 Ethiopian accountants willing to test
+- [ ] Give them access to the staging environment
+- [ ] Ask them to complete a full payroll cycle
+- [ ] Observe where they get stuck
+- [ ] Collect feedback on trust components (do they understand the narrative? do they trust the evidence?)
+- [ ] Fix critical issues found
 
 ---
 
-## Validation Gate
+### 7. Performance Benchmark (+0.5 points) 🔲
 
-After Sprint 3, conduct usability sessions with real Ethiopian accountants.
+**Prove the system works at scale.**
 
-Question: "Do they prefer it over Excel?"
+Currently: no load testing. Unknown if dashboard loads in 1 second or 30 seconds with 500 employees.
 
-Not: "Does it work?"
+**Build:**
+- [ ] Benchmark Change Summary with 100, 500, 1000 employees
+- [ ] Benchmark dashboard API response time
+- [ ] Benchmark full payroll cycle (upload → approve)
+- [ ] Document performance characteristics
+- [ ] Fix any bottlenecks found
+
+---
+
+## Priority order
+
+| # | What | Impact | Effort |
+|---|---|---|---|
+| 1 | Integration test | High | 2 hours |
+| 2 | Error boundaries | High | 1 hour |
+| 3 | Caching | Medium | 2 hours |
+| 4 | Rate limiting | Low | 30 min |
+| 5 | Input validation | Low | 30 min |
+| 6 | Performance benchmark | Medium | 2 hours |
+| 7 | Real accountant validation | Critical | External |
+
+---
+
+## What's done (for reference)
+
+- [x] Trust components (6 modules, 164 tests)
+- [x] Role-based dashboards (4 roles)
+- [x] Dashboard API with trends
+- [x] Payroll Review workspace
+- [x] Filing workspace
+- [x] Rule Source with legal basis
+- [x] Cockpit with priority ranking
+- [x] can_approve enforced at approval gate
+- [x] N+1 query fixed
+- [x] Shared test helpers created

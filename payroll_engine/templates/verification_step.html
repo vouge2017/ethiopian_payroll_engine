@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ step.title }} — Verification{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-3xl">
+  <!-- Breadcrumb -->
+  <div class="text-sm text-gray-500 mb-4">
+    <a href="{{ url_for('verification.verification_home') }}" class="hover:text-gray-700">Verification</a>
+    <span class="mx-1">›</span>
+    <span class="text-gray-800">{{ step.title }}</span>
+  </div>
+
+  <!-- Progress indicator -->
+  <div class="text-xs text-gray-400 mb-6">Step {{ current_idx + 1 }} of {{ total }}</div>
+
+  <!-- Step content -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-bold">
+        {{ step.section }}
+      </span>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">{{ step.title }}</h1>
+        <span class="text-xs px-2 py-0.5 rounded
+          {% if step.impact.startswith('HIGH') %}bg-red-50 text-red-700
+          {% elif step.impact.startswith('MEDIUM') %}bg-yellow-50 text-yellow-700
+          {% else %}bg-gray-50 text-gray-600{% endif %}">
+          {{ step.impact }}
+        </span>
+      </div>
+    </div>
+
+    <p class="text-gray-600 mb-4">{{ step.description }}</p>
+
+    <!-- What our system does -->
+    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">What our system uses:</h3>
+      <ul class="space-y-1">
+        {% for field in step.fields %}
+        <li class="text-sm text-gray-600 flex items-start gap-2">
+          <span class="text-gray-400 mt-0.5">•</span>
+          {{ field }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- What to check -->
+    <div class="bg-blue-50 rounded-lg p-4 mb-6">
+      <h3 class="text-sm font-semibold text-blue-700 mb-1">What to check:</h3>
+      <p class="text-sm text-blue-600">{{ step.what_to_check }}</p>
+    </div>
+
+    <!-- Verification form -->
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <!-- Verified checkbox -->
+      <div class="mb-4">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="verified" class="w-4 h-4 text-blue-600 rounded"
+                 {% if progress.get('verified') %}checked{% endif %}>
+          <span class="text-sm font-medium text-gray-700">I have reviewed this section</span>
+        </label>
+      </div>
+
+      <!-- Correct/Incorrect -->
+      <div class="mb-4">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="correct" class="w-4 h-4 text-green-600 rounded"
+                 {% if progress.get('correct') %}checked{% endif %}>
+          <span class="text-sm font-medium text-gray-700">These values are correct</span>
+        </label>
+      </div>
+
+      <!-- Correction field -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          If incorrect, what should the correct value be?
+        </label>
+        <textarea name="correction" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="e.g., The correct tax rate for 2,001-4,000 is 10%, not 15%">{{ progress.get('correction', '') }}</textarea>
+      </div>
+
+      <!-- Notes field -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          Additional notes (optional)
+        </label>
+        <textarea name="notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="Any other observations...">{{ progress.get('notes', '') }}</textarea>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex items-center gap-3">
+        <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+          Save & Continue
+        </button>
+        <a href="{{ url_for('verification.verification_home') }}" class="text-sm text-gray-500 hover:text-gray-700">
+          Back to all steps
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

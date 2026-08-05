@@ -391,6 +391,8 @@ def create_app():
     app.register_blueprint(accounting_bp)
     from .calendar_bp import calendar_bp
     app.register_blueprint(calendar_bp)
+    from .verification_bp import verification_bp
+    app.register_blueprint(verification_bp)
     from .selfservice_bp import selfservice_bp
     app.register_blueprint(selfservice_bp)
     @app.cli.command('seed-holidays')

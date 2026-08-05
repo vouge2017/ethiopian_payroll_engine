@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Accountant Verification — EthioPayroll{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-4xl">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900">Accountant Verification</h1>
+    <p class="text-gray-500 mt-1">Step-by-step verification of payroll calculations against Ethiopian law</p>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium text-gray-700">Progress</span>
+      <span class="text-sm text-gray-500">{{ completed }}/{{ total }} verified</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+      <div class="bg-green-500 h-2 rounded-full transition-all" style="width: {{ (completed / total * 100) | round }}%"></div>
+    </div>
+    {% if completed == total %}
+    <p class="text-green-600 text-sm mt-2 font-medium">✓ All steps verified! <a href="{{ url_for('verification.verification_summary') }}" class="underline">View summary</a></p>
+    {% endif %}
+  </div>
+
+  <!-- Steps list -->
+  <div class="space-y-3">
+    {% for step in steps %}
+    {% set p = progress.get(step.id, {}) %}
+    <a href="{{ url_for('verification.verification_step', step_id=step.id) }}"
+       class="block bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:border-blue-300 transition-colors">
+      <div class="flex items-center gap-4">
+        <div class="flex-shrink-0">
+          {% if p.get('verified') and p.get('correct') %}
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600">✓</span>
+          {% elif p.get('verified') and not p.get('correct') %}
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-yellow-100 text-yellow-600">⚠</span>
+          {% else %}
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-400">{{ step.section }}</span>
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-gray-800">{{ step.title }}</div>
+          <div class="text-xs text-gray-500">{{ step.description }}</div>
+        </div>
+        <div class="flex-shrink-0">
+          <span class="text-xs px-2 py-1 rounded
+            {% if step.impact.startswith('HIGH') %}bg-red-50 text-red-700
+            {% elif step.impact.startswith('MEDIUM') %}bg-yellow-50 text-yellow-700
+            {% else %}bg-gray-50 text-gray-600{% endif %}">
+            {{ step.impact.split(' ')[0] }}
+          </span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Feedback section -->
+  <div class="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-3">General Feedback</h2>
+    <p class="text-sm text-gray-500 mb-4">Found something not covered above? Let us know.</p>
+    <form id="feedback-form" onsubmit="submitFeedback(event)">
+      <div class="mb-3">
+        <select name="category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          <option value="general">General feedback</option>
+          <option value="calculation">Calculation error</option>
+          <option value="format">ERCA format issue</option>
+          <option value="ux">Usability issue</option>
+          <option value="missing">Missing feature</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <textarea name="feedback" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="Describe what you found..."></textarea>
+      </div>
+      <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
+        Submit Feedback
+      </button>
+      <span id="feedback-status" class="ml-3 text-sm text-green-600 hidden">Thank you!</span>
+    </form>
+  </div>
+</div>
+
+<script>
+async function submitFeedback(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = {
+    category: form.category.value,
+    feedback: form.feedback.value,
+  };
+  const resp = await fetch('/verification/feedback', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data),
+  });
+  if (resp.ok) {
+    form.feedback.value = '';
+    document.getElementById('feedback-status').classList.remove('hidden');
+    setTimeout(() => document.getElementById('feedback-status').classList.add('hidden'), 3000);
+  }
+}
+</script>
+{% endblock %}

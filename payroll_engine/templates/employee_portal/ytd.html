@@ -71,7 +71,7 @@
         <div class="card-body p-0">
             {% if ytd.payslips %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead>
                         <tr>
                             <th>Month</th>
@@ -85,12 +85,12 @@
                     <tbody>
                         {% for ps in ytd.payslips %}
                         <tr>
-                            <td><strong>{{ ps.period }}</strong></td>
-                            <td class="text-end">ETB {{ "{:,.0f}".format(ps.gross) }}</td>
-                            <td class="text-end text-warning">ETB {{ "{:,.0f}".format(ps.tax) }}</td>
-                            <td class="text-end">ETB {{ "{:,.0f}".format(ps.pension) }}</td>
-                            <td class="text-end fw-bold text-success">ETB {{ "{:,.0f}".format(ps.net) }}</td>
-                            <td class="text-end">
+                            <td data-label="Period"><strong>{{ ps.period }}</strong></td>
+                            <td data-label="Gross" class="text-end">ETB {{ "{:,.0f}".format(ps.gross) }}</td>
+                            <td data-label="Tax" class="text-end text-warning">ETB {{ "{:,.0f}".format(ps.tax) }}</td>
+                            <td data-label="Pension" class="text-end">ETB {{ "{:,.0f}".format(ps.pension) }}</td>
+                            <td data-label="Net" class="text-end fw-bold text-success">ETB {{ "{:,.0f}".format(ps.net) }}</td>
+                            <td data-label="" class="text-end">
                                 <a href="{{ url_for('portal.my_payslip_detail', payslip_id=ps.payslip_id) }}" class="btn btn-sm btn-ghost">
                                     <i class="bi bi-eye"></i>
                                 </a>

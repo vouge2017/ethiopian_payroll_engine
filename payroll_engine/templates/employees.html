@@ -106,9 +106,18 @@
                             <td data-label="Basic Salary" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.basic_salary) }}</td>
                             <td data-label="Gross" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.gross_salary) }}</td>
                             <td data-label="Actions">
-                                <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-ghost">
-                                    <i class="bi bi-eye"></i>
-                                </a>
+                                <div class="d-flex gap-1">
+                                    <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('employees.edit_employee', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-ghost text-danger" title="Deactivate"
+                                            onclick="deactivateEmployee({{ emp.id }}, '{{ emp.display_name|e }}')">
+                                        <i class="bi bi-person-dash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -149,4 +158,37 @@
     </nav>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function deactivateEmployee(empId, empName) {
+    if (!confirm(`Deactivate ${empName}? Their payroll history will be preserved.`)) return;
+
+    try {
+        const data = await EthioPayroll.ajax(`/employees/${empId}/deactivate`, {
+            method: 'POST',
+        });
+        if (data.success) {
+            EthioPayroll.toast(data.message, 'success');
+            // Remove the row from the table with fade-out
+            const rows = document.querySelectorAll('tr');
+            let row = null;
+            for (const r of rows) {
+                const btn = r.querySelector(`button[onclick*="deactivateEmployee(${empId},"]`);
+                if (btn) { row = r; break; }
+            }
+            if (row) {
+                row.style.transition = 'opacity 0.3s ease';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 300);
+            }
+        } else {
+            EthioPayroll.toast(data.error || 'Failed to deactivate', 'error');
+        }
+    } catch (err) {
+        EthioPayroll.toast(err.message || 'Network error', 'error');
+    }
+}
+</script>
 {% endblock %}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Filing History — EthioPayroll{% endblock %}
 {% block content %}
-<div class="container mt-4">
+<div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4><i class="bi bi-file-earmark-check me-2"></i>Filing History</h4>
@@ -15,7 +15,7 @@
     {% if records %}
     <div class="card">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 sortable filterable">
+            <table class="table table-hover mb-0 sortable filterable responsive-card">
                 <thead class="table-light">
                     <tr>
                         <th>Type</th>
@@ -29,16 +29,16 @@
                 <tbody>
                     {% for r in records %}
                     <tr>
-                        <td>
+                        <td data-label="Type">
                             <span class="badge bg-{{ 'primary' if r.filing_type == 'erca' else 'success' if r.filing_type == 'pension' else 'info' }}">
                                 {{ r.filing_type|upper }}
                             </span>
                         </td>
-                        <td>{{ r.period }}</td>
-                        <td>{{ eth_date(r.filed_at) if r.filed_at else '' }}</td>
-                        <td>{{ r.user.email if r.user else '—' }}</td>
-                        <td><code>{{ r.confirmation_number or '—' }}</code></td>
-                        <td class="text-muted small">{{ r.notes or '' }}</td>
+                        <td data-label="Period">{{ r.period }}</td>
+                        <td data-label="Filed At">{{ eth_date(r.filed_at) if r.filed_at else '' }}</td>
+                        <td data-label="Filed By">{{ r.user.email if r.user else '—' }}</td>
+                        <td data-label="Confirmation #"><code>{{ r.confirmation_number or '—' }}</code></td>
+                        <td data-label="Notes" class="text-muted small">{{ r.notes or '' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

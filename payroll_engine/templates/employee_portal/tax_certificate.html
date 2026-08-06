@@ -66,27 +66,27 @@
             <!-- YTD Summary -->
             <h5 class="fw-bold mb-3">Income Summary / የገቢ ማጠቃለያ</h5>
             <div class="table-responsive mb-4">
-                <table class="table table-bordered">
+                <table class="table table-bordered responsive-card">
                     <tbody>
                         <tr>
-                            <td class="fw-semibold" style="background:var(--bg-tertiary);">Total Gross Income / ጠቅላይ ገቢ</td>
-                            <td class="text-end fw-bold fs-5">ETB {{ "{:,.2f}".format(ytd.gross) }}</td>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Gross Income / ጠቅላይ ገቢ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5">ETB {{ "{:,.2f}".format(ytd.gross) }}</td></td>
                         </tr>
                         <tr>
-                            <td class="fw-semibold" style="background:var(--bg-tertiary);">Total Income Tax Paid / የተከፈለ ታክስ</td>
-                            <td class="text-end fw-bold fs-5 text-warning">ETB {{ "{:,.2f}".format(ytd.tax) }}</td>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Income Tax Paid / የተከፈለ ታክስ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5 text-warning">ETB {{ "{:,.2f}".format(ytd.tax) }}</td></td>
                         </tr>
                         <tr>
-                            <td class="fw-semibold" style="background:var(--bg-tertiary);">Total Pension Contribution / የፋንድ ተጠቃሚ</td>
-                            <td class="text-end fw-bold fs-5">ETB {{ "{:,.2f}".format(ytd.pension_employee) }}</td>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Pension Contribution / የፋንድ ተጠቃሚ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5">ETB {{ "{:,.2f}".format(ytd.pension_employee) }}</td></td>
                         </tr>
                         <tr>
-                            <td class="fw-semibold" style="background:var(--bg-tertiary);">Total Net Income / የተቀረ ገቢ</td>
-                            <td class="text-end fw-bold fs-5 text-success">ETB {{ "{:,.2f}".format(ytd.net) }}</td>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Net Income / የተቀረ ገቢ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5 text-success">ETB {{ "{:,.2f}".format(ytd.net) }}</td></td>
                         </tr>
                         <tr>
-                            <td class="fw-semibold" style="background:var(--bg-tertiary);">Months Paid / የተከፈሉ ወራት</td>
-                            <td class="text-end fw-bold">{{ ytd.months_paid }}</td>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Months Paid / የተከፈሉ ወራት</td>
+                            <td data-label="Amount" class="text-end fw-bold">{{ ytd.months_paid }}</td></td>
                         </tr>
                     </tbody>
                 </table>
@@ -96,7 +96,7 @@
             {% if ytd.payslips %}
             <h5 class="fw-bold mb-3">Monthly Detail / ወርሃዊ ዝርዝር</h5>
             <div class="table-responsive mb-4">
-                <table class="table table-sm table-bordered">
+                <table class="table table-sm table-bordered responsive-card">
                     <thead>
                         <tr style="background:var(--bg-tertiary);">
                             <th>Period</th>
@@ -109,11 +109,11 @@
                     <tbody>
                         {% for ps in ytd.payslips %}
                         <tr>
-                            <td>{{ ps.period }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(ps.gross) }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(ps.tax) }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(ps.pension) }}</td>
-                            <td class="text-end fw-semibold">{{ "{:,.0f}".format(ps.net) }}</td>
+                            <td data-label="Period">{{ ps.period }}</td>
+                            <td data-label="Gross" class="text-end">{{ "{:,.0f}".format(ps.gross) }}</td>
+                            <td data-label="Tax" class="text-end">{{ "{:,.0f}".format(ps.tax) }}</td>
+                            <td data-label="Pension" class="text-end">{{ "{:,.0f}".format(ps.pension) }}</td>
+                            <td data-label="Net" class="text-end fw-semibold">{{ "{:,.0f}".format(ps.net) }}</td></td>
                         </tr>
                         {% endfor %}
                     </tbody>

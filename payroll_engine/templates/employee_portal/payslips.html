@@ -14,7 +14,7 @@
         <div class="card-body p-0">
             {% if payslips %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0 sortable filterable">
+                <table class="table table-hover mb-0 sortable filterable responsive-card">
                     <thead class="table-light">
                         <tr>
                             <th>{{ _('period') }}</th>
@@ -28,12 +28,12 @@
                     <tbody>
                         {% for p in payslips %}
                         <tr>
-                            <td>{{ eth_only(p.generated_at) }}</td>
-                            <td>{{ '%.2f'|format(p.gross_salary) }}</td>
-                            <td>{{ '%.2f'|format(p.tax) }}</td>
-                            <td>{{ '%.2f'|format(p.employee_pension) }}</td>
-                            <td><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
-                            <td>
+                            <td data-label="Period">{{ eth_only(p.generated_at) }}</td>
+                            <td data-label="Gross (ETB)">{{ '%.2f'|format(p.gross_salary) }}</td>
+                            <td data-label="Tax (ETB)">{{ '%.2f'|format(p.tax) }}</td>
+                            <td data-label="Pension (ETB)">{{ '%.2f'|format(p.employee_pension) }}</td>
+                            <td data-label="Net Pay (ETB)"><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
+                            <td data-label="Actions">
                                 <a href="{{ url_for('portal.my_payslip_detail', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary me-1">
                                     <i class="bi bi-eye"></i> View
                                 </a>

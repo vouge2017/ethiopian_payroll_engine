@@ -80,25 +80,25 @@
                     <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>{{ _('earnings') }}</h5>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0 responsive-card">
                         <tbody>
                             <tr>
-                                <td>{{ _('basic_salary') }}</td>
-                                <td class="text-end">ETB {{ '%.2f'|format(employee.basic_salary) }}</td>
+                                <td data-label="Item">{{ _('basic_salary') }}</td>
+                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(employee.basic_salary) }}</td>
                             </tr>
                             <tr>
-                                <td>{{ _('allowances') }}</td>
-                                <td class="text-end">ETB {{ '%.2f'|format(employee.allowances) }}</td>
+                                <td data-label="Item">{{ _('allowances') }}</td>
+                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(employee.allowances) }}</td>
                             </tr>
                             {% if overtime_details %}
                             <tr>
-                                <td>{{ _('overtime') }} ({{ overtime_details|length }} {{ _('entries') }})</td>
-                                <td class="text-end">ETB {{ '%.2f'|format(total_ot_pay) }}</td>
+                                <td data-label="Item">{{ _('overtime') }} ({{ overtime_details|length }} {{ _('entries') }})</td>
+                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(total_ot_pay) }}</td>
                             </tr>
                             {% endif %}
                             <tr class="table-light">
-                                <td><strong>{{ _('gross_salary') }}</strong></td>
-                                <td class="text-end"><strong>ETB {{ '%.2f'|format(payslip.gross_salary) }}</strong></td>
+                                <td data-label="Item"><strong>{{ _('gross_salary') }}</strong></td>
+                                <td data-label="Amount" class="text-end"><strong>ETB {{ '%.2f'|format(payslip.gross_salary) }}</strong></td>
                             </tr>
                         </tbody>
                     </table>
@@ -111,12 +111,12 @@
                     <h5 class="mb-0"><i class="bi bi-dash-circle me-2"></i>{{ _('deductions') }}</h5>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0 responsive-card">
                         <tbody>
                             <!-- Pension with breakdown -->
                             <tr>
-                                <td>
-                                    {{ _('employee_pension') }} <span class="text-muted small">(7% {{ _('of') }} {{ _('basic_salary') }})</span>
+                                <td data-label="Deduction">
+                                    {{ _('employee_pension') }} <span class="text-muted small">(7% {{ _('of') }} {{ _('basic_salary') }})</span> <span data-bs-toggle="tooltip" title="7% of basic salary. Proclamation No. 1268/2022. Employer pays 11% separately."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
                                     <details class="mt-1">
                                         <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small text-muted">
@@ -124,13 +124,13 @@
                                         </div>
                                     </details>
                                 </td>
-                                <td class="text-end align-top">ETB {{ '%.2f'|format(payslip.employee_pension) }}</td>
+                                <td data-label="Amount" class="text-end align-top">ETB {{ '%.2f'|format(payslip.employee_pension) }}</td>
                             </tr>
 
                             <!-- Tax with bracket breakdown -->
                             <tr>
                                 <td>
-                                    {{ _('income_tax') }} <span class="text-muted small">({{ _('per') }} Proclamation 1395/2025)</span>
+                                    {{ _('income_tax') }} <span class="text-muted small">({{ _('per') }} Proclamation 1395/2025)</span> <span data-bs-toggle="tooltip" title="PAYE tax on taxable income (gross minus pension). Brackets: 0%, 15%, 20%, 25%, 30%, 35%."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
                                     <details class="mt-1">
                                         <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small">
@@ -163,7 +163,7 @@
                                         </div>
                                     </details>
                                 </td>
-                                <td class="text-end align-top">ETB {{ '%.2f'|format(payslip.tax) }}</td>
+                                <td data-label="Amount" class="text-end align-top">ETB {{ '%.2f'|format(payslip.tax) }}</td>
                             </tr>
 
                             <!-- Overtime breakdown -->
@@ -186,13 +186,13 @@
                                         </div>
                                     </details>
                                 </td>
-                                <td class="text-end align-top">ETB {{ '%.2f'|format(total_ot_pay) }}</td>
+                                <td data-label="Amount" class="text-end align-top">ETB {{ '%.2f'|format(total_ot_pay) }}</td></td>
                             </tr>
                             {% endif %}
 
                             <tr class="table-light">
-                                <td><strong>{{ _('total_deductions') }}</strong></td>
-                                <td class="text-end"><strong>ETB {{ '%.2f'|format(payslip.tax + payslip.employee_pension) }}</strong></td>
+                                <td data-label="Deduction"><strong>{{ _('total_deductions') }}</strong></td>
+                                <td data-label="Amount" class="text-end"><strong>ETB {{ '%.2f'|format(payslip.tax + payslip.employee_pension) }}</strong></td>
                             </tr>
                         </tbody>
                     </table>

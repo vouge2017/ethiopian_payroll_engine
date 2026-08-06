@@ -145,7 +145,7 @@
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead>
                         <tr>
                             <th>Employee</th>
@@ -163,19 +163,19 @@
                         {% set gross_diff = emp.b_gross - emp.a_gross %}
                         {% set net_diff = emp.b_net - emp.a_net %}
                         <tr>
-                            <td>
+                            <td data-label="Employee">
                                 <strong>{{ emp.name }}</strong>
                                 <br><small class="text-muted">{{ emp.emp_id }}</small>
                             </td>
-                            <td>{{ emp.department }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(emp.a_gross) }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(emp.b_gross) }}</td>
-                            <td class="text-end fw-semibold {% if gross_diff > 0 %}text-danger{% elif gross_diff < 0 %}text-success{% endif %}">
+                            <td data-label="Dept">{{ emp.department }}</td>
+                            <td data-label="Gross A" class="text-end">{{ "{:,.0f}".format(emp.a_gross) }}</td>
+                            <td data-label="Gross B" class="text-end">{{ "{:,.0f}".format(emp.b_gross) }}</td>
+                            <td data-label="Change" class="text-end fw-semibold {% if gross_diff > 0 %}text-danger{% elif gross_diff < 0 %}text-success{% endif %}">
                                 {% if gross_diff > 0 %}+{% endif %}{{ "{:,.0f}".format(gross_diff) }}
                             </td>
-                            <td class="text-end">{{ "{:,.0f}".format(emp.a_net) }}</td>
-                            <td class="text-end fw-bold">{{ "{:,.0f}".format(emp.b_net) }}</td>
-                            <td class="text-end fw-bold {% if net_diff > 0 %}text-success{% elif net_diff < 0 %}text-danger{% endif %}">
+                            <td data-label="Net A" class="text-end">{{ "{:,.0f}".format(emp.a_net) }}</td>
+                            <td data-label="Net B" class="text-end fw-bold">{{ "{:,.0f}".format(emp.b_net) }}</td>
+                            <td data-label="Net Change" class="text-end fw-bold {% if net_diff > 0 %}text-success{% elif net_diff < 0 %}text-danger{% endif %}">
                                 {% if net_diff > 0 %}+{% endif %}{{ "{:,.0f}".format(net_diff) }}
                             </td>
                         </tr>

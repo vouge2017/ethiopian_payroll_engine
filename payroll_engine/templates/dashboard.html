@@ -258,7 +258,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="chart-container">
+                    <div class="chart-container" id="chart-payroll-skeleton">
+                        <div class="skeleton skeleton-card" style="height: 220px;"></div>
+                    </div>
+                    <div class="chart-container" id="chart-payroll-real" style="display:none;">
                         <canvas id="payrollBreakdownChart"></canvas>
                     </div>
                 </div>
@@ -270,7 +273,10 @@
                     <h5 class="mb-0">Deductions Breakdown</h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container">
+                    <div class="chart-container" id="chart-deductions-skeleton">
+                        <div class="skeleton skeleton-card" style="height: 220px;"></div>
+                    </div>
+                    <div class="chart-container" id="chart-deductions-real" style="display:none;">
                         <canvas id="deductionsChart"></canvas>
                     </div>
                 </div>
@@ -288,15 +294,47 @@
                     <i class="bi bi-lightning-charge text-white fs-3"></i>
                 </div>
                 <h3 class="fw-bold">Welcome! Let's run your first payroll</h3>
-                <p class="text-muted mb-0">Paste your employee data from Excel — done in 2 minutes.</p>
+                <p class="text-muted mb-0">Follow these steps to get started.</p>
             </div>
+
+            <!-- Onboarding Progress -->
+            <div class="d-flex justify-content-center mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>Company Created</span>
+                    </div>
+                    <i class="bi bi-arrow-right text-muted"></i>
+                    <div class="d-flex align-items-center gap-1">
+                        {% if employee_count > 0 %}
+                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>{{ employee_count }} Employees</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-primary px-3 py-2">2. Add Employees</span>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-arrow-right text-muted"></i>
+                    <div class="d-flex align-items-center gap-1">
+                        {% if recent_runs|length > 0 %}
+                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>Payroll Run</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-secondary px-3 py-2">3. Run Payroll</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
             <div class="text-center">
+                {% if employee_count == 0 %}
                 <a href="{{ url_for('wizard.quick_start') }}" class="btn btn-primary btn-lg me-2" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
                     <i class="bi bi-lightning me-2"></i>Quick Start
                 </a>
                 <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost btn-lg" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
                     <i class="bi bi-person-plus me-2"></i>Add One by One
                 </a>
+                {% else %}
+                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary btn-lg" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
+                    <i class="bi bi-cloud-upload me-2"></i>Run Your First Payroll
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -388,7 +426,7 @@
         <div class="card-body p-0">
             {% if recent_runs %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead>
                         <tr>
                             <th>Reference</th>
@@ -401,16 +439,16 @@
                     <tbody>
                         {% for run in recent_runs %}
                         <tr>
-                            <td><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</code></td>
-                            <td>{{ run.period or eth_only(run.run_date) }}</td>
-                            <td>
+                            <td data-label="Reference"><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</code></td>
+                            <td data-label="Period">{{ run.period or eth_only(run.run_date) }}</td>
+                            <td data-label="Status">
                                 {% if run.status == 'completed' %}<span class="badge badge-success">Completed</span>
                                 {% elif run.status == 'locked' %}<span class="badge bg-dark">Locked</span>
                                 {% elif run.status == 'processing' %}<span class="badge badge-warning">Processing</span>
                                 {% else %}<span class="badge badge-info">{{ run.status|capitalize }}</span>{% endif %}
                             </td>
-                            <td>{{ run.payslips|length }}</td>
-                            <td>
+                            <td data-label="Payslips">{{ run.payslips|length }}</td>
+                            <td data-label="Actions">
                                 <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-sm btn-ghost">
                                     <i class="bi bi-eye me-1"></i>View
                                 </a>
@@ -439,9 +477,17 @@
 {% if last_month_summary %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+function showChart(skeletonId, realId) {
+    const sk = document.getElementById(skeletonId);
+    const re = document.getElementById(realId);
+    if (sk) { sk.style.transition = 'opacity 0.2s'; sk.style.opacity = '0'; setTimeout(() => sk.style.display = 'none', 200); }
+    if (re) { re.style.display = 'block'; re.style.opacity = '0'; re.style.transition = 'opacity 0.3s'; requestAnimationFrame(() => re.style.opacity = '1'); }
+}
+
 // Payroll Breakdown Bar Chart
 const payrollCtx = document.getElementById('payrollBreakdownChart');
 if (payrollCtx) {
+    showChart('chart-payroll-skeleton', 'chart-payroll-real');
     new Chart(payrollCtx, {
         type: 'bar',
         data: {
@@ -489,6 +535,7 @@ if (payrollCtx) {
 // Deductions Donut Chart
 const dedCtx = document.getElementById('deductionsChart');
 if (dedCtx) {
+    showChart('chart-deductions-skeleton', 'chart-deductions-real');
     new Chart(dedCtx, {
         type: 'doughnut',
         data: {

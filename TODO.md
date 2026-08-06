@@ -30,32 +30,31 @@
 ## UI/UX Grand Plan — 5 Phases, 15 Items
 
 ### Phase 1: Explainability (HIGHEST priority, 9h)
-- [ ] Sortable data tables (click header → sort → filter)
-- [ ] Inline action buttons on employee list, payroll runs, leave
-- [ ] Print-ready CSS (@media print) for payslips, reports
-- [ ] Empty state components (illustration + action)
-- [ ] Loading skeleton screens
+- [x] Sortable data tables (click header → sort → filter) — 8 templates
+- [x] Inline action buttons on employee list, payroll runs, leave — AJAX approve/reject
+- [x] Print-ready CSS (@media print) for payslips, reports — responsive.css
+- [x] Empty state components (illustration + action) — 15+ templates
+- [x] Loading skeleton screens — dashboard charts + CSS/JS infrastructure
 
 ### Phase 2: Professional (HIGH priority, 4h)
-- [ ] Audit all templates for consistent components
-- [ ] Responsive data tables (table → cards on mobile)
+- [x] Audit all templates for consistent components — card headers (bg-transparent), page wrappers (p-4 p-md-5)
+- [x] Responsive data tables (table → cards on mobile) — 22 templates
 - [ ] Toast notification system for instant feedback
-- [ ] Dark mode toggle in header
+- [x] Dark mode toggle — toggle in sidebar, CSS vars, localStorage
 
 ### Phase 3: Modern (MEDIUM priority, 5h)
-- [ ] AJAX for approve/reject/delete (no page reload)
-- [ ] Keyboard shortcuts (Ctrl+K search, Esc close)
-- [ ] Guided onboarding wizard
+- [x] AJAX for approve/reject/delete (no page reload) — 12 actions: leave, overtime, deductions, profile changes, team, lock/unlock
+- [x] Keyboard shortcuts (Ctrl+K search, Esc close) — command palette + shortcut help
+- [x] Guided onboarding wizard — 3-step progress tracker + Quick Start
 
 ### Phase 4: Power (MEDIUM priority, 5h)
 - [ ] Smart defaults (auto-fill period, auto-suggest bank)
 - [ ] Keyboard shortcut help modal (? key)
-- [ ] Contextual tooltips on complex fields
+- [x] Contextual tooltips on complex fields — pension, tax, overtime with proclamation refs
 
 ### Phase 5: Delight (LOW priority, 4h)
-- [ ] Micro-animations (card expand, button press, page transitions)
-- [ ] Success celebration on payroll approval
-- [ ] Contextual help on tax brackets, pension rates
+- [x] Micro-animations (card expand, button press, page transitions) — CSS transitions throughout
+- [x] Success celebration on payroll approval — canvas confetti animation
 
 ---
 

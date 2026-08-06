@@ -1,105 +1,86 @@
 {% extends "base.html" %}
 {% block title %}{{ step.title }} — Verification{% endblock %}
 {% block content %}
-<div class="container mx-auto px-4 py-6 max-w-3xl">
+<div class="p-4 p-md-5" style="max-width: 800px; margin: 0 auto;">
   <!-- Breadcrumb -->
-  <div class="text-sm text-gray-500 mb-4">
-    <a href="{{ url_for('verification.verification_home') }}" class="hover:text-gray-700">Verification</a>
-    <span class="mx-1">›</span>
-    <span class="text-gray-800">{{ step.title }}</span>
-  </div>
+  <nav class="mb-3" aria-label="breadcrumb">
+    <ol class="breadcrumb breadcrumb-sm mb-0">
+      <li class="breadcrumb-item"><a href="{{ url_for('verification.verification_home') }}">Verification</a></li>
+      <li class="breadcrumb-item active">{{ step.title }}</li>
+    </ol>
+  </nav>
 
   <!-- Progress indicator -->
-  <div class="text-xs text-gray-400 mb-6">Step {{ current_idx + 1 }} of {{ total }}</div>
+  <small class="text-muted">Step {{ current_idx + 1 }} of {{ total }}</small>
 
   <!-- Step content -->
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-    <div class="flex items-center gap-3 mb-4">
-      <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-600 font-bold">
-        {{ step.section }}
-      </span>
-      <div>
-        <h1 class="text-xl font-bold text-gray-900">{{ step.title }}</h1>
-        <span class="text-xs px-2 py-0.5 rounded
-          {% if step.impact.startswith('HIGH') %}bg-red-50 text-red-700
-          {% elif step.impact.startswith('MEDIUM') %}bg-yellow-50 text-yellow-700
-          {% else %}bg-gray-50 text-gray-600{% endif %}">
-          {{ step.impact }}
-        </span>
+  <div class="card mt-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <span class="badge bg-primary rounded-circle p-2 fs-6">{{ step.section }}</span>
+        <div>
+          <h4 class="fw-bold mb-0">{{ step.title }}</h4>
+          <span class="badge
+            {% if step.impact.startswith('HIGH') %}bg-danger-subtle text-danger
+            {% elif step.impact.startswith('MEDIUM') %}bg-warning-subtle text-warning
+            {% else %}bg-secondary-subtle text-secondary{% endif %} mt-1">
+            {{ step.impact }}
+          </span>
+        </div>
       </div>
-    </div>
 
-    <p class="text-gray-600 mb-4">{{ step.description }}</p>
+      <p class="text-muted">{{ step.description }}</p>
 
-    <!-- What our system does -->
-    <div class="bg-gray-50 rounded-lg p-4 mb-4">
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">What our system uses:</h3>
-      <ul class="space-y-1">
-        {% for field in step.fields %}
-        <li class="text-sm text-gray-600 flex items-start gap-2">
-          <span class="text-gray-400 mt-0.5">•</span>
-          {{ field }}
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
+      <!-- What our system does -->
+      <div class="bg-body-secondary rounded-3 p-3 mb-3">
+        <h6 class="fw-semibold mb-2">What our system uses:</h6>
+        <ul class="mb-0 small">
+          {% for field in step.fields %}
+          <li class="text-muted">{{ field }}</li>
+          {% endfor %}
+        </ul>
+      </div>
 
-    <!-- What to check -->
-    <div class="bg-blue-50 rounded-lg p-4 mb-6">
-      <h3 class="text-sm font-semibold text-blue-700 mb-1">What to check:</h3>
-      <p class="text-sm text-blue-600">{{ step.what_to_check }}</p>
-    </div>
+      <!-- What to check -->
+      <div class="alert alert-primary small">
+        <h6 class="fw-semibold mb-1">What to check:</h6>
+        <p class="mb-0">{{ step.what_to_check }}</p>
+      </div>
 
-    <!-- Verification form -->
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <!-- Verification form -->
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <!-- Verified checkbox -->
-      <div class="mb-4">
-        <label class="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" name="verified" class="w-4 h-4 text-blue-600 rounded"
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" name="verified" id="verified"
                  {% if progress.get('verified') %}checked{% endif %}>
-          <span class="text-sm font-medium text-gray-700">I have reviewed this section</span>
-        </label>
-      </div>
+          <label class="form-check-label small fw-semibold" for="verified">I have reviewed this section</label>
+        </div>
 
-      <!-- Correct/Incorrect -->
-      <div class="mb-4">
-        <label class="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" name="correct" class="w-4 h-4 text-green-600 rounded"
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" name="correct" id="correct"
                  {% if progress.get('correct') %}checked{% endif %}>
-          <span class="text-sm font-medium text-gray-700">These values are correct</span>
-        </label>
-      </div>
+          <label class="form-check-label small fw-semibold" for="correct">These values are correct</label>
+        </div>
 
-      <!-- Correction field -->
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">
-          If incorrect, what should the correct value be?
-        </label>
-        <textarea name="correction" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="e.g., The correct tax rate for 2,001-4,000 is 10%, not 15%">{{ progress.get('correction', '') }}</textarea>
-      </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">If incorrect, what should the correct value be?</label>
+          <textarea name="correction" rows="2" class="form-control form-control-sm"
+                    placeholder="e.g., The correct tax rate for 2,001-4,000 is 10%, not 15%">{{ progress.get('correction', '') }}</textarea>
+        </div>
 
-      <!-- Notes field -->
-      <div class="mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-1">
-          Additional notes (optional)
-        </label>
-        <textarea name="notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="Any other observations...">{{ progress.get('notes', '') }}</textarea>
-      </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Additional notes (optional)</label>
+          <textarea name="notes" rows="2" class="form-control form-control-sm"
+                    placeholder="Any other observations...">{{ progress.get('notes', '') }}</textarea>
+        </div>
 
-      <!-- Submit -->
-      <div class="flex items-center gap-3">
-        <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
-          Save & Continue
-        </button>
-        <a href="{{ url_for('verification.verification_home') }}" class="text-sm text-gray-500 hover:text-gray-700">
-          Back to all steps
-        </a>
-      </div>
-    </form>
+        <div class="d-flex align-items-center gap-3">
+          <button type="submit" class="btn btn-primary">Save & Continue</button>
+          <a href="{{ url_for('verification.verification_home') }}" class="text-muted small">Back to all steps</a>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 {% endblock %}

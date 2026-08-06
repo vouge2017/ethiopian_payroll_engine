@@ -52,7 +52,7 @@
         <div class="card-body p-0">
             {% if recent_payslips %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead>
                         <tr>
                             <th>Period</th>
@@ -65,11 +65,11 @@
                     <tbody>
                         {% for ps in recent_payslips %}
                         <tr>
-                            <td><strong>{{ ps.payroll_run.period or eth_only(ps.generated_at) }}</strong></td>
-                            <td class="text-end">ETB {{ '{:,.0f}'.format(ps.gross_salary) }}</td>
-                            <td class="text-end text-warning">ETB {{ '{:,.0f}'.format(ps.tax) }}</td>
-                            <td class="text-end fw-bold text-success">ETB {{ '{:,.0f}'.format(ps.net_pay) }}</td>
-                            <td class="text-end">
+                            <td data-label="Period"><strong>{{ ps.payroll_run.period or eth_only(ps.generated_at) }}</strong></td>
+                            <td data-label="Gross" class="text-end">ETB {{ '{:,.0f}'.format(ps.gross_salary) }}</td>
+                            <td data-label="Tax" class="text-end text-warning">ETB {{ '{:,.0f}'.format(ps.tax) }}</td>
+                            <td data-label="Net Pay" class="text-end fw-bold text-success">ETB {{ '{:,.0f}'.format(ps.net_pay) }}</td>
+                            <td data-label="" class="text-end">
                                 <a href="{{ url_for('portal.my_payslip_detail', payslip_id=ps.id) }}" class="btn btn-sm btn-ghost">
                                     <i class="bi bi-eye"></i>
                                 </a>

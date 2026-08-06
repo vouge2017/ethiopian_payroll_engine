@@ -45,6 +45,11 @@
                 <td style="width: 2em;">{{ step.icon }}</td>
                 <td>
                     <strong>{{ step.label }}</strong>
+                    {% if 'pension' in step.label|lower or '7%' in step.note|default('') %}
+                    <span data-bs-toggle="tooltip" data-bs-placement="top" title="7% of basic salary. Proclamation No. 1268/2022, Art. 10. Employer pays 11% separately."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
+                    {% elif 'tax' in step.label|lower and 'bracket' not in step.label|lower %}
+                    <span data-bs-toggle="tooltip" data-bs-placement="top" title="PAYE tax on taxable income (gross minus pension). Brackets: 0%, 15%, 20%, 25%, 30%, 35%. Proclamation No. 1395/2025."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
+                    {% endif %}
                     <br><small class="text-muted">{{ step.note }}</small>
                 </td>
                 <td class="text-end align-middle">

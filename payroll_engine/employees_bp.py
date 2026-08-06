@@ -1,7 +1,7 @@
 """Employees blueprint: employee CRUD, overtime, allowances, deductions, leave, termination."""
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
-    flash, current_app, send_file
+    flash, current_app, send_file, jsonify
 )
 from flask_login import login_required, current_user
 from datetime import date, datetime, timezone
@@ -515,6 +515,8 @@ def delete_overtime(entry_id):
     from payroll_engine import trust_cache
     trust_cache.invalidate_trust_cache(_company_id())
     flash('Overtime entry deleted.', 'info')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': 'Overtime entry deleted.', 'entry_id': entry_id})
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
 
@@ -815,6 +817,8 @@ def stop_deduction(ded_id):
     from payroll_engine import trust_cache
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Deduction "{ded.label}" stopped.', 'info')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': f'Deduction "{ded.label}" stopped.', 'deduction_id': ded.id})
     return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
 
 
@@ -865,6 +869,12 @@ def deactivate_employee(emp_id):
     db.session.commit()
     from payroll_engine import trust_cache
     trust_cache.invalidate_trust_cache(_company_id())
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': f'{emp.name} has been deactivated. Payroll history preserved.',
+            'employee_id': emp.id,
+        })
     flash(f'{emp.name} has been deactivated. Payroll history preserved.', 'info')
     return redirect(url_for('employees.list_employees'))
 
@@ -889,6 +899,8 @@ def reactivate_employee(emp_id):
     from payroll_engine import trust_cache
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'{emp.name} has been reactivated.', 'success')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': f'{emp.name} has been reactivated.', 'employee_id': emp.id})
     return redirect(url_for('employees.list_employees'))
 
 
@@ -1148,6 +1160,8 @@ def approve_leave(leave_id):
     ).first_or_404()
 
     if leave.status != 'pending':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'This leave request is not pending.'}), 400
         flash('This leave request is not pending.', 'danger')
         return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
@@ -1216,6 +1230,13 @@ def approve_leave(leave_id):
     except Exception:
         pass
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.',
+            'leave_id': leave.id,
+            'status': 'approved',
+        })
     flash(f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.', 'success')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
@@ -1229,11 +1250,19 @@ def reject_leave(leave_id):
     ).first_or_404()
 
     if leave.status != 'pending':
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'This leave request is not pending.'}), 400
         flash('This leave request is not pending.', 'danger')
         return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
-    reason = request.form.get('reason', '').strip()
+    # Accept reason from form or JSON body
+    if request.is_json:
+        reason = (request.get_json() or {}).get('reason', '').strip()
+    else:
+        reason = request.form.get('reason', '').strip()
     if not reason:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Please provide a reason for rejection.'}), 400
         flash('Please provide a reason for rejection.', 'danger')
         return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
@@ -1280,6 +1309,13 @@ def reject_leave(leave_id):
     except Exception:
         pass
 
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': 'Leave request rejected.',
+            'leave_id': leave.id,
+            'status': 'rejected',
+        })
     flash(f'Leave request rejected.', 'warning')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
@@ -1465,6 +1501,8 @@ def approve_profile_change(change_id):
     from payroll_engine import trust_cache
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Approved {change.field_label} change for {emp.name}.', 'success')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': f'Approved {change.field_label} change for {emp.name}.', 'change_id': change.id, 'status': 'approved'})
     return redirect(url_for('employees.profile_changes'))
 
 
@@ -1512,4 +1550,6 @@ def reject_profile_change(change_id):
 
     db.session.commit()
     flash(f'Rejected {change.field_label} change for {emp.name}.', 'info')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': f'Rejected {change.field_label} change for {emp.name}.', 'change_id': change.id, 'status': 'rejected'})
     return redirect(url_for('employees.profile_changes'))

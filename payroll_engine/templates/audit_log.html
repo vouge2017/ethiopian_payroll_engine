@@ -24,7 +24,7 @@
     <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-sticky mb-0 sortable filterable audit-log-table">
+                <table class="table table-hover table-sticky mb-0 sortable filterable responsive-card audit-log-table">
                     <thead class="table-light">
                         <tr>
                             <th>When</th>
@@ -36,10 +36,10 @@
                     <tbody>
                         {% for log in logs %}
                         <tr>
-                            <td>
+                            <td data-label="When">
                                 <small class="text-muted">{{ eth_date(log.timestamp) }} {{ log.timestamp.strftime('%H:%M') }}</small>
                             </td>
-                            <td>
+                            <td data-label="Action">
                                 {% if 'salary' in log.action %}
                                 <span class="badge bg-warning text-dark">{{ log.action.replace('_', ' ') }}</span>
                                 {% elif 'bank' in log.action %}
@@ -54,14 +54,14 @@
                                 <span class="badge bg-secondary">{{ log.action.replace('_', ' ') }}</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Who">
                                 {% if log.user %}
                                 {% if log.user.phone %}+251 {{ log.user.phone }}{% elif log.user.email %}{{ log.user.email }}{% else %}User #{{ log.user_id }}{% endif %}
                                 {% else %}
                                 <span class="text-muted">System</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Details">
                                 {% if log.details %}
                                 <small class="text-muted">
                                     {% for key, val in log.details.items() %}

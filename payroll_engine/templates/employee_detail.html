@@ -36,12 +36,10 @@
             </form>
             {% else %}
             <span class="badge bg-warning text-dark">{{ _('deactivated') }}</span>
-            <form method="POST" action="{{ url_for('employees.reactivate_employee', emp_id=employee.id) }}" style="display:inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-outline-success">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>{{ _('reactivate') }}
-                </button>
-            </form>
+            <button type="button" class="btn btn-sm btn-outline-success"
+                    onclick="reactivateEmployee({{ employee.id }}, '{{ employee.display_name|e }}')">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>{{ _('reactivate') }}
+            </button>
             {% endif %}
         </div>
     </div>
@@ -134,7 +132,7 @@
     <!-- Overtime Section -->
     <div class="card mb-4">
         <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }}</h5>
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="Overtime rates: Day=1.5×, Night=1.75×, Holiday=2×, Rest+Holiday=2.5× hourly rate. Hourly rate = basic salary ÷ 208. Max 4 hrs/day, 12 hrs/week. Proclamation No. 1156/2019, Art. 67-68."><i class="bi bi-info-circle text-muted" style="font-size:0.8em;cursor:help"></i></span></h5>
             {% if total_ot_hours > 0 %}
             <span class="badge bg-light text-dark">{{ total_ot_hours }}h / ETB {{ '%.2f'|format(total_ot_pay) }}</span>
             {% endif %}
@@ -164,7 +162,7 @@
             <!-- Overtime History -->
             {% if overtime_data %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead class="table-light">
                         <tr>
                             <th>{{ _('date') }}</th>
@@ -178,17 +176,16 @@
                     <tbody>
                         {% for item in overtime_data %}
                         <tr>
-                            <td>{{ item.entry.date }}</td>
-                            <td>{{ item.entry.hours }}</td>
-                            <td>{{ item.entry.overtime_type }}</td>
-                            <td>{{ item.rate }}x</td>
-                            <td>{{ '%.2f'|format(item.pay) }}</td>
-                            <td>
-                                <form method="POST" action="{{ url_for('employees.delete_overtime', entry_id=item.entry.id) }}"
-                                      onsubmit="return confirm('Delete this overtime entry?')">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Are you sure you want to delete this?"><i class="bi bi-trash"></i></button>
-                                </form>
+                            <td data-label="Date">{{ item.entry.date }}</td>
+                            <td data-label="Hours">{{ item.entry.hours }}</td>
+                            <td data-label="Type">{{ item.entry.overtime_type }}</td>
+                            <td data-label="Rate">{{ item.rate }}x</td>
+                            <td data-label="Pay (ETB)">{{ '%.2f'|format(item.pay) }}</td>
+                            <td data-label="">
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                                        onclick="deleteOvertime({{ item.entry.id }}, this)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -251,7 +248,7 @@
             <!-- Allowance Summary -->
             {% if allowance_records %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead class="table-light">
                         <tr>
                             <th>Type</th>
@@ -267,14 +264,14 @@
                         {% for allowance in allowance_records %}
                         {% if allowance.is_active %}
                         <tr>
-                            <td>
+                            <td data-label="Type">
                                 <strong>{{ allowance.type_label }}</strong>
                                 {% if allowance.custom_type_name %}
                                 <small class="text-muted d-block">{{ allowance.custom_type_name }}</small>
                                 {% endif %}
                             </td>
-                            <td>ETB {{ '%.2f'|format(allowance.amount) }}</td>
-                            <td>
+                            <td data-label="Amount (ETB)">ETB {{ '%.2f'|format(allowance.amount) }}</td>
+                            <td data-label="Tax Treatment">
                                 {% if allowance.tax_treatment == 'exempt' %}
                                 <span class="badge badge-success">Exempt</span>
                                 {% elif allowance.tax_treatment == 'partial' %}
@@ -283,23 +280,22 @@
                                 <span class="badge bg-secondary">Taxable</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Exempt Cap">
                                 {% if allowance.exempt_cap_amount %}
                                 ETB {{ '%.2f'|format(allowance.exempt_cap_amount) }}
                                 {% else %}
                                 -
                                 {% endif %}
                             </td>
-                            <td>ETB {{ '%.2f'|format(allowance.taxable_amount) }}</td>
-                            <td>
+                            <td data-label="Taxable">ETB {{ '%.2f'|format(allowance.taxable_amount) }}</td>
+                            <td data-label="Regulation">
                                 {% if allowance.regulation_reference %}
                                 <small class="text-muted">{{ allowance.regulation_reference }}</small>
                                 {% else %}
                                 -
                                 {% endif %}
                             </td>
-                            <td>
-                                <form method="POST" action="{{ url_for('employees.delete_allowance', allowance_id=allowance.id) }}" style="display:inline"
+                            <td data-label="Action">
                                       onsubmit="return confirm('Remove this allowance?')">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Are you sure you want to delete this?"><i class="bi bi-trash"></i></button>
@@ -409,7 +405,7 @@
             {% if active_deductions %}
             <h6 class="text-muted mb-2">Active Deductions</h6>
             <div class="table-responsive mb-3">
-                <table class="table table-sm table-hover mb-0">
+                <table class="table table-sm table-hover mb-0 responsive-card">
                     <thead class="table-light">
                         <tr>
                             <th>Type</th>
@@ -425,17 +421,16 @@
                     <tbody>
                         {% for d in active_deductions %}
                         <tr>
-                            <td><span class="badge bg-{{ 'danger' if d.deduction_type == 'court_order' else 'warning' if d.deduction_type == 'cost_sharing' else 'info' }}">{{ d.type_label }}</span></td>
-                            <td>{{ d.label }}</td>
-                            <td>
+                            <td data-label="Type"><span class="badge bg-{{ 'danger' if d.deduction_type == 'court_order' else 'warning' if d.deduction_type == 'cost_sharing' else 'info' }}">{{ d.type_label }}</span></td>
+                            <td data-label="Label">{{ d.label }}</td>
+                            <td data-label="Amount">
                                 {% if d.amount_mode == 'percentage' %}
                                     {{ d.amount }}% of net
                                 {% else %}
                                     ETB {{ '%.2f'|format(d.amount) }}
                                 {% endif %}
                             </td>
-                            <td>
-                                {% if d.is_declining and d.remaining_balance is not none %}
+                            <td data-label="Balance">
                                     {% if d.remaining_balance <= d.amount %}
                                         <span class="text-warning"><i class="bi bi-exclamation-triangle"></i> ETB {{ '%.2f'|format(d.remaining_balance) }}</span>
                                     {% else %}
@@ -445,26 +440,23 @@
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Period">
                                 {{ d.start_date }}
                                 {% if d.end_date %} → {{ d.end_date }}{% else %} → ongoing{% endif %}
                             </td>
-                            <td>{{ d.reference_number or '—' }}</td>
-                            <td>
+                            <td data-label="Ref #">{{ d.reference_number or '—' }}</td>
+                            <td data-label="Doc">
                                 {% if d.document_path %}
                                     <a href="{{ d.document_path }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark"></i></a>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <form method="POST" action="{{ url_for('employees.stop_deduction', ded_id=d.id) }}" class="d-inline" onsubmit="return confirm('Stop this deduction?')">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="reason" value="Manually stopped by {{ current_user.phone or current_user.email }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Stop deduction" data-confirm="Stop this deduction?">
-                                        <i class="bi bi-stop-circle"></i>
-                                    </button>
-                                </form>
+                            <td data-label="Action">
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Stop deduction"
+                                        onclick="stopDeduction({{ d.id }}, '{{ d.label|e }}', this)">
+                                    <i class="bi bi-stop-circle"></i>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -480,7 +472,7 @@
             <details class="mt-2">
                 <summary class="text-muted" style="cursor:pointer">Stopped/Exhausted ({{ inactive_deductions|length }})</summary>
                 <div class="table-responsive mt-2">
-                    <table class="table table-sm table-hover mb-0">
+                    <table class="table table-sm table-hover mb-0 responsive-card">
                         <thead class="table-light">
                             <tr>
                                 <th>Type</th>
@@ -492,10 +484,10 @@
                         <tbody>
                             {% for d in inactive_deductions %}
                             <tr class="text-muted">
-                                <td>{{ d.type_label }}</td>
-                                <td>{{ d.label }}</td>
-                                <td>ETB {{ '%.2f'|format(d.amount) }}</td>
-                                <td>{{ d.stopped_reason or '—' }}</td>
+                                <td data-label="Type">{{ d.type_label }}</td>
+                                <td data-label="Label">{{ d.label }}</td>
+                                <td data-label="Amount">ETB {{ '%.2f'|format(d.amount) }}</td>
+                                <td data-label="Reason">{{ d.stopped_reason or '—' }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -514,7 +506,7 @@
         <div class="card-body p-0">
             {% if payslips %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead class="table-light">
                         <tr>
                             <th>{{ _('date') }}</th>
@@ -528,12 +520,12 @@
                     <tbody>
                         {% for p in payslips %}
                         <tr>
-                            <td>{{ eth_only(p.generated_at) }}</td>
-                            <td>{{ '%.2f'|format(p.gross_salary) }}</td>
-                            <td>{{ '%.2f'|format(p.tax) }}</td>
-                            <td>{{ '%.2f'|format(p.employee_pension) }}</td>
-                            <td><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
-                            <td>
+                            <td data-label="Date">{{ eth_only(p.generated_at) }}</td>
+                            <td data-label="Gross">{{ '%.2f'|format(p.gross_salary) }}</td>
+                            <td data-label="Tax">{{ '%.2f'|format(p.tax) }}</td>
+                            <td data-label="Pension">{{ '%.2f'|format(p.employee_pension) }}</td>
+                            <td data-label="Net"><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
+                            <td data-label="PDF">
                                 {% if p.pdf_file_path %}
                                 <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-download"></i>
@@ -556,4 +548,40 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function deleteOvertime(entryId, btn) {
+    if (!confirm('Delete this overtime entry?')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/overtime/${entryId}/delete`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        const row = btn.closest('tr');
+        if (row) { row.style.transition = 'opacity 0.3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function stopDeduction(dedId, label, btn) {
+    if (!confirm(`Stop deduction "${label}"?`)) return;
+    try {
+        const data = await EthioPayroll.ajax(`/deductions/${dedId}/stop`, {
+            method: 'POST',
+            body: JSON.stringify({ reason: 'Manually stopped' }),
+        });
+        EthioPayroll.toast(data.message, 'success');
+        const row = btn.closest('tr');
+        if (row) { row.style.transition = 'opacity 0.3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function reactivateEmployee(empId, name) {
+    if (!confirm(`Reactivate ${name}?`)) return;
+    try {
+        const data = await EthioPayroll.ajax(`/employees/${empId}/reactivate`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+</script>
 {% endblock %}

@@ -1,23 +1,22 @@
 <!-- Reusable error boundary partial for trust components -->
 <!-- Pass component_name and error_message via Jinja2 set before including -->
 
-<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 my-4">
-  <div class="flex items-start gap-3">
-    <span class="text-yellow-500 text-lg flex-shrink-0">&#x26A0;</span>
-    <div class="flex-1 min-w-0">
-      <p class="text-sm font-medium text-yellow-800">
+<div class="alert alert-warning my-3">
+  <div class="d-flex align-items-start gap-3">
+    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
+    <div class="flex-grow-1 min-w-0">
+      <p class="fw-semibold small mb-1">
         Unable to load {{ component_name | default('this section') }}
       </p>
       {% if error_message is defined and error_message %}
-        <p class="text-xs text-yellow-600 mt-1">{{ error_message }}</p>
+        <p class="small text-muted mb-1">{{ error_message }}</p>
       {% else %}
-        <p class="text-xs text-yellow-600 mt-1">
+        <p class="small text-muted mb-1">
           An error occurred while computing this data. Other sections may still work.
         </p>
       {% endif %}
-      <button onclick="location.reload()"
-              class="mt-2 text-xs text-yellow-700 underline hover:text-yellow-900">
-        Try again
+      <button onclick="location.reload()" class="btn btn-sm btn-outline-warning mt-1">
+        <i class="bi bi-arrow-clockwise me-1"></i>Try again
       </button>
     </div>
   </div>

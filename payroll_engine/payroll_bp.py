@@ -1604,6 +1604,8 @@ def lock_payroll(run_id):
     db.session.commit()
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Period {run.period} is now locked. No further changes allowed.', 'success')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': f'Period {run.period} is now locked.', 'run_id': run.id, 'status': 'locked'})
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 
@@ -1633,6 +1635,8 @@ def unlock_payroll(run_id):
     db.session.commit()
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Period {run.period} unlocked. You can now create a correction run.', 'warning')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': f'Period {run.period} unlocked.', 'run_id': run.id, 'status': 'completed'})
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 
@@ -1649,6 +1653,8 @@ def mark_disbursed(run_id):
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     notes = request.form.get('notes', '').strip()
+    if request.is_json:
+        notes = (request.get_json() or {}).get('notes', '').strip()
     run.disbursement_status = 'disbursed'
     run.disbursed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     run.disbursed_by = current_user.id
@@ -1671,6 +1677,8 @@ def mark_disbursed(run_id):
     db.session.commit()
 
     flash(f'Payroll {run.reference} marked as disbursed. Bank file has been sent.', 'success')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': f'Payroll {run.reference} marked as disbursed.', 'run_id': run.id})
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 

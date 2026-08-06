@@ -1,5 +1,5 @@
 """Settings & team management blueprint."""
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 
 from payroll_engine import db
@@ -161,6 +161,8 @@ def remove_team_member(user_id):
     db.session.add(log)
     db.session.commit()
     flash('Team member removed.', 'success')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': 'Team member removed.', 'user_id': user_id})
     return redirect(url_for('settings.team_settings'))
 
 

@@ -62,20 +62,16 @@
             </form>
             {% endif %}
             {% if run.status == 'completed' %}
-            <form method="POST" action="{{ url_for('payroll.lock_payroll', run_id=run.id) }}" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-outline-dark" title="Lock this period — prevents new runs and edits">
-                    <i class="bi bi-lock me-1"></i> Lock Period
-                </button>
-            </form>
+            <button type="button" class="btn btn-sm btn-outline-dark" title="Lock this period — prevents new runs and edits"
+                    onclick="lockPayroll({{ run.id }})">
+                <i class="bi bi-lock me-1"></i> Lock Period
+            </button>
             {% endif %}
             {% if run.status == 'locked' %}
-            <form method="POST" action="{{ url_for('payroll.unlock_payroll', run_id=run.id) }}" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-outline-warning" title="Unlock — allows corrections">
-                    <i class="bi bi-unlock me-1"></i> Unlock
-                </button>
-            </form>
+            <button type="button" class="btn btn-sm btn-outline-warning" title="Unlock — allows corrections"
+                    onclick="unlockPayroll({{ run.id }})">
+                <i class="bi bi-unlock me-1"></i> Unlock
+            </button>
             {% endif %}
 
             <!-- Disbursement tracking -->
@@ -85,12 +81,10 @@
             </a>
             {% endif %}
             {% if run.status == 'completed' and run.disbursement_status == 'pending' %}
-            <form method="POST" action="{{ url_for('payroll.mark_disbursed', run_id=run.id) }}" class="d-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-outline-info" title="Mark as disbursed — bank file has been sent">
-                    <i class="bi bi-bank me-1"></i> Mark Disbursed
-                </button>
-            </form>
+            <button type="button" class="btn btn-sm btn-outline-info" title="Mark as disbursed — bank file has been sent"
+                    onclick="markDisbursed({{ run.id }})">
+                <i class="bi bi-bank me-1"></i> Mark Disbursed
+            </button>
             {% elif run.disbursement_status == 'disbursed' %}
             <span class="badge badge-info"><i class="bi bi-bank me-1"></i> Disbursed</span>
             <form method="POST" action="{{ url_for('payroll.confirm_payment', run_id=run.id) }}" class="d-inline">
@@ -285,5 +279,37 @@ document.getElementById('searchTable').addEventListener('keyup', function() {
         row.style.display = text.includes(query) ? '' : 'none';
     });
 });
+
+// Confetti on completed payroll
+{% if run.status == 'completed' %}
+EthioPayroll.confetti();
+{% endif %}
+
+async function lockPayroll(runId) {
+    if (!confirm('Lock this period? No further changes will be allowed.')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/lock`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function unlockPayroll(runId) {
+    if (!confirm('Unlock this period? This allows corrections.')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/unlock`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'warning');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function markDisbursed(runId) {
+    if (!confirm('Mark as disbursed? This indicates the bank file has been sent.')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/disburse`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
 </script>
 {% endblock %}

@@ -173,13 +173,13 @@
 
             <!-- Leave History -->
             <div class="card">
-                <div class="card-header">
+                <div class="card-header bg-transparent">
                     <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Leave History</h6>
                 </div>
                 <div class="card-body p-0">
                     {% if leaves %}
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 responsive-card">
                             <thead class="table-light">
                                 <tr>
                                     <th>Type</th>
@@ -193,14 +193,14 @@
                             <tbody>
                                 {% for leave in leaves %}
                                 <tr>
-                                    <td>
+                                    <td data-label="Type">
                                         <span class="badge bg-{% if leave.leave_type == 'annual' %}primary{% elif leave.leave_type == 'sick' %}warning{% elif leave.leave_type == 'maternity' %}success{% else %}secondary{% endif %}">
                                             {{ leave.leave_type|title }}
                                         </span>
                                     </td>
-                                    <td>{{ eth_date(leave.start_date) }} - {{ eth_date(leave.end_date) }}</td>
-                                    <td>{{ leave.days_requested }}</td>
-                                    <td>
+                                    <td data-label="Period">{{ eth_date(leave.start_date) }} - {{ eth_date(leave.end_date) }}</td>
+                                    <td data-label="Days">{{ leave.days_requested }}</td>
+                                    <td data-label="Status">
                                         {% if leave.status == 'pending' %}
                                         <span class="badge bg-warning text-dark">Pending</span>
                                         {% elif leave.status == 'approved' %}
@@ -209,8 +209,8 @@
                                         <span class="badge badge-danger">Rejected</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ eth_date(leave.applied_at) }}</td>
-                                    <td>
+                                    <td data-label="Applied">{{ eth_date(leave.applied_at) }}</td>
+                                    <td data-label="Action">
                                         {% if leave.status == 'pending' %}
                                         <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" style="display:inline">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -249,7 +249,7 @@
         <!-- Sidebar: Legal Reference -->
         <div class="col-md-4">
             <div class="card mb-4">
-                <div class="card-header">
+                <div class="card-header bg-transparent">
                     <h6 class="mb-0"><i class="bi bi-book me-2"></i>Legal Reference</h6>
                 </div>
                 <div class="card-body">
@@ -299,7 +299,7 @@
 
             <!-- Company Policy Override -->
             <div class="card">
-                <div class="card-header">
+                <div class="card-header bg-transparent">
                     <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Company Policy</h6>
                 </div>
                 <div class="card-body">

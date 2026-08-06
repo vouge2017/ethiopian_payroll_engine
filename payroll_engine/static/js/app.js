@@ -493,6 +493,154 @@ const EthioPayroll = {
 
 
     // =============================================
+    // CONFETTI CELEBRATION
+    // =============================================
+
+    /**
+     * Show a confetti animation. Call on success pages.
+     * @param {number} [duration] - Duration in ms (default 3000)
+     */
+    confetti(duration = 3000) {
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const colors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+        const pieces = Array.from({ length: 80 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            w: Math.random() * 10 + 5,
+            h: Math.random() * 6 + 3,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            vx: (Math.random() - 0.5) * 4,
+            vy: Math.random() * 3 + 2,
+            rotation: Math.random() * 360,
+            rotSpeed: (Math.random() - 0.5) * 10,
+            opacity: 1,
+        }));
+
+        const start = performance.now();
+
+        function frame(now) {
+            const elapsed = now - start;
+            if (elapsed > duration) { canvas.remove(); return; }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const fadeStart = duration * 0.7;
+
+            for (const p of pieces) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.05;
+                p.rotation += p.rotSpeed;
+                if (elapsed > fadeStart) p.opacity = Math.max(0, 1 - (elapsed - fadeStart) / (duration - fadeStart));
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation * Math.PI / 180);
+                ctx.globalAlpha = p.opacity;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx.restore();
+            }
+            requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+    },
+
+
+    // =============================================
+    // AJAX HELPERS
+    // =============================================
+
+    /**
+     * Get CSRF token from meta tag.
+     * @returns {string}
+     */
+    _getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    },
+
+    /**
+     * AJAX fetch wrapper with CSRF token and JSON handling.
+     * @param {string} url - Request URL
+     * @param {object} options - Fetch options
+     * @returns {Promise<object>} Parsed JSON response
+     */
+    async ajax(url, options = {}) {
+        const defaults = {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this._getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        };
+        const config = { ...defaults, ...options };
+        config.headers = { ...defaults.headers, ...options.headers };
+
+        const response = await fetch(url, config);
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || data.message || `Request failed (${response.status})`);
+        }
+        return data;
+    },
+
+    /**
+     * Show a confirmation dialog using a modal or confirm.
+     * @param {string} message - Confirmation message
+     * @returns {Promise<boolean>}
+     */
+    confirmAction(message) {
+        return new Promise(resolve => {
+            resolve(window.confirm(message));
+        });
+    },
+
+    /**
+     * Initialize skeleton loading: replace skeleton placeholders with actual content.
+     * Looks for elements with data-skeleton="true" and fades in real content.
+     */
+    initSkeletonLoading() {
+        document.querySelectorAll('[data-skeleton="true"]').forEach(el => {
+            el.classList.remove('skeleton');
+            el.removeAttribute('data-skeleton');
+            el.style.opacity = '0';
+            el.style.transition = 'opacity 0.3s ease';
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+            });
+        });
+
+        // Also handle skeleton rows in tables — swap with real rows
+        document.querySelectorAll('tr[data-skeleton-row]').forEach(tr => {
+            tr.style.transition = 'opacity 0.2s ease';
+            tr.style.opacity = '0';
+            setTimeout(() => tr.remove(), 200);
+        });
+    },
+
+    // =============================================
+    // TOOLTIPS
+    // =============================================
+
+    /**
+     * Initialize Bootstrap tooltips on all elements with data-bs-toggle="tooltip".
+     */
+    initTooltips() {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) return;
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+            new bootstrap.Tooltip(el, { trigger: 'hover', html: true });
+        });
+    },
+
+    // =============================================
     // INITIALIZATION
     // =============================================
 
@@ -500,6 +648,8 @@ const EthioPayroll = {
         this._initShortcuts();
         this.initSortableTables();
         this.initFilterableTables();
+        this.initSkeletonLoading();
+        this.initTooltips();
 
         // Auto-validate forms with data-validate attribute
         document.querySelectorAll('form[data-validate]').forEach(

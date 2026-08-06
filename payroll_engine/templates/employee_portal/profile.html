@@ -106,7 +106,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 responsive-card">
                             <thead class="table-light">
                                 <tr>
                                     <th>Type</th>
@@ -118,10 +118,10 @@
                             <tbody>
                                 {% for leave in leaves %}
                                 <tr>
-                                    <td><span class="badge bg-secondary">{{ leave.leave_type|capitalize }}</span></td>
-                                    <td>{{ leave.start_date }} — {{ leave.end_date }}</td>
-                                    <td class="text-center">{{ leave.days_requested }}</td>
-                                    <td>
+                                    <td data-label="Type"><span class="badge bg-secondary">{{ leave.leave_type|capitalize }}</span></td>
+                                    <td data-label="Dates">{{ leave.start_date }} — {{ leave.end_date }}</td>
+                                    <td data-label="Days" class="text-center">{{ leave.days_requested }}</td>
+                                    <td data-label="Status">
                                         {% if leave.status == 'approved' %}
                                             <span class="badge badge-success">Approved</span>
                                         {% elif leave.status == 'rejected' %}

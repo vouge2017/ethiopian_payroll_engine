@@ -14,7 +14,7 @@
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 responsive-card">
                     <thead>
                         <tr>
                             <th>Reference</th>
@@ -27,11 +27,11 @@
                     <tbody>
                         {% for run in runs %}
                         <tr>
-                            <td><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') }}</code></td>
-                            <td>{{ run.period or eth_only(run.run_date) }}</td>
-                            <td>{{ eth_date(run.run_date) }}</td>
-                            <td class="text-end">{{ run.payslips|length }}</td>
-                            <td>
+                            <td data-label="Reference"><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') }}</code></td>
+                            <td data-label="Period">{{ run.period or eth_only(run.run_date) }}</td>
+                            <td data-label="Date">{{ eth_date(run.run_date) }}</td>
+                            <td data-label="Payslips" class="text-end">{{ run.payslips|length }}</td>
+                            <td data-label="Actions">
                                 <a href="{{ url_for('accounting.preview_journal', run_id=run.id) }}" class="btn btn-sm btn-ghost">
                                     <i class="bi bi-eye me-1"></i>Preview
                                 </a>

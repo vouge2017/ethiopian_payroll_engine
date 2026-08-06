@@ -15,6 +15,19 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from payroll_engine.cockpit import build_cockpit, CockpitData, AttentionItem
+from payroll_engine import trust_cache
+
+
+# ─────────────────────────────────────────────
+# Fixtures
+# ─────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def _clear_trust_cache():
+    """Clear trust cache between tests to prevent stale data."""
+    trust_cache.invalidate_trust_cache()
+    yield
+    trust_cache.invalidate_trust_cache()
 
 
 # ─────────────────────────────────────────────

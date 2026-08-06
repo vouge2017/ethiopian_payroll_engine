@@ -38,7 +38,7 @@
         <div class="card-body p-0">
             {% if runs %}
             <div class="table-responsive">
-                <table class="table table-hover mb-0 sortable filterable">
+                <table class="table table-hover mb-0 sortable filterable responsive-card">
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
@@ -52,16 +52,16 @@
                     <tbody>
                         {% for run in runs %}
                         <tr>
-                            <td>{{ run.reference or run.id }}</td>
-                            <td>
+                            <td data-label="#">{{ run.reference or run.id }}</td>
+                            <td data-label="Period">
                                 {% if run.period %}
                                     <strong>{{ run.period }}</strong>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td>{{ run.run_date }}</td>
-                            <td>
+                            <td data-label="Date">{{ run.run_date }}</td>
+                            <td data-label="Status">
                                 {% if run.status == 'locked' %}
                                     <span class="badge bg-dark"><i class="bi bi-lock-fill"></i> locked</span>
                                 {% elif run.status == 'completed' %}
@@ -74,8 +74,8 @@
                                     <span class="badge bg-secondary">{{ run.status }}</span>
                                 {% endif %}
                             </td>
-                            <td>{{ run.payslips|length }}</td>
-                            <td>
+                            <td data-label="Payslips">{{ run.payslips|length }}</td>
+                            <td data-label="Actions">
                                 <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-sm btn-outline-primary me-1">
                                     <i class="bi bi-eye"></i> View
                                 </a>

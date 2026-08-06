@@ -90,7 +90,7 @@
             <!-- Employee Breakdown (expandable) -->
             {% if employees %}
             <div class="card mb-4">
-                <div class="card-header bg-white">
+                <div class="card-header bg-transparent">
                     <h5 class="mb-0"><i class="bi bi-people me-2"></i>Employee Breakdown</h5>
                 </div>
                 <div class="card-body p-0">
@@ -125,8 +125,8 @@
                                     <h6 class="text-danger">{{ _('deductions') }}</h6>
                                     <div class="table-responsive">
                                     <table class="table table-sm table-borderless mb-0">
-                                        <tr><td class="text-muted">{{ _('employee_pension') }} (7%)</td><td class="text-end">ETB {{ '%.2f'|format(emp.pension_employee) }}</td></tr>
-                                        <tr><td class="text-muted">{{ _('income_tax') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.tax) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('employee_pension') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="7% of basic salary per Proclamation No. 1268/2022. Employer contributes 11%. No statutory ceiling."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span> (7%)</td><td class="text-end">ETB {{ '%.2f'|format(emp.pension_employee) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('income_tax') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="PAYE tax calculated on taxable income (gross − pension). Brackets: 0-2000=0%, 2001-4000=15%, 4001-7000=20%, 7001-10000=25%, 10001-14000=30%, 14001+=35%. Per Proclamation No. 1395/2025."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span></td><td class="text-end">ETB {{ '%.2f'|format(emp.tax) }}</td></tr>
                                         {% if emp.tax_breakdown and emp.tax_breakdown.brackets %}
                                         <tr><td colspan="2">
                                             <details>

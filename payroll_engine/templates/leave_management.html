@@ -121,17 +121,15 @@
                             <td data-label="Reason"><small class="text-muted">{{ leave.reason[:50] if leave.reason else '-' }}</small></td>
                             <td data-label="Actions">
                                 {% if leave.status == 'pending' %}
-                                <div class="d-flex gap-2">
-                                <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" class="d-inline">
-                                    <button type="submit" class="btn btn-success btn-sm btn-approve-lg" title="Approve">
+                                <div class="d-flex gap-2" id="leave-actions-{{ leave.id }}">
+                                    <button type="button" class="btn btn-success btn-sm btn-approve-lg" title="Approve"
+                                            onclick="handleLeaveAction({{ leave.id }}, 'approve')">
                                         <i class="bi bi-check"></i> Approve
                                     </button>
-                                </form>
-                                <form method="POST" action="{{ url_for('employees.reject_leave', leave_id=leave.id) }}" class="d-inline">
-                                    <button type="submit" class="btn btn-danger btn-sm btn-approve-lg" title="Reject" data-confirm="Reject this leave request?">
+                                    <button type="button" class="btn btn-danger btn-sm btn-approve-lg" title="Reject"
+                                            onclick="handleLeaveAction({{ leave.id }}, 'reject')">
                                         <i class="bi bi-x"></i> Reject
                                     </button>
-                                </form>
                                 </div>
                                 {% else %}
                                 <span class="text-muted">—</span>
@@ -155,4 +153,47 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function handleLeaveAction(leaveId, action) {
+    const url = `/employees/leave/${leaveId}/${action}`;
+
+    try {
+        let data;
+        if (action === 'reject') {
+            const reason = prompt('Reason for rejection:');
+            if (!reason) return;
+            data = await EthioPayroll.ajax(url, {
+                method: 'POST',
+                body: JSON.stringify({ reason: reason }),
+            });
+        } else {
+            data = await EthioPayroll.ajax(url, { method: 'POST' });
+        }
+
+        EthioPayroll.toast(data.message, 'success');
+        // Update the row in-place
+        const actionsCell = document.getElementById(`leave-actions-${leaveId}`);
+        if (actionsCell) {
+            const badge = action === 'approve'
+                ? '<span class="badge bg-success">Approved</span>'
+                : '<span class="badge bg-danger">Rejected</span>';
+            actionsCell.innerHTML = badge;
+        }
+        // Update the status badge in the same row
+        const row = actionsCell?.closest('tr');
+        if (row) {
+            const statusCell = row.querySelector('[data-label="Status"] .badge');
+            if (statusCell) {
+                statusCell.className = `badge bg-${action === 'approve' ? 'success' : 'danger'}`;
+                statusCell.textContent = action === 'approve' ? 'Approved' : 'Rejected';
+            }
+        }
+    } catch (err) {
+        EthioPayroll.toast(err.message || 'Network error', 'error');
+    }
+}
+</script>
 {% endblock %}

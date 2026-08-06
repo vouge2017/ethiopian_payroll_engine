@@ -73,12 +73,12 @@
 
             <!-- Individual jobs -->
             <div class="card mb-4">
-                <div class="card-header bg-white">
+                <div class="card-header bg-transparent">
                     <h5 class="mb-0"><i class="bi bi-file-earmark-pdf me-2"></i>Payslips</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0 responsive-card">
                             <thead class="table-light">
                                 <tr>
                                     <th>Employee</th>
@@ -89,11 +89,11 @@
                             <tbody>
                                 {% for job in jobs %}
                                 <tr>
-                                    <td>
+                                    <td data-label="Employee">
                                         <strong>{{ job.employee_name or 'Unknown' }}</strong>
                                         <br><small class="text-muted">{{ job.employee_id or '' }}</small>
                                     </td>
-                                    <td>
+                                    <td data-label="Status">
                                         {% if job.status == 'generated' %}
                                             <span class="badge badge-success"><i class="bi bi-check-circle me-1"></i>Done</span>
                                         {% elif job.status == 'running' %}
@@ -104,8 +104,7 @@
                                             <span class="badge badge-danger"><i class="bi bi-x-circle me-1"></i>Failed</span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        {% if job.error_message %}
+                                    <td data-label="Error">
                                             <small class="text-danger">{{ job.error_message }}</small>
                                         {% else %}
                                             <span class="text-muted">—</span>

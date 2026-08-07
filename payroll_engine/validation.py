@@ -374,7 +374,7 @@ def _check_pending_leave_impact(data: list[dict], company_id: int, results: list
         employees = Employee.query.filter(
             Employee.company_id == company_id,
             Employee.id.in_(emp_ids_on_leave),
-            not Employee.is_deleted,
+            Employee.is_deleted == False,
         ).all()
         emp_by_id = {e.id: e for e in employees}
 
@@ -583,7 +583,7 @@ def _check_active_deductions(data: list[dict], company_id: int, results: list[Va
         employees = Employee.query.filter(
             Employee.company_id == company_id,
             Employee.employee_id.in_(emp_ids),
-            not Employee.is_deleted,
+            Employee.is_deleted == False,
         ).all()
         emp_by_eid = {e.employee_id: e for e in employees}
 

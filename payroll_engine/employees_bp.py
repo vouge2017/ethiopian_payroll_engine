@@ -58,7 +58,7 @@ def list_employees():
         for r in db.session.query(Employee.department)
         .filter(
             Employee.company_id == _company_id(),
-            not Employee.is_deleted,
+            Employee.is_deleted == False,
             Employee.department.isnot(None),
             Employee.department != '',
         )

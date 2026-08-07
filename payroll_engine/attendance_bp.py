@@ -96,7 +96,7 @@ def _match_employee(emp_id_str, company_id):
     # Try name match (case-insensitive)
     emp = Employee.query.filter(
         Employee.company_id == company_id,
-        not Employee.is_deleted,
+        Employee.is_deleted == False,
         db.func.lower(Employee.name) == emp_id_str.strip().lower(),
     ).first()
     if emp:

@@ -21,9 +21,11 @@ Before listing recommendations, here's what's already built and should not be du
 
 ## Recommendations
 
-### 1. Multi-Company Accountant Dashboard
+### ~~1. Multi-Company Accountant Dashboard~~ — ALREADY BUILT
 
-**Classification:** BUILD NOW
+**Status:** `companies_dashboard()` in `main.py` (line 76) with `companies_dashboard.html`. Shows company cards with employee counts, compliance scores, upcoming deadlines, and quick actions. `UserCompany` model supports multi-company accountant access.
+
+**What's missing:** Minor — could add aggregate compliance score across all companies and bulk actions ("file all overdue ERCA reports"). But the core feature exists.
 
 **Business problem:** Ethiopian accountants typically manage 10–50 companies. Currently they must log in and out of each company to process payroll. This is the single biggest reason accountants stick with Excel — one spreadsheet per client, all open at once.
 
@@ -47,134 +49,47 @@ Before listing recommendations, here's what's already built and should not be du
 
 ---
 
-### 2. Month-End Close Checklist (Automated Workflow)
+### ~~2. Month-End Close Checklist (Automated Workflow)~~ — ALREADY BUILT
 
-**Classification:** BUILD NOW
+**Status:** `filing_workspace.py` with `build_filing_workspace()` tracks ERCA → Pension → Bank File steps with `ready_count`, `filed_count`, `total_steps`. `FilingRecord` model tracks filing history with `mark_filed()` in `reports_bp.py`. Compliance deadlines in `compliance.py` with `get_upcoming_deadlines()` and `get_deadline_for_type()`.
 
-**Business problem:** Accountants follow the same sequence every month: run payroll → review → approve → generate ERCA → generate pension → generate bank file → file ERCA → remit pension → disburse salary → mark all as filed. They track this in their heads or on paper. Missing a step (especially filing) causes penalties.
-
-**Expected user impact:** Eliminates "did I file the pension for Company X?" anxiety. Reduces missed deadlines to zero. New accountants can follow the checklist without training.
-
-**What it is:**
-- A checklist per payroll run with dependencies (can't generate bank file until payroll is approved)
-- Auto-populated from the filing workspace (already tracks ERCA → Pension → Bank File)
-- Visual progress bar with blockers highlighted
-- Deadline countdown per step (ERCA: 25th, Pension: 10th)
-- "Mark as done" for external steps (actually filed with ERCA)
-- Monthly summary: "All 12 companies filed on time this month"
-
-**Dependencies:** Filing Workspace already exists and tracks steps. Compliance deadlines already exist. Needs a new `MonthEndChecklist` model or extend `FilingRecord`.
-
-**Complexity:** Low (1–2 days). The data is already there — `FilingRecord`, `compliance.py`, `filing_workspace.py`. Needs a UI that presents it as a checklist with deadlines.
-
-**Integration:**
-- **Trust Platform:** Evidence Engine already checks if filing is complete — show as checklist item
-- **Knowledge Platform:** Rule Source links to the legal basis for each deadline
-- **Accountant Operating System:** Filing Workspace is the backend — this is the frontend presentation
+**What's missing:** Minor — could add deadline countdown per step and a monthly summary across all companies. But the workflow exists.
 
 ---
 
-### 3. Month-Over-Month Variance Detection
+### ~~3. Month-Over-Month Variance Detection~~ — ALREADY BUILT
 
-**Classification:** BUILD NOW
+**Status:** `change_summary.py` has per-employee deltas with `EmployeeChange` dataclass (old_value, new_value, delta, delta_pct, severity). Variance threshold at 20% with `has_unusual_variance` flag. Severity levels: info/attention/review. Variance notes auto-generated for salary changes >20%. `ChangeSummary` includes gross_delta_pct, net_delta_pct, and status.
 
-**Business problem:** Accountants catch errors by manually comparing this month's payroll to last month's. "Why did Employee X's tax go up by 40%?" They do this in Excel by copying last month's column next to this month's. If they miss a variance, the ERCA filing is wrong.
-
-**Expected user impact:** Catches errors before filing. Reduces accountant review time from 20 min to 5 min per company. The Change Summary already detects changes — this extends it to flag anomalies.
-
-**What it is:**
-- For each employee: show delta (absolute + percentage) for gross, tax, pension, net vs. previous run
-- Flag anomalies: >20% change in any field, new employees, missing employees, zero-salary employees
-- Visual: red/yellow/green badges on each row
-- Filter: "show me only flagged employees"
-- Explanation: "Tax increased because overtime increased from 0 to 40 hours"
-
-**Dependencies:** Change Summary already detects changes between runs. Needs to extend it to compute deltas per employee (not just aggregate) and add threshold-based flagging.
-
-**Complexity:** Medium (2–3 days). The `change_summary.py` module already compares runs. Needs per-employee delta computation and anomaly thresholds.
-
-**Integration:**
-- **Trust Platform:** This IS a trust component — extends the Evidence Engine with variance checks
-- **Knowledge Platform:** Rule Source can explain why a variance is expected (e.g., "overtime rate changed due to Proclamation X")
-- **Accountant Operating System:** Variance report feeds into the filing workspace — flagged items block approval
+**What's missing:** Nothing material. The variance detection is complete.
 
 ---
 
-### 4. Year-End Tax Reconciliation & Employee Tax Certificates
+### ~~4. Year-End Tax Reconciliation & Employee Tax Certificates~~ — PARTIALLY BUILT
 
-**Classification:** BUILD NOW
+**Status:** `generate_yearly_summary()` in `reports.py` (line 318) generates annual tax/pension summary per employee in Excel. `download_yearly_summary()` route in `reports_bp.py` (line 145). YTD data in `selfservice_bp.py` for employee self-service.
 
-**Business problem:** At the end of the Ethiopian fiscal year (Hamle → Sene), accountants must reconcile total tax withheld vs. total tax liability for each employee, and issue tax certificates (Form 1). Currently this is done manually in Excel — sum 12 months of tax, compare to annual liability, issue certificate. Errors cause ERCA audits.
-
-**Expected user impact:** Automates the most error-prone annual task. Reduces year-end processing from days to hours. Eliminates the risk of arithmetic errors in annual reconciliation.
-
-**What it is:**
-- Annual summary per employee: total gross, total tax, total pension, total net across 12 months
-- Reconciliation check: does monthly tax sum = annual tax liability? Flag discrepancies
-- Form 1 generation: pre-filled employee tax certificate (PDF)
-- Bulk generation: "generate all 50 tax certificates" with one click
-- Year-end adjustment: handle retroactive salary changes, corrections
-
-**Dependencies:** `Payslip` model already stores per-month data. Needs annual aggregation query and PDF template for Form 1.
-
-**Complexity:** Medium (3–4 days). Aggregation query is straightforward. Form 1 PDF template needs the exact ERCA format. Year-end adjustment logic is the complex part.
-
-**Integration:**
-- **Trust Platform:** Evidence Engine can verify annual totals match monthly sums
-- **Knowledge Platform:** Rule Source links to the legal basis for Form 1 requirements
-- **Accountant Operating System:** Extends the filing workspace with a year-end phase
+**What's missing:**
+- Form 1 PDF generation (ERCA tax certificate format)
+- Annual reconciliation check (does monthly tax sum = annual liability?)
+- Bulk Form 1 generation for all employees
+- Year-end adjustment handling (retroactive salary changes)
 
 ---
 
-### 5. Ethiopian Calendar as Primary Date System
+### ~~5. Ethiopian Calendar as Primary Date System~~ — ALREADY BUILT
 
-**Classification:** BUILD NOW
+**Status:** `ethiopian_calendar.py` with `format_ethiopian_date()` and `format_dual_date()`. Injected globally via `inject_ethiopian_calendar()` in `__init__.py` (line 520). Templates use `format_ethiopian_date` filter. `PayrollRun.generate_reference()` uses Ethiopian calendar for PR-YYYY-MM-NNN format.
 
-**Business problem:** Ethiopian businesses operate on the Ethiopian calendar (Meskerem → Pagume, 13 months). ERCA filings use Ethiopian dates. Pension remittances use Ethiopian dates. Bank files use Ethiopian dates. Currently the system uses Gregorian dates internally and converts for display. Accountants think in Ethiopian dates — every mental conversion is friction.
-
-**Expected user impact:** Eliminates the #1 complaint from Ethiopian users about any software — "why is it showing me January when it's Tikimt?" Reduces date-related errors in filings.
-
-**What it is:**
-- All dates displayed in Ethiopian calendar by default (with Gregorian toggle)
-- Payroll periods named by Ethiopian month (Meskerem 2018, not October 2025)
-- Filing deadlines shown in Ethiopian dates (25th of Tikimt, not 25th of November)
-- Date picker uses Ethiopian calendar
-- ERCA report uses Ethiopian dates natively
-
-**Dependencies:** `ethiopian_calendar.py` already exists with conversion functions. The cockpit already shows Ethiopian dates. Needs to be extended to all templates and date pickers.
-
-**Complexity:** Medium (2–3 days). The conversion library exists. Main work is template updates and date picker components.
-
-**Integration:**
-- **Trust Platform:** Narrative already uses Ethiopian dates — extend to all components
-- **Knowledge Platform:** Rule Source references Ethiopian fiscal year
-- **Accountant Operating System:** Filing Workspace deadlines in Ethiopian dates
+**What's missing:** Nothing material. Ethiopian dates are the primary display system.
 
 ---
 
-### 6. Bulk Employee Import/Export via Spreadsheet
+### ~~6. Bulk Employee Import/Export via Spreadsheet~~ — ALREADY BUILT
 
-**Classification:** BUILD NOW
+**Status:** `bulk_import_employees()` in `api.py` (line 661) — JSON array import with validation. `export_employees()` in `employees_bp.py` (line 85) — CSV export. `excel_import.py` handles payroll draft spreadsheet import.
 
-**Business problem:** Accountants manage employee data in Excel. When they adopt a new payroll system, they need to import 50–200 employees at once. Currently the system has CSV upload for payroll drafts, but not for employee master data. Accountants also need to export employee data for audits, bank submissions, and government agencies.
-
-**Expected user impact:** Reduces onboarding time from hours (manual entry) to minutes (spreadsheet import). Eliminates transcription errors. Makes the system a source of truth instead of Excel.
-
-**What it is:**
-- Employee import: upload Excel/CSV with employee data, validate, preview, confirm
-- Employee export: download all employee data as Excel/CSV
-- Template download: pre-formatted spreadsheet with column headers matching the system
-- Validation: check for duplicates, missing required fields, invalid phone numbers, invalid TINs
-- Error report: "Row 15: phone number is not Ethiopian format"
-
-**Dependencies:** `excel_import.py` exists for payroll drafts. `Employee` model has all fields. Needs extension to handle employee master data import/export.
-
-**Complexity:** Low (1–2 days). The import infrastructure exists. Needs employee-specific validation and a new route.
-
-**Integration:**
-- **Trust Platform:** Evidence Engine can validate imported data (e.g., "TIN format valid", "phone number valid")
-- **Knowledge Platform:** No direct integration needed
-- **Accountant Operating System:** Feeds into the filing workspace — imported employees appear in ERCA filing
+**What's missing:** Minor — could add Excel/CSV upload UI for employee master data (currently JSON API only), and a template download with pre-formatted column headers.
 
 ---
 
@@ -427,12 +342,12 @@ Before listing recommendations, here's what's already built and should not be du
 
 | # | Feature | Classification | Effort | Impact |
 |---|---------|---------------|--------|--------|
-| 1 | Multi-Company Accountant Dashboard | **BUILD NOW** | 2–3 days | Highest — enables accountant to manage all clients |
-| 2 | Month-End Close Checklist | **BUILD NOW** | 1–2 days | High — eliminates missed deadlines |
-| 3 | Month-Over-Month Variance Detection | **BUILD NOW** | 2–3 days | High — catches errors before filing |
-| 4 | Year-End Tax Reconciliation & Form 1 | **BUILD NOW** | 3–4 days | High — automates most error-prone annual task |
-| 5 | Ethiopian Calendar as Primary | **BUILD NOW** | 2–3 days | High — eliminates #1 user complaint |
-| 6 | Bulk Employee Import/Export | **BUILD NOW** | 1–2 days | High — reduces onboarding friction |
+| 1 | ~~Multi-Company Dashboard~~ | **BUILT** | — | — |
+| 2 | ~~Month-End Checklist~~ | **BUILT** | — | — |
+| 3 | ~~Variance Detection~~ | **BUILT** | — | — |
+| 4 | Year-End Form 1 & Reconciliation | **BUILD NOW** | 3–4 days | High — annual tax certificate generation |
+| 5 | ~~Ethiopian Calendar~~ | **BUILT** | — | — |
+| 6 | ~~Bulk Import/Export~~ | **BUILT** | — | — |
 | 7 | Disbursement Tracking | BUILD NEXT | 3–4 days | Medium — closes the payroll loop |
 | 8 | Multi-Level Approval | BUILD NEXT | 3–4 days | Medium — enables larger companies |
 | 9 | Employee Self-Service Enhancements | BUILD NEXT | 1–2 days | Medium — reduces accountant workload |
@@ -443,23 +358,21 @@ Before listing recommendations, here's what's already built and should not be du
 | 14 | Document Management | BUILD LATER | 3–4 days | Low-Medium — audit readiness |
 | 15 | Retroactive Salary Adjustments | BUILD LATER | 5–7 days | Low — rare but complex |
 
-**BUILD NOW total:** 11–17 days
-**BUILD NEXT total:** 10–16 days
-**BUILD LATER total:** 11–15 days
+**Actually BUILD NOW:** 3–4 days (Form 1 + reconciliation only)
+**BUILD NEXT:** 10–16 days
+**BUILD LATER:** 11–15 days
 
 ---
 
 ## Key Insight
 
-The existing Trust Platform (Narrative, Evidence, Exceptions, Rule Source, Cockpit) is genuinely unique — no other payroll product in Ethiopia (or globally) has it. The Accountant Operating System (Filing Workspace, compliance scoring, accounting exports) is solid infrastructure.
+The existing Trust Platform (Narrative, Evidence, Exceptions, Rule Source, Cockpit) is genuinely unique — no other payroll product in Ethiopia (or globally) has it. The Accountant Operating System (Filing Workspace, compliance scoring, accounting exports, multi-company dashboard, variance detection, Ethiopian calendar, bulk import/export) is **already complete**.
 
-**The gap is not features — it's workflow.** Ethiopian accountants don't need more features. They need the existing features connected into a monthly workflow that's faster than Excel. The six BUILD NOW recommendations do exactly that:
+**The system is further along than the roadmap suggests.** Five of six "BUILD NOW" recommendations already exist in the codebase. The only genuinely missing piece is Form 1 PDF generation and year-end reconciliation.
 
-1. **Multi-company dashboard** → see all clients at once
-2. **Month-end checklist** → know what's done and what's not
-3. **Variance detection** → catch errors before filing
-4. **Year-end reconciliation** → automate the hardest annual task
-5. **Ethiopian calendar** → speak the user's language
-6. **Bulk import/export** → bridge the Excel gap
+**What's actually left:**
+- **BUILD NOW:** Form 1 tax certificates + annual reconciliation (3–4 days)
+- **BUILD NEXT:** Disbursement tracking, multi-level approval, scheduled drafts, notifications (10–16 days)
+- **BUILD LATER:** Cross-company comparison, document management, retroactive adjustments (11–15 days)
 
-These six features turn the system from "a payroll calculator with trust components" into "an accountant's operating system for Ethiopian payroll."
+**The real next step is not building features — it's getting accountant validation.** The verification package is ready. The staging environment is deployed. Find 3–5 Ethiopian accountants and let them use the system. Their feedback will tell us what's actually missing.

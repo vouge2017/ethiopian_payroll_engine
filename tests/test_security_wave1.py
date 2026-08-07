@@ -4,9 +4,9 @@ These tests deliberately attack the previous failure modes — they are not
 happy-path smoke checks. Each assertion maps to a real abuse path.
 """
 import io
+import os
 import re
 import sys
-import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -16,7 +16,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import User, Company, TenantQuery, Employee, OvertimeEntry
+from payroll_engine.models import Employee, OvertimeEntry, TenantQuery, User
 from payroll_engine.security import safe_redirect_target
 
 

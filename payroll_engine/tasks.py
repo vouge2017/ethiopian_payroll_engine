@@ -7,9 +7,9 @@ Provides:
 
 RQ is optional — if Redis is unavailable, callers fall back to inline generation.
 """
+import logging
 import os
 import uuid
-import logging
 
 logger = logging.getLogger('payroll_engine')
 
@@ -49,7 +49,7 @@ def generate_payslip_pdf(job_id):
         job_id: PayslipGenerationJob.id
     """
     from payroll_engine import create_app, db
-    from payroll_engine.models import PayslipGenerationJob, Payslip, PayrollRun, Company
+    from payroll_engine.models import Company, PayrollRun, Payslip, PayslipGenerationJob
     from payroll_engine.pdf import generate_payslip
 
     app = create_app()
@@ -176,9 +176,10 @@ def get_batch_status(batch_id):
 
     Returns dict: {queued: N, running: N, generated: N, failed: N, total: N}
     """
+    from sqlalchemy import func
+
     from payroll_engine import db
     from payroll_engine.models import PayslipGenerationJob
-    from sqlalchemy import func
 
     rows = db.session.query(
         PayslipGenerationJob.status,
@@ -197,7 +198,6 @@ def get_batch_jobs(batch_id):
 
     Returns list of dicts with payslip details.
     """
-    from payroll_engine import db
     from payroll_engine.models import PayslipGenerationJob
 
     jobs = PayslipGenerationJob.query.filter_by(batch_id=batch_id).all()

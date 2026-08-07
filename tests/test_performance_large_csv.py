@@ -1,9 +1,10 @@
 """Performance benchmark: 10,000-row payroll CSV processing."""
-import sys
-import os
-import io
-import time
 import csv
+import io
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
@@ -12,7 +13,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Employee, Company, User, TenantQuery, OvertimeEntry
+from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery, User
 
 TARGET_THRESHOLD_SEC = 30.0
 ROW_COUNT = 10000

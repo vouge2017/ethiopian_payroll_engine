@@ -6,16 +6,18 @@ These tests prove that:
 2. Filtered queries work normally
 3. Two tenants can each have the same employee_id (composite unique)
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Employee, PayrollRun, AuditLog, Company, User, TenantQuery
+from payroll_engine.models import AuditLog, Company, Employee, PayrollRun, TenantQuery
 
 
 @pytest.fixture

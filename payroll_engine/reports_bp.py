@@ -1,12 +1,13 @@
 """Reports & compliance blueprint."""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
-from flask_login import login_required, current_user
-from datetime import date, datetime
 import io
+from datetime import UTC, date, datetime
+
+from flask import Blueprint, flash, redirect, render_template, request, send_file, url_for
+from flask_login import current_user, login_required
 
 from payroll_engine import db
-from payroll_engine.models import Employee, PayrollRun, AuditLog
 from payroll_engine.compliance import compute_compliance_score, get_status_message
+from payroll_engine.models import AuditLog, Employee, PayrollRun
 from payroll_engine.shared import _company_id, role_required
 
 reports_bp = Blueprint('reports', __name__)
@@ -181,8 +182,9 @@ def download_yearly_summary(year):
 def download_bank_file(run_id):
     """Download bank transfer file for a payroll run."""
     from payroll_engine.bank_file import (
-        generate_csv, generate_xlsx, validate_payroll_for_bank,
-        ACCOUNT_PATTERNS, NARRATIVE_TEMPLATES
+        generate_csv,
+        generate_xlsx,
+        validate_payroll_for_bank,
     )
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=_company_id()
@@ -266,9 +268,12 @@ def download_bank_file(run_id):
 @role_required('owner', 'accountant')
 def export_leave_balances():
     """Export leave balances for all employees as CSV."""
-    from payroll_engine.models import Employee, LeaveBalance
-    import csv, io
+    import csv
+    import io
+
     from flask import send_file
+
+    from payroll_engine.models import Employee, LeaveBalance
 
     employees = Employee.query.filter_by(
         company_id=_company_id(), is_deleted=False
@@ -300,9 +305,12 @@ def export_leave_balances():
 @role_required('owner')
 def export_audit_log():
     """Export audit log as CSV."""
-    from payroll_engine.models import AuditLog
-    import csv, io
+    import csv
+    import io
+
     from flask import send_file
+
+    from payroll_engine.models import AuditLog
 
     logs = AuditLog.query.filter_by(
         company_id=_company_id()
@@ -368,7 +376,7 @@ def mark_filed():
     if existing:
         existing.confirmation_number = confirmation or existing.confirmation_number
         existing.notes = notes or existing.notes
-        existing.filed_at = datetime.now(timezone.utc)
+        existing.filed_at = datetime.now(UTC)
         existing.filed_by = current_user.id
         db.session.commit()
         flash(f'Updated {filing_type.upper()} filing for {period}.', 'success')
@@ -405,7 +413,7 @@ def mark_filed():
 @role_required('owner', 'accountant')
 def analytics():
     """Analytics dashboard with department costs, overtime, leave, headcount."""
-    from payroll_engine.models import Payslip, OvertimeEntry, Leave, LeaveBalance
+    from payroll_engine.models import Leave, LeaveBalance, OvertimeEntry, Payslip
     company = current_user.company
     cid = company.id
     year = request.args.get('year', date.today().year, type=int)
@@ -523,9 +531,12 @@ def analytics():
 @role_required('owner', 'accountant')
 def export_analytics():
     """Export analytics data as CSV (department costs + overtime + leave)."""
-    from payroll_engine.models import Payslip, OvertimeEntry, Leave, LeaveBalance
-    import csv, io
+    import csv
+    import io
+
     from flask import send_file
+
+    from payroll_engine.models import Leave, LeaveBalance, OvertimeEntry, Payslip
 
     company = current_user.company
     cid = company.id
@@ -627,12 +638,12 @@ def export_analytics():
 def payroll_comparison():
     """Compare two payroll runs side by side."""
     company_id = _company_id()
-    
+
     # Get all completed runs
     runs = PayrollRun.query.filter_by(
         company_id=company_id, status='completed'
     ).order_by(PayrollRun.run_date.desc()).all()
-    
+
     if len(runs) < 2:
         return render_template('payroll_comparison.html',
             runs=runs,
@@ -641,27 +652,27 @@ def payroll_comparison():
             comparison=None,
             needs_two=True
         )
-    
+
     # Get selected runs or default to latest two
     run_a_id = request.args.get('run_a', runs[1].id, type=int)
     run_b_id = request.args.get('run_b', runs[0].id, type=int)
-    
+
     run_a = PayrollRun.query.filter_by(id=run_a_id, company_id=company_id).first()
     run_b = PayrollRun.query.filter_by(id=run_b_id, company_id=company_id).first()
-    
+
     if not run_a or not run_b:
         flash('Payroll run not found.', 'warning')
         return redirect(url_for('reports.reports'))
-    
+
     from payroll_engine.models import Payslip
-    
+
     # Get payslips for both runs
     payslips_a = Payslip.query.filter_by(payroll_run_id=run_a.id).all()
     payslips_b = Payslip.query.filter_by(payroll_run_id=run_b.id).all()
-    
+
     # Build employee-level comparison
     from payroll_engine.models import Employee
-    
+
     emp_map = {}
     for ps in payslips_a:
         emp = Employee.query.get(ps.employee_id)
@@ -679,7 +690,7 @@ def payroll_comparison():
                 'b_pension': 0,
                 'b_net': 0,
             }
-    
+
     for ps in payslips_b:
         if ps.employee_id in emp_map:
             emp_map[ps.employee_id]['b_gross'] = ps.gross_salary or 0
@@ -699,7 +710,7 @@ def payroll_comparison():
                     'b_pension': ps.employee_pension or 0,
                     'b_net': ps.net_pay or 0,
                 }
-    
+
     # Calculate totals
     totals = {
         'a_gross': sum(e['a_gross'] for e in emp_map.values()),
@@ -717,15 +728,15 @@ def payroll_comparison():
     totals['headcount_a'] = len(payslips_a)
     totals['headcount_b'] = len(payslips_b)
     totals['headcount_change'] = totals['headcount_b'] - totals['headcount_a']
-    
+
     if totals['a_gross'] > 0:
         totals['gross_change_pct'] = (totals['gross_change'] / totals['a_gross'] * 100)
     else:
         totals['gross_change_pct'] = 0
-    
+
     # Employee list sorted by change
     employees = sorted(emp_map.values(), key=lambda e: abs(e['b_net'] - e['a_net']), reverse=True)
-    
+
     return render_template('payroll_comparison.html',
         runs=runs,
         run_a=run_a,

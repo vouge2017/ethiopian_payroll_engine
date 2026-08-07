@@ -6,12 +6,14 @@ This is the structural guardrail: if anyone calls calculate_tax(gross)
 directly instead of going through calculate_payroll(), the test suite
 catches it. The function itself prevents wrong numbers.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.tax import calculate_tax
 

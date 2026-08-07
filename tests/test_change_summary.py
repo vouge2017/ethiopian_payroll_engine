@@ -9,14 +9,11 @@ Run: python -m pytest tests/test_change_summary.py -v
 import sys
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from payroll_engine.change_summary import compute_change_summary, _build_summary, ChangeSummary, EmployeeChange
-
+from payroll_engine.change_summary import _build_summary
 
 # ─────────────────────────────────────────────
 # Helpers

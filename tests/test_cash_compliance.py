@@ -5,8 +5,9 @@ Ethiopian law (Proclamation No. 1395/2025, Article 81) requires electronic
 payment for salaries above ETB 50,000. The system flags this as a FLAG
 (not BLOCK) — it informs the owner but does not prevent payroll from proceeding.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from payroll_engine.validation import validate_payroll_data

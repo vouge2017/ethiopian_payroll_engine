@@ -7,6 +7,7 @@ multiple fixtures share the same db engine.
 Solution: use StaticPool (single connection) for in-memory SQLite tests.
 """
 import os
+
 import pytest
 
 os.environ.setdefault('FLASK_ENV', 'testing')
@@ -17,8 +18,9 @@ os.environ.setdefault('CELERY_BROKER_URL', 'memory://')
 @pytest.fixture(autouse=True, scope='session')
 def _configure_test_db():
     """Configure the database for testing with a single connection."""
-    from payroll_engine import db
     from sqlalchemy.pool import StaticPool
+
+    from payroll_engine import db
 
     # Override engine options before any test creates an app
     db.engine_options = {

@@ -8,20 +8,20 @@ Tests:
 - Deleted employees excluded from default queries
 - Payroll history preserved after soft delete
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from datetime import UTC, date, datetime
+
 from payroll_engine import create_app, db
-from payroll_engine.models import (
-    Employee, Company, User, PayrollRun, Payslip,
-    AuditLog, TenantQuery, OvertimeEntry
-)
-from datetime import date, datetime, timezone
+from payroll_engine.models import AuditLog, Company, Employee, OvertimeEntry, PayrollRun, Payslip, TenantQuery, User
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def test_soft_delete_marks_employee(company_user_employee):
     assert not emp.is_deleted
 
     emp.is_deleted = True
-    emp.deleted_at = datetime.now(timezone.utc)
+    emp.deleted_at = datetime.now(UTC)
     emp.deleted_by = user.id
     db.session.commit()
 
@@ -92,7 +92,7 @@ def test_soft_delete_excludes_from_default_query(company_user_employee):
 
     # Soft delete
     emp.is_deleted = True
-    emp.deleted_at = datetime.now(timezone.utc)
+    emp.deleted_at = datetime.now(UTC)
     db.session.commit()
 
     # After delete: 0 active employees
@@ -109,7 +109,7 @@ def test_reactivate_restores_employee(company_user_employee):
     company, user, emp = company_user_employee
 
     emp.is_deleted = True
-    emp.deleted_at = datetime.now(timezone.utc)
+    emp.deleted_at = datetime.now(UTC)
     db.session.commit()
 
     # Reactivate
@@ -142,7 +142,7 @@ def test_payroll_history_preserved_after_soft_delete(company_user_employee):
 
     # Soft delete the employee
     emp.is_deleted = True
-    emp.deleted_at = datetime.now(timezone.utc)
+    emp.deleted_at = datetime.now(UTC)
     db.session.commit()
 
     # Payslip still exists
@@ -237,7 +237,7 @@ def test_multiple_active_employees(company_user_employee):
 
     # Deactivate one
     emp.is_deleted = True
-    emp.deleted_at = datetime.now(timezone.utc)
+    emp.deleted_at = datetime.now(UTC)
     db.session.commit()
 
     active = Employee.query.filter_by(company_id=company.id, is_deleted=False).all()

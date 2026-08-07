@@ -2,24 +2,21 @@
 
 Routes in main.py delegate to this module so they stay thin.
 """
-import csv as csv_module
 import math
 import os
 from datetime import date
-from typing import List, Dict, Tuple, Optional
 
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.tax import calculate_tax_breakdown
 
 
-def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
+def parse_and_calculate_payroll(filepath: str) -> tuple[list[dict], list[str]]:
     """Parse a CSV or Excel file and calculate payroll for each row.
 
     Returns:
         (employees_data, row_errors) where employees_data is a list of dicts
         with calculated payroll fields, and row_errors is a list of error strings.
     """
-    import os
     employees_data = []
     row_errors = []
 
@@ -28,7 +25,7 @@ def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
     is_excel = ext in ('.xlsx', '.xls')
 
     if is_excel:
-        from payroll_engine.excel_import import read_xlsx, parse_salary
+        from payroll_engine.excel_import import parse_salary, read_xlsx
         rows = read_xlsx(filepath)
         if not rows:
             raise ValueError('Excel file is empty or has no data')
@@ -104,7 +101,7 @@ def parse_and_calculate_payroll(filepath: str) -> Tuple[List[Dict], List[str]]:
     return employees_data, row_errors
 
 
-def check_csv_row_limit(employees_data: List, max_rows: int = 5000) -> Optional[str]:
+def check_csv_row_limit(employees_data: list, max_rows: int = 5000) -> str | None:
     """Return an error message if row limit is exceeded, else None."""
     if len(employees_data) > max_rows:
         return (
@@ -124,7 +121,6 @@ def build_period_string(ref_date=None) -> str:
 
 def get_previous_payslips(company_id: int):
     """Fetch previous month's payslip data for salary comparison."""
-    from payroll_engine import db
     from payroll_engine.models import PayrollRun
     previous_payslips = {}
     last_run = PayrollRun.query.filter_by(
@@ -140,14 +136,13 @@ def get_previous_payslips(company_id: int):
     return previous_payslips
 
 
-def check_duplicate_period(company_id: int, period: str) -> Optional[Tuple[str, str]]:
+def check_duplicate_period(company_id: int, period: str) -> tuple[str, str] | None:
     """Check if a payroll run already exists for this period.
 
     Returns (status_message, redirect) tuple or None if no conflict.
     """
-    from payroll_engine import db
-    from payroll_engine.models import PayrollRun
     from payroll_engine.ethiopian_calendar import get_ethiopian_month_name
+    from payroll_engine.models import PayrollRun
 
     existing = PayrollRun.query.filter_by(
         company_id=company_id,
@@ -174,7 +169,7 @@ def check_duplicate_period(company_id: int, period: str) -> Optional[Tuple[str, 
     return None
 
 
-def create_payroll_run(company_id: int, employees_data: List, validation_results: list) -> dict:
+def create_payroll_run(company_id: int, employees_data: list, validation_results: list) -> dict:
     """Create a complete payroll run with draft and validation results.
 
     Wraps all DB writes in a transaction so a partial failure rolls back cleanly.
@@ -182,7 +177,7 @@ def create_payroll_run(company_id: int, employees_data: List, validation_results
     Returns dict with keys: run_id, employees_data, totals.
     """
     from payroll_engine import db
-    from payroll_engine.models import PayrollRun, PayrollDraft, PayrollValidationResult
+    from payroll_engine.models import PayrollDraft, PayrollRun, PayrollValidationResult
 
     try:
         run = PayrollRun(

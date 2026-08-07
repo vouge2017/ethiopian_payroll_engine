@@ -5,20 +5,20 @@ Tests:
 - Delete employee without history → 200 + AuditLog
 - Delete employee with payroll history → 409 (IntegrityError)
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from datetime import date
+
 from payroll_engine import create_app, db
-from payroll_engine.models import (
-    Employee, Company, User, PayrollRun, Payslip,
-    AuditLog, TenantQuery, OvertimeEntry
-)
-from datetime import date, datetime
+from payroll_engine.models import AuditLog, Company, Employee, OvertimeEntry, PayrollRun, Payslip, TenantQuery, User
 
 
 @pytest.fixture

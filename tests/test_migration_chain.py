@@ -1,9 +1,11 @@
 """Migration chain integrity tests — verify all migrations can apply and rollback."""
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
@@ -213,7 +215,6 @@ def test_api_key_indexes(app):
 
 def _has_postgres():
     """Check if a PostgreSQL test database is available."""
-    import urllib.parse
     url = os.environ.get('TEST_DATABASE_URL', '')
     return url.startswith('postgresql')
 
@@ -224,8 +225,8 @@ def test_migrations_apply_to_postgres():
     from alembic.command import upgrade
     from alembic.config import Config
     from flask import Flask
-    from flask_sqlalchemy import SQLAlchemy
     from flask_migrate import Migrate
+    from flask_sqlalchemy import SQLAlchemy
     proj_root = os.path.join(os.path.dirname(__file__), '..')
     pg_url = os.environ['TEST_DATABASE_URL']
 
@@ -251,11 +252,11 @@ def test_migrations_apply_to_postgres():
 @pytest.mark.skipif(not _has_postgres(), reason="PostgreSQL not available (set TEST_DATABASE_URL)")
 def test_migrations_rollback_on_postgres():
     """All migrations can be rolled back on PostgreSQL."""
-    from alembic.command import upgrade, downgrade
+    from alembic.command import downgrade, upgrade
     from alembic.config import Config
     from flask import Flask
-    from flask_sqlalchemy import SQLAlchemy
     from flask_migrate import Migrate
+    from flask_sqlalchemy import SQLAlchemy
     proj_root = os.path.join(os.path.dirname(__file__), '..')
     pg_url = os.environ['TEST_DATABASE_URL']
 

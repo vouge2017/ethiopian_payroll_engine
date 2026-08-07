@@ -1,14 +1,17 @@
-from flask import Blueprint, request, jsonify, g as flask_g
-from flask_login import login_required, current_user
-from functools import wraps
 from decimal import Decimal, InvalidOperation
+from functools import wraps
+
+from flask import Blueprint, Response, jsonify, request
+from flask import g as flask_g
+from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
+
 from . import db, limiter
-from .models import Company, User, Employee, PayrollRun, Payslip, Leave, AuditLog, ApiKey
 from .change_summary import compute_change_summary
-from .narrative import generate_narrative
-from .exceptions import classify_exceptions
 from .evidence import collect_evidence
+from .exceptions import classify_exceptions
+from .models import ApiKey, AuditLog, Company, Employee, PayrollRun, Payslip
+from .narrative import generate_narrative
 
 api = Blueprint('api', __name__)
 
@@ -403,8 +406,9 @@ def get_payroll_run(run_id):
 @api_token_or_login_required
 @company_required
 def download_payslip(payslip_id):
-    from flask import send_file
     import os
+
+    from flask import send_file
     payslip = Payslip.query.filter_by(id=payslip_id).first_or_404()
     # Verify company access
     run = db.session.get(PayrollRun, payslip.payroll_run_id)
@@ -495,8 +499,9 @@ def impact_new_hire():
 @api_role_required('owner', 'accountant')
 def impact_termination():
     """Preview cost of terminating an employee."""
-    from payroll_engine.impact import preview_termination
     from datetime import datetime as dt
+
+    from payroll_engine.impact import preview_termination
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Request body required'}), 400
@@ -607,6 +612,7 @@ def bulk_import_employees():
     Returns: {"imported": N, "errors": [...], "total_errors": M}
     """
     from decimal import Decimal, InvalidOperation
+
     from payroll_engine.models import validate_ethiopian_phone
 
     data = request.get_json()
@@ -693,10 +699,9 @@ def get_accounting_export(run_id):
 
     format: json (default), csv, iif, xero, peachtree
     """
+
+
     from payroll_engine.accounting_bp import _generate_journal_entries
-    from flask import Response
-    import csv
-    import io
 
     cid = _get_company_id()
     journal = _generate_journal_entries(run_id, cid)
@@ -736,7 +741,10 @@ def get_accounting_export(run_id):
 
     # CSV/IIF/Xero/Peachtree — return as file download
     from payroll_engine.accounting_bp import (
-        _export_generic_csv, _export_quickbooks_iif, _export_xero, _export_peachtree
+        _export_generic_csv,
+        _export_peachtree,
+        _export_quickbooks_iif,
+        _export_xero,
     )
     exporters = {
         'csv': _export_generic_csv,

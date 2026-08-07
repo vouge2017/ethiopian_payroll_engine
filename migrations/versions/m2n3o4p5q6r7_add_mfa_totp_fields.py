@@ -4,8 +4,8 @@ Revision ID: m2n3o4p5q6r7
 Revises: k1l2m3n4o5p6
 Create Date: 2026-07-15 12:30:00.000000
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'm2n3o4p5q6r7'

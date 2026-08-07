@@ -1,8 +1,11 @@
 import hashlib
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
-from flask_login import login_user, logout_user, login_required, current_user
+from datetime import UTC
+
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required, login_user, logout_user
+
 from . import db, limiter
-from .models import User, Company, validate_ethiopian_phone
+from .models import Company, User, validate_ethiopian_phone
 from .security import safe_redirect_target
 
 auth = Blueprint('auth', __name__)
@@ -117,8 +120,8 @@ def login():
         # Successful login — clear lockout counter
         LoginAttempt.record_success(identifier)
         login_user(user, remember=remember)
-        from datetime import datetime, timezone
-        session['_login_time'] = datetime.now(timezone.utc).timestamp()
+        from datetime import datetime
+        session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
         # Audit: successful login
@@ -327,8 +330,8 @@ def google_callback():
     if user:
         # Existing user — log them in
         login_user(user)
-        from datetime import datetime, timezone
-        session['_login_time'] = datetime.now(timezone.utc).timestamp()
+        from datetime import datetime
+        session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
         flash('Welcome back!', 'success')
@@ -395,8 +398,8 @@ def google_register():
         session.pop('google_name', None)
 
         login_user(user)
-        from datetime import datetime, timezone
-        session['_login_time'] = datetime.now(timezone.utc).timestamp()
+        from datetime import datetime
+        session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
         flash('Account created with Google!', 'success')

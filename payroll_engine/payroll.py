@@ -15,10 +15,11 @@ Usage:
     result = calculate_payroll(basic_salary=10000, allowances=2000)
 """
 
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
-from payroll_engine.tax import calculate_tax, explain_tax_amharic
-from payroll_engine.pension import employee_pension, employer_pension
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+
 from payroll_engine.overtime import calculate_total_overtime
+from payroll_engine.pension import employee_pension, employer_pension
+from payroll_engine.tax import calculate_tax, explain_tax_amharic
 
 Q = Decimal('0.01')
 
@@ -50,7 +51,8 @@ def calculate_prorated_salary(monthly_salary, start_date, end_date=None) -> Deci
     Returns:
         Prorated salary amount in ETB, as Decimal
     """
-    from datetime import date as _date, datetime as _dt
+    from datetime import date as _date
+    from datetime import datetime as _dt
 
     monthly_salary = _D(monthly_salary)
     if monthly_salary <= 0:
@@ -331,7 +333,7 @@ def generate_calculation_flow(result: dict) -> dict:
         {
             'label': 'Employee Pension (7%)',
             'amount': pension,
-            'note': f'7% of basic salary — deducted before tax',
+            'note': '7% of basic salary — deducted before tax',
             'is_deduction': True,
             'icon': '🏦',
         },

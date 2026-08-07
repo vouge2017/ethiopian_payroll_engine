@@ -16,8 +16,7 @@ Rates and optional ceiling are configurable via the TaxRule database model.
 When no database rule exists, falls back to hardcoded defaults (no ceiling).
 """
 
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
-from typing import Tuple, Optional
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 # Quantizer for 2 decimal places
 Q = Decimal('0.01')
@@ -53,7 +52,7 @@ def _D(value) -> Decimal:
         return Decimal('0')
 
 
-def _get_rates(for_date=None) -> Tuple[Decimal, Decimal, Optional[Decimal]]:
+def _get_rates(for_date=None) -> tuple[Decimal, Decimal, Decimal | None]:
     """
     Fetch pension rates and optional ceiling from the database.
     Falls back to hardcoded defaults if no TaxRule exists.
@@ -96,7 +95,7 @@ def _get_rates(for_date=None) -> Tuple[Decimal, Decimal, Optional[Decimal]]:
     return result
 
 
-def _insurable_salary(basic_salary: Decimal, ceiling: Optional[Decimal]) -> Decimal:
+def _insurable_salary(basic_salary: Decimal, ceiling: Decimal | None) -> Decimal:
     """Return the salary amount on which pension is calculated.
 
     If a ceiling is configured, pension is capped at that amount.

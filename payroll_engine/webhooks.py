@@ -13,15 +13,16 @@ Usage:
     from payroll_engine.webhooks import fire_webhook
     fire_webhook(company_id, 'payroll.approved', {'run_id': 1, 'total_net': 50000})
 """
-import os
-import hmac
 import hashlib
+import hmac
 import json
-import time
-from payroll_engine import db
 import logging
+import os
 import threading
-from datetime import datetime, timezone
+import time
+from datetime import UTC, datetime
+
+from payroll_engine import db
 
 logger = logging.getLogger('payroll_engine.webhooks')
 
@@ -134,7 +135,7 @@ def fire_webhook(company_id, event, data):
 
     payload = {
         'event': event,
-        'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        'timestamp': datetime.now(UTC).replace(tzinfo=None).isoformat(),
         'company_id': company_id,
         'company_name': company_name,
         'data': data,

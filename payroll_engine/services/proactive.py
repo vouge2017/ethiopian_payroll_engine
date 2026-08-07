@@ -7,7 +7,7 @@ This service runs automatically (via before_request hooks) to:
 No external scheduler needed — uses the same pattern as daily_retention_purge.
 """
 import logging
-from datetime import date, datetime, timezone
+from datetime import date
 
 from payroll_engine import db
 
@@ -27,12 +27,16 @@ def prepare_monthly_draft(company_id):
     Returns:
         dict with 'status' and 'message', or None if skipped
     """
-    from payroll_engine.models import (
-        Company, Employee, PayrollRun, PayrollDraft, User, UserCompany,
-    )
-    from payroll_engine.payroll import calculate_payroll
-    from payroll_engine.notifications import notify
     from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
+    from payroll_engine.models import (
+        Employee,
+        PayrollDraft,
+        PayrollRun,
+        User,
+        UserCompany,
+    )
+    from payroll_engine.notifications import notify
+    from payroll_engine.payroll import calculate_payroll
 
     today = date.today()
     eth_year, eth_month, _ = gregorian_to_ethiopian(today)
@@ -177,10 +181,9 @@ def send_compliance_nudges(company_id):
     Returns:
         list of notification messages sent, or empty list
     """
-    from payroll_engine.models import PayrollRun, User, UserCompany
     from payroll_engine.compliance import get_upcoming_deadlines
+    from payroll_engine.models import Company, PayrollRun, User, UserCompany
     from payroll_engine.notifications import notify
-    from payroll_engine.models import Company
 
     today = date.today()
 

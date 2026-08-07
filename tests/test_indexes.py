@@ -1,13 +1,15 @@
 """Tests for composite database indexes."""
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Employee, PayrollRun, Payslip, OvertimeEntry, Leave
+from payroll_engine.models import Employee, Leave, OvertimeEntry, PayrollRun, Payslip
 
 
 @pytest.fixture

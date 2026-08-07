@@ -5,9 +5,10 @@ file upload restrictions, and API validation abuse cases.
 
 Each test deliberately attacks the previous failure mode.
 """
-import sys
-import os
 import io
+import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
@@ -16,8 +17,8 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import User, Company, Employee, TenantQuery, OvertimeEntry
-from payroll_engine.security import safe_redirect_target, prevent_csv_injection, log_and_flash_error
+from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery, User
+from payroll_engine.security import prevent_csv_injection, safe_redirect_target
 
 
 @pytest.fixture

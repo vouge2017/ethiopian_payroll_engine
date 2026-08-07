@@ -8,19 +8,20 @@ Tests:
 - Payslip download works
 - Profile page shows masked bank
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from payroll_engine import create_app, db
-from payroll_engine.models import (
-    Employee, Company, User, PayrollRun, Payslip, TenantQuery, OvertimeEntry
-)
 from datetime import date
+
+from payroll_engine import create_app, db
+from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, Payslip, TenantQuery, User
 
 
 @pytest.fixture

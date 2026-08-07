@@ -8,12 +8,14 @@ Proves that:
 4. Companies can make rules more generous but not violate law
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from datetime import date
 from decimal import Decimal
+
 import pytest
 
 D = Decimal
@@ -65,7 +67,7 @@ class TestOvertimeConfigurable:
     def test_custom_rates_from_database(self, app):
         from payroll_engine import db
         from payroll_engine.models import TaxRule
-        from payroll_engine.overtime import get_overtime_rates, calculate_overtime_pay, invalidate_overtime_cache
+        from payroll_engine.overtime import calculate_overtime_pay, get_overtime_rates, invalidate_overtime_cache
 
         with app.app_context():
             db.create_all()
@@ -167,8 +169,8 @@ class TestLeaveConfigurable:
 
     def test_custom_annual_from_database(self, app):
         from payroll_engine import db
-        from payroll_engine.models import TaxRule
         from payroll_engine.leave import calculate_annual_entitlement, invalidate_leave_cache
+        from payroll_engine.models import TaxRule
 
         with app.app_context():
             db.create_all()
@@ -218,7 +220,7 @@ class TestSeveranceDefaults:
     """Test severance with no database rule (uses hardcoded defaults)."""
 
     def test_eligible_termination(self):
-        from payroll_engine.severance import calculate_severance, TerminationReason
+        from payroll_engine.severance import calculate_severance
         r = calculate_severance(D('10000'), '2020-01-01', '2025-01-01', 'redundancy')
         assert r['eligible'] is True
         assert r['years_of_service'] == D('5.00')
@@ -227,7 +229,7 @@ class TestSeveranceDefaults:
         assert r['final_amount'] < D('25000')
 
     def test_severance_cap(self):
-        from payroll_engine.severance import calculate_severance, TerminationReason
+        from payroll_engine.severance import calculate_severance
         r = calculate_severance(D('10000'), '2010-01-01', '2025-01-01', 'redundancy')
         assert r['eligible'] is True
         # 15 years: 30 + 14×10 = 170 days. daily=333.33. 170×333.33=56666.67

@@ -11,22 +11,29 @@ Tests:
 - Court order cap validation in validation engine
 - Deduction appears in payroll calculation
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from datetime import date, timedelta
+from decimal import Decimal
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Employee, Company, User, PayrollRun, Payslip,
-    AuditLog, TenantQuery, OvertimeEntry, EmployeeDeduction
+    Company,
+    Employee,
+    EmployeeDeduction,
+    OvertimeEntry,
+    TenantQuery,
+    User,
 )
 from payroll_engine.payroll import calculate_payroll
-from decimal import Decimal
-from datetime import date, datetime, timedelta
 
 
 @pytest.fixture

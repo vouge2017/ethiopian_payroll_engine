@@ -1,58 +1,68 @@
 """Payroll blueprint: upload, validation, approval, payslips, register, runs."""
-from flask import (
-    Blueprint, render_template, request, redirect, url_for,
-    flash, send_file, abort, current_app, jsonify, session
-)
-from payroll_engine import limiter
-from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
-from decimal import Decimal
-import os
-import uuid
 import csv
 import io
+import os
+import uuid
 import zipfile
-from datetime import date, datetime, timezone, timedelta
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 
-from payroll_engine import db
-from payroll_engine import trust_cache
-from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
-    PayrollValidationResult, OvertimeEntry, FinalSettlement,
-    EmployeeAllowance, Leave, LeaveBalance, AuditLog
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
 )
-from payroll_engine.tax import calculate_tax, explain_tax_amharic
-from payroll_engine.pension import employee_pension, employer_pension
-from payroll_engine.payroll import calculate_payroll
-from payroll_engine.pdf import _ensure_pdf
-from payroll_engine.compliance import compute_compliance_score, get_status_message
-from payroll_engine.security import log_and_flash_error, prevent_csv_injection
-from payroll_engine.services.payroll_workflow import (
-    parse_and_calculate_payroll,
-    check_csv_row_limit,
-    build_period_string,
-    get_previous_payslips,
-    check_duplicate_period,
-    create_payroll_run,
-)
-from payroll_engine.validation import validate_payroll_data, get_summary
+from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+
+from payroll_engine import db, limiter, trust_cache
 
 # Trust Architecture components
 from payroll_engine.change_summary import compute_change_summary
-from payroll_engine.narrative import generate_narrative
-from payroll_engine.exceptions import classify_exceptions
-from payroll_engine.evidence import collect_evidence
-from payroll_engine.filing_workspace import build_filing_workspace
 from payroll_engine.cockpit import build_cockpit
 from payroll_engine.cockpits import build_role_cockpit
 from payroll_engine.dashboard_api import get_dashboard_data
-
+from payroll_engine.evidence import collect_evidence
+from payroll_engine.exceptions import classify_exceptions
+from payroll_engine.filing_workspace import build_filing_workspace
+from payroll_engine.models import (
+    AuditLog,
+    Company,
+    Employee,
+    Leave,
+    OvertimeEntry,
+    PayrollDraft,
+    PayrollRun,
+    PayrollValidationResult,
+    Payslip,
+    User,
+)
+from payroll_engine.narrative import generate_narrative
+from payroll_engine.payroll import calculate_payroll
+from payroll_engine.pdf import _ensure_pdf
+from payroll_engine.security import log_and_flash_error, prevent_csv_injection
+from payroll_engine.services.payroll_workflow import (
+    build_period_string,
+    check_csv_row_limit,
+    check_duplicate_period,
+    create_payroll_run,
+    get_previous_payslips,
+    parse_and_calculate_payroll,
+)
+from payroll_engine.validation import get_summary, validate_payroll_data
 
 payroll_bp = Blueprint('payroll', __name__)
 
 # Import shared helpers (single source of truth — no duplicates)
-from payroll_engine.shared import _company_id, role_required, create_audit_log
-
+from payroll_engine.shared import _company_id, create_audit_log, role_required
 
 # ──────────────────────────────────────────────────────────────────────
 # Payroll Wizard API Endpoints
@@ -64,7 +74,7 @@ from payroll_engine.shared import _company_id, role_required, create_audit_log
 def api_last_run():
     """Return the most recent completed payroll run's employee data as JSON.
     Used by the 'Use Last Payroll' button to pre-fill the wizard."""
-    from payroll_engine.models import PayrollRun, PayrollDraft
+    from payroll_engine.models import PayrollDraft, PayrollRun
 
     last_run = PayrollRun.query.filter_by(
         company_id=_company_id(), status='completed'
@@ -108,8 +118,6 @@ def api_last_run():
             })
 
     # Calculate payroll for preview display
-    from payroll_engine.payroll import calculate_payroll
-    from payroll_engine.tax import calculate_tax_breakdown
 
     preview_employees = []
     total_gross = total_tax = total_pension = total_net = 0
@@ -349,8 +357,8 @@ def download_csv_template():
     """Download a CSV template with example data."""
     import csv
     import io
+
     from flask import Response
-    from payroll_engine.security import prevent_csv_injection
 
     output = io.StringIO()
     output.write('\ufeff')  # UTF-8 BOM for Excel compatibility
@@ -409,8 +417,8 @@ def download_prefilled_csv():
     """Download CSV pre-filled with current employee data."""
     import csv
     import io
+
     from flask import Response
-    from payroll_engine.security import prevent_csv_injection
 
     employees = Employee.query.filter_by(
         company_id=_company_id(), is_deleted=False
@@ -467,7 +475,7 @@ def cockpit():
     from payroll_engine import models as cockpit_models
     try:
         data = build_cockpit(cid, db, cockpit_models)
-    except Exception as e:
+    except Exception:
         logger.exception('Error building cockpit for company %d', cid)
         flash('Unable to load cockpit data. Some sections may be unavailable.', 'warning')
         data = None
@@ -621,7 +629,7 @@ def payroll_upload():
         mime_header = file.read(512)
         file.seek(0)
         if not is_excel:
-            if mime_header and not mime_header[:1] in (b'\xef', b'#', b'"', b'\r', b'\n', b' '):
+            if mime_header and mime_header[:1] not in (b'\xef', b'#', b'"', b'\r', b'\n', b' '):
                 decoded = mime_header.decode('utf-8', errors='replace')
                 first_non_space = decoded.lstrip()[:1]
                 if first_non_space and first_non_space not in ('e', 'n', 'b', 'a', 'p', 'd', ',', '"', '#', '\ufeff'):
@@ -721,8 +729,8 @@ def payroll_confirm(run_id):
         payroll_run_id=run.id, severity='FLAG'
     ).all()
     # Add tax breakdown and calculation flow for each employee
-    from payroll_engine.tax import calculate_tax_breakdown
     from payroll_engine.payroll import generate_calculation_flow
+    from payroll_engine.tax import calculate_tax_breakdown
     for emp in employees_data:
         taxable = emp.get('gross', 0) - emp.get('pension_employee', 0)
         emp['tax_breakdown'] = calculate_tax_breakdown(taxable)
@@ -806,8 +814,8 @@ def approve_payroll():
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     # Trust Architecture — check for blocking issues before approval
-    from payroll_engine.exceptions import classify_exceptions
     from payroll_engine import models as trust_models
+    from payroll_engine.exceptions import classify_exceptions
     exception_report = classify_exceptions(run.id, _company_id(), db, trust_models)
     if exception_report.has_blocking:
         blocking_titles = [i.title for i in exception_report.blocking_issues]
@@ -911,7 +919,7 @@ def undo_approval(run_id):
         flash('No approval timestamp found.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    elapsed = datetime.now(timezone.utc).replace(tzinfo=None) - run.approved_at
+    elapsed = datetime.now(UTC).replace(tzinfo=None) - run.approved_at
     if elapsed > timedelta(hours=1):
         flash(
             f'Cannot undo: approval was {int(elapsed.total_seconds() / 60)} minutes ago. '
@@ -969,7 +977,6 @@ def undo_approval(run_id):
 @role_required('owner', 'accountant')
 def create_adjustment(run_id):
     """Create an adjustment payslip for a completed payroll run."""
-    from payroll_engine.payroll import calculate_payroll
 
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=_company_id()
@@ -1069,6 +1076,7 @@ def historical_import():
         try:
             import csv as csv_mod
             from io import StringIO
+
             from payroll_engine.security import prevent_csv_injection
 
             content_bytes = file.read().decode('utf-8-sig')
@@ -1108,13 +1116,13 @@ def historical_import():
                     if not (2000 <= year <= 2100):
                         row_errors.append(f'year must be 2000-2100, got {year}')
                     if gross < 0:
-                        row_errors.append(f'gross cannot be negative')
+                        row_errors.append('gross cannot be negative')
                     if tax < 0:
-                        row_errors.append(f'tax cannot be negative')
+                        row_errors.append('tax cannot be negative')
                     if pension < 0:
-                        row_errors.append(f'pension cannot be negative')
+                        row_errors.append('pension cannot be negative')
                     if net < 0:
-                        row_errors.append(f'net cannot be negative')
+                        row_errors.append('net cannot be negative')
 
                     # Find the employee
                     emp = Employee.query.filter_by(
@@ -1144,7 +1152,7 @@ def historical_import():
                     imported += 1
 
                 except (ValueError, KeyError) as e:
-                    errors.append(f'Row {i}: {str(e)}')
+                    errors.append(f'Row {i}: {e!s}')
                     skipped += 1
 
             # Rollback if >50% rows have errors
@@ -1179,7 +1187,6 @@ def historical_import():
                         )
                         db.session.add(ps)
                 else:
-                    from datetime import datetime as dt
                     run = PayrollRun(
                         company_id=_company_id(),
                         run_date=date(buf['year'], buf['month'], 1),
@@ -1247,10 +1254,11 @@ def payroll_spreadsheet():
     Shows ALL employees in a single editable table.
     Accountant can edit overtime, absences, advances, and bonus inline.
     """
-    from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
-    from payroll_engine.models import OvertimeEntry, EmployeeDeduction
-    from payroll_engine.payroll import calculate_payroll
     from decimal import Decimal, InvalidOperation
+
+    from payroll_engine.models import EmployeeDeduction
+    from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
+    from payroll_engine.payroll import calculate_payroll
 
     if request.method == 'POST':
         action = request.form.get('action', 'save')
@@ -1478,8 +1486,9 @@ def payroll_spreadsheet_autosave():
     Saves: overtime entries + advance deductions.
     Absences and bonus require 'Save & Recalculate' (affect payroll computation).
     """
-    from payroll_engine.models import OvertimeEntry, EmployeeDeduction
     from decimal import Decimal, InvalidOperation
+
+    from payroll_engine.models import EmployeeDeduction
 
     emp_ids = request.form.getlist('emp_id')
     if not emp_ids:
@@ -1560,7 +1569,7 @@ def payroll_spreadsheet_autosave():
     return jsonify({
         'status': 'ok',
         'saved': saved,
-        'timestamp': datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+        'timestamp': datetime.now(UTC).replace(tzinfo=None).isoformat(),
         'note': 'Overtime and advances saved. Absences/bonus require Save & Recalculate.',
     })
 
@@ -1593,7 +1602,7 @@ def lock_payroll(run_id):
         flash('Can only lock completed payroll runs.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
     run.status = 'locked'
-    run.locked_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    run.locked_at = datetime.now(UTC).replace(tzinfo=None)
     run.locked_by = current_user.id
     create_audit_log(
         company_id=_company_id(),
@@ -1656,7 +1665,7 @@ def mark_disbursed(run_id):
     if request.is_json:
         notes = (request.get_json() or {}).get('notes', '').strip()
     run.disbursement_status = 'disbursed'
-    run.disbursed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    run.disbursed_at = datetime.now(UTC).replace(tzinfo=None)
     run.disbursed_by = current_user.id
     run.disbursement_notes = notes or None
 
@@ -1721,7 +1730,6 @@ def confirm_payment(run_id):
 @role_required('owner', 'accountant')
 def disbursement_progress(run_id):
     """Show disbursement progress for a completed payroll run."""
-    from payroll_engine.bank_file import ACCOUNT_PATTERNS
 
     run = PayrollRun.query.filter_by(
         id=run_id, company_id=_company_id()
@@ -1836,7 +1844,6 @@ def payroll_register():
     Payroll register — single-page summary of all employees for the current month.
     Printable on A4. Shows: ID, Name, Basic, Allowances, OT, Gross, Pension, Tax, Net.
     """
-    from payroll_engine.payroll import calculate_payroll
 
     employees = Employee.query.filter_by(
         company_id=_company_id(), is_deleted=False
@@ -1992,7 +1999,6 @@ def batch_payslips():
     Download all payslips for the latest payroll run as a ZIP file.
     Tries RQ background generation first; falls back to inline.
     """
-    import zipfile
     from payroll_engine.tasks import enqueue_batch
 
     # Get the latest completed payroll run
@@ -2182,7 +2188,7 @@ def batch_pdf_status(batch_id):
     Returns HTML page with auto-refresh (polls itself every 2s).
     Once all jobs are done, shows download link.
     """
-    from payroll_engine.tasks import get_batch_status, get_batch_jobs
+    from payroll_engine.tasks import get_batch_jobs, get_batch_status
 
     status = get_batch_status(batch_id)
     jobs = get_batch_jobs(batch_id)
@@ -2208,7 +2214,6 @@ def batch_pdf_download(batch_id):
 
     Assembles ZIP from all generated PDFs in the batch.
     """
-    import zipfile
     from payroll_engine.tasks import get_batch_jobs
 
     jobs = get_batch_jobs(batch_id)
@@ -2272,7 +2277,6 @@ def download_all_payslips(run_id):
 
     Tries RQ background generation first; falls back to inline.
     """
-    import zipfile
     from payroll_engine.tasks import enqueue_batch
 
     run = PayrollRun.query.filter_by(

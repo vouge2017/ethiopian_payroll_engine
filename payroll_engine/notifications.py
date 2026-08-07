@@ -4,8 +4,9 @@ Usage:
     from payroll_engine.notifications import notify
     notify(company_id, user_id, "Payroll approved", employee_phone="+251911234567")
 """
-import os
 import logging
+import os
+
 from payroll_engine import db
 from payroll_engine.models import Notification
 
@@ -120,7 +121,7 @@ def notify_payroll_approved(company_id, employees_data, run_reference):
             user_id=user.id,
             message=f'Payroll {run_reference} has been approved. {len(employees_data)} payslips generated.',
             notif_type='success',
-            link=f'/payroll/runs',  # Will be resolved by the template
+            link='/payroll/runs',  # Will be resolved by the template
         )
 
     # Send WhatsApp to each employee
@@ -147,7 +148,7 @@ def notify_leave_decision(leave, decision, manager_name=None):
         decision: 'approved' or 'rejected'
         manager_name: Name of the manager who made the decision
     """
-    from payroll_engine.models import Employee, User, UserCompany
+    from payroll_engine.models import Employee, User
 
     emp = Employee.query.filter_by(
         id=leave.employee_id, company_id=leave.company_id, is_deleted=False

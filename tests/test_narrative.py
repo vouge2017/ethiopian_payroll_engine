@@ -8,15 +8,11 @@ Run: python -m pytest tests/test_narrative.py -v
 import sys
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from payroll_engine.narrative import generate_narrative
 from payroll_engine.change_summary import ChangeSummary, EmployeeChange
-
+from payroll_engine.narrative import generate_narrative
 
 # ─────────────────────────────────────────────
 # Helpers

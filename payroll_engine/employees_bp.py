@@ -1,22 +1,25 @@
 """Employees blueprint: employee CRUD, overtime, allowances, deductions, leave, termination."""
-from flask import (
-    Blueprint, render_template, request, redirect, url_for,
-    flash, current_app, send_file, jsonify
-)
-from flask_login import login_required, current_user
-from datetime import date, datetime, timezone
+import csv
+import io
 import os
 import uuid
-import io
-import csv
+from datetime import UTC, date, datetime
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
+from flask_login import current_user, login_required
 
 from payroll_engine import db
 from payroll_engine.models import (
-    Employee, Payslip, OvertimeEntry, FinalSettlement,
-    EmployeeAllowance, EmployeeDeduction, Leave, LeaveBalance
+    Employee,
+    EmployeeAllowance,
+    EmployeeDeduction,
+    FinalSettlement,
+    Leave,
+    LeaveBalance,
+    OvertimeEntry,
+    Payslip,
 )
-from payroll_engine.shared import _company_id, role_required, create_audit_log, create_notification
-
+from payroll_engine.shared import _company_id, create_audit_log, create_notification, role_required
 
 employees_bp = Blueprint('employees', __name__)
 
@@ -123,7 +126,7 @@ def generate_invite(emp_id):
     # Generate token
     token = secrets.token_urlsafe(32)
     emp.invite_token = token
-    emp.invite_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=48)
+    emp.invite_expires = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=48)
     db.session.commit()
 
     invite_url = f'{request.host_url}employees/accept-invite/{token}'
@@ -151,7 +154,7 @@ def accept_invite(token):
         flash('Invalid or expired invite link.', 'danger')
         return redirect(url_for('auth.login'))
 
-    if datetime.now(timezone.utc).replace(tzinfo=None) > emp.invite_expires:
+    if datetime.now(UTC).replace(tzinfo=None) > emp.invite_expires:
         flash('This invite link has expired. Ask your admin for a new one.', 'danger')
         return redirect(url_for('auth.login'))
 
@@ -215,7 +218,7 @@ def accept_invite(token):
 @role_required('owner', 'accountant')
 def add_employee():
     """Add a new employee manually."""
-    from payroll_engine.services.employee_service import parse_employee_form, create_employee
+    from payroll_engine.services.employee_service import create_employee, parse_employee_form
 
     if request.method == 'POST':
         data, error = parse_employee_form(request.form)
@@ -404,7 +407,7 @@ def edit_employee(emp_id):
             except Exception:
                 pass
 
-            field_names = [c.replace('_', ' ') for c in changes.keys()]
+            field_names = [c.replace('_', ' ') for c in changes]
             flash(f'{name}\'s profile updated: {", ".join(field_names)}.', 'success')
         else:
             flash(f'No changes for {name}.', 'info')
@@ -416,8 +419,8 @@ def edit_employee(emp_id):
 @employees_bp.route('/employees/<int:emp_id>')
 def employee_detail(emp_id):
     """Show employee details."""
-    from payroll_engine.models import OvertimeEntry, EmployeeDeduction
-    from payroll_engine.overtime import calculate_overtime_pay, DEFAULT_OVERTIME_RATES as OVERTIME_RATES
+    from payroll_engine.overtime import DEFAULT_OVERTIME_RATES as OVERTIME_RATES
+    from payroll_engine.overtime import calculate_overtime_pay
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(),
         is_deleted=False
@@ -473,7 +476,6 @@ def employee_detail(emp_id):
 @employees_bp.route('/employees/<int:emp_id>/overtime', methods=['POST'])
 def add_overtime(emp_id):
     """Add overtime entry for an employee."""
-    from payroll_engine.models import OvertimeEntry
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(),
         is_deleted=False
@@ -505,7 +507,6 @@ def add_overtime(emp_id):
 @employees_bp.route('/overtime/<int:entry_id>/delete', methods=['POST'])
 def delete_overtime(entry_id):
     """Delete an overtime entry."""
-    from payroll_engine.models import OvertimeEntry
     entry = OvertimeEntry.query.filter_by(
         id=entry_id, company_id=_company_id()
     ).first_or_404()
@@ -635,10 +636,8 @@ def delete_allowance(allowance_id):
 @role_required('owner', 'accountant')
 def add_deduction(emp_id):
     """Add a flexible deduction to an employee."""
-    from payroll_engine.models import EmployeeDeduction
-    from decimal import Decimal, InvalidOperation
     from datetime import datetime as dt
-    import os, uuid
+    from decimal import Decimal, InvalidOperation
 
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(),
@@ -794,7 +793,6 @@ def add_deduction(emp_id):
 @role_required('owner', 'accountant')
 def stop_deduction(ded_id):
     """Stop (deactivate) a deduction."""
-    from payroll_engine.models import EmployeeDeduction
     ded = EmployeeDeduction.query.filter_by(
         id=ded_id, company_id=_company_id()
     ).first_or_404()
@@ -826,7 +824,6 @@ def stop_deduction(ded_id):
 @role_required('owner')
 def delete_deduction(ded_id):
     """Delete a deduction (owner only). Use stop for audit trail."""
-    from payroll_engine.models import EmployeeDeduction
     ded = EmployeeDeduction.query.filter_by(
         id=ded_id, company_id=_company_id()
     ).first_or_404()
@@ -858,7 +855,7 @@ def deactivate_employee(emp_id):
         id=emp_id, company_id=_company_id(), is_deleted=False
     ).first_or_404()
     emp.is_deleted = True
-    emp.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    emp.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     emp.deleted_by = current_user.id
     create_audit_log(
             company_id=_company_id(),
@@ -908,8 +905,8 @@ def reactivate_employee(emp_id):
 @role_required('owner', 'accountant')
 def terminate_employee(emp_id):
     """Terminate an employee with severance calculation and final settlement."""
+    from payroll_engine.services.settlement_service import create_settlement_record
     from payroll_engine.severance import TerminationReason
-    from payroll_engine.services.settlement_service import create_settlement_record, calculate_settlement
 
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(), is_deleted=False
@@ -949,7 +946,7 @@ def terminate_employee(emp_id):
 
         # Soft-delete the employee
         emp.is_deleted = True
-        emp.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        emp.deleted_at = datetime.now(UTC).replace(tzinfo=None)
         emp.deleted_by = current_user.id
 
         # Deactivate all pending deductions
@@ -1007,7 +1004,6 @@ def terminate_employee(emp_id):
 @employees_bp.route('/settlements/<int:settlement_id>')
 def settlement_detail(settlement_id):
     """Show final settlement details."""
-    from payroll_engine.models import FinalSettlement
     settlement = FinalSettlement.query.filter_by(
         id=settlement_id, company_id=_company_id()
     ).first_or_404()
@@ -1022,7 +1018,7 @@ def settlement_detail(settlement_id):
 @employees_bp.route('/employees/<int:emp_id>/leave')
 def employee_leave_balance(emp_id):
     """Show leave balances for an employee."""
-    from payroll_engine.leave import calculate_leave_balance, LeaveType
+    from payroll_engine.leave import LeaveType, calculate_leave_balance
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(),
         is_deleted=False
@@ -1063,8 +1059,9 @@ def employee_leave_balance(emp_id):
 @employees_bp.route('/employees/<int:emp_id>/leave/request', methods=['POST'])
 def request_leave(emp_id):
     """Request leave for an employee."""
-    from payroll_engine.leave import validate_leave_request, calculate_leave_balance, LeaveType
     from datetime import datetime as dt
+
+    from payroll_engine.leave import calculate_leave_balance, validate_leave_request
 
     emp = Employee.query.filter_by(
         id=emp_id, company_id=_company_id(),
@@ -1167,7 +1164,7 @@ def approve_leave(leave_id):
 
     leave.status = 'approved'
     leave.approved_by = current_user.id
-    leave.approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    leave.approved_at = datetime.now(UTC).replace(tzinfo=None)
 
     # Update leave balance
     balance = LeaveBalance.query.filter_by(
@@ -1316,7 +1313,7 @@ def reject_leave(leave_id):
             'leave_id': leave.id,
             'status': 'rejected',
         })
-    flash(f'Leave request rejected.', 'warning')
+    flash('Leave request rejected.', 'warning')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
 
@@ -1381,6 +1378,7 @@ def _calculate_unpaid_leave_deduction(employee, company_id, pay_period_start, pa
         Decimal amount to deduct from salary
     """
     from decimal import Decimal
+
     from payroll_engine.leave import LeaveType
     # Get all approved unpaid leave that overlaps with the pay period
     unpaid_leaves = Leave.query.filter(
@@ -1420,8 +1418,9 @@ def _calculate_unpaid_leave_deduction(employee, company_id, pay_period_start, pa
 @role_required('owner', 'accountant')
 def profile_changes():
     """List all pending profile change requests."""
-    from payroll_engine.models import ProfileChangeRequest
     from sqlalchemy.orm import joinedload as _joinedload
+
+    from payroll_engine.models import ProfileChangeRequest
 
     status_filter = request.args.get('status', 'pending').strip()
     query = ProfileChangeRequest.query.options(
@@ -1474,7 +1473,7 @@ def approve_profile_change(change_id):
     # Update request status
     change.status = ProfileChangeRequest.STATUS_APPROVED
     change.reviewed_by = current_user.id
-    change.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    change.reviewed_at = datetime.now(UTC).replace(tzinfo=None)
 
     # Audit log
     create_audit_log(
@@ -1526,7 +1525,7 @@ def reject_profile_change(change_id):
     change.status = ProfileChangeRequest.STATUS_REJECTED
     change.rejection_reason = reason
     change.reviewed_by = current_user.id
-    change.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    change.reviewed_at = datetime.now(UTC).replace(tzinfo=None)
 
     create_audit_log(
         _company_id(), current_user.id, 'profile_change_rejected',

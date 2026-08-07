@@ -6,20 +6,19 @@ Profile change request tests — verifies the employee edit workflow:
 - Notifications are sent
 - Audit logs are created
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+
 import pytest
-from datetime import date, datetime
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import (
-    Company, User, Employee, ProfileChangeRequest, Notification, AuditLog
-)
+from payroll_engine.models import AuditLog, Company, Employee, Notification, ProfileChangeRequest, User
 
 
 @pytest.fixture

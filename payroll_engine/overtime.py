@@ -21,8 +21,7 @@ All multipliers and limits are configurable via TaxRule.rules_json['overtime'].
 When no database rule exists, falls back to hardcoded defaults (Ethiopian law).
 """
 
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
-from typing import Optional, Dict, Tuple
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 # Quantizer for 2 decimal places
 Q = Decimal('0.01')
@@ -147,12 +146,12 @@ def calculate_hourly_rate(basic_salary, for_date=None) -> Decimal:
     return (basic_salary / rules['monthly_hours']).quantize(Q, rounding=ROUND_HALF_UP)
 
 
-def get_overtime_rates(for_date=None) -> Dict[str, Decimal]:
+def get_overtime_rates(for_date=None) -> dict[str, Decimal]:
     """Get overtime rate multipliers. Returns dict of type -> multiplier."""
     return _get_overtime_rules(for_date)['rates']
 
 
-def get_overtime_limits(for_date=None) -> Dict[str, int]:
+def get_overtime_limits(for_date=None) -> dict[str, int]:
     """Get all overtime limits. Returns dict with day, week, month, year keys."""
     rules = _get_overtime_rules(for_date)
     return {

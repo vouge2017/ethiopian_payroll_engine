@@ -9,16 +9,13 @@ Extracted from main.py to enable:
 """
 
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional
-from payroll_engine.models import (
-    Employee, EmployeeDeduction, LeaveBalance, FinalSettlement, AuditLog
-)
-from payroll_engine.severance import calculate_severance, TerminationReason
-from payroll_engine.tax import calculate_tax
-from payroll_engine.pension import employee_pension
-from payroll_engine.leave import calculate_leave_balance, LeaveType
+from decimal import Decimal
 
+from payroll_engine.leave import LeaveType
+from payroll_engine.models import Employee, EmployeeDeduction, FinalSettlement, LeaveBalance
+from payroll_engine.pension import employee_pension
+from payroll_engine.severance import calculate_severance
+from payroll_engine.tax import calculate_tax
 
 Q = Decimal('0.01')
 

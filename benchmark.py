@@ -14,7 +14,6 @@ import json
 import os
 import sys
 import time
-from datetime import date
 from decimal import Decimal
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -107,8 +106,8 @@ def benchmark_tax(employees):
 
 def benchmark_pdf(employees):
     """Benchmark PDF generation."""
-    from payroll_engine.pdf import generate_payslip
     from payroll_engine.payroll import calculate_payroll
+    from payroll_engine.pdf import generate_payslip
 
     count = min(len(employees), 200)  # Cap at 200 for PDF
     payslips = []
@@ -156,7 +155,7 @@ def benchmark_pdf(employees):
 def benchmark_erca_report(employees):
     """Benchmark ERCA Excel report generation."""
     from payroll_engine import create_app, db
-    from payroll_engine.models import Employee, Payslip, PayrollRun, Company
+    from payroll_engine.models import Company, Employee, PayrollRun, Payslip
     from payroll_engine.payroll import calculate_payroll
     from payroll_engine.reports import generate_erca_report
 
@@ -284,7 +283,7 @@ def main():
 
     with open('benchmark_results.json', 'w') as f:
         json.dump(results, f, indent=2, default=str)
-    print(f"\nResults saved to benchmark_results.json")
+    print("\nResults saved to benchmark_results.json")
 
 
 if __name__ == '__main__':

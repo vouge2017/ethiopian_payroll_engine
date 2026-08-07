@@ -1,25 +1,17 @@
 """Main blueprint: dashboard, employees, payroll upload/results, reports."""
-from flask import (
-    Blueprint, render_template, request, redirect, url_for,
-    flash, abort, current_app, session
-)
-from flask_login import login_required, current_user
-import os
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
-from payroll_engine import db
-from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, OvertimeEntry, Leave
-)
-from payroll_engine.payroll import calculate_payroll
-from payroll_engine.compliance import compute_compliance_score, get_status_message
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_required
 
+from payroll_engine import db
+from payroll_engine.compliance import compute_compliance_score, get_status_message
+from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, Payslip, User
 
 main = Blueprint('main', __name__)
 
 # Import shared helpers (single source of truth — no duplicates)
-from payroll_engine.shared import _company_id
 
 
 # --- Company Setup Guard ---
@@ -83,7 +75,7 @@ def companies_dashboard():
     Shows all companies with payroll status, deadlines, and quick actions.
     """
     from payroll_engine.compliance import get_upcoming_deadlines
-    from payroll_engine.models import PayrollRun, Payslip
+    from payroll_engine.models import PayrollRun
 
     user_companies = current_user.companies
     company_cards = []
@@ -211,9 +203,9 @@ def index():
     deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date_str)
 
     # Overtime summary for current month (eager-load employee to avoid N+1)
-    from payroll_engine.models import OvertimeEntry
-    from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
     from sqlalchemy.orm import joinedload
+
+    from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
     month_start = date.today().replace(day=1)
     ot_entries = OvertimeEntry.query.options(
         joinedload(OvertimeEntry.employee)
@@ -309,7 +301,6 @@ def my_referral():
         db.session.commit()
 
     # Count referrals
-    from payroll_engine.models import User
     referral_count = User.query.filter_by(referred_by=current_user.id).count()
 
     return render_template('referral.html',
@@ -320,7 +311,6 @@ def my_referral():
 @main.route('/referral/<code>')
 def apply_referral(code):
     """Apply a referral code during registration."""
-    from payroll_engine.models import User
     referrer = User.query.filter_by(referral_code=code).first()
     if not referrer:
         flash('Invalid referral code.', 'danger')
@@ -329,5 +319,5 @@ def apply_referral(code):
     # Store in session for use during registration
     from flask import session
     session['referral_code'] = code
-    flash(f'You were referred! Sign up to get started.', 'info')
+    flash('You were referred! Sign up to get started.', 'info')
     return redirect(url_for('auth.register'))

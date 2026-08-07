@@ -6,19 +6,21 @@ Verifies:
 - Rate-limited endpoints return 429 when exceeded
 - Read-only HTML pages are NOT rate-limited (normal accountant use)
 """
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['FLASK_ENV'] = 'testing'
 
-from payroll_engine import create_app, db
-from payroll_engine.models import Company, User, Employee, PayrollRun, Payslip
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
+from payroll_engine import create_app, db
+from payroll_engine.models import Company, Employee, PayrollRun, Payslip, User
 
 
 @pytest.fixture

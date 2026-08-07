@@ -7,21 +7,22 @@ Verifies:
 - Approval is blocked when exceptions can't be computed
 - Other components still work when one fails
 """
-import sys
 import os
+import sys
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['FLASK_ENV'] = 'testing'
 
-from payroll_engine import create_app, db
-from payroll_engine import trust_cache
-from payroll_engine.models import Company, User, Employee, PayrollRun, Payslip
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
+from payroll_engine import create_app, db, trust_cache
+from payroll_engine.models import Company, Employee, PayrollRun, Payslip, User
 
 
 @pytest.fixture

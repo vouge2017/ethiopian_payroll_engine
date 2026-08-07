@@ -11,12 +11,12 @@ Simple, clear, actionable. No jargon. Just numbers.
 """
 
 from decimal import Decimal, InvalidOperation
+
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pension import employee_pension
-from payroll_engine.tax import calculate_tax
-from payroll_engine.severance import calculate_severance
 from payroll_engine.services.allowance_service import calculate_transport_exempt_amount
-
+from payroll_engine.severance import calculate_severance
+from payroll_engine.tax import calculate_tax
 
 Q = Decimal('0.01')
 

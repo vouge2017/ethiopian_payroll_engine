@@ -2,8 +2,9 @@
 
 Extracted from employees_bp.py to separate business logic from HTTP handling.
 """
-from decimal import Decimal, InvalidOperation
 from datetime import datetime as dt
+from decimal import Decimal, InvalidOperation
+
 from payroll_engine import db
 from payroll_engine.models import Employee
 from payroll_engine.shared import create_audit_log

@@ -4,19 +4,17 @@ Bank file generation tests.
 Tests the pre-validation engine, CSV generation, and Excel generation
 for Ethiopian bank bulk payment files.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from payroll_engine.bank_file import (
-    validate_account_number,
     format_amount,
-    validate_payroll_for_bank,
     generate_csv,
-    generate_xlsx,
-    ACCOUNT_PATTERNS,
+    validate_account_number,
+    validate_payroll_for_bank,
 )
-
 
 # ---------------------------------------------------------------
 # Account Validation

@@ -10,16 +10,18 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from payroll_engine.exceptions import (
-    classify_exceptions, ExceptionReport, Issue,
-    CRITICAL, HIGH, MEDIUM, LOW,
-)
 from payroll_engine.change_summary import ChangeSummary, EmployeeChange
-
+from payroll_engine.exceptions import (
+    CRITICAL,
+    HIGH,
+    LOW,
+    MEDIUM,
+    ExceptionReport,
+    Issue,
+    classify_exceptions,
+)
 
 # ─────────────────────────────────────────────
 # Helpers

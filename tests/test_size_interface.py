@@ -4,18 +4,20 @@ Tests for Phase 6 — Size-Appropriate Interface:
 - Quick Start as primary onboarding
 - Context-aware labels
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 from datetime import date
+
+import pytest
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, User, Employee, UserCompany
+from payroll_engine.models import Company, Employee, User
 
 
 @pytest.fixture
@@ -183,14 +185,12 @@ class TestContextProcessor:
 
     def test_employee_count_in_context(self, app):
         cid, oid = _setup(app, num_employees=5)
-        with app.app_context():
-            with app.test_request_context():
-                from flask_login import login_user
-                user = db.session.get(User, oid)
-                # Simulate the context processor
-                from payroll_engine.models import Employee
-                count = Employee.query.filter_by(company_id=cid, is_deleted=False).count()
-                assert count == 5
+        with app.app_context(), app.test_request_context():
+            user = db.session.get(User, oid)
+            # Simulate the context processor
+            from payroll_engine.models import Employee
+            count = Employee.query.filter_by(company_id=cid, is_deleted=False).count()
+            assert count == 5
 
     def test_zero_employees(self, app):
         cid, oid = _setup(app, num_employees=0)

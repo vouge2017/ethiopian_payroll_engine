@@ -15,8 +15,7 @@ Reference: Ethiopian calendar epoch = Meskerem 1, 1 AD = August 29, 8 CE (Julian
            JDN of epoch = 1724273
 """
 
-from datetime import date, datetime
-from typing import Tuple
+from datetime import date
 
 # Ethiopian month names
 ETHIOPIAN_MONTHS = [
@@ -62,7 +61,7 @@ def _gregorian_to_jdn(greg_date: date) -> int:
     return jdn
 
 
-def gregorian_to_ethiopian(greg_date: date) -> Tuple[int, int, int]:
+def gregorian_to_ethiopian(greg_date: date) -> tuple[int, int, int]:
     """
     Convert a Gregorian date to Ethiopian calendar (year, month, day).
 

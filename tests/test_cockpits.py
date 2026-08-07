@@ -6,19 +6,15 @@ Tests each role's view: Owner, Accountant, HR, Employee.
 Run: python -m pytest tests/test_cockpits.py -v
 """
 import sys
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from payroll_engine.cockpits import (
-    build_role_cockpit, RoleCockpit, OwnerCockpit,
-    AccountantCockpit, HRCockpit, EmployeeCockpit,
+    build_role_cockpit,
 )
-
 
 # ─────────────────────────────────────────────
 # Helpers

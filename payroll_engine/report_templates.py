@@ -16,7 +16,6 @@ Usage:
     columns = template['columns']  # list of {key, label, enabled, order, data_path, ...}
 """
 
-from typing import List, Dict, Optional
 
 # Predefined column library — users can use these or create their own
 # key: internal field name
@@ -243,7 +242,7 @@ def reorder_columns(company, report_type: str, key_order: list) -> None:
     save_report_template(company, report_type, reordered)
 
 
-def get_enabled_columns(company, report_type: str = 'erca') -> List[Dict]:
+def get_enabled_columns(company, report_type: str = 'erca') -> list[dict]:
     """Get enabled columns for a report, sorted by order.
 
     Returns:

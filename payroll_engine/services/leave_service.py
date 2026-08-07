@@ -8,17 +8,21 @@ Extracted from main.py and leave.py to provide a clean API for:
 - Integration with payroll (sick leave pay reduction)
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Optional
+
 from payroll_engine import db
-from payroll_engine.models import Leave, LeaveBalance, Employee, AuditLog
 from payroll_engine.leave import (
-    calculate_leave_balance, validate_leave_request,
-    calculate_sick_leave_pay, LeaveType,
-    DEFAULT_ANNUAL_BASE, DEFAULT_ANNUAL_INCREMENT,
-    DEFAULT_SICK_MAX_DAYS, DEFAULT_SICK_TIER_1_DAYS, DEFAULT_SICK_TIER_2_DAYS
+    DEFAULT_ANNUAL_BASE,
+    DEFAULT_ANNUAL_INCREMENT,
+    DEFAULT_SICK_MAX_DAYS,
+    DEFAULT_SICK_TIER_1_DAYS,
+    DEFAULT_SICK_TIER_2_DAYS,
+    LeaveType,
+    calculate_sick_leave_pay,
+    validate_leave_request,
 )
+from payroll_engine.models import Employee, Leave, LeaveBalance
 
 
 def get_or_create_balance(company_id: int, employee_id: int,
@@ -189,16 +193,7 @@ def get_leave_balance(employee: Employee, company_id: int,
             'remaining': max(0, 120 - taken),
         }
 
-    elif leave_type == LeaveType.PATERNITY:
-        taken = get_leave_taken(company_id, employee.id, leave_type, year, db_session)
-        return {
-            'leave_type': leave_type,
-            'entitled': 3,
-            'taken': taken,
-            'remaining': max(0, 3 - taken),
-        }
-
-    elif leave_type == LeaveType.SPECIAL:
+    elif leave_type == LeaveType.PATERNITY or leave_type == LeaveType.SPECIAL:
         taken = get_leave_taken(company_id, employee.id, leave_type, year, db_session)
         return {
             'leave_type': leave_type,
@@ -284,7 +279,7 @@ def approve_leave(leave: Leave, approved_by: int, db_session) -> dict:
 
     leave.status = 'approved'
     leave.approved_by = approved_by
-    leave.approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    leave.approved_at = datetime.now(UTC).replace(tzinfo=None)
     db_session.flush()  # Flush so the DB sum below includes this leave
 
     # Derive balance.taken from the authoritative source (Leave table)
@@ -344,7 +339,6 @@ def get_sick_leave_pay_reduction(employee: Employee, company_id: int,
     Returns:
         Amount to deduct from salary (ETB). 0 if no sick leave or within tier 1.
     """
-    from payroll_engine.models import Employee as EmpModel
 
     today = date.today()
     taken = get_leave_taken(company_id, employee.id, LeaveType.SICK, today.year, db_session)

@@ -8,13 +8,13 @@ from datetime import date
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, User
 from payroll_engine.services.payroll_workflow import (
-    parse_and_calculate_payroll,
-    check_csv_row_limit,
     build_period_string,
+    check_csv_row_limit,
     check_duplicate_period,
+    parse_and_calculate_payroll,
 )
 
 

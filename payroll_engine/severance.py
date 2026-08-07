@@ -31,9 +31,8 @@ Does NOT apply to:
 All constants are configurable via TaxRule.rules_json['severance'].
 """
 
-from datetime import date, datetime
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
-from typing import Optional
+from datetime import datetime
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 Q = Decimal('0.01')
 
@@ -243,11 +242,11 @@ def _calculation_explanation(salary, years, calculated, cap, final, max_months) 
     """Generate plain-language explanation of severance calculation."""
     daily_rate = salary / Decimal('30')
     lines = [
-        f"Severance calculation (Labor Proclamation 1156/2019, Art. 40):",
+        "Severance calculation (Labor Proclamation 1156/2019, Art. 40):",
         f"  Monthly salary: ETB {salary:,.2f}",
         f"  Daily rate (salary/30): ETB {daily_rate:,.2f}",
         f"  Years of service: {years}",
-        f"  Formula: 30 days (year 1) + 10 days per additional year",
+        "  Formula: 30 days (year 1) + 10 days per additional year",
         f"  Calculated: ETB {calculated:,.2f}",
     ]
     if calculated > cap:

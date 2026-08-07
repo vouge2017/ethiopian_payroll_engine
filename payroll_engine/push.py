@@ -15,9 +15,8 @@ Usage:
 """
 
 import json
-import os
 import logging
-from datetime import datetime
+import os
 
 logger = logging.getLogger('payroll_engine.push')
 
@@ -79,7 +78,7 @@ def send_push_notification(user_id, title, body, url='/', notif_type='info'):
         return False
 
     try:
-        from pywebpush import webpush, WebPushException
+        from pywebpush import WebPushException, webpush
 
         payload = json.dumps({
             'title': title,

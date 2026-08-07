@@ -6,20 +6,20 @@ Tests the month-end filing readiness: ERCA, Pension, Bank File.
 Run: python -m pytest tests/test_filing_workspace.py -v
 """
 import sys
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from payroll_engine.filing_workspace import (
-    build_filing_workspace, FilingWorkspace, FilingStep,
-    NOT_READY, READY, GENERATED, FILED, OVERDUE,
-)
 from unittest.mock import patch
 
+from payroll_engine.filing_workspace import (
+    FILED,
+    NOT_READY,
+    READY,
+    build_filing_workspace,
+)
 
 # ─────────────────────────────────────────────
 # Helpers

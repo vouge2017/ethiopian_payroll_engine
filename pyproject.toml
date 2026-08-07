@@ -25,6 +25,9 @@ ignore = [
     "N803",   # argument name should be lowercase
     "N806",   # variable in function should be lowercase
     "UP007",  # use X | Y for union types (Python 3.10+)
+    "RUF001", # ambiguous unicode string (Amharic text — expected)
+    "RUF002", # ambiguous unicode docstring (Amharic text)
+    "RUF003", # ambiguous unicode comment (Amharic text)
 ]
 
 [tool.ruff.lint.isort]

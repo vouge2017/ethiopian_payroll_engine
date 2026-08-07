@@ -19,8 +19,7 @@ Rules are configurable via the TaxRule database model.
 When no database rule exists, falls back to hardcoded defaults.
 """
 
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
-from typing import List, Tuple
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 # Quantizer for 2 decimal places
 Q = Decimal('0.01')
@@ -30,7 +29,7 @@ Q = Decimal('0.01')
 # Article 36(1) — Rates of Income Tax
 # https://lawethiopia.com/images/proc1395-2025.pdf
 # Used only when no TaxRule exists in the database
-DEFAULT_BRACKETS: List[Tuple[Decimal, Decimal]] = [
+DEFAULT_BRACKETS: list[tuple[Decimal, Decimal]] = [
     (Decimal('2000'), Decimal('0.00')),
     (Decimal('4000'), Decimal('0.15')),
     (Decimal('7000'), Decimal('0.20')),

@@ -11,9 +11,8 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -21,7 +20,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import verify_backup
-
 
 # ─────────────────────────────────────────────
 # Fixtures

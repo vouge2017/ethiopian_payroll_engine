@@ -3,14 +3,17 @@
 Extracted from payroll_bp.py to separate business logic from HTTP handling.
 The route handler handles auth/flash/redirects; this service handles the data.
 """
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from payroll_engine import db
-from payroll_engine.models import (
-    Company, Employee, PayrollRun, Payslip, PayrollDraft,
-    PayrollValidationResult,
-)
 from payroll_engine.compliance import compute_compliance_score
+from payroll_engine.models import (
+    Employee,
+    PayrollDraft,
+    PayrollRun,
+    PayrollValidationResult,
+    Payslip,
+)
 from payroll_engine.shared import create_audit_log, create_notification
 
 
@@ -77,7 +80,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
     try:
         run.status = 'processing'
         run.approved_by = user_id
-        run.approved_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        run.approved_at = datetime.now(UTC).replace(tzinfo=None)
         run.approval_ip = request_ip
 
         # Batch-fetch existing employees to avoid N+1 queries

@@ -4,9 +4,10 @@ Revision ID: v2w3x4y5z6a7
 Revises: u1v2w3x4y5z6
 Create Date: 2026-07-18
 """
-from alembic import op
-import sqlalchemy as sa
 import os
+
+import sqlalchemy as sa
+from alembic import op
 
 revision = 'v2w3x4y5z6a7'
 down_revision = 'u1v2w3x4y5z6'

@@ -8,22 +8,22 @@ Verifies:
 - Disbursement score based on configurable window
 - Score calculation and status thresholds
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'payroll_engine'))
-from compliance import (
-    compute_compliance_score,
-    get_status_message,
-    get_upcoming_deadlines,
-    get_company_deadlines,
-    get_deadline_for_type,
-    _fallback_deadline,
-    DEFAULT_ERCA_FILING_DAY,
-    DEFAULT_PENSION_DEADLINE_DAY,
-    FILING_TYPE_DEFAULTS,
-)
 from datetime import date
 
+from compliance import (
+    DEFAULT_ERCA_FILING_DAY,
+    DEFAULT_PENSION_DEADLINE_DAY,
+    _fallback_deadline,
+    compute_compliance_score,
+    get_company_deadlines,
+    get_deadline_for_type,
+    get_status_message,
+    get_upcoming_deadlines,
+)
 
 # --- Deadline defaults ---
 

@@ -9,8 +9,8 @@ Auto-generates reports on schedule:
 Uses APScheduler or can be triggered via cron/heartbeat.
 """
 
-from datetime import date, datetime, timedelta
 import logging
+from datetime import date, datetime
 
 logger = logging.getLogger('payroll_engine.scheduled')
 
@@ -21,8 +21,8 @@ def check_deadlines_and_notify():
     Run this daily via heartbeat or cron.
     """
     from payroll_engine import db
-    from payroll_engine.models import PayrollRun, User, Company
     from payroll_engine.compliance import get_upcoming_deadlines
+    from payroll_engine.models import Company, PayrollRun, User
     from payroll_engine.push import notify_deadline_approaching
 
     today = date.today()
@@ -79,7 +79,7 @@ def generate_monthly_erca_reminder():
     Called by cron or heartbeat on the 20th.
     """
     from payroll_engine import db
-    from payroll_engine.models import PayrollRun, User, Company
+    from payroll_engine.models import Company, PayrollRun, User
     from payroll_engine.push import send_push_notification
 
     today = date.today()
@@ -121,7 +121,7 @@ def generate_payroll_summary_email(company_id, run_id):
 
     Can be sent via email service or WhatsApp.
     """
-    from payroll_engine.models import PayrollRun, Payslip, Employee, Company
+    from payroll_engine.models import Company, Employee, PayrollRun, Payslip
 
     run = PayrollRun.query.get(run_id)
     company = Company.query.get(company_id)

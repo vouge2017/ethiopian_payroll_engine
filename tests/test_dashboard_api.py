@@ -8,14 +8,11 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from payroll_engine.dashboard_api import (
-    get_dashboard_data, DashboardResponse, Metric, Widget,
+    get_dashboard_data,
 )
-
 
 # ─────────────────────────────────────────────
 # Helpers

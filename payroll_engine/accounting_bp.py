@@ -17,15 +17,14 @@ Also exports as:
     - Peachtree-compatible CSV
 """
 
-from flask import Blueprint, render_template, request, Response, flash, redirect, url_for
-from flask_login import login_required, current_user
-from decimal import Decimal
-from datetime import date
 import csv
 import io
+from decimal import Decimal
 
-from payroll_engine import db
-from payroll_engine.models import PayrollRun, Payslip, Employee, Company
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
+from payroll_engine.models import Company, Employee, PayrollRun, Payslip
 from payroll_engine.shared import role_required
 
 accounting_bp = Blueprint('accounting', __name__)
@@ -35,12 +34,12 @@ def _generate_journal_entries(run_id, company_id):
     """Generate journal entries for a payroll run."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=company_id).first_or_404()
     company = Company.query.get(company_id)
-    
+
     payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
-    
+
     if not payslips:
         return None
-    
+
     entries = []
     total_gross = Decimal('0')
     total_tax = Decimal('0')
@@ -48,18 +47,18 @@ def _generate_journal_entries(run_id, company_id):
     total_pension_empr = Decimal('0')
     total_net = Decimal('0')
     total_deductions = Decimal('0')
-    
+
     for ps in payslips:
         emp = Employee.query.get(ps.employee_id)
         if not emp:
             continue
-        
+
         total_gross += ps.gross_salary or Decimal('0')
         total_tax += ps.tax or Decimal('0')
         total_pension_emp += ps.employee_pension or Decimal('0')
         total_pension_empr += ps.employer_pension or Decimal('0')
         total_net += ps.net_pay or Decimal('0')
-        
+
         entries.append({
             'employee_id': emp.employee_id,
             'employee_name': emp.name,
@@ -70,10 +69,10 @@ def _generate_journal_entries(run_id, company_id):
             'pension_employer': ps.employer_pension or Decimal('0'),
             'net_pay': ps.net_pay or Decimal('0'),
         })
-    
+
     period = run.period or run.run_date.strftime('%Y-%m')
     ref = run.reference or f'PR-{period}'
-    
+
     journal = {
         'reference': ref,
         'period': period,
@@ -96,14 +95,14 @@ def _generate_journal_entries(run_id, company_id):
             {'account': '1000', 'name': 'Bank/Cash', 'debit': Decimal('0'), 'credit': total_net, 'type': 'asset'},
         ]
     }
-    
+
     # Verify balanced
     total_debits = sum(l['debit'] for l in journal['journal_lines'])
     total_credits = sum(l['credit'] for l in journal['journal_lines'])
     journal['balanced'] = total_debits == total_credits
     journal['total_debits'] = total_debits
     journal['total_credits'] = total_credits
-    
+
     return journal
 
 
@@ -116,7 +115,7 @@ def accounting_home():
         company_id=current_user.company_id,
         status='completed'
     ).order_by(PayrollRun.run_date.desc()).limit(12).all()
-    
+
     return render_template('accounting.html', runs=runs)
 
 
@@ -126,13 +125,13 @@ def accounting_home():
 def export_journal(run_id):
     """Export journal entries as CSV."""
     journal = _generate_journal_entries(run_id, current_user.company_id)
-    
+
     if not journal:
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('accounting.accounting_home'))
-    
+
     fmt = request.args.get('format', 'generic')
-    
+
     if fmt == 'quickbooks':
         return _export_quickbooks_iif(journal)
     elif fmt == 'peachtree':
@@ -147,10 +146,10 @@ def _export_generic_csv(journal):
     """Export as generic CSV with debit/credit columns."""
     output = io.StringIO()
     writer = csv.writer(output)
-    
+
     # Header
     writer.writerow(['Date', 'Reference', 'Account', 'Account Name', 'Description', 'Debit', 'Credit', 'Employee'])
-    
+
     # Journal lines
     for line in journal['journal_lines']:
         if line['debit'] > 0 or line['credit'] > 0:
@@ -164,12 +163,12 @@ def _export_generic_csv(journal):
                 f'{line["credit"]:.2f}' if line['credit'] > 0 else '',
                 ''
             ])
-    
+
     # Employee detail lines
     writer.writerow([])
     writer.writerow(['--- Employee Detail ---'])
     writer.writerow(['Employee ID', 'Employee Name', 'Department', 'Gross', 'Tax', 'Pension (Emp)', 'Pension (Empr)', 'Net Pay'])
-    
+
     for entry in journal['entries']:
         writer.writerow([
             entry['employee_id'],
@@ -181,7 +180,7 @@ def _export_generic_csv(journal):
             f'{entry["pension_employer"]:.2f}',
             f'{entry["net_pay"]:.2f}',
         ])
-    
+
     # Totals
     writer.writerow([])
     writer.writerow(['', '', 'TOTALS',
@@ -190,7 +189,7 @@ def _export_generic_csv(journal):
         f'{journal["totals"]["pension_employee"]:.2f}',
         f'{journal["totals"]["pension_employer"]:.2f}',
         f'{journal["totals"]["net"]:.2f}'])
-    
+
     output.seek(0)
     return Response(
         output.getvalue(),
@@ -202,21 +201,21 @@ def _export_generic_csv(journal):
 def _export_quickbooks_iif(journal):
     """Export as QuickBooks IIF format."""
     output = io.StringIO()
-    
+
     # IIF header
     output.write('!TRNS\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n')
     output.write('!SPL\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n')
     output.write('!ENDTRNS\n')
-    
+
     # Transaction
     for line in journal['journal_lines']:
         if line['debit'] > 0:
             output.write(f'TRNS\tGENERAL JOURNAL\t{journal["date"]}\t{line["account"]}\t{journal["company"]}\t{line["debit"]:.2f}\t{journal["reference"]}\t{line["name"]}\n')
         if line['credit'] > 0:
             output.write(f'SPL\tGENERAL JOURNAL\t{journal["date"]}\t{line["account"]}\t{journal["company"]}\t-{line["credit"]:.2f}\t{journal["reference"]}\t{line["name"]}\n')
-    
+
     output.write('ENDTRNS\n')
-    
+
     return Response(
         output.getvalue(),
         mimetype='text/plain',
@@ -228,10 +227,10 @@ def _export_peachtree(journal):
     """Export as Peachtree-compatible CSV."""
     output = io.StringIO()
     writer = csv.writer(output)
-    
+
     # Peachtree format: Date, Reference, Account, Description, Debit, Credit
     writer.writerow(['Date', 'Reference', 'Account', 'Description', 'Debit', 'Credit'])
-    
+
     for line in journal['journal_lines']:
         if line['debit'] > 0 or line['credit'] > 0:
             writer.writerow([
@@ -242,7 +241,7 @@ def _export_peachtree(journal):
                 f'{line["debit"]:.2f}' if line['debit'] > 0 else '0.00',
                 f'{line["credit"]:.2f}' if line['credit'] > 0 else '0.00',
             ])
-    
+
     output.seek(0)
     return Response(
         output.getvalue(),
@@ -296,9 +295,9 @@ def _export_xero(journal):
 def preview_journal(run_id):
     """Preview journal entries before export."""
     journal = _generate_journal_entries(run_id, current_user.company_id)
-    
+
     if not journal:
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('accounting.accounting_home'))
-    
+
     return render_template('accounting_preview.html', journal=journal)

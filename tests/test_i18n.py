@@ -1,11 +1,12 @@
 """
 i18n tests — verifies Amharic string lookup and language switching.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from payroll_engine.i18n import get_string, get_all_strings, STRINGS
+from payroll_engine.i18n import STRINGS, get_all_strings, get_string
 from payroll_engine.i18n_om import STRINGS_OM
 
 

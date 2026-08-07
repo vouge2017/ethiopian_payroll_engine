@@ -1,9 +1,11 @@
 """Tests for impact preview module."""
-import pytest
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
+import pytest
+
 from payroll_engine import create_app, db
-from payroll_engine.models import TenantQuery, Employee, OvertimeEntry, EmployeeDeduction
+from payroll_engine.models import Employee, EmployeeDeduction, OvertimeEntry, TenantQuery
 
 
 @pytest.fixture

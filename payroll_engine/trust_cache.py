@@ -11,9 +11,8 @@ Invalidation:
 
 Pattern follows existing rule caches (tax.py, pension.py, overtime.py).
 """
-import time
 import logging
-from typing import Optional
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +73,7 @@ def get_change_summary(run_id: int, company_id: int):
     return _get(_change_cache, run_id, company_id)
 
 
-def get_narrative(run_id: int, company_id: int) -> Optional[str]:
+def get_narrative(run_id: int, company_id: int) -> str | None:
     """Get cached narrative text or None."""
     return _get(_narrative_cache, run_id, company_id)
 

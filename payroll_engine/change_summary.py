@@ -8,9 +8,8 @@ and unusual variances.
 This is the foundation of the trust architecture. Every payroll
 review screen should start with this summary.
 """
-from decimal import Decimal
 from dataclasses import dataclass, field
-from typing import Optional
+from decimal import Decimal
 
 
 @dataclass
@@ -20,10 +19,10 @@ class EmployeeChange:
     employee_name: str
     change_type: str  # new_hire, departure, salary_change, overtime, adjustment
     description: str
-    old_value: Optional[Decimal] = None
-    new_value: Optional[Decimal] = None
-    delta: Optional[Decimal] = None
-    delta_pct: Optional[float] = None
+    old_value: Decimal | None = None
+    new_value: Decimal | None = None
+    delta: Decimal | None = None
+    delta_pct: float | None = None
     severity: str = 'info'  # info, attention, review
 
 
@@ -32,7 +31,7 @@ class ChangeSummary:
     """Complete change summary for a payroll run vs previous period."""
     # Period info
     current_period: str
-    previous_period: Optional[str]
+    previous_period: str | None
 
     # Headcount
     current_employee_count: int
@@ -214,7 +213,7 @@ def _build_summary(current_run, previous_run, current_payslips,
                 employee_id=emp_id_str,
                 employee_name=emp_name,
                 change_type='new_hire',
-                description=f'New employee this period',
+                description='New employee this period',
                 new_value=curr['payslip'].gross_salary,
                 severity='info',
             )

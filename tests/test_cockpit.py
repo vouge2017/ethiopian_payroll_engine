@@ -6,7 +6,7 @@ Tests the landing page that answers 5 questions in 10 seconds.
 Run: python -m pytest tests/test_cockpit.py -v
 """
 import sys
-from datetime import date, datetime, timezone, timedelta
+from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,9 +14,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from payroll_engine.cockpit import build_cockpit, CockpitData, AttentionItem
 from payroll_engine import trust_cache
-
+from payroll_engine.cockpit import build_cockpit
 
 # ─────────────────────────────────────────────
 # Fixtures
@@ -271,7 +270,6 @@ class TestUnusualVariance:
         mock_filing.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)
         mock_exceptions.return_value = MagicMock(has_blocking=False, blocking_issues=[])
 
-        from payroll_engine.change_summary import ChangeSummary
         mock_change.return_value = MagicMock(
             has_unusual_variance=True,
             variance_notes=['Total gross +25% — exceeds threshold'],

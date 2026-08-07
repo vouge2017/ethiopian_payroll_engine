@@ -6,11 +6,11 @@ Upload → Calculate → Review → Approve → File
 
 Uses real SQLite database (not mocks) to verify data flows correctly.
 """
-import sys
 import os
-from pathlib import Path
+import sys
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -23,7 +23,8 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 @pytest.fixture
 def app():
     """Create a test app with real database."""
-    from payroll_engine import create_app, db as _db
+    from payroll_engine import create_app
+    from payroll_engine import db as _db
     app = create_app()
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
@@ -43,16 +44,21 @@ class TestIntegrationPayrollFlow:
     def test_full_flow(self, app):
         """Upload → Calculate → Review → Approve → File."""
         from payroll_engine import db
-        from payroll_engine.models import (
-            Company, User, Employee, PayrollRun, Payslip, FilingRecord,
-        )
-        from payroll_engine.change_summary import compute_change_summary
-        from payroll_engine.narrative import generate_narrative
-        from payroll_engine.exceptions import classify_exceptions
-        from payroll_engine.evidence import collect_evidence
-        from payroll_engine.filing_workspace import build_filing_workspace
-        from payroll_engine.rule_source import get_rule_source
         from payroll_engine import models as trust_models
+        from payroll_engine.change_summary import compute_change_summary
+        from payroll_engine.evidence import collect_evidence
+        from payroll_engine.exceptions import classify_exceptions
+        from payroll_engine.filing_workspace import build_filing_workspace
+        from payroll_engine.models import (
+            Company,
+            Employee,
+            FilingRecord,
+            PayrollRun,
+            Payslip,
+            User,
+        )
+        from payroll_engine.narrative import generate_narrative
+        from payroll_engine.rule_source import get_rule_source
 
         with app.app_context():
             # ─────────────────────────────────────────
@@ -224,9 +230,9 @@ class TestIntegrationPayrollFlow:
     def test_blocking_issues_prevent_approval(self, app):
         """Critical issues should mark payroll as not approvable."""
         from payroll_engine import db
-        from payroll_engine.models import Company, Employee, PayrollRun, Payslip
-        from payroll_engine.exceptions import classify_exceptions
         from payroll_engine import models as trust_models
+        from payroll_engine.exceptions import classify_exceptions
+        from payroll_engine.models import Company, Employee, PayrollRun, Payslip
 
         with app.app_context():
             company = Company(name='Test PLC', tin='123')

@@ -1,6 +1,6 @@
 """Help & Support blueprint — in-app FAQ and contextual guidance."""
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required, current_user
+from flask import Blueprint, jsonify, render_template, request
+from flask_login import login_required
 
 help_bp = Blueprint('help', __name__)
 

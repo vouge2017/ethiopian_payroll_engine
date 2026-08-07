@@ -2,20 +2,27 @@
 Tests for lazy PDF generation — approval no longer generates PDFs.
 PDFs are generated on-demand at download time via _ensure_pdf().
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 from datetime import date
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
+import pytest
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, UserCompany, PayrollDraft,
+    Company,
+    Employee,
+    PayrollDraft,
+    PayrollRun,
+    Payslip,
+    User,
 )
 
 

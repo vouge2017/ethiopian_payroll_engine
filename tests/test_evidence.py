@@ -10,12 +10,9 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from payroll_engine.evidence import collect_evidence, EvidenceReport, Signal, PASS, FAIL, WARN
-
+from payroll_engine.evidence import FAIL, PASS, WARN, EvidenceReport, Signal, collect_evidence
 
 # ─────────────────────────────────────────────
 # Helpers

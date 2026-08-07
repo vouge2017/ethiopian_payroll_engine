@@ -8,19 +8,22 @@ Tests:
 - Overtime limit validation
 - CSV upload with overtime columns
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from payroll_engine import create_app, db
-from payroll_engine.models import Employee, Company, User, OvertimeEntry, TenantQuery
-from payroll_engine.overtime import calculate_overtime_pay, calculate_total_overtime, DEFAULT_OVERTIME_RATES as OVERTIME_RATES
-from payroll_engine.payroll import calculate_payroll
 from datetime import date
+
+from payroll_engine import create_app, db
+from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery
+from payroll_engine.overtime import calculate_overtime_pay, calculate_total_overtime
+from payroll_engine.payroll import calculate_payroll
 
 
 @pytest.fixture
@@ -133,14 +136,12 @@ def test_overtime_delete(company_and_employee):
 
 def test_overtime_pay_weekday():
     """4h weekday overtime on basic 10,000 → 288.48 (1.5x rate)"""
-    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'day')
     assert abs(float(pay) - 288.48) < 1.0  # Allow rounding tolerance
 
 
 def test_overtime_pay_night():
     """4h night overtime → 1.75x"""
-    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'night')
     expected = round(10000 / 208 * 4 * 1.75, 2)
     assert abs(float(pay) - expected) < 0.10
@@ -148,7 +149,6 @@ def test_overtime_pay_night():
 
 def test_overtime_pay_holiday():
     """4h holiday overtime → 2x"""
-    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'holiday')
     expected = round(10000 / 208 * 4 * 2.0, 2)
     assert abs(float(pay) - expected) < 0.10
@@ -156,7 +156,6 @@ def test_overtime_pay_holiday():
 
 def test_overtime_pay_rest_day():
     """4h rest_day_holiday overtime → 2.5x"""
-    from decimal import Decimal as D
     pay = calculate_overtime_pay(10000, 4, 'rest_day_holiday')
     expected = round(10000 / 208 * 4 * 2.5, 2)
     assert abs(float(pay) - expected) < 0.10

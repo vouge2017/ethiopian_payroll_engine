@@ -9,25 +9,26 @@ Thresholds:
 - Dashboard API: <3s for 200 employees
 - Full payroll cycle: <10s for 200 employees
 """
-import sys
 import os
+import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['FLASK_ENV'] = 'testing'
 
-from payroll_engine import create_app, db
-from payroll_engine.models import Company, User, Employee, PayrollRun, Payslip
+from datetime import date
+from decimal import Decimal
+
+from payroll_engine import create_app, db, trust_cache
 from payroll_engine.change_summary import compute_change_summary
 from payroll_engine.evidence import collect_evidence
 from payroll_engine.exceptions import classify_exceptions
+from payroll_engine.models import Company, Employee, PayrollRun, Payslip
 from payroll_engine.narrative import generate_narrative
-from payroll_engine import trust_cache
-from decimal import Decimal
-from datetime import date
 
 
 @pytest.fixture

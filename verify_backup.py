@@ -26,12 +26,10 @@ import argparse
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 
 def get_db_url():
@@ -226,7 +224,7 @@ def run_full_cycle(db_url: str) -> dict:
     Returns complete report.
     """
     report = {
-        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'timestamp': datetime.now(UTC).isoformat(),
         'database_url': db_url.split('@')[-1] if '@' in db_url else 'local',
         'steps': {},
     }
@@ -329,7 +327,7 @@ def main():
             print(f"\n✅ Backup created: {output}")
             print(f"   Size: {result['file_size_mb']} MB")
             print(f"   SHA-256: {result['checksum']}")
-            print(f"   Row counts:")
+            print("   Row counts:")
             for table, count in result['row_counts'].items():
                 print(f"     {table}: {count}")
         else:

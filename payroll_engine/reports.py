@@ -11,7 +11,6 @@ All reports are generated from Payslip data and downloadable as Excel.
 
 import io
 from datetime import date
-from typing import List, Dict, Any
 
 
 def generate_erca_report(payslips: list, company_name: str,
@@ -30,7 +29,7 @@ def generate_erca_report(payslips: list, company_name: str,
     Returns:
         Excel file as bytes
     """
-    from payroll_engine.report_templates import get_enabled_columns, get_column_value
+    from payroll_engine.report_templates import get_column_value, get_enabled_columns
 
     # Get columns from template or use defaults (ERCA portal format)
     if company:
@@ -89,8 +88,8 @@ def generate_erca_report(payslips: list, company_name: str,
 
     try:
         import openpyxl
-        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
         from openpyxl.cell.cell import MergedCell
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     except ImportError:
         # Fallback to CSV if openpyxl not installed
         return _generate_erca_csv(payslips, company_name, period)
@@ -234,8 +233,8 @@ def generate_pension_report(payslips: list, company_name: str,
     """
     try:
         import openpyxl
-        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
         from openpyxl.cell.cell import MergedCell
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     except ImportError:
         return _generate_pension_csv(payslips, company_name, period)
 
@@ -355,7 +354,7 @@ def generate_yearly_summary(payslips: list, company_name: str, year: int) -> byt
     """
     try:
         import openpyxl
-        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     except ImportError:
         return _generate_yearly_csv(payslips, company_name, year)
 

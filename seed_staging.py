@@ -24,8 +24,12 @@ sys.path.insert(0, '.')
 def seed():
     from payroll_engine import create_app, db
     from payroll_engine.models import (
-        User, Company, Employee, PayrollRun, Payslip, TaxRule,
-        Leave, AuditLog,
+        AuditLog,
+        Company,
+        Employee,
+        Leave,
+        TaxRule,
+        User,
     )
 
     app = create_app()
@@ -226,11 +230,11 @@ def seed():
 
         db.session.commit()
 
-        print(f'✅ Seeded successfully!')
+        print('✅ Seeded successfully!')
         print(f'   Company 1: {company1.name} — {len(employees1)} employees')
         print(f'   Company 2: {company2.name} — {len(employees2)} employees')
         print(f'   Users: owner1={owner1.phone}, accountant1={accountant1.phone}, owner2={owner2.phone}')
-        print(f'   Password for all: Staging@123')
+        print('   Password for all: Staging@123')
         print(f'   Tax rules: {len(brackets)} brackets + 3 pension/relief rules')
 
 

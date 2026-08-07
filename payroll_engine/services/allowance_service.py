@@ -6,10 +6,9 @@ Handles the transition from single 'allowances' field to granular
 EmployeeAllowance records.
 """
 
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional, List
-from payroll_engine.models import Employee, EmployeeAllowance
+from decimal import Decimal
 
+from payroll_engine.models import Employee, EmployeeAllowance
 
 Q = Decimal('0.01')
 
@@ -18,7 +17,7 @@ TRANSPORT_EXEMPT_CAP_ETB = Decimal('2200')
 TRANSPORT_EXEMPT_CAP_PERCENT = Decimal('0.25')  # 25% of basic salary
 
 
-def get_effective_allowances(employee: Employee) -> List[EmployeeAllowance]:
+def get_effective_allowances(employee: Employee) -> list[EmployeeAllowance]:
     """Get the effective allowance records for an employee.
 
     If EmployeeAllowance records exist, return them.
@@ -180,7 +179,7 @@ def get_taxable_allowances(employee: Employee) -> Decimal:
 
 
 def migrate_legacy_allowances(employee: Employee, company_id: int,
-                                db_session) -> List[EmployeeAllowance]:
+                                db_session) -> list[EmployeeAllowance]:
     """Migrate a single 'allowances' field into EmployeeAllowance records.
 
     Called once per employee to convert legacy data to new format.

@@ -1,22 +1,22 @@
 """
 Tests for Demo Mode and CSV Template Download.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 import csv
 import io
+
+import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip,
-    OvertimeEntry, TenantQuery
-)
 from payroll_engine.demo import create_demo_data
+from payroll_engine.models import Employee, OvertimeEntry, PayrollRun, Payslip, TenantQuery
 
 
 @pytest.fixture

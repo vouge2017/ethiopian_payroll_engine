@@ -9,18 +9,18 @@ Accountant Cockpit — Answers 5 questions in 10 seconds.
 
 Aggregates data from all trust components into one view.
 """
-from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
-from typing import Optional
 import logging
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
+
 from payroll_engine.compliance import get_deadline_for_type
 
 logger = logging.getLogger(__name__)
+from payroll_engine import trust_cache
 from payroll_engine.change_summary import compute_change_summary
-from payroll_engine.narrative import generate_narrative
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
-from payroll_engine import trust_cache
+from payroll_engine.narrative import generate_narrative
 
 
 @dataclass
@@ -29,9 +29,9 @@ class AttentionItem:
     priority: str       # urgent, important, info
     title: str
     description: str
-    action_url: Optional[str] = None
-    action_label: Optional[str] = None
-    key: Optional[str] = None  # Unique key for dismiss tracking
+    action_url: str | None = None
+    action_label: str | None = None
+    key: str | None = None  # Unique key for dismiss tracking
     score: int = 0      # Priority score (higher = more urgent)
 
 
@@ -39,7 +39,7 @@ class AttentionItem:
 class CockpitData:
     """All data for the cockpit dashboard."""
     company_name: str
-    period: Optional[str]
+    period: str | None
     last_updated: str
 
     # Question 1: What needs my attention?
@@ -99,7 +99,7 @@ def build_cockpit(company_id, db, models):
     cockpit = CockpitData(
         company_name=company.name,
         period=None,
-        last_updated=datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M'),
+        last_updated=datetime.now(UTC).strftime('%Y-%m-%d %H:%M'),
     )
 
     # Get latest completed run

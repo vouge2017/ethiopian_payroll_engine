@@ -2,12 +2,14 @@
 Tax breakdown tests — verifies bracket-by-bracket calculation
 and that the breakdown total matches the tax amount.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from payroll_engine.tax import calculate_tax, calculate_tax_breakdown
 from decimal import Decimal
+
+from payroll_engine.tax import calculate_tax, calculate_tax_breakdown
 
 
 def test_breakdown_matches_total():

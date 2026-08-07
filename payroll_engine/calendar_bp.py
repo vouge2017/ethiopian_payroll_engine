@@ -13,16 +13,15 @@ Designed for Ethiopian businesses:
 - Amharic labels available
 """
 
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required, current_user
-from datetime import date, timedelta, datetime
 from collections import defaultdict
+from datetime import date, timedelta
 
-from payroll_engine import db
-from payroll_engine.models import Employee, Leave
-from payroll_engine.holidays import Holiday
-from payroll_engine.shared import role_required
+from flask import Blueprint, jsonify, render_template, request
+from flask_login import current_user, login_required
+
 from payroll_engine.holidays import get_holidays_for_month, get_working_days
+from payroll_engine.models import Employee, Leave
+from payroll_engine.shared import role_required
 
 calendar_bp = Blueprint('calendar', __name__)
 
@@ -35,32 +34,32 @@ def leave_calendar():
     today = date.today()
     year = request.args.get('year', today.year, type=int)
     month = request.args.get('month', today.month, type=int)
-    
+
     if month < 1: month = 12; year -= 1
     if month > 12: month = 1; year += 1
-    
+
     company_id = current_user.company_id
-    
+
     # Get all employees
     employees = Employee.query.filter_by(
         company_id=company_id,
         is_deleted=False
     ).order_by(Employee.name).all()
-    
+
     # Get approved leaves for this month
     start = date(year, month, 1)
     if month == 12:
         end = date(year + 1, 1, 1)
     else:
         end = date(year, month + 1, 1)
-    
+
     leaves = Leave.query.filter(
         Leave.company_id == company_id,
         Leave.status == 'approved',
         Leave.start_date < end,
         Leave.end_date >= start
     ).all()
-    
+
     # Build day → employees_on_leave map
     leave_map = defaultdict(list)
     for leave in leaves:
@@ -75,16 +74,16 @@ def leave_calendar():
                 'emp_id': emp.employee_id,
             })
             current += timedelta(days=1)
-    
+
     # Get holidays
     holidays = get_holidays_for_month(year, month, company_id)
     holiday_dates = {h.holiday_date: h for h in holidays}
-    
+
     # Build calendar grid
     import calendar
     cal = calendar.Calendar(firstweekday=0)  # Monday first
     weeks = cal.monthdayscalendar(year, month)
-    
+
     calendar_data = []
     for week in weeks:
         week_data = []
@@ -96,7 +95,7 @@ def leave_calendar():
                 is_sunday = d.weekday() == 6
                 holiday = holiday_dates.get(d)
                 on_leave = leave_map.get(d, [])
-                
+
                 week_data.append({
                     'date': d,
                     'day': day,
@@ -109,21 +108,21 @@ def leave_calendar():
                     'is_today': d == today,
                 })
         calendar_data.append(week_data)
-    
+
     # Working days
     working_days = get_working_days(year, month, company_id)
-    
+
     # Summary
     leave_summary = defaultdict(int)
     for leave in leaves:
         leave_summary[leave.leave_type] += 1
-    
+
     # Navigation
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
-    
+
     return render_template('leave_calendar.html',
         calendar_data=calendar_data,
         year=year,
@@ -149,20 +148,20 @@ def api_leaves():
     year = request.args.get('year', date.today().year, type=int)
     month = request.args.get('month', date.today().month, type=int)
     company_id = current_user.company_id
-    
+
     start = date(year, month, 1)
     if month == 12:
         end = date(year + 1, 1, 1)
     else:
         end = date(year, month + 1, 1)
-    
+
     leaves = Leave.query.filter(
         Leave.company_id == company_id,
         Leave.status == 'approved',
         Leave.start_date < end,
         Leave.end_date >= start
     ).all()
-    
+
     result = []
     for leave in leaves:
         emp = Employee.query.get(leave.employee_id)
@@ -174,5 +173,5 @@ def api_leaves():
                 'end': leave.end_date.isoformat(),
                 'days': leave.days_requested,
             })
-    
+
     return jsonify(result)

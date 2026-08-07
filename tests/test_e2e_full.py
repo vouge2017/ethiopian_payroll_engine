@@ -8,31 +8,40 @@ Every major feature tested in sequence.
 This is the single most important test in the codebase.
 If this passes, the product works.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
-import io
 import csv
+import io
 from decimal import Decimal
+
+import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from datetime import date
+
 from payroll_engine import create_app, db
+from payroll_engine.bank_file import generate_csv as generate_bank_csv
 from payroll_engine.models import (
-    Employee, Company, User, UserCompany, PayrollRun, Payslip,
-    AuditLog, TenantQuery, OvertimeEntry, PayrollDraft
+    AuditLog,
+    Company,
+    Employee,
+    OvertimeEntry,
+    PayrollRun,
+    Payslip,
+    TenantQuery,
+    User,
 )
-from payroll_engine.payroll import calculate_payroll
 from payroll_engine.overtime import calculate_overtime_pay
+from payroll_engine.payroll import calculate_payroll
+from payroll_engine.pdf import generate_payslip
+from payroll_engine.reports import generate_erca_report, generate_pension_report
 from payroll_engine.severance import calculate_severance
 from payroll_engine.tax import calculate_tax
-from payroll_engine.pension import employee_pension, employer_pension
-from payroll_engine.reports import generate_erca_report, generate_pension_report
-from payroll_engine.bank_file import generate_csv as generate_bank_csv
-from payroll_engine.pdf import generate_payslip
-from datetime import date, datetime
 
 
 @pytest.fixture

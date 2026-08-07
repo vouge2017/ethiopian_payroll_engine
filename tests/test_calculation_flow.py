@@ -1,13 +1,14 @@
 """Transparent calculation flow tests — verify the step-by-step breakdown."""
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from decimal import Decimal
+
 from payroll_engine.payroll import calculate_payroll, generate_calculation_flow
 
 

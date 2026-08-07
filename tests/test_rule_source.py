@@ -6,17 +6,17 @@ Run: python -m pytest tests/test_rule_source.py -v
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from payroll_engine.rule_source import (
-    RULE_SOURCES, get_rule_source, get_rules_by_category,
-    get_all_sources, get_explanation, mark_verified,
-    get_unverified_rules, get_verification_summary,
-    RuleSource,
+    RULE_SOURCES,
+    get_explanation,
+    get_rule_source,
+    get_rules_by_category,
+    get_unverified_rules,
+    get_verification_summary,
+    mark_verified,
 )
-
 
 # ─────────────────────────────────────────────
 # Tests: Rule sources exist

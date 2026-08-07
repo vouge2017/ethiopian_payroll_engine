@@ -10,11 +10,11 @@ Usage:
     python3 run_tests.py --continue   # run all, report all failures
     python3 run_tests.py --verbose    # show each test name
 """
+import glob
+import os
 import subprocess
 import sys
-import os
 import time
-import glob
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 TEST_DIR = os.path.join(REPO_ROOT, 'tests')
@@ -102,7 +102,7 @@ def main():
                     if 'FAILED' in line or 'ERROR' in line:
                         print(f"   {line.strip()}")
             if not continue_on_failure:
-                print(f"\nStopping on first failure. Use --continue to run all.")
+                print("\nStopping on first failure. Use --continue to run all.")
                 break
 
     elapsed = time.time() - start_time

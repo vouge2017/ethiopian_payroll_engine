@@ -1,12 +1,14 @@
-from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date, timezone, timedelta
-import secrets
-from decimal import Decimal
-import re
-import threading
-import sys
 import os
+import re
+import secrets
+import sys
+import threading
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
+
+from flask_login import UserMixin
+from werkzeug.security import check_password_hash, generate_password_hash
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from payroll_engine import db
 
@@ -324,7 +326,7 @@ class Company(db.Model):
     tin = db.Column(db.String(20), nullable=True)  # Tax Identification Number
     logo_path = db.Column(db.String(500), nullable=True)  # Path to uploaded logo
     is_demo = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Webhook for external integrations
     webhook_url = db.Column(db.String(500), nullable=True)
     webhook_secret = db.Column(db.String(64), nullable=True)  # For HMAC signature verification
@@ -350,7 +352,7 @@ class Company(db.Model):
     users = db.relationship('User', backref='company', lazy=True)
     employees = db.relationship('Employee', backref='company', lazy=True)
     payroll_runs = db.relationship('PayrollRun', backref='company', lazy=True)
-    
+
     def __repr__(self):
         return f'<Company {self.name}>'
 
@@ -369,7 +371,7 @@ class UserCompany(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='employee')  # owner, accountant, employee
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     user = db.relationship('User', backref=db.backref('user_companies', lazy=True))
     company = db.relationship('Company', backref=db.backref('user_companies', lazy=True))
@@ -390,7 +392,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), nullable=False, default='owner')  # owner, accountant, employee
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # Null until user creates/joins a company
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Password reset tokens
     reset_token_hash = db.Column(db.String(64), nullable=True)
     reset_token_expires = db.Column(db.DateTime, nullable=True)
@@ -419,11 +421,11 @@ class User(UserMixin, db.Model):
         """Generate a password reset token. Returns the raw token (show to user).
         Stores only the SHA-256 hash in the database.
         """
-        import secrets
         import hashlib
+        import secrets
         token = secrets.token_urlsafe(32)
         self.reset_token_hash = hashlib.sha256(token.encode()).hexdigest()
-        self.reset_token_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+        self.reset_token_expires = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)
         return token
 
     def verify_reset_token(self, token: str) -> bool:
@@ -431,7 +433,7 @@ class User(UserMixin, db.Model):
         import hashlib
         if not self.reset_token_hash or not self.reset_token_expires:
             return False
-        if datetime.now(timezone.utc).replace(tzinfo=None) > self.reset_token_expires:
+        if datetime.now(UTC).replace(tzinfo=None) > self.reset_token_expires:
             return False
         expected = hashlib.sha256(token.encode()).hexdigest()
         return secrets.compare_digest(expected, self.reset_token_hash)
@@ -519,7 +521,7 @@ class ApiKey(db.Model):
     token_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
     name = db.Column(db.String(100), nullable=True)  # e.g. 'CI pipeline', 'Mobile app'
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     last_used_at = db.Column(db.DateTime, nullable=True)
 
     user = db.relationship('User', backref=db.backref('api_keys', lazy='dynamic'))
@@ -557,7 +559,7 @@ class ApiKey(db.Model):
         token_hash = cls.hash_token(raw_token)
         key = cls.query.filter_by(token_hash=token_hash, is_active=True).first()
         if key:
-            key.last_used_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            key.last_used_at = datetime.now(UTC).replace(tzinfo=None)
             db.session.flush()  # flush, don't commit — let the request own the transaction
             return key, key.user
         return None, None
@@ -600,7 +602,7 @@ class Employee(db.Model):
     bank_or_telebirr = db.Column(db.String(100))  # Legacy: 'telebirr:0912345678' or 'bank:cbe'
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Link to User account
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Soft delete — employee is deactivated, not removed
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
@@ -760,8 +762,8 @@ class EmployeeAllowance(db.Model):
     regulation_reference = db.Column(db.String(200), nullable=True)  # e.g., "Directive No. 21/2001"
 
     # Audit
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('allowance_records', lazy=True))
@@ -799,7 +801,6 @@ class EmployeeAllowance(db.Model):
     @property
     def taxable_amount(self):
         """Calculate the taxable portion of this allowance."""
-        from decimal import Decimal
         return self.amount - self.calculated_exempt_amount
 
     def __repr__(self):
@@ -813,7 +814,7 @@ class PayrollRun(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     reference = db.Column(db.String(20), nullable=True)  # e.g., PR-2026-07-001
     period = db.Column(db.String(7), nullable=True)  # Ethiopian period e.g. '2018-10' (Sene 2018)
-    run_date = db.Column(db.Date, nullable=False, default=lambda: datetime.now(timezone.utc))
+    run_date = db.Column(db.Date, nullable=False, default=lambda: datetime.now(UTC))
     # Lifecycle: draft → review → pending_approval → processing → completed → locked / failed
     status = db.Column(db.String(20), nullable=False, default='draft')
     source = db.Column(db.String(20), nullable=False, default='upload')  # 'upload', 'spreadsheet', 'import', 'api'
@@ -826,7 +827,7 @@ class PayrollRun(db.Model):
     disbursed_at = db.Column(db.DateTime, nullable=True)
     disbursed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     disbursement_notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         db.Index('ix_payrollrun_company_status', 'company_id', 'status'),
@@ -855,7 +856,7 @@ class PayrollRun(db.Model):
             month_str = self.run_date.strftime('%Y-%m')
             self.reference = f'PR-{month_str}-{self.id:03d}'
         else:
-            month_str = datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m')
+            month_str = datetime.now(UTC).replace(tzinfo=None).strftime('%Y-%m')
             self.reference = f'PR-{month_str}-{self.id:03d}'
 
     def __repr__(self):
@@ -878,7 +879,7 @@ class Payslip(db.Model):
     # pending_bank_clearance → bank_rejected → corrected → paid
     payment_status = db.Column(db.String(30), nullable=False, default='pending_bank_clearance')
     payment_rejection_reason = db.Column(db.Text, nullable=True)
-    generated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    generated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Adjustment payslip support
     payslip_type = db.Column(db.String(20), nullable=False, default='regular')  # regular, adjustment
     reason = db.Column(db.String(255), nullable=True)  # Reason for adjustment
@@ -940,7 +941,7 @@ class FinalSettlement(db.Model):
 
     # Audit
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('settlements', lazy=True))
@@ -960,7 +961,7 @@ class PayrollDraft(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     employee_data = db.Column(db.JSON, nullable=False)  # JSONB on Postgres
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     # Relationship
     payroll_run = db.relationship('PayrollRun', backref=db.backref('draft', uselist=False))
@@ -974,7 +975,7 @@ class Attendance(db.Model):
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     hours_worked = db.Column(db.Float, nullable=False, default=0.0)
-    
+
     def __repr__(self):
         return f'<Attendance {self.employee_id} on {self.date}>'
 
@@ -995,7 +996,7 @@ class Leave(db.Model):
     approved_at = db.Column(db.DateTime, nullable=True)
     rejection_reason = db.Column(db.Text, nullable=True)
     medical_certificate = db.Column(db.String(255), nullable=True)  # Path to uploaded document
-    applied_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    applied_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         db.Index('ix_leave_emp_status_date', 'employee_id', 'status', 'start_date'),
@@ -1039,8 +1040,8 @@ class LeaveBalance(db.Model):
 
     # Audit
     last_accrual_date = db.Column(db.Date, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('leave_balances', lazy=True))
@@ -1073,7 +1074,7 @@ class OvertimeEntry(db.Model):
     date = db.Column(db.Date, nullable=False)
     hours = db.Column(db.Float, nullable=False)
     overtime_type = db.Column(db.String(20), nullable=False, default='day')  # day, night, holiday, rest_day_holiday
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         db.Index('ix_overtime_company_date', 'company_id', 'date'),
@@ -1150,8 +1151,8 @@ class EmployeeDeduction(db.Model):
 
     # Audit
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('deductions', lazy=True))
@@ -1257,7 +1258,7 @@ class AuditLog(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Null if system action
     action = db.Column(db.String(255), nullable=False)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     details = db.Column(db.JSON)
     previous_hash = db.Column(db.String(64), nullable=True)
     hash = db.Column(db.String(64), nullable=True)
@@ -1271,7 +1272,8 @@ class AuditLog(db.Model):
         Does NOT include timestamp because the column default fires after before_insert,
         so the value isn't yet available at hash-computation time.
         """
-        import hashlib, json
+        import hashlib
+        import json
         raw = (
             str(self.previous_hash or '')
             + str(self.company_id)
@@ -1318,7 +1320,7 @@ def _audit_log_before_insert(mapper, connection, target):
 
     Uses the raw connection so it works even before the session is flushed.
     """
-    from sqlalchemy import select, func
+    from sqlalchemy import select
     if target.previous_hash is None:
         stmt = select(AuditLog.hash).where(
             AuditLog.company_id == target.company_id
@@ -1340,7 +1342,7 @@ class TaxRule(db.Model):
     rules_json = db.Column(db.JSON, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='draft')  # draft / active / archived
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     notes = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
@@ -1454,7 +1456,7 @@ class PayrollValidationResult(db.Model):
     overridden = db.Column(db.Boolean, default=False)
     override_reason = db.Column(db.Text, nullable=True)
     overridden_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     def __repr__(self):
         return f'<PayrollValidationResult {self.rule_code} for run {self.payroll_run_id}>'
@@ -1502,7 +1504,7 @@ class ProfileChangeRequest(db.Model):
     reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('profile_change_requests', lazy=True))
@@ -1559,7 +1561,7 @@ class Notification(db.Model):
     type = db.Column(db.String(20), nullable=False, default='info')  # info, success, warning, danger
     link = db.Column(db.String(500), nullable=True)  # Optional URL to navigate to
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     user = db.relationship('User', backref=db.backref('notifications', lazy=True))
 
@@ -1576,7 +1578,7 @@ class SystemSetting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False)
     value = db.Column(db.Text, nullable=True)
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     @classmethod
     def get(cls, key, default=None):
@@ -1590,7 +1592,7 @@ class SystemSetting(db.Model):
         setting = cls.query.filter_by(key=key).first()
         if setting:
             setting.value = str(value)
-            setting.updated_at = datetime.now(timezone.utc)
+            setting.updated_at = datetime.now(UTC)
         else:
             setting = cls(key=key, value=str(value))
             db.session.add(setting)
@@ -1613,8 +1615,8 @@ class PayslipGenerationJob(db.Model):
     status = db.Column(db.String(20), nullable=False, default='queued')  # queued/running/generated/failed
     error_message = db.Column(db.Text, nullable=True)
     rq_job_id = db.Column(db.String(64), nullable=True, index=True)  # RQ job id for status tracking
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     payslip = db.relationship('Payslip', backref=db.backref('generation_jobs', lazy=True))
 
@@ -1636,7 +1638,7 @@ class LoginAttempt(db.Model):
     identifier = db.Column(db.String(120), nullable=False, index=True)  # phone or email
     success = db.Column(db.Boolean, nullable=False, default=False)
     ip_address = db.Column(db.String(45), nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     # Lockout constants
     MAX_ATTEMPTS = 5
@@ -1656,8 +1658,8 @@ class LoginAttempt(db.Model):
 
         Returns (is_locked, remaining_seconds) tuple.
         """
-        from datetime import datetime, timedelta, timezone
-        now = datetime.now(timezone.utc)
+        from datetime import datetime, timedelta
+        now = datetime.now(UTC)
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
 
         # Use naive UTC for SQLite compatibility
@@ -1686,7 +1688,7 @@ class LoginAttempt(db.Model):
         # Handle both naive and aware datetimes
         last_failure_time = last_failure.created_at
         if last_failure_time.tzinfo is None:
-            last_failure_time = last_failure_time.replace(tzinfo=timezone.utc)
+            last_failure_time = last_failure_time.replace(tzinfo=UTC)
 
         lockout_end = last_failure_time + timedelta(minutes=cls.LOCKOUT_DURATION_MINUTES)
         if now < lockout_end:
@@ -1709,8 +1711,8 @@ class LoginAttempt(db.Model):
     @classmethod
     def record_success(cls, identifier):
         """Record a successful login and clear recent failures for this identifier."""
-        from datetime import datetime, timedelta, timezone
-        now = datetime.now(timezone.utc)
+        from datetime import datetime, timedelta
+        now = datetime.now(UTC)
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
         # Use naive UTC for SQLite compatibility
         window_start_naive = window_start.replace(tzinfo=None)
@@ -1727,8 +1729,8 @@ class LoginAttempt(db.Model):
     @classmethod
     def cleanup_old(cls, days=7):
         """Delete attempts older than N days (for periodic cleanup)."""
-        from datetime import datetime, timedelta, timezone
-        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+        from datetime import datetime, timedelta
+        cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
         cls.query.filter(cls.created_at < cutoff).delete()
 
 
@@ -1742,11 +1744,11 @@ class FilingRecord(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     filing_type = db.Column(db.String(30), nullable=False)  # 'erca', 'pension', 'pssa'
     period = db.Column(db.String(20), nullable=False)  # '2026-07' format
-    filed_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    filed_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
     filed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     confirmation_number = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     company = db.relationship('Company', backref=db.backref('filing_records', lazy=True))
     user = db.relationship('User', backref=db.backref('filings_made', lazy=True))

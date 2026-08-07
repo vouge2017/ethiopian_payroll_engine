@@ -9,30 +9,36 @@ Covers:
 - Webhook handles missing webhook_url gracefully
 - WhatsApp send skipped when not configured
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from datetime import date
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from datetime import date, datetime
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Company, User, Employee, Leave, Notification,
-    PayrollRun, Payslip, PayrollDraft, UserCompany,
+    Company,
+    Employee,
+    Leave,
+    Notification,
+    User,
+    UserCompany,
 )
 from payroll_engine.notifications import (
     create_in_app_notification,
-    send_whatsapp,
     notify,
-    notify_payroll_approved,
     notify_leave_decision,
+    notify_payroll_approved,
+    send_whatsapp,
 )
-from payroll_engine.webhooks import fire_webhook, _sign_payload, _deliver
+from payroll_engine.webhooks import _deliver, _sign_payload, fire_webhook
 
 
 @pytest.fixture

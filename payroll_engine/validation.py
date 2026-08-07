@@ -10,9 +10,9 @@ Severity levels:
     WARN  — Informational only. Shows but doesn't block.
 """
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import List, Dict, Any
+from typing import Any
 
 
 def _D(value) -> Decimal:
@@ -56,9 +56,9 @@ class ValidationResult:
         }
 
 
-def validate_payroll_data(employees_data: List[Dict[str, Any]],
+def validate_payroll_data(employees_data: list[dict[str, Any]],
                           company_id: int = None,
-                          previous_payslips: Dict[str, dict] = None) -> List[ValidationResult]:
+                          previous_payslips: dict[str, dict] = None) -> list[ValidationResult]:
     """
     Run all pre-processing validation checks on payroll data.
 
@@ -108,7 +108,7 @@ def validate_payroll_data(employees_data: List[Dict[str, Any]],
     return results
 
 
-def _check_duplicate_employees(data: List[Dict], results: List[ValidationResult]):
+def _check_duplicate_employees(data: list[dict], results: list[ValidationResult]):
     """BLOCK: Same name + same bank account = likely duplicate."""
     seen = {}
     for emp in data:
@@ -132,7 +132,7 @@ def _check_duplicate_employees(data: List[Dict], results: List[ValidationResult]
             seen[key] = emp.get('id', '')
 
 
-def _check_negative_net_pay(data: List[Dict], results: List[ValidationResult]):
+def _check_negative_net_pay(data: list[dict], results: list[ValidationResult]):
     """BLOCK: Net pay cannot be negative."""
     for emp in data:
         net = emp.get('net', 0)
@@ -150,7 +150,7 @@ def _check_negative_net_pay(data: List[Dict], results: List[ValidationResult]):
             ))
 
 
-def _check_missing_bank(data: List[Dict], results: List[ValidationResult]):
+def _check_missing_bank(data: list[dict], results: list[ValidationResult]):
     """BLOCK: Bank or Telebirr details required for disbursement."""
     for emp in data:
         bank = emp.get('bank', '').strip()
@@ -165,8 +165,8 @@ def _check_missing_bank(data: List[Dict], results: List[ValidationResult]):
             ))
 
 
-def _check_salary_typos(data: List[Dict], previous: Dict[str, dict],
-                        results: List[ValidationResult]):
+def _check_salary_typos(data: list[dict], previous: dict[str, dict],
+                        results: list[ValidationResult]):
     """FLAG: Salary > 10× previous month or > 500,000 ETB.
 
     This catches data entry errors (extra zeros, wrong decimal place).
@@ -210,8 +210,8 @@ def _check_salary_typos(data: List[Dict], previous: Dict[str, dict],
                 ))
 
 
-def _check_salary_change_significant(data: List[Dict], previous: Dict[str, dict],
-                                     results: List[ValidationResult]):
+def _check_salary_change_significant(data: list[dict], previous: dict[str, dict],
+                                     results: list[ValidationResult]):
     """FLAG: Salary changed by more than 30% from previous month.
 
     Catches real salary changes (raises, demotions) that Tigist should verify.
@@ -256,8 +256,8 @@ def _check_salary_change_significant(data: List[Dict], previous: Dict[str, dict]
             ))
 
 
-def _check_payroll_variance(data: List[Dict], company_id: int,
-                            results: List[ValidationResult]):
+def _check_payroll_variance(data: list[dict], company_id: int,
+                            results: list[ValidationResult]):
     """FLAG: Total payroll differs from last month by more than 20%.
 
     A large swing in total payroll is unusual and should be verified.
@@ -266,7 +266,7 @@ def _check_payroll_variance(data: List[Dict], company_id: int,
     if company_id is None:
         return
     try:
-        from payroll_engine.models import PayrollRun, Payslip
+        from payroll_engine.models import PayrollRun
         last_run = PayrollRun.query.filter_by(
             company_id=company_id, status='completed'
         ).order_by(PayrollRun.run_date.desc()).first()
@@ -319,8 +319,8 @@ def _check_payroll_variance(data: List[Dict], company_id: int,
         )
 
 
-def _check_pending_leave_impact(data: List[Dict], company_id: int,
-                                results: List[ValidationResult]):
+def _check_pending_leave_impact(data: list[dict], company_id: int,
+                                results: list[ValidationResult]):
     """FLAG: Employee with approved unpaid leave still shows full salary.
 
     If an employee has approved unpaid leave this month, their salary
@@ -329,7 +329,7 @@ def _check_pending_leave_impact(data: List[Dict], company_id: int,
     if company_id is None:
         return
     try:
-        from payroll_engine.models import Leave, Employee
+        from payroll_engine.models import Employee, Leave
 
         today = date.today()
         month_start = today.replace(day=1)
@@ -404,7 +404,7 @@ def _check_pending_leave_impact(data: List[Dict], company_id: int,
         )
 
 
-def _check_pension_mismatch(data: List[Dict], results: List[ValidationResult]):
+def _check_pension_mismatch(data: list[dict], results: list[ValidationResult]):
     """FLAG: Pension should be 7% of basic salary."""
     for emp in data:
         basic = _D(emp.get('basic', 0))
@@ -426,7 +426,7 @@ def _check_pension_mismatch(data: List[Dict], results: List[ValidationResult]):
             ))
 
 
-def _check_tax_mismatch(data: List[Dict], results: List[ValidationResult]):
+def _check_tax_mismatch(data: list[dict], results: list[ValidationResult]):
     """FLAG: Tax should match the bracket calculation."""
     # We can't fully verify without re-running the tax engine,
     # but we can do a basic sanity check
@@ -460,7 +460,7 @@ def _check_tax_mismatch(data: List[Dict], results: List[ValidationResult]):
             ))
 
 
-def _check_missing_tin(data: List[Dict], results: List[ValidationResult]):
+def _check_missing_tin(data: list[dict], results: list[ValidationResult]):
     """WARN: TIN needed for ERCA reporting."""
     for emp in data:
         tin = emp.get('tin', '').strip()
@@ -477,7 +477,7 @@ def _check_missing_tin(data: List[Dict], results: List[ValidationResult]):
             ))
 
 
-def _check_missing_fayda_fin(data: List[Dict], results: List[ValidationResult]):
+def _check_missing_fayda_fin(data: list[dict], results: list[ValidationResult]):
     """HINT: Fayda FIN recommended for ERCA filing validation."""
     for emp in data:
         fin = emp.get('fayda_fin', '').strip() if emp.get('fayda_fin') else ''
@@ -494,7 +494,7 @@ def _check_missing_fayda_fin(data: List[Dict], results: List[ValidationResult]):
             ))
 
 
-def _check_cash_compliance(data: List[Dict], results: List[ValidationResult]):
+def _check_cash_compliance(data: list[dict], results: list[ValidationResult]):
     """FLAG: Ethiopian law requires electronic payment for salaries above ETB 50,000.
 
     Per the Income Tax (Amendment) Proclamation No. 1395/2025, Article 81,
@@ -523,8 +523,8 @@ def _check_cash_compliance(data: List[Dict], results: List[ValidationResult]):
             ))
 
 
-def _check_active_deductions(data: List[Dict], company_id: int,
-                              results: List[ValidationResult]):
+def _check_active_deductions(data: list[dict], company_id: int,
+                              results: list[ValidationResult]):
     """FLAG: Check for active deductions and their warnings.
 
     Pulls active deductions for each employee and flags:
@@ -535,8 +535,9 @@ def _check_active_deductions(data: List[Dict], company_id: int,
     if company_id is None:
         return
     try:
-        from payroll_engine.models import EmployeeDeduction
         from decimal import Decimal
+
+        from payroll_engine.models import EmployeeDeduction
 
         # Collect all employee IDs from the data
         emp_ids = [e.get('id') for e in data if e.get('id')]
@@ -644,7 +645,7 @@ def _check_active_deductions(data: List[Dict], company_id: int,
         )
 
 
-def get_summary(results: List[ValidationResult]) -> Dict[str, Any]:
+def get_summary(results: list[ValidationResult]) -> dict[str, Any]:
     """
     Summarize validation results.
 

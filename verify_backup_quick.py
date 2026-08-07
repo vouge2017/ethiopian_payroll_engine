@@ -8,7 +8,8 @@ Usage (PowerShell):
 """
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 
 def main():
     db_url = os.environ.get('DATABASE_URL', '')
@@ -24,7 +25,7 @@ def main():
     # Mask password in output
     masked = db_url.split('@')[-1] if '@' in db_url else db_url
     print(f"Connecting to: {masked}")
-    print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
+    print(f"Timestamp: {datetime.now(UTC).isoformat()}")
     print()
 
     try:

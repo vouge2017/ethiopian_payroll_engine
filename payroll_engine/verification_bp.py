@@ -4,12 +4,11 @@ Accountant Verification Blueprint — self-guided verification flow.
 Walks accountants through verifying the system's calculations step by step.
 Includes feedback form for flagging issues.
 """
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
-from flask_login import login_required, current_user
-from . import db
-from .models import Company, User
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
 verification_bp = Blueprint('verification', __name__)
 
@@ -211,7 +210,7 @@ def verification_step(step_id):
             'correct': correct,
             'correction': correction,
             'notes': notes,
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
         }
         SystemSetting.set(f'verification_progress_{current_user.id}', json.dumps(progress))
 
@@ -220,7 +219,7 @@ def verification_step(step_id):
         elif verified and not correct:
             flash(f'⚠ {step["title"]} flagged with correction. Thank you!', 'warning')
         else:
-            flash(f'Step saved as draft.', 'info')
+            flash('Step saved as draft.', 'info')
 
         # Go to next step
         current_idx = next(i for i, s in enumerate(VERIFICATION_STEPS) if s['id'] == step_id)
@@ -300,7 +299,7 @@ def submit_feedback():
         'user_id': current_user.id,
         'category': category,
         'feedback': feedback_text,
-        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'timestamp': datetime.now(UTC).isoformat(),
     })
     SystemSetting.set('accountant_feedback', json.dumps(feedback_list))
 

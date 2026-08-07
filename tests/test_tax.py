@@ -11,11 +11,13 @@ Proclamation No. 1395/2025 brackets:
 
 No personal relief — removed per Proclamation 1395/2025.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'payroll_engine'))
-from tax import calculate_tax
 from decimal import Decimal
+
+from tax import calculate_tax
 
 D = Decimal
 PERSONAL_RELIEF = D('0')  # Removed — not in Proclamation 1395/2025

@@ -16,9 +16,8 @@ Usage:
     from payroll_engine.rule_source import RULE_SOURCES, get_rule_source
     source = get_rule_source('tax_brackets')
 """
-from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
-from typing import Optional
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -28,13 +27,13 @@ class RuleSource:
     name: str                   # Human-readable name
     name_am: str                # Amharic name
     source: str                 # Legal reference (e.g., "Proclamation No. 1395/2025, Article 11")
-    source_url: Optional[str] = None  # Link to the law
-    effective_date: Optional[str] = None  # When the rule became effective
+    source_url: str | None = None  # Link to the law
+    effective_date: str | None = None  # When the rule became effective
     category: str = 'general'   # tax, pension, overtime, leave, severance, compliance
     verified: bool = False
-    verified_at: Optional[str] = None
-    verified_by: Optional[str] = None
-    notes: Optional[str] = None
+    verified_at: str | None = None
+    verified_by: str | None = None
+    notes: str | None = None
     explanation: str = ''       # Plain-English explanation
 
 
@@ -236,7 +235,7 @@ RULE_SOURCES = {
 }
 
 
-def get_rule_source(rule_id: str) -> Optional[RuleSource]:
+def get_rule_source(rule_id: str) -> RuleSource | None:
     """Get the source for a specific rule."""
     return RULE_SOURCES.get(rule_id)
 
@@ -259,12 +258,12 @@ def get_explanation(rule_id: str) -> str:
     return ''
 
 
-def mark_verified(rule_id: str, verified_by: str) -> Optional[RuleSource]:
+def mark_verified(rule_id: str, verified_by: str) -> RuleSource | None:
     """Mark a rule as verified by an accountant."""
     source = RULE_SOURCES.get(rule_id)
     if source:
         source.verified = True
-        source.verified_at = datetime.now(timezone.utc).isoformat()
+        source.verified_at = datetime.now(UTC).isoformat()
         source.verified_by = verified_by
     return source
 

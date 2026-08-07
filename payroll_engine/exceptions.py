@@ -14,9 +14,6 @@ Usage:
     issues = classify_exceptions(current_run_id, company_id, db, models)
 """
 from dataclasses import dataclass, field
-from decimal import Decimal
-from typing import Optional
-
 
 # Severity levels (ordered by priority)
 CRITICAL = 'critical'
@@ -34,17 +31,17 @@ class Issue:
     code: str               # Machine-readable code (e.g., 'SALARY_VARIANCE')
     title: str              # Short title for display
     description: str        # Full description
-    employee_id: Optional[str] = None
-    employee_name: Optional[str] = None
-    action_required: Optional[str] = None  # What to do about it
+    employee_id: str | None = None
+    employee_name: str | None = None
+    action_required: str | None = None  # What to do about it
     blocking: bool = False  # Does this block approval?
 
     # Resolution Intelligence fields
-    impact: Optional[str] = None       # What happens if not fixed
-    cause: Optional[str] = None        # Why this issue exists
-    recommendation: Optional[str] = None  # What to do
-    action_url: Optional[str] = None   # Where to go to fix it
-    estimated_time: Optional[str] = None  # How long to fix
+    impact: str | None = None       # What happens if not fixed
+    cause: str | None = None        # Why this issue exists
+    recommendation: str | None = None  # What to do
+    action_url: str | None = None   # Where to go to fix it
+    estimated_time: str | None = None  # How long to fix
 
 
 @dataclass

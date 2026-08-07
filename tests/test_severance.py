@@ -11,17 +11,19 @@ Formula: daily_rate × total_days
     total_days = 30 + (years - 1) × 10  (for years >= 1)
     total_days = years × 30             (for years < 1, prorated)
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'payroll_engine'))
 from decimal import Decimal as D
+
 from severance import (
-    calculate_years_of_service,
-    calculate_severance,
-    TerminationReason,
     DEFAULT_MAX_SEVERANCE_MONTHS as MAX_SEVERANCE_MONTHS,
 )
-
+from severance import (
+    calculate_severance,
+    calculate_years_of_service,
+)
 
 # --- Years of service ---
 

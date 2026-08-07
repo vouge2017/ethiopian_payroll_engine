@@ -11,13 +11,12 @@ Usage:
     python3 verify_status.py --fix-tracker # auto-update PROGRESS_TRACKER.md
 """
 
-import os
+import json
 import re
 import subprocess
 import sys
-import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent
 ENGINE_DIR = REPO_ROOT / "payroll_engine"
@@ -233,7 +232,7 @@ def run_all_checks():
     # Payroll reference number
     models_content = (REPO_ROOT / 'payroll_engine' / 'models.py').read_text(encoding='utf-8')
     report['features']['payroll_reference'] = {
-        'exists': 'reference' in models_content.lower() and 'PR-' in models_content or 'generate_reference' in models_content,
+        'exists': ('reference' in models_content.lower() and 'PR-' in models_content) or 'generate_reference' in models_content,
         'detail': 'PayrollRun has human-readable reference (PR-YYYY-MM-NNN)'
     }
 
@@ -260,7 +259,7 @@ def print_report(report):
 
     # File counts
     f = report['files']
-    print(f"\n📁 FILES")
+    print("\n📁 FILES")
     print(f"   Engine .py files:  {f['engine_py_count']}")
     print(f"   Test files:        {f['test_file_count']} ({f['test_total_lines']} lines)")
 
@@ -276,12 +275,12 @@ def print_report(report):
         print(f"   Failed:    {p.get('failed', '?')}")
         print(f"   Errors:    {p.get('errors', '?')}")
         if p.get('failed_tests'):
-            print(f"\n   Failed tests:")
+            print("\n   Failed tests:")
             for t in p['failed_tests']:
                 print(f"   ❌ {t}")
 
     # Features
-    print(f"\n🔍 FEATURE VERIFICATION")
+    print("\n🔍 FEATURE VERIFICATION")
     features = report.get('features', {})
     for name, data in features.items():
         if isinstance(data, list):
@@ -304,7 +303,7 @@ def print_report(report):
             icon = "✅" if exists else "❌"
             detail = data.get('detail', '')
             extra = ""
-            if 'files' in data and data['files']:
+            if data.get('files'):
                 extra = f" [{', '.join(data['files'])}]"
             elif 'missing_patterns' in data:
                 extra = f" (missing: {', '.join(data['missing_patterns'])})"
@@ -315,7 +314,7 @@ def print_report(report):
     if t.get('exists'):
         print(f"\n📄 PROGRESS_TRACKER.md: exists ({t['lines']} lines)")
     else:
-        print(f"\n📄 PROGRESS_TRACKER.md: MISSING")
+        print("\n📄 PROGRESS_TRACKER.md: MISSING")
 
     print("\n" + "=" * 70)
 

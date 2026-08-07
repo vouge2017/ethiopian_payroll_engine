@@ -2,9 +2,11 @@
 
 Extracted from main.py to enable blueprint split without circular imports.
 """
-from flask import session, abort, flash, request
-from flask_login import current_user
 from functools import wraps
+
+from flask import abort, flash, request, session
+from flask_login import current_user
+
 from payroll_engine import db
 from payroll_engine.models import AuditLog
 
@@ -54,6 +56,7 @@ def get_linked_employee():
 def create_audit_log(company_id, user_id, action, details=None):
     """Create an AuditLog with request_id automatically injected."""
     from flask import g
+
     from payroll_engine.models import AuditLog
     merged_details = dict(details or {})
     request_id = getattr(g, 'request_id', None)

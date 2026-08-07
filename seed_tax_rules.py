@@ -8,7 +8,6 @@ Or with Flask CLI:
     flask seed-tax-rules
 """
 
-import json
 from datetime import date
 
 # Proclamation No. 1395/2025 — effective July 7, 2025

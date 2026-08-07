@@ -12,11 +12,10 @@ Key rules from the implementation blueprint:
 - Pre-validation catches bad account numbers before file generation
 """
 
-import io
 import csv
+import io
 import re
-from typing import List, Dict, Any
-
+from typing import Any
 
 # Account validation patterns
 ACCOUNT_PATTERNS = {
@@ -167,9 +166,9 @@ def format_amount(amount: float, decimals: int = 2) -> str:
     return f"{amount:.{decimals}f}"
 
 
-def validate_payroll_for_bank(employees_data: List[Dict[str, Any]],
+def validate_payroll_for_bank(employees_data: list[dict[str, Any]],
                                bank: str = 'cbe',
-                               previous_payslips: Dict[str, dict] = None) -> List[Dict[str, Any]]:
+                               previous_payslips: dict[str, dict] = None) -> list[dict[str, Any]]:
     """
     Pre-validate all employees before generating bank file.
 
@@ -291,7 +290,7 @@ def validate_payroll_for_bank(employees_data: List[Dict[str, Any]],
     return errors
 
 
-def generate_csv(employees_data: List[Dict[str, Any]],
+def generate_csv(employees_data: list[dict[str, Any]],
                  bank: str = 'cbe',
                  company_name: str = '',
                  period: str = '',
@@ -348,7 +347,7 @@ def generate_csv(employees_data: List[Dict[str, Any]],
     return output.getvalue().encode('utf-8')
 
 
-def generate_xlsx(employees_data: List[Dict[str, Any]],
+def generate_xlsx(employees_data: list[dict[str, Any]],
                   bank: str = 'cbe',
                   company_name: str = '',
                   period: str = '',
@@ -370,7 +369,7 @@ def generate_xlsx(employees_data: List[Dict[str, Any]],
     """
     try:
         import openpyxl
-        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     except ImportError:
         # Fallback to CSV
         return generate_csv(employees_data, bank, company_name, period)

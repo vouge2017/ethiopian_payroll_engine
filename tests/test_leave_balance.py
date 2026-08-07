@@ -5,22 +5,22 @@ multiple leave requests in sequence.
 The single source of truth is the Leave table (status='approved').
 balance.taken is always derived from the DB sum, never manually incremented.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 from datetime import date
+
+import pytest
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, User, Employee, Leave, LeaveBalance
-from payroll_engine.services.leave_service import (
-    request_leave, approve_leave, get_leave_balance, get_or_create_balance
-)
 from payroll_engine.leave import LeaveType
+from payroll_engine.models import Company, Employee, LeaveBalance, User
+from payroll_engine.services.leave_service import approve_leave, get_leave_balance, request_leave
 
 
 @pytest.fixture

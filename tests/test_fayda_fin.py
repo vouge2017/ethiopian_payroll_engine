@@ -3,8 +3,9 @@
 Fayda FIN is a 12-digit number issued by Ethiopia's National ID Program (NIDP).
 Source: https://id.gov.et
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from payroll_engine.models import validate_fayda_fin
@@ -118,7 +119,7 @@ class TestFaydaFinValidationIntegration:
     """Test Fayda FIN validation in the payroll validation pipeline."""
 
     def test_missing_fin_generates_hint(self):
-        from payroll_engine.validation import _check_missing_fayda_fin, ValidationResult
+        from payroll_engine.validation import _check_missing_fayda_fin
         data = [{'id': 'E001', 'name': 'Test', 'fayda_fin': ''}]
         results = []
         _check_missing_fayda_fin(data, results)
@@ -127,7 +128,7 @@ class TestFaydaFinValidationIntegration:
         assert results[0].severity == 'HINT'
 
     def test_present_fin_no_hint(self):
-        from payroll_engine.validation import _check_missing_fayda_fin, ValidationResult
+        from payroll_engine.validation import _check_missing_fayda_fin
         data = [{'id': 'E001', 'name': 'Test', 'fayda_fin': '123456789012'}]
         results = []
         _check_missing_fayda_fin(data, results)
@@ -135,7 +136,7 @@ class TestFaydaFinValidationIntegration:
 
     def test_missing_fin_field_generates_hint(self):
         """When fayda_fin key is missing entirely from the dict."""
-        from payroll_engine.validation import _check_missing_fayda_fin, ValidationResult
+        from payroll_engine.validation import _check_missing_fayda_fin
         data = [{'id': 'E001', 'name': 'Test'}]
         results = []
         _check_missing_fayda_fin(data, results)

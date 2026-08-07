@@ -4,26 +4,32 @@ Tests for Phase 2 validation checks:
 2. Salary change 30% detection
 3. Pending unpaid leave impact
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 from datetime import date, timedelta
+
+import pytest
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, Leave,
+    Company,
+    Employee,
+    Leave,
+    PayrollRun,
+    Payslip,
+    User,
 )
 from payroll_engine.validation import (
-    validate_payroll_data, get_summary,
-    _check_salary_change_significant,
     _check_payroll_variance,
     _check_pending_leave_impact,
-    ValidationResult,
+    _check_salary_change_significant,
+    validate_payroll_data,
 )
 
 

@@ -16,7 +16,6 @@ Status: 'green' (>=80), 'yellow' (50-79), 'red' (<50)
 """
 
 from datetime import date, datetime, timedelta
-from typing import Tuple, Optional
 
 # Sensible defaults — companies override via Company.compliance_deadlines
 DEFAULT_ERCA_FILING_DAY = 25
@@ -83,7 +82,7 @@ def get_company_deadlines(company) -> dict:
     return result
 
 
-def get_deadline_for_type(company, filing_type: str, payroll_date: date) -> Optional[date]:
+def get_deadline_for_type(company, filing_type: str, payroll_date: date) -> date | None:
     """Get the deadline date for a specific filing type.
 
     Args:
@@ -129,7 +128,7 @@ def compute_compliance_score(
     pension_deadline: str = None,
     tax_deadline: str = None,
     disbursement_date: str = None,
-) -> Tuple[float, str]:
+) -> tuple[float, str]:
     """
     Compute a compliance score based on deadline adherence.
 

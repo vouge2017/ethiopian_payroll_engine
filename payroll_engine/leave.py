@@ -18,7 +18,7 @@ When no database rule exists, falls back to hardcoded defaults (Ethiopian law).
 """
 
 from datetime import date, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 # Default statutory minimums (cannot be reduced by company policy)
 DEFAULT_ANNUAL_BASE = 16          # Art. 77(1)(a): 16 days for year 1

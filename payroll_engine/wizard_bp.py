@@ -1,10 +1,12 @@
 """Quick Start wizard blueprint — import employees from pasted data."""
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required, current_user
-from payroll_engine import db, limiter
-from payroll_engine.models import Employee, Company
-from payroll_engine.shared import _company_id, role_required
 from decimal import Decimal, InvalidOperation
+
+from flask import Blueprint, jsonify, render_template, request
+from flask_login import login_required
+
+from payroll_engine import db, limiter
+from payroll_engine.models import Company, Employee
+from payroll_engine.shared import _company_id, role_required
 
 wizard_bp = Blueprint('wizard', __name__)
 

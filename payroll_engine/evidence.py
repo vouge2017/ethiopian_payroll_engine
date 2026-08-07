@@ -16,10 +16,9 @@ Usage:
 """
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Optional
+
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.rule_source import get_rule_source
-
 
 # Status values
 PASS = 'pass'
@@ -40,8 +39,8 @@ class Signal:
     status: str           # pass, fail, warn
     category: str         # validation, compliance, data_quality, integrity
     explanation: str       # Why this matters
-    source: Optional[str] = None  # Proclamation or system check
-    detail: Optional[str] = None  # Specific detail (e.g., "128/128 employees")
+    source: str | None = None  # Proclamation or system check
+    detail: str | None = None  # Specific detail (e.g., "128/128 employees")
     blocking: bool = False  # Does a fail block approval?
 
 

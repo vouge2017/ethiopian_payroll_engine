@@ -1,10 +1,10 @@
 """Settings & team management blueprint."""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from flask_login import login_required, current_user
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
 from payroll_engine import db
-from payroll_engine.models import User, Company, Employee
-from payroll_engine.shared import _company_id, role_required, create_audit_log
+from payroll_engine.models import Company, Employee, User
+from payroll_engine.shared import _company_id, create_audit_log, role_required
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -22,6 +22,7 @@ def _require_company():
 def company_profile():
     """Edit company branding: name, address, TIN, logo."""
     import os
+
     from werkzeug.utils import secure_filename
 
     company = db.session.get(Company, _company_id())
@@ -88,8 +89,9 @@ def team_settings():
 @role_required('owner')
 def invite_team_member():
     """Invite a team member by phone. Creates user with temporary password."""
-    from payroll_engine.models import validate_ethiopian_phone, UserCompany
     import secrets as _secrets
+
+    from payroll_engine.models import UserCompany, validate_ethiopian_phone
     phone = request.form.get('phone', '').strip()
     name = request.form.get('name', '').strip()
     role = request.form.get('role', 'employee').strip()
@@ -209,7 +211,7 @@ def link_employee_user():
 @role_required('owner', 'accountant')
 def compliance_deadlines():
     """Configure compliance deadlines and reminder settings."""
-    from payroll_engine.compliance import get_company_deadlines, FILING_TYPE_DEFAULTS
+    from payroll_engine.compliance import FILING_TYPE_DEFAULTS, get_company_deadlines
     company = current_user.company
 
     if request.method == 'POST':
@@ -276,7 +278,6 @@ def compliance_deadlines():
 # Need to import date for team_settings
 from datetime import date
 
-
 # ---------------------------------------------------------------------------
 # Report Template Settings
 # ---------------------------------------------------------------------------
@@ -286,8 +287,10 @@ from datetime import date
 def report_templates():
     """Configure report column layouts."""
     from payroll_engine.report_templates import (
-        get_report_template, save_report_template, get_default_template,
         get_all_available_columns,
+        get_default_template,
+        get_report_template,
+        save_report_template,
     )
     company = current_user.company
 

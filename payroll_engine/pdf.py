@@ -9,17 +9,16 @@ Font: NotoSansEthiopic for full Amharic + Latin rendering.
 """
 
 import os
-from datetime import datetime, date
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.lib.colors import HexColor, black, white
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-)
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from datetime import date
+
+from reportlab.lib.colors import HexColor, white
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 # Register NotoSansEthiopic font
 _FONT_DIR = os.path.join(os.path.dirname(__file__), 'fonts')
@@ -53,6 +52,7 @@ def _ensure_pdf(payslip, emp, company_info=None):
     # Try to claim the 'generating' state (race-condition guard)
     # Use a DB-level atomic update so only one request wins
     from sqlalchemy import update
+
     from payroll_engine.models import Payslip
     result = db.session.execute(
         update(Payslip)
@@ -118,7 +118,7 @@ def _ensure_pdf(payslip, emp, company_info=None):
         db.session.flush()
         return pdf_path
 
-    except Exception as e:
+    except Exception:
         payslip.pdf_status = 'failed'
         db.session.flush()
         raise
@@ -403,7 +403,7 @@ def generate_payslip(emp: dict, output_dir: str = None, company: dict = None) ->
         alignment=TA_CENTER
     )
     elements.append(Paragraph(
-        f"This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።",
+        "This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።",
         footer_style
     ))
     if company_tin:

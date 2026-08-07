@@ -8,8 +8,8 @@ Flexible deduction module for cost-sharing, court orders, penalties, loans.
 Supports fixed ETB and percentage-of-net-pay amounts.
 Supports declining-balance and date-bounded tracking.
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'b8c9d0e1f2a3'
 down_revision = 'a7b8c9d0e1f2'

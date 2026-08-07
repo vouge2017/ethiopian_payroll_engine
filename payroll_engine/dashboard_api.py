@@ -5,14 +5,13 @@ Returns trend data, drill-down details, and configurable widgets.
 Used by the role dashboard for dynamic updates and interactive exploration.
 """
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone, timedelta
-from decimal import Decimal
-from typing import Optional, List
+from datetime import UTC, date, datetime
+
 from payroll_engine.change_summary import compute_change_summary
-from payroll_engine.narrative import generate_narrative
-from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.evidence import collect_evidence
+from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
+from payroll_engine.models import LeaveBalance, PayrollRun
 
 
 @dataclass
@@ -103,7 +102,7 @@ def get_dashboard_data(user, company_id, db, models, role_filter=None):
         'company_name': company.name,
         'period': period,
         'roles': roles,
-        'last_updated': datetime.now(timezone.utc).isoformat(),
+        'last_updated': datetime.now(UTC).isoformat(),
         'metrics': [],
         'widgets': [],
         'attention_items': [],

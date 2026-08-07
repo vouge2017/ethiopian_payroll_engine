@@ -10,10 +10,9 @@ Tracks status of each filing component:
 - Bank File: Ready, Generated, Disbursed
 """
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
-from typing import Optional
-from payroll_engine.compliance import get_deadline_for_type
+from datetime import date
 
+from payroll_engine.compliance import get_deadline_for_type
 
 # Filing statuses
 NOT_READY = 'not_ready'
@@ -29,13 +28,13 @@ class FilingStep:
     name: str
     name_am: str           # Amharic name
     status: str            # not_ready, ready, generated, filed, overdue
-    deadline: Optional[str] = None  # ISO date string
-    days_remaining: Optional[int] = None
-    filed_at: Optional[str] = None
-    confirmation: Optional[str] = None
-    action_url: Optional[str] = None
-    action_label: Optional[str] = None
-    detail: Optional[str] = None
+    deadline: str | None = None  # ISO date string
+    days_remaining: int | None = None
+    filed_at: str | None = None
+    confirmation: str | None = None
+    action_url: str | None = None
+    action_label: str | None = None
+    detail: str | None = None
 
 
 @dataclass
@@ -46,8 +45,8 @@ class FilingWorkspace:
     steps: list = field(default_factory=list)
     all_filed: bool = False
     has_overdue: bool = False
-    next_deadline: Optional[str] = None
-    next_deadline_days: Optional[int] = None
+    next_deadline: str | None = None
+    next_deadline_days: int | None = None
 
     @property
     def ready_count(self):

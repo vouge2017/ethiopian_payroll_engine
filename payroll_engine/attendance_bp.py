@@ -10,17 +10,15 @@ Usage:
     Attendance data feeds into overtime calculation during payroll.
 """
 
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
-from flask_login import login_required, current_user
-from functools import wraps
-from datetime import datetime, date, timedelta
-from decimal import Decimal
 import csv
 import io
-import re
+from datetime import date, datetime, timedelta
+
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
 from payroll_engine import db
-from payroll_engine.models import Employee, Attendance, AuditLog
+from payroll_engine.models import Attendance, AuditLog, Employee
 from payroll_engine.shared import role_required
 
 attendance_bp = Blueprint('attendance', __name__)
@@ -60,27 +58,27 @@ def _parse_time(time_str):
 def _detect_format(headers):
     """Detect CSV format from headers."""
     headers_lower = [h.strip().lower() for h in headers]
-    
+
     # ZKTeco format: UserID, Name, Date, Time, Status
     zk_indicators = ['userid', 'user id', 'emp code', 'employee id', 'badge']
     if any(ind in ' '.join(headers_lower) for ind in zk_indicators):
         return 'zkteco'
-    
+
     # Simple format: employee_id, date, hours_worked
     if 'hours_worked' in headers_lower or 'hours' in headers_lower:
         return 'simple'
-    
+
     # Punch format: employee_id, date, clock_in, clock_out
     if any('in' in h and ('clock' in h or 'punch' in h) for h in headers_lower):
         return 'punch'
-    
+
     return 'unknown'
 
 
 def _match_employee(emp_id_str, company_id):
     """Match employee by ID, name, or phone."""
     emp_id_str = emp_id_str.strip()
-    
+
     # Try exact employee_id match
     emp = Employee.query.filter_by(
         company_id=company_id,
@@ -89,7 +87,7 @@ def _match_employee(emp_id_str, company_id):
     ).first()
     if emp:
         return emp
-    
+
     # Try numeric ID
     try:
         numeric_id = int(emp_id_str)
@@ -102,7 +100,7 @@ def _match_employee(emp_id_str, company_id):
             return emp
     except ValueError:
         pass
-    
+
     # Try name match (case-insensitive)
     emp = Employee.query.filter(
         Employee.company_id == company_id,
@@ -111,7 +109,7 @@ def _match_employee(emp_id_str, company_id):
     ).first()
     if emp:
         return emp
-    
+
     return None
 
 
@@ -122,7 +120,7 @@ def attendance_list():
     """View attendance records for current month."""
     today = date.today()
     month = request.args.get('month', today.strftime('%Y-%m'))
-    
+
     try:
         year, mon = map(int, month.split('-'))
         start = date(year, mon, 1)
@@ -135,7 +133,7 @@ def attendance_list():
         end = start + timedelta(days=32)
         end = date(end.year, end.month, 1)
         month = start.strftime('%Y-%m')
-    
+
     records = db.session.query(
         Attendance,
         Employee.name,
@@ -147,7 +145,7 @@ def attendance_list():
         Attendance.date >= start,
         Attendance.date < end
     ).order_by(Attendance.date.desc()).all()
-    
+
     # Group by employee
     by_employee = {}
     for att, name, emp_code in records:
@@ -160,12 +158,12 @@ def attendance_list():
             }
         by_employee[att.employee_id]['records'].append(att)
         by_employee[att.employee_id]['total_hours'] += att.hours_worked
-    
+
     employees = Employee.query.filter_by(
         company_id=current_user.company_id,
         is_deleted=False
     ).all()
-    
+
     return render_template('attendance.html',
         by_employee=by_employee,
         employees=employees,
@@ -185,27 +183,27 @@ def attendance_import():
             is_deleted=False
         ).all()
         return render_template('attendance_import.html', employees=employees)
-    
+
     file = request.files.get('file')
     if not file or not file.filename:
         flash('Please select a CSV file.', 'danger')
         return redirect(url_for('attendance.attendance_import'))
-    
+
     try:
         content = file.read().decode('utf-8-sig')  # Handle BOM
         reader = csv.reader(io.StringIO(content))
         headers = next(reader)
         fmt = _detect_format(headers)
-        
+
         company_id = current_user.company_id
         imported = 0
         skipped = 0
         errors = []
-        
+
         for line_num, row in enumerate(reader, start=2):
             if not row or all(c.strip() == '' for c in row):
                 continue
-            
+
             try:
                 if fmt == 'zkteco':
                     # ZKTeco: UserID, Name, Date, Time, Status
@@ -213,29 +211,29 @@ def attendance_import():
                     emp_id_str = row[0].strip()
                     att_date = _parse_date(row[2] if len(row) > 2 else row[1])
                     time_val = _parse_time(row[3] if len(row) > 3 else row[2])
-                    
+
                     if not att_date:
                         errors.append(f'Line {line_num}: invalid date')
                         skipped += 1
                         continue
-                    
+
                     # For ZKTeco, we need to calculate hours from IN/OUT pairs
                     # Simplified: mark as 8 hours for now, user can adjust
                     hours = 8.0
-                    
+
                 elif fmt == 'simple':
                     # Simple: employee_id, date, hours_worked
                     emp_id_str = row[0].strip()
                     att_date = _parse_date(row[1])
                     hours = float(row[2].strip()) if len(row) > 2 else 8.0
-                    
+
                 elif fmt == 'punch':
                     # Punch: employee_id, date, clock_in, clock_out
                     emp_id_str = row[0].strip()
                     att_date = _parse_date(row[1])
                     clock_in = _parse_time(row[2]) if len(row) > 2 else None
                     clock_out = _parse_time(row[3]) if len(row) > 3 else None
-                    
+
                     if clock_in and clock_out:
                         hours = max(0, clock_out - clock_in)
                     else:
@@ -245,24 +243,24 @@ def attendance_import():
                     emp_id_str = row[0].strip()
                     att_date = _parse_date(row[1]) if len(row) > 1 else None
                     hours = float(row[2]) if len(row) > 2 else 8.0
-                
+
                 if not att_date:
                     errors.append(f'Line {line_num}: could not parse date')
                     skipped += 1
                     continue
-                
+
                 emp = _match_employee(emp_id_str, company_id)
                 if not emp:
                     errors.append(f'Line {line_num}: employee "{emp_id_str}" not found')
                     skipped += 1
                     continue
-                
+
                 # Check for existing record
                 existing = Attendance.query.filter_by(
                     employee_id=emp.id,
                     date=att_date
                 ).first()
-                
+
                 if existing:
                     existing.hours_worked = hours
                 else:
@@ -272,15 +270,15 @@ def attendance_import():
                         hours_worked=hours
                     )
                     db.session.add(record)
-                
+
                 imported += 1
-                
+
             except (ValueError, IndexError) as e:
-                errors.append(f'Line {line_num}: {str(e)}')
+                errors.append(f'Line {line_num}: {e!s}')
                 skipped += 1
-        
+
         db.session.commit()
-        
+
         # Audit log
         audit = AuditLog(
             user_id=current_user.id,
@@ -295,7 +293,7 @@ def attendance_import():
         )
         db.session.add(audit)
         db.session.commit()
-        
+
         if imported > 0:
             flash(f'Imported {imported} attendance records. {skipped} skipped.', 'success')
         if errors:
@@ -303,11 +301,11 @@ def attendance_import():
                 flash(err, 'warning')
             if len(errors) > 5:
                 flash(f'... and {len(errors) - 5} more errors', 'warning')
-        
+
         return redirect(url_for('attendance.attendance_list'))
-        
+
     except Exception as e:
-        flash(f'Error processing file: {str(e)}', 'danger')
+        flash(f'Error processing file: {e!s}', 'danger')
         return redirect(url_for('attendance.attendance_import'))
 
 
@@ -319,23 +317,23 @@ def attendance_add():
     emp_id = request.form.get('employee_id', type=int)
     att_date = request.form.get('date')
     hours = request.form.get('hours_worked', type=float)
-    
+
     if not emp_id or not att_date or hours is None:
         flash('All fields required.', 'danger')
         return redirect(url_for('attendance.attendance_list'))
-    
+
     emp = Employee.query.filter_by(
         id=emp_id,
         company_id=current_user.company_id,
         is_deleted=False
     ).first_or_404()
-    
+
     try:
         att_date = datetime.strptime(att_date, '%Y-%m-%d').date()
     except ValueError:
         flash('Invalid date format.', 'danger')
         return redirect(url_for('attendance.attendance_list'))
-    
+
     existing = Attendance.query.filter_by(employee_id=emp.id, date=att_date).first()
     if existing:
         existing.hours_worked = hours
@@ -344,7 +342,7 @@ def attendance_add():
         record = Attendance(employee_id=emp.id, date=att_date, hours_worked=hours)
         db.session.add(record)
         flash(f'Added attendance for {emp.name} on {att_date}.', 'success')
-    
+
     db.session.commit()
     return redirect(url_for('attendance.attendance_list'))
 
@@ -356,11 +354,11 @@ def attendance_delete(att_id):
     """Delete attendance record."""
     record = Attendance.query.get_or_404(att_id)
     emp = Employee.query.get(record.employee_id)
-    
+
     if emp.company_id != current_user.company_id:
         flash('Unauthorized.', 'danger')
         return redirect(url_for('attendance.attendance_list'))
-    
+
     db.session.delete(record)
     db.session.commit()
     flash('Attendance record deleted.', 'success')
@@ -373,7 +371,7 @@ def attendance_delete(att_id):
 def download_template():
     """Download attendance CSV template."""
     from flask import Response
-    
+
     csv_content = "employee_id,date,hours_worked\nEMP001,2026-07-15,8\nEMP001,2026-07-16,8\nEMP002,2026-07-15,7.5\n"
     return Response(
         csv_content,

@@ -8,13 +8,15 @@ Tests:
 - Audit log is append-only (no edit/delete routes)
 - Audit log page renders
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 from payroll_engine import create_app, db
-from payroll_engine.models import User, Company, Employee, AuditLog, TenantQuery
+from payroll_engine.models import AuditLog, Company, Employee, TenantQuery, User
 
 
 @pytest.fixture

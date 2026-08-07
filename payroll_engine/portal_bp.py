@@ -1,10 +1,11 @@
 """Employee portal blueprint."""
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
-from flask_login import login_required, current_user
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
+
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
 from payroll_engine import db
-from payroll_engine.models import Employee, Payslip, OvertimeEntry, Leave
+from payroll_engine.models import Leave, OvertimeEntry, Payslip
 from payroll_engine.shared import _company_id, get_linked_employee
 
 portal_bp = Blueprint('portal', __name__)
@@ -28,7 +29,7 @@ def employee_dashboard():
         return render_template('employee_portal/dashboard.html', employee=None)
     latest_payslip = Payslip.query.filter_by(employee_id=emp.id) \
         .order_by(Payslip.generated_at.desc()).first()
-    from payroll_engine.overtime import calculate_overtime_pay, DEFAULT_OVERTIME_RATES as OVERTIME_RATES
+    from payroll_engine.overtime import calculate_overtime_pay
     month_start = date.today().replace(day=1)
     ot_entries = OvertimeEntry.query.filter_by(
         employee_id=emp.id, company_id=_company_id()
@@ -60,8 +61,9 @@ def my_payslips():
 @portal_bp.route('/my/payslips/<int:payslip_id>')
 def my_payslip_detail(payslip_id):
     """View a specific payslip with full breakdown."""
+    from payroll_engine.overtime import DEFAULT_OVERTIME_RATES as OVERTIME_RATES
+    from payroll_engine.overtime import calculate_hourly_rate
     from payroll_engine.tax import calculate_tax_breakdown
-    from payroll_engine.overtime import calculate_overtime_pay, DEFAULT_OVERTIME_RATES as OVERTIME_RATES, calculate_hourly_rate
 
     emp = get_linked_employee()
     if not emp:
@@ -95,8 +97,8 @@ def my_payslip_detail(payslip_id):
             'pay': pay,
         })
 
-    from payroll_engine.payroll import generate_calculation_flow
     from payroll_engine.models import PayslipAcknowledgment
+    from payroll_engine.payroll import generate_calculation_flow
 
     calc_flow = generate_calculation_flow({
         'gross': payslip.gross_salary,
@@ -144,7 +146,7 @@ def acknowledge_payslip(payslip_id):
         company_id=_company_id(),
         payslip_id=payslip.id,
         employee_id=emp.id,
-        acknowledged_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        acknowledged_at=datetime.now(UTC).replace(tzinfo=None),
         ip_address=request.remote_addr,
     )
     db.session.add(ack)
@@ -164,6 +166,7 @@ def acknowledge_payslip(payslip_id):
 def download_my_payslip(payslip_id):
     """Download payslip PDF from employee portal."""
     import os
+
     from flask import send_file
 
     emp = get_linked_employee()
@@ -295,7 +298,7 @@ def edit_profile():
 @portal_bp.route('/my/leave')
 def my_leave():
     """Employee's leave balance and history."""
-    from payroll_engine.leave import calculate_leave_balance, LeaveType
+    from payroll_engine.leave import LeaveType, calculate_leave_balance
     emp = get_linked_employee()
     if not emp:
         abort(404)
@@ -327,8 +330,9 @@ def my_leave():
 @portal_bp.route('/my/leave/request', methods=['POST'])
 def my_request_leave():
     """Employee requests leave from the portal."""
-    from payroll_engine.leave import validate_leave_request, calculate_leave_balance, LeaveType
     from datetime import datetime as dt
+
+    from payroll_engine.leave import calculate_leave_balance, validate_leave_request
 
     emp = get_linked_employee()
     if not emp:

@@ -8,9 +8,7 @@ Every function in this module answers one of the five trust questions:
 5. Can I safely proceed?
 """
 
-from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
-from typing import Dict, List, Optional, Any
 
 
 def _D(value) -> Decimal:
@@ -40,8 +38,7 @@ def get_payroll_change_summary(company_id: int) -> dict:
         variance_flag: bool (True if > 20% change in total_net)
         summary: str (human-readable one-liner)
     """
-    from payroll_engine.models import PayrollRun, Payslip, Employee
-    from payroll_engine import db
+    from payroll_engine.models import PayrollRun
 
     # Get last two completed runs
     runs = PayrollRun.query.filter_by(
@@ -205,7 +202,7 @@ def get_approval_preview(run_id: int) -> dict:
         undo_details: list of str (what gets undone vs. what doesn't)
         safety_checks: list of {check, status, detail}
     """
-    from payroll_engine.models import PayrollRun, Payslip
+    from payroll_engine.models import PayrollRun
 
     run = PayrollRun.query.get(run_id)
     if not run:
@@ -219,8 +216,8 @@ def get_approval_preview(run_id: int) -> dict:
     actions = [
         f'{employee_count} payslips will be generated',
         f'Bank file will be created (ETB {total_net:,.2f})',
-        f'ERCA report will be available for download',
-        f'Employees will be able to view their payslips in the portal',
+        'ERCA report will be available for download',
+        'Employees will be able to view their payslips in the portal',
     ]
 
     undo_window = 'You can undo this within 1 hour.'
@@ -246,7 +243,6 @@ def get_approval_preview(run_id: int) -> dict:
 
 def _run_safety_checks(run) -> list:
     """Run safety checks on a payroll run before approval."""
-    from payroll_engine.models import Payslip
 
     checks = []
     payslips = run.payslips or []
@@ -306,10 +302,10 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
         days_remaining: int
         is_overdue: bool
     """
-    from payroll_engine.models import PayrollRun, Company, FilingRecord
-    from payroll_engine.compliance import get_company_deadlines, get_deadline_for_type
-    from payroll_engine import db
     from datetime import date as _date
+
+    from payroll_engine.compliance import get_deadline_for_type
+    from payroll_engine.models import Company, FilingRecord, PayrollRun
 
     # Get the most recent completed run
     run = PayrollRun.query.filter_by(

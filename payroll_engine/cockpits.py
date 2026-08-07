@@ -15,20 +15,17 @@ Usage:
     cockpit = build_role_cockpit(user, company_id, db, models)
 """
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone, timedelta
-from typing import Optional, List
+from datetime import UTC, date, datetime
 
-from payroll_engine.cockpit import (
-    CockpitData, AttentionItem, build_cockpit,
-)
-from payroll_engine.compliance import get_deadline_for_type, get_company_deadlines
 from payroll_engine.change_summary import compute_change_summary
-from payroll_engine.narrative import generate_narrative
-from payroll_engine.exceptions import classify_exceptions
+from payroll_engine.cockpit import (
+    AttentionItem,
+)
+from payroll_engine.compliance import get_deadline_for_type
 from payroll_engine.evidence import collect_evidence
+from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
-from payroll_engine.rule_source import get_verification_summary, get_unverified_rules
-
+from payroll_engine.narrative import generate_narrative
 
 # ─────────────────────────────────────────────
 # Role-specific cockpit data
@@ -50,7 +47,7 @@ class OwnerCockpit:
 @dataclass
 class AccountantCockpit:
     """Accountant view — detailed payroll and filing."""
-    period: Optional[str] = None
+    period: str | None = None
     narrative: str = ''
     evidence_passed: int = 0
     evidence_total: int = 0
@@ -82,9 +79,9 @@ class EmployeeCockpit:
     """Employee self-service view."""
     name: str = ''
     employee_id: str = ''
-    latest_payslip: Optional[dict] = None
+    latest_payslip: dict | None = None
     leave_balance: dict = field(default_factory=dict)
-    pending_leave: Optional[dict] = None
+    pending_leave: dict | None = None
     profile_complete: bool = True
     missing_fields: list = field(default_factory=list)
     attention_items: list = field(default_factory=list)
@@ -95,14 +92,14 @@ class RoleCockpit:
     """Combined cockpit for a user with one or more roles."""
     user_roles: list = field(default_factory=list)  # ['owner', 'accountant', 'hr']
     company_name: str = ''
-    period: Optional[str] = None
+    period: str | None = None
     last_updated: str = ''
 
     # Role-specific views
-    owner: Optional[OwnerCockpit] = None
-    accountant: Optional[AccountantCockpit] = None
-    hr: Optional[HRCockpit] = None
-    employee: Optional[EmployeeCockpit] = None
+    owner: OwnerCockpit | None = None
+    accountant: AccountantCockpit | None = None
+    hr: HRCockpit | None = None
+    employee: EmployeeCockpit | None = None
 
     # Shared
     status: str = 'unknown'
@@ -154,7 +151,7 @@ def build_role_cockpit(user, company_id, db, models):
         user_roles=roles,
         company_name=company.name,
         period=period,
-        last_updated=datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M'),
+        last_updated=datetime.now(UTC).strftime('%Y-%m-%d %H:%M'),
     )
 
     # Build each role's view

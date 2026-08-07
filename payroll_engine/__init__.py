@@ -1,17 +1,17 @@
 import logging
 import os
 import uuid
-from datetime import date, datetime, timezone, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 
 logger = logging.getLogger('payroll_engine')
 
 from flask import Flask, current_app, flash, g, redirect, request, url_for
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_login import LoginManager
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -176,7 +176,7 @@ def create_app():
     migrate.init_app(app, db)
 
     # Register tenant-scoped models for structural isolation enforcement
-    from .models import Employee, PayrollRun, AuditLog, OvertimeEntry, EmployeeDeduction, UserCompany, TenantQuery
+    from .models import AuditLog, Employee, EmployeeDeduction, OvertimeEntry, PayrollRun, TenantQuery, UserCompany
     TenantQuery.register_model(Employee)
     TenantQuery.register_model(PayrollRun)
     TenantQuery.register_model(AuditLog)
@@ -212,7 +212,7 @@ def create_app():
         if endpoint.startswith('static') or endpoint.startswith('auth.'):
             return
 
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
 
         # Absolute timeout check
         login_time = flask_session.get('_login_time')
@@ -253,7 +253,12 @@ def create_app():
             from .models import SystemSetting
             if SystemSetting.get('last_purge_date') == today:
                 return
-            from .retention import purge_expired_payslip_pdfs, purge_expired_drafts, purge_expired_uploads, purge_old_login_attempts
+            from .retention import (
+                purge_expired_drafts,
+                purge_expired_payslip_pdfs,
+                purge_expired_uploads,
+                purge_old_login_attempts,
+            )
             purge_expired_payslip_pdfs(app)
             purge_expired_drafts(app)
             purge_expired_uploads(app)
@@ -468,7 +473,6 @@ def create_app():
     # Make Ethiopian calendar available in all templates
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
     from payroll_engine.i18n import get_string
-    from datetime import date
 
     @app.context_processor
     def inject_ethiopian_calendar():
@@ -518,7 +522,7 @@ def create_app():
                 return {'deadline_alerts': []}
             company_id = flask_session.get('active_company_id', current_user.company_id)
             from payroll_engine.compliance import get_upcoming_deadlines
-            from payroll_engine.models import PayrollRun, Company
+            from payroll_engine.models import Company, PayrollRun
             company = db.session.get(Company, company_id)
             latest_run = PayrollRun.query.filter_by(company_id=company_id).order_by(PayrollRun.created_at.desc()).first()
             payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
@@ -597,6 +601,7 @@ def create_app():
     @app.errorhandler(500)
     def internal_error(e):
         from flask import render_template
+
         from payroll_engine import db
         db.session.rollback()
         return render_template('errors/500.html'), 500

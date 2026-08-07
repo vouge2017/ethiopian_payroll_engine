@@ -4,20 +4,27 @@ Transaction boundary tests for payroll approval.
 Verifies that the approval flow is atomic: if anything fails midway,
 the entire approval rolls back — no partial payslips, no half-committed state.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, PayrollDraft,
-    AuditLog, PayrollValidationResult,
+    AuditLog,
+    Company,
+    Employee,
+    PayrollDraft,
+    PayrollRun,
+    Payslip,
+    User,
 )
 
 

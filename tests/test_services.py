@@ -1,12 +1,23 @@
 """Tests for Settlement Service, Leave Service, and Allowance Service."""
-import pytest
+from datetime import UTC, date
 from decimal import Decimal
-from datetime import date, timezone, timedelta
+
+import pytest
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Company, User, Employee, Leave, LeaveBalance,
-    EmployeeAllowance, FinalSettlement, EmployeeDeduction,
-    TenantQuery, OvertimeEntry, AuditLog, PayrollRun
+    AuditLog,
+    Company,
+    Employee,
+    EmployeeAllowance,
+    EmployeeDeduction,
+    FinalSettlement,
+    Leave,
+    LeaveBalance,
+    OvertimeEntry,
+    PayrollRun,
+    TenantQuery,
+    User,
 )
 from payroll_engine.severance import TerminationReason
 
@@ -112,7 +123,11 @@ def test_leave_annual_balance(app, ids):
 
 
 def test_leave_sick_tiers(app, ids):
-    from payroll_engine.services.leave_service import get_leave_balance, get_or_create_balance, approve_leave, request_leave
+    from payroll_engine.services.leave_service import (
+        approve_leave,
+        get_leave_balance,
+        request_leave,
+    )
     cid, uid, eid = ids
     with app.app_context():
         emp = db.session.get(Employee, eid)
@@ -132,7 +147,7 @@ def test_leave_sick_tiers(app, ids):
 
 
 def test_leave_request_approve(app, ids):
-    from payroll_engine.services.leave_service import request_leave, approve_leave, get_leave_balance
+    from payroll_engine.services.leave_service import approve_leave, get_leave_balance, request_leave
     cid, uid, eid = ids
     with app.app_context():
         emp = db.session.get(Employee, eid)
@@ -166,8 +181,10 @@ def test_effective_allowances_fallback(app, ids):
 
 def test_add_transport_allowance(app, ids):
     from payroll_engine.services.allowance_service import (
-        add_allowance_for_employee, get_total_allowances,
-        get_exempt_allowances, get_taxable_allowances
+        add_allowance_for_employee,
+        get_exempt_allowances,
+        get_taxable_allowances,
+        get_total_allowances,
     )
     cid, _, eid = ids
     with app.app_context():
@@ -393,8 +410,8 @@ def test_create_payroll_run_basic(app, ids):
 
 
 def test_create_payroll_run_rollback(app, ids):
-    from payroll_engine.services.payroll_workflow import create_payroll_run
     from payroll_engine.models import PayrollRun
+    from payroll_engine.services.payroll_workflow import create_payroll_run
     cid, _, _ = ids
     with app.app_context():
         employees_data = [{'id': 'EMP001', 'name': 'Test', 'basic': 1000,
@@ -437,7 +454,7 @@ def test_check_duplicate_period_conflict(app, ids):
 
 def test_soft_delete_auto_filter(app, ids):
     """Default query auto-excludes deleted employees."""
-    from payroll_engine.models import Employee, TenantQuery
+    from payroll_engine.models import Employee
     cid, _, eid = ids
     with app.app_context():
         emp = db.session.get(Employee, eid)
@@ -445,8 +462,8 @@ def test_soft_delete_auto_filter(app, ids):
 
         # Soft delete
         emp.is_deleted = True
-        from datetime import datetime, timezone
-        emp.deleted_at = datetime.now(timezone.utc)
+        from datetime import datetime
+        emp.deleted_at = datetime.now(UTC)
         db.session.commit()
 
         # Default query excludes deleted
@@ -473,8 +490,8 @@ def test_soft_delete_count(app, ids):
 
         emp = db.session.get(Employee, eid)
         emp.is_deleted = True
-        from datetime import datetime, timezone
-        emp.deleted_at = datetime.now(timezone.utc)
+        from datetime import datetime
+        emp.deleted_at = datetime.now(UTC)
         db.session.commit()
 
         assert Employee.query.filter_by(company_id=cid).count() == 0
@@ -488,8 +505,8 @@ def test_soft_delete_paginate(app, ids):
     with app.app_context():
         emp = db.session.get(Employee, eid)
         emp.is_deleted = True
-        from datetime import datetime, timezone
-        emp.deleted_at = datetime.now(timezone.utc)
+        from datetime import datetime
+        emp.deleted_at = datetime.now(UTC)
         db.session.commit()
 
         pagination = Employee.query.filter_by(company_id=cid).paginate(page=1, per_page=20)
@@ -506,8 +523,8 @@ def test_soft_delete_bulk_delete_bypass(app, ids):
     with app.app_context():
         emp = db.session.get(Employee, eid)
         emp.is_deleted = True
-        from datetime import datetime, timezone
-        emp.deleted_at = datetime.now(timezone.utc)
+        from datetime import datetime
+        emp.deleted_at = datetime.now(UTC)
         db.session.commit()
 
         # Bulk delete should affect ALL records, not just non-deleted

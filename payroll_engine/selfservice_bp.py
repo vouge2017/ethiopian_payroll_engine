@@ -9,16 +9,16 @@ Ethiopian tax year: July 8 – July 7 (Hamle 1 – Sene 30)
 But for simplicity, we use Gregorian year (Jan-Dec) for YTD.
 """
 
-from flask import Blueprint, render_template, Response, flash, redirect, url_for
-from flask_login import login_required, current_user
-from datetime import date, datetime
-from decimal import Decimal
 import csv
 import io
+from datetime import date, datetime
+from decimal import Decimal
+
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
 from payroll_engine import db
-from payroll_engine.models import Employee, Payslip, PayrollRun
-from payroll_engine.shared import role_required
+from payroll_engine.models import Employee, PayrollRun, Payslip
 
 selfservice_bp = Blueprint('selfservice', __name__)
 

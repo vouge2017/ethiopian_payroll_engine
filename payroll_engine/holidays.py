@@ -17,10 +17,9 @@ Usage:
 """
 
 from datetime import date, timedelta
-from payroll_engine.models import Holiday
-from payroll_engine import db
-from payroll_engine.models import Company
 
+from payroll_engine import db
+from payroll_engine.models import Holiday
 
 # Ethiopian National Holidays (fixed Gregorian dates)
 # These are the standard public holidays recognized by the Ethiopian government
@@ -54,7 +53,7 @@ NATIONAL_HOLIDAYS_2026 = [
 def seed_holidays():
     """Seed national holidays for current and next year."""
     all_holidays = NATIONAL_HOLIDAYS_2025 + NATIONAL_HOLIDAYS_2026
-    
+
     added = 0
     for h in all_holidays:
         existing = Holiday.query.filter_by(
@@ -63,7 +62,7 @@ def seed_holidays():
             is_national=True,
             company_id=None
         ).first()
-        
+
         if not existing:
             holiday = Holiday(
                 company_id=None,
@@ -72,11 +71,11 @@ def seed_holidays():
                 holiday_date=h['date'],
                 is_national=True,
                 is_recurring=h.get('recurring', False),
-                description=f"Ethiopian national holiday"
+                description="Ethiopian national holiday"
             )
             db.session.add(holiday)
             added += 1
-    
+
     db.session.commit()
     return added
 
@@ -84,13 +83,13 @@ def seed_holidays():
 def get_holidays_for_month(year, month, company_id=None):
     """Get all holidays for a given month (national + company-specific)."""
     from datetime import date as dt_date
-    
+
     start = dt_date(year, month, 1)
     if month == 12:
         end = dt_date(year + 1, 1, 1)
     else:
         end = dt_date(year, month + 1, 1)
-    
+
     holidays = Holiday.query.filter(
         Holiday.holiday_date >= start,
         Holiday.holiday_date < end,
@@ -99,7 +98,7 @@ def get_holidays_for_month(year, month, company_id=None):
             Holiday.company_id == company_id
         )
     ).order_by(Holiday.holiday_date).all()
-    
+
     return holidays
 
 
@@ -116,18 +115,18 @@ def is_holiday(check_date, company_id=None):
 
 def get_working_days(year, month, company_id=None):
     """Count working days in a month (excluding weekends and holidays)."""
-    from datetime import date as dt_date, timedelta
-    
+    from datetime import date as dt_date
+
     start = dt_date(year, month, 1)
     if month == 12:
         end = dt_date(year + 1, 1, 1)
     else:
         end = dt_date(year, month + 1, 1)
-    
+
     holidays = set()
     for h in get_holidays_for_month(year, month, company_id):
         holidays.add(h.holiday_date)
-    
+
     working_days = 0
     current = start
     while current < end:
@@ -135,5 +134,5 @@ def get_working_days(year, month, company_id=None):
         if current.weekday() != 6 and current not in holidays:  # 6 = Sunday
             working_days += 1
         current += timedelta(days=1)
-    
+
     return working_days

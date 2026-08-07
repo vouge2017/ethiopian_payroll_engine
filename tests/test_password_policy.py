@@ -10,17 +10,16 @@ Verifies the password strength requirements after the 2.1 hardening:
 - Repeated characters rejected
 - Sequential characters rejected
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import pytest
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine.password_policy import check_password_strength
-
 
 # ---------------------------------------------------------------
 # SHOULD PASS

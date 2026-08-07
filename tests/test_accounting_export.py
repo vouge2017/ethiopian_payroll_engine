@@ -13,8 +13,6 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
@@ -558,7 +556,6 @@ class TestBalanceVerification:
         }
 
     def test_balanced_journal_passes(self):
-        from payroll_engine.accounting_bp import _generate_journal_entries
         # Test the balanced flag directly
         journal = self._make_journal([
             {'account': '5100', 'name': 'Expense', 'debit': Decimal('10000'),

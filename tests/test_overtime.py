@@ -7,17 +7,23 @@ Labor Proclamation No. 1156/2019, Article 68:
 Hourly rate = basic_salary / 208 (26 working days × 8 hours)
 Per Ethiopian labor law: 48 hours/week, 6 days/week, 26 days/month.
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'payroll_engine'))
+from decimal import Decimal
+
+from overtime import (
+    DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH,
+)
+from overtime import (
+    DEFAULT_OVERTIME_RATES as OVERTIME_RATES,
+)
 from overtime import (
     calculate_hourly_rate,
     calculate_overtime_pay,
     calculate_total_overtime,
-    DEFAULT_OVERTIME_RATES as OVERTIME_RATES,
-    DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH,
 )
-from decimal import Decimal
 
 D = Decimal
 

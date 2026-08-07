@@ -3,19 +3,27 @@ Tests for Phase 4 — Employee Self-Service:
 - Payslip acknowledgment
 - Notification when payslip is ready
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+from datetime import UTC, date
+
 import pytest
-from datetime import date
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Company, User, Employee, PayrollRun, Payslip, PayslipAcknowledgment, Notification, UserCompany,
+    Company,
+    Employee,
+    Notification,
+    PayrollRun,
+    Payslip,
+    PayslipAcknowledgment,
+    User,
 )
 
 
@@ -84,10 +92,10 @@ class TestPayslipAcknowledgmentModel:
     def test_model_creation(self, app):
         cid, oid, euid, eid, rid, pid = _setup(app)
         with app.app_context():
-            from datetime import datetime, timezone
+            from datetime import datetime
             ack = PayslipAcknowledgment(
                 company_id=cid, payslip_id=pid, employee_id=eid,
-                acknowledged_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                acknowledged_at=datetime.now(UTC).replace(tzinfo=None),
             )
             db.session.add(ack)
             db.session.commit()
@@ -97,8 +105,8 @@ class TestPayslipAcknowledgmentModel:
         """Can't acknowledge same payslip twice."""
         cid, oid, euid, eid, rid, pid = _setup(app)
         with app.app_context():
-            from datetime import datetime, timezone
-            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            from datetime import datetime
+            now = datetime.now(UTC).replace(tzinfo=None)
             ack1 = PayslipAcknowledgment(
                 company_id=cid, payslip_id=pid, employee_id=eid,
                 acknowledged_at=now,

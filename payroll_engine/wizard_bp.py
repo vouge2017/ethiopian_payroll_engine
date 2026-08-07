@@ -1,4 +1,5 @@
 """Quick Start wizard blueprint — import employees from pasted data."""
+
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, jsonify, render_template, request
@@ -17,12 +18,8 @@ wizard_bp = Blueprint('wizard', __name__)
 def quick_start():
     """Show the Quick Start wizard page."""
     company = db.session.get(Company, _company_id())
-    employee_count = Employee.query.filter_by(
-        company_id=_company_id(), is_deleted=False
-    ).count()
-    return render_template('quick_start.html',
-                           company=company,
-                           employee_count=employee_count)
+    employee_count = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).count()
+    return render_template('quick_start.html', company=company, employee_count=employee_count)
 
 
 @wizard_bp.route('/quick-start/import', methods=['POST'])
@@ -46,9 +43,7 @@ def quick_import():
     errors = []
 
     # Count once before loop (avoids N+1 queries)
-    existing_count = Employee.query.filter_by(
-        company_id=company_id, is_deleted=False
-    ).count()
+    existing_count = Employee.query.filter_by(company_id=company_id, is_deleted=False).count()
 
     for i, emp_data in enumerate(employees):
         name = (emp_data.get('name') or '').strip()
@@ -94,9 +89,11 @@ def quick_import():
 
     db.session.commit()
 
-    return jsonify({
-        'status': 'ok',
-        'imported': imported,
-        'errors': errors[:10],  # Return first 10 errors
-        'total_errors': len(errors),
-    })
+    return jsonify(
+        {
+            'status': 'ok',
+            'imported': imported,
+            'errors': errors[:10],  # Return first 10 errors
+            'total_errors': len(errors),
+        }
+    )

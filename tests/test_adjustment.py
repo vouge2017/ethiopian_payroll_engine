@@ -1,4 +1,5 @@
 """Adjustment payslip tests — verify post-approval corrections."""
+
 import os
 import sys
 
@@ -61,17 +62,18 @@ def client(app):
 
 
 def login(client):
-    client.post('/auth/login', data={
-        'login_id': '0911000001', 'password': 'Test1234!'
-    }, follow_redirects=True)
+    client.post('/auth/login', data={'login_id': '0911000001', 'password': 'Test1234!'}, follow_redirects=True)
 
 
 def _create_completed_run(app, company_id, user_id):
     """Create a completed payroll run with a regular payslip."""
     with app.app_context():
         emp = Employee(
-            employee_id='EMP001', name='Test Worker',
-            basic_salary=10000, allowances=0, company_id=company_id,
+            employee_id='EMP001',
+            name='Test Worker',
+            basic_salary=10000,
+            allowances=0,
+            company_id=company_id,
         )
         db.session.add(emp)
         db.session.commit()
@@ -108,18 +110,20 @@ def test_create_adjustment(app, company_user, client):
     run_id, emp_id = _create_completed_run(app, cid, uid)
 
     login(client)
-    resp = client.post(f'/payroll/{run_id}/adjustment', data={
-        'employee_id': str(emp_id),
-        'amount': '2000',
-        'reason': 'Overtime correction',
-    }, follow_redirects=True)
+    resp = client.post(
+        f'/payroll/{run_id}/adjustment',
+        data={
+            'employee_id': str(emp_id),
+            'amount': '2000',
+            'reason': 'Overtime correction',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     assert b'Adjustment' in resp.data
 
     with app.app_context():
-        adjustments = Payslip.query.filter_by(
-            payroll_run_id=run_id, payslip_type='adjustment'
-        ).all()
+        adjustments = Payslip.query.filter_by(payroll_run_id=run_id, payslip_type='adjustment').all()
         assert len(adjustments) == 1
         assert adjustments[0].reason == 'Overtime correction'
         assert adjustments[0].gross_salary == 2000
@@ -132,11 +136,15 @@ def test_adjustment_requires_reason(app, company_user, client):
     run_id, emp_id = _create_completed_run(app, cid, uid)
 
     login(client)
-    resp = client.post(f'/payroll/{run_id}/adjustment', data={
-        'employee_id': str(emp_id),
-        'amount': '2000',
-        'reason': '',
-    }, follow_redirects=True)
+    resp = client.post(
+        f'/payroll/{run_id}/adjustment',
+        data={
+            'employee_id': str(emp_id),
+            'amount': '2000',
+            'reason': '',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     assert b'required' in resp.data.lower()
 
@@ -147,11 +155,15 @@ def test_adjustment_requires_positive_amount(app, company_user, client):
     run_id, emp_id = _create_completed_run(app, cid, uid)
 
     login(client)
-    resp = client.post(f'/payroll/{run_id}/adjustment', data={
-        'employee_id': str(emp_id),
-        'amount': '-500',
-        'reason': 'Test',
-    }, follow_redirects=True)
+    resp = client.post(
+        f'/payroll/{run_id}/adjustment',
+        data={
+            'employee_id': str(emp_id),
+            'amount': '-500',
+            'reason': 'Test',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
 
 
@@ -161,34 +173,40 @@ def test_adjustment_creates_audit_log(app, company_user, client):
     run_id, emp_id = _create_completed_run(app, cid, uid)
 
     login(client)
-    resp = client.post(f'/payroll/{run_id}/adjustment', data={
-        'employee_id': str(emp_id),
-        'amount': '1500',
-        'reason': 'Bonus correction',
-    }, follow_redirects=True)
+    resp = client.post(
+        f'/payroll/{run_id}/adjustment',
+        data={
+            'employee_id': str(emp_id),
+            'amount': '1500',
+            'reason': 'Bonus correction',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
 
     with app.app_context():
-        log = AuditLog.query.filter_by(
-            company_id=cid, action='adjustment_payslip_created'
-        ).first()
+        log = AuditLog.query.filter_by(company_id=cid, action='adjustment_payslip_created').first()
         assert log is not None
         assert log.details['reason'] == 'Bonus correction'
 
 
 def test_adjustment_only_completed_runs(app, company_user, client):
     """Cannot adjust a non-completed run."""
-    cid, uid = company_user
+    cid, _uid = company_user
     with app.app_context():
         emp = Employee(
-            employee_id='EMP001', name='Test',
-            basic_salary=5000, company_id=cid,
+            employee_id='EMP001',
+            name='Test',
+            basic_salary=5000,
+            company_id=cid,
         )
         db.session.add(emp)
         db.session.commit()
 
         run = PayrollRun(
-            company_id=cid, run_date=datetime.now(UTC).date(), status='review',
+            company_id=cid,
+            run_date=datetime.now(UTC).date(),
+            status='review',
         )
         db.session.add(run)
         db.session.commit()
@@ -196,10 +214,14 @@ def test_adjustment_only_completed_runs(app, company_user, client):
         emp_id = emp.id
 
     login(client)
-    resp = client.post(f'/payroll/{run_id}/adjustment', data={
-        'employee_id': str(emp_id),
-        'amount': '1000',
-        'reason': 'Test',
-    }, follow_redirects=True)
+    resp = client.post(
+        f'/payroll/{run_id}/adjustment',
+        data={
+            'employee_id': str(emp_id),
+            'amount': '1000',
+            'reason': 'Test',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     assert b'only adjust completed' in resp.data.lower() or b'completed' in resp.data.lower()

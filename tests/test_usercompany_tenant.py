@@ -4,6 +4,7 @@ UserCompany tenant isolation tests.
 Proves that UserCompany is structurally enforced by TenantQuery —
 a query without company_id must raise RuntimeError.
 """
+
 import os
 import sys
 
@@ -37,8 +38,7 @@ def ctx(app):
 
 def test_usercompany_registered_with_tenant_query(ctx):
     """UserCompany must be in the TenantQuery registry."""
-    assert UserCompany in TenantQuery._tenant_scoped_models, \
-        "UserCompany is not registered with TenantQuery"
+    assert UserCompany in TenantQuery._tenant_scoped_models, 'UserCompany is not registered with TenantQuery'
 
 
 def test_usercompany_query_without_company_id_raises(ctx):

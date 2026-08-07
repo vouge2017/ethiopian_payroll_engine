@@ -6,6 +6,7 @@ salary changes, overtime detection, variance flags.
 
 Run: python -m pytest tests/test_change_summary.py -v
 """
+
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -19,6 +20,7 @@ from payroll_engine.change_summary import _build_summary
 # Helpers
 # ─────────────────────────────────────────────
 
+
 def _make_employee(emp_id, name, employee_id_str=None):
     emp = MagicMock()
     emp.id = emp_id
@@ -28,8 +30,7 @@ def _make_employee(emp_id, name, employee_id_str=None):
     return emp
 
 
-def _make_payslip(emp_id, gross, tax=0, pension_emp=0, pension_empr=0, net=None,
-                   payslip_type='regular', reason=None):
+def _make_payslip(emp_id, gross, tax=0, pension_emp=0, pension_empr=0, net=None, payslip_type='regular', reason=None):
     ps = MagicMock()
     ps.employee_id = emp_id
     ps.gross_salary = Decimal(str(gross))
@@ -54,10 +55,11 @@ def _make_run(run_id, period, company_id=1):
 
 class MockDB:
     """Mock SQLAlchemy session that returns employees by ID."""
+
     def __init__(self, employees):
         self._employees = {e.id: e for e in employees}
 
-    class session:
+    class session:  # noqa: N801 — mimics Flask session interface
         @staticmethod
         def get(model, id):
             return MockDB._employees.get(id) if hasattr(model, '__name__') else None
@@ -66,8 +68,9 @@ class MockDB:
         pass
 
 
-def _setup_mocks(current_run, previous_run, current_payslips, previous_payslips,
-                  employees, current_run_id=2, company_id=1):
+def _setup_mocks(
+    current_run, previous_run, current_payslips, previous_payslips, employees, current_run_id=2, company_id=1
+):
     """Set up all the mocks for compute_change_summary."""
     mock_db = MagicMock()
     mock_models = MagicMock()
@@ -80,6 +83,7 @@ def _setup_mocks(current_run, previous_run, current_payslips, previous_payslips,
 
     # Previous payslips (called when previous_run exists)
     if previous_run:
+
         def payslip_filter_by(**kwargs):
             mock = MagicMock()
             if kwargs.get('payroll_run_id') == previous_run.id:
@@ -87,12 +91,15 @@ def _setup_mocks(current_run, previous_run, current_payslips, previous_payslips,
             else:
                 mock.all.return_value = current_payslips
             return mock
+
         mock_models.Payslip.query.filter_by.side_effect = payslip_filter_by
 
     # Employee lookup
     emp_map = {e.id: e for e in employees}
+
     def session_get(model, id):
         return emp_map.get(id)
+
     mock_db.session.get.side_effect = session_get
 
     return mock_db, mock_models, previous_run
@@ -102,8 +109,8 @@ def _setup_mocks(current_run, previous_run, current_payslips, previous_payslips,
 # Tests: No previous run (first payroll)
 # ─────────────────────────────────────────────
 
-class TestFirstPayroll:
 
+class TestFirstPayroll:
     def test_first_run_returns_summary(self):
         emp1 = _make_employee(1, 'Dawit')
         emp2 = _make_employee(2, 'Hana')
@@ -111,7 +118,6 @@ class TestFirstPayroll:
         ps2 = _make_payslip(2, gross=15000, tax=2500, pension_emp=1050)
 
         current_run = _make_run(1, '2018-10')
-        employees = [emp1, emp2]
 
         mock_db = MagicMock()
         mock_models = MagicMock()
@@ -151,16 +157,15 @@ class TestFirstPayroll:
 # Tests: New hires
 # ─────────────────────────────────────────────
 
-class TestNewHires:
 
+class TestNewHires:
     def test_detects_new_employee(self):
         emp1 = _make_employee(1, 'Dawit')
         emp2 = _make_employee(2, 'Hana')  # New this month
         emp3 = _make_employee(3, 'Kebede')
 
         prev_payslips = [_make_payslip(1, gross=10000), _make_payslip(3, gross=20000)]
-        curr_payslips = [_make_payslip(1, gross=10000), _make_payslip(2, gross=12000),
-                         _make_payslip(3, gross=20000)]
+        curr_payslips = [_make_payslip(1, gross=10000), _make_payslip(2, gross=12000), _make_payslip(3, gross=20000)]
 
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
@@ -170,7 +175,14 @@ class TestNewHires:
             current_run, previous_run, curr_payslips, prev_payslips, employees
         )
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result is not None
         assert len(result.new_hires) == 1
@@ -191,7 +203,14 @@ class TestNewHires:
             current_run, previous_run, curr_payslips, prev_payslips, [emp1, emp2]
         )
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.headcount_change == 1
         assert result.current_employee_count == 2
@@ -202,8 +221,8 @@ class TestNewHires:
 # Tests: Departures
 # ─────────────────────────────────────────────
 
-class TestDepartures:
 
+class TestDepartures:
     def test_detects_departed_employee(self):
         emp1 = _make_employee(1, 'Dawit')
         emp2 = _make_employee(2, 'Abebe')  # Left this month
@@ -218,7 +237,14 @@ class TestDepartures:
             current_run, previous_run, curr_payslips, prev_payslips, [emp1, emp2]
         )
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert len(result.departures) == 1
         assert result.departures[0].employee_name == 'Abebe'
@@ -239,7 +265,14 @@ class TestDepartures:
             current_run, previous_run, curr_payslips, prev_payslips, [emp1, emp2]
         )
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.headcount_change == -1
 
@@ -248,8 +281,8 @@ class TestDepartures:
 # Tests: Salary changes
 # ─────────────────────────────────────────────
 
-class TestSalaryChanges:
 
+class TestSalaryChanges:
     def test_detects_salary_increase(self):
         emp1 = _make_employee(1, 'Dawit')
         prev_payslips = [_make_payslip(1, gross=10000, tax=1500)]
@@ -258,11 +291,16 @@ class TestSalaryChanges:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert len(result.salary_changes) == 1
         assert result.salary_changes[0].delta == Decimal('2000')
@@ -277,11 +315,16 @@ class TestSalaryChanges:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert len(result.salary_changes) == 1
         assert result.salary_changes[0].delta == Decimal('-2000')
@@ -294,11 +337,16 @@ class TestSalaryChanges:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert len(result.salary_changes) == 0
 
@@ -310,11 +358,16 @@ class TestSalaryChanges:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.salary_changes[0].severity == 'review'
         assert result.has_unusual_variance is True
@@ -324,8 +377,8 @@ class TestSalaryChanges:
 # Tests: Variance detection
 # ─────────────────────────────────────────────
 
-class TestVarianceDetection:
 
+class TestVarianceDetection:
     def test_20_percent_variance_flagged(self):
         emp1 = _make_employee(1, 'Dawit')
         prev_payslips = [_make_payslip(1, gross=10000)]
@@ -334,11 +387,16 @@ class TestVarianceDetection:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.has_unusual_variance is True
         assert result.status == 'review'
@@ -352,11 +410,16 @@ class TestVarianceDetection:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.has_unusual_variance is False
         assert result.status == 'attention'
@@ -369,11 +432,16 @@ class TestVarianceDetection:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.has_unusual_variance is False
         assert result.status == 'normal'
@@ -383,8 +451,8 @@ class TestVarianceDetection:
 # Tests: Summary text
 # ─────────────────────────────────────────────
 
-class TestSummaryText:
 
+class TestSummaryText:
     def test_no_changes_text(self):
         emp1 = _make_employee(1, 'Dawit')
         prev_payslips = [_make_payslip(1, gross=10000)]
@@ -393,11 +461,16 @@ class TestSummaryText:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert 'No changes' in result.summary_text
 
@@ -407,8 +480,7 @@ class TestSummaryText:
         emp3 = _make_employee(3, 'New Guy')
 
         prev_payslips = [_make_payslip(1, gross=10000), _make_payslip(2, gross=12000)]
-        curr_payslips = [_make_payslip(1, gross=11000), _make_payslip(2, gross=12000),
-                         _make_payslip(3, gross=8000)]
+        curr_payslips = [_make_payslip(1, gross=11000), _make_payslip(2, gross=12000), _make_payslip(3, gross=8000)]
 
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
@@ -417,7 +489,14 @@ class TestSummaryText:
             current_run, previous_run, curr_payslips, prev_payslips, [emp1, emp2, emp3]
         )
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert '1 new hire' in result.summary_text
         assert '1 salary change' in result.summary_text
@@ -427,16 +506,20 @@ class TestSummaryText:
 # Tests: Totals
 # ─────────────────────────────────────────────
 
-class TestTotals:
 
+class TestTotals:
     def test_totals_calculated_correctly(self):
         emp1 = _make_employee(1, 'Dawit')
         emp2 = _make_employee(2, 'Hana')
 
-        prev_payslips = [_make_payslip(1, gross=10000, tax=1500, pension_emp=700),
-                         _make_payslip(2, gross=15000, tax=2500, pension_emp=1050)]
-        curr_payslips = [_make_payslip(1, gross=10000, tax=1500, pension_emp=700),
-                         _make_payslip(2, gross=15000, tax=2500, pension_emp=1050)]
+        prev_payslips = [
+            _make_payslip(1, gross=10000, tax=1500, pension_emp=700),
+            _make_payslip(2, gross=15000, tax=2500, pension_emp=1050),
+        ]
+        curr_payslips = [
+            _make_payslip(1, gross=10000, tax=1500, pension_emp=700),
+            _make_payslip(2, gross=15000, tax=2500, pension_emp=1050),
+        ]
 
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
@@ -445,7 +528,14 @@ class TestTotals:
             current_run, previous_run, curr_payslips, prev_payslips, [emp1, emp2]
         )
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.current_total_gross == Decimal('25000')
         assert result.previous_total_gross == Decimal('25000')
@@ -461,11 +551,16 @@ class TestTotals:
         current_run = _make_run(2, '2018-10')
         previous_run = _make_run(1, '2018-09')
 
-        mock_db, mock_models, prev_run = _setup_mocks(
-            current_run, previous_run, curr_payslips, prev_payslips, [emp1]
-        )
+        mock_db, mock_models, prev_run = _setup_mocks(current_run, previous_run, curr_payslips, prev_payslips, [emp1])
 
-        result = _build_summary(_make_run(2, "2018-10"), prev_run, mock_models.Payslip.query.filter_by.return_value.all.return_value, 1, mock_db, mock_models)
+        result = _build_summary(
+            _make_run(2, '2018-10'),
+            prev_run,
+            mock_models.Payslip.query.filter_by.return_value.all.return_value,
+            1,
+            mock_db,
+            mock_models,
+        )
 
         assert result.gross_delta == Decimal('2000')
         assert result.gross_delta_pct == 20.0
@@ -475,8 +570,8 @@ class TestTotals:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_no_previous_run_first_payroll(self):
         """_build_summary with None previous_run should work (first payroll)."""
         emp1 = _make_employee(1, 'Dawit')
@@ -508,9 +603,9 @@ class TestEdgeCases:
 
     def test_mixed_changes(self):
         """Multiple types of changes in one run."""
-        emp1 = _make_employee(1, 'Dawit')   # Salary change
-        emp2 = _make_employee(2, 'Abebe')   # Departure
-        emp3 = _make_employee(3, 'New Guy') # New hire
+        emp1 = _make_employee(1, 'Dawit')  # Salary change
+        emp2 = _make_employee(2, 'Abebe')  # Departure
+        emp3 = _make_employee(3, 'New Guy')  # New hire
 
         prev_payslips = [_make_payslip(1, gross=10000), _make_payslip(2, gross=8000)]
         curr_payslips = [_make_payslip(1, gross=12000), _make_payslip(3, gross=9000)]
@@ -526,14 +621,14 @@ class TestEdgeCases:
             else:
                 mock.all.return_value = curr_payslips
             return mock
+
         mock_models.Payslip.query.filter_by.side_effect = payslip_filter_by
 
         emp_map = {1: emp1, 2: emp2, 3: emp3}
         mock_db.session.get.side_effect = lambda model, id: emp_map.get(id)
 
         result = _build_summary(
-            _make_run(2, '2018-10'), _make_run(1, '2018-09'),
-            curr_payslips, 1, mock_db, mock_models
+            _make_run(2, '2018-10'), _make_run(1, '2018-09'), curr_payslips, 1, mock_db, mock_models
         )
 
         assert len(result.new_hires) == 1  # New Guy

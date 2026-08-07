@@ -4,6 +4,7 @@ Tests for Phase 5 — Disbursement Progress:
 - Per-bank grouping
 - Status progression
 """
+
 import os
 import sys
 
@@ -52,25 +53,39 @@ def _setup(app, disbursement_status='pending'):
 
         # Employees with different banks
         emp1 = Employee(
-            employee_id='EMP001', name='Abebe Kebede', phone='0911111111',
-            basic_salary=10000, allowances=2000, company_id=company.id,
+            employee_id='EMP001',
+            name='Abebe Kebede',
+            phone='0911111111',
+            basic_salary=10000,
+            allowances=2000,
+            company_id=company.id,
             bank_account='cbe:1000123456789',
         )
         emp2 = Employee(
-            employee_id='EMP002', name='Hana Tesfaye', phone='0922222222',
-            basic_salary=8000, allowances=1000, company_id=company.id,
+            employee_id='EMP002',
+            name='Hana Tesfaye',
+            phone='0922222222',
+            basic_salary=8000,
+            allowances=1000,
+            company_id=company.id,
             bank_account='cbe:1000987654321',
         )
         emp3 = Employee(
-            employee_id='EMP003', name='Dawit Mekonnen', phone='0933333333',
-            basic_salary=12000, allowances=3000, company_id=company.id,
+            employee_id='EMP003',
+            name='Dawit Mekonnen',
+            phone='0933333333',
+            basic_salary=12000,
+            allowances=3000,
+            company_id=company.id,
             bank_account='dashen:2000111222333',
         )
         db.session.add_all([emp1, emp2, emp3])
         db.session.flush()
 
         run = PayrollRun(
-            company_id=company.id, run_date=date.today(), status='completed',
+            company_id=company.id,
+            run_date=date.today(),
+            status='completed',
             disbursement_status=disbursement_status,
         )
         run.generate_period()
@@ -80,9 +95,12 @@ def _setup(app, disbursement_status='pending'):
 
         for emp in [emp1, emp2, emp3]:
             payslip = Payslip(
-                payroll_run_id=run.id, employee_id=emp.id,
+                payroll_run_id=run.id,
+                employee_id=emp.id,
                 gross_salary=emp.basic_salary + emp.allowances,
-                tax=1500, employee_pension=700, employer_pension=1100,
+                tax=1500,
+                employee_pension=700,
+                employer_pension=1100,
                 net_pay=emp.basic_salary + emp.allowances - 1500 - 700,
             )
             db.session.add(payslip)
@@ -98,7 +116,7 @@ class TestDisbursementProgress:
     """Test the disbursement progress page."""
 
     def test_page_loads(self, app):
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
@@ -106,14 +124,14 @@ class TestDisbursementProgress:
         assert b'Disbursement' in resp.data
 
     def test_shows_employee_count(self, app):
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
         assert b'3' in resp.data  # 3 employees
 
     def test_shows_bank_grouping(self, app):
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
@@ -121,7 +139,7 @@ class TestDisbursementProgress:
         assert b'Dashen' in resp.data or b'dashen' in resp.data
 
     def test_shows_total_amount(self, app):
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
@@ -129,21 +147,21 @@ class TestDisbursementProgress:
         assert b'ETB' in resp.data
 
     def test_shows_pending_status(self, app):
-        cid, oid, rid = _setup(app, disbursement_status='pending')
+        _cid, _oid, rid = _setup(app, disbursement_status='pending')
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
         assert b'Pending' in resp.data
 
     def test_shows_disbursed_status(self, app):
-        cid, oid, rid = _setup(app, disbursement_status='disbursed')
+        _cid, _oid, rid = _setup(app, disbursement_status='disbursed')
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
         assert b'Disbursed' in resp.data
 
     def test_shows_confirmed_status(self, app):
-        cid, oid, rid = _setup(app, disbursement_status='confirmed')
+        _cid, _oid, rid = _setup(app, disbursement_status='confirmed')
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
@@ -151,14 +169,14 @@ class TestDisbursementProgress:
         assert b'All payments confirmed' in resp.data
 
     def test_mark_as_sent_button_when_pending(self, app):
-        cid, oid, rid = _setup(app, disbursement_status='pending')
+        _cid, _oid, rid = _setup(app, disbursement_status='pending')
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
         assert b'Mark as Sent' in resp.data
 
     def test_confirm_button_when_disbursed(self, app):
-        cid, oid, rid = _setup(app, disbursement_status='disbursed')
+        _cid, _oid, rid = _setup(app, disbursement_status='disbursed')
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get(f'/payroll/{rid}/disbursement')
@@ -187,7 +205,7 @@ class TestDisbursementProgress:
 
     def test_employee_cannot_access(self, app):
         """Employees can't access disbursement page."""
-        cid, oid, rid = _setup(app)
+        cid, _oid, rid = _setup(app)
         with app.app_context():
             emp_user = User(phone='0944444444', role='employee', company_id=cid)
             emp_user.set_password('EmpPass1!')

@@ -16,6 +16,7 @@ Usage:
     from payroll_engine.rule_source import RULE_SOURCES, get_rule_source
     source = get_rule_source('tax_brackets')
 """
+
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -23,18 +24,19 @@ from datetime import UTC, datetime
 @dataclass
 class RuleSource:
     """A single rule with its legal source."""
-    rule_id: str                # Machine-readable ID
-    name: str                   # Human-readable name
-    name_am: str                # Amharic name
-    source: str                 # Legal reference (e.g., "Proclamation No. 1395/2025, Article 11")
+
+    rule_id: str  # Machine-readable ID
+    name: str  # Human-readable name
+    name_am: str  # Amharic name
+    source: str  # Legal reference (e.g., "Proclamation No. 1395/2025, Article 11")
     source_url: str | None = None  # Link to the law
     effective_date: str | None = None  # When the rule became effective
-    category: str = 'general'   # tax, pension, overtime, leave, severance, compliance
+    category: str = 'general'  # tax, pension, overtime, leave, severance, compliance
     verified: bool = False
     verified_at: str | None = None
     verified_by: str | None = None
     notes: str | None = None
-    explanation: str = ''       # Plain-English explanation
+    explanation: str = ''  # Plain-English explanation
 
 
 # ─────────────────────────────────────────────
@@ -71,7 +73,6 @@ RULE_SOURCES = {
         category='tax',
         explanation='Salaries above ETB 50,000 must be paid electronically (bank transfer or mobile wallet). Cash payment is not permitted above this threshold.',
     ),
-
     # ─── PENSION ───
     'pension_employee_rate': RuleSource(
         rule_id='pension_employee_rate',
@@ -100,7 +101,6 @@ RULE_SOURCES = {
         category='pension',
         explanation='There is no maximum insurable earnings ceiling for pension contributions in Ethiopia. Contributions are calculated on the full basic salary.',
     ),
-
     # ─── OVERTIME ───
     'overtime_day_rate': RuleSource(
         rule_id='overtime_day_rate',
@@ -147,7 +147,6 @@ RULE_SOURCES = {
         category='overtime',
         explanation='Hourly rate = Monthly basic salary ÷ 26 working days ÷ 8 hours per day.',
     ),
-
     # ─── LEAVE ───
     'leave_annual': RuleSource(
         rule_id='leave_annual',
@@ -203,7 +202,6 @@ RULE_SOURCES = {
         category='leave',
         explanation='Male employees are entitled to 3 days of paternity leave with full pay.',
     ),
-
     # ─── SEVERANCE ───
     'severance_year1': RuleSource(
         rule_id='severance_year1',

@@ -1,4 +1,5 @@
 """Tests for brute-force login lockout."""
+
 import os
 import sys
 
@@ -22,6 +23,7 @@ def app():
     app.config['WTF_CSRF_ENABLED'] = False
     # Disable rate limiter for lockout tests
     from payroll_engine import limiter
+
     limiter.enabled = False
     with app.app_context():
         db.create_all()
@@ -48,14 +50,14 @@ class TestLoginAttemptModel:
     def test_record_failure(self, app):
         """Recording a failure creates a LoginAttempt row."""
         with app.app_context():
-            is_locked, remaining = LoginAttempt.record_failure('0910000000')
+            is_locked, _remaining = LoginAttempt.record_failure('0910000000')
             assert is_locked is False
             assert LoginAttempt.query.filter_by(identifier='0910000000').count() == 1
 
     def test_lockout_after_max_attempts(self, app):
         """Account locks after MAX_ATTEMPTS failures."""
         with app.app_context():
-            for i in range(LoginAttempt.MAX_ATTEMPTS):
+            for _i in range(LoginAttempt.MAX_ATTEMPTS):
                 is_locked, remaining = LoginAttempt.record_failure('0910000000')
 
             assert is_locked is True
@@ -64,7 +66,7 @@ class TestLoginAttemptModel:
     def test_lockout_remaining_decreases(self, app):
         """Remaining lockout time is positive and reasonable."""
         with app.app_context():
-            for i in range(LoginAttempt.MAX_ATTEMPTS):
+            for _i in range(LoginAttempt.MAX_ATTEMPTS):
                 LoginAttempt.record_failure('0910000000')
 
             is_locked, remaining = LoginAttempt.is_locked_out('0910000000')
@@ -75,7 +77,7 @@ class TestLoginAttemptModel:
     def test_success_clears_failures(self, app):
         """Successful login clears recent failures."""
         with app.app_context():
-            for i in range(LoginAttempt.MAX_ATTEMPTS - 1):
+            for _i in range(LoginAttempt.MAX_ATTEMPTS - 1):
                 LoginAttempt.record_failure('0910000000')
 
             LoginAttempt.record_success('0910000000')
@@ -86,7 +88,7 @@ class TestLoginAttemptModel:
     def test_different_identifiers_independent(self, app):
         """Lockout for one identifier doesn't affect another."""
         with app.app_context():
-            for i in range(LoginAttempt.MAX_ATTEMPTS):
+            for _i in range(LoginAttempt.MAX_ATTEMPTS):
                 LoginAttempt.record_failure('0910000000')
 
             is_locked_1, _ = LoginAttempt.is_locked_out('0910000000')
@@ -99,7 +101,7 @@ class TestLoginAttemptModel:
         with app.app_context():
             # Create failures outside the window
             old_time = datetime.now(UTC) - timedelta(minutes=LoginAttempt.LOCKOUT_WINDOW_MINUTES + 1)
-            for i in range(LoginAttempt.MAX_ATTEMPTS):
+            for _i in range(LoginAttempt.MAX_ATTEMPTS):
                 attempt = LoginAttempt(identifier='0910000000', success=False, created_at=old_time)
                 db.session.add(attempt)
             db.session.commit()
@@ -125,6 +127,7 @@ class TestLoginAttemptModel:
             formats = ['0910000000', '+251910000000', '910000000']
             for fmt in formats:
                 from payroll_engine.models import validate_ethiopian_phone
+
                 is_valid, normalized, _ = validate_ethiopian_phone(fmt)
                 if is_valid:
                     LoginAttempt.record_failure(normalized)
@@ -152,64 +155,93 @@ class TestLoginLockoutIntegration:
 
     def test_login_works_normally(self, client, app):
         """Valid login works without lockout."""
-        resp = client.post('/auth/login', data={
-            'login_id': '0910000000',
-            'password': 'OwnerPass1!',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/auth/login',
+            data={
+                'login_id': '0910000000',
+                'password': 'OwnerPass1!',
+            },
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
         assert b'Welcome back' in resp.data
 
     def test_failed_login_shows_invalid(self, client, app):
         """Failed login shows 'Invalid credentials' message."""
-        resp = client.post('/auth/login', data={
-            'login_id': '0910000000',
-            'password': 'wrongpassword',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/auth/login',
+            data={
+                'login_id': '0910000000',
+                'password': 'wrongpassword',
+            },
+            follow_redirects=True,
+        )
         assert b'Invalid credentials' in resp.data
 
     def test_lockout_message_after_max_failures(self, client, app):
         """After MAX_ATTEMPTS failures, shows lockout message."""
-        for i in range(LoginAttempt.MAX_ATTEMPTS):
-            client.post('/auth/login', data={
+        for _i in range(LoginAttempt.MAX_ATTEMPTS):
+            client.post(
+                '/auth/login',
+                data={
+                    'login_id': '0910000000',
+                    'password': 'wrongpassword',
+                },
+            )
+
+        resp = client.post(
+            '/auth/login',
+            data={
                 'login_id': '0910000000',
                 'password': 'wrongpassword',
-            })
-
-        resp = client.post('/auth/login', data={
-            'login_id': '0910000000',
-            'password': 'wrongpassword',
-        }, follow_redirects=True)
+            },
+            follow_redirects=True,
+        )
         assert b'locked' in resp.data.lower() or b'temporarily' in resp.data.lower()
 
     def test_locked_out_user_cannot_login_even_with_correct_password(self, client, app):
         """Locked out user can't login even with correct password."""
-        for i in range(LoginAttempt.MAX_ATTEMPTS):
-            client.post('/auth/login', data={
-                'login_id': '0910000000',
-                'password': 'wrongpassword',
-            })
+        for _i in range(LoginAttempt.MAX_ATTEMPTS):
+            client.post(
+                '/auth/login',
+                data={
+                    'login_id': '0910000000',
+                    'password': 'wrongpassword',
+                },
+            )
 
-        resp = client.post('/auth/login', data={
-            'login_id': '0910000000',
-            'password': 'OwnerPass1!',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/auth/login',
+            data={
+                'login_id': '0910000000',
+                'password': 'OwnerPass1!',
+            },
+            follow_redirects=True,
+        )
         assert b'locked' in resp.data.lower() or b'temporarily' in resp.data.lower()
         assert b'Welcome back' not in resp.data
 
     def test_successful_login_resets_counter(self, client, app):
         """Successful login resets the failure counter."""
         # Fail a few times (not enough to lock)
-        for i in range(3):
-            client.post('/auth/login', data={
-                'login_id': '0910000000',
-                'password': 'wrongpassword',
-            })
+        for _i in range(3):
+            client.post(
+                '/auth/login',
+                data={
+                    'login_id': '0910000000',
+                    'password': 'wrongpassword',
+                },
+            )
 
         # Succeed
-        resp = client.post('/auth/login', data={
-            'login_id': '0910000000',
-            'password': 'OwnerPass1!',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/auth/login',
+            data={
+                'login_id': '0910000000',
+                'password': 'OwnerPass1!',
+            },
+            follow_redirects=True,
+        )
         assert b'Welcome back' in resp.data
 
         # Fail counter should be reset — can fail again without immediate lockout

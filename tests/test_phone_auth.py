@@ -7,6 +7,7 @@ Tests:
 - Registration with phone
 - Duplicate phone detection
 """
+
 import os
 import sys
 
@@ -41,6 +42,7 @@ def ctx(app):
 # ---------------------------------------------------------------
 # Phone Validation Tests
 # ---------------------------------------------------------------
+
 
 def test_valid_phone_formats():
     """Valid Ethiopian phone numbers should be accepted (Ethio Telecom + Safaricom)."""
@@ -85,17 +87,17 @@ def test_valid_phone_formats():
 def test_invalid_phone_formats():
     """Invalid phone numbers should be rejected."""
     invalid_numbers = [
-        '+1234567890',      # Not Ethiopian
-        '12345',            # Too short
-        'abcdefghij',       # Not numbers
-        '',                 # Empty
-        '091123456',        # Too short (9 digits after 0)
-        '09112345678',      # Too long (11 digits after 0)
-        '+25191123456',     # Too short after +251
-        '+2519112345678',   # Too long after +251
-        '0611234567',       # 06X prefix
-        '0811234567',       # 08X prefix
-        '+44911234567',     # UK prefix
+        '+1234567890',  # Not Ethiopian
+        '12345',  # Too short
+        'abcdefghij',  # Not numbers
+        '',  # Empty
+        '091123456',  # Too short (9 digits after 0)
+        '09112345678',  # Too long (11 digits after 0)
+        '+25191123456',  # Too short after +251
+        '+2519112345678',  # Too long after +251
+        '0611234567',  # 06X prefix
+        '0811234567',  # 08X prefix
+        '+44911234567',  # UK prefix
     ]
     for phone in invalid_numbers:
         is_valid, normalized, error = validate_ethiopian_phone(phone)
@@ -105,11 +107,11 @@ def test_invalid_phone_formats():
 
 def test_phone_normalization():
     """Phone numbers should normalize to 09XXXXXXXX format."""
-    is_valid, normalized, error = validate_ethiopian_phone('+251911234567')
+    is_valid, normalized, _error = validate_ethiopian_phone('+251911234567')
     assert is_valid
     assert normalized == '0911234567'
 
-    is_valid, normalized, error = validate_ethiopian_phone('0911234567')
+    is_valid, normalized, _error = validate_ethiopian_phone('0911234567')
     assert is_valid
     assert normalized == '0911234567'
 
@@ -118,9 +120,10 @@ def test_phone_normalization():
 # Registration Tests
 # ---------------------------------------------------------------
 
+
 def test_register_with_phone(ctx):
     """Registration with phone number should work."""
-    client = create_app().test_client()
+    create_app().test_client()
     # Can't easily test full registration without app context
     # Test the model directly
     company = Company(name='TestCo')

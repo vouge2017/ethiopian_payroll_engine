@@ -1,4 +1,5 @@
 """Tests for password reset flow."""
+
 import os
 import sys
 
@@ -50,9 +51,13 @@ def test_forgot_password_with_phone(client, ctx):
     db.session.add(user)
     db.session.commit()
 
-    resp = client.post('/auth/forgot-password', data={
-        'login_id': '0911111111',
-    }, follow_redirects=True)
+    resp = client.post(
+        '/auth/forgot-password',
+        data={
+            'login_id': '0911111111',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     # Must show same message as non-existent user (no enumeration)
     assert b'if an account' in resp.data.lower() and b'reset link has been sent' in resp.data.lower()
@@ -70,9 +75,13 @@ def test_forgot_password_with_email(client, ctx):
     db.session.add(user)
     db.session.commit()
 
-    resp = client.post('/auth/forgot-password', data={
-        'login_id': 'test@example.com',
-    }, follow_redirects=True)
+    resp = client.post(
+        '/auth/forgot-password',
+        data={
+            'login_id': 'test@example.com',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
 
     refreshed = db.session.get(User, user.id)
@@ -81,9 +90,13 @@ def test_forgot_password_with_email(client, ctx):
 
 def test_forgot_password_nonexistent_user(client, ctx):
     """POST with unknown phone still shows same generic message (no user enumeration)."""
-    resp = client.post('/auth/forgot-password', data={
-        'login_id': '0999999999',
-    }, follow_redirects=True)
+    resp = client.post(
+        '/auth/forgot-password',
+        data={
+            'login_id': '0999999999',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     # Exact same message as existing user (no enumeration)
     assert b'if an account' in resp.data.lower() and b'reset link has been sent' in resp.data.lower()
@@ -99,11 +112,15 @@ def test_reset_password_with_valid_token(client, ctx):
     token = user.generate_reset_token()
     db.session.commit()
 
-    resp = client.post('/auth/reset-password', data={
-        'token': token,
-        'password': 'NewPass1!',
-        'password2': 'NewPass1!',
-    }, follow_redirects=True)
+    resp = client.post(
+        '/auth/reset-password',
+        data={
+            'token': token,
+            'password': 'NewPass1!',
+            'password2': 'NewPass1!',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     assert b'reset successfully' in resp.data.lower() or b'log in' in resp.data.lower()
 
@@ -117,11 +134,15 @@ def test_reset_password_with_valid_token(client, ctx):
 
 def test_reset_password_with_invalid_token(client, ctx):
     """POST with invalid token shows error."""
-    resp = client.post('/auth/reset-password', data={
-        'token': 'invalidtoken123',
-        'password': 'NewPass1!',
-        'password2': 'NewPass1!',
-    }, follow_redirects=True)
+    resp = client.post(
+        '/auth/reset-password',
+        data={
+            'token': 'invalidtoken123',
+            'password': 'NewPass1!',
+            'password2': 'NewPass1!',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     assert b'invalid' in resp.data.lower() or b'expired' in resp.data.lower()
 
@@ -136,11 +157,15 @@ def test_reset_password_weak_password_rejected(client, ctx):
     token = user.generate_reset_token()
     db.session.commit()
 
-    resp = client.post('/auth/reset-password', data={
-        'token': token,
-        'password': 'Password1',
-        'password2': 'Password1',
-    }, follow_redirects=True)
+    resp = client.post(
+        '/auth/reset-password',
+        data={
+            'token': token,
+            'password': 'Password1',
+            'password2': 'Password1',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     assert b'too common' in resp.data.lower()
 
@@ -159,11 +184,15 @@ def test_reset_password_mismatch_rejected(client, ctx):
     token = user.generate_reset_token()
     db.session.commit()
 
-    resp = client.post('/auth/reset-password', data={
-        'token': token,
-        'password': 'NewPass1!',
-        'password2': 'DifferentPass1!',
-    }, follow_redirects=True)
+    resp = client.post(
+        '/auth/reset-password',
+        data={
+            'token': token,
+            'password': 'NewPass1!',
+            'password2': 'DifferentPass1!',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     assert b'do not match' in resp.data.lower()
 

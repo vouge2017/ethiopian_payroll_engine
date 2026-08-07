@@ -1,4 +1,5 @@
 """Employees blueprint: employee CRUD, overtime, allowances, deductions, leave, termination."""
+
 import csv
 import io
 import os
@@ -33,6 +34,7 @@ def _require_login():
 
 # --- Employees ---
 
+
 @employees_bp.route('/employees')
 @role_required('owner', 'accountant')
 def list_employees():
@@ -46,29 +48,36 @@ def list_employees():
     if not show_archived:
         query = query.filter_by(is_deleted=False)
     if search:
-        query = query.filter(
-            db.or_(
-                Employee.name.ilike(f'%{search}%'),
-                Employee.employee_id.ilike(f'%{search}%')
-            )
-        )
+        query = query.filter(db.or_(Employee.name.ilike(f'%{search}%'), Employee.employee_id.ilike(f'%{search}%')))
     if selected_dept:
         query = query.filter(Employee.department == selected_dept)
 
     # Get all departments for the filter dropdown
     departments = [
-        r[0] for r in db.session.query(Employee.department)
-        .filter(Employee.company_id == _company_id(), Employee.is_deleted == False, Employee.department.isnot(None), Employee.department != '')
-        .distinct().order_by(Employee.department).all()
+        r[0]
+        for r in db.session.query(Employee.department)
+        .filter(
+            Employee.company_id == _company_id(),
+            not Employee.is_deleted,
+            Employee.department.isnot(None),
+            Employee.department != '',
+        )
+        .distinct()
+        .order_by(Employee.department)
+        .all()
     ]
 
-    pagination = query.order_by(Employee.name).paginate(
-        page=page, per_page=20, error_out=False
+    pagination = query.order_by(Employee.name).paginate(page=page, per_page=20, error_out=False)
+    return render_template(
+        'employees.html',
+        employees=pagination.items,
+        pagination=pagination,
+        search=search,
+        departments=departments,
+        selected_dept=selected_dept,
+        year=date.today().year,
+        show_archived=show_archived,
     )
-    return render_template('employees.html', employees=pagination.items,
-                           pagination=pagination, search=search,
-                           departments=departments, selected_dept=selected_dept,
-                           year=date.today().year, show_archived=show_archived)
 
 
 @employees_bp.route('/employees/export')
@@ -76,27 +85,43 @@ def list_employees():
 def export_employees():
     """Export employee list as CSV."""
     from payroll_engine.models import Company
+
     company = db.session.get(Company, _company_id())
-    employees = Employee.query.filter_by(
-        company_id=_company_id(), is_deleted=False
-    ).order_by(Employee.name).all()
+    employees = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).order_by(Employee.name).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        'Employee ID', 'Name', 'Phone', 'Department', 'Position',
-        'Start Date', 'Basic Salary', 'Allowances', 'Employee Type',
-        'Bank/Telebirr', 'TIN',
-    ])
+    writer.writerow(
+        [
+            'Employee ID',
+            'Name',
+            'Phone',
+            'Department',
+            'Position',
+            'Start Date',
+            'Basic Salary',
+            'Allowances',
+            'Employee Type',
+            'Bank/Telebirr',
+            'TIN',
+        ]
+    )
     for emp in employees:
-        writer.writerow([
-            emp.employee_id, emp.name, emp.phone or '',
-            emp.department or '', emp.position or '',
-            emp.start_date.isoformat() if emp.start_date else '',
-            str(emp.basic_salary), str(emp.allowances),
-            emp.employee_type, emp.bank_or_telebirr or '',
-            emp.tin or '',
-        ])
+        writer.writerow(
+            [
+                emp.employee_id,
+                emp.name,
+                emp.phone or '',
+                emp.department or '',
+                emp.position or '',
+                emp.start_date.isoformat() if emp.start_date else '',
+                str(emp.basic_salary),
+                str(emp.allowances),
+                emp.employee_type,
+                emp.bank_or_telebirr or '',
+                emp.tin or '',
+            ]
+        )
 
     output.seek(0)
     filename = f'employees_{company.name}_{date.today().isoformat()}.csv'
@@ -115,9 +140,7 @@ def generate_invite(emp_id):
     import secrets
     from datetime import timedelta
 
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(), is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     if emp.user_id:
         flash('This employee already has an account.', 'warning')
@@ -182,6 +205,7 @@ def accept_invite(token):
 
         # Validate phone format
         from payroll_engine.models import validate_ethiopian_phone
+
         is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
         if not is_valid:
             flash(phone_error, 'danger')
@@ -236,12 +260,17 @@ def add_employee():
         # Fire webhook
         try:
             from payroll_engine.webhooks import fire_webhook
-            fire_webhook(_company_id(), 'employee.created', {
-                'employee_id': data.get('employee_id'),
-                'name': name,
-                'department': data.get('department'),
-                'basic_salary': float(data.get('basic_salary', 0)),
-            })
+
+            fire_webhook(
+                _company_id(),
+                'employee.created',
+                {
+                    'employee_id': data.get('employee_id'),
+                    'name': name,
+                    'department': data.get('department'),
+                    'basic_salary': float(data.get('basic_salary', 0)),
+                },
+            )
         except Exception:
             pass
 
@@ -255,10 +284,7 @@ def add_employee():
 @role_required('owner', 'accountant')
 def edit_employee(emp_id):
     """Edit an employee. Logs salary and bank account changes to audit trail."""
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(),
-        is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -271,6 +297,7 @@ def edit_employee(emp_id):
             name = ' '.join(p for p in parts if p)
         phone_raw = request.form.get('phone', '').strip()
         from decimal import Decimal, InvalidOperation
+
         try:
             basic = Decimal(request.form.get('basic_salary', '0') or '0')
         except (InvalidOperation, ValueError):
@@ -287,6 +314,7 @@ def edit_employee(emp_id):
 
         # Validate and normalize phone
         from payroll_engine.models import validate_ethiopian_phone, validate_fayda_fin
+
         if phone_raw:
             is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
             if not is_valid:
@@ -377,24 +405,26 @@ def edit_employee(emp_id):
         # Log to audit trail (one entry per changed field)
         for change_type, details in changes.items():
             create_audit_log(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action=change_type,
-            details={
+                company_id=_company_id(),
+                user_id=current_user.id,
+                action=change_type,
+                details={
                     'employee_id': emp.employee_id,
                     'employee_name': name,
                     **details,
-                }
-        )
+                },
+            )
 
         db.session.commit()
         from payroll_engine import trust_cache
+
         trust_cache.invalidate_trust_cache(_company_id())
 
         if changes:
             # Fire webhook for significant changes
             try:
                 from payroll_engine.webhooks import fire_webhook
+
                 webhook_data = {
                     'employee_id': emp.employee_id,
                     'employee_name': name,
@@ -408,7 +438,7 @@ def edit_employee(emp_id):
                 pass
 
             field_names = [c.replace('_', ' ') for c in changes]
-            flash(f'{name}\'s profile updated: {", ".join(field_names)}.', 'success')
+            flash(f"{name}'s profile updated: {', '.join(field_names)}.", 'success')
         else:
             flash(f'No changes for {name}.', 'info')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
@@ -421,65 +451,72 @@ def employee_detail(emp_id):
     """Show employee details."""
     from payroll_engine.overtime import DEFAULT_OVERTIME_RATES as OVERTIME_RATES
     from payroll_engine.overtime import calculate_overtime_pay
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(),
-        is_deleted=False
-    ).first_or_404()
+
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
     page = request.args.get('page', 1, type=int)
-    payslips_pagination = Payslip.query.filter_by(employee_id=emp.id) \
-        .order_by(Payslip.generated_at.desc()) \
+    payslips_pagination = (
+        Payslip.query.filter_by(employee_id=emp.id)
+        .order_by(Payslip.generated_at.desc())
         .paginate(page=page, per_page=12, error_out=False)
+    )
     payslips = payslips_pagination.items
     # Overtime entries for current month
     today = date.today()
     month_start = today.replace(day=1)
-    overtime_entries = OvertimeEntry.query.filter_by(
-        employee_id=emp.id, company_id=_company_id()
-    ).filter(OvertimeEntry.date >= month_start) \
-     .order_by(OvertimeEntry.date.desc()).all()
+    overtime_entries = (
+        OvertimeEntry.query.filter_by(employee_id=emp.id, company_id=_company_id())
+        .filter(OvertimeEntry.date >= month_start)
+        .order_by(OvertimeEntry.date.desc())
+        .all()
+    )
     # Calculate pay for each entry
     overtime_data = []
     total_ot_hours = 0
     total_ot_pay = 0
     for entry in overtime_entries:
         pay = calculate_overtime_pay(emp.basic_salary, entry.hours, entry.overtime_type)
-        overtime_data.append({
-            'entry': entry,
-            'pay': pay,
-            'rate': OVERTIME_RATES.get(entry.overtime_type, 1.0),
-        })
+        overtime_data.append(
+            {
+                'entry': entry,
+                'pay': pay,
+                'rate': OVERTIME_RATES.get(entry.overtime_type, 1.0),
+            }
+        )
         total_ot_hours += entry.hours
         total_ot_pay += pay
     # Deductions
-    deductions = EmployeeDeduction.query.filter_by(
-        employee_id=emp.id, company_id=_company_id()
-    ).order_by(EmployeeDeduction.created_at.desc()).all()
+    deductions = (
+        EmployeeDeduction.query.filter_by(employee_id=emp.id, company_id=_company_id())
+        .order_by(EmployeeDeduction.created_at.desc())
+        .all()
+    )
     active_deductions = [d for d in deductions if d.is_active]
     inactive_deductions = [d for d in deductions if not d.is_active]
     years = today.year
-    return render_template('employee_detail.html',
-                           employee=emp, payslips=payslips,
-                           payslips_pagination=payslips_pagination, year=years,
-                           overtime_data=overtime_data,
-                           total_ot_hours=round(total_ot_hours, 2),
-                           total_ot_pay=round(total_ot_pay, 2),
-                           overtime_types=list(OVERTIME_RATES.keys()),
-                           deductions=deductions,
-                           active_deductions=active_deductions,
-                           inactive_deductions=inactive_deductions,
-                           deduction_types=EmployeeDeduction.DEDUCTION_TYPES,
-                           allowance_records=emp.allowance_records,
-                           allowance_types=EmployeeAllowance.ALLOWANCE_TYPES,
-                           tax_treatments=EmployeeAllowance.TAX_TREATMENTS)
+    return render_template(
+        'employee_detail.html',
+        employee=emp,
+        payslips=payslips,
+        payslips_pagination=payslips_pagination,
+        year=years,
+        overtime_data=overtime_data,
+        total_ot_hours=round(total_ot_hours, 2),
+        total_ot_pay=round(total_ot_pay, 2),
+        overtime_types=list(OVERTIME_RATES.keys()),
+        deductions=deductions,
+        active_deductions=active_deductions,
+        inactive_deductions=inactive_deductions,
+        deduction_types=EmployeeDeduction.DEDUCTION_TYPES,
+        allowance_records=emp.allowance_records,
+        allowance_types=EmployeeAllowance.ALLOWANCE_TYPES,
+        tax_treatments=EmployeeAllowance.TAX_TREATMENTS,
+    )
 
 
 @employees_bp.route('/employees/<int:emp_id>/overtime', methods=['POST'])
 def add_overtime(emp_id):
     """Add overtime entry for an employee."""
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(),
-        is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
     ot_date = request.form.get('date')
     hours = request.form.get('hours', type=float)
     ot_type = request.form.get('overtime_type', 'day')
@@ -499,6 +536,7 @@ def add_overtime(emp_id):
     db.session.add(entry)
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Overtime added: {hours}h {ot_type} on {ot_date}.', 'success')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
@@ -507,13 +545,12 @@ def add_overtime(emp_id):
 @employees_bp.route('/overtime/<int:entry_id>/delete', methods=['POST'])
 def delete_overtime(entry_id):
     """Delete an overtime entry."""
-    entry = OvertimeEntry.query.filter_by(
-        id=entry_id, company_id=_company_id()
-    ).first_or_404()
+    entry = OvertimeEntry.query.filter_by(id=entry_id, company_id=_company_id()).first_or_404()
     emp_id = entry.employee_id
     db.session.delete(entry)
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     flash('Overtime entry deleted.', 'info')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -523,16 +560,14 @@ def delete_overtime(entry_id):
 
 # --- Employee Allowances ---
 
+
 @employees_bp.route('/employees/<int:emp_id>/allowances/add', methods=['POST'])
 @role_required('owner', 'accountant')
 def add_allowance(emp_id):
     """Add an allowance to an employee with tax treatment."""
     from decimal import Decimal, InvalidOperation
 
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(),
-        is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     allowance_type = request.form.get('allowance_type', '').strip()
     custom_type_name = request.form.get('custom_type_name', '').strip() or None
@@ -604,10 +639,11 @@ def add_allowance(emp_id):
             'allowance_type': allowance_type,
             'amount': str(amount),
             'tax_treatment': tax_treatment,
-        }
+        },
     )
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
 
     flash(f'{allowance.type_label} of ETB {amount:,.2f} added for {emp.name}.', 'success')
@@ -618,19 +654,19 @@ def add_allowance(emp_id):
 @role_required('owner', 'accountant')
 def delete_allowance(allowance_id):
     """Delete an allowance record."""
-    allowance = EmployeeAllowance.query.filter_by(
-        id=allowance_id, company_id=_company_id()
-    ).first_or_404()
+    allowance = EmployeeAllowance.query.filter_by(id=allowance_id, company_id=_company_id()).first_or_404()
     emp_id = allowance.employee_id
     db.session.delete(allowance)
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     flash('Allowance removed.', 'info')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
 
 # --- Employee Deductions ---
+
 
 @employees_bp.route('/employees/<int:emp_id>/deductions/add', methods=['POST'])
 @role_required('owner', 'accountant')
@@ -639,10 +675,7 @@ def add_deduction(emp_id):
     from datetime import datetime as dt
     from decimal import Decimal, InvalidOperation
 
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(),
-        is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     deduction_type = request.form.get('deduction_type', '').strip()
     label = request.form.get('label', '').strip()
@@ -703,17 +736,16 @@ def add_deduction(emp_id):
     # Parse total to recover (for declining mode)
     total_to_recover = None
     remaining_balance = None
-    if tracking_mode == 'declining':
-        if total_str:
-            try:
-                total_to_recover = Decimal(total_str)
-            except (InvalidOperation, ValueError):
-                flash('Invalid total to recover.', 'danger')
-                return redirect(url_for('employees.employee_detail', emp_id=emp_id))
-            if total_to_recover <= 0:
-                flash('Total to recover must be positive.', 'danger')
-                return redirect(url_for('employees.employee_detail', emp_id=emp_id))
-            remaining_balance = total_to_recover
+    if tracking_mode == 'declining' and total_str:
+        try:
+            total_to_recover = Decimal(total_str)
+        except (InvalidOperation, ValueError):
+            flash('Invalid total to recover.', 'danger')
+            return redirect(url_for('employees.employee_detail', emp_id=emp_id))
+        if total_to_recover <= 0:
+            flash('Total to recover must be positive.', 'danger')
+            return redirect(url_for('employees.employee_detail', emp_id=emp_id))
+        remaining_balance = total_to_recover
 
     # Handle document upload
     document_path = None
@@ -723,6 +755,7 @@ def add_deduction(emp_id):
         file = request.files['document']
         if file.filename:
             from werkzeug.utils import secure_filename
+
             ext = os.path.splitext(file.filename)[1].lower()
             if ext not in _ALLOWED_EXTENSIONS:
                 flash(f'File type "{ext}" is not allowed. Accepted: {", ".join(sorted(_ALLOWED_EXTENSIONS))}', 'danger')
@@ -733,7 +766,7 @@ def add_deduction(emp_id):
                 flash('File content does not match an accepted document type.', 'danger')
                 return redirect(url_for('employees.employee_detail', emp_id=emp_id))
             filename = secure_filename(file.filename)
-            filename = f"deduction_{uuid.uuid4().hex[:8]}_{filename}"
+            filename = f'deduction_{uuid.uuid4().hex[:8]}_{filename}'
             upload_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'deductions')
             os.makedirs(upload_dir, exist_ok=True)
             document_path = os.path.join(upload_dir, filename)
@@ -744,7 +777,7 @@ def add_deduction(emp_id):
         flash(
             f'Warning: Court order deduction is {amount}% of net pay. '
             f'Ethiopian labor law caps at 1/3 (33.33%) standard, 1/2 (50%) for child support.',
-            'warning'
+            'warning',
         )
 
     deduction = EmployeeDeduction(
@@ -779,10 +812,11 @@ def add_deduction(emp_id):
             'amount_mode': amount_mode,
             'tracking_mode': tracking_mode,
             'reference_number': reference_number,
-        }
+        },
     )
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
 
     flash(f'Deduction "{label}" added for {emp.name}.', 'success')
@@ -793,26 +827,25 @@ def add_deduction(emp_id):
 @role_required('owner', 'accountant')
 def stop_deduction(ded_id):
     """Stop (deactivate) a deduction."""
-    ded = EmployeeDeduction.query.filter_by(
-        id=ded_id, company_id=_company_id()
-    ).first_or_404()
+    ded = EmployeeDeduction.query.filter_by(id=ded_id, company_id=_company_id()).first_or_404()
     reason = request.form.get('reason', '').strip() or 'Manually stopped'
     ded.is_active = False
     ded.stopped_reason = reason
     create_audit_log(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='deduction_stopped',
-            details={
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='deduction_stopped',
+        details={
             'deduction_id': ded.id,
             'employee_id': ded.employee_id,
             'deduction_type': ded.deduction_type,
             'label': ded.label,
             'reason': reason,
-        }
-        )
+        },
+    )
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Deduction "{ded.label}" stopped.', 'info')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -824,24 +857,23 @@ def stop_deduction(ded_id):
 @role_required('owner')
 def delete_deduction(ded_id):
     """Delete a deduction (owner only). Use stop for audit trail."""
-    ded = EmployeeDeduction.query.filter_by(
-        id=ded_id, company_id=_company_id()
-    ).first_or_404()
+    ded = EmployeeDeduction.query.filter_by(id=ded_id, company_id=_company_id()).first_or_404()
     emp_id = ded.employee_id
     create_audit_log(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='deduction_deleted',
-            details={
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='deduction_deleted',
+        details={
             'deduction_id': ded.id,
             'employee_id': emp_id,
             'label': ded.label,
             'deduction_type': ded.deduction_type,
-        }
-        )
+        },
+    )
     db.session.delete(ded)
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Deduction "{ded.label}" deleted.', 'warning')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
@@ -851,27 +883,28 @@ def delete_deduction(ded_id):
 @role_required('owner')
 def deactivate_employee(emp_id):
     """Soft-delete an employee (deactivate). Preserves payroll history."""
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(), is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
     emp.is_deleted = True
     emp.deleted_at = datetime.now(UTC).replace(tzinfo=None)
     emp.deleted_by = current_user.id
     create_audit_log(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='employee_deactivated',
-            details={'employee_id': emp.employee_id, 'name': emp.name}
-        )
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='employee_deactivated',
+        details={'employee_id': emp.employee_id, 'name': emp.name},
+    )
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({
-            'success': True,
-            'message': f'{emp.name} has been deactivated. Payroll history preserved.',
-            'employee_id': emp.id,
-        })
+        return jsonify(
+            {
+                'success': True,
+                'message': f'{emp.name} has been deactivated. Payroll history preserved.',
+                'employee_id': emp.id,
+            }
+        )
     flash(f'{emp.name} has been deactivated. Payroll history preserved.', 'info')
     return redirect(url_for('employees.list_employees'))
 
@@ -880,20 +913,19 @@ def deactivate_employee(emp_id):
 @role_required('owner')
 def reactivate_employee(emp_id):
     """Reactivate a soft-deleted employee."""
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(), is_deleted=True
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=True).first_or_404()
     emp.is_deleted = False
     emp.deleted_at = None
     emp.deleted_by = None
     create_audit_log(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='employee_reactivated',
-            details={'employee_id': emp.employee_id, 'name': emp.name}
-        )
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='employee_reactivated',
+        details={'employee_id': emp.employee_id, 'name': emp.name},
+    )
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'{emp.name} has been reactivated.', 'success')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -908,9 +940,7 @@ def terminate_employee(emp_id):
     from payroll_engine.services.settlement_service import create_settlement_record
     from payroll_engine.severance import TerminationReason
 
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(), is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     if request.method == 'POST':
         reason = request.form.get('termination_reason', '').strip()
@@ -926,6 +956,7 @@ def terminate_employee(emp_id):
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
         from datetime import datetime as dt
+
         end_date = date.today()
         if end_date_str:
             try:
@@ -951,6 +982,7 @@ def terminate_employee(emp_id):
 
         # Deactivate all pending deductions
         from payroll_engine.models import EmployeeDeduction
+
         active_deductions = EmployeeDeduction.query.filter_by(
             employee_id=emp.id, company_id=_company_id(), is_active=True
         ).all()
@@ -960,10 +992,10 @@ def terminate_employee(emp_id):
 
         # Audit log
         create_audit_log(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='employee_terminated',
-        details={
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='employee_terminated',
+            details={
                 'employee_id': emp.employee_id,
                 'name': emp.name,
                 'reason': reason,
@@ -973,19 +1005,24 @@ def terminate_employee(emp_id):
                 'severance_amount': str(settlement.severance_pay),
                 'settlement_id': settlement.id,
                 'net_final_payment': str(settlement.net_final_payment),
-            }
-    )
+            },
+        )
         db.session.commit()
         from payroll_engine import trust_cache
+
         trust_cache.invalidate_trust_cache(_company_id())
 
-        flash(f'{emp.name} terminated. Final settlement: ETB {settlement.net_final_payment:,.2f} '
-              f'(Outstanding: {settlement.outstanding_salary:,.2f} + Severance: {settlement.severance_pay:,.2f} + '
-              f'Leave: {settlement.leave_encashment:,.2f} - Deductions: {settlement.total_deductions:,.2f}).', 'warning')
+        flash(
+            f'{emp.name} terminated. Final settlement: ETB {settlement.net_final_payment:,.2f} '
+            f'(Outstanding: {settlement.outstanding_salary:,.2f} + Severance: {settlement.severance_pay:,.2f} + '
+            f'Leave: {settlement.leave_encashment:,.2f} - Deductions: {settlement.total_deductions:,.2f}).',
+            'warning',
+        )
         return redirect(url_for('employees.settlement_detail', settlement_id=settlement.id))
 
     # GET: show termination form with severance preview
     from payroll_engine.severance import calculate_severance
+
     today = date.today()
     start = emp.start_date or (emp.created_at.date() if emp.created_at else today)
     previews = {}
@@ -993,36 +1030,34 @@ def terminate_employee(emp_id):
         result = calculate_severance(emp.basic_salary, start, today, r)
         previews[r] = result
 
-    return render_template('terminate_employee.html',
-                           employee=emp,
-                           start_date=start,
-                           today=today,
-                           previews=previews,
-                           termination_reasons=TerminationReason.ALL)
+    return render_template(
+        'terminate_employee.html',
+        employee=emp,
+        start_date=start,
+        today=today,
+        previews=previews,
+        termination_reasons=TerminationReason.ALL,
+    )
 
 
 @employees_bp.route('/settlements/<int:settlement_id>')
 def settlement_detail(settlement_id):
     """Show final settlement details."""
-    settlement = FinalSettlement.query.filter_by(
-        id=settlement_id, company_id=_company_id()
-    ).first_or_404()
-    return render_template('settlement_detail.html',
-                           settlement=settlement,
-                           employee=settlement.employee,
-                           year=date.today().year)
+    settlement = FinalSettlement.query.filter_by(id=settlement_id, company_id=_company_id()).first_or_404()
+    return render_template(
+        'settlement_detail.html', settlement=settlement, employee=settlement.employee, year=date.today().year
+    )
 
 
 # --- Leave Management ---
+
 
 @employees_bp.route('/employees/<int:emp_id>/leave')
 def employee_leave_balance(emp_id):
     """Show leave balances for an employee."""
     from payroll_engine.leave import LeaveType, calculate_leave_balance
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(),
-        is_deleted=False
-    ).first_or_404()
+
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     year = request.args.get('year', date.today().year, type=int)
 
@@ -1030,12 +1065,17 @@ def employee_leave_balance(emp_id):
     balances = {}
     for leave_type in [LeaveType.ANNUAL, LeaveType.SICK, LeaveType.MATERNITY, LeaveType.PATERNITY, LeaveType.SPECIAL]:
         # Get actual taken days from Leave records
-        taken = db.session.query(db.func.sum(Leave.days_requested)).filter(
-            Leave.employee_id == emp.id,
-            Leave.leave_type == leave_type,
-            Leave.status == 'approved',
-            db.extract('year', Leave.start_date) == year
-        ).scalar() or 0
+        taken = (
+            db.session.query(db.func.sum(Leave.days_requested))
+            .filter(
+                Leave.employee_id == emp.id,
+                Leave.leave_type == leave_type,
+                Leave.status == 'approved',
+                db.extract('year', Leave.start_date) == year,
+            )
+            .scalar()
+            or 0
+        )
 
         balances[leave_type] = calculate_leave_balance(
             employee_start_date=emp.start_date or emp.created_at.date(),
@@ -1045,15 +1085,11 @@ def employee_leave_balance(emp_id):
         )
 
     # Get leave history
-    leaves = Leave.query.filter_by(employee_id=emp.id) \
-        .order_by(Leave.applied_at.desc()).limit(20).all()
+    leaves = Leave.query.filter_by(employee_id=emp.id).order_by(Leave.applied_at.desc()).limit(20).all()
 
-    return render_template('employee_leave.html',
-                           employee=emp,
-                           balances=balances,
-                           leaves=leaves,
-                           year=year,
-                           current_year=date.today().year)
+    return render_template(
+        'employee_leave.html', employee=emp, balances=balances, leaves=leaves, year=year, current_year=date.today().year
+    )
 
 
 @employees_bp.route('/employees/<int:emp_id>/leave/request', methods=['POST'])
@@ -1063,10 +1099,7 @@ def request_leave(emp_id):
 
     from payroll_engine.leave import calculate_leave_balance, validate_leave_request
 
-    emp = Employee.query.filter_by(
-        id=emp_id, company_id=_company_id(),
-        is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     leave_type = request.form.get('leave_type', '').strip()
     start_date_str = request.form.get('start_date', '').strip()
@@ -1087,12 +1120,17 @@ def request_leave(emp_id):
         return redirect(url_for('employees.employee_leave_balance', emp_id=emp_id))
 
     # Get current balance
-    taken = db.session.query(db.func.sum(Leave.days_requested)).filter(
-        Leave.employee_id == emp.id,
-        Leave.leave_type == leave_type,
-        Leave.status == 'approved',
-        db.extract('year', Leave.start_date) == date.today().year
-    ).scalar() or 0
+    taken = (
+        db.session.query(db.func.sum(Leave.days_requested))
+        .filter(
+            Leave.employee_id == emp.id,
+            Leave.leave_type == leave_type,
+            Leave.status == 'approved',
+            db.extract('year', Leave.start_date) == date.today().year,
+        )
+        .scalar()
+        or 0
+    )
 
     balance = calculate_leave_balance(
         employee_start_date=emp.start_date or emp.created_at.date(),
@@ -1140,7 +1178,7 @@ def request_leave(emp_id):
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat(),
             'days': days_requested,
-        }
+        },
     )
     db.session.commit()
 
@@ -1152,9 +1190,7 @@ def request_leave(emp_id):
 @role_required('owner', 'accountant')
 def approve_leave(leave_id):
     """Approve a leave request."""
-    leave = Leave.query.filter_by(
-        id=leave_id, company_id=_company_id()
-    ).first_or_404()
+    leave = Leave.query.filter_by(id=leave_id, company_id=_company_id()).first_or_404()
 
     if leave.status != 'pending':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1186,16 +1222,16 @@ def approve_leave(leave_id):
     balance.taken = (balance.taken or 0) + leave.days_requested
 
     create_audit_log(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='leave_approved',
-            details={
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='leave_approved',
+        details={
             'leave_id': leave.id,
             'employee_id': leave.employee_id,
             'leave_type': leave.leave_type,
             'days': leave.days_requested,
-        }
-        )
+        },
+    )
     create_notification(
         company_id=_company_id(),
         user_id=current_user.id,
@@ -1208,6 +1244,7 @@ def approve_leave(leave_id):
     # Send WhatsApp notification to employee
     try:
         from payroll_engine.notifications import notify_leave_decision
+
         notify_leave_decision(leave, 'approved', current_user.phone or current_user.email)
     except Exception:
         pass  # Don't fail approval if notification fails
@@ -1215,25 +1252,32 @@ def approve_leave(leave_id):
     # Fire webhook
     try:
         from payroll_engine.webhooks import fire_webhook
-        fire_webhook(_company_id(), 'leave.approved', {
-            'leave_id': leave.id,
-            'employee_id': leave.employee_id,
-            'leave_type': leave.leave_type,
-            'days': leave.days_requested,
-            'start_date': str(leave.start_date),
-            'end_date': str(leave.end_date),
-            'approved_by': current_user.id,
-        })
+
+        fire_webhook(
+            _company_id(),
+            'leave.approved',
+            {
+                'leave_id': leave.id,
+                'employee_id': leave.employee_id,
+                'leave_type': leave.leave_type,
+                'days': leave.days_requested,
+                'start_date': str(leave.start_date),
+                'end_date': str(leave.end_date),
+                'approved_by': current_user.id,
+            },
+        )
     except Exception:
         pass
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({
-            'success': True,
-            'message': f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.',
-            'leave_id': leave.id,
-            'status': 'approved',
-        })
+        return jsonify(
+            {
+                'success': True,
+                'message': f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.',
+                'leave_id': leave.id,
+                'status': 'approved',
+            }
+        )
     flash(f'Leave approved: {leave.days_requested} days of {leave.leave_type} leave.', 'success')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
@@ -1242,9 +1286,7 @@ def approve_leave(leave_id):
 @role_required('owner', 'accountant')
 def reject_leave(leave_id):
     """Reject a leave request."""
-    leave = Leave.query.filter_by(
-        id=leave_id, company_id=_company_id()
-    ).first_or_404()
+    leave = Leave.query.filter_by(id=leave_id, company_id=_company_id()).first_or_404()
 
     if leave.status != 'pending':
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1267,15 +1309,15 @@ def reject_leave(leave_id):
     leave.rejection_reason = reason
 
     create_audit_log(
-            company_id=_company_id(),
-            user_id=current_user.id,
-            action='leave_rejected',
-            details={
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='leave_rejected',
+        details={
             'leave_id': leave.id,
             'employee_id': leave.employee_id,
             'reason': reason,
-        }
-        )
+        },
+    )
     create_notification(
         company_id=_company_id(),
         user_id=current_user.id,
@@ -1288,6 +1330,7 @@ def reject_leave(leave_id):
     # Send WhatsApp notification to employee
     try:
         from payroll_engine.notifications import notify_leave_decision
+
         notify_leave_decision(leave, 'rejected', current_user.phone or current_user.email)
     except Exception:
         pass
@@ -1295,31 +1338,37 @@ def reject_leave(leave_id):
     # Fire webhook
     try:
         from payroll_engine.webhooks import fire_webhook
-        fire_webhook(_company_id(), 'leave.rejected', {
-            'leave_id': leave.id,
-            'employee_id': leave.employee_id,
-            'leave_type': leave.leave_type,
-            'days': leave.days_requested,
-            'reason': reason,
-            'rejected_by': current_user.id,
-        })
+
+        fire_webhook(
+            _company_id(),
+            'leave.rejected',
+            {
+                'leave_id': leave.id,
+                'employee_id': leave.employee_id,
+                'leave_type': leave.leave_type,
+                'days': leave.days_requested,
+                'reason': reason,
+                'rejected_by': current_user.id,
+            },
+        )
     except Exception:
         pass
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({
-            'success': True,
-            'message': 'Leave request rejected.',
-            'leave_id': leave.id,
-            'status': 'rejected',
-        })
+        return jsonify(
+            {
+                'success': True,
+                'message': 'Leave request rejected.',
+                'leave_id': leave.id,
+                'status': 'rejected',
+            }
+        )
     flash('Leave request rejected.', 'warning')
     return redirect(url_for('employees.employee_leave_balance', emp_id=leave.employee_id))
 
 
-
-
 # --- Company-Wide Leave Management ---
+
 
 @employees_bp.route('/leave')
 @role_required('owner', 'accountant')
@@ -1329,6 +1378,7 @@ def leave_management():
     type_filter = request.args.get('type', '').strip()
 
     from sqlalchemy.orm import joinedload as _joinedload
+
     query = Leave.query.options(_joinedload(Leave.employee)).filter(Leave.company_id == _company_id())
 
     if status_filter:
@@ -1337,9 +1387,7 @@ def leave_management():
         query = query.filter(Leave.leave_type == type_filter)
 
     page = request.args.get('page', 1, type=int)
-    pagination = query.order_by(Leave.applied_at.desc()).paginate(
-        page=page, per_page=20, error_out=False
-    )
+    pagination = query.order_by(Leave.applied_at.desc()).paginate(page=page, per_page=20, error_out=False)
     leaves = pagination.items
 
     # Summary counts
@@ -1380,6 +1428,7 @@ def _calculate_unpaid_leave_deduction(employee, company_id, pay_period_start, pa
     from decimal import Decimal
 
     from payroll_engine.leave import LeaveType
+
     # Get all approved unpaid leave that overlaps with the pay period
     unpaid_leaves = Leave.query.filter(
         Leave.company_id == company_id,
@@ -1414,6 +1463,7 @@ def _calculate_unpaid_leave_deduction(employee, company_id, pay_period_start, pa
 
 # --- Profile Change Request Management (Admin) ---
 
+
 @employees_bp.route('/profile-changes')
 @role_required('owner', 'accountant')
 def profile_changes():
@@ -1437,9 +1487,7 @@ def profile_changes():
     )
     changes = pagination.items
 
-    pending_count = ProfileChangeRequest.query.filter_by(
-        company_id=_company_id(), status='pending'
-    ).count()
+    pending_count = ProfileChangeRequest.query.filter_by(company_id=_company_id(), status='pending').count()
 
     return render_template(
         'profile_changes.html',
@@ -1457,9 +1505,7 @@ def approve_profile_change(change_id):
     from payroll_engine.models import ProfileChangeRequest
     from payroll_engine.shared import create_audit_log, create_notification
 
-    change = ProfileChangeRequest.query.filter_by(
-        id=change_id, company_id=_company_id()
-    ).first_or_404()
+    change = ProfileChangeRequest.query.filter_by(id=change_id, company_id=_company_id()).first_or_404()
 
     if change.status != ProfileChangeRequest.STATUS_PENDING:
         flash('This request has already been reviewed.', 'warning')
@@ -1477,20 +1523,23 @@ def approve_profile_change(change_id):
 
     # Audit log
     create_audit_log(
-        _company_id(), current_user.id, 'profile_change_approved',
+        _company_id(),
+        current_user.id,
+        'profile_change_approved',
         {
             'employee_id': emp.id,
             'field': change.field_name,
             'old_value': str(old_val),
             'new_value': change.new_value,
             'change_request_id': change.id,
-        }
+        },
     )
 
     # Notify employee
     if emp.user_id:
         create_notification(
-            _company_id(), emp.user_id,
+            _company_id(),
+            emp.user_id,
             f'Your {change.field_label} change has been approved.',
             type='success',
             link=url_for('portal.my_profile'),
@@ -1498,10 +1547,18 @@ def approve_profile_change(change_id):
 
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_company_id())
     flash(f'Approved {change.field_label} change for {emp.name}.', 'success')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'success': True, 'message': f'Approved {change.field_label} change for {emp.name}.', 'change_id': change.id, 'status': 'approved'})
+        return jsonify(
+            {
+                'success': True,
+                'message': f'Approved {change.field_label} change for {emp.name}.',
+                'change_id': change.id,
+                'status': 'approved',
+            }
+        )
     return redirect(url_for('employees.profile_changes'))
 
 
@@ -1512,9 +1569,7 @@ def reject_profile_change(change_id):
     from payroll_engine.models import ProfileChangeRequest
     from payroll_engine.shared import create_audit_log, create_notification
 
-    change = ProfileChangeRequest.query.filter_by(
-        id=change_id, company_id=_company_id()
-    ).first_or_404()
+    change = ProfileChangeRequest.query.filter_by(id=change_id, company_id=_company_id()).first_or_404()
 
     if change.status != ProfileChangeRequest.STATUS_PENDING:
         flash('This request has already been reviewed.', 'warning')
@@ -1528,20 +1583,23 @@ def reject_profile_change(change_id):
     change.reviewed_at = datetime.now(UTC).replace(tzinfo=None)
 
     create_audit_log(
-        _company_id(), current_user.id, 'profile_change_rejected',
+        _company_id(),
+        current_user.id,
+        'profile_change_rejected',
         {
             'employee_id': change.employee_id,
             'field': change.field_name,
             'new_value': change.new_value,
             'reason': reason,
             'change_request_id': change.id,
-        }
+        },
     )
 
     emp = change.employee
     if emp.user_id:
         create_notification(
-            _company_id(), emp.user_id,
+            _company_id(),
+            emp.user_id,
             f'Your {change.field_label} change was rejected. {reason or ""}',
             type='danger',
             link=url_for('portal.my_profile'),
@@ -1550,5 +1608,12 @@ def reject_profile_change(change_id):
     db.session.commit()
     flash(f'Rejected {change.field_label} change for {emp.name}.', 'info')
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'success': True, 'message': f'Rejected {change.field_label} change for {emp.name}.', 'change_id': change.id, 'status': 'rejected'})
+        return jsonify(
+            {
+                'success': True,
+                'message': f'Rejected {change.field_label} change for {emp.name}.',
+                'change_id': change.id,
+                'status': 'rejected',
+            }
+        )
     return redirect(url_for('employees.profile_changes'))

@@ -6,6 +6,7 @@ Upload → Calculate → Review → Approve → File
 
 Uses real SQLite database (not mocks) to verify data flows correctly.
 """
+
 import os
 import sys
 from datetime import date
@@ -25,6 +26,7 @@ def app():
     """Create a test app with real database."""
     from payroll_engine import create_app
     from payroll_engine import db as _db
+
     app = create_app()
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
@@ -73,11 +75,14 @@ class TestIntegrationPayrollFlow:
             db.session.add(user)
 
             employees = []
-            for i, (name, dept, salary, bank) in enumerate([
-                ('Dawit Kebede', 'Finance', 15000, '1000123456789'),
-                ('Hana Tesfaye', 'IT', 20000, '1000987654321'),
-                ('Kebede Alemu', 'HR', 12000, '1000555666777'),
-            ], 1):
+            for i, (name, dept, salary, bank) in enumerate(
+                [
+                    ('Dawit Kebede', 'Finance', 15000, '1000123456789'),
+                    ('Hana Tesfaye', 'IT', 20000, '1000987654321'),
+                    ('Kebede Alemu', 'HR', 12000, '1000555666777'),
+                ],
+                1,
+            ):
                 emp = Employee(
                     employee_id=f'EMP-{i:03d}',
                     name=name,
@@ -178,6 +183,7 @@ class TestIntegrationPayrollFlow:
             # Step 9: Accounting export
             # ─────────────────────────────────────────
             from payroll_engine.accounting_bp import _generate_journal_entries
+
             journal = _generate_journal_entries(run.id, company.id)
             assert journal is not None
             assert journal['balanced'] is True
@@ -189,14 +195,16 @@ class TestIntegrationPayrollFlow:
             from payroll_engine.bank_file import generate_csv
 
             payments = []
-            for emp, gross, tax, pension, net in payslip_data:
-                payments.append({
-                    'employee_id': emp.employee_id,
-                    'employee_name': emp.name,
-                    'account_number': emp.bank_or_telebirr,
-                    'amount': net,
-                    'bank': 'cbe',
-                })
+            for emp, _gross, _tax, _pension, net in payslip_data:
+                payments.append(
+                    {
+                        'employee_id': emp.employee_id,
+                        'employee_name': emp.name,
+                        'account_number': emp.bank_or_telebirr,
+                        'amount': net,
+                        'bank': 'cbe',
+                    }
+                )
 
             csv_output = generate_csv(payments, 'cbe')
             assert len(csv_output) > 0
@@ -224,7 +232,7 @@ class TestIntegrationPayrollFlow:
 
             # Re-check filing workspace
             filing2 = build_filing_workspace(run.id, company.id, db, trust_models)
-            erca_step = [s for s in filing2.steps if 'ERCA' in s.name][0]
+            erca_step = next(s for s in filing2.steps if 'ERCA' in s.name)
             assert erca_step.status == 'filed'
 
     def test_blocking_issues_prevent_approval(self, app):
@@ -240,26 +248,35 @@ class TestIntegrationPayrollFlow:
             db.session.flush()
 
             emp = Employee(
-                employee_id='EMP-001', name='Dawit',
-                basic_salary=Decimal('10000'), allowances=Decimal('0'),
-                bank_or_telebirr='1000123456789', tin='TIN001',
-                phone='+251911000001', company_id=company.id,
+                employee_id='EMP-001',
+                name='Dawit',
+                basic_salary=Decimal('10000'),
+                allowances=Decimal('0'),
+                bank_or_telebirr='1000123456789',
+                tin='TIN001',
+                phone='+251911000001',
+                company_id=company.id,
             )
             db.session.add(emp)
             db.session.commit()
 
             run = PayrollRun(
-                company_id=company.id, run_date=date(2026, 8, 1),
-                status='completed', period='2018-10',
+                company_id=company.id,
+                run_date=date(2026, 8, 1),
+                status='completed',
+                period='2018-10',
             )
             db.session.add(run)
             db.session.flush()
 
             # Negative net pay (blocking)
             ps = Payslip(
-                payroll_run_id=run.id, employee_id=emp.id,
-                gross_salary=Decimal('10000'), tax=Decimal('12000'),
-                employee_pension=Decimal('700'), employer_pension=Decimal('700'),
+                payroll_run_id=run.id,
+                employee_id=emp.id,
+                gross_salary=Decimal('10000'),
+                tax=Decimal('12000'),
+                employee_pension=Decimal('700'),
+                employer_pension=Decimal('700'),
                 net_pay=Decimal('-2700'),
             )
             db.session.add(ps)
@@ -270,7 +287,7 @@ class TestIntegrationPayrollFlow:
             assert exceptions.has_blocking is True
             assert exceptions.can_approve is False
 
-            neg_issue = [i for i in exceptions.issues if i.code == 'NEGATIVE_NET_PAY'][0]
+            neg_issue = next(i for i in exceptions.issues if i.code == 'NEGATIVE_NET_PAY')
             assert neg_issue.impact is not None
             assert neg_issue.cause is not None
             assert neg_issue.recommendation is not None

@@ -4,6 +4,7 @@ instead of being lost when a Flask session expires.
 
 This is the fix for the session-based data loss bug.
 """
+
 import os
 import sys
 
@@ -51,20 +52,34 @@ def _create_company_and_run():
 # ---------------------------------------------------------------
 def test_draft_store_and_retrieve(ctx):
     """Data stored in PayrollDraft can be retrieved intact."""
-    company, run = _create_company_and_run()
+    _company, run = _create_company_and_run()
 
     sample_data = [
         {
-            'id': 'EMP001', 'name': 'Alice', 'basic': 8000,
-            'allowances': 2000, 'gross': 10000, 'taxable': 9440,
-            'tax': 1959.0, 'pension_employee': 560, 'pension_employer': 880,
-            'net': 7481.0, 'bank': 'telebirr:0911111111',
+            'id': 'EMP001',
+            'name': 'Alice',
+            'basic': 8000,
+            'allowances': 2000,
+            'gross': 10000,
+            'taxable': 9440,
+            'tax': 1959.0,
+            'pension_employee': 560,
+            'pension_employer': 880,
+            'net': 7481.0,
+            'bank': 'telebirr:0911111111',
         },
         {
-            'id': 'EMP002', 'name': 'Bob', 'basic': 12000,
-            'allowances': 3000, 'gross': 15000, 'taxable': 14160,
-            'tax': 2901.0, 'pension_employee': 840, 'pension_employer': 1320,
-            'net': 11259.0, 'bank': 'bank:cbe',
+            'id': 'EMP002',
+            'name': 'Bob',
+            'basic': 12000,
+            'allowances': 3000,
+            'gross': 15000,
+            'taxable': 14160,
+            'tax': 2901.0,
+            'pension_employee': 840,
+            'pension_employer': 1320,
+            'net': 11259.0,
+            'bank': 'bank:cbe',
         },
     ]
 
@@ -91,12 +106,23 @@ def test_draft_survives_session_expiry(ctx):
     session expires. Simulate by creating draft, then reading it
     in a completely separate query context.
     """
-    company, run = _create_company_and_run()
+    _company, run = _create_company_and_run()
 
-    sample_data = [{'id': 'EMP001', 'name': 'Alice', 'basic': 5000,
-                    'allowances': 0, 'gross': 5000, 'taxable': 4650,
-                    'tax': 472.5, 'pension_employee': 350, 'pension_employer': 550,
-                    'net': 4177.5, 'bank': 'cash'}]
+    sample_data = [
+        {
+            'id': 'EMP001',
+            'name': 'Alice',
+            'basic': 5000,
+            'allowances': 0,
+            'gross': 5000,
+            'taxable': 4650,
+            'tax': 472.5,
+            'pension_employee': 350,
+            'pension_employer': 550,
+            'net': 4177.5,
+            'bank': 'cash',
+        }
+    ]
 
     draft = PayrollDraft(payroll_run_id=run.id, employee_data=sample_data)
     db.session.add(draft)
@@ -118,7 +144,7 @@ def test_draft_survives_session_expiry(ctx):
 # ---------------------------------------------------------------
 def test_draft_cleanup_after_approval(ctx):
     """After payroll is approved, draft should be deleted."""
-    company, run = _create_company_and_run()
+    _company, run = _create_company_and_run()
 
     draft = PayrollDraft(payroll_run_id=run.id, employee_data=[{'id': 'EMP001'}])
     db.session.add(draft)
@@ -136,7 +162,7 @@ def test_draft_cleanup_after_approval(ctx):
 # ---------------------------------------------------------------
 def test_draft_relationship(ctx):
     """PayrollRun.draft should return the associated draft."""
-    company, run = _create_company_and_run()
+    _company, run = _create_company_and_run()
 
     draft = PayrollDraft(payroll_run_id=run.id, employee_data=[{'id': 'EMP001'}])
     db.session.add(draft)
@@ -151,7 +177,7 @@ def test_draft_relationship(ctx):
 # ---------------------------------------------------------------
 def test_draft_empty_data(ctx):
     """An empty list is valid (edge case: CSV with headers but no rows)."""
-    company, run = _create_company_and_run()
+    _company, run = _create_company_and_run()
 
     draft = PayrollDraft(payroll_run_id=run.id, employee_data=[])
     db.session.add(draft)
@@ -166,18 +192,25 @@ def test_draft_empty_data(ctx):
 # ---------------------------------------------------------------
 def test_draft_large_dataset(ctx):
     """100 employees should store and retrieve without issues."""
-    company, run = _create_company_and_run()
+    _company, run = _create_company_and_run()
 
     large_data = []
     for i in range(100):
-        large_data.append({
-            'id': f'EMP{i:03d}', 'name': f'Employee {i}',
-            'basic': 5000 + i * 100, 'allowances': 1000,
-            'gross': 6000 + i * 100, 'taxable': 5580 + i * 100,
-            'tax': 500, 'pension_employee': 350 + i * 7,
-            'pension_employer': 550 + i * 11, 'net': 5000 + i * 100,
-            'bank': 'cash',
-        })
+        large_data.append(
+            {
+                'id': f'EMP{i:03d}',
+                'name': f'Employee {i}',
+                'basic': 5000 + i * 100,
+                'allowances': 1000,
+                'gross': 6000 + i * 100,
+                'taxable': 5580 + i * 100,
+                'tax': 500,
+                'pension_employee': 350 + i * 7,
+                'pension_employer': 550 + i * 11,
+                'net': 5000 + i * 100,
+                'bank': 'cash',
+            }
+        )
 
     draft = PayrollDraft(payroll_run_id=run.id, employee_data=large_data)
     db.session.add(draft)

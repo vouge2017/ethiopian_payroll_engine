@@ -11,6 +11,7 @@ Invalidation:
 
 Pattern follows existing rule caches (tax.py, pension.py, overtime.py).
 """
+
 import logging
 import time
 
@@ -48,12 +49,12 @@ def _get(cache: dict, run_id: int, company_id: int):
     key = _cache_key(run_id, company_id)
     entry = cache.get(key)
     if _is_fresh(entry):
-        logger.debug("Trust cache HIT for %s", key)
+        logger.debug('Trust cache HIT for %s', key)
         return entry[0]
     if entry:
         # Expired — clean up
         del cache[key]
-    logger.debug("Trust cache MISS for %s", key)
+    logger.debug('Trust cache MISS for %s', key)
     return None
 
 
@@ -61,12 +62,13 @@ def _put(cache: dict, run_id: int, company_id: int, value):
     """Store a value in cache with current timestamp."""
     key = _cache_key(run_id, company_id)
     cache[key] = (value, time.time())
-    logger.debug("Trust cache PUT for %s", key)
+    logger.debug('Trust cache PUT for %s', key)
 
 
 # ─────────────────────────────────────────
 # Public API — Getters
 # ─────────────────────────────────────────
+
 
 def get_change_summary(run_id: int, company_id: int):
     """Get cached ChangeSummary or None."""
@@ -97,6 +99,7 @@ def get_filing_workspace(run_id: int, company_id: int):
 # Public API — Setters
 # ─────────────────────────────────────────
 
+
 def put_change_summary(run_id: int, company_id: int, value):
     """Cache a ChangeSummary result."""
     _put(_change_cache, run_id, company_id, value)
@@ -126,7 +129,8 @@ def put_filing_workspace(run_id: int, company_id: int, value):
 # Invalidation
 # ─────────────────────────────────────────
 
-def invalidate_trust_cache(company_id: int = None):
+
+def invalidate_trust_cache(company_id: int | None = None):
     """Invalidate all cached trust components.
 
     Args:
@@ -139,33 +143,31 @@ def invalidate_trust_cache(company_id: int = None):
         _evidence_cache.clear()
         _exceptions_cache.clear()
         _filing_cache.clear()
-        logger.info("Trust cache: full flush (all companies)")
+        logger.info('Trust cache: full flush (all companies)')
         return
 
     # Selective invalidation — only remove entries for this company
-    for cache in (_change_cache, _narrative_cache, _evidence_cache,
-                  _exceptions_cache, _filing_cache):
+    for cache in (_change_cache, _narrative_cache, _evidence_cache, _exceptions_cache, _filing_cache):
         keys_to_remove = [k for k in cache if k[1] == company_id]
         for key in keys_to_remove:
             del cache[key]
 
-    logger.info("Trust cache: invalidated for company_id=%d", company_id)
+    logger.info('Trust cache: invalidated for company_id=%d', company_id)
 
 
 def invalidate_run(run_id: int, company_id: int):
     """Invalidate all cached trust components for a specific run."""
     key = _cache_key(run_id, company_id)
-    for cache in (_change_cache, _narrative_cache, _evidence_cache,
-                  _exceptions_cache, _filing_cache):
+    for cache in (_change_cache, _narrative_cache, _evidence_cache, _exceptions_cache, _filing_cache):
         if key in cache:
             del cache[key]
-    logger.info("Trust cache: invalidated for run_id=%d, company_id=%d",
-                run_id, company_id)
+    logger.info('Trust cache: invalidated for run_id=%d, company_id=%d', run_id, company_id)
 
 
 # ─────────────────────────────────────────
 # Stats (for monitoring)
 # ─────────────────────────────────────────
+
 
 def cache_stats() -> dict:
     """Return cache size stats for monitoring."""
@@ -176,8 +178,10 @@ def cache_stats() -> dict:
         'exceptions': len(_exceptions_cache),
         'filing_workspace': len(_filing_cache),
         'total_entries': (
-            len(_change_cache) + len(_narrative_cache) +
-            len(_evidence_cache) + len(_exceptions_cache) +
-            len(_filing_cache)
+            len(_change_cache)
+            + len(_narrative_cache)
+            + len(_evidence_cache)
+            + len(_exceptions_cache)
+            + len(_filing_cache)
         ),
     }

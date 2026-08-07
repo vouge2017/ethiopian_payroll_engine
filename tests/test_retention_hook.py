@@ -1,4 +1,5 @@
 """Tests for DB-backed retention purge tracker (SystemSetting)."""
+
 import os
 import sys
 
@@ -41,6 +42,7 @@ def test_system_setting_persists_across_contexts(app):
 def test_purge_date_prevents_rerun(app):
     """Once purge date is set to today, subsequent calls should skip."""
     from datetime import date
+
     today = date.today().isoformat()
 
     with app.app_context():
@@ -57,6 +59,7 @@ def test_purge_date_prevents_rerun(app):
 def test_purge_date_different_day(app):
     """If last purge was yesterday, should trigger again."""
     from datetime import date, timedelta
+
     today = date.today().isoformat()
     yesterday = (date.today() - timedelta(days=1)).isoformat()
 

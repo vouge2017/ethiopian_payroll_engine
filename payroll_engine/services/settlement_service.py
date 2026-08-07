@@ -42,14 +42,13 @@ def calculate_outstanding_salary(employee: Employee, end_date: date) -> Decimal:
         # Not the last day - prorate
         days_in_month = 30  # Ethiopian convention
         days_worked = end_date.day
-        prorated = (gross * Decimal(str(days_worked)) / Decimal(str(days_in_month)))
+        prorated = gross * Decimal(str(days_worked)) / Decimal(str(days_in_month))
         return prorated.quantize(Q)
 
     return gross
 
 
-def calculate_leave_encashment(employee: Employee, end_date: date,
-                                company_id: int, db_session=None) -> Decimal:
+def calculate_leave_encashment(employee: Employee, end_date: date, company_id: int, db_session=None) -> Decimal:
     """Calculate encashment for unused annual leave.
 
     Queries actual LeaveBalance records to get accurate unused days.
@@ -97,11 +96,9 @@ def calculate_leave_encashment(employee: Employee, end_date: date,
     return encashment
 
 
-def calculate_settlement(employee: Employee,
-                          termination_reason: str,
-                          end_date: date,
-                          company_id: int,
-                          db_session=None) -> dict:
+def calculate_settlement(
+    employee: Employee, termination_reason: str, end_date: date, company_id: int, db_session=None
+) -> dict:
     """Calculate complete final settlement for a terminated employee.
 
     This is the SINGLE SOURCE OF TRUTH for settlement calculations.
@@ -159,11 +156,13 @@ def calculate_settlement(employee: Employee,
         for ded in active_deductions:
             remaining = ded.remaining_balance or ded.amount
             pending_deductions += remaining
-            deduction_details.append({
-                'type': ded.deduction_type,
-                'label': ded.label,
-                'amount': str(remaining),
-            })
+            deduction_details.append(
+                {
+                    'type': ded.deduction_type,
+                    'label': ded.label,
+                    'amount': str(remaining),
+                }
+            )
 
     # 7. Calculate totals
     total_earnings = outstanding_salary + severance_amount + leave_encashment
@@ -188,12 +187,9 @@ def calculate_settlement(employee: Employee,
     }
 
 
-def create_settlement_record(employee: Employee,
-                              termination_reason: str,
-                              end_date: date,
-                              company_id: int,
-                              created_by: int,
-                              db_session) -> FinalSettlement:
+def create_settlement_record(
+    employee: Employee, termination_reason: str, end_date: date, company_id: int, created_by: int, db_session
+) -> FinalSettlement:
     """Calculate and persist a FinalSettlement record.
 
     This is the ONLY way to create a settlement record.

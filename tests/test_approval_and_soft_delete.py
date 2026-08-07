@@ -8,6 +8,7 @@ Tests:
 - Deleted employees excluded from default queries
 - Payroll history preserved after soft delete
 """
+
 import os
 import sys
 
@@ -53,10 +54,7 @@ def company_user_employee(ctx):
     user.set_password('testpass123')
     db.session.add(user)
     db.session.commit()
-    emp = Employee(
-        employee_id='E001', name='Abebe', basic_salary=10000,
-        allowances=2000, company_id=company.id
-    )
+    emp = Employee(employee_id='E001', name='Abebe', basic_salary=10000, allowances=2000, company_id=company.id)
     db.session.add(emp)
     db.session.commit()
     return company, user, emp
@@ -65,6 +63,7 @@ def company_user_employee(ctx):
 # ---------------------------------------------------------------
 # SOFT DELETE TESTS
 # ---------------------------------------------------------------
+
 
 def test_soft_delete_marks_employee(company_user_employee):
     """Deactivating an employee sets is_deleted=True."""
@@ -84,7 +83,7 @@ def test_soft_delete_marks_employee(company_user_employee):
 
 def test_soft_delete_excludes_from_default_query(company_user_employee):
     """Deleted employees should not appear in default queries."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
 
     # Before delete: 1 employee
     active = Employee.query.filter_by(company_id=company.id, is_deleted=False).all()
@@ -106,7 +105,7 @@ def test_soft_delete_excludes_from_default_query(company_user_employee):
 
 def test_reactivate_restores_employee(company_user_employee):
     """Reactivating a soft-deleted employee restores them."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
 
     emp.is_deleted = True
     emp.deleted_at = datetime.now(UTC)
@@ -125,7 +124,7 @@ def test_reactivate_restores_employee(company_user_employee):
 
 def test_payroll_history_preserved_after_soft_delete(company_user_employee):
     """Payroll history should survive soft delete."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
 
     # Create a payroll run with payslip
     run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 1), status='completed')
@@ -133,9 +132,13 @@ def test_payroll_history_preserved_after_soft_delete(company_user_employee):
     db.session.commit()
 
     payslip = Payslip(
-        payroll_run_id=run.id, employee_id=emp.id,
-        gross_salary=12000, tax=2000, employee_pension=700,
-        employer_pension=1100, net_pay=9300
+        payroll_run_id=run.id,
+        employee_id=emp.id,
+        gross_salary=12000,
+        tax=2000,
+        employee_pension=700,
+        employer_pension=1100,
+        net_pay=9300,
     )
     db.session.add(payslip)
     db.session.commit()
@@ -156,16 +159,15 @@ def test_soft_delete_audit_log(company_user_employee):
     company, user, emp = company_user_employee
 
     log = AuditLog(
-        company_id=company.id, user_id=user.id,
+        company_id=company.id,
+        user_id=user.id,
         action='employee_deactivated',
-        details={'employee_id': emp.employee_id, 'name': emp.name}
+        details={'employee_id': emp.employee_id, 'name': emp.name},
     )
     db.session.add(log)
     db.session.commit()
 
-    found = AuditLog.query.filter_by(
-        company_id=company.id, action='employee_deactivated'
-    ).first()
+    found = AuditLog.query.filter_by(company_id=company.id, action='employee_deactivated').first()
     assert found is not None
     assert found.details['name'] == 'Abebe'
 
@@ -174,11 +176,12 @@ def test_soft_delete_audit_log(company_user_employee):
 # APPROVAL CONFIRMATION TESTS
 # ---------------------------------------------------------------
 
+
 def test_approval_requires_password(company_user_employee):
     """Approval should fail without correct password."""
-    company, user, emp = company_user_employee
+    _company, user, _emp = company_user_employee
     app = create_app()
-    client = app.test_client()
+    app.test_client()
 
     # Login
     with app.test_request_context():
@@ -191,13 +194,13 @@ def test_approval_requires_password(company_user_employee):
 
 def test_approval_with_correct_password(company_user_employee):
     """Approval should succeed with correct password."""
-    company, user, emp = company_user_employee
+    _company, user, _emp = company_user_employee
     assert user.check_password('testpass123')
 
 
 def test_rejection_creates_audit_log(company_user_employee):
     """Rejection should create an audit log entry."""
-    company, user, emp = company_user_employee
+    company, user, _emp = company_user_employee
 
     run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 1), status='review')
     db.session.add(run)
@@ -206,29 +209,25 @@ def test_rejection_creates_audit_log(company_user_employee):
     # Simulate rejection
     run.status = 'draft'
     log = AuditLog(
-        company_id=company.id, user_id=user.id,
+        company_id=company.id,
+        user_id=user.id,
         action='payroll_rejected',
-        details={'run_id': run.id, 'reason': 'Numbers look wrong'}
+        details={'run_id': run.id, 'reason': 'Numbers look wrong'},
     )
     db.session.add(log)
     db.session.commit()
 
     assert run.status == 'draft'
-    found = AuditLog.query.filter_by(
-        company_id=company.id, action='payroll_rejected'
-    ).first()
+    found = AuditLog.query.filter_by(company_id=company.id, action='payroll_rejected').first()
     assert found is not None
     assert found.details['reason'] == 'Numbers look wrong'
 
 
 def test_multiple_active_employees(company_user_employee):
     """Can have multiple active employees."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
 
-    emp2 = Employee(
-        employee_id='E002', name='Bekele', basic_salary=8000,
-        allowances=1000, company_id=company.id
-    )
+    emp2 = Employee(employee_id='E002', name='Bekele', basic_salary=8000, allowances=1000, company_id=company.id)
     db.session.add(emp2)
     db.session.commit()
 

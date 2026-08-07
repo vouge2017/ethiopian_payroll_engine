@@ -1,4 +1,5 @@
 """Undo approval tests — verify 1-hour window and safety checks."""
+
 import os
 import sys
 
@@ -61,9 +62,7 @@ def client(app):
 
 
 def login(client):
-    client.post('/auth/login', data={
-        'login_id': '0911000001', 'password': 'Test1234!'
-    }, follow_redirects=True)
+    client.post('/auth/login', data={'login_id': '0911000001', 'password': 'Test1234!'}, follow_redirects=True)
 
 
 def _create_completed_run(app, company_id, user_id, approved_minutes_ago=30):
@@ -165,19 +164,19 @@ def test_undo_creates_audit_log(app, company_user, client):
     assert resp.status_code == 200
 
     with app.app_context():
-        log = AuditLog.query.filter_by(
-            company_id=cid, action='payroll_approval_undone'
-        ).first()
+        log = AuditLog.query.filter_by(company_id=cid, action='payroll_approval_undone').first()
         assert log is not None
         assert log.details['run_id'] == run_id
 
 
 def test_undo_only_completed_runs(app, company_user, client):
     """Cannot undo a non-completed run."""
-    cid, uid = company_user
+    cid, _uid = company_user
     with app.app_context():
         run = PayrollRun(
-            company_id=cid, run_date=datetime.now(UTC).date(), status='review',
+            company_id=cid,
+            run_date=datetime.now(UTC).date(),
+            status='review',
         )
         db.session.add(run)
         db.session.commit()

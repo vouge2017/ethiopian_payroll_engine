@@ -7,6 +7,7 @@ Verifies:
 - Preflight (OPTIONS) handled correctly
 - Allowed methods/headers are correct
 """
+
 import os
 import sys
 
@@ -99,9 +100,12 @@ class TestCorsConfigured:
         _create_user(app_with_cors)
         client = app_with_cors.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get('/api/v1/employees', headers={
-            'Origin': 'https://app.ethiopayroll.com',
-        })
+        resp = client.get(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://app.ethiopayroll.com',
+            },
+        )
         assert resp.headers.get('Access-Control-Allow-Origin') == 'https://app.ethiopayroll.com'
 
     def test_cors_rejects_disallowed_origin(self, app_with_cors):
@@ -109,9 +113,12 @@ class TestCorsConfigured:
         _create_user(app_with_cors)
         client = app_with_cors.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get('/api/v1/employees', headers={
-            'Origin': 'https://evil.com',
-        })
+        resp = client.get(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://evil.com',
+            },
+        )
         assert 'Access-Control-Allow-Origin' not in resp.headers
 
     def test_cors_allows_credentials(self, app_with_cors):
@@ -119,20 +126,26 @@ class TestCorsConfigured:
         _create_user(app_with_cors)
         client = app_with_cors.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get('/api/v1/employees', headers={
-            'Origin': 'https://app.ethiopayroll.com',
-        })
+        resp = client.get(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://app.ethiopayroll.com',
+            },
+        )
         assert resp.headers.get('Access-Control-Allow-Credentials') == 'true'
 
     def test_cors_preflight(self, app_with_cors):
         """OPTIONS preflight request returns correct CORS headers."""
         _create_user(app_with_cors)
         client = app_with_cors.test_client()
-        resp = client.options('/api/v1/employees', headers={
-            'Origin': 'https://app.ethiopayroll.com',
-            'Access-Control-Request-Method': 'GET',
-            'Access-Control-Request-Headers': 'Authorization',
-        })
+        resp = client.options(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://app.ethiopayroll.com',
+                'Access-Control-Request-Method': 'GET',
+                'Access-Control-Request-Headers': 'Authorization',
+            },
+        )
         assert resp.headers.get('Access-Control-Allow-Origin') == 'https://app.ethiopayroll.com'
         allowed_methods = resp.headers.get('Access-Control-Allow-Methods', '')
         assert 'GET' in allowed_methods
@@ -142,9 +155,12 @@ class TestCorsConfigured:
         _create_user(app_with_cors)
         client = app_with_cors.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get('/api/v1/employees', headers={
-            'Origin': 'https://app.ethiopayroll.com',
-        })
+        resp = client.get(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://app.ethiopayroll.com',
+            },
+        )
         exposed = resp.headers.get('Access-Control-Expose-Headers', '')
         assert 'X-Total-Count' in exposed or 'X-Page-Count' in exposed
 
@@ -154,14 +170,20 @@ class TestCorsConfigured:
         client = app_with_cors.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
 
-        resp1 = client.get('/api/v1/employees', headers={
-            'Origin': 'https://app.ethiopayroll.com',
-        })
+        resp1 = client.get(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://app.ethiopayroll.com',
+            },
+        )
         assert resp1.headers.get('Access-Control-Allow-Origin') == 'https://app.ethiopayroll.com'
 
-        resp2 = client.get('/api/v1/employees', headers={
-            'Origin': 'https://staging.ethiopayroll.com',
-        })
+        resp2 = client.get(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://staging.ethiopayroll.com',
+            },
+        )
         assert resp2.headers.get('Access-Control-Allow-Origin') == 'https://staging.ethiopayroll.com'
 
     def test_no_wildcard_with_credentials(self, app_with_cors):
@@ -169,8 +191,11 @@ class TestCorsConfigured:
         _create_user(app_with_cors)
         client = app_with_cors.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get('/api/v1/employees', headers={
-            'Origin': 'https://app.ethiopayroll.com',
-        })
+        resp = client.get(
+            '/api/v1/employees',
+            headers={
+                'Origin': 'https://app.ethiopayroll.com',
+            },
+        )
         origin = resp.headers.get('Access-Control-Allow-Origin', '')
         assert origin != '*', 'CORS wildcard with credentials is a security hole'

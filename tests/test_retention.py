@@ -1,4 +1,5 @@
 """Tests for retention policy hooks."""
+
 import os
 import sys
 import tempfile
@@ -42,6 +43,7 @@ def ctx(app):
 def test_purge_expired_uploads(app):
     """Purge uploads older than retention window."""
     from payroll_engine.retention import purge_expired_uploads
+
     folder = app.config['UPLOAD_FOLDER']
     old_path = os.path.join(folder, 'old_file.csv')
     new_path = os.path.join(folder, 'new_file.csv')
@@ -61,6 +63,7 @@ def test_purge_expired_drafts(app, ctx):
     """Purge payroll drafts older than retention window."""
     from payroll_engine.models import PayrollRun
     from payroll_engine.retention import purge_expired_drafts
+
     c = Company(name='RetentionCo')
     db.session.add(c)
     db.session.commit()
@@ -68,11 +71,13 @@ def test_purge_expired_drafts(app, ctx):
     db.session.add(run)
     db.session.commit()
     draft_old = PayrollDraft(
-        payroll_run_id=run.id, employee_data='{}',
+        payroll_run_id=run.id,
+        employee_data='{}',
         created_at=datetime.now(UTC) - timedelta(days=200),
     )
     draft_new = PayrollDraft(
-        payroll_run_id=run.id, employee_data='{}',
+        payroll_run_id=run.id,
+        employee_data='{}',
     )
     db.session.add(draft_old)
     db.session.add(draft_new)

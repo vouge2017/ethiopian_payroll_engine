@@ -5,6 +5,7 @@ Tests issue classification by severity: Critical/High/Medium/Low.
 
 Run: python -m pytest tests/test_exceptions.py -v
 """
+
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -27,8 +28,8 @@ from payroll_engine.exceptions import (
 # Helpers
 # ─────────────────────────────────────────────
 
-def _make_employee(emp_id, name, employee_id_str=None, bank='1000123456789',
-                    tin='1234567890', phone='0911234567'):
+
+def _make_employee(emp_id, name, employee_id_str=None, bank='1000123456789', tin='1234567890', phone='0911234567'):
     emp = MagicMock()
     emp.id = emp_id
     emp.employee_id = employee_id_str or f'EMP-{emp_id:03d}'
@@ -40,8 +41,7 @@ def _make_employee(emp_id, name, employee_id_str=None, bank='1000123456789',
     return emp
 
 
-def _make_payslip(emp_id, gross=10000, tax=1500, pension_emp=700, net=None,
-                   payslip_type='regular'):
+def _make_payslip(emp_id, gross=10000, tax=1500, pension_emp=700, net=None, payslip_type='regular'):
     ps = MagicMock()
     ps.employee_id = emp_id
     ps.gross_salary = Decimal(str(gross))
@@ -73,6 +73,7 @@ def _setup_db(current_run, payslips, employees, previous_payslip_count=1):
     def session_get(model, id):
         # Return employee if id matches, otherwise return the run
         return emp_map.get(id, current_run)
+
     mock_db.session.get.side_effect = session_get
 
     # Payslips
@@ -85,20 +86,29 @@ def _setup_db(current_run, payslips, employees, previous_payslip_count=1):
     return mock_db, mock_models
 
 
-def _make_change_summary(has_unusual_variance=False, variance_notes=None,
-                          salary_changes=None):
+def _make_change_summary(has_unusual_variance=False, variance_notes=None, salary_changes=None):
     return ChangeSummary(
-        current_period='2018-10', previous_period='2018-09',
-        current_employee_count=10, previous_employee_count=10,
+        current_period='2018-10',
+        previous_period='2018-09',
+        current_employee_count=10,
+        previous_employee_count=10,
         headcount_change=0,
-        current_total_gross=Decimal('100000'), previous_total_gross=Decimal('100000'),
-        current_total_net=Decimal('80000'), previous_total_net=Decimal('80000'),
-        current_total_tax=Decimal('15000'), previous_total_tax=Decimal('15000'),
-        gross_delta=Decimal('0'), gross_delta_pct=0,
-        net_delta=Decimal('0'), net_delta_pct=0,
-        changes=[], new_hires=[], departures=[],
+        current_total_gross=Decimal('100000'),
+        previous_total_gross=Decimal('100000'),
+        current_total_net=Decimal('80000'),
+        previous_total_net=Decimal('80000'),
+        current_total_tax=Decimal('15000'),
+        previous_total_tax=Decimal('15000'),
+        gross_delta=Decimal('0'),
+        gross_delta_pct=0,
+        net_delta=Decimal('0'),
+        net_delta_pct=0,
+        changes=[],
+        new_hires=[],
+        departures=[],
         salary_changes=salary_changes or [],
-        overtime_entries=[], adjustments=[],
+        overtime_entries=[],
+        adjustments=[],
         has_unusual_variance=has_unusual_variance,
         variance_notes=variance_notes or [],
     )
@@ -108,8 +118,8 @@ def _make_change_summary(has_unusual_variance=False, variance_notes=None,
 # Tests: No issues (clean payroll)
 # ─────────────────────────────────────────────
 
-class TestCleanPayroll:
 
+class TestCleanPayroll:
     def test_no_issues_clean_payroll(self):
         emp = _make_employee(1, 'Dawit')
         ps = _make_payslip(1, gross=10000, tax=1500, pension_emp=700, net=7800)
@@ -128,8 +138,8 @@ class TestCleanPayroll:
 # Tests: Critical issues
 # ─────────────────────────────────────────────
 
-class TestCriticalIssues:
 
+class TestCriticalIssues:
     def test_negative_net_pay(self):
         emp = _make_employee(1, 'Dawit')
         ps = _make_payslip(1, gross=10000, tax=12000, net=-2000)
@@ -143,7 +153,7 @@ class TestCriticalIssues:
         assert report.has_blocking is True
         assert report.can_approve is False
         assert any(i.code == 'NEGATIVE_NET_PAY' for i in report.issues)
-        negative = [i for i in report.issues if i.code == 'NEGATIVE_NET_PAY'][0]
+        negative = next(i for i in report.issues if i.code == 'NEGATIVE_NET_PAY')
         assert negative.blocking is True
         assert negative.employee_name == 'Dawit'
 
@@ -178,8 +188,8 @@ class TestCriticalIssues:
 # Tests: High issues
 # ─────────────────────────────────────────────
 
-class TestHighIssues:
 
+class TestHighIssues:
     def test_missing_bank_account(self):
         emp = _make_employee(1, 'Dawit', bank='')
         ps = _make_payslip(1)
@@ -190,7 +200,7 @@ class TestHighIssues:
         report = classify_exceptions(1, 1, mock_db, mock_models)
 
         assert any(i.code == 'MISSING_BANK_ACCOUNT' for i in report.issues)
-        issue = [i for i in report.issues if i.code == 'MISSING_BANK_ACCOUNT'][0]
+        issue = next(i for i in report.issues if i.code == 'MISSING_BANK_ACCOUNT')
         assert issue.severity == HIGH
         assert issue.blocking is False
 
@@ -226,8 +236,8 @@ class TestHighIssues:
 # Tests: Medium issues
 # ─────────────────────────────────────────────
 
-class TestMediumIssues:
 
+class TestMediumIssues:
     def test_missing_tin(self):
         emp = _make_employee(1, 'Dawit', tin='')
         ps = _make_payslip(1)
@@ -238,7 +248,7 @@ class TestMediumIssues:
         report = classify_exceptions(1, 1, mock_db, mock_models)
 
         assert any(i.code == 'MISSING_TIN' for i in report.issues)
-        issue = [i for i in report.issues if i.code == 'MISSING_TIN'][0]
+        issue = next(i for i in report.issues if i.code == 'MISSING_TIN')
         assert issue.severity == MEDIUM
 
     def test_missing_phone(self):
@@ -270,11 +280,20 @@ class TestMediumIssues:
 
         mock_db, mock_models = _setup_db(run, [ps], [emp])
 
-        summary = _make_change_summary(salary_changes=[
-            EmployeeChange('EMP-001', 'Dawit', 'salary_change', 'raise',
-                           old_value=Decimal('10000'), new_value=Decimal('15000'),
-                           delta=Decimal('5000'), delta_pct=50.0),
-        ])
+        summary = _make_change_summary(
+            salary_changes=[
+                EmployeeChange(
+                    'EMP-001',
+                    'Dawit',
+                    'salary_change',
+                    'raise',
+                    old_value=Decimal('10000'),
+                    new_value=Decimal('15000'),
+                    delta=Decimal('5000'),
+                    delta_pct=50.0,
+                ),
+            ]
+        )
 
         report = classify_exceptions(1, 1, mock_db, mock_models, change_summary=summary)
 
@@ -285,8 +304,8 @@ class TestMediumIssues:
 # Tests: Low issues
 # ─────────────────────────────────────────────
 
-class TestLowIssues:
 
+class TestLowIssues:
     @patch('payroll_engine.exceptions._is_first_payroll', return_value=True)
     def test_new_employee_first_payroll(self, mock_first):
         emp = _make_employee(1, 'Dawit')
@@ -298,7 +317,7 @@ class TestLowIssues:
         report = classify_exceptions(1, 1, mock_db, mock_models)
 
         assert any(i.code == 'NEW_EMPLOYEE_FIRST_PAYROLL' for i in report.issues)
-        issue = [i for i in report.issues if i.code == 'NEW_EMPLOYEE_FIRST_PAYROLL'][0]
+        issue = next(i for i in report.issues if i.code == 'NEW_EMPLOYEE_FIRST_PAYROLL')
         assert issue.severity == LOW
 
 
@@ -306,12 +325,12 @@ class TestLowIssues:
 # Tests: Multiple issues
 # ─────────────────────────────────────────────
 
-class TestMultipleIssues:
 
+class TestMultipleIssues:
     def test_multiple_employees_multiple_issues(self):
         emp1 = _make_employee(1, 'Dawit', tin='')  # Missing TIN
         emp2 = _make_employee(2, 'Hana', bank='')  # Missing bank
-        emp3 = _make_employee(3, 'Kebede')          # Clean
+        emp3 = _make_employee(3, 'Kebede')  # Clean
 
         ps1 = _make_payslip(1)
         ps2 = _make_payslip(2)
@@ -345,15 +364,17 @@ class TestMultipleIssues:
 # Tests: Report summary
 # ─────────────────────────────────────────────
 
-class TestReportSummary:
 
+class TestReportSummary:
     def test_summary_with_mixed_issues(self):
-        report = ExceptionReport(issues=[
-            Issue(CRITICAL, 'NEGATIVE_NET_PAY', 'Negative net', 'desc'),
-            Issue(HIGH, 'MISSING_BANK', 'Missing bank', 'desc'),
-            Issue(MEDIUM, 'MISSING_TIN', 'Missing TIN', 'desc'),
-            Issue(LOW, 'NEW_EMP', 'New emp', 'desc'),
-        ])
+        report = ExceptionReport(
+            issues=[
+                Issue(CRITICAL, 'NEGATIVE_NET_PAY', 'Negative net', 'desc'),
+                Issue(HIGH, 'MISSING_BANK', 'Missing bank', 'desc'),
+                Issue(MEDIUM, 'MISSING_TIN', 'Missing TIN', 'desc'),
+                Issue(LOW, 'NEW_EMP', 'New emp', 'desc'),
+            ]
+        )
 
         assert '4 issue' in report.summary
         assert '1 critical' in report.summary
@@ -362,17 +383,21 @@ class TestReportSummary:
         assert '1 low' in report.summary
 
     def test_can_approve_with_no_critical(self):
-        report = ExceptionReport(issues=[
-            Issue(HIGH, 'MISSING_BANK', 'Missing bank', 'desc'),
-            Issue(MEDIUM, 'MISSING_TIN', 'Missing TIN', 'desc'),
-        ])
+        report = ExceptionReport(
+            issues=[
+                Issue(HIGH, 'MISSING_BANK', 'Missing bank', 'desc'),
+                Issue(MEDIUM, 'MISSING_TIN', 'Missing TIN', 'desc'),
+            ]
+        )
 
         assert report.can_approve is True
 
     def test_cannot_approve_with_critical(self):
-        report = ExceptionReport(issues=[
-            Issue(CRITICAL, 'NEGATIVE_NET_PAY', 'Negative net', 'desc', blocking=True),
-        ])
+        report = ExceptionReport(
+            issues=[
+                Issue(CRITICAL, 'NEGATIVE_NET_PAY', 'Negative net', 'desc', blocking=True),
+            ]
+        )
 
         assert report.can_approve is False
 
@@ -381,8 +406,8 @@ class TestReportSummary:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_invalid_run_returns_empty(self):
         mock_db = MagicMock()
         mock_models = MagicMock()
@@ -419,8 +444,8 @@ class TestEdgeCases:
 # Tests: Resolution Intelligence
 # ─────────────────────────────────────────────
 
-class TestResolutionIntelligence:
 
+class TestResolutionIntelligence:
     def test_negative_net_pay_has_resolution(self):
         emp = _make_employee(1, 'Dawit')
         ps = _make_payslip(1, gross=10000, tax=12000, net=-2000)
@@ -429,7 +454,7 @@ class TestResolutionIntelligence:
         mock_db, mock_models = _setup_db(run, [ps], [emp])
         report = classify_exceptions(1, 1, mock_db, mock_models)
 
-        issue = [i for i in report.issues if i.code == 'NEGATIVE_NET_PAY'][0]
+        issue = next(i for i in report.issues if i.code == 'NEGATIVE_NET_PAY')
         assert issue.impact is not None
         assert issue.cause is not None
         assert issue.recommendation is not None
@@ -446,7 +471,7 @@ class TestResolutionIntelligence:
         mock_db, mock_models = _setup_db(run, [ps], [emp])
         report = classify_exceptions(1, 1, mock_db, mock_models)
 
-        issue = [i for i in report.issues if i.code == 'MISSING_BANK_ACCOUNT'][0]
+        issue = next(i for i in report.issues if i.code == 'MISSING_BANK_ACCOUNT')
         assert issue.impact is not None
         assert 'bank transfer' in issue.impact.lower()
         assert issue.cause is not None
@@ -462,7 +487,7 @@ class TestResolutionIntelligence:
         mock_db, mock_models = _setup_db(run, [ps], [emp])
         report = classify_exceptions(1, 1, mock_db, mock_models)
 
-        issue = [i for i in report.issues if i.code == 'MISSING_TIN'][0]
+        issue = next(i for i in report.issues if i.code == 'MISSING_TIN')
         assert issue.impact is not None
         assert 'erca' in issue.impact.lower()
         assert issue.recommendation is not None
@@ -478,7 +503,7 @@ class TestResolutionIntelligence:
         with patch('payroll_engine.exceptions._is_first_payroll', return_value=True):
             report = classify_exceptions(1, 1, mock_db, mock_models)
 
-        issue = [i for i in report.issues if i.code == 'NEW_EMPLOYEE_FIRST_PAYROLL'][0]
+        issue = next(i for i in report.issues if i.code == 'NEW_EMPLOYEE_FIRST_PAYROLL')
         assert issue.impact is not None
         assert issue.estimated_time is not None
 

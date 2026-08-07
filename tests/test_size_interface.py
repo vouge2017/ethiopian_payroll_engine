@@ -4,6 +4,7 @@ Tests for Phase 6 — Size-Appropriate Interface:
 - Quick Start as primary onboarding
 - Context-aware labels
 """
+
 import os
 import sys
 
@@ -46,8 +47,10 @@ def _setup(app, num_employees=0):
 
         for i in range(num_employees):
             emp = Employee(
-                employee_id=f'EMP{i+1:03d}', name=f'Employee {i+1}',
-                basic_salary=5000 + i * 1000, company_id=company.id,
+                employee_id=f'EMP{i + 1:03d}',
+                name=f'Employee {i + 1}',
+                basic_salary=5000 + i * 1000,
+                company_id=company.id,
             )
             db.session.add(emp)
 
@@ -63,7 +66,7 @@ class TestSidebarAdaptation:
 
     def test_small_company_sidebar(self, app):
         """Company with 3 employees: basic sidebar, no Leave, no Impact Calculator."""
-        cid, oid = _setup(app, num_employees=3)
+        _cid, _oid = _setup(app, num_employees=3)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
@@ -82,7 +85,7 @@ class TestSidebarAdaptation:
 
     def test_medium_company_sidebar(self, app):
         """Company with 10 employees: Leave appears, but not Impact Calculator."""
-        cid, oid = _setup(app, num_employees=10)
+        _cid, _oid = _setup(app, num_employees=10)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
@@ -95,7 +98,7 @@ class TestSidebarAdaptation:
 
     def test_large_company_sidebar(self, app):
         """Company with 25 employees: all features visible."""
-        cid, oid = _setup(app, num_employees=25)
+        _cid, _oid = _setup(app, num_employees=25)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
@@ -108,7 +111,7 @@ class TestSidebarAdaptation:
 
     def test_reports_label_small_company(self, app):
         """Small company: 'Compliance & Reports' label."""
-        cid, oid = _setup(app, num_employees=3)
+        _cid, _oid = _setup(app, num_employees=3)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
@@ -116,7 +119,7 @@ class TestSidebarAdaptation:
 
     def test_reports_label_large_company(self, app):
         """Large company: 'Reports' label."""
-        cid, oid = _setup(app, num_employees=25)
+        _cid, _oid = _setup(app, num_employees=25)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
@@ -132,7 +135,7 @@ class TestQuickStartPrimary:
 
     def test_quick_start_button_visible(self, app):
         """Dashboard should show Quick Start prominently."""
-        cid, oid = _setup(app, num_employees=0)
+        _cid, _oid = _setup(app, num_employees=0)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
@@ -141,7 +144,7 @@ class TestQuickStartPrimary:
 
     def test_quick_start_link_works(self, app):
         """Quick Start page should load."""
-        cid, oid = _setup(app, num_employees=0)
+        _cid, _oid = _setup(app, num_employees=0)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/quick-start')
@@ -150,9 +153,10 @@ class TestQuickStartPrimary:
 
     def test_wizard_hidden_after_first_run(self, app):
         """First-run wizard should not show after payroll is completed."""
-        cid, oid = _setup(app, num_employees=3)
+        cid, _oid = _setup(app, num_employees=3)
         with app.app_context():
             from payroll_engine.models import PayrollRun
+
             run = PayrollRun(company_id=cid, run_date=date.today(), status='completed')
             run.generate_period()
             db.session.add(run)
@@ -186,15 +190,17 @@ class TestContextProcessor:
     def test_employee_count_in_context(self, app):
         cid, oid = _setup(app, num_employees=5)
         with app.app_context(), app.test_request_context():
-            user = db.session.get(User, oid)
+            db.session.get(User, oid)
             # Simulate the context processor
             from payroll_engine.models import Employee
+
             count = Employee.query.filter_by(company_id=cid, is_deleted=False).count()
             assert count == 5
 
     def test_zero_employees(self, app):
-        cid, oid = _setup(app, num_employees=0)
+        cid, _oid = _setup(app, num_employees=0)
         with app.app_context():
             from payroll_engine.models import Employee
+
             count = Employee.query.filter_by(company_id=cid, is_deleted=False).count()
             assert count == 0

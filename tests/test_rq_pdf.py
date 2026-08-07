@@ -7,6 +7,7 @@ Covers:
 - PayslipGenerationJob model CRUD
 - Batch status JSON endpoint
 """
+
 import os
 import sys
 
@@ -58,9 +59,9 @@ def _setup(app, num_employees=2):
         employees_data = []
         for i in range(num_employees):
             emp = Employee(
-                employee_id=f'EMP{i+1:03d}',
-                name=f'Employee {i+1}',
-                phone=f'09100000{i+1:02d}',
+                employee_id=f'EMP{i + 1:03d}',
+                name=f'Employee {i + 1}',
+                phone=f'09100000{i + 1:02d}',
                 basic_salary=10000,
                 allowances=2000,
                 company_id=company.id,
@@ -68,28 +69,32 @@ def _setup(app, num_employees=2):
                 tin=f'12345678{i:02d}',
             )
             db.session.add(emp)
-            employees_data.append({
-                'id': f'EMP{i+1:03d}',
-                'name': f'Employee {i+1}',
-                'phone': f'09100000{i+1:02d}',
-                'basic': 10000,
-                'allowances': 2000,
-                'gross': 12000,
-                'tax': 1500,
-                'pension_employee': 700,
-                'pension_employer': 1100,
-                'net': 9800,
-                'bank': f'cbe:100012345678{i}',
-                'tin': f'12345678{i:02d}',
-                'taxable': 11300,
-                'department': '',
-                'position': '',
-            })
+            employees_data.append(
+                {
+                    'id': f'EMP{i + 1:03d}',
+                    'name': f'Employee {i + 1}',
+                    'phone': f'09100000{i + 1:02d}',
+                    'basic': 10000,
+                    'allowances': 2000,
+                    'gross': 12000,
+                    'tax': 1500,
+                    'pension_employee': 700,
+                    'pension_employer': 1100,
+                    'net': 9800,
+                    'bank': f'cbe:100012345678{i}',
+                    'tin': f'12345678{i:02d}',
+                    'taxable': 11300,
+                    'department': '',
+                    'position': '',
+                }
+            )
 
         db.session.flush()
 
         run = PayrollRun(
-            company_id=company.id, run_date=date.today(), status='review',
+            company_id=company.id,
+            run_date=date.today(),
+            status='review',
         )
         run.generate_period()
         db.session.add(run)
@@ -105,9 +110,13 @@ def _setup(app, num_employees=2):
 
         # Complete payroll to create payslips
         from payroll_engine.services.payroll_service import process_payroll
+
         result = process_payroll(
-            run=run, company_id=company.id, user_id=owner.id,
-            user_email='test@test.com', request_ip='127.0.0.1',
+            run=run,
+            company_id=company.id,
+            user_id=owner.id,
+            user_email='test@test.com',
+            request_ip='127.0.0.1',
         )
         assert result.success is True
 
@@ -122,16 +131,18 @@ class TestRqFallback:
 
     def test_enqueue_batch_returns_none_without_redis(self, app):
         """enqueue_batch() returns None when Redis URL is not set."""
-        cid, oid, rid = _setup(app)
+        cid, _oid, rid = _setup(app)
 
         with app.app_context():
             from payroll_engine.tasks import enqueue_batch
+
             # Ensure REDIS_URL is not set
             env_patch = {k: v for k, v in os.environ.items() if 'REDIS' not in k}
             env_patch.pop('REDISTOGO_URL', None)
             with patch.dict(os.environ, env_patch, clear=True):
                 # Reset the cached queue
                 import payroll_engine.tasks as tasks_module
+
                 tasks_module._rq_queue = None
 
                 result = enqueue_batch(rid, cid)
@@ -139,21 +150,24 @@ class TestRqFallback:
 
     def test_enqueue_batch_returns_none_when_redis_unreachable(self, app):
         """enqueue_batch() returns None when Redis connection fails."""
-        cid, oid, rid = _setup(app)
+        cid, _oid, rid = _setup(app)
 
         with app.app_context():
             import payroll_engine.tasks as tasks_module
             from payroll_engine.tasks import enqueue_batch
+
             tasks_module._rq_queue = None
 
-            with patch.dict(os.environ, {'REDIS_URL': 'redis://localhost:9999/0'}):
-                with patch('redis.from_url') as mock_redis:
-                    mock_conn = MagicMock()
-                    mock_conn.ping.side_effect = Exception('Connection refused')
-                    mock_redis.return_value = mock_conn
+            with (
+                patch.dict(os.environ, {'REDIS_URL': 'redis://localhost:9999/0'}),
+                patch('redis.from_url') as mock_redis,
+            ):
+                mock_conn = MagicMock()
+                mock_conn.ping.side_effect = Exception('Connection refused')
+                mock_redis.return_value = mock_conn
 
-                    result = enqueue_batch(rid, cid)
-                    assert result is None
+                result = enqueue_batch(rid, cid)
+                assert result is None
 
 
 # ─── get_batch_status with no jobs ───
@@ -164,16 +178,17 @@ class TestBatchStatus:
 
     def test_empty_batch_returns_empty_counts(self, app):
         """A batch_id with no jobs returns total=0."""
-        cid, oid, rid = _setup(app)
+        _cid, _oid, _rid = _setup(app)
 
         with app.app_context():
             from payroll_engine.tasks import get_batch_status
+
             status = get_batch_status('nonexistent-batch-id')
             assert status['total'] == 0
 
     def test_batch_status_counts_jobs(self, app):
         """get_batch_status() correctly counts jobs by status."""
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
 
         with app.app_context():
             # Create some jobs manually
@@ -190,6 +205,7 @@ class TestBatchStatus:
             db.session.commit()
 
             from payroll_engine.tasks import get_batch_status
+
             status = get_batch_status(batch_id)
             assert status['total'] == len(payslips)
             assert status.get('generated', 0) == 1
@@ -204,7 +220,7 @@ class TestPayslipGenerationJob:
 
     def test_job_lifecycle(self, app):
         """Job transitions: queued → running → generated."""
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
 
         with app.app_context():
             payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
@@ -231,7 +247,7 @@ class TestPayslipGenerationJob:
 
     def test_job_failure_with_error(self, app):
         """Failed job stores error message."""
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
 
         with app.app_context():
             payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
@@ -253,7 +269,7 @@ class TestPayslipGenerationJob:
 
     def test_job_payslip_relationship(self, app):
         """Job has correct relationship to payslip."""
-        cid, oid, rid = _setup(app)
+        _cid, _oid, rid = _setup(app)
 
         with app.app_context():
             payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
@@ -277,7 +293,7 @@ class TestInlineFallbackCaps:
 
     def test_batch_payslips_cap_at_50(self, app):
         """batch_payslips route warns and returns to runs page when >50 uncached PDFs and no Redis."""
-        cid, oid, rid = _setup(app, num_employees=3)
+        _cid, _oid, rid = _setup(app, num_employees=3)
 
         with app.app_context():
             # Verify all payslips are not_generated (lazy PDF)
@@ -287,17 +303,19 @@ class TestInlineFallbackCaps:
 
             # The cap constant is INLINE_PDF_CAP_BATCH = 50 in payroll_bp.py
             from payroll_engine.payroll_bp import INLINE_PDF_CAP_BATCH
+
             uncached = sum(1 for ps in payslips if ps.pdf_status != 'generated')
             assert uncached == 3  # well under cap
             assert uncached <= INLINE_PDF_CAP_BATCH  # would pass the inline fallback
 
     def test_download_all_cap_at_100(self, app):
         """download_all route warns when >100 uncached PDFs and no Redis."""
-        cid, oid, rid = _setup(app, num_employees=3)
+        _cid, _oid, rid = _setup(app, num_employees=3)
 
         with app.app_context():
             payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
             from payroll_engine.payroll_bp import INLINE_PDF_CAP_DOWNLOAD
+
             uncached = sum(1 for p in payslips if p.pdf_status != 'generated')
             assert uncached == 3
             assert uncached <= INLINE_PDF_CAP_DOWNLOAD  # would pass the inline fallback
@@ -305,5 +323,6 @@ class TestInlineFallbackCaps:
     def test_inline_caps_are_documented(self):
         """Verify the fallback cap values are named constants in payroll_bp.py."""
         from payroll_engine.payroll_bp import INLINE_PDF_CAP_BATCH, INLINE_PDF_CAP_DOWNLOAD
+
         assert INLINE_PDF_CAP_BATCH == 50
         assert INLINE_PDF_CAP_DOWNLOAD == 100

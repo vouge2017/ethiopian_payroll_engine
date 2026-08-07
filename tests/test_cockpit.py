@@ -5,6 +5,7 @@ Tests the landing page that answers 5 questions in 10 seconds.
 
 Run: python -m pytest tests/test_cockpit.py -v
 """
+
 import sys
 from datetime import date
 from pathlib import Path
@@ -21,6 +22,7 @@ from payroll_engine.cockpit import build_cockpit
 # Fixtures
 # ─────────────────────────────────────────────
 
+
 @pytest.fixture(autouse=True)
 def _clear_trust_cache():
     """Clear trust cache between tests to prevent stale data."""
@@ -33,6 +35,7 @@ def _clear_trust_cache():
 # Helpers
 # ─────────────────────────────────────────────
 
+
 def _make_company(company_id=1, name='Test PLC'):
     company = MagicMock()
     company.id = company_id
@@ -41,8 +44,7 @@ def _make_company(company_id=1, name='Test PLC'):
     return company
 
 
-def _make_run(run_id=1, period='2018-10', company_id=1, status='completed',
-              run_date=None):
+def _make_run(run_id=1, period='2018-10', company_id=1, status='completed', run_date=None):
     run = MagicMock()
     run.id = run_id
     run.period = period
@@ -76,6 +78,7 @@ def _setup(company, runs=None, employees=None):
         if id == company.id:
             return company
         return None
+
     mock_session = MagicMock()
     mock_session.get.side_effect = session_get
     mock_db.session = mock_session
@@ -97,8 +100,8 @@ def _setup(company, runs=None, employees=None):
 # Tests: No payroll runs
 # ─────────────────────────────────────────────
 
-class TestNoPayroll:
 
+class TestNoPayroll:
     def test_no_runs_status(self):
         company = _make_company()
         mock_db, mock_models = _setup(company)
@@ -126,14 +129,13 @@ class TestNoPayroll:
 # Tests: Draft payroll
 # ─────────────────────────────────────────────
 
-class TestDraftPayroll:
 
+class TestDraftPayroll:
     @patch('payroll_engine.cockpit.classify_exceptions')
     @patch('payroll_engine.cockpit.build_filing_workspace')
     @patch('payroll_engine.cockpit.compute_change_summary')
     @patch('payroll_engine.cockpit.get_deadline_for_type')
-    def test_draft_payroll_needs_attention(self, mock_deadline, mock_change,
-                                            mock_filing, mock_exceptions):
+    def test_draft_payroll_needs_attention(self, mock_deadline, mock_change, mock_filing, mock_exceptions):
         mock_deadline.return_value = date(2026, 9, 25)
         mock_change.return_value = None
         mock_filing.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)
@@ -155,14 +157,13 @@ class TestDraftPayroll:
 # Tests: Completed payroll
 # ─────────────────────────────────────────────
 
-class TestCompletedPayroll:
 
+class TestCompletedPayroll:
     @patch('payroll_engine.cockpit.classify_exceptions')
     @patch('payroll_engine.cockpit.build_filing_workspace')
     @patch('payroll_engine.cockpit.compute_change_summary')
     @patch('payroll_engine.cockpit.get_deadline_for_type')
-    def test_completed_payroll_ready_for_approval(self, mock_deadline, mock_change,
-                                                    mock_filing, mock_exceptions):
+    def test_completed_payroll_ready_for_approval(self, mock_deadline, mock_change, mock_filing, mock_exceptions):
         mock_deadline.return_value = date(2026, 9, 25)
         mock_change.return_value = None
         mock_filing.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)
@@ -183,14 +184,13 @@ class TestCompletedPayroll:
 # Tests: Missing employee data
 # ─────────────────────────────────────────────
 
-class TestMissingData:
 
+class TestMissingData:
     @patch('payroll_engine.cockpit.classify_exceptions')
     @patch('payroll_engine.cockpit.build_filing_workspace')
     @patch('payroll_engine.cockpit.compute_change_summary')
     @patch('payroll_engine.cockpit.get_deadline_for_type')
-    def test_missing_bank_detected(self, mock_deadline, mock_change,
-                                    mock_filing, mock_exceptions):
+    def test_missing_bank_detected(self, mock_deadline, mock_change, mock_filing, mock_exceptions):
         mock_deadline.return_value = date(2026, 9, 25)
         mock_change.return_value = None
         mock_filing.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)
@@ -211,14 +211,13 @@ class TestMissingData:
 # Tests: Blocking issues
 # ─────────────────────────────────────────────
 
-class TestBlocking:
 
+class TestBlocking:
     @patch('payroll_engine.cockpit.classify_exceptions')
     @patch('payroll_engine.cockpit.build_filing_workspace')
     @patch('payroll_engine.cockpit.compute_change_summary')
     @patch('payroll_engine.cockpit.get_deadline_for_type')
-    def test_blocking_issues_detected(self, mock_deadline, mock_change,
-                                       mock_filing, mock_exceptions):
+    def test_blocking_issues_detected(self, mock_deadline, mock_change, mock_filing, mock_exceptions):
         mock_deadline.return_value = date(2026, 9, 25)
         mock_change.return_value = None
         mock_filing.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)
@@ -250,14 +249,13 @@ class TestBlocking:
 # Tests: Unusual variance
 # ─────────────────────────────────────────────
 
-class TestUnusualVariance:
 
+class TestUnusualVariance:
     @patch('payroll_engine.cockpit.classify_exceptions')
     @patch('payroll_engine.cockpit.build_filing_workspace')
     @patch('payroll_engine.cockpit.compute_change_summary')
     @patch('payroll_engine.cockpit.get_deadline_for_type')
-    def test_variance_flagged(self, mock_deadline, mock_change,
-                               mock_filing, mock_exceptions):
+    def test_variance_flagged(self, mock_deadline, mock_change, mock_filing, mock_exceptions):
         mock_deadline.return_value = date(2026, 9, 25)
 
         mock_change.return_value = MagicMock(
@@ -294,14 +292,13 @@ class TestUnusualVariance:
 # Tests: Narrative
 # ─────────────────────────────────────────────
 
-class TestNarrative:
 
+class TestNarrative:
     @patch('payroll_engine.cockpit.classify_exceptions')
     @patch('payroll_engine.cockpit.build_filing_workspace')
     @patch('payroll_engine.cockpit.compute_change_summary')
     @patch('payroll_engine.cockpit.get_deadline_for_type')
-    def test_narrative_generated(self, mock_deadline, mock_change,
-                                  mock_filing, mock_exceptions):
+    def test_narrative_generated(self, mock_deadline, mock_change, mock_filing, mock_exceptions):
         mock_deadline.return_value = date(2026, 9, 25)
         mock_change.return_value = None
         mock_filing.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)
@@ -323,8 +320,8 @@ class TestNarrative:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_invalid_company_returns_none(self):
         mock_db = MagicMock()
         mock_models = MagicMock()
@@ -337,8 +334,7 @@ class TestEdgeCases:
     @patch('payroll_engine.cockpit.build_filing_workspace')
     @patch('payroll_engine.cockpit.compute_change_summary')
     @patch('payroll_engine.cockpit.get_deadline_for_type')
-    def test_period_set_from_latest_run(self, mock_deadline, mock_change,
-                                         mock_filing, mock_exceptions):
+    def test_period_set_from_latest_run(self, mock_deadline, mock_change, mock_filing, mock_exceptions):
         mock_deadline.return_value = date(2026, 9, 25)
         mock_change.return_value = None
         mock_filing.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)

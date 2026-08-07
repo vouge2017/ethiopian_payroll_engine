@@ -3,6 +3,7 @@
 These tests deliberately attack the previous failure modes — they are not
 happy-path smoke checks. Each assertion maps to a real abuse path.
 """
+
 import io
 import os
 import re
@@ -43,17 +44,22 @@ def client(app):
 
 
 def _register(client, phone='0911234567', password='SecurePass123!', company='SecureCo'):
-    return client.post('/auth/register', data={
-        'phone': phone,
-        'email': f'{phone}@test.com',
-        'password': password,
-        'password2': password,
-        'company_name': company,
-    }, follow_redirects=True)
+    return client.post(
+        '/auth/register',
+        data={
+            'phone': phone,
+            'email': f'{phone}@test.com',
+            'password': password,
+            'password2': password,
+            'company_name': company,
+        },
+        follow_redirects=True,
+    )
 
 
 def _login(client, phone='0911234567', password='SecurePass123!', next_url=None, follow=False):
     from urllib.parse import quote
+
     url = '/auth/login'
     if next_url is not None:
         url = f'/auth/login?next={quote(next_url, safe="")}'
@@ -73,14 +79,18 @@ def _register_and_login(client, phone='0911234567', password='SecurePass123!', c
 # #1 Open redirect
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize('evil_next', [
-    'https://evil.example/phish',
-    'http://evil.example/phish',
-    '//evil.example/phish',
-    '/\\evil.example',
-    '///evil.example',
-    'https://evil.example/?next=/employees',
-])
+
+@pytest.mark.parametrize(
+    'evil_next',
+    [
+        'https://evil.example/phish',
+        'http://evil.example/phish',
+        '//evil.example/phish',
+        '/\\evil.example',
+        '///evil.example',
+        'https://evil.example/?next=/employees',
+    ],
+)
 def test_login_blocks_external_next_redirect(client, app, evil_next):
     """Unauthenticated login with attacker-controlled ?next= must not leave host."""
     _register(client)
@@ -123,15 +133,20 @@ def test_safe_redirect_target_unit(app):
 # #2 Predictable temp passwords
 # ---------------------------------------------------------------------------
 
+
 def test_invite_uses_unpredictable_password_shown_once(client, app):
     """Invite must not use phone-derived passwords or flash plaintext."""
     _register_and_login(client)
 
-    resp = client.post('/settings/team/invite', data={
-        'phone': '0944444444',
-        'name': 'New Hire',
-        'role': 'accountant',
-    }, follow_redirects=False)
+    resp = client.post(
+        '/settings/team/invite',
+        data={
+            'phone': '0944444444',
+            'name': 'New Hire',
+            'role': 'accountant',
+        },
+        follow_redirects=False,
+    )
 
     assert resp.status_code == 200
     body = resp.data.decode('utf-8', errors='replace')
@@ -168,11 +183,14 @@ def test_invite_uses_unpredictable_password_shown_once(client, app):
 def test_invited_user_must_change_password_before_app_use(client, app):
     """Temp password login is forced into change-password before any app route."""
     _register_and_login(client)
-    resp = client.post('/settings/team/invite', data={
-        'phone': '0955555555',
-        'name': 'Forced Change',
-        'role': 'accountant',
-    })
+    resp = client.post(
+        '/settings/team/invite',
+        data={
+            'phone': '0955555555',
+            'name': 'Forced Change',
+            'role': 'accountant',
+        },
+    )
     body = resp.data.decode('utf-8', errors='replace')
     codes = re.findall(r'<code[^>]*>([^<]+)</code>', body)
     temp_password = codes[0].strip()
@@ -190,11 +208,15 @@ def test_invited_user_must_change_password_before_app_use(client, app):
         assert '/auth/change-password' in dash.headers.get('Location', '')
 
     # Complete forced change
-    change = client.post('/auth/change-password', data={
-        'current_password': temp_password,
-        'new_password': 'brandNewPass9',
-        'new_password2': 'brandNewPass9',
-    }, follow_redirects=False)
+    change = client.post(
+        '/auth/change-password',
+        data={
+            'current_password': temp_password,
+            'new_password': 'brandNewPass9',
+            'new_password2': 'brandNewPass9',
+        },
+        follow_redirects=False,
+    )
     assert change.status_code == 302
     assert '/auth/change-password' not in change.headers.get('Location', '')
 
@@ -212,6 +234,7 @@ def test_invited_user_must_change_password_before_app_use(client, app):
 # ---------------------------------------------------------------------------
 # #3 Exception leakage
 # ---------------------------------------------------------------------------
+
 
 def test_payroll_upload_error_does_not_leak_exception_text(client, app):
     """Payroll upload failures must not expose raw exception details to users."""
@@ -239,6 +262,7 @@ def test_payroll_upload_error_does_not_leak_exception_text(client, app):
 # ---------------------------------------------------------------------------
 # #4 Open /demo route
 # ---------------------------------------------------------------------------
+
 
 def test_demo_route_disabled_when_flag_off(client, app):
     """Public demo auto-login must be unavailable when disabled."""
@@ -273,4 +297,5 @@ def test_login_page_shows_demo_when_enabled(client, app):
 def test_production_config_forces_demo_off():
     """Production must hard-disable demo auto-login (class-level lock)."""
     from config import ProductionConfig
+
     assert ProductionConfig.ENABLE_DEMO_MODE is False

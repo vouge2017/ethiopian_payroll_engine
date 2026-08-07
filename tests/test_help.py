@@ -1,4 +1,5 @@
 """Tests for the in-app help system."""
+
 import os
 import sys
 
@@ -104,8 +105,7 @@ class TestHelpSearch:
         _login(client, app)
         resp = client.get('/help/search?q=pension')
         data = resp.get_json()
-        assert any('pension' in r['question'].lower() or 'pension' in r['answer'].lower()
-                    for r in data['results'])
+        assert any('pension' in r['question'].lower() or 'pension' in r['answer'].lower() for r in data['results'])
 
     def test_search_overtime(self, client, app):
         """Search for 'overtime' returns overtime-related items."""

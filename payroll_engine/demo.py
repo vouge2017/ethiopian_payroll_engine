@@ -14,49 +14,69 @@ from payroll_engine.payroll import calculate_payroll
 # Sample employees
 DEMO_EMPLOYEES = [
     {
-        'employee_id': 'EMP001', 'name': 'Dawit Mekonnen',
-        'basic_salary': 10000, 'allowances': 2000,
-        'department': 'Sales', 'position': 'Manager',
+        'employee_id': 'EMP001',
+        'name': 'Dawit Mekonnen',
+        'basic_salary': 10000,
+        'allowances': 2000,
+        'department': 'Sales',
+        'position': 'Manager',
         'start_date': date(2023, 1, 15),
         'bank_or_telebirr': 'cbe:1000123456789',
         'bank_account': '1000123456789',
-        'tin': '1234567890', 'phone': '0911111111',
+        'tin': '1234567890',
+        'phone': '0911111111',
     },
     {
-        'employee_id': 'EMP002', 'name': 'Hana Tesfaye',
-        'basic_salary': 5000, 'allowances': 500,
-        'department': 'Factory', 'position': 'Worker',
+        'employee_id': 'EMP002',
+        'name': 'Hana Tesfaye',
+        'basic_salary': 5000,
+        'allowances': 500,
+        'department': 'Factory',
+        'position': 'Worker',
         'start_date': date(2024, 6, 1),
         'bank_or_telebirr': 'dashen:2000987654321',
         'bank_account': '2000987654321',
-        'tin': '0987654321', 'phone': '0922222222',
+        'tin': '0987654321',
+        'phone': '0922222222',
     },
     {
-        'employee_id': 'EMP003', 'name': 'Kebede Alemu',
-        'basic_salary': 15000, 'allowances': 3000,
-        'department': 'Finance', 'position': 'Accountant',
+        'employee_id': 'EMP003',
+        'name': 'Kebede Alemu',
+        'basic_salary': 15000,
+        'allowances': 3000,
+        'department': 'Finance',
+        'position': 'Accountant',
         'start_date': date(2022, 3, 10),
         'bank_or_telebirr': 'awash:3000112233445',
         'bank_account': '3000112233445',
-        'tin': '1122334455', 'phone': '0933333333',
+        'tin': '1122334455',
+        'phone': '0933333333',
     },
     {
-        'employee_id': 'EMP004', 'name': 'Tigist Bekele',
-        'basic_salary': 8000, 'allowances': 1500,
-        'department': 'HR', 'position': 'Officer',
+        'employee_id': 'EMP004',
+        'name': 'Tigist Bekele',
+        'basic_salary': 8000,
+        'allowances': 1500,
+        'department': 'HR',
+        'position': 'Officer',
         'start_date': date(2023, 9, 1),
         'bank_or_telebirr': 'cbe:1000445566778',
         'bank_account': '1000445566778',
-        'tin': '5566778899', 'phone': '0944444444',
+        'tin': '5566778899',
+        'phone': '0944444444',
     },
     {
-        'employee_id': 'EMP005', 'name': 'Yonas Desta',
-        'basic_salary': 3500, 'allowances': 300,
-        'department': 'Factory', 'position': 'Worker',
+        'employee_id': 'EMP005',
+        'name': 'Yonas Desta',
+        'basic_salary': 3500,
+        'allowances': 300,
+        'department': 'Factory',
+        'position': 'Worker',
         'start_date': date(2025, 1, 15),
         'bank_or_telebirr': 'telebirr:0911234567',
         'bank_account': 'telebirr:0911234567',
-        'tin': '9988776655', 'phone': '0955555555',
+        'tin': '9988776655',
+        'phone': '0955555555',
     },
 ]
 
@@ -70,17 +90,13 @@ def create_demo_data():
     """
     # 0. Cleanup old demos (older than 24 hours)
     from datetime import timedelta
+
     cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24)
-    old_demos = Company.query.filter(
-        Company.is_demo == True,
-        Company.created_at < cutoff
-    ).all()
+    old_demos = Company.query.filter(Company.is_demo, Company.created_at < cutoff).all()
     for old in old_demos:
         # Delete employees, runs, payslips, users for this demo company
         Payslip.query.filter(
-            Payslip.payroll_run_id.in_(
-                db.session.query(PayrollRun.id).filter_by(company_id=old.id)
-            )
+            Payslip.payroll_run_id.in_(db.session.query(PayrollRun.id).filter_by(company_id=old.id))
         ).delete(synchronize_session='fetch')
         PayrollRun.query.filter_by(company_id=old.id).delete()
         OvertimeEntry.query.filter_by(company_id=old.id).delete()
@@ -140,7 +156,8 @@ def create_demo_data():
         employee_id=employees[0].id,
         company_id=company.id,
         date=date.today().replace(day=15),
-        hours=4, overtime_type='day',
+        hours=4,
+        overtime_type='day',
     )
     db.session.add(ot)
     db.session.commit()
@@ -168,7 +185,8 @@ def create_demo_data():
             ot_entries = [{'hours': 4, 'type': 'day'}]
 
         result = calculate_payroll(
-            emp.basic_salary, emp.allowances,
+            emp.basic_salary,
+            emp.allowances,
             overtime_entries=ot_entries,
         )
 

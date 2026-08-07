@@ -8,6 +8,7 @@ Tests:
 - Overtime limit validation
 - CSV upload with overtime columns
 """
+
 import os
 import sys
 
@@ -50,10 +51,7 @@ def company_and_employee(ctx):
     company = Company(name='TestCo')
     db.session.add(company)
     db.session.commit()
-    emp = Employee(
-        employee_id='E001', name='Abebe', basic_salary=10000,
-        allowances=2000, company_id=company.id
-    )
+    emp = Employee(employee_id='E001', name='Abebe', basic_salary=10000, allowances=2000, company_id=company.id)
     db.session.add(emp)
     db.session.commit()
     return company, emp
@@ -63,19 +61,17 @@ def company_and_employee(ctx):
 # MODEL TESTS
 # ---------------------------------------------------------------
 
+
 def test_overtime_entry_stored(company_and_employee):
     """OvertimeEntry should be stored correctly."""
     company, emp = company_and_employee
     entry = OvertimeEntry(
-        company_id=company.id, employee_id=emp.id,
-        date=date(2026, 7, 15), hours=4.0, overtime_type='day'
+        company_id=company.id, employee_id=emp.id, date=date(2026, 7, 15), hours=4.0, overtime_type='day'
     )
     db.session.add(entry)
     db.session.commit()
 
-    found = OvertimeEntry.query.filter_by(
-        company_id=company.id, employee_id=emp.id
-    ).first()
+    found = OvertimeEntry.query.filter_by(company_id=company.id, employee_id=emp.id).first()
     assert found is not None
     assert found.hours == 4.0
     assert found.overtime_type == 'day'
@@ -88,17 +84,13 @@ def test_overtime_tenant_isolation(company_and_employee):
     other_company = Company(name='OtherCo')
     db.session.add(other_company)
     db.session.commit()
-    other_emp = Employee(
-        employee_id='E001', name='Other', basic_salary=5000,
-        allowances=0, company_id=other_company.id
-    )
+    other_emp = Employee(employee_id='E001', name='Other', basic_salary=5000, allowances=0, company_id=other_company.id)
     db.session.add(other_emp)
     db.session.commit()
 
     # Add overtime to first company
     entry = OvertimeEntry(
-        company_id=company.id, employee_id=emp.id,
-        date=date(2026, 7, 15), hours=4.0, overtime_type='day'
+        company_id=company.id, employee_id=emp.id, date=date(2026, 7, 15), hours=4.0, overtime_type='day'
     )
     db.session.add(entry)
     db.session.commit()
@@ -116,8 +108,7 @@ def test_overtime_delete(company_and_employee):
     """Deleting an overtime entry should remove it."""
     company, emp = company_and_employee
     entry = OvertimeEntry(
-        company_id=company.id, employee_id=emp.id,
-        date=date(2026, 7, 15), hours=4.0, overtime_type='day'
+        company_id=company.id, employee_id=emp.id, date=date(2026, 7, 15), hours=4.0, overtime_type='day'
     )
     db.session.add(entry)
     db.session.commit()
@@ -133,6 +124,7 @@ def test_overtime_delete(company_and_employee):
 # ---------------------------------------------------------------
 # CALCULATION TESTS
 # ---------------------------------------------------------------
+
 
 def test_overtime_pay_weekday():
     """4h weekday overtime on basic 10,000 → 288.48 (1.5x rate)"""
@@ -164,6 +156,7 @@ def test_overtime_pay_rest_day():
 def test_overtime_zero_hours():
     """Zero hours should give zero pay."""
     from decimal import Decimal as D
+
     assert calculate_overtime_pay(10000, 0, 'day') == D('0')
 
 
@@ -175,6 +168,7 @@ def test_overtime_total():
     ]
     result = calculate_total_overtime(10000, entries)
     from decimal import Decimal as D
+
     assert result['total_hours'] == D('6')
     assert result['total_pay'] > 0
     assert len(result['entries']) == 2
@@ -184,14 +178,14 @@ def test_overtime_total():
 # DEDUCTION ORDER TEST
 # ---------------------------------------------------------------
 
+
 def test_overtime_included_in_gross():
     """Overtime should be added to gross BEFORE tax."""
     # Without overtime
     result_no_ot = calculate_payroll(basic_salary=10000, allowances=2000)
     # With overtime
     result_with_ot = calculate_payroll(
-        basic_salary=10000, allowances=2000,
-        overtime_entries=[{'hours': 4, 'type': 'day'}]
+        basic_salary=10000, allowances=2000, overtime_entries=[{'hours': 4, 'type': 'day'}]
     )
     # Gross should be higher with overtime
     assert result_with_ot['gross'] > result_no_ot['gross']
@@ -205,10 +199,8 @@ def test_overtime_included_in_gross():
 def test_deduction_order_with_overtime():
     """Verify exact deduction order: gross+pension→taxable→tax→net"""
     from decimal import Decimal as D
-    result = calculate_payroll(
-        basic_salary=10000, allowances=2000,
-        overtime_entries=[{'hours': 4, 'type': 'day'}]
-    )
+
+    result = calculate_payroll(basic_salary=10000, allowances=2000, overtime_entries=[{'hours': 4, 'type': 'day'}])
     # Gross = 10000 + 2000 + overtime
     assert result['gross'] == D('12000') + result['overtime_pay']
     # Pension = 7% of basic (NOT affected by overtime)
@@ -222,10 +214,8 @@ def test_deduction_order_with_overtime():
 def test_verification_numbers():
     """Use the exact verification numbers from the task spec."""
     from decimal import Decimal as D
-    result = calculate_payroll(
-        basic_salary=10000, allowances=2000,
-        overtime_entries=[{'hours': 4, 'type': 'day'}]
-    )
+
+    result = calculate_payroll(basic_salary=10000, allowances=2000, overtime_entries=[{'hours': 4, 'type': 'day'}])
     # Overtime pay should be approximately 288.48 (1.5x rate, 10000/208 rounded to 48.08 * 4 * 1.5)
     assert D('288') < result['overtime_pay'] < D('289')
     # Gross = 12000 + overtime
@@ -241,6 +231,7 @@ def test_verification_numbers():
 # ---------------------------------------------------------------
 # VALIDATION TESTS
 # ---------------------------------------------------------------
+
 
 def test_overtime_within_limit():
     """20 hours monthly is OK, but daily/weekly limits still flagged."""

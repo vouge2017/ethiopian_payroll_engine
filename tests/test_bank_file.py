@@ -4,6 +4,7 @@ Bank file generation tests.
 Tests the pre-validation engine, CSV generation, and Excel generation
 for Ethiopian bank bulk payment files.
 """
+
 import os
 import sys
 
@@ -20,6 +21,7 @@ from payroll_engine.bank_file import (
 # Account Validation
 # ---------------------------------------------------------------
 
+
 def test_cbe_valid():
     """13-digit CBE account should pass."""
     valid, err = validate_account_number('1000123456789', 'cbe')
@@ -34,24 +36,24 @@ def test_cbe_too_short():
 
 
 def test_cbe_too_long():
-    valid, err = validate_account_number('10001234567890', 'cbe')
+    valid, _err = validate_account_number('10001234567890', 'cbe')
     assert valid is False
 
 
 def test_cbe_letters():
-    valid, err = validate_account_number('1000ABC456789', 'cbe')
+    valid, _err = validate_account_number('1000ABC456789', 'cbe')
     assert valid is False
 
 
 def test_telebirr_valid():
     """10-digit starting with 09 should pass."""
-    valid, err = validate_account_number('0912345678', 'telebirr')
+    valid, _err = validate_account_number('0912345678', 'telebirr')
     assert valid is True
 
 
 def test_telebirr_07_prefix():
     """10-digit starting with 07 should also pass (Ethio Telecom)."""
-    valid, err = validate_account_number('0712345678', 'telebirr')
+    valid, _err = validate_account_number('0712345678', 'telebirr')
     assert valid is True
 
 
@@ -68,18 +70,19 @@ def test_empty_account():
 
 
 def test_dashen_valid():
-    valid, err = validate_account_number('1000123456789', 'dashen')
+    valid, _err = validate_account_number('1000123456789', 'dashen')
     assert valid is True
 
 
 def test_awash_valid():
-    valid, err = validate_account_number('1000123456789', 'awash')
+    valid, _err = validate_account_number('1000123456789', 'awash')
     assert valid is True
 
 
 # ---------------------------------------------------------------
 # Amount Formatting
 # ---------------------------------------------------------------
+
 
 def test_format_amount_no_commas():
     """Amounts must have no commas."""
@@ -102,6 +105,7 @@ def test_format_amount_string_type():
 # ---------------------------------------------------------------
 # Pre-Validation
 # ---------------------------------------------------------------
+
 
 def test_validate_missing_bank():
     """Employee with no bank account should be flagged."""
@@ -151,6 +155,7 @@ def test_validate_multiple_errors():
 # ---------------------------------------------------------------
 # Duplicate Detection
 # ---------------------------------------------------------------
+
 
 def test_validate_duplicate_employee_id():
     """Same employee appearing twice should be caught."""
@@ -221,6 +226,7 @@ def test_validate_new_employee_no_flag():
 # ---------------------------------------------------------------
 # CSV Generation
 # ---------------------------------------------------------------
+
 
 def test_csv_has_headers():
     employees = [{'id': 'E001', 'name': 'Alice', 'bank': 'telebirr:0912345678', 'net': 5000}]

@@ -6,6 +6,7 @@ and the accounting preview page.
 
 Run: python -m pytest tests/test_accounting_export.py -v
 """
+
 import csv
 import io
 import sys
@@ -19,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 # ─────────────────────────────────────────────
 # Mock helpers
 # ─────────────────────────────────────────────
+
 
 def _make_payslip(gross=10000, tax=1500, pension_emp=700, pension_empr=1100, net=7800):
     """Create a mock payslip."""
@@ -64,10 +66,11 @@ def _make_company(name='Test Company PLC'):
 # Tests: _generate_journal_entries
 # ─────────────────────────────────────────────
 
-class TestGenerateJournalEntries:
 
+class TestGenerateJournalEntries:
     def _import_func(self):
         from payroll_engine.accounting_bp import _generate_journal_entries
+
         return _generate_journal_entries
 
     @patch('payroll_engine.accounting_bp.Company')
@@ -155,8 +158,7 @@ class TestGenerateJournalEntries:
             assert 'name' in line
             assert 'type' in line
             # Each line should have exactly one side non-zero
-            assert (line['debit'] > 0 and line['credit'] == 0) or \
-                   (line['credit'] > 0 and line['debit'] == 0)
+            assert (line['debit'] > 0 and line['credit'] == 0) or (line['credit'] > 0 and line['debit'] == 0)
 
     @patch('payroll_engine.accounting_bp.Company')
     @patch('payroll_engine.accounting_bp.Employee')
@@ -260,9 +262,7 @@ class TestGenerateJournalEntries:
     def test_reference_included(self, MockRun, MockPayslip, MockEmp, MockCompany):
         func = self._import_func()
 
-        MockRun.query.filter_by.return_value.first_or_404.return_value = _make_run(
-            reference='PR-2026-07-001'
-        )
+        MockRun.query.filter_by.return_value.first_or_404.return_value = _make_run(reference='PR-2026-07-001')
         MockCompany.query.get.return_value = _make_company()
         MockPayslip.query.filter_by.return_value.all.return_value = [_make_payslip()]
         MockEmp.query.get.return_value = _make_employee()
@@ -277,11 +277,12 @@ class TestGenerateJournalEntries:
 # Tests: CSV Export
 # ─────────────────────────────────────────────
 
-class TestGenericCSVExport:
 
+class TestGenericCSVExport:
     def _get_csv_output(self, journal):
         """Call _export_generic_csv and parse the CSV output."""
         from payroll_engine.accounting_bp import _export_generic_csv
+
         response = _export_generic_csv(journal)
         return response.get_data(as_text=True)
 
@@ -292,25 +293,53 @@ class TestGenericCSVExport:
             'date': '2026-07-01',
             'company': 'Test PLC',
             'entries': [
-                {'employee_id': 'E001', 'employee_name': 'Dawit', 'department': 'IT',
-                 'gross': Decimal('10000'), 'tax': Decimal('1500'),
-                 'pension_employee': Decimal('700'), 'pension_employer': Decimal('1100'),
-                 'net_pay': Decimal('7800')},
+                {
+                    'employee_id': 'E001',
+                    'employee_name': 'Dawit',
+                    'department': 'IT',
+                    'gross': Decimal('10000'),
+                    'tax': Decimal('1500'),
+                    'pension_employee': Decimal('700'),
+                    'pension_employer': Decimal('1100'),
+                    'net_pay': Decimal('7800'),
+                },
             ],
             'totals': {
-                'gross': Decimal('10000'), 'tax': Decimal('1500'),
-                'pension_employee': Decimal('700'), 'pension_employer': Decimal('1100'),
+                'gross': Decimal('10000'),
+                'tax': Decimal('1500'),
+                'pension_employee': Decimal('700'),
+                'pension_employer': Decimal('1100'),
                 'net': Decimal('7800'),
             },
             'journal_lines': [
-                {'account': '5100', 'name': 'Salary Expense', 'debit': Decimal('10000'),
-                 'credit': Decimal('0'), 'type': 'expense'},
-                {'account': '2100', 'name': 'PAYE Tax Payable', 'debit': Decimal('0'),
-                 'credit': Decimal('1500'), 'type': 'liability'},
-                {'account': '2200', 'name': 'Pension Payable', 'debit': Decimal('0'),
-                 'credit': Decimal('700'), 'type': 'liability'},
-                {'account': '1000', 'name': 'Bank/Cash', 'debit': Decimal('0'),
-                 'credit': Decimal('7800'), 'type': 'asset'},
+                {
+                    'account': '5100',
+                    'name': 'Salary Expense',
+                    'debit': Decimal('10000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {
+                    'account': '2100',
+                    'name': 'PAYE Tax Payable',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('1500'),
+                    'type': 'liability',
+                },
+                {
+                    'account': '2200',
+                    'name': 'Pension Payable',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('700'),
+                    'type': 'liability',
+                },
+                {
+                    'account': '1000',
+                    'name': 'Bank/Cash',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('7800'),
+                    'type': 'asset',
+                },
             ],
         }
 
@@ -351,17 +380,18 @@ class TestGenericCSVExport:
                 break
         assert salary_row is not None
         assert salary_row[5] == '10000.00'  # Debit
-        assert salary_row[6] == ''          # Credit (empty for debit lines)
+        assert salary_row[6] == ''  # Credit (empty for debit lines)
 
 
 # ─────────────────────────────────────────────
 # Tests: QuickBooks IIF Export
 # ─────────────────────────────────────────────
 
-class TestQuickBooksIIFExport:
 
+class TestQuickBooksIIFExport:
     def _get_iif_output(self, journal):
         from payroll_engine.accounting_bp import _export_quickbooks_iif
+
         response = _export_quickbooks_iif(journal)
         return response.get_data(as_text=True)
 
@@ -374,10 +404,20 @@ class TestQuickBooksIIFExport:
             'entries': [],
             'totals': {},
             'journal_lines': [
-                {'account': '5100', 'name': 'Salary Expense', 'debit': Decimal('10000'),
-                 'credit': Decimal('0'), 'type': 'expense'},
-                {'account': '2100', 'name': 'PAYE Tax Payable', 'debit': Decimal('0'),
-                 'credit': Decimal('10000'), 'type': 'liability'},
+                {
+                    'account': '5100',
+                    'name': 'Salary Expense',
+                    'debit': Decimal('10000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {
+                    'account': '2100',
+                    'name': 'PAYE Tax Payable',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('10000'),
+                    'type': 'liability',
+                },
             ],
         }
 
@@ -421,10 +461,11 @@ class TestQuickBooksIIFExport:
 # Tests: Peachtree CSV Export
 # ─────────────────────────────────────────────
 
-class TestPeachtreeExport:
 
+class TestPeachtreeExport:
     def _get_peachtree_output(self, journal):
         from payroll_engine.accounting_bp import _export_peachtree
+
         response = _export_peachtree(journal)
         return response.get_data(as_text=True)
 
@@ -437,10 +478,20 @@ class TestPeachtreeExport:
             'entries': [],
             'totals': {},
             'journal_lines': [
-                {'account': '5100', 'name': 'Salary Expense', 'debit': Decimal('10000'),
-                 'credit': Decimal('0'), 'type': 'expense'},
-                {'account': '2100', 'name': 'PAYE Tax Payable', 'debit': Decimal('0'),
-                 'credit': Decimal('10000'), 'type': 'liability'},
+                {
+                    'account': '5100',
+                    'name': 'Salary Expense',
+                    'debit': Decimal('10000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {
+                    'account': '2100',
+                    'name': 'PAYE Tax Payable',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('10000'),
+                    'type': 'liability',
+                },
             ],
         }
 
@@ -466,32 +517,50 @@ class TestPeachtreeExport:
         salary_row = [r for r in rows if len(r) > 3 and 'Salary Expense' in r[3]]
         assert len(salary_row) == 1
         assert salary_row[0][4] == '10000.00'  # Debit
-        assert salary_row[0][5] == '0.00'      # Credit
+        assert salary_row[0][5] == '0.00'  # Credit
 
 
 # ─────────────────────────────────────────────
 # Tests: Xero CSV Export
 # ─────────────────────────────────────────────
 
-class TestXeroExport:
 
+class TestXeroExport:
     def _get_xero_output(self, journal):
         from payroll_engine.accounting_bp import _export_xero
+
         response = _export_xero(journal)
         return response.get_data(as_text=True)
 
     def _sample_journal(self):
         return {
-            'reference': 'PR-2026-07-001', 'period': '2026-07', 'date': '2026-07-01',
-            'company': 'Test PLC', 'entries': [],
-            'totals': {'gross': Decimal('10000'), 'tax': Decimal('0'),
-                       'pension_employee': Decimal('0'), 'pension_employer': Decimal('0'),
-                       'net': Decimal('10000')},
+            'reference': 'PR-2026-07-001',
+            'period': '2026-07',
+            'date': '2026-07-01',
+            'company': 'Test PLC',
+            'entries': [],
+            'totals': {
+                'gross': Decimal('10000'),
+                'tax': Decimal('0'),
+                'pension_employee': Decimal('0'),
+                'pension_employer': Decimal('0'),
+                'net': Decimal('10000'),
+            },
             'journal_lines': [
-                {'account': '5100', 'name': 'Salary Expense', 'debit': Decimal('10000'),
-                 'credit': Decimal('0'), 'type': 'expense'},
-                {'account': '2100', 'name': 'PAYE Tax Payable', 'debit': Decimal('0'),
-                 'credit': Decimal('10000'), 'type': 'liability'},
+                {
+                    'account': '5100',
+                    'name': 'Salary Expense',
+                    'debit': Decimal('10000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {
+                    'account': '2100',
+                    'name': 'PAYE Tax Payable',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('10000'),
+                    'type': 'liability',
+                },
             ],
         }
 
@@ -528,11 +597,13 @@ class TestXeroExport:
 
     def test_xero_content_type(self):
         from payroll_engine.accounting_bp import _export_xero
+
         resp = _export_xero(self._sample_journal())
         assert 'text/csv' in resp.content_type
 
     def test_xero_filename(self):
         from payroll_engine.accounting_bp import _export_xero
+
         resp = _export_xero(self._sample_journal())
         assert 'xero' in resp.headers.get('Content-Disposition', '')
         assert '.csv' in resp.headers.get('Content-Disposition', '')
@@ -542,8 +613,8 @@ class TestXeroExport:
 # Tests: Balance verification across formats
 # ─────────────────────────────────────────────
 
-class TestBalanceVerification:
 
+class TestBalanceVerification:
     def _make_journal(self, lines):
         return {
             'reference': 'PR-2026-07-001',
@@ -557,23 +628,35 @@ class TestBalanceVerification:
 
     def test_balanced_journal_passes(self):
         # Test the balanced flag directly
-        journal = self._make_journal([
-            {'account': '5100', 'name': 'Expense', 'debit': Decimal('10000'),
-             'credit': Decimal('0'), 'type': 'expense'},
-            {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'),
-             'credit': Decimal('10000'), 'type': 'asset'},
-        ])
+        journal = self._make_journal(
+            [
+                {
+                    'account': '5100',
+                    'name': 'Expense',
+                    'debit': Decimal('10000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'), 'credit': Decimal('10000'), 'type': 'asset'},
+            ]
+        )
         total_debits = sum(l['debit'] for l in journal['journal_lines'])
         total_credits = sum(l['credit'] for l in journal['journal_lines'])
         assert total_debits == total_credits
 
     def test_unbalanced_detected(self):
-        journal = self._make_journal([
-            {'account': '5100', 'name': 'Expense', 'debit': Decimal('10000'),
-             'credit': Decimal('0'), 'type': 'expense'},
-            {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'),
-             'credit': Decimal('5000'), 'type': 'asset'},
-        ])
+        journal = self._make_journal(
+            [
+                {
+                    'account': '5100',
+                    'name': 'Expense',
+                    'debit': Decimal('10000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'), 'credit': Decimal('5000'), 'type': 'asset'},
+            ]
+        )
         total_debits = sum(l['debit'] for l in journal['journal_lines'])
         total_credits = sum(l['credit'] for l in journal['journal_lines'])
         assert total_debits != total_credits
@@ -583,46 +666,62 @@ class TestBalanceVerification:
 # Tests: Content-Type headers
 # ─────────────────────────────────────────────
 
-class TestResponseHeaders:
 
+class TestResponseHeaders:
     def _sample_journal(self):
         return {
-            'reference': 'PR-2026-07-001', 'period': '2026-07', 'date': '2026-07-01',
-            'company': 'Test PLC', 'entries': [],
-            'totals': {'gross': Decimal('1000'), 'tax': Decimal('0'),
-                       'pension_employee': Decimal('0'), 'pension_employer': Decimal('0'),
-                       'net': Decimal('1000')},
+            'reference': 'PR-2026-07-001',
+            'period': '2026-07',
+            'date': '2026-07-01',
+            'company': 'Test PLC',
+            'entries': [],
+            'totals': {
+                'gross': Decimal('1000'),
+                'tax': Decimal('0'),
+                'pension_employee': Decimal('0'),
+                'pension_employer': Decimal('0'),
+                'net': Decimal('1000'),
+            },
             'journal_lines': [
-                {'account': '5100', 'name': 'Expense', 'debit': Decimal('1000'),
-                 'credit': Decimal('0'), 'type': 'expense'},
-                {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'),
-                 'credit': Decimal('1000'), 'type': 'asset'},
+                {
+                    'account': '5100',
+                    'name': 'Expense',
+                    'debit': Decimal('1000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'), 'credit': Decimal('1000'), 'type': 'asset'},
             ],
         }
 
     def test_csv_content_type(self):
         from payroll_engine.accounting_bp import _export_generic_csv
+
         resp = _export_generic_csv(self._sample_journal())
         assert 'text/csv' in resp.content_type
 
     def test_csv_filename(self):
         from payroll_engine.accounting_bp import _export_generic_csv
+
         resp = _export_generic_csv(self._sample_journal())
         assert 'attachment' in resp.headers.get('Content-Disposition', '')
         assert '.csv' in resp.headers.get('Content-Disposition', '')
 
     def test_iif_content_type(self):
         from payroll_engine.accounting_bp import _export_quickbooks_iif
+
         resp = _export_quickbooks_iif(self._sample_journal())
         assert 'text/plain' in resp.content_type
 
     def test_iif_filename(self):
         from payroll_engine.accounting_bp import _export_quickbooks_iif
+
         resp = _export_quickbooks_iif(self._sample_journal())
         assert '.iif' in resp.headers.get('Content-Disposition', '')
 
     def test_peachtree_content_type(self):
         from payroll_engine.accounting_bp import _export_peachtree
+
         resp = _export_peachtree(self._sample_journal())
         assert 'text/csv' in resp.content_type
 
@@ -631,22 +730,36 @@ class TestResponseHeaders:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def _make_totals(self, gross=0, tax=0, pension_emp=0, pension_empr=0, net=0):
-        return {'gross': Decimal(str(gross)), 'tax': Decimal(str(tax)),
-                'pension_employee': Decimal(str(pension_emp)),
-                'pension_employer': Decimal(str(pension_empr)), 'net': Decimal(str(net))}
+        return {
+            'gross': Decimal(str(gross)),
+            'tax': Decimal(str(tax)),
+            'pension_employee': Decimal(str(pension_emp)),
+            'pension_employer': Decimal(str(pension_empr)),
+            'net': Decimal(str(net)),
+        }
 
     def test_zero_amounts(self):
         """Journal with zero amounts should still balance."""
         from payroll_engine.accounting_bp import _export_generic_csv
+
         journal = {
-            'reference': 'PR-ZERO', 'period': '2026-07', 'date': '2026-07-01',
-            'company': 'Test', 'entries': [], 'totals': self._make_totals(),
+            'reference': 'PR-ZERO',
+            'period': '2026-07',
+            'date': '2026-07-01',
+            'company': 'Test',
+            'entries': [],
+            'totals': self._make_totals(),
             'journal_lines': [
-                {'account': '5100', 'name': 'Expense', 'debit': Decimal('0'),
-                 'credit': Decimal('0'), 'type': 'expense'},
+                {
+                    'account': '5100',
+                    'name': 'Expense',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
             ],
         }
         resp = _export_generic_csv(journal)
@@ -655,15 +768,29 @@ class TestEdgeCases:
     def test_large_amounts(self):
         """Journal with large ETB amounts should format correctly."""
         from payroll_engine.accounting_bp import _export_generic_csv
+
         journal = {
-            'reference': 'PR-LARGE', 'period': '2026-07', 'date': '2026-07-01',
-            'company': 'Test', 'entries': [],
+            'reference': 'PR-LARGE',
+            'period': '2026-07',
+            'date': '2026-07-01',
+            'company': 'Test',
+            'entries': [],
             'totals': self._make_totals(gross=9999999.99, net=9999999.99),
             'journal_lines': [
-                {'account': '5100', 'name': 'Expense', 'debit': Decimal('9999999.99'),
-                 'credit': Decimal('0'), 'type': 'expense'},
-                {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'),
-                 'credit': Decimal('9999999.99'), 'type': 'asset'},
+                {
+                    'account': '5100',
+                    'name': 'Expense',
+                    'debit': Decimal('9999999.99'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {
+                    'account': '1000',
+                    'name': 'Bank',
+                    'debit': Decimal('0'),
+                    'credit': Decimal('9999999.99'),
+                    'type': 'asset',
+                },
             ],
         }
         resp = _export_generic_csv(journal)
@@ -673,26 +800,44 @@ class TestEdgeCases:
     def test_multiple_employees_same_department(self):
         """Multiple employees in same department should all appear."""
         from payroll_engine.accounting_bp import _export_generic_csv
+
         journal = {
-            'reference': 'PR-MULTI', 'period': '2026-07', 'date': '2026-07-01',
+            'reference': 'PR-MULTI',
+            'period': '2026-07',
+            'date': '2026-07-01',
             'company': 'Test',
-            'totals': self._make_totals(gross=25000, tax=4000, pension_emp=1750,
-                                        pension_empr=2750, net=19250),
+            'totals': self._make_totals(gross=25000, tax=4000, pension_emp=1750, pension_empr=2750, net=19250),
             'entries': [
-                {'employee_id': 'E001', 'employee_name': 'Dawit', 'department': 'IT',
-                 'gross': Decimal('10000'), 'tax': Decimal('1500'),
-                 'pension_employee': Decimal('700'), 'pension_employer': Decimal('1100'),
-                 'net_pay': Decimal('7800')},
-                {'employee_id': 'E002', 'employee_name': 'Hana', 'department': 'IT',
-                 'gross': Decimal('15000'), 'tax': Decimal('2500'),
-                 'pension_employee': Decimal('1050'), 'pension_employer': Decimal('1650'),
-                 'net_pay': Decimal('11450')},
+                {
+                    'employee_id': 'E001',
+                    'employee_name': 'Dawit',
+                    'department': 'IT',
+                    'gross': Decimal('10000'),
+                    'tax': Decimal('1500'),
+                    'pension_employee': Decimal('700'),
+                    'pension_employer': Decimal('1100'),
+                    'net_pay': Decimal('7800'),
+                },
+                {
+                    'employee_id': 'E002',
+                    'employee_name': 'Hana',
+                    'department': 'IT',
+                    'gross': Decimal('15000'),
+                    'tax': Decimal('2500'),
+                    'pension_employee': Decimal('1050'),
+                    'pension_employer': Decimal('1650'),
+                    'net_pay': Decimal('11450'),
+                },
             ],
             'journal_lines': [
-                {'account': '5100', 'name': 'Expense', 'debit': Decimal('25000'),
-                 'credit': Decimal('0'), 'type': 'expense'},
-                {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'),
-                 'credit': Decimal('25000'), 'type': 'asset'},
+                {
+                    'account': '5100',
+                    'name': 'Expense',
+                    'debit': Decimal('25000'),
+                    'credit': Decimal('0'),
+                    'type': 'expense',
+                },
+                {'account': '1000', 'name': 'Bank', 'debit': Decimal('0'), 'credit': Decimal('25000'), 'type': 'asset'},
             ],
         }
         resp = _export_generic_csv(journal)

@@ -1,4 +1,5 @@
 """API token authentication tests — Bearer token access to /api/v1/ endpoints."""
+
 import os
 import sys
 
@@ -66,6 +67,7 @@ def _create_api_key(app, user_id, company_id, name='Test Key'):
 
 # --- Token lookup ---
 
+
 def test_api_key_hash_stored_not_raw(app):
     """Raw token should NOT be stored; only the SHA-256 hash."""
     cid, uid = _setup_company_user(app)
@@ -79,7 +81,7 @@ def test_api_key_hash_stored_not_raw(app):
 def test_api_key_lookup_valid(app):
     """Lookup by raw token returns the key and user."""
     cid, uid = _setup_company_user(app)
-    raw_token, key_id = _create_api_key(app, uid, cid, 'Lookup Test')
+    raw_token, _key_id = _create_api_key(app, uid, cid, 'Lookup Test')
     with app.app_context():
         found_key, found_user = ApiKey.lookup(raw_token)
         assert found_key is not None
@@ -101,7 +103,7 @@ def test_api_key_lookup_revoked(app):
     with app.app_context():
         key = db.session.get(ApiKey, key_id)
         key.revoke()
-        found_key, found_user = ApiKey.lookup(raw_token)
+        found_key, _found_user = ApiKey.lookup(raw_token)
         assert found_key is None
 
 
@@ -119,14 +121,13 @@ def test_api_key_last_used_updates(app):
 
 # --- Bearer token on API endpoints ---
 
+
 def test_list_employees_with_bearer_token(app):
     """GET /api/v1/employees with valid Bearer token returns 200."""
     cid, uid = _setup_company_user(app)
     raw_token, _ = _create_api_key(app, uid, cid)
     with app.test_client() as client:
-        resp = client.get('/api/v1/employees', headers={
-            'Authorization': f'Bearer {raw_token}'
-        })
+        resp = client.get('/api/v1/employees', headers={'Authorization': f'Bearer {raw_token}'})
         assert resp.status_code == 200
         data = resp.get_json()
         assert isinstance(data, dict)
@@ -144,9 +145,7 @@ def test_list_employees_no_auth(app):
 def test_list_employees_bad_token(app):
     """GET /api/v1/employees with garbage token returns 401."""
     with app.test_client() as client:
-        resp = client.get('/api/v1/employees', headers={
-            'Authorization': 'Bearer ep_invalidtoken123'
-        })
+        resp = client.get('/api/v1/employees', headers={'Authorization': 'Bearer ep_invalidtoken123'})
         assert resp.status_code == 401
 
 
@@ -155,13 +154,15 @@ def test_create_employee_with_bearer_token(app):
     cid, uid = _setup_company_user(app)
     raw_token, _ = _create_api_key(app, uid, cid)
     with app.test_client() as client:
-        resp = client.post('/api/v1/employees',
+        resp = client.post(
+            '/api/v1/employees',
             headers={'Authorization': f'Bearer {raw_token}'},
             json={
                 'employee_id': 'API001',
                 'name': 'API Worker',
                 'basic_salary': 5000,
-            })
+            },
+        )
         assert resp.status_code == 201
         data = resp.get_json()
         assert data['employee_id'] == 'API001'
@@ -172,7 +173,8 @@ def test_impact_endpoint_with_bearer(app):
     cid, uid = _setup_company_user(app)
     raw_token, _ = _create_api_key(app, uid, cid)
     with app.test_client() as client:
-        resp = client.post('/api/v1/impact/salary-raise',
+        resp = client.post(
+            '/api/v1/impact/salary-raise',
             headers={'Authorization': f'Bearer {raw_token}'},
             json={
                 'current_basic': 5000,
@@ -180,7 +182,8 @@ def test_impact_endpoint_with_bearer(app):
                 'new_basic': 6000,
                 'new_allowances': 1200,
                 'employee_name': 'Test',
-            })
+            },
+        )
         assert resp.status_code == 200
         data = resp.get_json()
         assert 'impact' in data or 'current' in data
@@ -188,14 +191,13 @@ def test_impact_endpoint_with_bearer(app):
 
 # --- API Key management endpoints ---
 
+
 def test_list_api_keys(app):
     """GET /api/v1/api-keys lists keys for current user."""
     cid, uid = _setup_company_user(app)
     raw_token, _ = _create_api_key(app, uid, cid)
     with app.test_client() as client:
-        resp = client.get('/api/v1/api-keys', headers={
-            'Authorization': f'Bearer {raw_token}'
-        })
+        resp = client.get('/api/v1/api-keys', headers={'Authorization': f'Bearer {raw_token}'})
         assert resp.status_code == 200
         keys = resp.get_json()
         assert len(keys) >= 1
@@ -207,9 +209,9 @@ def test_create_api_key_via_api(app):
     cid, uid = _setup_company_user(app)
     raw_token, _ = _create_api_key(app, uid, cid)
     with app.test_client() as client:
-        resp = client.post('/api/v1/api-keys',
-            headers={'Authorization': f'Bearer {raw_token}'},
-            json={'name': 'CI Pipeline'})
+        resp = client.post(
+            '/api/v1/api-keys', headers={'Authorization': f'Bearer {raw_token}'}, json={'name': 'CI Pipeline'}
+        )
         assert resp.status_code == 201
         data = resp.get_json()
         assert 'token' in data
@@ -222,18 +224,15 @@ def test_revoke_api_key(app):
     cid, uid = _setup_company_user(app)
     raw_token, key_id = _create_api_key(app, uid, cid)
     with app.test_client() as client:
-        resp = client.delete(f'/api/v1/api-keys/{key_id}', headers={
-            'Authorization': f'Bearer {raw_token}'
-        })
+        resp = client.delete(f'/api/v1/api-keys/{key_id}', headers={'Authorization': f'Bearer {raw_token}'})
         assert resp.status_code == 200
         # Key should no longer work
-        resp2 = client.get('/api/v1/employees', headers={
-            'Authorization': f'Bearer {raw_token}'
-        })
+        resp2 = client.get('/api/v1/employees', headers={'Authorization': f'Bearer {raw_token}'})
         assert resp2.status_code == 401
 
 
 # --- Tenant isolation via API token ---
+
 
 def test_api_token_tenant_isolation(app):
     """API token from Company A cannot see Company B's employees."""
@@ -244,15 +243,15 @@ def test_api_token_tenant_isolation(app):
         db.session.add(other_company)
         db.session.commit()
         emp = Employee(
-            employee_id='OTHER001', name='Other Worker',
-            basic_salary=3000, company_id=other_company.id,
+            employee_id='OTHER001',
+            name='Other Worker',
+            basic_salary=3000,
+            company_id=other_company.id,
         )
         db.session.add(emp)
         db.session.commit()
     with app.test_client() as client:
-        resp = client.get('/api/v1/employees', headers={
-            'Authorization': f'Bearer {raw_token}'
-        })
+        resp = client.get('/api/v1/employees', headers={'Authorization': f'Bearer {raw_token}'})
         assert resp.status_code == 200
         ids = [e['employee_id'] for e in resp.get_json()['employees']]
         assert 'OTHER001' not in ids
@@ -260,9 +259,10 @@ def test_api_token_tenant_isolation(app):
 
 # --- Role enforcement via API token ---
 
+
 def test_api_token_owner_only_delete(app):
     """Non-owner API token cannot DELETE employees."""
-    cid, uid = _setup_company_user(app)
+    cid, _uid = _setup_company_user(app)
     with app.app_context():
         company = db.session.get(Company, cid)
         # Create an accountant
@@ -273,16 +273,16 @@ def test_api_token_owner_only_delete(app):
         uc = UserCompany(user_id=acct.id, company_id=company.id, role='accountant')
         db.session.add(uc)
         db.session.commit()
-        acct_key, acct_token = ApiKey.create_for_user(acct, company.id, name='Acct Key')
+        _acct_key, acct_token = ApiKey.create_for_user(acct, company.id, name='Acct Key')
         emp = Employee(
-            employee_id='DEL001', name='Delete Me',
-            basic_salary=1000, company_id=company.id,
+            employee_id='DEL001',
+            name='Delete Me',
+            basic_salary=1000,
+            company_id=company.id,
         )
         db.session.add(emp)
         db.session.commit()
         emp_id = emp.id
     with app.test_client() as client:
-        resp = client.delete(f'/api/v1/employees/{emp_id}', headers={
-            'Authorization': f'Bearer {acct_token}'
-        })
+        resp = client.delete(f'/api/v1/employees/{emp_id}', headers={'Authorization': f'Bearer {acct_token}'})
         assert resp.status_code == 403

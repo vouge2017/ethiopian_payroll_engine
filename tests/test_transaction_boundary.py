@@ -4,6 +4,7 @@ Transaction boundary tests for payroll approval.
 Verifies that the approval flow is atomic: if anything fails midway,
 the entire approval rolls back — no partial payslips, no half-committed state.
 """
+
 import os
 import sys
 
@@ -59,8 +60,10 @@ def _setup_approval_data(app):
         db.session.flush()
 
         emp = Employee(
-            employee_id='EMP001', name='Abebe',
-            basic_salary=10000, allowances=2000,
+            employee_id='EMP001',
+            name='Abebe',
+            basic_salary=10000,
+            allowances=2000,
             company_id=company.id,
         )
         db.session.add(emp)
@@ -76,19 +79,21 @@ def _setup_approval_data(app):
 
         draft = PayrollDraft(
             payroll_run_id=run.id,
-            employee_data=[{
-                'id': 'EMP001',
-                'name': 'Abebe',
-                'basic': 10000,
-                'allowances': 2000,
-                'bank': 'dashen:2000987654321',
-                'tin': '1234567890',
-                'gross': 12000,
-                'tax': 1500,
-                'pension_employee': 840,
-                'pension_employer': 1320,
-                'net': 9660,
-            }],
+            employee_data=[
+                {
+                    'id': 'EMP001',
+                    'name': 'Abebe',
+                    'basic': 10000,
+                    'allowances': 2000,
+                    'bank': 'dashen:2000987654321',
+                    'tin': '1234567890',
+                    'gross': 12000,
+                    'tax': 1500,
+                    'pension_employee': 840,
+                    'pension_employer': 1320,
+                    'net': 9660,
+                }
+            ],
         )
         db.session.add(draft)
         db.session.commit()
@@ -102,7 +107,7 @@ def test_approval_succeeds_without_pdf_generation(app):
     PDFs are generated lazily on download (not at approval time).
     Payslips are created with pdf_status='not_generated'.
     """
-    company_id, user_id, run_id = _setup_approval_data(app)
+    _company_id, user_id, run_id = _setup_approval_data(app)
 
     with app.app_context():
         # Verify starting state
@@ -119,10 +124,14 @@ def test_approval_succeeds_without_pdf_generation(app):
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
 
-        resp = client.post('/payroll/approve', data={
-            'run_id': run_id,
-            'password': 'TestPass1!',
-        }, follow_redirects=False)
+        client.post(
+            '/payroll/approve',
+            data={
+                'run_id': run_id,
+                'password': 'TestPass1!',
+            },
+            follow_redirects=False,
+        )
 
     # After approval, verify payslips are created with lazy PDF status
     with app.app_context():
@@ -133,14 +142,14 @@ def test_approval_succeeds_without_pdf_generation(app):
 
         # Payslips should exist with pdf_status='not_generated'
         payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
-        assert len(payslips) > 0, "No payslips created"
+        assert len(payslips) > 0, 'No payslips created'
         for ps in payslips:
-            assert ps.pdf_file_path is None, f"Expected no PDF path for {ps.id}"
+            assert ps.pdf_file_path is None, f'Expected no PDF path for {ps.id}'
             assert ps.pdf_status == 'not_generated', f"Expected 'not_generated', got '{ps.pdf_status}'"
 
         # Draft should be cleaned up
         draft = PayrollDraft.query.filter_by(payroll_run_id=run_id).first()
-        assert draft is None, "Draft was not cleaned up"
+        assert draft is None, 'Draft was not cleaned up'
 
 
 def test_approval_rolls_back_on_compliance_failure(app):
@@ -148,7 +157,7 @@ def test_approval_rolls_back_on_compliance_failure(app):
     If compliance scoring fails after payslips are generated,
     the entire transaction must roll back.
     """
-    company_id, user_id, run_id = _setup_approval_data(app)
+    _company_id, user_id, run_id = _setup_approval_data(app)
 
     with app.test_client() as client:
         with app.app_context():
@@ -157,11 +166,18 @@ def test_approval_rolls_back_on_compliance_failure(app):
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
 
-        with patch('payroll_engine.services.payroll_service.compute_compliance_score', side_effect=Exception('Compliance service down')):
-            resp = client.post('/payroll/approve', data={
-                'run_id': run_id,
-                'password': 'TestPass1!',
-            }, follow_redirects=False)
+        with patch(
+            'payroll_engine.services.payroll_service.compute_compliance_score',
+            side_effect=Exception('Compliance service down'),
+        ):
+            client.post(
+                '/payroll/approve',
+                data={
+                    'run_id': run_id,
+                    'password': 'TestPass1!',
+                },
+                follow_redirects=False,
+            )
 
     with app.app_context():
         run = db.session.get(PayrollRun, run_id)
@@ -186,10 +202,14 @@ def test_approval_commits_atomically_on_success(app):
                 sess['_user_id'] = str(user.id)
                 sess['_fresh'] = True
 
-        resp = client.post('/payroll/approve', data={
-            'run_id': run_id,
-            'password': 'TestPass1!',
-        }, follow_redirects=False)
+        client.post(
+            '/payroll/approve',
+            data={
+                'run_id': run_id,
+                'password': 'TestPass1!',
+            },
+            follow_redirects=False,
+        )
 
     with app.app_context():
         run = db.session.get(PayrollRun, run_id)
@@ -199,8 +219,6 @@ def test_approval_commits_atomically_on_success(app):
         assert Payslip.query.filter_by(payroll_run_id=run_id).count() == 1
         assert PayrollDraft.query.filter_by(payroll_run_id=run_id).first() is None
 
-        success_log = AuditLog.query.filter_by(
-            company_id=company_id, action='payroll_run_completed'
-        ).first()
+        success_log = AuditLog.query.filter_by(company_id=company_id, action='payroll_run_completed').first()
         assert success_log is not None
         assert success_log.details['employee_count'] == 1

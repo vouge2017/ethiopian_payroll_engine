@@ -35,16 +35,17 @@ def leave_calendar():
     year = request.args.get('year', today.year, type=int)
     month = request.args.get('month', today.month, type=int)
 
-    if month < 1: month = 12; year -= 1
-    if month > 12: month = 1; year += 1
+    if month < 1:
+        month = 12
+        year -= 1
+    if month > 12:
+        month = 1
+        year += 1
 
     company_id = current_user.company_id
 
     # Get all employees
-    employees = Employee.query.filter_by(
-        company_id=company_id,
-        is_deleted=False
-    ).order_by(Employee.name).all()
+    employees = Employee.query.filter_by(company_id=company_id, is_deleted=False).order_by(Employee.name).all()
 
     # Get approved leaves for this month
     start = date(year, month, 1)
@@ -54,10 +55,7 @@ def leave_calendar():
         end = date(year, month + 1, 1)
 
     leaves = Leave.query.filter(
-        Leave.company_id == company_id,
-        Leave.status == 'approved',
-        Leave.start_date < end,
-        Leave.end_date >= start
+        Leave.company_id == company_id, Leave.status == 'approved', Leave.start_date < end, Leave.end_date >= start
     ).all()
 
     # Build day → employees_on_leave map
@@ -68,11 +66,13 @@ def leave_calendar():
             continue
         current = max(leave.start_date, start)
         while current < min(leave.end_date + timedelta(days=1), end):
-            leave_map[current].append({
-                'employee': emp.name,
-                'type': leave.leave_type,
-                'emp_id': emp.employee_id,
-            })
+            leave_map[current].append(
+                {
+                    'employee': emp.name,
+                    'type': leave.leave_type,
+                    'emp_id': emp.employee_id,
+                }
+            )
             current += timedelta(days=1)
 
     # Get holidays
@@ -81,6 +81,7 @@ def leave_calendar():
 
     # Build calendar grid
     import calendar
+
     cal = calendar.Calendar(firstweekday=0)  # Monday first
     weeks = cal.monthdayscalendar(year, month)
 
@@ -96,17 +97,19 @@ def leave_calendar():
                 holiday = holiday_dates.get(d)
                 on_leave = leave_map.get(d, [])
 
-                week_data.append({
-                    'date': d,
-                    'day': day,
-                    'is_sunday': is_sunday,
-                    'is_holiday': holiday is not None,
-                    'holiday_name': holiday.name_am or holiday.name if holiday else None,
-                    'is_weekend': is_sunday,
-                    'on_leave': on_leave,
-                    'leave_count': len(on_leave),
-                    'is_today': d == today,
-                })
+                week_data.append(
+                    {
+                        'date': d,
+                        'day': day,
+                        'is_sunday': is_sunday,
+                        'is_holiday': holiday is not None,
+                        'holiday_name': holiday.name_am or holiday.name if holiday else None,
+                        'is_weekend': is_sunday,
+                        'on_leave': on_leave,
+                        'leave_count': len(on_leave),
+                        'is_today': d == today,
+                    }
+                )
         calendar_data.append(week_data)
 
     # Working days
@@ -123,7 +126,8 @@ def leave_calendar():
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
 
-    return render_template('leave_calendar.html',
+    return render_template(
+        'leave_calendar.html',
         calendar_data=calendar_data,
         year=year,
         month=month,
@@ -136,7 +140,7 @@ def leave_calendar():
         prev_year=prev_year,
         next_month=next_month,
         next_year=next_year,
-        today=today
+        today=today,
     )
 
 
@@ -156,22 +160,21 @@ def api_leaves():
         end = date(year, month + 1, 1)
 
     leaves = Leave.query.filter(
-        Leave.company_id == company_id,
-        Leave.status == 'approved',
-        Leave.start_date < end,
-        Leave.end_date >= start
+        Leave.company_id == company_id, Leave.status == 'approved', Leave.start_date < end, Leave.end_date >= start
     ).all()
 
     result = []
     for leave in leaves:
         emp = Employee.query.get(leave.employee_id)
         if emp:
-            result.append({
-                'employee': emp.name,
-                'type': leave.leave_type,
-                'start': leave.start_date.isoformat(),
-                'end': leave.end_date.isoformat(),
-                'days': leave.days_requested,
-            })
+            result.append(
+                {
+                    'employee': emp.name,
+                    'type': leave.leave_type,
+                    'start': leave.start_date.isoformat(),
+                    'end': leave.end_date.isoformat(),
+                    'days': leave.days_requested,
+                }
+            )
 
     return jsonify(result)

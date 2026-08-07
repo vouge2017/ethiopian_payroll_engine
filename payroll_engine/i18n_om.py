@@ -22,12 +22,12 @@ STRINGS_OM = {
     'logout': 'Bahii',
     'help': 'Gargaarsa',
     'log_in': 'Seeni',
-    'register': 'Galmaa\'i',
+    'register': "Galmaa'i",
     'add_employee': 'Hojjetaa Dabali',
     'save_employee': 'Hojjetaa Olkaayi',
     'cancel': 'Haqunu',
     'search': 'Barbaadi',
-    'upload_csv': 'CSV Olfe\'i',
+    'upload_csv': "CSV Olfe'i",
     'select_csv': 'Faayila CSV Filadhu',
     'view_all': 'Hunduma Agarsiisi',
     'download': 'Buufadhu',
@@ -41,7 +41,6 @@ STRINGS_OM = {
     'show_calculation': 'Shallacha agarsiisi',
     'entries': 'Galfamoota',
     'overtime': 'Hojii Turee',
-
     # Employee Fields
     'employee_id': 'ID Hojjetaa',
     'full_name': 'Maqaa Guutuu',
@@ -50,7 +49,7 @@ STRINGS_OM = {
     'department': 'Damee',
     'position': 'Gadi-aantummaa Hojii',
     'start_date': 'Guyyaa Hojii Jalqabe',
-    'basic_salary': 'Mindaa Bu\'uraa',
+    'basic_salary': "Mindaa Bu'uraa",
     'allowances': 'Aballii',
     'gross_salary': 'Mindaa Waligalaa',
     'bank_account': 'Herrega Baankii',
@@ -61,19 +60,18 @@ STRINGS_OM = {
     'status': 'Haala',
     'deactivated': 'Kan Dhaabbate',
     'linked_user': 'Fayyadamaa Walqabate',
-
     # Payroll
     'payroll_summary': 'Gabaasa Kaffaltii Gabaabaa',
     'payroll_history': 'Seenaa Kaffaltii',
     'period': 'Yeroo',
     'date': 'Guyyaa',
     'earnings': 'Galiiwwan',
-    'deductions': 'Hir\'ifamoota',
+    'deductions': "Hir'ifamoota",
     'gross': 'Waligala',
     'income_tax': 'Gibira Galii',
     'employee_pension': 'Furtuu Hojjetaa',
     'employer_pension': 'Furtuu Hojjechiisaa',
-    'total_deductions': 'Total Hir\'ifamoota',
+    'total_deductions': "Total Hir'ifamoota",
     'net_pay': 'Kaffaltii Qulqulluu',
     'net': 'Qulqulluu',
     'payment': 'Kaffaltii',
@@ -92,15 +90,13 @@ STRINGS_OM = {
     'total_gross': 'Total Waligala',
     'total_tax': 'Total Gibira',
     'total_net': 'Total Qulqulluu',
-
     # Overtime
     'overtime_this_month': 'Hojii Turee kan Addaa',
-    'total_hours': 'Total Sa\'aatii',
+    'total_hours': "Total Sa'aatii",
     'over_limit': 'Daangaa Ol',
-    'hours': 'Sa\'aatiiwwan',
+    'hours': "Sa'aatiiwwan",
     'type': 'Akaakuu',
     'rate': 'Saffisa',
-
     # Compliance & Reports
     'compliance': 'Seera Kabajuu',
     'compliance_score': 'Qabxii Seera Kabajuu',
@@ -111,31 +107,27 @@ STRINGS_OM = {
     'pension_contribution_deadline': 'Daangaa Guyyaa Buusii Furtuu',
     'pssa_remittance': 'PSSSA Remittance',
     'reports_compliance': 'Gabaasa & Seera Kabajuu',
-    'total_checks': 'Total Sakatta\'iinsa',
+    'total_checks': "Total Sakatta'iinsa",
     'issue': 'Rakkoo',
     'override': 'Irra Dabalama',
     'reason': 'Sababa',
     'note': 'Hubachiisa',
-    'why_ok': 'Kun maaliif sirrii ta\'e?',
-
+    'why_ok': "Kun maaliif sirrii ta'e?",
     # Dashboard
     'latest_net_pay': 'Kaffaltii Qulqulluu Dhumaa',
     'last_payroll_run': 'Kaffaltii Raawwatame kan Dhumaa',
     'quick_actions': 'Gochaawwan Ariifachiisaa',
-
     # Termination
     'severance_preview': 'Durgoo Gaggeessaa Dursee Argamuu',
     'termination_reason': 'Sababa Hojii Gaggeeffamuu',
     'last_working_day': 'Guyyaa Hojii Dhumaa',
     'years_of_service': 'Waggoottan Tajaajilaa',
-
     # Team & Linking
     'current_members': 'Miseensota Ammaa',
     'add_team_member': 'Miseensa Garee Dabali',
     'phone_or_email': 'Bilbila ykn Email',
     'user_account': 'Herrega Fayyadamaa',
     'link_employee_user': 'Hojjetaa herrega fayyadamaa waliin walqabsiisi',
-
     # Login & Registration
     'password': 'Jecha Icciitii',
     'forgot_password': 'Jecha Icciitii dagattanii?',
@@ -143,17 +135,15 @@ STRINGS_OM = {
     'email': 'Email',
     'yes': 'Eeyyee',
     'no': 'Lakki',
-
     # CSV & Format
     'csv_format': 'Boca CSV',
     'bank_telebirr': 'Baankii / Telebirr',
-
     # Flash Messages
     'how_tax_calculated': 'Caasni akkamitti shallagama?',
     'tax_explainer_intro': "Caansi lixuu Itoophiyaa brackettiin caalu fayyadamaa (Proclamation No. 1395/2025). Haqni guutuu dura caasaa irraa ni haqama, lixuu kee ni hir'isa.",
     'bracket': 'Bracket',
     'taxable_range': 'Hangaa Lixuu',
-    'rate': 'Hammam',
+    'tax_rate': 'Hammam',
     'personal_relief': 'Dhoomsoo Dhuunfaa',
     'per_month': "ji'a tokkootti",
     'pension_before_tax': 'Haqni guutuu dura caasaa irraa ni haqama',

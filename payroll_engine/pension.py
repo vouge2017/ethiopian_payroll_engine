@@ -64,6 +64,7 @@ def _get_rates(for_date=None) -> tuple[Decimal, Decimal, Decimal | None]:
     """
     cache_key = str(for_date) if for_date else 'default'
     import time
+
     now = time.time()
     if cache_key in _rates_cache:
         cached_time = _rates_cache_timestamps.get(cache_key, 0)
@@ -75,6 +76,7 @@ def _get_rates(for_date=None) -> tuple[Decimal, Decimal, Decimal | None]:
 
     try:
         from payroll_engine.models import TaxRule
+
         rule = TaxRule.get_active_rule(for_date)
         if rule:
             pension_cfg = rule.rules_json.get('pension', {})
@@ -161,4 +163,6 @@ def total_pension(basic_salary, for_date=None) -> Decimal:
     Returns:
         Combined pension contribution in ETB, as Decimal
     """
-    return (employee_pension(basic_salary, for_date) + employer_pension(basic_salary, for_date)).quantize(Q, rounding=ROUND_HALF_UP)
+    return (employee_pension(basic_salary, for_date) + employer_pension(basic_salary, for_date)).quantize(
+        Q, rounding=ROUND_HALF_UP
+    )

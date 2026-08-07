@@ -19,26 +19,36 @@ from datetime import date
 
 # Ethiopian month names
 ETHIOPIAN_MONTHS = [
-    'መስከረም',   # Meskerem (1)
-    'ጥቅምት',    # Tikimt (2)
-    'ህዳር',     # Hidar (3)
-    'ታህሳስ',    # Tahsas (4)
-    'ጥር',      # Ter (5)
-    'የካቲት',    # Yekatit (6)
-    'መጋቢት',    # Megabit (7)
-    'ሚያዝያ',    # Miyazia (8)
-    'ግንቦት',    # Ginbot (9)
-    'ሰኔ',      # Sene (10)
-    'ሐምሌ',     # Hamle (11)
-    'ነሐሴ',     # Nehase (12)
-    'ጳጉሜ',    # Pagume (13)
+    'መስከረም',  # Meskerem (1)
+    'ጥቅምት',  # Tikimt (2)
+    'ህዳር',  # Hidar (3)
+    'ታህሳስ',  # Tahsas (4)
+    'ጥር',  # Ter (5)
+    'የካቲት',  # Yekatit (6)
+    'መጋቢት',  # Megabit (7)
+    'ሚያዝያ',  # Miyazia (8)
+    'ግንቦት',  # Ginbot (9)
+    'ሰኔ',  # Sene (10)
+    'ሐምሌ',  # Hamle (11)
+    'ነሐሴ',  # Nehase (12)
+    'ጳጉሜ',  # Pagume (13)
 ]
 
 # English month names for fallback
 ETHIOPIAN_MONTHS_EN = [
-    'Meskerem', 'Tikimt', 'Hidar', 'Tahsas', 'Ter',
-    'Yekatit', 'Megabit', 'Miyazia', 'Ginbot', 'Sene',
-    'Hamle', 'Nehase', 'Pagume',
+    'Meskerem',
+    'Tikimt',
+    'Hidar',
+    'Tahsas',
+    'Ter',
+    'Yekatit',
+    'Megabit',
+    'Miyazia',
+    'Ginbot',
+    'Sene',
+    'Hamle',
+    'Nehase',
+    'Pagume',
 ]
 
 # JDN of Ethiopian epoch (Meskerem 1, year 1)
@@ -101,7 +111,7 @@ def gregorian_to_ethiopian(greg_date: date) -> tuple[int, int, int]:
     day_in_year = days_since_epoch - (cycles * 1461) - year_starts[year_in_cycle]
 
     # Month and day
-    is_leap = (eth_year % 4 == 3)
+    is_leap = eth_year % 4 == 3
     if day_in_year >= 360:
         # Pagume (month 13)
         eth_month = 13
@@ -136,7 +146,7 @@ def format_ethiopian_date(greg_date: date, language: str = 'am') -> str:
     else:
         month_name = ETHIOPIAN_MONTHS_EN[eth_month - 1]
 
-    return f"{month_name} {eth_day}, {eth_year}"
+    return f'{month_name} {eth_day}, {eth_year}'
 
 
 def format_dual_date(greg_date: date, language: str = 'am') -> str:
@@ -152,7 +162,7 @@ def format_dual_date(greg_date: date, language: str = 'am') -> str:
     """
     eth_str = format_ethiopian_date(greg_date, language='am')
     greg_str = greg_date.strftime('%b %d, %Y')
-    return f"{eth_str} ({greg_str})"
+    return f'{eth_str} ({greg_str})'
 
 
 def get_ethiopian_month_name(month: int, language: str = 'am') -> str:

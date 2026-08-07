@@ -6,6 +6,7 @@ Profile change request tests — verifies the employee edit workflow:
 - Notifications are sent
 - Audit logs are created
 """
+
 import os
 import sys
 
@@ -76,10 +77,14 @@ def _setup(app):
 
 def _login(client, phone, password):
     """Log in a user via the auth route."""
-    return client.post('/auth/login', data={
-        'login_id': phone,
-        'password': password,
-    }, follow_redirects=True)
+    return client.post(
+        '/auth/login',
+        data={
+            'login_id': phone,
+            'password': password,
+        },
+        follow_redirects=True,
+    )
 
 
 class TestProfileChangeRequestModel:
@@ -87,7 +92,7 @@ class TestProfileChangeRequestModel:
 
     def test_model_creation(self, app):
         with app.app_context():
-            company_id, admin_id, emp_user_id, emp_id = _setup(app)
+            company_id, _admin_id, emp_user_id, emp_id = _setup(app)
             req = ProfileChangeRequest(
                 company_id=company_id,
                 employee_id=emp_id,
@@ -119,10 +124,13 @@ class TestProfileChangeRequestModel:
 
     def test_field_labels(self, app):
         with app.app_context():
-            company_id, admin_id, emp_user_id, emp_id = _setup(app)
+            company_id, _admin_id, emp_user_id, emp_id = _setup(app)
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='bank_account', old_value='old', new_value='new',
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='bank_account',
+                old_value='old',
+                new_value='new',
                 requested_by=emp_user_id,
             )
             assert req.field_label == 'Bank Account'
@@ -132,7 +140,7 @@ class TestEmployeeProfileEdit:
     """Tests for the employee portal edit routes."""
 
     def test_edit_page_loads(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        _company_id, _admin_id, _emp_user_id, _emp_id = _setup(app)
         client = app.test_client()
         _login(client, '0910000001', 'EmpPass1!')
         resp = client.get('/my/profile/edit')
@@ -140,14 +148,18 @@ class TestEmployeeProfileEdit:
         assert b'Edit My Profile' in resp.data
 
     def test_safe_field_updates_immediately(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
         _login(client, '0910000001', 'EmpPass1!')
-        resp = client.post('/my/profile/edit', data={
-            'address': 'Bole, Addis Ababa',
-            'emergency_contact': 'Abebe Kebede',
-            'emergency_phone': '0933333333',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/my/profile/edit',
+            data={
+                'address': 'Bole, Addis Ababa',
+                'emergency_contact': 'Abebe Kebede',
+                'emergency_phone': '0933333333',
+            },
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
 
         with app.app_context():
@@ -157,12 +169,16 @@ class TestEmployeeProfileEdit:
             assert emp.emergency_phone == '0933333333'
 
     def test_sensitive_field_creates_approval_request(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
         _login(client, '0910000001', 'EmpPass1!')
-        resp = client.post('/my/profile/edit', data={
-            'phone': '0922222222',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/my/profile/edit',
+            data={
+                'phone': '0922222222',
+            },
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
 
         with app.app_context():
@@ -171,31 +187,31 @@ class TestEmployeeProfileEdit:
             assert emp.phone == '0911111111'
 
             # But a change request should exist
-            req = ProfileChangeRequest.query.filter_by(
-                employee_id=emp_id, field_name='phone'
-            ).first()
+            req = ProfileChangeRequest.query.filter_by(employee_id=emp_id, field_name='phone').first()
             assert req is not None
             assert req.status == 'pending'
             assert req.new_value == '0922222222'
             assert req.old_value == '0911111111'
 
     def test_no_change_submitted_if_value_same(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
         _login(client, '0910000001', 'EmpPass1!')
-        resp = client.post('/my/profile/edit', data={
-            'phone': '0911111111',  # Same as current
-        }, follow_redirects=True)
+        resp = client.post(
+            '/my/profile/edit',
+            data={
+                'phone': '0911111111',  # Same as current
+            },
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
 
         with app.app_context():
-            reqs = ProfileChangeRequest.query.filter_by(
-                employee_id=emp_id, field_name='phone'
-            ).all()
+            reqs = ProfileChangeRequest.query.filter_by(employee_id=emp_id, field_name='phone').all()
             assert len(reqs) == 0
 
     def test_duplicate_pending_request_blocked(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
         _login(client, '0910000001', 'EmpPass1!')
         # First request
@@ -205,8 +221,7 @@ class TestEmployeeProfileEdit:
 
         with app.app_context():
             pending = ProfileChangeRequest.query.filter_by(
-                employee_id=emp_id, field_name='phone',
-                status='pending'
+                employee_id=emp_id, field_name='phone', status='pending'
             ).all()
             assert len(pending) == 1
             assert pending[0].new_value == '0922222222'
@@ -216,12 +231,15 @@ class TestAdminApproval:
     """Tests for admin approval/rejection routes."""
 
     def test_admin_can_list_changes(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='phone', old_value='0911111111',
-                new_value='0922222222', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='phone',
+                old_value='0911111111',
+                new_value='0922222222',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -236,9 +254,12 @@ class TestAdminApproval:
         company_id, admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='phone', old_value='0911111111',
-                new_value='0922222222', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='phone',
+                old_value='0911111111',
+                new_value='0922222222',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -246,8 +267,7 @@ class TestAdminApproval:
 
         client = app.test_client()
         _login(client, '0910000000', 'AdminPass1!')
-        resp = client.post(f'/profile-changes/{req_id}/approve',
-                           follow_redirects=True)
+        resp = client.post(f'/profile-changes/{req_id}/approve', follow_redirects=True)
         assert resp.status_code == 200
 
         with app.app_context():
@@ -260,12 +280,15 @@ class TestAdminApproval:
             assert req.reviewed_at is not None
 
     def test_admin_reject_with_reason(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='bank_account', old_value='1234567890',
-                new_value='9999999999', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='bank_account',
+                old_value='1234567890',
+                new_value='9999999999',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -273,9 +296,9 @@ class TestAdminApproval:
 
         client = app.test_client()
         _login(client, '0910000000', 'AdminPass1!')
-        resp = client.post(f'/profile-changes/{req_id}/reject',
-                           data={'reason': 'Need bank statement'},
-                           follow_redirects=True)
+        resp = client.post(
+            f'/profile-changes/{req_id}/reject', data={'reason': 'Need bank statement'}, follow_redirects=True
+        )
         assert resp.status_code == 200
 
         with app.app_context():
@@ -287,12 +310,15 @@ class TestAdminApproval:
             assert req.rejection_reason == 'Need bank statement'
 
     def test_approve_sends_notification(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='tin', old_value='0001234567',
-                new_value='0009999999', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='tin',
+                old_value='0001234567',
+                new_value='0009999999',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -309,12 +335,15 @@ class TestAdminApproval:
             assert notif.type == 'success'
 
     def test_reject_sends_notification(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='name', old_value='Tigist Haile',
-                new_value='Tigist H.', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='name',
+                old_value='Tigist Haile',
+                new_value='Tigist H.',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -322,8 +351,7 @@ class TestAdminApproval:
 
         client = app.test_client()
         _login(client, '0910000000', 'AdminPass1!')
-        client.post(f'/profile-changes/{req_id}/reject',
-                    data={'reason': 'Use full name'})
+        client.post(f'/profile-changes/{req_id}/reject', data={'reason': 'Use full name'})
 
         with app.app_context():
             notif = Notification.query.filter_by(user_id=emp_user_id).first()
@@ -332,12 +360,15 @@ class TestAdminApproval:
             assert notif.type == 'danger'
 
     def test_cannot_approve_already_reviewed(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='phone', old_value='0911111111',
-                new_value='0922222222', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='phone',
+                old_value='0911111111',
+                new_value='0922222222',
+                requested_by=emp_user_id,
                 status='approved',
             )
             db.session.add(req)
@@ -346,18 +377,20 @@ class TestAdminApproval:
 
         client = app.test_client()
         _login(client, '0910000000', 'AdminPass1!')
-        resp = client.post(f'/profile-changes/{req_id}/approve',
-                           follow_redirects=True)
+        resp = client.post(f'/profile-changes/{req_id}/approve', follow_redirects=True)
         assert resp.status_code == 200
         assert b'already been reviewed' in resp.data
 
     def test_audit_log_created_on_approve(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='phone', old_value='0911111111',
-                new_value='0922222222', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='phone',
+                old_value='0911111111',
+                new_value='0922222222',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -368,9 +401,7 @@ class TestAdminApproval:
         client.post(f'/profile-changes/{req_id}/approve')
 
         with app.app_context():
-            log = AuditLog.query.filter_by(
-                action='profile_change_approved', company_id=company_id
-            ).first()
+            log = AuditLog.query.filter_by(action='profile_change_approved', company_id=company_id).first()
             assert log is not None
             assert log.details['field'] == 'phone'
             assert log.details['employee_id'] == emp_id
@@ -380,12 +411,15 @@ class TestProfileViewWithPending:
     """Tests for profile view showing pending changes."""
 
     def test_profile_shows_pending_badge(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='phone', old_value='0911111111',
-                new_value='0922222222', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='phone',
+                old_value='0911111111',
+                new_value='0922222222',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -397,12 +431,15 @@ class TestProfileViewWithPending:
         assert b'Change pending' in resp.data
 
     def test_profile_shows_pending_summary(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='bank_account', old_value='1234567890',
-                new_value='9999999999', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='bank_account',
+                old_value='1234567890',
+                new_value='9999999999',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -418,12 +455,15 @@ class TestAccessControl:
     """Tests for role-based access control."""
 
     def test_employee_cannot_approve(self, app):
-        company_id, admin_id, emp_user_id, emp_id = _setup(app)
+        company_id, _admin_id, emp_user_id, emp_id = _setup(app)
         with app.app_context():
             req = ProfileChangeRequest(
-                company_id=company_id, employee_id=emp_id,
-                field_name='phone', old_value='0911111111',
-                new_value='0922222222', requested_by=emp_user_id,
+                company_id=company_id,
+                employee_id=emp_id,
+                field_name='phone',
+                old_value='0911111111',
+                new_value='0922222222',
+                requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
@@ -431,8 +471,7 @@ class TestAccessControl:
 
         client = app.test_client()
         _login(client, '0910000001', 'EmpPass1!')
-        resp = client.post(f'/profile-changes/{req_id}/approve',
-                           follow_redirects=True)
+        resp = client.post(f'/profile-changes/{req_id}/approve', follow_redirects=True)
         # Should be forbidden or redirected
         assert resp.status_code in (403, 200)
         # Employee phone should NOT change

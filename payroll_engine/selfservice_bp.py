@@ -29,13 +29,17 @@ def _get_ytd_data(employee_id, year=None):
         year = date.today().year
 
     # Get all payslips for this employee in this year
-    payslips = db.session.query(Payslip).join(
-        PayrollRun, Payslip.payroll_run_id == PayrollRun.id
-    ).filter(
-        Payslip.employee_id == employee_id,
-        db.extract('year', PayrollRun.run_date) == year,
-        PayrollRun.status == 'completed'
-    ).order_by(PayrollRun.run_date).all()
+    payslips = (
+        db.session.query(Payslip)
+        .join(PayrollRun, Payslip.payroll_run_id == PayrollRun.id)
+        .filter(
+            Payslip.employee_id == employee_id,
+            db.extract('year', PayrollRun.run_date) == year,
+            PayrollRun.status == 'completed',
+        )
+        .order_by(PayrollRun.run_date)
+        .all()
+    )
 
     ytd = {
         'year': year,
@@ -59,15 +63,17 @@ def _get_ytd_data(employee_id, year=None):
         ytd['pension_employer'] += ps.employer_pension or Decimal('0')
         ytd['net'] += ps.net_pay or Decimal('0')
 
-        ytd['payslips'].append({
-            'period': run.period or run.run_date.strftime('%B %Y'),
-            'date': run.run_date,
-            'gross': ps.gross_salary or Decimal('0'),
-            'tax': ps.tax or Decimal('0'),
-            'pension': ps.employee_pension or Decimal('0'),
-            'net': ps.net_pay or Decimal('0'),
-            'payslip_id': ps.id,
-        })
+        ytd['payslips'].append(
+            {
+                'period': run.period or run.run_date.strftime('%B %Y'),
+                'date': run.run_date,
+                'gross': ps.gross_salary or Decimal('0'),
+                'tax': ps.tax or Decimal('0'),
+                'pension': ps.employee_pension or Decimal('0'),
+                'net': ps.net_pay or Decimal('0'),
+                'payslip_id': ps.id,
+            }
+        )
 
     return ytd
 
@@ -76,10 +82,7 @@ def _get_ytd_data(employee_id, year=None):
 @login_required
 def ytd_earnings():
     """Employee YTD earnings summary."""
-    employee = Employee.query.filter_by(
-        user_id=current_user.id,
-        is_deleted=False
-    ).first()
+    employee = Employee.query.filter_by(user_id=current_user.id, is_deleted=False).first()
 
     if not employee:
         flash('No employee record linked to your account.', 'warning')
@@ -89,21 +92,16 @@ def ytd_earnings():
     ytd = _get_ytd_data(employee.id, year)
 
     # Available years
-    available_years = db.session.query(
-        db.func.distinct(db.extract('year', PayrollRun.run_date))
-    ).join(
-        Payslip, Payslip.payroll_run_id == PayrollRun.id
-    ).filter(
-        Payslip.employee_id == employee.id,
-        PayrollRun.status == 'completed'
-    ).all()
+    available_years = (
+        db.session.query(db.func.distinct(db.extract('year', PayrollRun.run_date)))
+        .join(Payslip, Payslip.payroll_run_id == PayrollRun.id)
+        .filter(Payslip.employee_id == employee.id, PayrollRun.status == 'completed')
+        .all()
+    )
     available_years = sorted([int(y[0]) for y in available_years if y[0]], reverse=True)
 
-    return render_template('employee_portal/ytd.html',
-        employee=employee,
-        ytd=ytd,
-        available_years=available_years,
-        year=year
+    return render_template(
+        'employee_portal/ytd.html', employee=employee, ytd=ytd, available_years=available_years, year=year
     )
 
 
@@ -111,10 +109,7 @@ def ytd_earnings():
 @login_required
 def tax_certificate():
     """Generate tax certificate for the employee."""
-    employee = Employee.query.filter_by(
-        user_id=current_user.id,
-        is_deleted=False
-    ).first()
+    employee = Employee.query.filter_by(user_id=current_user.id, is_deleted=False).first()
 
     if not employee:
         flash('No employee record linked to your account.', 'warning')
@@ -125,12 +120,13 @@ def tax_certificate():
 
     company = current_user.company
 
-    return render_template('employee_portal/tax_certificate.html',
+    return render_template(
+        'employee_portal/tax_certificate.html',
         employee=employee,
         ytd=ytd,
         company=company,
         year=year,
-        generated_at=datetime.now()
+        generated_at=datetime.now(),
     )
 
 
@@ -138,10 +134,7 @@ def tax_certificate():
 @login_required
 def download_tax_certificate():
     """Download tax certificate as CSV."""
-    employee = Employee.query.filter_by(
-        user_id=current_user.id,
-        is_deleted=False
-    ).first()
+    employee = Employee.query.filter_by(user_id=current_user.id, is_deleted=False).first()
 
     if not employee:
         flash('No employee record linked.', 'warning')
@@ -164,16 +157,20 @@ def download_tax_certificate():
 
     writer.writerow(['Period', 'Gross (ETB)', 'Tax (ETB)', 'Pension (ETB)', 'Net (ETB)'])
     for ps in ytd['payslips']:
-        writer.writerow([
-            ps['period'],
-            f'{ps["gross"]:.2f}',
-            f'{ps["tax"]:.2f}',
-            f'{ps["pension"]:.2f}',
-            f'{ps["net"]:.2f}',
-        ])
+        writer.writerow(
+            [
+                ps['period'],
+                f'{ps["gross"]:.2f}',
+                f'{ps["tax"]:.2f}',
+                f'{ps["pension"]:.2f}',
+                f'{ps["net"]:.2f}',
+            ]
+        )
 
     writer.writerow([])
-    writer.writerow(['TOTAL', f'{ytd["gross"]:.2f}', f'{ytd["tax"]:.2f}', f'{ytd["pension_employee"]:.2f}', f'{ytd["net"]:.2f}'])
+    writer.writerow(
+        ['TOTAL', f'{ytd["gross"]:.2f}', f'{ytd["tax"]:.2f}', f'{ytd["pension_employee"]:.2f}', f'{ytd["net"]:.2f}']
+    )
     writer.writerow([])
     writer.writerow([f'Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}'])
     writer.writerow(['This is a computer-generated document.'])
@@ -182,5 +179,5 @@ def download_tax_certificate():
     return Response(
         output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=tax_certificate_{year}_{employee.employee_id}.csv'}
+        headers={'Content-Disposition': f'attachment; filename=tax_certificate_{year}_{employee.employee_id}.csv'},
     )

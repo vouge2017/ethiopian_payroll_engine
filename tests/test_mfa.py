@@ -1,4 +1,5 @@
 """Tests for MFA / TOTP functionality."""
+
 import os
 import sys
 
@@ -41,6 +42,7 @@ def ctx(app):
 def _create_user(ctx):
     """Create a test user and return (user, password)."""
     from payroll_engine.models import Company
+
     company = Company(name='TestCo')
     db.session.add(company)
     db.session.flush()
@@ -54,15 +56,18 @@ def _create_user(ctx):
 
 def _login(client, phone='0911111111', password='TestPass1!'):
     """Log in a test user."""
-    client.post('/auth/login', data={
-        'login_id': phone,
-        'password': password,
-    })
+    client.post(
+        '/auth/login',
+        data={
+            'login_id': phone,
+            'password': password,
+        },
+    )
 
 
 def test_mfa_setup_page_loads(client, ctx):
     """MFA setup page loads and shows QR code."""
-    user, pw = _create_user(ctx)
+    _user, _pw = _create_user(ctx)
     _login(client)
     resp = client.get('/auth/mfa/setup')
     assert resp.status_code == 200
@@ -72,7 +77,7 @@ def test_mfa_setup_page_loads(client, ctx):
 
 def test_mfa_enable_with_valid_code(client, ctx):
     """Valid TOTP code enables MFA."""
-    user, pw = _create_user(ctx)
+    user, _pw = _create_user(ctx)
     _login(client)
 
     # Generate secret
@@ -95,7 +100,7 @@ def test_mfa_enable_with_valid_code(client, ctx):
 
 def test_mfa_enable_with_invalid_code(client, ctx):
     """Invalid TOTP code does not enable MFA."""
-    user, pw = _create_user(ctx)
+    user, _pw = _create_user(ctx)
     _login(client)
     client.get('/auth/mfa/setup')
 
@@ -109,7 +114,7 @@ def test_mfa_enable_with_invalid_code(client, ctx):
 
 def test_mfa_verify_page_loads(client, ctx):
     """MFA verify page loads."""
-    user, pw = _create_user(ctx)
+    _user, _pw = _create_user(ctx)
     _login(client)
     resp = client.get('/auth/mfa/verify')
     assert resp.status_code == 200
@@ -118,7 +123,7 @@ def test_mfa_verify_page_loads(client, ctx):
 
 def test_mfa_verify_sets_session_flag(client, ctx):
     """Successful MFA verification sets session flag."""
-    user, pw = _create_user(ctx)
+    user, _pw = _create_user(ctx)
     _login(client)
 
     # Enable MFA
@@ -140,7 +145,7 @@ def test_mfa_verify_sets_session_flag(client, ctx):
 
 def test_mfa_disable(client, ctx):
     """MFA can be disabled with valid TOTP code."""
-    user, pw = _create_user(ctx)
+    user, _pw = _create_user(ctx)
     _login(client)
 
     # Enable MFA
@@ -163,7 +168,7 @@ def test_mfa_disable(client, ctx):
 
 def test_mfa_already_enabled_shows_info(client, ctx):
     """If MFA is already enabled, setup page redirects with info."""
-    user, pw = _create_user(ctx)
+    user, _pw = _create_user(ctx)
     _login(client)
 
     # Enable MFA
@@ -181,6 +186,7 @@ def test_mfa_already_enabled_shows_info(client, ctx):
 def test_user_model_totp_methods(ctx):
     """Test User model TOTP methods directly."""
     from payroll_engine.models import Company
+
     company = Company(name='TestCo2')
     db.session.add(company)
     db.session.flush()

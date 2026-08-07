@@ -2,6 +2,7 @@
 Tests for lazy PDF generation — approval no longer generates PDFs.
 PDFs are generated on-demand at download time via _ensure_pdf().
 """
+
 import os
 import sys
 
@@ -51,20 +52,32 @@ def _setup(app):
         db.session.flush()
 
         emp1 = Employee(
-            employee_id='EMP001', name='Abebe Kebede', phone='0911111111',
-            basic_salary=10000, allowances=2000, company_id=company.id,
-            bank_account='cbe:1000123456789', tin='1234567890',
+            employee_id='EMP001',
+            name='Abebe Kebede',
+            phone='0911111111',
+            basic_salary=10000,
+            allowances=2000,
+            company_id=company.id,
+            bank_account='cbe:1000123456789',
+            tin='1234567890',
         )
         emp2 = Employee(
-            employee_id='EMP002', name='Hana Tesfaye', phone='0922222222',
-            basic_salary=8000, allowances=1000, company_id=company.id,
-            bank_account='dashen:2000987654321', tin='0987654321',
+            employee_id='EMP002',
+            name='Hana Tesfaye',
+            phone='0922222222',
+            basic_salary=8000,
+            allowances=1000,
+            company_id=company.id,
+            bank_account='dashen:2000987654321',
+            tin='0987654321',
         )
         db.session.add_all([emp1, emp2])
         db.session.flush()
 
         run = PayrollRun(
-            company_id=company.id, run_date=date.today(), status='review',
+            company_id=company.id,
+            run_date=date.today(),
+            status='review',
         )
         run.generate_period()
         db.session.add(run)
@@ -73,18 +86,38 @@ def _setup(app):
 
         employees_data = [
             {
-                'id': 'EMP001', 'name': 'Abebe Kebede', 'phone': '0911111111',
-                'basic': 10000, 'allowances': 2000, 'gross': 12000,
-                'tax': 1500, 'pension_employee': 700, 'pension_employer': 1100,
-                'net': 9800, 'bank': 'cbe:1000123456789', 'tin': '1234567890',
-                'taxable': 11300, 'department': '', 'position': '',
+                'id': 'EMP001',
+                'name': 'Abebe Kebede',
+                'phone': '0911111111',
+                'basic': 10000,
+                'allowances': 2000,
+                'gross': 12000,
+                'tax': 1500,
+                'pension_employee': 700,
+                'pension_employer': 1100,
+                'net': 9800,
+                'bank': 'cbe:1000123456789',
+                'tin': '1234567890',
+                'taxable': 11300,
+                'department': '',
+                'position': '',
             },
             {
-                'id': 'EMP002', 'name': 'Hana Tesfaye', 'phone': '0922222222',
-                'basic': 8000, 'allowances': 1000, 'gross': 9000,
-                'tax': 1000, 'pension_employee': 560, 'pension_employer': 880,
-                'net': 7440, 'bank': 'dashen:2000987654321', 'tin': '0987654321',
-                'taxable': 8440, 'department': '', 'position': '',
+                'id': 'EMP002',
+                'name': 'Hana Tesfaye',
+                'phone': '0922222222',
+                'basic': 8000,
+                'allowances': 1000,
+                'gross': 9000,
+                'tax': 1000,
+                'pension_employee': 560,
+                'pension_employer': 880,
+                'net': 7440,
+                'bank': 'dashen:2000987654321',
+                'tin': '0987654321',
+                'taxable': 8440,
+                'department': '',
+                'position': '',
             },
         ]
 
@@ -109,11 +142,15 @@ class TestLazyPdfGeneration:
         cid, oid, rid = _setup(app)
 
         from payroll_engine.services.payroll_service import process_payroll
+
         with app.app_context():
             run = db.session.get(PayrollRun, rid)
             result = process_payroll(
-                run=run, company_id=cid, user_id=oid,
-                user_email='test@test.com', request_ip='127.0.0.1',
+                run=run,
+                company_id=cid,
+                user_id=oid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
             )
 
             assert result.success is True
@@ -124,11 +161,15 @@ class TestLazyPdfGeneration:
         cid, oid, rid = _setup(app)
 
         from payroll_engine.services.payroll_service import process_payroll
+
         with app.app_context():
             run = db.session.get(PayrollRun, rid)
             process_payroll(
-                run=run, company_id=cid, user_id=oid,
-                user_email='test@test.com', request_ip='127.0.0.1',
+                run=run,
+                company_id=cid,
+                user_id=oid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
             )
 
             payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
@@ -142,11 +183,15 @@ class TestLazyPdfGeneration:
         cid, oid, rid = _setup(app)
 
         from payroll_engine.services.payroll_service import process_payroll
+
         with app.app_context():
             run = db.session.get(PayrollRun, rid)
             result = process_payroll(
-                run=run, company_id=cid, user_id=oid,
-                user_email='test@test.com', request_ip='127.0.0.1',
+                run=run,
+                company_id=cid,
+                user_id=oid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
             )
 
             assert result.success is True
@@ -165,11 +210,15 @@ class TestRetryPdf:
 
         # First, complete payroll (no PDFs generated)
         from payroll_engine.services.payroll_service import process_payroll
+
         with app.app_context():
             run = db.session.get(PayrollRun, rid)
             process_payroll(
-                run=run, company_id=cid, user_id=oid,
-                user_email='test@test.com', request_ip='127.0.0.1',
+                run=run,
+                company_id=cid,
+                user_id=oid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
             )
 
             payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
@@ -192,14 +241,19 @@ class TestRetryPdf:
     def test_retry_rejects_already_generated(self, app):
         """Retry should reject if payslip already has a generated PDF."""
         import tempfile
+
         cid, oid, rid = _setup(app)
 
         from payroll_engine.services.payroll_service import process_payroll
+
         with app.app_context():
             run = db.session.get(PayrollRun, rid)
             process_payroll(
-                run=run, company_id=cid, user_id=oid,
-                user_email='test@test.com', request_ip='127.0.0.1',
+                run=run,
+                company_id=cid,
+                user_id=oid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
             )
 
             # Simulate a previously generated PDF (file must exist on disk)

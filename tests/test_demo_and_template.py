@@ -1,6 +1,7 @@
 """
 Tests for Demo Mode and CSV Template Download.
 """
+
 import os
 import sys
 
@@ -50,9 +51,10 @@ def ctx(app):
 # DEMO MODE TESTS
 # ================================================================
 
+
 def test_demo_creates_company(ctx):
     """Demo creates a company marked as is_demo."""
-    company, user, employees, run = create_demo_data()
+    company, _user, _employees, _run = create_demo_data()
     assert company is not None
     assert company.name == 'Sample Trading PLC'
     assert company.is_demo is True
@@ -60,7 +62,7 @@ def test_demo_creates_company(ctx):
 
 def test_demo_creates_5_employees(ctx):
     """Demo creates exactly 5 employees."""
-    company, user, employees, run = create_demo_data()
+    company, _user, employees, _run = create_demo_data()
     assert len(employees) == 5
     emps = Employee.query.filter_by(company_id=company.id).all()
     assert len(emps) == 5
@@ -68,7 +70,7 @@ def test_demo_creates_5_employees(ctx):
 
 def test_demo_creates_user(ctx):
     """Demo creates an owner user with demo credentials."""
-    company, user, employees, run = create_demo_data()
+    _company, user, _employees, _run = create_demo_data()
     assert user.phone == '0900000000'
     assert user.role == 'owner'
     assert user.check_password('demo123')
@@ -76,7 +78,7 @@ def test_demo_creates_user(ctx):
 
 def test_demo_creates_payroll_run(ctx):
     """Demo creates a completed payroll run with payslips."""
-    company, user, employees, run = create_demo_data()
+    company, _user, _employees, run = create_demo_data()
     assert run.status == 'completed'
     assert run.company_id == company.id
     payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
@@ -85,7 +87,7 @@ def test_demo_creates_payroll_run(ctx):
 
 def test_demo_payslips_have_correct_amounts(ctx):
     """Demo payslips have non-zero amounts."""
-    company, user, employees, run = create_demo_data()
+    _company, _user, _employees, run = create_demo_data()
     payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
     for ps in payslips:
         assert ps.gross_salary > 0
@@ -97,7 +99,7 @@ def test_demo_payslips_have_correct_amounts(ctx):
 
 def test_demo_overtime_entry(ctx):
     """Demo includes overtime for Dawit."""
-    company, user, employees, run = create_demo_data()
+    company, _user, _employees, _run = create_demo_data()
     dawit = Employee.query.filter_by(employee_id='EMP001', company_id=company.id).first()
     ot = OvertimeEntry.query.filter_by(employee_id=dawit.id, company_id=company.id).first()
     assert ot is not None
@@ -125,16 +127,28 @@ def test_demo_dashboard_shows_data(client, ctx):
 # CSV TEMPLATE TESTS
 # ================================================================
 
+
 def test_csv_template_download(ctx, client):
     """CSV template download returns a valid CSV file."""
     # Register and login first
-    client.post('/auth/register', data={
-        'company_name': 'TestCo', 'phone': '0911123456',
-        'password': 'TestPass123!', 'password2': 'TestPass123!',
-    }, follow_redirects=True)
-    client.post('/auth/login', data={
-        'login_id': '0911123456', 'password': 'TestPass123!',
-    }, follow_redirects=True)
+    client.post(
+        '/auth/register',
+        data={
+            'company_name': 'TestCo',
+            'phone': '0911123456',
+            'password': 'TestPass123!',
+            'password2': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
+    client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
     resp = client.get('/payroll/template')
     assert resp.status_code == 200
@@ -144,13 +158,24 @@ def test_csv_template_download(ctx, client):
 
 def test_csv_template_has_headers(ctx, client):
     """CSV template contains correct headers."""
-    client.post('/auth/register', data={
-        'company_name': 'TestCo', 'phone': '0911123456',
-        'password': 'TestPass123!', 'password2': 'TestPass123!',
-    }, follow_redirects=True)
-    client.post('/auth/login', data={
-        'login_id': '0911123456', 'password': 'TestPass123!',
-    }, follow_redirects=True)
+    client.post(
+        '/auth/register',
+        data={
+            'company_name': 'TestCo',
+            'phone': '0911123456',
+            'password': 'TestPass123!',
+            'password2': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
+    client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
     resp = client.get('/payroll/template')
     content = resp.data.decode('utf-8-sig')  # Handle BOM
@@ -162,13 +187,24 @@ def test_csv_template_has_headers(ctx, client):
 
 def test_csv_template_has_example_data(ctx, client):
     """CSV template contains example employee data."""
-    client.post('/auth/register', data={
-        'company_name': 'TestCo', 'phone': '0911123456',
-        'password': 'TestPass123!', 'password2': 'TestPass123!',
-    }, follow_redirects=True)
-    client.post('/auth/login', data={
-        'login_id': '0911123456', 'password': 'TestPass123!',
-    }, follow_redirects=True)
+    client.post(
+        '/auth/register',
+        data={
+            'company_name': 'TestCo',
+            'phone': '0911123456',
+            'password': 'TestPass123!',
+            'password2': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
+    client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
     resp = client.get('/payroll/template')
     content = resp.data.decode('utf-8-sig')
@@ -179,13 +215,24 @@ def test_csv_template_has_example_data(ctx, client):
 
 def test_csv_template_is_parseable(ctx, client):
     """CSV template can be parsed as valid CSV."""
-    client.post('/auth/register', data={
-        'company_name': 'TestCo', 'phone': '0911123456',
-        'password': 'TestPass123!', 'password2': 'TestPass123!',
-    }, follow_redirects=True)
-    client.post('/auth/login', data={
-        'login_id': '0911123456', 'password': 'TestPass123!',
-    }, follow_redirects=True)
+    client.post(
+        '/auth/register',
+        data={
+            'company_name': 'TestCo',
+            'phone': '0911123456',
+            'password': 'TestPass123!',
+            'password2': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
+    client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
     resp = client.get('/payroll/template')
     content = resp.data.decode('utf-8-sig')
@@ -198,13 +245,24 @@ def test_csv_template_is_parseable(ctx, client):
 
 def test_csv_template_has_utf8_bom(ctx, client):
     """CSV template starts with UTF-8 BOM for Excel compatibility."""
-    client.post('/auth/register', data={
-        'company_name': 'TestCo', 'phone': '0911123456',
-        'password': 'TestPass123!', 'password2': 'TestPass123!',
-    }, follow_redirects=True)
-    client.post('/auth/login', data={
-        'login_id': '0911123456', 'password': 'TestPass123!',
-    }, follow_redirects=True)
+    client.post(
+        '/auth/register',
+        data={
+            'company_name': 'TestCo',
+            'phone': '0911123456',
+            'password': 'TestPass123!',
+            'password2': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
+    client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
     resp = client.get('/payroll/template')
     assert resp.data[:3] == b'\xef\xbb\xbf'  # UTF-8 BOM

@@ -96,7 +96,7 @@ def validate_account_number(account: str, bank: str) -> tuple:
         (is_valid: bool, error_message: str or None)
     """
     if not account or not account.strip():
-        return False, "Account number is empty"
+        return False, 'Account number is empty'
 
     account = account.strip()
 
@@ -128,8 +128,7 @@ NARRATIVE_TEMPLATES = {
 }
 
 
-def get_narrative(template_key: str, emp_id: str, name: str,
-                  period: str, custom_template: str = None) -> str:
+def get_narrative(template_key: str, emp_id: str, name: str, period: str, custom_template: str | None = None) -> str:
     """
     Generate narrative text from a template.
 
@@ -163,12 +162,12 @@ def format_amount(amount: float, decimals: int = 2) -> str:
     Bad:  "12,500.50" or 12500.5
     Good: "12500.50"
     """
-    return f"{amount:.{decimals}f}"
+    return f'{amount:.{decimals}f}'
 
 
-def validate_payroll_for_bank(employees_data: list[dict[str, Any]],
-                               bank: str = 'cbe',
-                               previous_payslips: dict[str, dict] = None) -> list[dict[str, Any]]:
+def validate_payroll_for_bank(
+    employees_data: list[dict[str, Any]], bank: str = 'cbe', previous_payslips: dict[str, dict] | None = None
+) -> list[dict[str, Any]]:
     """
     Pre-validate all employees before generating bank file.
 
@@ -191,8 +190,8 @@ def validate_payroll_for_bank(employees_data: list[dict[str, Any]],
     errors = []
 
     # --- Track duplicates within this run ---
-    seen_ids = {}      # employee_id -> first occurrence index
-    seen_accounts = {} # account_number -> first employee_id
+    seen_ids = {}  # employee_id -> first occurrence index
+    seen_accounts = {}  # account_number -> first employee_id
 
     for i, emp in enumerate(employees_data):
         emp_id = emp.get('id', '')
@@ -200,27 +199,31 @@ def validate_payroll_for_bank(employees_data: list[dict[str, Any]],
 
         # --- CHECK 1: Duplicate employee ID ---
         if emp_id in seen_ids:
-            errors.append({
-                'employee_id': emp_id,
-                'name': emp_name,
-                'field': 'employee_id',
-                'error': f'DUPLICATE: Employee {emp_id} appears twice in this run '
-                         f'(first at row {seen_ids[emp_id] + 1}, again at row {i + 1})',
-                'severity': 'BLOCK',
-            })
+            errors.append(
+                {
+                    'employee_id': emp_id,
+                    'name': emp_name,
+                    'field': 'employee_id',
+                    'error': f'DUPLICATE: Employee {emp_id} appears twice in this run '
+                    f'(first at row {seen_ids[emp_id] + 1}, again at row {i + 1})',
+                    'severity': 'BLOCK',
+                }
+            )
             continue  # Skip further checks for duplicate entry
         seen_ids[emp_id] = i
 
         # --- CHECK 2: Missing account number ---
         account = emp.get('bank', '').strip()
         if not account:
-            errors.append({
-                'employee_id': emp_id,
-                'name': emp_name,
-                'field': 'bank_or_telebirr',
-                'error': 'Missing bank/Telebirr account number',
-                'severity': 'BLOCK',
-            })
+            errors.append(
+                {
+                    'employee_id': emp_id,
+                    'name': emp_name,
+                    'field': 'bank_or_telebirr',
+                    'error': 'Missing bank/Telebirr account number',
+                    'severity': 'BLOCK',
+                }
+            )
             continue
 
         # Extract account number from format
@@ -238,25 +241,29 @@ def validate_payroll_for_bank(employees_data: list[dict[str, Any]],
             bank_key = bank
         is_valid, error_msg = validate_account_number(account_number, bank_key)
         if not is_valid:
-            errors.append({
-                'employee_id': emp_id,
-                'name': emp_name,
-                'field': 'bank_or_telebirr',
-                'error': error_msg,
-                'severity': 'BLOCK',
-            })
+            errors.append(
+                {
+                    'employee_id': emp_id,
+                    'name': emp_name,
+                    'field': 'bank_or_telebirr',
+                    'error': error_msg,
+                    'severity': 'BLOCK',
+                }
+            )
 
         # --- CHECK 4: Same bank account used by different employees ---
         if account_number in seen_accounts:
-            errors.append({
-                'employee_id': emp_id,
-                'name': emp_name,
-                'field': 'bank_or_telebirr',
-                'error': f'DUPLICATE ACCOUNT: Bank account {account_number} '
-                         f'is also assigned to employee {seen_accounts[account_number]}. '
-                         f'One account cannot receive two salaries.',
-                'severity': 'BLOCK',
-            })
+            errors.append(
+                {
+                    'employee_id': emp_id,
+                    'name': emp_name,
+                    'field': 'bank_or_telebirr',
+                    'error': f'DUPLICATE ACCOUNT: Bank account {account_number} '
+                    f'is also assigned to employee {seen_accounts[account_number]}. '
+                    f'One account cannot receive two salaries.',
+                    'severity': 'BLOCK',
+                }
+            )
         else:
             seen_accounts[account_number] = emp_id
 
@@ -267,36 +274,42 @@ def validate_payroll_for_bank(employees_data: list[dict[str, Any]],
             if prev_account and ':' in prev_account:
                 prev_account = prev_account.split(':', 1)[1].strip()
             if prev_account and account_number != prev_account:
-                errors.append({
-                    'employee_id': emp_id,
-                    'name': emp_name,
-                    'field': 'bank_or_telebirr',
-                    'error': f'ACCOUNT CHANGED: Was {prev_account} last month, '
-                             f'now {account_number}. Verify this is correct.',
-                    'severity': 'FLAG',  # Not a block, but needs confirmation
-                })
+                errors.append(
+                    {
+                        'employee_id': emp_id,
+                        'name': emp_name,
+                        'field': 'bank_or_telebirr',
+                        'error': f'ACCOUNT CHANGED: Was {prev_account} last month, '
+                        f'now {account_number}. Verify this is correct.',
+                        'severity': 'FLAG',  # Not a block, but needs confirmation
+                    }
+                )
 
         # --- CHECK 6: Negative or zero net pay ---
         net = emp.get('net', 0)
         if net <= 0:
-            errors.append({
-                'employee_id': emp_id,
-                'name': emp_name,
-                'field': 'net_pay',
-                'error': f'Net pay must be positive, got {net}',
-                'severity': 'BLOCK',
-            })
+            errors.append(
+                {
+                    'employee_id': emp_id,
+                    'name': emp_name,
+                    'field': 'net_pay',
+                    'error': f'Net pay must be positive, got {net}',
+                    'severity': 'BLOCK',
+                }
+            )
 
     return errors
 
 
-def generate_csv(employees_data: list[dict[str, Any]],
-                 bank: str = 'cbe',
-                 company_name: str = '',
-                 period: str = '',
-                 narrative_template: str = 'id_name',
-                 custom_narrative: str = None,
-                 decimals: int = 2) -> bytes:
+def generate_csv(
+    employees_data: list[dict[str, Any]],
+    bank: str = 'cbe',
+    company_name: str = '',
+    period: str = '',
+    narrative_template: str = 'id_name',
+    custom_narrative: str | None = None,
+    decimals: int = 2,
+) -> bytes:
     """
     Generate a bank-ready CSV file for bulk payment upload.
 
@@ -337,23 +350,28 @@ def generate_csv(employees_data: list[dict[str, Any]],
 
         # CSV injection prevention
         from payroll_engine.security import prevent_csv_injection
-        writer.writerow([
-            account,
-            amount,
-            prevent_csv_injection(narrative),
-            'ETB',
-        ])
+
+        writer.writerow(
+            [
+                account,
+                amount,
+                prevent_csv_injection(narrative),
+                'ETB',
+            ]
+        )
 
     return output.getvalue().encode('utf-8')
 
 
-def generate_xlsx(employees_data: list[dict[str, Any]],
-                  bank: str = 'cbe',
-                  company_name: str = '',
-                  period: str = '',
-                  narrative_template: str = 'id_name',
-                  custom_narrative: str = None,
-                  decimals: int = 2) -> bytes:
+def generate_xlsx(
+    employees_data: list[dict[str, Any]],
+    bank: str = 'cbe',
+    company_name: str = '',
+    period: str = '',
+    narrative_template: str = 'id_name',
+    custom_narrative: str | None = None,
+    decimals: int = 2,
+) -> bytes:
     """
     Generate a bank-ready Excel file with account numbers as TEXT
     (prevents Excel scientific notation on 13-digit numbers).
@@ -378,7 +396,7 @@ def generate_xlsx(employees_data: list[dict[str, Any]],
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Bank Transfer"
+    ws.title = 'Bank Transfer'
 
     # Styles
     title_font = Font(bold=True, size=16, color='1A5276')
@@ -416,7 +434,7 @@ def generate_xlsx(employees_data: list[dict[str, Any]],
     # --- Headers (row 5) ---
     headers = ['Account Number', 'Amount (ETB)', 'Narrative', 'Currency']
     col_widths = [20, 16, 40, 10]
-    for col, (header, width) in enumerate(zip(headers, col_widths), 1):
+    for col, (header, width) in enumerate(zip(headers, col_widths, strict=False), 1):
         cell = ws.cell(row=5, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill

@@ -4,6 +4,7 @@ Tests for Phase 2 validation checks:
 2. Salary change 30% detection
 3. Pending unpaid leave impact
 """
+
 import os
 import sys
 
@@ -61,8 +62,10 @@ def _setup_company(app):
 def _create_employee(app, company_id, emp_id='EMP001', name='Abebe', salary=10000, allowances=2000):
     with app.app_context():
         emp = Employee(
-            employee_id=emp_id, name=name,
-            basic_salary=salary, allowances=allowances,
+            employee_id=emp_id,
+            name=name,
+            basic_salary=salary,
+            allowances=allowances,
             company_id=company_id,
         )
         db.session.add(emp)
@@ -84,9 +87,7 @@ def _create_completed_run(app, company_id, employees_data):
         run.generate_reference()
 
         for emp_data in employees_data:
-            emp_obj = Employee.query.filter_by(
-                employee_id=emp_data['id'], company_id=company_id
-            ).first()
+            emp_obj = Employee.query.filter_by(employee_id=emp_data['id'], company_id=company_id).first()
             if emp_obj:
                 payslip = Payslip(
                     payroll_run_id=run.id,
@@ -177,14 +178,14 @@ class TestPayrollVariance:
     """Test _check_payroll_variance."""
 
     def test_no_flag_when_no_previous_run(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         data = [{'id': 'EMP001', 'name': 'Abebe', 'net': 10000}]
         results = []
         _check_payroll_variance(data, cid, results)
         assert len(results) == 0
 
     def test_no_flag_when_change_under_20pct(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         _create_employee(app, cid, 'EMP001', 'Abebe', 10000, 2000)
         _create_completed_run(app, cid, [{'id': 'EMP001', 'net': 10000}])
 
@@ -194,7 +195,7 @@ class TestPayrollVariance:
         assert len(results) == 0
 
     def test_flag_when_increase_over_20pct(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         _create_employee(app, cid, 'EMP001', 'Abebe', 10000, 2000)
         _create_completed_run(app, cid, [{'id': 'EMP001', 'net': 10000}])
 
@@ -207,7 +208,7 @@ class TestPayrollVariance:
         assert '30%' in results[0].message
 
     def test_flag_when_decrease_over_20pct(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         _create_employee(app, cid, 'EMP001', 'Abebe', 10000, 2000)
         _create_completed_run(app, cid, [{'id': 'EMP001', 'net': 10000}])
 
@@ -232,22 +233,24 @@ class TestPendingUnpaidLeave:
     """Test _check_pending_leave_impact."""
 
     def test_no_flag_when_no_unpaid_leave(self, app):
-        cid, uid = _setup_company(app)
-        emp_id, emp_eid = _create_employee(app, cid)
+        cid, _uid = _setup_company(app)
+        _emp_id, emp_eid = _create_employee(app, cid)
         data = [{'id': emp_eid, 'name': 'Abebe', 'basic': 10000}]
         results = []
         _check_pending_leave_impact(data, cid, results)
         assert len(results) == 0
 
     def test_flag_when_unpaid_leave_this_month(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         emp_id, emp_eid = _create_employee(app, cid)
 
         today = date.today()
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=emp_id,
-                leave_type='unpaid', status='approved',
+                company_id=cid,
+                employee_id=emp_id,
+                leave_type='unpaid',
+                status='approved',
                 start_date=today.replace(day=5),
                 end_date=today.replace(day=10),
                 days_requested=6,
@@ -264,14 +267,16 @@ class TestPendingUnpaidLeave:
         assert results[0].severity == 'FLAG'
 
     def test_no_flag_when_leave_is_paid_type(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         emp_id, emp_eid = _create_employee(app, cid)
 
         today = date.today()
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=emp_id,
-                leave_type='annual', status='approved',
+                company_id=cid,
+                employee_id=emp_id,
+                leave_type='annual',
+                status='approved',
                 start_date=today.replace(day=5),
                 end_date=today.replace(day=10),
                 days_requested=6,
@@ -285,14 +290,16 @@ class TestPendingUnpaidLeave:
         assert len(results) == 0
 
     def test_no_flag_when_leave_is_pending(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         emp_id, emp_eid = _create_employee(app, cid)
 
         today = date.today()
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=emp_id,
-                leave_type='unpaid', status='pending',
+                company_id=cid,
+                employee_id=emp_id,
+                leave_type='unpaid',
+                status='pending',
                 start_date=today.replace(day=5),
                 end_date=today.replace(day=10),
                 days_requested=6,
@@ -306,15 +313,17 @@ class TestPendingUnpaidLeave:
         assert len(results) == 0
 
     def test_no_flag_when_leave_last_month(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         emp_id, emp_eid = _create_employee(app, cid)
 
         today = date.today()
-        last_month = (today.replace(day=1) - timedelta(days=1))
+        last_month = today.replace(day=1) - timedelta(days=1)
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=emp_id,
-                leave_type='unpaid', status='approved',
+                company_id=cid,
+                employee_id=emp_id,
+                leave_type='unpaid',
+                status='approved',
                 start_date=last_month.replace(day=1),
                 end_date=last_month.replace(day=5),
                 days_requested=5,
@@ -335,33 +344,52 @@ class TestValidationIntegration:
     """Test that new checks are wired into validate_payroll_data."""
 
     def test_salary_change_appears_in_full_validation(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         _create_employee(app, cid, 'EMP001', 'Abebe', 10000, 2000)
         _create_completed_run(app, cid, [{'id': 'EMP001', 'net': 10000}])
 
         from payroll_engine.services.payroll_workflow import get_previous_payslips
+
         previous = get_previous_payslips(cid)
 
-        data = [{
-            'id': 'EMP001', 'name': 'Abebe', 'basic': 15000, 'allowances': 2000,
-            'gross': 17000, 'tax': 2500, 'pension_employee': 1050, 'net': 13450,
-            'bank': 'cbe:1000123456789', 'tin': '1234567890',
-        }]
+        data = [
+            {
+                'id': 'EMP001',
+                'name': 'Abebe',
+                'basic': 15000,
+                'allowances': 2000,
+                'gross': 17000,
+                'tax': 2500,
+                'pension_employee': 1050,
+                'net': 13450,
+                'bank': 'cbe:1000123456789',
+                'tin': '1234567890',
+            }
+        ]
         results = validate_payroll_data(data, company_id=cid, previous_payslips=previous)
 
         rule_codes = [r.rule_code for r in results]
         assert 'SALARY_CHANGE_30PCT' in rule_codes
 
     def test_payroll_variance_appears_in_full_validation(self, app):
-        cid, uid = _setup_company(app)
+        cid, _uid = _setup_company(app)
         _create_employee(app, cid, 'EMP001', 'Abebe', 10000, 2000)
         _create_completed_run(app, cid, [{'id': 'EMP001', 'net': 10000}])
 
-        data = [{
-            'id': 'EMP001', 'name': 'Abebe', 'basic': 10000, 'allowances': 2000,
-            'gross': 12000, 'tax': 1500, 'pension_employee': 700, 'net': 13000,
-            'bank': 'cbe:1000123456789', 'tin': '1234567890',
-        }]
+        data = [
+            {
+                'id': 'EMP001',
+                'name': 'Abebe',
+                'basic': 10000,
+                'allowances': 2000,
+                'gross': 12000,
+                'tax': 1500,
+                'pension_employee': 700,
+                'net': 13000,
+                'bank': 'cbe:1000123456789',
+                'tin': '1234567890',
+            }
+        ]
         results = validate_payroll_data(data, company_id=cid)
 
         rule_codes = [r.rule_code for r in results]

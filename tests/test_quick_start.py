@@ -1,4 +1,5 @@
 """Quick Start wizard tests — verify employee import from pasted data."""
+
 import os
 import sys
 
@@ -56,9 +57,7 @@ def client(app):
 
 
 def login(client):
-    client.post('/auth/login', data={
-        'login_id': '0911000001', 'password': 'Test1234!'
-    }, follow_redirects=True)
+    client.post('/auth/login', data={'login_id': '0911000001', 'password': 'Test1234!'}, follow_redirects=True)
 
 
 def test_quick_start_page_loads(app, company_user, client):
@@ -72,11 +71,14 @@ def test_quick_start_page_loads(app, company_user, client):
 def test_import_employees_json(app, company_user, client):
     """Import employees via JSON POST."""
     login(client)
-    resp = client.post('/quick-start/import',
-        json={'employees': [
-            {'name': 'Abebe Kebede', 'phone': '0911234567', 'salary': 8000},
-            {'name': 'Tigist Hailu', 'phone': '0922345678', 'salary': 12000},
-        ]},
+    resp = client.post(
+        '/quick-start/import',
+        json={
+            'employees': [
+                {'name': 'Abebe Kebede', 'phone': '0911234567', 'salary': 8000},
+                {'name': 'Tigist Hailu', 'phone': '0922345678', 'salary': 12000},
+            ]
+        },
         headers={'Content-Type': 'application/json'},
     )
     assert resp.status_code == 200
@@ -94,11 +96,14 @@ def test_import_employees_json(app, company_user, client):
 def test_import_validates_missing_name(app, company_user, client):
     """Import rejects rows with missing name."""
     login(client)
-    resp = client.post('/quick-start/import',
-        json={'employees': [
-            {'name': '', 'phone': '0911234567', 'salary': 8000},
-            {'name': 'Valid Name', 'phone': '0922345678', 'salary': 5000},
-        ]},
+    resp = client.post(
+        '/quick-start/import',
+        json={
+            'employees': [
+                {'name': '', 'phone': '0911234567', 'salary': 8000},
+                {'name': 'Valid Name', 'phone': '0922345678', 'salary': 5000},
+            ]
+        },
         headers={'Content-Type': 'application/json'},
     )
     data = resp.get_json()
@@ -110,10 +115,13 @@ def test_import_validates_missing_name(app, company_user, client):
 def test_import_validates_negative_salary(app, company_user, client):
     """Import rejects negative salary."""
     login(client)
-    resp = client.post('/quick-start/import',
-        json={'employees': [
-            {'name': 'Bad Salary', 'phone': '0911234567', 'salary': -1000},
-        ]},
+    resp = client.post(
+        '/quick-start/import',
+        json={
+            'employees': [
+                {'name': 'Bad Salary', 'phone': '0911234567', 'salary': -1000},
+            ]
+        },
         headers={'Content-Type': 'application/json'},
     )
     data = resp.get_json()
@@ -124,10 +132,13 @@ def test_import_validates_negative_salary(app, company_user, client):
 def test_import_validates_invalid_salary(app, company_user, client):
     """Import rejects non-numeric salary."""
     login(client)
-    resp = client.post('/quick-start/import',
-        json={'employees': [
-            {'name': 'Bad Input', 'phone': '0911234567', 'salary': 'abc'},
-        ]},
+    resp = client.post(
+        '/quick-start/import',
+        json={
+            'employees': [
+                {'name': 'Bad Input', 'phone': '0911234567', 'salary': 'abc'},
+            ]
+        },
         headers={'Content-Type': 'application/json'},
     )
     data = resp.get_json()
@@ -138,7 +149,8 @@ def test_import_validates_invalid_salary(app, company_user, client):
 def test_import_empty_body(app, company_user, client):
     """Import rejects empty request."""
     login(client)
-    resp = client.post('/quick-start/import',
+    resp = client.post(
+        '/quick-start/import',
         json={},
         headers={'Content-Type': 'application/json'},
     )
@@ -148,21 +160,22 @@ def test_import_empty_body(app, company_user, client):
 def test_import_generates_employee_ids(app, company_user, client):
     """Import auto-generates employee IDs."""
     login(client)
-    resp = client.post('/quick-start/import',
-        json={'employees': [
-            {'name': 'First', 'phone': '0911000001', 'salary': 5000},
-            {'name': 'Second', 'phone': '0911000002', 'salary': 6000},
-            {'name': 'Third', 'phone': '0911000003', 'salary': 7000},
-        ]},
+    resp = client.post(
+        '/quick-start/import',
+        json={
+            'employees': [
+                {'name': 'First', 'phone': '0911000001', 'salary': 5000},
+                {'name': 'Second', 'phone': '0911000002', 'salary': 6000},
+                {'name': 'Third', 'phone': '0911000003', 'salary': 7000},
+            ]
+        },
         headers={'Content-Type': 'application/json'},
     )
     data = resp.get_json()
     assert data['imported'] == 3
 
     with app.app_context():
-        employees = Employee.query.filter_by(
-            company_id=company_user[0]
-        ).order_by(Employee.id).all()
+        employees = Employee.query.filter_by(company_id=company_user[0]).order_by(Employee.id).all()
         ids = [e.employee_id for e in employees]
         assert len(ids) == 3
         # IDs should be sequential
@@ -173,7 +186,8 @@ def test_import_max_limit(app, company_user, client):
     """Import rejects more than 500 employees."""
     login(client)
     employees = [{'name': f'Emp {i}', 'salary': 5000} for i in range(501)]
-    resp = client.post('/quick-start/import',
+    resp = client.post(
+        '/quick-start/import',
         json={'employees': employees},
         headers={'Content-Type': 'application/json'},
     )

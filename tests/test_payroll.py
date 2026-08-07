@@ -6,6 +6,7 @@ This is the structural guardrail: if anyone calls calculate_tax(gross)
 directly instead of going through calculate_payroll(), the test suite
 catches it. The function itself prevents wrong numbers.
 """
+
 import os
 import sys
 
@@ -51,7 +52,7 @@ def test_payroll_negative_basic():
     """Negative salary must be rejected, not silently produce wrong numbers."""
     try:
         calculate_payroll(basic_salary=-5000, allowances=0)
-        assert False, "Should have raised ValueError"
+        raise AssertionError('Should have raised ValueError')
     except ValueError as e:
         assert 'negative' in str(e).lower()
 
@@ -62,7 +63,7 @@ def test_payroll_negative_basic():
 def test_payroll_negative_allowances():
     try:
         calculate_payroll(basic_salary=5000, allowances=-1000)
-        assert False, "Should have raised ValueError"
+        raise AssertionError('Should have raised ValueError')
     except ValueError as e:
         assert 'negative' in str(e).lower()
 
@@ -126,7 +127,7 @@ def test_deduction_order_matters():
     assert wrong_tax != right_tax, "Deduction order doesn't matter? Something is wrong."
 
     # The wrong way produces a HIGHER tax (employee gets less)
-    assert wrong_tax > right_tax, "Wrong deduction order should produce higher tax."
+    assert wrong_tax > right_tax, 'Wrong deduction order should produce higher tax.'
 
     # Our function uses the right way
     result = calculate_payroll(basic_salary=basic, allowances=gross - basic)
@@ -149,10 +150,11 @@ def test_payroll_no_overflow():
 def test_no_pension_ceiling_by_default():
     """Ethiopian law has no pension ceiling — contributions on full salary."""
     from payroll_engine.pension import employee_pension, employer_pension
+
     emp = employee_pension(D('25000'))
     empr = employer_pension(D('25000'))
-    assert emp == D('1750'), f"Employee pension should be 1750 (7% of 25000), got {emp}"
-    assert empr == D('2750'), f"Employer pension should be 2750 (11% of 25000), got {empr}"
+    assert emp == D('1750'), f'Employee pension should be 1750 (7% of 25000), got {emp}'
+    assert empr == D('2750'), f'Employer pension should be 2750 (11% of 25000), got {empr}'
 
     result = calculate_payroll(basic_salary=25000, allowances=5000)
     assert result['pension_employee'] == D('1750')
@@ -183,8 +185,8 @@ def test_pension_ceiling_when_configured():
                     'employee_rate': 0.07,
                     'employer_rate': 0.11,
                     'ceiling': 15000,
-                }
-            }
+                },
+            },
         )
         db.session.add(rule)
         db.session.commit()
@@ -193,12 +195,12 @@ def test_pension_ceiling_when_configured():
         try:
             emp = employee_pension(D('25000'))
             empr = employer_pension(D('25000'))
-            assert emp == D('1050'), f"With 15k ceiling, employee pension should be 1050, got {emp}"
-            assert empr == D('1650'), f"With 15k ceiling, employer pension should be 1650, got {empr}"
+            assert emp == D('1050'), f'With 15k ceiling, employee pension should be 1050, got {emp}'
+            assert empr == D('1650'), f'With 15k ceiling, employer pension should be 1650, got {empr}'
 
             # Below the ceiling — no capping
             emp_low = employee_pension(D('10000'))
-            assert emp_low == D('700'), f"Below ceiling, pension should be 700, got {emp_low}"
+            assert emp_low == D('700'), f'Below ceiling, pension should be 700, got {emp_low}'
         finally:
             db.session.delete(rule)
             db.session.commit()

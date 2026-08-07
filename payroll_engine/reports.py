@@ -13,8 +13,7 @@ import io
 from datetime import date
 
 
-def generate_erca_report(payslips: list, company_name: str,
-                         period: str = None, company=None) -> bytes:
+def generate_erca_report(payslips: list, company_name: str, period: str | None = None, company=None) -> bytes:
     """
     Generate ERCA-formatted tax filing report.
 
@@ -51,44 +50,26 @@ def generate_erca_report(payslips: list, company_name: str,
 
     # Identify which columns are numeric (for formatting and totals)
     NUMERIC_KEYS = {
-        'basic_salary', 'allowances', 'gross_salary', 'overtime_pay',
-        'pension_employee', 'pension_employer', 'taxable_income',
-        'tax_withheld', 'net_pay', 'transport_allowance',
-        'taxable_transport', 'other_taxable', 'total_taxable',
+        'basic_salary',
+        'allowances',
+        'gross_salary',
+        'overtime_pay',
+        'pension_employee',
+        'pension_employer',
+        'taxable_income',
+        'tax_withheld',
+        'net_pay',
+        'transport_allowance',
+        'taxable_transport',
+        'other_taxable',
+        'total_taxable',
     }
 
     # Map data_path to actual payslip attribute names
-    PATH_MAP = {
-        '_row_number': '_row_number',
-        '_end_date': '_end_date',
-        '_transport_allowance': '_transport_allowance',
-        '_taxable_transport': '_taxable_transport',
-        '_other_taxable': '_other_taxable',
-        'employee.employee_id': 'employee.employee_id',
-        'employee.name': 'employee.name',
-        'employee.tin': 'employee.tin',
-        'employee.fayda_fin': 'employee.fayda_fin',
-        'employee.start_date': 'employee.start_date',
-        'employee.department': 'employee.department',
-        'employee.position': 'employee.position',
-        'employee.basic_salary': 'employee.basic_salary',
-        'employee.allowances': 'employee.allowances',
-        'gross': 'gross_salary',
-        'overtime_pay': 'overtime_pay',
-        'pension_employee': 'employee_pension',
-        'pension_employer': 'employer_pension',
-        'taxable': 'taxable',
-        'tax': 'tax',
-        'net': 'net_pay',
-        '_company_tin': '_company_tin',
-        '_company_name': '_company_name',
-        'employee.bank_account': 'employee.bank_account',
-        'employee.bank_or_telebirr': 'employee.bank_or_telebirr',
-    }
 
     try:
         import openpyxl
-        from openpyxl.cell.cell import MergedCell
+        from openpyxl.cell.cell import MergedCell  # noqa: F401
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     except ImportError:
         # Fallback to CSV if openpyxl not installed
@@ -99,7 +80,7 @@ def generate_erca_report(payslips: list, company_name: str,
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "ERCA Tax Filing"
+    ws.title = 'ERCA Tax Filing'
 
     # Styles
     title_font = Font(bold=True, size=16, color='1A5276')
@@ -152,8 +133,7 @@ def generate_erca_report(payslips: list, company_name: str,
     totals = {}  # key -> running total
 
     for i, p in enumerate(payslips, 1):
-        emp = p.employee
-        taxable = p.gross_salary - p.employee_pension
+        p.gross_salary - p.employee_pension
         row = 5 + i
 
         for col_idx, col_cfg in enumerate(columns, 1):
@@ -218,8 +198,7 @@ def generate_erca_report(payslips: list, company_name: str,
     return output.getvalue()
 
 
-def generate_pension_report(payslips: list, company_name: str,
-                            period: str = None) -> bytes:
+def generate_pension_report(payslips: list, company_name: str, period: str | None = None) -> bytes:
     """
     Generate pension contribution report.
 
@@ -233,7 +212,7 @@ def generate_pension_report(payslips: list, company_name: str,
     """
     try:
         import openpyxl
-        from openpyxl.cell.cell import MergedCell
+        from openpyxl.cell.cell import MergedCell  # noqa: F401
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     except ImportError:
         return _generate_pension_csv(payslips, company_name, period)
@@ -243,7 +222,7 @@ def generate_pension_report(payslips: list, company_name: str,
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Pension Report"
+    ws.title = 'Pension Report'
 
     # Styles
     title_font = Font(bold=True, size=16, color='1A5276')
@@ -278,12 +257,9 @@ def generate_pension_report(payslips: list, company_name: str,
     ws['A3'].font = Font(italic=True, color='666666')
 
     # --- Column headers (row 5) ---
-    headers = [
-        'No.', 'Employee ID', 'Employee Name', 'Basic Salary',
-        'Employee 7%', 'Employer 11%', 'Total'
-    ]
+    headers = ['No.', 'Employee ID', 'Employee Name', 'Basic Salary', 'Employee 7%', 'Employer 11%', 'Total']
     col_widths = [6, 14, 22, 16, 14, 14, 16]
-    for col, (header, width) in enumerate(zip(headers, col_widths), 1):
+    for col, (header, width) in enumerate(zip(headers, col_widths, strict=False), 1):
         cell = ws.cell(row=5, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
@@ -304,8 +280,7 @@ def generate_pension_report(payslips: list, company_name: str,
         ws.cell(row=row, column=2, value=emp.employee_id).alignment = name_align
         ws.cell(row=row, column=3, value=emp.name).alignment = name_align
 
-        for col_idx, val in [(4, emp.basic_salary), (5, p.employee_pension),
-                              (6, p.employer_pension), (7, total)]:
+        for col_idx, val in [(4, emp.basic_salary), (5, p.employee_pension), (6, p.employer_pension), (7, total)]:
             cell = ws.cell(row=row, column=col_idx, value=val)
             cell.number_format = etb_format
             cell.alignment = data_align
@@ -321,8 +296,7 @@ def generate_pension_report(payslips: list, company_name: str,
     ws.cell(row=totals_row, column=3, value='TOTALS').font = totals_font
     ws.cell(row=totals_row, column=3).fill = totals_fill
     ws.cell(row=totals_row, column=3).border = thin_border
-    for col_idx, val in [(5, total_employee), (6, total_employer),
-                          (7, total_employee + total_employer)]:
+    for col_idx, val in [(5, total_employee), (6, total_employer), (7, total_employee + total_employer)]:
         cell = ws.cell(row=totals_row, column=col_idx, value=val)
         cell.font = totals_font
         cell.fill = totals_fill
@@ -371,8 +345,10 @@ def generate_yearly_summary(payslips: list, company_name: str, year: int) -> byt
     totals_fill = PatternFill(start_color='D5E8D4', end_color='D5E8D4', fill_type='solid')
     etb_format = '#,##0.00'
     thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin'),
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin'),
     )
     name_align = Alignment(vertical='center')
     data_align = Alignment(horizontal='right', vertical='center')
@@ -390,11 +366,17 @@ def generate_yearly_summary(payslips: list, company_name: str, year: int) -> byt
     ws['A3'].font = Font(italic=True, color='666666')
 
     headers = [
-        'No.', 'Employee ID', 'Employee Name', 'Total Gross',
-        'Total Pension', 'Total Tax', 'Total Net', 'Periods Paid',
+        'No.',
+        'Employee ID',
+        'Employee Name',
+        'Total Gross',
+        'Total Pension',
+        'Total Tax',
+        'Total Net',
+        'Periods Paid',
     ]
     col_widths = [6, 14, 22, 16, 14, 14, 16, 12]
-    for col, (header, width) in enumerate(zip(headers, col_widths), 1):
+    for col, (header, width) in enumerate(zip(headers, col_widths, strict=False), 1):
         cell = ws.cell(row=5, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
@@ -403,6 +385,7 @@ def generate_yearly_summary(payslips: list, company_name: str, year: int) -> byt
         ws.column_dimensions[cell.column_letter].width = width
 
     from collections import defaultdict
+
     emp_agg = defaultdict(lambda: {'gross': 0, 'pension': 0, 'tax': 0, 'net': 0, 'periods': set()})
     for p in payslips:
         eid = p.employee_id
@@ -422,8 +405,7 @@ def generate_yearly_summary(payslips: list, company_name: str, year: int) -> byt
         ws.cell(row=row, column=1, value=i).alignment = Alignment(horizontal='center')
         ws.cell(row=row, column=2, value=agg.get('emp_id', eid)).alignment = name_align
         ws.cell(row=row, column=3, value=agg.get('name', '')).alignment = name_align
-        for col_idx, val in [(4, agg['gross']), (5, agg['pension']),
-                              (6, agg['tax']), (7, agg['net'])]:
+        for col_idx, val in [(4, agg['gross']), (5, agg['pension']), (6, agg['tax']), (7, agg['net'])]:
             cell = ws.cell(row=row, column=col_idx, value=val)
             cell.number_format = etb_format
             cell.alignment = data_align
@@ -460,12 +442,16 @@ def generate_yearly_summary(payslips: list, company_name: str, year: int) -> byt
 def _generate_yearly_csv(payslips, company_name, year):
     """Fallback CSV for year-end summary."""
     import csv
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Year-End Summary', company_name, str(year)])
-    writer.writerow(['No.', 'Employee ID', 'Name', 'Total Gross', 'Total Pension', 'Total Tax', 'Total Net', 'Periods Paid'])
+    writer.writerow(
+        ['No.', 'Employee ID', 'Name', 'Total Gross', 'Total Pension', 'Total Tax', 'Total Net', 'Periods Paid']
+    )
 
     from collections import defaultdict
+
     emp_agg = defaultdict(lambda: {'gross': 0, 'pension': 0, 'tax': 0, 'net': 0, 'periods': set()})
     for p in payslips:
         eid = p.employee_id
@@ -480,13 +466,20 @@ def _generate_yearly_csv(payslips, company_name, year):
             emp_agg[eid]['emp_id'] = p.employee.employee_id if p.employee else str(eid)
 
     from payroll_engine.security import prevent_csv_injection
+
     for i, (eid, agg) in enumerate(sorted(emp_agg.items()), 1):
-        writer.writerow([
-            i,
-            prevent_csv_injection(agg.get('emp_id', eid)),
-            prevent_csv_injection(agg.get('name', '')),
-            agg['gross'], agg['pension'], agg['tax'], agg['net'], len(agg['periods']),
-        ])
+        writer.writerow(
+            [
+                i,
+                prevent_csv_injection(agg.get('emp_id', eid)),
+                prevent_csv_injection(agg.get('name', '')),
+                agg['gross'],
+                agg['pension'],
+                agg['tax'],
+                agg['net'],
+                len(agg['periods']),
+            ]
+        )
     return output.getvalue().encode('utf-8')
 
 
@@ -495,40 +488,54 @@ def _generate_erca_csv(payslips, company_name, period):
     Uses ERCA portal column format.
     """
     import csv
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['ERCA Tax Filing Report', company_name, period or ''])
     # ERCA portal headers
-    writer.writerow([
-        'Employee Full Name', 'Start Date', 'End Date',
-        'Basic Salary', 'Transport Allowance', 'Taxable Transport Allowance',
-        'Over Time', 'Other Taxable Benefit', 'Total Taxable', 'Tax withheld',
-    ])
-    for i, p in enumerate(payslips, 1):
+    writer.writerow(
+        [
+            'Employee Full Name',
+            'Start Date',
+            'End Date',
+            'Basic Salary',
+            'Transport Allowance',
+            'Taxable Transport Allowance',
+            'Over Time',
+            'Other Taxable Benefit',
+            'Total Taxable',
+            'Tax withheld',
+        ]
+    )
+    for _i, p in enumerate(payslips, 1):
         emp = p.employee
         basic = float(emp.basic_salary or 0)
         gross = float(p.gross_salary or 0)
         transport = max(0, gross - basic)
         start_date = emp.start_date.strftime('%d/%m/%Y') if emp.start_date else ''
         from payroll_engine.security import prevent_csv_injection
-        writer.writerow([
-            prevent_csv_injection(emp.name),
-            start_date,
-            '',  # End Date
-            basic,
-            transport,  # Transport Allowance
-            transport,  # Taxable Transport Allowance
-            float(p.overtime_pay or 0),  # Over Time
-            0,  # Other Taxable Benefit
-            float(p.taxable or 0),  # Total Taxable
-            float(p.tax or 0),  # Tax withheld
-        ])
+
+        writer.writerow(
+            [
+                prevent_csv_injection(emp.name),
+                start_date,
+                '',  # End Date
+                basic,
+                transport,  # Transport Allowance
+                transport,  # Taxable Transport Allowance
+                float(p.overtime_pay or 0),  # Over Time
+                0,  # Other Taxable Benefit
+                float(p.taxable or 0),  # Total Taxable
+                float(p.tax or 0),  # Tax withheld
+            ]
+        )
     return output.getvalue().encode('utf-8')
 
 
 def _generate_pension_csv(payslips, company_name, period):
     """Fallback CSV generation if openpyxl not installed."""
     import csv
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Pension Contribution Report', company_name, period or ''])
@@ -537,10 +544,16 @@ def _generate_pension_csv(payslips, company_name, period):
         emp = p.employee
         total = p.employee_pension + p.employer_pension
         from payroll_engine.security import prevent_csv_injection
-        writer.writerow([
-            i,
-            prevent_csv_injection(emp.employee_id),
-            prevent_csv_injection(emp.name),
-            emp.basic_salary, p.employee_pension, p.employer_pension, total,
-        ])
+
+        writer.writerow(
+            [
+                i,
+                prevent_csv_injection(emp.employee_id),
+                prevent_csv_injection(emp.name),
+                emp.basic_salary,
+                p.employee_pension,
+                p.employer_pension,
+                total,
+            ]
+        )
     return output.getvalue().encode('utf-8')

@@ -1,4 +1,5 @@
 """Tests for the analytics reports (department costs, overtime, leave, headcount)."""
+
 import os
 import sys
 
@@ -56,9 +57,9 @@ def _setup(app, num_employees=3, departments=None):
         for i in range(num_employees):
             dept = departments[i] if i < len(departments) else 'General'
             emp = Employee(
-                employee_id=f'EMP{i+1:03d}',
-                name=f'Employee {i+1}',
-                phone=f'09100000{i+1:02d}',
+                employee_id=f'EMP{i + 1:03d}',
+                name=f'Employee {i + 1}',
+                phone=f'09100000{i + 1:02d}',
                 basic_salary=10000 + i * 2000,
                 allowances=2000,
                 company_id=company.id,
@@ -67,28 +68,32 @@ def _setup(app, num_employees=3, departments=None):
                 department=dept,
             )
             db.session.add(emp)
-            employees_data.append({
-                'id': f'EMP{i+1:03d}',
-                'name': f'Employee {i+1}',
-                'phone': f'09100000{i+1:02d}',
-                'basic': 10000 + i * 2000,
-                'allowances': 2000,
-                'gross': 12000 + i * 2000,
-                'tax': 1500 + i * 200,
-                'pension_employee': 700 + i * 140,
-                'pension_employer': 1100 + i * 220,
-                'net': 9800 + i * 1660,
-                'bank': f'cbe:100012345678{i}',
-                'tin': f'12345678{i:02d}',
-                'taxable': 11300 + i * 1860,
-                'department': dept,
-                'position': '',
-            })
+            employees_data.append(
+                {
+                    'id': f'EMP{i + 1:03d}',
+                    'name': f'Employee {i + 1}',
+                    'phone': f'09100000{i + 1:02d}',
+                    'basic': 10000 + i * 2000,
+                    'allowances': 2000,
+                    'gross': 12000 + i * 2000,
+                    'tax': 1500 + i * 200,
+                    'pension_employee': 700 + i * 140,
+                    'pension_employer': 1100 + i * 220,
+                    'net': 9800 + i * 1660,
+                    'bank': f'cbe:100012345678{i}',
+                    'tin': f'12345678{i:02d}',
+                    'taxable': 11300 + i * 1860,
+                    'department': dept,
+                    'position': '',
+                }
+            )
 
         db.session.flush()
 
         run = PayrollRun(
-            company_id=company.id, run_date=date.today(), status='review',
+            company_id=company.id,
+            run_date=date.today(),
+            status='review',
         )
         run.generate_period()
         db.session.add(run)
@@ -103,9 +108,13 @@ def _setup(app, num_employees=3, departments=None):
         db.session.commit()
 
         from payroll_engine.services.payroll_service import process_payroll
+
         result = process_payroll(
-            run=run, company_id=company.id, user_id=owner.id,
-            user_email='test@test.com', request_ip='127.0.0.1',
+            run=run,
+            company_id=company.id,
+            user_id=owner.id,
+            user_email='test@test.com',
+            request_ip='127.0.0.1',
         )
         assert result.success is True
 
@@ -187,6 +196,7 @@ class TestAnalyticsData:
 
         with app.app_context():
             from payroll_engine.models import Payslip
+
             company = Company.query.first()
             runs = PayrollRun.query.filter_by(company_id=company.id, status='completed').all()
             run_ids = [r.id for r in runs]

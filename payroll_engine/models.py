@@ -15,14 +15,12 @@ from payroll_engine import db
 # Encryption key for sensitive fields (bank_account, tin)
 # In production: set DB_ENCRYPTION_KEY env var (32-byte hex or base64)
 # In dev/test: falls back to a deterministic key (NOT secure, only for development)
-_ENCRYPTION_KEY = os.environ.get(
-    'DB_ENCRYPTION_KEY',
-    'dev-encryption-key-not-for-production-use-only-32b'
-)
+_ENCRYPTION_KEY = os.environ.get('DB_ENCRYPTION_KEY', 'dev-encryption-key-not-for-production-use-only-32b')
 
 try:
     from sqlalchemy_utils import EncryptedType
     from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
+
     _HAS_ENCRYPTION = True
 except ImportError:
     _HAS_ENCRYPTION = False
@@ -49,14 +47,14 @@ def validate_ethiopian_phone(phone: str) -> tuple:
 
     # Normalize to 10 digits with leading 0 (0XXXXXXXXX)
     patterns = [
-        (r'^\+2510(9\d{8})$', '0{}'),    # +2510911234567 → 0911234567
-        (r'^\+2510(7\d{8})$', '0{}'),    # +2510711234567 → 0711234567
-        (r'^\+251(9\d{8})$', '0{}'),     # +251911234567 → 0911234567
-        (r'^\+251(7\d{8})$', '0{}'),     # +251711234567 → 0711234567
-        (r'^0(9\d{8})$', '0{}'),          # 0911234567 → 0911234567
-        (r'^0(7\d{8})$', '0{}'),          # 0711234567 → 0711234567
-        (r'^(9\d{8})$', '0{}'),           # 911234567 → 0911234567
-        (r'^(7\d{8})$', '0{}'),           # 711234567 → 0711234567
+        (r'^\+2510(9\d{8})$', '0{}'),  # +2510911234567 → 0911234567
+        (r'^\+2510(7\d{8})$', '0{}'),  # +2510711234567 → 0711234567
+        (r'^\+251(9\d{8})$', '0{}'),  # +251911234567 → 0911234567
+        (r'^\+251(7\d{8})$', '0{}'),  # +251711234567 → 0711234567
+        (r'^0(9\d{8})$', '0{}'),  # 0911234567 → 0911234567
+        (r'^0(7\d{8})$', '0{}'),  # 0711234567 → 0711234567
+        (r'^(9\d{8})$', '0{}'),  # 911234567 → 0911234567
+        (r'^(7\d{8})$', '0{}'),  # 711234567 → 0711234567
     ]
 
     for pattern, fmt in patterns:
@@ -105,6 +103,7 @@ def validate_fayda_fin(fin: str) -> tuple:
 # ---------------------------------------------------------------------------
 # Structural tenant isolation
 # ---------------------------------------------------------------------------
+
 
 class TenantQuery(db.Query):
     """
@@ -172,33 +171,27 @@ class TenantQuery(db.Query):
         # Walk the query's where clause looking for company_id
         has_company_filter = False
         if self.whereclause is not None:
-            has_company_filter = self._clause_has_column(
-                self.whereclause, 'company_id'
-            )
+            has_company_filter = self._clause_has_column(self.whereclause, 'company_id')
 
         if not has_company_filter:
             raise RuntimeError(
-                f"TENANT ISOLATION VIOLATION: Query on {model.__name__} "
-                f"has no company_id filter. "
-                f"Use .filter_by(company_id=...) or "
-                f"TenantQuery.set_tenant_context(company_id) "
-                f"for background tasks."
+                f'TENANT ISOLATION VIOLATION: Query on {model.__name__} '
+                f'has no company_id filter. '
+                f'Use .filter_by(company_id=...) or '
+                f'TenantQuery.set_tenant_context(company_id) '
+                f'for background tasks.'
             )
 
     @staticmethod
     def _clause_has_column(clause, column_name):
         """Recursively check if a SQL clause references a column name."""
-        if hasattr(clause, 'left') and hasattr(clause.left, 'name'):
-            if clause.left.name == column_name:
-                return True
+        if hasattr(clause, 'left') and hasattr(clause.left, 'name') and clause.left.name == column_name:
+            return True
         if hasattr(clause, 'clauses'):
             for sub in clause.clauses:
                 if TenantQuery._clause_has_column(sub, column_name):
                     return True
-        if hasattr(clause, 'element'):
-            if TenantQuery._clause_has_column(clause.element, column_name):
-                return True
-        return False
+        return bool(hasattr(clause, 'element') and TenantQuery._clause_has_column(clause.element, column_name))
 
     @classmethod
     def register_model(cls, model_class):
@@ -218,12 +211,15 @@ class TenantQuery(db.Query):
     @classmethod
     def tenant_context(cls, company_id):
         """Context manager: sets tenant for background tasks."""
+
         class _Ctx:
-            def __enter__(self_):
+            def __enter__(self):
                 cls.set_tenant_context(company_id)
-                return self_
-            def __exit__(self_, *args):
+                return self
+
+            def __exit__(self, *args):
                 cls.clear_tenant_context()
+
         return _Ctx()
 
 
@@ -306,7 +302,7 @@ class SoftDeleteQuery(TenantQuery):
                 if hasattr(mapper.c, 'is_deleted'):
                     q = self._clone()
                     q._with_deleted = True
-                    return q.filter(mapper.c.is_deleted == True)
+                    return q.filter(mapper.c.is_deleted)
         except (AttributeError, IndexError):
             pass
         return self
@@ -376,9 +372,7 @@ class UserCompany(db.Model):
     user = db.relationship('User', backref=db.backref('user_companies', lazy=True))
     company = db.relationship('Company', backref=db.backref('user_companies', lazy=True))
 
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'company_id', name='uq_user_company'),
-    )
+    __table_args__ = (db.UniqueConstraint('user_id', 'company_id', name='uq_user_company'),)
 
     def __repr__(self):
         return f'<UserCompany user={self.user_id} company={self.company_id} role={self.role}>'
@@ -387,10 +381,12 @@ class UserCompany(db.Model):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=True)  # Optional — phone is primary
-    phone = db.Column(db.String(20), unique=True, nullable=True)   # 9XXXXXXXX format
+    phone = db.Column(db.String(20), unique=True, nullable=True)  # 9XXXXXXXX format
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='owner')  # owner, accountant, employee
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # Null until user creates/joins a company
+    company_id = db.Column(
+        db.Integer, db.ForeignKey('company.id'), nullable=True
+    )  # Null until user creates/joins a company
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Password reset tokens
@@ -414,6 +410,7 @@ class User(UserMixin, db.Model):
         """Generate a cryptographically random temporary password."""
         import secrets
         import string
+
         alphabet = string.ascii_letters + string.digits
         return ''.join(secrets.choice(alphabet) for _ in range(16))
 
@@ -423,6 +420,7 @@ class User(UserMixin, db.Model):
         """
         import hashlib
         import secrets
+
         token = secrets.token_urlsafe(32)
         self.reset_token_hash = hashlib.sha256(token.encode()).hexdigest()
         self.reset_token_expires = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=1)
@@ -431,6 +429,7 @@ class User(UserMixin, db.Model):
     def verify_reset_token(self, token: str) -> bool:
         """Verify a reset token against the stored hash. Returns True if valid."""
         import hashlib
+
         if not self.reset_token_hash or not self.reset_token_expires:
             return False
         if datetime.now(UTC).replace(tzinfo=None) > self.reset_token_expires:
@@ -446,6 +445,7 @@ class User(UserMixin, db.Model):
     def generate_totp_secret(self) -> str:
         """Generate a new TOTP secret and store it. Returns the secret."""
         import pyotp
+
         secret = pyotp.random_base32()
         self.totp_secret = secret
         return secret
@@ -453,6 +453,7 @@ class User(UserMixin, db.Model):
     def get_totp_uri(self, issuer: str = 'EthioPayroll') -> str:
         """Get the TOTP provisioning URI for QR code generation."""
         import pyotp
+
         if not self.totp_secret:
             return ''
         totp = pyotp.TOTP(self.totp_secret)
@@ -462,6 +463,7 @@ class User(UserMixin, db.Model):
     def verify_totp(self, code: str) -> bool:
         """Verify a TOTP code. Returns True if valid."""
         import pyotp
+
         if not self.totp_secret or not self.mfa_enabled:
             return True  # MFA not enabled — always pass
         totp = pyotp.TOTP(self.totp_secret)
@@ -513,6 +515,7 @@ class User(UserMixin, db.Model):
 
 class ApiKey(db.Model):
     """API key for programmatic access. Token shown once at creation."""
+
     __tablename__ = 'api_key'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -531,12 +534,14 @@ class ApiKey(db.Model):
     def generate_token():
         """Generate a random API token. Returns the raw token (show once)."""
         import secrets
+
         return f'ep_{secrets.token_urlsafe(32)}'
 
     @staticmethod
     def hash_token(token: str) -> str:
         """SHA-256 hash of the token for storage."""
         import hashlib
+
         return hashlib.sha256(token.encode()).hexdigest()
 
     @classmethod
@@ -696,6 +701,7 @@ class EmployeeAllowance(db.Model):
     The Employee.allowances field is kept for backward compatibility.
     If EmployeeAllowance records exist, they take precedence.
     """
+
     query_class = TenantQuery
 
     # Allowance type choices
@@ -769,14 +775,8 @@ class EmployeeAllowance(db.Model):
     employee = db.relationship('Employee', backref=db.backref('allowance_records', lazy=True))
 
     __table_args__ = (
-        db.CheckConstraint(
-            "tax_treatment IN ('taxable', 'exempt', 'partial')",
-            name='ck_allowance_tax_treatment'
-        ),
-        db.CheckConstraint(
-            "calculation_basis IN ('fixed', 'percentage')",
-            name='ck_allowance_calc_basis'
-        ),
+        db.CheckConstraint("tax_treatment IN ('taxable', 'exempt', 'partial')", name='ck_allowance_tax_treatment'),
+        db.CheckConstraint("calculation_basis IN ('fixed', 'percentage')", name='ck_allowance_calc_basis'),
     )
 
     @property
@@ -789,6 +789,7 @@ class EmployeeAllowance(db.Model):
     def calculated_exempt_amount(self):
         """Calculate the tax-exempt portion of this allowance."""
         from decimal import Decimal
+
         if self.tax_treatment == self.TAX_TAXABLE:
             return Decimal('0')
         if self.tax_treatment == self.TAX_EXEMPT:
@@ -823,19 +824,21 @@ class PayrollRun(db.Model):
     approval_ip = db.Column(db.String(45), nullable=True)
     locked_at = db.Column(db.DateTime, nullable=True)
     locked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    disbursement_status = db.Column(db.String(20), nullable=False, default='pending')  # pending, file_downloaded, disbursed, confirmed, failed
+    disbursement_status = db.Column(
+        db.String(20), nullable=False, default='pending'
+    )  # pending, file_downloaded, disbursed, confirmed, failed
     disbursed_at = db.Column(db.DateTime, nullable=True)
     disbursed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     disbursement_notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
-    __table_args__ = (
-        db.Index('ix_payrollrun_company_status', 'company_id', 'status'),
-    )
+    __table_args__ = (db.Index('ix_payrollrun_company_status', 'company_id', 'status'),)
 
     # Relationships
     payslips = db.relationship('Payslip', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
-    validation_results = db.relationship('PayrollValidationResult', backref='payroll_run', lazy=True, cascade='all, delete-orphan')
+    validation_results = db.relationship(
+        'PayrollValidationResult', backref='payroll_run', lazy=True, cascade='all, delete-orphan'
+    )
 
     def generate_period(self):
         """Set period from run_date using Ethiopian calendar.
@@ -844,6 +847,7 @@ class PayrollRun(db.Model):
         Example: Gregorian Jul 2026 → Ethiopian Sene 2018 → '2018-10'
         """
         from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
+
         ref_date = self.run_date or date.today()
         eth_year, eth_month, _ = gregorian_to_ethiopian(ref_date)
         self.period = f'{eth_year}-{eth_month:02d}'
@@ -885,9 +889,7 @@ class Payslip(db.Model):
     reason = db.Column(db.String(255), nullable=True)  # Reason for adjustment
     original_payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=True)
 
-    __table_args__ = (
-        db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),
-    )
+    __table_args__ = (db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),)
 
     def __repr__(self):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
@@ -902,6 +904,7 @@ class FinalSettlement(db.Model):
     - Unused leave encashment
     - Pending deductions (loans, cost-sharing, etc.)
     """
+
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
@@ -958,6 +961,7 @@ class PayrollDraft(db.Model):
     Replaces Flask session storage which caused data loss on expiry.
     Data is stored as JSONB (Postgres) or JSON (SQLite) for flexibility.
     """
+
     id = db.Column(db.Integer, primary_key=True)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     employee_data = db.Column(db.JSON, nullable=False)  # JSONB on Postgres
@@ -998,9 +1002,7 @@ class Leave(db.Model):
     medical_certificate = db.Column(db.String(255), nullable=True)  # Path to uploaded document
     applied_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
-    __table_args__ = (
-        db.Index('ix_leave_emp_status_date', 'employee_id', 'status', 'start_date'),
-    )
+    __table_args__ = (db.Index('ix_leave_emp_status_date', 'employee_id', 'status', 'start_date'),)
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('leave_requests', lazy=True))
@@ -1017,6 +1019,7 @@ class LeaveBalance(db.Model):
     Tracks sick leave within 12-month periods.
     Enforces statutory minimums.
     """
+
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
@@ -1056,9 +1059,7 @@ class LeaveBalance(db.Model):
         """Whether all leave has been used."""
         return self.remaining <= 0
 
-    __table_args__ = (
-        db.UniqueConstraint('company_id', 'employee_id', 'leave_type', 'year', name='uq_leave_balance'),
-    )
+    __table_args__ = (db.UniqueConstraint('company_id', 'employee_id', 'leave_type', 'year', name='uq_leave_balance'),)
 
     def __repr__(self):
         return f'<LeaveBalance {self.leave_type} {self.year} for employee {self.employee_id}>'
@@ -1066,6 +1067,7 @@ class LeaveBalance(db.Model):
 
 class OvertimeEntry(db.Model):
     """Stores individual overtime records for employees."""
+
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
@@ -1076,9 +1078,7 @@ class OvertimeEntry(db.Model):
     overtime_type = db.Column(db.String(20), nullable=False, default='day')  # day, night, holiday, rest_day_holiday
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
-    __table_args__ = (
-        db.Index('ix_overtime_company_date', 'company_id', 'date'),
-    )
+    __table_args__ = (db.Index('ix_overtime_company_date', 'company_id', 'date'),)
 
     # Relationship
     employee = db.relationship('Employee', backref=db.backref('overtime_entries', lazy=True))
@@ -1094,6 +1094,7 @@ class EmployeeDeduction(db.Model):
     Supports both fixed ETB amounts and percentage-of-net-pay calculations.
     Supports both declining-balance (ledger-tracked) and date-bounded (open-ended) modes.
     """
+
     query_class = TenantQuery
 
     # Deduction type choices
@@ -1116,7 +1117,7 @@ class EmployeeDeduction(db.Model):
     AMOUNT_MODES = [MODE_FIXED, MODE_PERCENTAGE]
 
     # Balance tracking mode choices
-    TRACK_DECLINING = 'declining'   # Ledger-tracked, auto-stop at zero
+    TRACK_DECLINING = 'declining'  # Ledger-tracked, auto-stop at zero
     TRACK_DATE_BOUNDED = 'date_bounded'  # Open-ended between start/end dates
     TRACKING_MODES = [TRACK_DECLINING, TRACK_DATE_BOUNDED]
 
@@ -1174,9 +1175,7 @@ class EmployeeDeduction(db.Model):
     @property
     def is_expired(self):
         """Check if a date-bounded deduction has passed its end date."""
-        if self.end_date and date.today() > self.end_date:
-            return True
-        return False
+        return bool(self.end_date and date.today() > self.end_date)
 
     @property
     def is_exhausted(self):
@@ -1225,25 +1224,22 @@ class EmployeeDeduction(db.Model):
         """Generate a warning message for the validation engine."""
         if not self.is_active:
             return None
-        if self.is_declining and self.remaining_balance is not None:
-            if self.remaining_balance <= self.amount and self.remaining_balance > Decimal('0'):
-                return f"{self.type_label} balance ({self.remaining_balance}) is less than one monthly deduction ({self.amount}). Will stop after this payment."
+        if (
+            self.is_declining
+            and self.remaining_balance is not None
+            and self.remaining_balance <= self.amount
+            and self.remaining_balance > Decimal('0')
+        ):
+            return f'{self.type_label} balance ({self.remaining_balance}) is less than one monthly deduction ({self.amount}). Will stop after this payment.'
         if self.is_expired:
-            return f"{self.type_label} end date ({self.end_date}) has passed. Deduction should be stopped."
+            return f'{self.type_label} end date ({self.end_date}) has passed. Deduction should be stopped.'
         return None
 
     __table_args__ = (
+        db.CheckConstraint("amount_mode IN ('fixed', 'percentage')", name='ck_deduction_amount_mode'),
+        db.CheckConstraint("tracking_mode IN ('declining', 'date_bounded')", name='ck_deduction_tracking_mode'),
         db.CheckConstraint(
-            "amount_mode IN ('fixed', 'percentage')",
-            name='ck_deduction_amount_mode'
-        ),
-        db.CheckConstraint(
-            "tracking_mode IN ('declining', 'date_bounded')",
-            name='ck_deduction_tracking_mode'
-        ),
-        db.CheckConstraint(
-            "deduction_type IN ('cost_sharing', 'court_order', 'penalty', 'loan', 'other')",
-            name='ck_deduction_type'
+            "deduction_type IN ('cost_sharing', 'court_order', 'penalty', 'loan', 'other')", name='ck_deduction_type'
         ),
     )
 
@@ -1274,6 +1270,7 @@ class AuditLog(db.Model):
         """
         import hashlib
         import json
+
         raw = (
             str(self.previous_hash or '')
             + str(self.company_id)
@@ -1321,10 +1318,11 @@ def _audit_log_before_insert(mapper, connection, target):
     Uses the raw connection so it works even before the session is flushed.
     """
     from sqlalchemy import select
+
     if target.previous_hash is None:
-        stmt = select(AuditLog.hash).where(
-            AuditLog.company_id == target.company_id
-        ).order_by(AuditLog.id.desc()).limit(1)
+        stmt = (
+            select(AuditLog.hash).where(AuditLog.company_id == target.company_id).order_by(AuditLog.id.desc()).limit(1)
+        )
         result = connection.execute(stmt).scalar()
         target.previous_hash = result
     target.hash = target.compute_hash()
@@ -1336,6 +1334,7 @@ class TaxRule(db.Model):
     Rules are fetched by effective_date so old payrolls always use
     the rules from their period, not the current rules.
     """
+
     id = db.Column(db.Integer, primary_key=True)
     version_name = db.Column(db.String(50), nullable=False)  # e.g., '2025-v1'
     effective_date = db.Column(db.Date, nullable=False)
@@ -1365,10 +1364,11 @@ class TaxRule(db.Model):
         else:
             target = for_date
 
-        return TaxRule.query.filter(
-            TaxRule.status == 'active',
-            TaxRule.effective_date <= target
-        ).order_by(TaxRule.effective_date.desc()).first()
+        return (
+            TaxRule.query.filter(TaxRule.status == 'active', TaxRule.effective_date <= target)
+            .order_by(TaxRule.effective_date.desc())
+            .first()
+        )
 
     @property
     def brackets(self):
@@ -1433,6 +1433,7 @@ class TaxRule(db.Model):
 
 class ValidationRule(db.Model):
     """Configurable validation rules for payroll pre-processing."""
+
     id = db.Column(db.Integer, primary_key=True)
     rule_code = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.String(255), nullable=False)
@@ -1446,6 +1447,7 @@ class ValidationRule(db.Model):
 
 class PayrollValidationResult(db.Model):
     """Results of validation checks for a payroll run."""
+
     id = db.Column(db.Integer, primary_key=True)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     rule_code = db.Column(db.String(50), nullable=False)
@@ -1468,6 +1470,7 @@ class ProfileChangeRequest(db.Model):
     Employees can request changes to sensitive fields (bank account, TIN,
     phone, name). An admin/owner/accountant must approve before changes apply.
     """
+
     query_class = TenantQuery
 
     # Status
@@ -1478,8 +1481,14 @@ class ProfileChangeRequest(db.Model):
 
     # Fields employees may request to change
     EDITABLE_FIELDS = [
-        'phone', 'bank_account', 'tin', 'fayda_fin', 'name',
-        'address', 'emergency_contact', 'emergency_phone',
+        'phone',
+        'bank_account',
+        'tin',
+        'fayda_fin',
+        'name',
+        'address',
+        'emergency_contact',
+        'emergency_phone',
     ]
 
     # Fields that are SAFE (no approval needed) — shown but not stored here
@@ -1508,7 +1517,9 @@ class ProfileChangeRequest(db.Model):
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('profile_change_requests', lazy=True))
-    requester = db.relationship('User', foreign_keys=[requested_by], backref=db.backref('profile_change_requests', lazy=True))
+    requester = db.relationship(
+        'User', foreign_keys=[requested_by], backref=db.backref('profile_change_requests', lazy=True)
+    )
     reviewer = db.relationship('User', foreign_keys=[reviewed_by])
 
     @property
@@ -1532,6 +1543,7 @@ class ProfileChangeRequest(db.Model):
 
 class PayslipAcknowledgment(db.Model):
     """Track when employees acknowledge receipt of their payslip."""
+
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
@@ -1544,9 +1556,7 @@ class PayslipAcknowledgment(db.Model):
     payslip = db.relationship('Payslip', backref=db.backref('acknowledgments', lazy=True))
     employee = db.relationship('Employee', backref=db.backref('payslip_acknowledgments', lazy=True))
 
-    __table_args__ = (
-        db.UniqueConstraint('payslip_id', 'employee_id', name='uq_payslip_ack'),
-    )
+    __table_args__ = (db.UniqueConstraint('payslip_id', 'employee_id', name='uq_payslip_ack'),)
 
     def __repr__(self):
         return f'<PayslipAcknowledgment payslip={self.payslip_id} employee={self.employee_id}>'
@@ -1554,6 +1564,7 @@ class PayslipAcknowledgment(db.Model):
 
 class Notification(db.Model):
     """In-app notification for users."""
+
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -1575,6 +1586,7 @@ class SystemSetting(db.Model):
     Used for things like last purge date that need to survive
     app restarts and work across multiple workers.
     """
+
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False)
     value = db.Column(db.Text, nullable=True)
@@ -1609,6 +1621,7 @@ class PayslipGenerationJob(db.Model):
     One row per payslip-in-batch, grouped by batch_id (UUID).
     RQ job id == this row's id (set after enqueue).
     """
+
     id = db.Column(db.Integer, primary_key=True)
     payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=False, index=True)
     batch_id = db.Column(db.String(36), nullable=False, index=True)  # UUID
@@ -1620,9 +1633,7 @@ class PayslipGenerationJob(db.Model):
 
     payslip = db.relationship('Payslip', backref=db.backref('generation_jobs', lazy=True))
 
-    __table_args__ = (
-        db.Index('ix_genjob_batch_status', 'batch_id', 'status'),
-    )
+    __table_args__ = (db.Index('ix_genjob_batch_status', 'batch_id', 'status'),)
 
     def __repr__(self):
         return f'<PayslipGenerationJob {self.id} payslip={self.payslip_id} batch={self.batch_id} status={self.status}>'
@@ -1634,6 +1645,7 @@ class LoginAttempt(db.Model):
     Records every failed login by identifier (phone/email).
     Lockout: 5 failures in 15 minutes → account locked for 30 minutes.
     """
+
     id = db.Column(db.Integer, primary_key=True)
     identifier = db.Column(db.String(120), nullable=False, index=True)  # phone or email
     success = db.Column(db.Boolean, nullable=False, default=False)
@@ -1645,9 +1657,7 @@ class LoginAttempt(db.Model):
     LOCKOUT_WINDOW_MINUTES = 15
     LOCKOUT_DURATION_MINUTES = 30
 
-    __table_args__ = (
-        db.Index('ix_login_attempt_identifier_time', 'identifier', 'created_at'),
-    )
+    __table_args__ = (db.Index('ix_login_attempt_identifier_time', 'identifier', 'created_at'),)
 
     def __repr__(self):
         return f'<LoginAttempt {self.identifier} success={self.success} at {self.created_at}>'
@@ -1659,17 +1669,18 @@ class LoginAttempt(db.Model):
         Returns (is_locked, remaining_seconds) tuple.
         """
         from datetime import datetime, timedelta
+
         now = datetime.now(UTC)
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
 
         # Use naive UTC for SQLite compatibility
-        now_naive = now.replace(tzinfo=None)
+        now.replace(tzinfo=None)
         window_start_naive = window_start.replace(tzinfo=None)
 
         # Count recent failed attempts
         recent_failures = cls.query.filter(
             cls.identifier == identifier,
-            cls.success == False,
+            not cls.success,
             cls.created_at >= window_start_naive,
         ).count()
 
@@ -1677,10 +1688,14 @@ class LoginAttempt(db.Model):
             return False, 0
 
         # Find the last failure to calculate lockout end
-        last_failure = cls.query.filter(
-            cls.identifier == identifier,
-            cls.success == False,
-        ).order_by(cls.created_at.desc()).first()
+        last_failure = (
+            cls.query.filter(
+                cls.identifier == identifier,
+                not cls.success,
+            )
+            .order_by(cls.created_at.desc())
+            .first()
+        )
 
         if not last_failure:
             return False, 0
@@ -1712,13 +1727,14 @@ class LoginAttempt(db.Model):
     def record_success(cls, identifier):
         """Record a successful login and clear recent failures for this identifier."""
         from datetime import datetime, timedelta
+
         now = datetime.now(UTC)
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
         # Use naive UTC for SQLite compatibility
         window_start_naive = window_start.replace(tzinfo=None)
         cls.query.filter(
             cls.identifier == identifier,
-            cls.success == False,
+            not cls.success,
             cls.created_at >= window_start_naive,
         ).delete()
 
@@ -1730,6 +1746,7 @@ class LoginAttempt(db.Model):
     def cleanup_old(cls, days=7):
         """Delete attempts older than N days (for periodic cleanup)."""
         from datetime import datetime, timedelta
+
         cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
         cls.query.filter(cls.created_at < cutoff).delete()
 
@@ -1740,6 +1757,7 @@ class FilingRecord(db.Model):
     Stores when a filing was made, who did it, and the confirmation number.
     Used to show filing history and prevent duplicate filings.
     """
+
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     filing_type = db.Column(db.String(30), nullable=False)  # 'erca', 'pension', 'pssa'
@@ -1753,9 +1771,7 @@ class FilingRecord(db.Model):
     company = db.relationship('Company', backref=db.backref('filing_records', lazy=True))
     user = db.relationship('User', backref=db.backref('filings_made', lazy=True))
 
-    __table_args__ = (
-        db.UniqueConstraint('company_id', 'filing_type', 'period', name='uq_filing_per_period'),
-    )
+    __table_args__ = (db.UniqueConstraint('company_id', 'filing_type', 'period', name='uq_filing_per_period'),)
 
     def __repr__(self):
         return f'<FilingRecord {self.filing_type} {self.period}>'
@@ -1764,6 +1780,7 @@ class FilingRecord(db.Model):
 # Holiday model (moved from holidays.py for migration support)
 class Holiday(db.Model):
     """Ethiopian public/company holidays."""
+
     __tablename__ = 'holiday'
 
     id = db.Column(db.Integer, primary_key=True)

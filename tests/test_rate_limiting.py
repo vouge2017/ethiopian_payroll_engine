@@ -6,6 +6,7 @@ Verifies:
 - Rate-limited endpoints return 429 when exceeded
 - Read-only HTML pages are NOT rate-limited (normal accountant use)
 """
+
 import os
 import sys
 
@@ -44,37 +45,50 @@ def client(app):
 def seed_data(app, client):
     """Register company and create payroll."""
     with app.app_context():
-        client.post('/auth/register', data={
-            'company_name': 'Test PLC',
-            'phone': '0911123456',
-            'password': 'TestPass123!',
-            'password2': 'TestPass123!',
-        }, follow_redirects=True)
+        client.post(
+            '/auth/register',
+            data={
+                'company_name': 'Test PLC',
+                'phone': '0911123456',
+                'password': 'TestPass123!',
+                'password2': 'TestPass123!',
+            },
+            follow_redirects=True,
+        )
 
         company = Company.query.filter_by(name='Test PLC').first()
         user = User.query.filter_by(phone='0911123456').first()
 
         emp = Employee(
-            employee_id='EMP-001', name='Dawit Kebede',
-            basic_salary=Decimal('15000'), allowances=Decimal('0'),
-            bank_or_telebirr='1000123456789', tin='TIN001',
-            phone='+251911000001', company_id=company.id,
+            employee_id='EMP-001',
+            name='Dawit Kebede',
+            basic_salary=Decimal('15000'),
+            allowances=Decimal('0'),
+            bank_or_telebirr='1000123456789',
+            tin='TIN001',
+            phone='+251911000001',
+            company_id=company.id,
         )
         db.session.add(emp)
         db.session.commit()
 
         run = PayrollRun(
-            company_id=company.id, run_date=date(2026, 8, 1),
-            status='completed', period='2018-10',
+            company_id=company.id,
+            run_date=date(2026, 8, 1),
+            status='completed',
+            period='2018-10',
             reference='PR-2018-10-001',
         )
         db.session.add(run)
         db.session.flush()
 
         ps = Payslip(
-            payroll_run_id=run.id, employee_id=emp.id,
-            gross_salary=Decimal('15000'), tax=Decimal('2250'),
-            employee_pension=Decimal('1050'), employer_pension=Decimal('1050'),
+            payroll_run_id=run.id,
+            employee_id=emp.id,
+            gross_salary=Decimal('15000'),
+            tax=Decimal('2250'),
+            employee_pension=Decimal('1050'),
+            employer_pension=Decimal('1050'),
             net_pay=Decimal('11700'),
         )
         db.session.add(ps)
@@ -88,10 +102,14 @@ def seed_data(app, client):
 
 
 def login(client):
-    return client.post('/auth/login', data={
-        'login_id': '0911123456',
-        'password': 'TestPass123!',
-    }, follow_redirects=True)
+    return client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
 
 class TestRateLimitingDecorators:

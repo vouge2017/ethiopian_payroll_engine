@@ -9,6 +9,7 @@ Verifies:
 - Per-run invalidation
 - Cache stats
 """
+
 import os
 import sys
 import time
@@ -29,6 +30,7 @@ def teardown_function():
 
 
 # --- Basic get/put ---
+
 
 def test_get_returns_none_on_empty():
     result = trust_cache.get_change_summary(1, 100)
@@ -57,6 +59,7 @@ def test_different_companies_isolated():
 
 # --- All component types ---
 
+
 def test_change_summary():
     trust_cache.put_change_summary(1, 100, 'cs')
     assert trust_cache.get_change_summary(1, 100) == 'cs'
@@ -84,6 +87,7 @@ def test_filing_workspace():
 
 # --- TTL ---
 
+
 def test_fresh_entry_is_hit():
     trust_cache.put_change_summary(1, 100, 'data')
     assert trust_cache.get_change_summary(1, 100) == 'data'
@@ -106,6 +110,7 @@ def test_expired_entry_cleaned_up():
 
 
 # --- Invalidation ---
+
 
 def test_invalidate_company_removes_all_components():
     trust_cache.put_change_summary(1, 100, 'cs')
@@ -157,6 +162,7 @@ def test_full_flush_clears_everything():
 
 # --- Stats ---
 
+
 def test_empty_cache_stats():
     stats = trust_cache.cache_stats()
     assert stats['total_entries'] == 0
@@ -178,6 +184,7 @@ def test_populated_cache_stats():
 
 
 # --- Edge cases ---
+
 
 def test_overwrite_cache_entry():
     trust_cache.put_change_summary(1, 100, 'old')

@@ -1,4 +1,5 @@
 """Performance benchmark: 10,000-row payroll CSV processing."""
+
 import csv
 import io
 import os
@@ -24,14 +25,7 @@ def _generate_large_csv(rows: int) -> bytes:
     writer = csv.writer(output)
     writer.writerow(['employee_id', 'name', 'basic_salary', 'allowances', 'bank_or_telebirr', 'tin'])
     for i in range(rows):
-        writer.writerow([
-            f'EMP{i:06d}',
-            f'Employee {i}',
-            '5000',
-            '1000',
-            '',
-            ''
-        ])
+        writer.writerow([f'EMP{i:06d}', f'Employee {i}', '5000', '1000', '', ''])
     return output.getvalue().encode('utf-8')
 
 
@@ -69,9 +63,7 @@ def company_user(app):
 
 
 def _login(client):
-    client.post('/auth/login', data={
-        'login_id': '0911000099', 'password': 'Test1234!'
-    }, follow_redirects=True)
+    client.post('/auth/login', data={'login_id': '0911000099', 'password': 'Test1234!'}, follow_redirects=True)
 
 
 @pytest.mark.benchmark
@@ -90,6 +82,5 @@ def test_large_csv_upload_performance(app, client, company_user):
 
     assert resp.status_code == 200, f'Upload failed with status {resp.status_code}'
     assert elapsed < TARGET_THRESHOLD_SEC, (
-        f'Processing {ROW_COUNT} rows took {elapsed:.2f}s, '
-        f'exceeding threshold of {TARGET_THRESHOLD_SEC}s'
+        f'Processing {ROW_COUNT} rows took {elapsed:.2f}s, exceeding threshold of {TARGET_THRESHOLD_SEC}s'
     )

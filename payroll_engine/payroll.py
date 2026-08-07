@@ -105,7 +105,7 @@ def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
     days_worked = _D(days_worked)
 
     if daily_rate < 0:
-        raise ValueError(f"daily_rate cannot be negative: {daily_rate}")
+        raise ValueError(f'daily_rate cannot be negative: {daily_rate}')
     if days_worked < 0:
         days_worked = Decimal('0')
 
@@ -142,12 +142,15 @@ def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
     }
 
 
-def calculate_payroll(basic_salary, allowances=Decimal('0'),
-                      overtime_entries: list = None,
-                      for_date=None,
-                      deductions: list = None,
-                      allowance_records: list = None,
-                      sick_leave_reduction: Decimal = Decimal('0')) -> dict:
+def calculate_payroll(
+    basic_salary,
+    allowances=Decimal('0'),
+    overtime_entries: list | None = None,
+    for_date=None,
+    deductions: list | None = None,
+    allowance_records: list | None = None,
+    sick_leave_reduction: Decimal = Decimal('0'),
+) -> dict:
     """
     Calculate complete payroll for one employee.
 
@@ -184,9 +187,9 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
     allowances = _D(allowances)
 
     if basic_salary < 0:
-        raise ValueError(f"basic_salary cannot be negative: {basic_salary}")
+        raise ValueError(f'basic_salary cannot be negative: {basic_salary}')
     if allowances < 0:
-        raise ValueError(f"allowances cannot be negative: {allowances}")
+        raise ValueError(f'allowances cannot be negative: {allowances}')
 
     # Step 1: Calculate allowance breakdown with exemptions
     exempt_allowances = Decimal('0')
@@ -201,14 +204,16 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
             taxable_amount = record.taxable_amount
             exempt_allowances += exempt_amount
             taxable_allowances += taxable_amount
-            allowance_details.append({
-                'type': record.allowance_type,
-                'type_label': record.type_label,
-                'amount': record.amount,
-                'exempt': exempt_amount,
-                'taxable': taxable_amount,
-                'tax_treatment': record.tax_treatment,
-            })
+            allowance_details.append(
+                {
+                    'type': record.allowance_type,
+                    'type_label': record.type_label,
+                    'amount': record.amount,
+                    'exempt': exempt_amount,
+                    'taxable': taxable_amount,
+                    'tax_treatment': record.tax_treatment,
+                }
+            )
         total_allowances = exempt_allowances + taxable_allowances
     else:
         # Fallback: treat all allowances as taxable (backward compatibility)
@@ -256,15 +261,17 @@ def calculate_payroll(basic_salary, allowances=Decimal('0'),
             ded_amount = ded.calculate_deduction(net_before_deductions)
             if ded_amount > 0:
                 total_deductions += ded_amount
-                deduction_details.append({
-                    'id': ded.id,
-                    'type': ded.deduction_type,
-                    'type_label': ded.type_label,
-                    'label': ded.label,
-                    'amount': ded_amount,
-                    'remaining_balance': ded.remaining_balance,
-                    'warning': ded.warning_message,
-                })
+                deduction_details.append(
+                    {
+                        'id': ded.id,
+                        'type': ded.deduction_type,
+                        'type_label': ded.type_label,
+                        'label': ded.label,
+                        'amount': ded_amount,
+                        'remaining_balance': ded.remaining_balance,
+                        'warning': ded.warning_message,
+                    }
+                )
 
     # Step 10: Apply sick leave reduction (if employee exceeded tier 1)
     sick_leave_reduction = _D(sick_leave_reduction)
@@ -340,65 +347,71 @@ def generate_calculation_flow(result: dict) -> dict:
     ]
 
     if exempt > 0:
-        steps.append({
-            'label': 'Exempt Allowances',
-            'amount': exempt,
-            'note': 'Tax-free allowances (transport cap, hardship, etc.)',
+        steps.append(
+            {
+                'label': 'Exempt Allowances',
+                'amount': exempt,
+                'note': 'Tax-free allowances (transport cap, hardship, etc.)',
+                'is_deduction': True,
+                'icon': '📋',
+            }
+        )
+
+    steps.append(
+        {
+            'label': 'Taxable Income',
+            'amount': taxable,
+            'note': 'Gross − Pension − Exempt Allowances',
+            'is_deduction': False,
+            'icon': '📊',
+            'is_highlight': True,
+        }
+    )
+
+    steps.append(
+        {
+            'label': 'Income Tax',
+            'amount': tax,
+            'note': 'Progressive brackets (Proclamation 1395/2025)',
             'is_deduction': True,
-            'icon': '📋',
-        })
-
-    steps.append({
-        'label': 'Taxable Income',
-        'amount': taxable,
-        'note': 'Gross − Pension − Exempt Allowances',
-        'is_deduction': False,
-        'icon': '📊',
-        'is_highlight': True,
-    })
-
-    steps.append({
-        'label': 'Income Tax',
-        'amount': tax,
-        'note': 'Progressive brackets (Proclamation 1395/2025)',
-        'is_deduction': True,
-        'icon': '🏛️',
-    })
+            'icon': '🏛️',
+        }
+    )
 
     # Show pension savings if meaningful
     if pension_savings > 0 and pension > 0:
-        steps.append({
-            'label': 'Pension Tax Savings',
-            'amount': pension_savings,
-            'note': f'You save this much because pension is deducted before tax. '
-                    f'Without this rule, tax would be ETB {tax_without_pension:,.2f}',
-            'is_deduction': False,
-            'icon': '💡',
-            'is_highlight': True,
-        })
+        steps.append(
+            {
+                'label': 'Pension Tax Savings',
+                'amount': pension_savings,
+                'note': f'You save this much because pension is deducted before tax. '
+                f'Without this rule, tax would be ETB {tax_without_pension:,.2f}',
+                'is_deduction': False,
+                'icon': '💡',
+                'is_highlight': True,
+            }
+        )
 
-    steps.append({
-        'label': 'Net Pay',
-        'amount': net,
-        'note': 'What the employee takes home',
-        'is_deduction': False,
-        'icon': '✅',
-        'is_final': True,
-    })
+    steps.append(
+        {
+            'label': 'Net Pay',
+            'amount': net,
+            'note': 'What the employee takes home',
+            'is_deduction': False,
+            'icon': '✅',
+            'is_final': True,
+        }
+    )
 
     # Effective tax rate
     effective_rate = (tax / gross * 100).quantize(Q) if gross > 0 else Decimal('0')
 
     # Plain-language summary
     summary = (
-        f"ETB {gross:,.2f} gross → "
-        f"Pension {pension:,.2f} → "
-        f"Taxable {taxable:,.2f} → "
-        f"Tax {tax:,.2f} → "
-        f"Net {net:,.2f}"
+        f'ETB {gross:,.2f} gross → Pension {pension:,.2f} → Taxable {taxable:,.2f} → Tax {tax:,.2f} → Net {net:,.2f}'
     )
     if pension_savings > 0:
-        summary += f" (Pension saves you ETB {pension_savings:,.2f}/month in tax)"
+        summary += f' (Pension saves you ETB {pension_savings:,.2f}/month in tax)'
 
     return {
         'steps': steps,

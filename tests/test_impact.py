@@ -1,4 +1,5 @@
 """Tests for impact preview module."""
+
 from datetime import date
 from decimal import Decimal
 
@@ -24,8 +25,10 @@ def app():
 
 # --- Salary Raise ---
 
+
 def test_salary_raise_basic(app):
     from payroll_engine.impact import preview_salary_raise
+
     with app.app_context():
         r = preview_salary_raise(10000, 2000, 15000, 3000, 'Dawit')
         assert r['type'] == 'salary_raise'
@@ -39,6 +42,7 @@ def test_salary_raise_basic(app):
 
 def test_salary_raise_no_change(app):
     from payroll_engine.impact import preview_salary_raise
+
     with app.app_context():
         r = preview_salary_raise(10000, 2000, 10000, 2000)
         assert r['impact']['net_monthly_change'] == Decimal('0.00')
@@ -47,6 +51,7 @@ def test_salary_raise_no_change(app):
 
 def test_salary_raise_decrease(app):
     from payroll_engine.impact import preview_salary_raise
+
     with app.app_context():
         r = preview_salary_raise(15000, 3000, 10000, 2000)
         assert r['impact']['net_monthly_change'] < 0
@@ -54,8 +59,10 @@ def test_salary_raise_decrease(app):
 
 # --- New Hire ---
 
+
 def test_new_hire_basic(app):
     from payroll_engine.impact import preview_new_hire
+
     with app.app_context():
         r = preview_new_hire(15000, 3000, employee_name='Abebe')
         assert r['type'] == 'new_hire'
@@ -69,6 +76,7 @@ def test_new_hire_basic(app):
 
 def test_new_hire_with_transport(app):
     from payroll_engine.impact import preview_new_hire
+
     with app.app_context():
         # When transport is specified, it goes into allowance_records
         # The allowances param (2000) is NOT added separately - only allowance_records are used
@@ -82,6 +90,7 @@ def test_new_hire_with_transport(app):
 
 def test_new_hire_zero_salary(app):
     from payroll_engine.impact import preview_new_hire
+
     with app.app_context():
         r = preview_new_hire(0, 0)
         assert r['monthly']['net'] == Decimal('0.00')
@@ -90,8 +99,10 @@ def test_new_hire_zero_salary(app):
 
 # --- Termination ---
 
+
 def test_termination_redundancy(app):
     from payroll_engine.impact import preview_termination
+
     with app.app_context():
         r = preview_termination(15000, 3000, date(2020, 1, 1), date(2026, 7, 15), 'redundancy', 'Dawit')
         assert r['type'] == 'termination'
@@ -105,6 +116,7 @@ def test_termination_redundancy(app):
 
 def test_termination_resignation(app):
     from payroll_engine.impact import preview_termination
+
     with app.app_context():
         r = preview_termination(15000, 3000, date(2020, 1, 1), date(2026, 7, 15), 'resignation')
         assert r['eligible'] is False
@@ -116,6 +128,7 @@ def test_termination_resignation(app):
 
 def test_termination_short_service(app):
     from payroll_engine.impact import preview_termination
+
     with app.app_context():
         r = preview_termination(10000, 0, date(2026, 1, 1), date(2026, 7, 15), 'redundancy')
         assert r['eligible'] is True
@@ -126,8 +139,10 @@ def test_termination_short_service(app):
 
 # --- Allowance Change ---
 
+
 def test_allowance_change_transport(app):
     from payroll_engine.impact import preview_allowance_change
+
     with app.app_context():
         r = preview_allowance_change(1500, 3000, 10000, 'transport')
         assert r['type'] == 'allowance_change'
@@ -139,6 +154,7 @@ def test_allowance_change_transport(app):
 
 def test_allowance_change_no_change(app):
     from payroll_engine.impact import preview_allowance_change
+
     with app.app_context():
         r = preview_allowance_change(2000, 2000, 10000, 'transport')
         assert r['impact']['amount_change'] == Decimal('0.00')
@@ -147,6 +163,7 @@ def test_allowance_change_no_change(app):
 
 def test_allowance_change_housing(app):
     from payroll_engine.impact import preview_allowance_change
+
     with app.app_context():
         r = preview_allowance_change(0, 5000, 10000, 'housing')
         # Housing is fully taxable
@@ -160,6 +177,7 @@ def test_allowance_change_housing(app):
 
 def test_allowance_change_transport_exemption(app):
     from payroll_engine.impact import preview_allowance_change
+
     with app.app_context():
         # Transport below exempt cap - all exempt
         r = preview_allowance_change(0, 2000, 10000, 'transport')

@@ -25,15 +25,16 @@ def check_deadlines_and_notify():
     from payroll_engine.models import Company, PayrollRun, User
     from payroll_engine.push import notify_deadline_approaching
 
-    today = date.today()
+    date.today()
     companies = Company.query.all()
 
     for company in companies:
         # Get latest payroll run
-        latest_run = PayrollRun.query.filter_by(
-            company_id=company.id,
-            status='completed'
-        ).order_by(PayrollRun.run_date.desc()).first()
+        latest_run = (
+            PayrollRun.query.filter_by(company_id=company.id, status='completed')
+            .order_by(PayrollRun.run_date.desc())
+            .first()
+        )
 
         if not latest_run:
             continue
@@ -42,15 +43,16 @@ def check_deadlines_and_notify():
         deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
 
         # Get company owners
-        owners = db.session.query(User).join(
-            User.companies
-        ).filter(
-            User.companies.any(company_id=company.id),
-            User.role == 'owner'
-        ).all()
+        owners = (
+            db.session.query(User)
+            .join(User.companies)
+            .filter(User.companies.any(company_id=company.id), User.role == 'owner')
+            .all()
+        )
 
         # Use company-configurable reminder window
         from payroll_engine.compliance import get_company_deadlines
+
         company_deadlines = get_company_deadlines(company)
         reminder_days = company_deadlines.get('_reminder_days_before', 3)
 
@@ -65,11 +67,7 @@ def check_deadlines_and_notify():
         for deadline_name, days_left in deadline_checks:
             if 0 < days_left <= reminder_days:  # Due within reminder window
                 for owner in owners:
-                    notify_deadline_approaching(
-                        user_id=owner.id,
-                        deadline_name=deadline_name,
-                        days_left=days_left
-                    )
+                    notify_deadline_approaching(user_id=owner.id, deadline_name=deadline_name, days_left=days_left)
                     logger.info(f'Notified {owner.email} about {deadline_name} ({days_left}d)')
 
 
@@ -94,17 +92,17 @@ def generate_monthly_erca_reminder():
             PayrollRun.company_id == company.id,
             PayrollRun.status == 'completed',
             db.extract('year', PayrollRun.run_date) == today.year,
-            db.extract('month', PayrollRun.run_date) == today.month
+            db.extract('month', PayrollRun.run_date) == today.month,
         ).first()
 
         if not current_month_run:
             # No payroll run this month — remind owner
-            owners = db.session.query(User).join(
-                User.companies
-            ).filter(
-                User.companies.any(company_id=company.id),
-                User.role == 'owner'
-            ).all()
+            owners = (
+                db.session.query(User)
+                .join(User.companies)
+                .filter(User.companies.any(company_id=company.id), User.role == 'owner')
+                .all()
+            )
 
             for owner in owners:
                 send_push_notification(
@@ -112,7 +110,7 @@ def generate_monthly_erca_reminder():
                     title='ERCA Filing Due',
                     body=f'Run payroll for {today.strftime("%B %Y")} — ERCA filing due on the 25th.',
                     url='/payroll/upload',
-                    notif_type='deadline'
+                    notif_type='deadline',
                 )
 
 

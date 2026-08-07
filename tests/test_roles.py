@@ -8,6 +8,7 @@ Tests:
 - Multi-company accountant
 - Approval visibility (owner vs accountant)
 """
+
 import os
 import sys
 
@@ -64,6 +65,7 @@ def company_with_users(ctx):
 # ROLE TESTS
 # ---------------------------------------------------------------
 
+
 def test_owner_role(company_with_users):
     """Owner has full access."""
     company, owner, _, _ = company_with_users
@@ -89,9 +91,10 @@ def test_employee_role(company_with_users):
 # INVITE TESTS
 # ---------------------------------------------------------------
 
+
 def test_invite_creates_user(company_with_users):
     """Inviting a team member creates a new user."""
-    company, owner, _, _ = company_with_users
+    company, _owner, _, _ = company_with_users
     new_user = User(phone='0944444444', company_id=company.id, role='accountant', must_change_password=True)
     new_user.set_password('temp123')
     db.session.add(new_user)
@@ -105,7 +108,7 @@ def test_invite_creates_user(company_with_users):
 
 def test_invite_existing_user_links_company(company_with_users):
     """Inviting an existing user creates a UserCompany link."""
-    company, owner, _, _ = company_with_users
+    company, _owner, _, _ = company_with_users
     # Create user in different company
     other_company = Company(name='OtherCo')
     db.session.add(other_company)
@@ -127,6 +130,7 @@ def test_invite_existing_user_links_company(company_with_users):
 # ---------------------------------------------------------------
 # MULTI-COMPANY TESTS
 # ---------------------------------------------------------------
+
 
 def test_accountant_multiple_companies(ctx):
     """Accountant can be linked to multiple companies."""
@@ -187,9 +191,9 @@ def test_switch_company(app):
         uid = user.id
 
     # Login as the multi-company accountant
-    login_resp = client.post('/auth/login', data={
-        'login_id': '0911234567', 'password': 'pass123'
-    }, follow_redirects=True)
+    login_resp = client.post(
+        '/auth/login', data={'login_id': '0911234567', 'password': 'pass123'}, follow_redirects=True
+    )
     assert login_resp.status_code == 200, f'Login failed: {login_resp.status_code}'
     assert b'Dashboard' in login_resp.data or b'dashboard' in login_resp.data.lower()
 
@@ -207,6 +211,7 @@ def test_switch_company(app):
 # ---------------------------------------------------------------
 # PERMISSION TESTS
 # ---------------------------------------------------------------
+
 
 def test_owner_can_approve(company_with_users):
     """Owner should be able to approve."""
@@ -230,7 +235,7 @@ def test_employee_cannot_upload(company_with_users):
 
 def test_role_change(company_with_users):
     """User role can be changed."""
-    _, owner, accountant, _ = company_with_users
+    _, _owner, accountant, _ = company_with_users
     accountant.role = 'owner'
     db.session.commit()
     assert accountant.role == 'owner'

@@ -1,4 +1,5 @@
 """Transparent calculation flow tests — verify the step-by-step breakdown."""
+
 import os
 import sys
 
@@ -121,6 +122,7 @@ def test_calc_flow_pension_savings():
 
     # Verify: savings = tax_without_pension - tax_with_pension
     from payroll_engine.tax import calculate_tax
+
     gross = result['gross']
     tax_without = calculate_tax(gross)
     tax_with = result['tax']

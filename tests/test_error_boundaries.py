@@ -7,6 +7,7 @@ Verifies:
 - Approval is blocked when exceptions can't be computed
 - Other components still work when one fails
 """
+
 import os
 import sys
 from unittest.mock import patch
@@ -47,39 +48,52 @@ def seed_data(app, client):
     """Register company and create payroll via the actual flow."""
     with app.app_context():
         # Register company + owner (creates UserCompany link)
-        client.post('/auth/register', data={
-            'company_name': 'Test PLC',
-            'phone': '0911123456',
-            'password': 'TestPass123!',
-            'password2': 'TestPass123!',
-        }, follow_redirects=True)
+        client.post(
+            '/auth/register',
+            data={
+                'company_name': 'Test PLC',
+                'phone': '0911123456',
+                'password': 'TestPass123!',
+                'password2': 'TestPass123!',
+            },
+            follow_redirects=True,
+        )
 
         company = Company.query.filter_by(name='Test PLC').first()
         user = User.query.filter_by(phone='0911123456').first()
 
         # Add employee
         emp = Employee(
-            employee_id='EMP-001', name='Dawit Kebede',
-            basic_salary=Decimal('15000'), allowances=Decimal('0'),
-            bank_or_telebirr='1000123456789', tin='TIN001',
-            phone='+251911000001', company_id=company.id,
+            employee_id='EMP-001',
+            name='Dawit Kebede',
+            basic_salary=Decimal('15000'),
+            allowances=Decimal('0'),
+            bank_or_telebirr='1000123456789',
+            tin='TIN001',
+            phone='+251911000001',
+            company_id=company.id,
         )
         db.session.add(emp)
         db.session.commit()
 
         # Create completed payroll run
         run = PayrollRun(
-            company_id=company.id, run_date=date(2026, 8, 1),
-            status='completed', period='2018-10',
+            company_id=company.id,
+            run_date=date(2026, 8, 1),
+            status='completed',
+            period='2018-10',
             reference='PR-2018-10-001',
         )
         db.session.add(run)
         db.session.flush()
 
         ps = Payslip(
-            payroll_run_id=run.id, employee_id=emp.id,
-            gross_salary=Decimal('15000'), tax=Decimal('2250'),
-            employee_pension=Decimal('1050'), employer_pension=Decimal('1050'),
+            payroll_run_id=run.id,
+            employee_id=emp.id,
+            gross_salary=Decimal('15000'),
+            tax=Decimal('2250'),
+            employee_pension=Decimal('1050'),
+            employer_pension=Decimal('1050'),
             net_pay=Decimal('11700'),
         )
         db.session.add(ps)
@@ -95,10 +109,14 @@ def seed_data(app, client):
 
 def login(client):
     """Log in the test user."""
-    return client.post('/auth/login', data={
-        'login_id': '0911123456',
-        'password': 'TestPass123!',
-    }, follow_redirects=True)
+    return client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
 
 class TestReviewWorkspaceErrorBoundaries:
@@ -115,7 +133,9 @@ class TestReviewWorkspaceErrorBoundaries:
         """Page should still load if compute_change_summary throws."""
         with app.app_context():
             login(client)
-            with patch('payroll_engine.payroll_bp.compute_change_summary', side_effect=RuntimeError('DB connection lost')):
+            with patch(
+                'payroll_engine.payroll_bp.compute_change_summary', side_effect=RuntimeError('DB connection lost')
+            ):
                 resp = client.get(f'/payroll/runs/{seed_data["run_id"]}/review')
                 assert resp.status_code == 200
                 assert b'Unable to load' in resp.data or b'Review' in resp.data
@@ -150,11 +170,13 @@ class TestReviewWorkspaceErrorBoundaries:
         """Page should still load even if ALL components fail."""
         with app.app_context():
             login(client)
-            with patch('payroll_engine.payroll_bp.compute_change_summary', side_effect=RuntimeError('E1')):
-                with patch('payroll_engine.payroll_bp.collect_evidence', side_effect=RuntimeError('E2')):
-                    with patch('payroll_engine.payroll_bp.classify_exceptions', side_effect=RuntimeError('E3')):
-                        resp = client.get(f'/payroll/runs/{seed_data["run_id"]}/review')
-                        assert resp.status_code == 200
+            with (
+                patch('payroll_engine.payroll_bp.compute_change_summary', side_effect=RuntimeError('E1')),
+                patch('payroll_engine.payroll_bp.collect_evidence', side_effect=RuntimeError('E2')),
+                patch('payroll_engine.payroll_bp.classify_exceptions', side_effect=RuntimeError('E3')),
+            ):
+                resp = client.get(f'/payroll/runs/{seed_data["run_id"]}/review')
+                assert resp.status_code == 200
 
 
 class TestCockpitErrorBoundaries:

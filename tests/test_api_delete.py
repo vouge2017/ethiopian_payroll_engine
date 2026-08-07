@@ -5,6 +5,7 @@ Tests:
 - Delete employee without history → 200 + AuditLog
 - Delete employee with payroll history → 409 (IntegrityError)
 """
+
 import os
 import sys
 
@@ -52,9 +53,7 @@ def company_user_employee(ctx):
     db.session.add(user)
     db.session.commit()
     emp = Employee(
-        employee_id='EMP001', name='Dawit Mekonnen',
-        basic_salary=10000, allowances=2000,
-        company_id=company.id
+        employee_id='EMP001', name='Dawit Mekonnen', basic_salary=10000, allowances=2000, company_id=company.id
     )
     db.session.add(emp)
     db.session.commit()
@@ -67,14 +66,12 @@ def client(app):
 
 
 def login(client, phone, password):
-    return client.post('/auth/login', data={
-        'login_id': phone, 'password': password
-    }, follow_redirects=True)
+    return client.post('/auth/login', data={'login_id': phone, 'password': password}, follow_redirects=True)
 
 
 def test_delete_employee_without_history(ctx, client, company_user_employee):
     """Delete employee without payroll history → 200 + AuditLog."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
 
     resp = client.delete(f'/api/v1/employees/{emp.id}')
@@ -85,16 +82,14 @@ def test_delete_employee_without_history(ctx, client, company_user_employee):
     assert db.session.get(Employee, emp.id) is None
 
     # Verify audit log
-    log = AuditLog.query.filter_by(
-        company_id=company.id, action='employee_deleted_api'
-    ).first()
+    log = AuditLog.query.filter_by(company_id=company.id, action='employee_deleted_api').first()
     assert log is not None
     assert log.details['employee_name'] == 'Dawit Mekonnen'
 
 
 def test_delete_employee_with_history_returns_409(ctx, client, company_user_employee):
     """Delete employee with payroll history → 409 (IntegrityError)."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
 
     # Create payroll history
@@ -103,9 +98,13 @@ def test_delete_employee_with_history_returns_409(ctx, client, company_user_empl
     db.session.commit()
 
     payslip = Payslip(
-        payroll_run_id=run.id, employee_id=emp.id,
-        gross_salary=12000, tax=500, employee_pension=700,
-        employer_pension=1100, net_pay=10800
+        payroll_run_id=run.id,
+        employee_id=emp.id,
+        gross_salary=12000,
+        tax=500,
+        employee_pension=700,
+        employer_pension=1100,
+        net_pay=10800,
     )
     db.session.add(payslip)
     db.session.commit()

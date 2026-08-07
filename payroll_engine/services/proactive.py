@@ -6,6 +6,7 @@ This service runs automatically (via before_request hooks) to:
 
 No external scheduler needed — uses the same pattern as daily_retention_purge.
 """
+
 import logging
 from datetime import date
 
@@ -43,18 +44,16 @@ def prepare_monthly_draft(company_id):
     period_str = f'{eth_year}-{eth_month:02d}'
 
     # Check if a run already exists for this period
-    existing = PayrollRun.query.filter_by(
-        company_id=company_id, period=period_str
-    ).filter(
-        PayrollRun.status.notin_(['failed', 'rejected'])
-    ).first()
+    existing = (
+        PayrollRun.query.filter_by(company_id=company_id, period=period_str)
+        .filter(PayrollRun.status.notin_(['failed', 'rejected']))
+        .first()
+    )
     if existing:
         return None  # Already has a run for this period
 
     # Get active employees
-    employees = Employee.query.filter_by(
-        company_id=company_id, is_deleted=False
-    ).all()
+    employees = Employee.query.filter_by(company_id=company_id, is_deleted=False).all()
     if not employees:
         return None
 
@@ -92,13 +91,13 @@ def prepare_monthly_draft(company_id):
 
             # Collect issues
             if not emp_data['bank']:
-                issues.append(f"{emp.name}: no bank account")
+                issues.append(f'{emp.name}: no bank account')
             if not emp_data['tin']:
-                issues.append(f"{emp.name}: no TIN")
+                issues.append(f'{emp.name}: no TIN')
 
         except Exception as e:
             logger.error('Failed to calculate payroll for %s: %s', emp.name, e)
-            issues.append(f"{emp.name}: calculation error")
+            issues.append(f'{emp.name}: calculation error')
 
     if not employees_data:
         return None
@@ -123,13 +122,14 @@ def prepare_monthly_draft(company_id):
         db.session.commit()
 
         # Notify owners
-        owners = User.query.join(UserCompany).filter(
-            UserCompany.company_id == company_id,
-            User.role.in_(['owner', 'accountant'])
-        ).all()
+        owners = (
+            User.query.join(UserCompany)
+            .filter(UserCompany.company_id == company_id, User.role.in_(['owner', 'accountant']))
+            .all()
+        )
 
         total_net = sum(e['net'] for e in employees_data)
-        issue_text = f" ({len(issues)} issues)" if issues else ""
+        issue_text = f' ({len(issues)} issues)' if issues else ''
         message = (
             f'Draft payroll for {period_str} is ready! '
             f'{len(employees_data)} employees{issue_text}. '
@@ -153,7 +153,10 @@ def prepare_monthly_draft(company_id):
 
         logger.info(
             'Prepared draft payroll for company %s: %s (%d employees, ETB %s)',
-            company_id, period_str, len(employees_data), f'{total_net:,.0f}'
+            company_id,
+            period_str,
+            len(employees_data),
+            f'{total_net:,.0f}',
         )
 
         return {
@@ -190,9 +193,11 @@ def send_compliance_nudges(company_id):
     company = db.session.get(Company, company_id)
 
     # Find the latest completed run for compliance dates
-    last_run = PayrollRun.query.filter_by(
-        company_id=company_id, status='completed'
-    ).order_by(PayrollRun.run_date.desc()).first()
+    last_run = (
+        PayrollRun.query.filter_by(company_id=company_id, status='completed')
+        .order_by(PayrollRun.run_date.desc())
+        .first()
+    )
 
     payroll_date = last_run.run_date.isoformat() if last_run else today.isoformat()
     deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
@@ -215,10 +220,11 @@ def send_compliance_nudges(company_id):
         return []
 
     # Send to owners
-    owners = User.query.join(UserCompany).filter(
-        UserCompany.company_id == company_id,
-        User.role.in_(['owner', 'accountant'])
-    ).all()
+    owners = (
+        User.query.join(UserCompany)
+        .filter(UserCompany.company_id == company_id, User.role.in_(['owner', 'accountant']))
+        .all()
+    )
 
     message = '⚠️ ' + ' · '.join(alerts) + '. Open dashboard to download and file.'
 

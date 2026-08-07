@@ -5,6 +5,7 @@ file upload restrictions, and API validation abuse cases.
 
 Each test deliberately attacks the previous failure mode.
 """
+
 import io
 import os
 import sys
@@ -56,14 +57,13 @@ def company_user(app):
 
 
 def _login(client):
-    client.post('/auth/login', data={
-        'login_id': '0911999999', 'password': 'Secure123!'
-    }, follow_redirects=True)
+    client.post('/auth/login', data={'login_id': '0911999999', 'password': 'Secure123!'}, follow_redirects=True)
 
 
 # -----------------------------------------------------------------------
 # Gate: Open redirect
 # -----------------------------------------------------------------------
+
 
 class TestOpenRedirect:
     def test_block_external_redirect(self, client, app, company_user):
@@ -105,26 +105,36 @@ class TestOpenRedirect:
 # Gate: Temp credential leakage
 # -----------------------------------------------------------------------
 
+
 class TestTempCredentialLeakage:
     def test_invite_does_not_leak_password_in_flash(self, client, app, company_user):
         _login(client)
-        resp = client.post('/settings/team/invite', data={
-            'phone': '0966666666',
-            'name': 'Regression Tester',
-            'role': 'accountant',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/settings/team/invite',
+            data={
+                'phone': '0966666666',
+                'name': 'Regression Tester',
+                'role': 'accountant',
+            },
+            follow_redirects=True,
+        )
         body = resp.data.decode('utf-8', errors='replace')
         assert 'Temporary password:' not in body
         assert '444444Temp1!' not in body
 
     def test_temp_password_is_random(self, client, app, company_user):
         _login(client)
-        resp = client.post('/settings/team/invite', data={
-            'phone': '0977777777',
-            'name': 'Random Check',
-            'role': 'accountant',
-        }, follow_redirects=False)
+        resp = client.post(
+            '/settings/team/invite',
+            data={
+                'phone': '0977777777',
+                'name': 'Random Check',
+                'role': 'accountant',
+            },
+            follow_redirects=False,
+        )
         import re
+
         body = resp.data.decode('utf-8', errors='replace')
         codes = re.findall(r'<code[^>]*>([^<]+)</code>', body)
         assert codes
@@ -132,12 +142,17 @@ class TestTempCredentialLeakage:
 
     def test_temp_password_not_phone_derived(self, client, app, company_user):
         _login(client)
-        resp = client.post('/settings/team/invite', data={
-            'phone': '0988888888',
-            'name': 'Not Phone Derived',
-            'role': 'accountant',
-        }, follow_redirects=False)
+        resp = client.post(
+            '/settings/team/invite',
+            data={
+                'phone': '0988888888',
+                'name': 'Not Phone Derived',
+                'role': 'accountant',
+            },
+            follow_redirects=False,
+        )
         import re
+
         body = resp.data.decode('utf-8', errors='replace')
         codes = re.findall(r'<code[^>]*>([^<]+)</code>', body)
         assert codes
@@ -147,20 +162,30 @@ class TestTempCredentialLeakage:
 
     def test_invited_user_must_change_password(self, client, app, company_user):
         _login(client)
-        resp = client.post('/settings/team/invite', data={
-            'phone': '0999999999',
-            'name': 'Force Change',
-            'role': 'accountant',
-        }, follow_redirects=True)
+        resp = client.post(
+            '/settings/team/invite',
+            data={
+                'phone': '0999999999',
+                'name': 'Force Change',
+                'role': 'accountant',
+            },
+            follow_redirects=True,
+        )
         import re
+
         body = resp.data.decode('utf-8', errors='replace')
         codes = re.findall(r'<code[^>]*>([^<]+)</code>', body)
         assert codes
         temp_pw = codes[0].strip()
         client.get('/auth/logout', follow_redirects=True)
-        resp2 = client.post('/auth/login', data={
-            'login_id': '0999999999', 'password': temp_pw,
-        }, follow_redirects=False)
+        resp2 = client.post(
+            '/auth/login',
+            data={
+                'login_id': '0999999999',
+                'password': temp_pw,
+            },
+            follow_redirects=False,
+        )
         assert resp2.status_code == 302
         assert '/auth/change-password' in resp2.headers.get('Location', '')
 
@@ -169,12 +194,12 @@ class TestTempCredentialLeakage:
 # Gate: Exception leakage
 # -----------------------------------------------------------------------
 
+
 class TestExceptionLeakage:
     def test_payroll_upload_no_raw_exception(self, client, app, company_user):
         _login(client)
         bad_data = {'file': (io.BytesIO(b'not,csv,data'), 'bad.csv')}
-        resp = client.post('/payroll', data=bad_data,
-                           content_type='multipart/form-data', follow_redirects=True)
+        resp = client.post('/payroll', data=bad_data, content_type='multipart/form-data', follow_redirects=True)
         assert resp.status_code == 200
         body = resp.data
         assert b'Reference:' in body
@@ -184,9 +209,7 @@ class TestExceptionLeakage:
 
     def test_api_bad_payload_no_raw_exception(self, client, app, company_user):
         _login(client)
-        resp = client.post('/api/v1/employees',
-                           json={'employee_id': None, 'name': {}},
-                           content_type='application/json')
+        resp = client.post('/api/v1/employees', json={'employee_id': None, 'name': {}}, content_type='application/json')
         assert resp.status_code == 422
         body = resp.data
         assert b'Traceback' not in body
@@ -196,6 +219,7 @@ class TestExceptionLeakage:
 # -----------------------------------------------------------------------
 # Gate: File upload restrictions
 # -----------------------------------------------------------------------
+
 
 class TestFileUploadRestrictions:
     def test_reject_exe_as_pdf(self, client, app):
@@ -207,25 +231,27 @@ class TestFileUploadRestrictions:
             user.set_password('Test1234!')
             db.session.add(user)
             db.session.commit()
-            emp = Employee(employee_id='SEC001', name='Security Test',
-                           basic_salary=5000, allowances=0,
-                           company_id=company.id)
+            emp = Employee(
+                employee_id='SEC001', name='Security Test', basic_salary=5000, allowances=0, company_id=company.id
+            )
             db.session.add(emp)
             db.session.commit()
             emp_id = emp.id
-        client.post('/auth/login', data={
-            'login_id': '0911888811', 'password': 'Test1234!'
-        }, follow_redirects=True)
-        resp = client.post(f'/employees/{emp_id}/deductions/add', data={
-            'deduction_type': 'cost_sharing',
-            'label': 'Security Test',
-            'amount_mode': 'fixed',
-            'amount': '500',
-            'tracking_mode': 'declining',
-            'total_to_recover': '5000',
-            'start_date': '2026-01-01',
-            'document': (io.BytesIO(b'MZ\x90\x00'), 'evil.pdf.exe'),
-        }, follow_redirects=True)
+        client.post('/auth/login', data={'login_id': '0911888811', 'password': 'Test1234!'}, follow_redirects=True)
+        resp = client.post(
+            f'/employees/{emp_id}/deductions/add',
+            data={
+                'deduction_type': 'cost_sharing',
+                'label': 'Security Test',
+                'amount_mode': 'fixed',
+                'amount': '500',
+                'tracking_mode': 'declining',
+                'total_to_recover': '5000',
+                'start_date': '2026-01-01',
+                'document': (io.BytesIO(b'MZ\x90\x00'), 'evil.pdf.exe'),
+            },
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
         assert b'not allowed' in resp.data
 
@@ -238,33 +264,40 @@ class TestFileUploadRestrictions:
             user.set_password('Test1234!')
             db.session.add(user)
             db.session.commit()
-            emp = Employee(employee_id='SEC002', name='Security Test 2',
-                           basic_salary=5000, allowances=0,
-                           company_id=company.id)
+            emp = Employee(
+                employee_id='SEC002', name='Security Test 2', basic_salary=5000, allowances=0, company_id=company.id
+            )
             db.session.add(emp)
             db.session.commit()
             emp_id = emp.id
-        client.post('/auth/login', data={
-            'login_id': '0911888822', 'password': 'Test1234!'
-        }, follow_redirects=True)
-        resp = client.post(f'/employees/{emp_id}/deductions/add', data={
-            'deduction_type': 'cost_sharing',
-            'label': 'Legit Doc',
-            'amount_mode': 'fixed',
-            'amount': '300',
-            'tracking_mode': 'declining',
-            'total_to_recover': '3000',
-            'start_date': '2026-01-01',
-            'document': (io.BytesIO(b'%PDF-1.4 fake pdf'), 'doc.pdf'),
-        }, follow_redirects=True)
+        client.post('/auth/login', data={'login_id': '0911888822', 'password': 'Test1234!'}, follow_redirects=True)
+        resp = client.post(
+            f'/employees/{emp_id}/deductions/add',
+            data={
+                'deduction_type': 'cost_sharing',
+                'label': 'Legit Doc',
+                'amount_mode': 'fixed',
+                'amount': '300',
+                'tracking_mode': 'declining',
+                'total_to_recover': '3000',
+                'start_date': '2026-01-01',
+                'document': (io.BytesIO(b'%PDF-1.4 fake pdf'), 'doc.pdf'),
+            },
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
         assert b'File type not allowed' not in resp.data
 
     def test_csv_rejects_empty_file(self, client, app, company_user):
         _login(client)
-        resp = client.post('/payroll', data={
-            'file': (io.BytesIO(b''), 'empty.csv'),
-        }, content_type='multipart/form-data', follow_redirects=True)
+        resp = client.post(
+            '/payroll',
+            data={
+                'file': (io.BytesIO(b''), 'empty.csv'),
+            },
+            content_type='multipart/form-data',
+            follow_redirects=True,
+        )
         assert resp.status_code == 200
         assert b'empty' in resp.data.lower() or b'no data' in resp.data.lower() or b'file' in resp.data.lower()
 
@@ -279,60 +312,79 @@ class TestFileUploadRestrictions:
 # Gate: API validation abuse cases
 # -----------------------------------------------------------------------
 
+
 class TestApiValidationAbuse:
     def test_reject_negative_salary(self, client, app, company_user):
         _login(client)
-        resp = client.post('/api/v1/employees', json={
-            'employee_id': 'ABUSE001',
-            'name': 'Abuse Test',
-            'basic_salary': -1000,
-        })
+        resp = client.post(
+            '/api/v1/employees',
+            json={
+                'employee_id': 'ABUSE001',
+                'name': 'Abuse Test',
+                'basic_salary': -1000,
+            },
+        )
         assert resp.status_code == 422
         errs = resp.get_json().get('details', [])
         assert any('must be zero or positive' in e.lower() for e in errs)
 
     def test_reject_non_numeric_salary(self, client, app, company_user):
         _login(client)
-        resp = client.post('/api/v1/employees', json={
-            'employee_id': 'ABUSE002',
-            'name': 'Abuse Test 2',
-            'basic_salary': 'not-a-number',
-        })
+        resp = client.post(
+            '/api/v1/employees',
+            json={
+                'employee_id': 'ABUSE002',
+                'name': 'Abuse Test 2',
+                'basic_salary': 'not-a-number',
+            },
+        )
         assert resp.status_code == 422
 
     def test_reject_empty_name(self, client, app, company_user):
         _login(client)
-        resp = client.post('/api/v1/employees', json={
-            'employee_id': 'ABUSE003',
-            'name': '',
-            'basic_salary': 5000,
-        })
+        resp = client.post(
+            '/api/v1/employees',
+            json={
+                'employee_id': 'ABUSE003',
+                'name': '',
+                'basic_salary': 5000,
+            },
+        )
         assert resp.status_code == 422
 
     def test_reject_empty_employee_id(self, client, app, company_user):
         _login(client)
-        resp = client.post('/api/v1/employees', json={
-            'employee_id': '',
-            'name': 'Test',
-            'basic_salary': 5000,
-        })
+        resp = client.post(
+            '/api/v1/employees',
+            json={
+                'employee_id': '',
+                'name': 'Test',
+                'basic_salary': 5000,
+            },
+        )
         assert resp.status_code == 422
 
     def test_reject_invalid_tin(self, client, app, company_user):
         _login(client)
-        resp = client.post('/api/v1/employees', json={
-            'employee_id': 'ABUSE004',
-            'name': 'TIN Test',
-            'basic_salary': 5000,
-            'tin': 'abc123',
-        })
+        resp = client.post(
+            '/api/v1/employees',
+            json={
+                'employee_id': 'ABUSE004',
+                'name': 'TIN Test',
+                'basic_salary': 5000,
+                'tin': 'abc123',
+            },
+        )
         assert resp.status_code == 422
 
     def test_accepts_name_with_special_chars(self, client, app, company_user):
         _login(client)
-        resp = client.post('/api/v1/employees', json={
-            'employee_id': 'ABUSE005',
-            'name': 'O\'Brien-Smith, Jr.',
-            'basic_salary': 5000,
-        })
+        resp = client.post(
+            '/api/v1/employees',
+            json={
+                'employee_id': 'ABUSE005',
+                'name': "O'Brien-Smith, Jr.",
+                'basic_salary': 5000,
+            },
+        )
         assert resp.status_code in (201, 422)

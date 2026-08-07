@@ -25,9 +25,7 @@ from payroll_engine.leave import (
 from payroll_engine.models import Employee, Leave, LeaveBalance
 
 
-def get_or_create_balance(company_id: int, employee_id: int,
-                           leave_type: str, year: int,
-                           db_session) -> LeaveBalance:
+def get_or_create_balance(company_id: int, employee_id: int, leave_type: str, year: int, db_session) -> LeaveBalance:
     """Get existing leave balance or create a new one.
 
     Args:
@@ -62,8 +60,7 @@ def get_or_create_balance(company_id: int, employee_id: int,
     return balance
 
 
-def accrue_annual_leave(employee: Employee, company_id: int,
-                         year: int, db_session) -> LeaveBalance:
+def accrue_annual_leave(employee: Employee, company_id: int, year: int, db_session) -> LeaveBalance:
     """Accrue annual leave for an employee for the given year.
 
     Called once per year (or on first access) to set the entitled days.
@@ -77,9 +74,7 @@ def accrue_annual_leave(employee: Employee, company_id: int,
     Returns:
         Updated LeaveBalance record
     """
-    balance = get_or_create_balance(
-        company_id, employee.id, LeaveType.ANNUAL, year, db_session
-    )
+    balance = get_or_create_balance(company_id, employee.id, LeaveType.ANNUAL, year, db_session)
 
     # Only accrue if not already done for this year
     if balance.entitled > 0 and balance.last_accrual_date:
@@ -102,9 +97,7 @@ def accrue_annual_leave(employee: Employee, company_id: int,
     return balance
 
 
-def get_leave_taken(company_id: int, employee_id: int,
-                     leave_type: str, year: int,
-                     db_session) -> int:
+def get_leave_taken(company_id: int, employee_id: int, leave_type: str, year: int, db_session) -> int:
     """Get total approved leave days for an employee in a year.
 
     Args:
@@ -117,22 +110,22 @@ def get_leave_taken(company_id: int, employee_id: int,
     Returns:
         Total days taken
     """
-    total = db_session.query(
-        db.func.sum(Leave.days_requested)
-    ).filter(
-        Leave.company_id == company_id,
-        Leave.employee_id == employee_id,
-        Leave.leave_type == leave_type,
-        Leave.status == 'approved',
-        db.extract('year', Leave.start_date) == year,
-    ).scalar()
+    total = (
+        db_session.query(db.func.sum(Leave.days_requested))
+        .filter(
+            Leave.company_id == company_id,
+            Leave.employee_id == employee_id,
+            Leave.leave_type == leave_type,
+            Leave.status == 'approved',
+            db.extract('year', Leave.start_date) == year,
+        )
+        .scalar()
+    )
 
     return total or 0
 
 
-def get_leave_balance(employee: Employee, company_id: int,
-                       leave_type: str, year: int,
-                       db_session) -> dict:
+def get_leave_balance(employee: Employee, company_id: int, leave_type: str, year: int, db_session) -> dict:
     """Get complete leave balance for an employee.
 
     This is the SINGLE SOURCE OF TRUTH for leave balance queries.
@@ -162,13 +155,9 @@ def get_leave_balance(employee: Employee, company_id: int,
         }
 
     elif leave_type == LeaveType.SICK:
-        balance = get_or_create_balance(
-            company_id, employee.id, leave_type, year, db_session
-        )
+        balance = get_or_create_balance(company_id, employee.id, leave_type, year, db_session)
         # Always derive from Leave table (single source of truth)
-        taken = get_leave_taken(
-            company_id, employee.id, leave_type, year, db_session
-        )
+        taken = get_leave_taken(company_id, employee.id, leave_type, year, db_session)
         balance.taken = taken
         daily_rate = (Decimal(str(employee.basic_salary)) + Decimal(str(employee.allowances))) / Decimal('30')
         pay_info = calculate_sick_leave_pay(taken, daily_rate)
@@ -205,9 +194,9 @@ def get_leave_balance(employee: Employee, company_id: int,
     return {'leave_type': leave_type, 'entitled': 0, 'taken': 0, 'remaining': 0}
 
 
-def request_leave(employee: Employee, company_id: int,
-                   leave_type: str, start_date: date, end_date: date,
-                   reason: str, db_session) -> dict:
+def request_leave(
+    employee: Employee, company_id: int, leave_type: str, start_date: date, end_date: date, reason: str, db_session
+) -> dict:
     """Create a leave request with validation.
 
     Args:
@@ -284,12 +273,10 @@ def approve_leave(leave: Leave, approved_by: int, db_session) -> dict:
 
     # Derive balance.taken from the authoritative source (Leave table)
     balance = get_or_create_balance(
-        leave.company_id, leave.employee_id,
-        leave.leave_type, date.today().year, db_session
+        leave.company_id, leave.employee_id, leave.leave_type, date.today().year, db_session
     )
     balance.taken = get_leave_taken(
-        leave.company_id, leave.employee_id,
-        leave.leave_type, date.today().year, db_session
+        leave.company_id, leave.employee_id, leave.leave_type, date.today().year, db_session
     )
 
     return {'success': True, 'message': f'Leave approved: {leave.days_requested} days.'}
@@ -318,8 +305,7 @@ def reject_leave(leave: Leave, reason: str, db_session) -> dict:
     return {'success': True, 'message': 'Leave request rejected.'}
 
 
-def get_sick_leave_pay_reduction(employee: Employee, company_id: int,
-                                  db_session) -> Decimal:
+def get_sick_leave_pay_reduction(employee: Employee, company_id: int, db_session) -> Decimal:
     """Get the sick leave pay reduction for payroll calculation.
 
     If an employee has taken more than 30 days of sick leave,
@@ -354,16 +340,19 @@ def get_sick_leave_pay_reduction(employee: Employee, company_id: int,
     month_start = today.replace(day=1)
 
     # Get this month's approved sick leave
-    month_sick_days = db_session.query(
-        db.func.sum(Leave.days_requested)
-    ).filter(
-        Leave.company_id == company_id,
-        Leave.employee_id == employee.id,
-        Leave.leave_type == LeaveType.SICK,
-        Leave.status == 'approved',
-        Leave.start_date >= month_start,
-        Leave.start_date <= today,
-    ).scalar() or 0
+    month_sick_days = (
+        db_session.query(db.func.sum(Leave.days_requested))
+        .filter(
+            Leave.company_id == company_id,
+            Leave.employee_id == employee.id,
+            Leave.leave_type == LeaveType.SICK,
+            Leave.status == 'approved',
+            Leave.start_date >= month_start,
+            Leave.start_date <= today,
+        )
+        .scalar()
+        or 0
+    )
 
     if month_sick_days == 0:
         return Decimal('0')

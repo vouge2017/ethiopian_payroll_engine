@@ -1,4 +1,5 @@
 """Tests for composite database indexes."""
+
 import os
 import sys
 

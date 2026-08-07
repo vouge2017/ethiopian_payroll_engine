@@ -3,6 +3,7 @@ Tests for rule_source.py — Legal source tracing for every calculation.
 
 Run: python -m pytest tests/test_rule_source.py -v
 """
+
 import sys
 from pathlib import Path
 
@@ -22,8 +23,8 @@ from payroll_engine.rule_source import (
 # Tests: Rule sources exist
 # ─────────────────────────────────────────────
 
-class TestRuleSourcesExist:
 
+class TestRuleSourcesExist:
     def test_all_categories_covered(self):
         categories = {r.category for r in RULE_SOURCES.values()}
         assert 'tax' in categories
@@ -73,8 +74,8 @@ class TestRuleSourcesExist:
 # Tests: Source format
 # ─────────────────────────────────────────────
 
-class TestSourceFormat:
 
+class TestSourceFormat:
     def test_all_sources_have_explanation(self):
         for rule_id, source in RULE_SOURCES.items():
             assert len(source.explanation) > 0, f'{rule_id}: missing explanation'
@@ -86,21 +87,21 @@ class TestSourceFormat:
 
     def test_all_sources_have_proclamation_reference(self):
         for rule_id, source in RULE_SOURCES.items():
-            assert 'Proclamation' in source.source or 'proclamation' in source.source, \
+            assert 'Proclamation' in source.source or 'proclamation' in source.source, (
                 f'{rule_id}: source should reference a proclamation'
+            )
 
     def test_amharic_names_different_from_english(self):
         for rule_id, source in RULE_SOURCES.items():
-            assert source.name_am != source.name, \
-                f'{rule_id}: Amharic name should differ from English'
+            assert source.name_am != source.name, f'{rule_id}: Amharic name should differ from English'
 
 
 # ─────────────────────────────────────────────
 # Tests: Category filtering
 # ─────────────────────────────────────────────
 
-class TestCategoryFiltering:
 
+class TestCategoryFiltering:
     def test_tax_rules(self):
         tax_rules = get_rules_by_category('tax')
         assert len(tax_rules) >= 3
@@ -127,8 +128,8 @@ class TestCategoryFiltering:
 # Tests: Verification
 # ─────────────────────────────────────────────
 
-class TestVerification:
 
+class TestVerification:
     def test_initially_unverified(self):
         source = get_rule_source('tax_brackets')
         assert source.verified is False
@@ -161,8 +162,8 @@ class TestVerification:
 # Tests: Explanation content
 # ─────────────────────────────────────────────
 
-class TestExplanationContent:
 
+class TestExplanationContent:
     def test_tax_bracket_explanation_has_rates(self):
         explanation = get_explanation('tax_brackets')
         assert '0%' in explanation
@@ -193,8 +194,8 @@ class TestExplanationContent:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_get_nonexistent_rule(self):
         source = get_rule_source('nonexistent')
         assert source is None

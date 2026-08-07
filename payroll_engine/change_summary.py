@@ -8,6 +8,7 @@ and unusual variances.
 This is the foundation of the trust architecture. Every payroll
 review screen should start with this summary.
 """
+
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -15,6 +16,7 @@ from decimal import Decimal
 @dataclass
 class EmployeeChange:
     """A single change affecting one employee."""
+
     employee_id: str
     employee_name: str
     change_type: str  # new_hire, departure, salary_change, overtime, adjustment
@@ -29,6 +31,7 @@ class EmployeeChange:
 @dataclass
 class ChangeSummary:
     """Complete change summary for a payroll run vs previous period."""
+
     # Period info
     current_period: str
     previous_period: str | None
@@ -87,7 +90,6 @@ def compute_change_summary(current_run_id, company_id, db, models):
     """
     PayrollRun = models.PayrollRun
     Payslip = models.Payslip
-    Employee = models.Employee
 
     # Get current run
     current_run = db.session.get(PayrollRun, current_run_id)
@@ -95,9 +97,7 @@ def compute_change_summary(current_run_id, company_id, db, models):
         return None
 
     # Get current payslips
-    current_payslips = Payslip.query.filter_by(
-        payroll_run_id=current_run_id
-    ).all()
+    current_payslips = Payslip.query.filter_by(payroll_run_id=current_run_id).all()
 
     if not current_payslips:
         return None
@@ -105,23 +105,23 @@ def compute_change_summary(current_run_id, company_id, db, models):
     # Find previous run (same company, earlier date, completed)
     previous_run = _find_previous_run(PayrollRun, company_id, current_run_id)
 
-    return _build_summary(
-        current_run, previous_run, current_payslips,
-        company_id, db, models
-    )
+    return _build_summary(current_run, previous_run, current_payslips, company_id, db, models)
 
 
 def _find_previous_run(PayrollRun, company_id, current_run_id):
     """Find the previous completed payroll run for the same company."""
-    return PayrollRun.query.filter(
-        PayrollRun.company_id == company_id,
-        PayrollRun.id < current_run_id,
-        PayrollRun.status.in_(['completed', 'locked']),
-    ).order_by(PayrollRun.run_date.desc()).first()
+    return (
+        PayrollRun.query.filter(
+            PayrollRun.company_id == company_id,
+            PayrollRun.id < current_run_id,
+            PayrollRun.status.in_(['completed', 'locked']),
+        )
+        .order_by(PayrollRun.run_date.desc())
+        .first()
+    )
 
 
-def _build_summary(current_run, previous_run, current_payslips,
-                   company_id, db, models):
+def _build_summary(current_run, previous_run, current_payslips, company_id, db, models):
     """Build the change summary from current and previous run data."""
     Payslip = models.Payslip
     Employee = models.Employee
@@ -138,9 +138,7 @@ def _build_summary(current_run, previous_run, current_payslips,
 
     previous_employees = {}
     if previous_run:
-        prev_payslips = Payslip.query.filter_by(
-            payroll_run_id=previous_run.id
-        ).all()
+        prev_payslips = Payslip.query.filter_by(payroll_run_id=previous_run.id).all()
         for ps in prev_payslips:
             emp = db.session.get(Employee, ps.employee_id)
             if emp:
@@ -151,10 +149,7 @@ def _build_summary(current_run, previous_run, current_payslips,
 
     # Compute totals
     def sum_field(employees, field_name):
-        return sum(
-            getattr(e['payslip'], field_name, Decimal('0') or Decimal('0'))
-            for e in employees.values()
-        )
+        return sum(getattr(e['payslip'], field_name, Decimal('0') or Decimal('0')) for e in employees.values())
 
     current_total_gross = sum_field(current_employees, 'gross_salary')
     previous_total_gross = sum_field(previous_employees, 'gross_salary')
@@ -165,15 +160,9 @@ def _build_summary(current_run, previous_run, current_payslips,
 
     # Deltas
     gross_delta = current_total_gross - previous_total_gross
-    gross_delta_pct = (
-        float(gross_delta / previous_total_gross * 100)
-        if previous_total_gross > 0 else 0.0
-    )
+    gross_delta_pct = float(gross_delta / previous_total_gross * 100) if previous_total_gross > 0 else 0.0
     net_delta = current_total_net - previous_total_net
-    net_delta_pct = (
-        float(net_delta / previous_total_net * 100)
-        if previous_total_net > 0 else 0.0
-    )
+    net_delta_pct = float(net_delta / previous_total_net * 100) if previous_total_net > 0 else 0.0
 
     headcount_change = len(current_employees) - len(previous_employees)
 
@@ -257,9 +246,7 @@ def _build_summary(current_run, previous_run, current_payslips,
                 summary.changes.append(change)
                 summary.salary_changes.append(change)
                 if severity == 'review':
-                    summary.variance_notes.append(
-                        f'{emp_name}: {abs(pct):.0f}% salary change — review recommended'
-                    )
+                    summary.variance_notes.append(f'{emp_name}: {abs(pct):.0f}% salary change — review recommended')
 
             # Overtime detection (if tax increased significantly but salary didn't)
             if curr_ps.gross_salary == prev_ps.gross_salary:

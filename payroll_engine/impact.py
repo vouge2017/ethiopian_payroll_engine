@@ -30,9 +30,9 @@ def _D(value) -> Decimal:
         return Decimal('0')
 
 
-def preview_salary_raise(current_basic, current_allowances,
-                          new_basic, new_allowances,
-                          employee_name: str = 'Employee') -> dict:
+def preview_salary_raise(
+    current_basic, current_allowances, new_basic, new_allowances, employee_name: str = 'Employee'
+) -> dict:
     """Show management what happens if they give someone a raise.
 
     Returns a simple, readable comparison:
@@ -83,9 +83,9 @@ def preview_salary_raise(current_basic, current_allowances,
     }
 
 
-def preview_new_hire(basic_salary, allowances,
-                      transport_allowance: Decimal = Decimal('0'),
-                      employee_name: str = 'New Employee') -> dict:
+def preview_new_hire(
+    basic_salary, allowances, transport_allowance: Decimal = Decimal('0'), employee_name: str = 'New Employee'
+) -> dict:
     """Show management what a new hire costs.
 
     Returns:
@@ -102,6 +102,7 @@ def preview_new_hire(basic_salary, allowances,
     allowance_records = None
     if transport_allowance > 0:
         from payroll_engine.models import EmployeeAllowance
+
         cap = calculate_transport_exempt_amount(basic_salary, transport_allowance)
         record = EmployeeAllowance(
             allowance_type='transport',
@@ -148,9 +149,9 @@ def preview_new_hire(basic_salary, allowances,
     }
 
 
-def preview_termination(basic_salary, allowances, start_date, end_date,
-                          termination_reason: str,
-                          employee_name: str = 'Employee') -> dict:
+def preview_termination(
+    basic_salary, allowances, start_date, end_date, termination_reason: str, employee_name: str = 'Employee'
+) -> dict:
     """Show management what termination costs.
 
     Returns:
@@ -198,8 +199,7 @@ def preview_termination(basic_salary, allowances, start_date, end_date,
     }
 
 
-def preview_allowance_change(current_amount, new_amount,
-                              basic_salary, allowance_type: str = 'transport') -> dict:
+def preview_allowance_change(current_amount, new_amount, basic_salary, allowance_type: str = 'transport') -> dict:
     """Show management what changing an allowance costs.
 
     Returns:
@@ -247,7 +247,11 @@ def preview_allowance_change(current_amount, new_amount,
             'tax_change': tax_change.quantize(Q),
             'net_monthly_change': net_change.quantize(Q),
             'net_annual_change': (net_change * 12).quantize(Q),
-            'employer_monthly_change': (new['gross'] + new['pension_employer'] - current['gross'] - current['pension_employer']).quantize(Q),
-            'employer_annual_change': ((new['gross'] + new['pension_employer'] - current['gross'] - current['pension_employer']) * 12).quantize(Q),
+            'employer_monthly_change': (
+                new['gross'] + new['pension_employer'] - current['gross'] - current['pension_employer']
+            ).quantize(Q),
+            'employer_annual_change': (
+                (new['gross'] + new['pension_employer'] - current['gross'] - current['pension_employer']) * 12
+            ).quantize(Q),
         },
     }

@@ -1,4 +1,5 @@
 """Reports & compliance blueprint."""
+
 import io
 from datetime import UTC, date, datetime
 
@@ -36,16 +37,14 @@ def reports():
     total_employees = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
 
     # All completed runs for period selector
-    all_completed_runs = PayrollRun.query.filter_by(
-        company_id=company.id, status='completed'
-    ).order_by(PayrollRun.run_date.desc()).all()
+    all_completed_runs = (
+        PayrollRun.query.filter_by(company_id=company.id, status='completed').order_by(PayrollRun.run_date.desc()).all()
+    )
 
     # Period selection
     selected_run_id = request.args.get('run_id', type=int)
     if selected_run_id:
-        selected_run = PayrollRun.query.filter_by(
-            id=selected_run_id, company_id=company.id, status='completed'
-        ).first()
+        selected_run = PayrollRun.query.filter_by(id=selected_run_id, company_id=company.id, status='completed').first()
         if not selected_run:
             flash('Payroll run not found.', 'warning')
             selected_run = all_completed_runs[0] if all_completed_runs else None
@@ -53,17 +52,16 @@ def reports():
         selected_run = all_completed_runs[0] if all_completed_runs else None
 
     payroll_date_str = selected_run.run_date.isoformat() if selected_run else date.today().isoformat()
-    score, status = compute_compliance_score(
-        company=company,
-        payroll_date=payroll_date_str
-    )
+    score, status = compute_compliance_score(company=company, payroll_date=payroll_date_str)
     status_msg = get_status_message(status)
 
     from payroll_engine.compliance import get_upcoming_deadlines
+
     deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date_str)
 
     # Trust Layer: Filing Progress
     from payroll_engine.services.trust import get_filing_progress
+
     filing_progress = get_filing_progress(company.id)
 
     return render_template(
@@ -88,13 +86,12 @@ def reports():
 def audit_log():
     """View the append-only audit trail for this company."""
     page = request.args.get('page', 1, type=int)
-    pagination = AuditLog.query.filter_by(
-        company_id=_company_id()
-    ).order_by(AuditLog.timestamp.desc()).paginate(
-        page=page, per_page=50, error_out=False
+    pagination = (
+        AuditLog.query.filter_by(company_id=_company_id())
+        .order_by(AuditLog.timestamp.desc())
+        .paginate(page=page, per_page=50, error_out=False)
     )
-    return render_template('audit_log.html', logs=pagination.items,
-                           pagination=pagination, year=date.today().year)
+    return render_template('audit_log.html', logs=pagination.items, pagination=pagination, year=date.today().year)
 
 
 @reports_bp.route('/reports/erca/<int:run_id>')
@@ -102,9 +99,8 @@ def audit_log():
 def download_erca_report(run_id):
     """Download ERCA tax filing report for a payroll run."""
     from payroll_engine.reports import generate_erca_report
-    run = PayrollRun.query.filter_by(
-        id=run_id, company_id=_company_id()
-    ).first_or_404()
+
+    run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
     if run.status != 'completed':
         flash('Can only generate reports for completed payroll runs.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
@@ -117,7 +113,7 @@ def download_erca_report(run_id):
         io.BytesIO(report_bytes),
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name=f'ERCA_{company.name}_{period.replace(" ", "_")}.xlsx'
+        download_name=f'ERCA_{company.name}_{period.replace(" ", "_")}.xlsx',
     )
 
 
@@ -126,9 +122,8 @@ def download_erca_report(run_id):
 def download_pension_report(run_id):
     """Download pension contribution report for a payroll run."""
     from payroll_engine.reports import generate_pension_report
-    run = PayrollRun.query.filter_by(
-        id=run_id, company_id=_company_id()
-    ).first_or_404()
+
+    run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
     if run.status != 'completed':
         flash('Can only generate reports for completed payroll runs.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
@@ -141,7 +136,7 @@ def download_pension_report(run_id):
         io.BytesIO(report_bytes),
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name=f'Pension_{company.name}_{period.replace(" ", "_")}.xlsx'
+        download_name=f'Pension_{company.name}_{period.replace(" ", "_")}.xlsx',
     )
 
 
@@ -150,6 +145,7 @@ def download_pension_report(run_id):
 def download_yearly_summary(year):
     """Download year-end tax/pension summary for a given year."""
     from payroll_engine.reports import generate_yearly_summary
+
     company = current_user.company
     start = date(year, 1, 1)
     end = date(year, 12, 31)
@@ -173,7 +169,7 @@ def download_yearly_summary(year):
         io.BytesIO(report_bytes),
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         as_attachment=True,
-        download_name=f'YearlySummary_{company.name}_{year}.xlsx'
+        download_name=f'YearlySummary_{company.name}_{year}.xlsx',
     )
 
 
@@ -186,9 +182,8 @@ def download_bank_file(run_id):
         generate_xlsx,
         validate_payroll_for_bank,
     )
-    run = PayrollRun.query.filter_by(
-        id=run_id, company_id=_company_id()
-    ).first_or_404()
+
+    run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
     if run.status != 'completed':
         flash('Can only generate bank files for completed payroll runs.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
@@ -205,17 +200,21 @@ def download_bank_file(run_id):
     employees_data = []
     for p in run.payslips:
         emp = p.employee
-        employees_data.append({
-            'id': emp.employee_id,
-            'name': emp.name,
-            'bank': emp.bank_or_telebirr or '',
-            'net': p.net_pay,
-        })
+        employees_data.append(
+            {
+                'id': emp.employee_id,
+                'name': emp.name,
+                'bank': emp.bank_or_telebirr or '',
+                'net': p.net_pay,
+            }
+        )
 
     previous_payslips = {}
-    last_run = PayrollRun.query.filter_by(
-        company_id=_company_id(), status='completed'
-    ).order_by(PayrollRun.run_date.desc()).first()
+    last_run = (
+        PayrollRun.query.filter_by(company_id=_company_id(), status='completed')
+        .order_by(PayrollRun.run_date.desc())
+        .first()
+    )
     if last_run and last_run.id != run.id:
         for p in last_run.payslips:
             emp = p.employee
@@ -224,43 +223,43 @@ def download_bank_file(run_id):
                 'net': p.net_pay,
             }
 
-    errors = validate_payroll_for_bank(
-        employees_data,
-        previous_payslips=previous_payslips
-    )
+    errors = validate_payroll_for_bank(employees_data, previous_payslips=previous_payslips)
     blocks = [e for e in errors if e.get('severity') == 'BLOCK']
     if blocks:
-        error_summary = '; '.join([f"{e['name']}: {e['error']}" for e in blocks[:3]])
+        error_summary = '; '.join([f'{e["name"]}: {e["error"]}' for e in blocks[:3]])
         flash(f'Bank file has validation errors: {error_summary}', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
     flags = [e for e in errors if e.get('severity') == 'FLAG']
     if flags:
         for flag in flags:
-            flash(f"Warning: {flag['name']} — {flag['error']}", 'warning')
+            flash(f'Warning: {flag["name"]} — {flag["error"]}', 'warning')
 
     if fmt == 'csv':
         file_bytes = generate_csv(
-            employees_data, bank=bank, company_name=company.name,
-            period=period, narrative_template=narrative,
-            custom_narrative=custom_narrative, decimals=decimals
+            employees_data,
+            bank=bank,
+            company_name=company.name,
+            period=period,
+            narrative_template=narrative,
+            custom_narrative=custom_narrative,
+            decimals=decimals,
         )
         mimetype = 'text/csv'
         filename = f'BankTransfer_{company.name}_{period.replace(" ", "_")}.csv'
     else:
         file_bytes = generate_xlsx(
-            employees_data, bank=bank, company_name=company.name,
-            period=period, narrative_template=narrative,
-            custom_narrative=custom_narrative, decimals=decimals
+            employees_data,
+            bank=bank,
+            company_name=company.name,
+            period=period,
+            narrative_template=narrative,
+            custom_narrative=custom_narrative,
+            decimals=decimals,
         )
         mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         filename = f'BankTransfer_{company.name}_{period.replace(" ", "_")}.xlsx'
 
-    return send_file(
-        io.BytesIO(file_bytes),
-        mimetype=mimetype,
-        as_attachment=True,
-        download_name=filename
-    )
+    return send_file(io.BytesIO(file_bytes), mimetype=mimetype, as_attachment=True, download_name=filename)
 
 
 @reports_bp.route('/reports/export/leave-balances')
@@ -275,9 +274,7 @@ def export_leave_balances():
 
     from payroll_engine.models import Employee, LeaveBalance
 
-    employees = Employee.query.filter_by(
-        company_id=_company_id(), is_deleted=False
-    ).order_by(Employee.name).all()
+    employees = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).order_by(Employee.name).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -312,21 +309,21 @@ def export_audit_log():
 
     from payroll_engine.models import AuditLog
 
-    logs = AuditLog.query.filter_by(
-        company_id=_company_id()
-    ).order_by(AuditLog.timestamp.desc()).limit(1000).all()
+    logs = AuditLog.query.filter_by(company_id=_company_id()).order_by(AuditLog.timestamp.desc()).limit(1000).all()
 
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(['Timestamp', 'User ID', 'Action', 'Details'])
 
     for log in logs:
-        writer.writerow([
-            log.timestamp.isoformat() if log.timestamp else '',
-            log.user_id,
-            log.action,
-            str(log.details) if log.details else '',
-        ])
+        writer.writerow(
+            [
+                log.timestamp.isoformat() if log.timestamp else '',
+                log.user_id,
+                log.action,
+                str(log.details) if log.details else '',
+            ]
+        )
 
     output.seek(0)
     return send_file(
@@ -339,15 +336,17 @@ def export_audit_log():
 
 # --- Filing History ---
 
+
 @reports_bp.route('/filing-history')
 @login_required
 @role_required('owner', 'accountant')
 def filing_history():
     """Show compliance filing history — when ERCA/pension/PSSA were filed."""
     from payroll_engine.models import FilingRecord
-    records = FilingRecord.query.filter_by(
-        company_id=_company_id()
-    ).order_by(FilingRecord.filed_at.desc()).limit(50).all()
+
+    records = (
+        FilingRecord.query.filter_by(company_id=_company_id()).order_by(FilingRecord.filed_at.desc()).limit(50).all()
+    )
     return render_template('filing_history.html', records=records)
 
 
@@ -357,6 +356,7 @@ def filing_history():
 def mark_filed():
     """Mark a compliance filing as done."""
     from payroll_engine.models import FilingRecord
+
     filing_type = request.form.get('filing_type', '').strip()
     period = request.form.get('period', '').strip()
     confirmation = request.form.get('confirmation_number', '').strip() or None
@@ -370,9 +370,7 @@ def mark_filed():
         flash('Period is required (e.g. 2026-07).', 'danger')
         return redirect(url_for('reports.filing_history'))
 
-    existing = FilingRecord.query.filter_by(
-        company_id=_company_id(), filing_type=filing_type, period=period
-    ).first()
+    existing = FilingRecord.query.filter_by(company_id=_company_id(), filing_type=filing_type, period=period).first()
     if existing:
         existing.confirmation_number = confirmation or existing.confirmation_number
         existing.notes = notes or existing.notes
@@ -414,16 +412,21 @@ def mark_filed():
 def analytics():
     """Analytics dashboard with department costs, overtime, leave, headcount."""
     from payroll_engine.models import Leave, LeaveBalance, OvertimeEntry, Payslip
+
     company = current_user.company
     cid = company.id
     year = request.args.get('year', date.today().year, type=int)
 
     # Get all completed runs for the year
-    runs = PayrollRun.query.filter(
-        PayrollRun.company_id == cid,
-        PayrollRun.status == 'completed',
-        db.extract('year', PayrollRun.run_date) == year,
-    ).order_by(PayrollRun.run_date).all()
+    runs = (
+        PayrollRun.query.filter(
+            PayrollRun.company_id == cid,
+            PayrollRun.status == 'completed',
+            db.extract('year', PayrollRun.run_date) == year,
+        )
+        .order_by(PayrollRun.run_date)
+        .all()
+    )
 
     run_ids = [r.id for r in runs]
 
@@ -467,13 +470,17 @@ def analytics():
     # ── Leave Utilization (single query for entire year) ──
     employees = Employee.query.filter_by(company_id=cid, is_deleted=False).all()
     emp_ids = [e.id for e in employees]
-    emp_map = {e.id: e for e in employees}
+    {e.id: e for e in employees}
 
-    approved_leaves = Leave.query.filter(
-        Leave.employee_id.in_(emp_ids),
-        Leave.status == 'approved',
-        db.extract('year', Leave.start_date) == year,
-    ).all() if emp_ids else []
+    approved_leaves = (
+        Leave.query.filter(
+            Leave.employee_id.in_(emp_ids),
+            Leave.status == 'approved',
+            db.extract('year', Leave.start_date) == year,
+        ).all()
+        if emp_ids
+        else []
+    )
 
     leave_days_by_emp = {}
     for l in approved_leaves:
@@ -489,12 +496,14 @@ def analytics():
 
     leave_data = []
     for emp in employees:
-        leave_data.append({
-            'name': emp.name,
-            'department': emp.department or 'Unassigned',
-            'days_taken': leave_days_by_emp.get(emp.id, 0),
-            'balance': balance_by_emp.get(emp.id, 0),
-        })
+        leave_data.append(
+            {
+                'name': emp.name,
+                'department': emp.department or 'Unassigned',
+                'days_taken': leave_days_by_emp.get(emp.id, 0),
+                'balance': balance_by_emp.get(emp.id, 0),
+            }
+        )
 
     # ── Headcount (count payslips per month in Python) ──
     headcount_by_month = {}
@@ -507,9 +516,7 @@ def analytics():
                 headcount_by_month[month_key] = headcount_by_month.get(month_key, 0) + 1
 
     # ── Year options ──
-    years = db.session.query(
-        db.func.distinct(db.extract('year', PayrollRun.run_date))
-    ).filter_by(company_id=cid).all()
+    years = db.session.query(db.func.distinct(db.extract('year', PayrollRun.run_date))).filter_by(company_id=cid).all()
     available_years = sorted([int(y[0]) for y in years if y[0]], reverse=True)
     if not available_years:
         available_years = [date.today().year]
@@ -542,11 +549,15 @@ def export_analytics():
     cid = company.id
     year = request.args.get('year', date.today().year, type=int)
 
-    runs = PayrollRun.query.filter(
-        PayrollRun.company_id == cid,
-        PayrollRun.status == 'completed',
-        db.extract('year', PayrollRun.run_date) == year,
-    ).order_by(PayrollRun.run_date).all()
+    runs = (
+        PayrollRun.query.filter(
+            PayrollRun.company_id == cid,
+            PayrollRun.status == 'completed',
+            db.extract('year', PayrollRun.run_date) == year,
+        )
+        .order_by(PayrollRun.run_date)
+        .all()
+    )
     run_ids = [r.id for r in runs]
 
     output = io.StringIO()
@@ -570,7 +581,17 @@ def export_analytics():
             dept_costs[dept]['count'] += 1
         for dept, d in sorted(dept_costs.items()):
             avg = d['gross'] / d['count'] if d['count'] else 0
-            writer.writerow([dept, d['count'], f"{d['gross']:.0f}", f"{d['tax']:.0f}", f"{d['pension']:.0f}", f"{d['net']:.0f}", f"{avg:.0f}"])
+            writer.writerow(
+                [
+                    dept,
+                    d['count'],
+                    f'{d["gross"]:.0f}',
+                    f'{d["tax"]:.0f}',
+                    f'{d["pension"]:.0f}',
+                    f'{d["net"]:.0f}',
+                    f'{avg:.0f}',
+                ]
+            )
 
     writer.writerow([])
 
@@ -597,7 +618,7 @@ def export_analytics():
             d = overtime_by_month[month_key]
             hours = d['hours']
             status = 'Over limit' if hours > 100 else 'Near limit' if hours > 80 else 'OK'
-            writer.writerow([month_key, len(d['employees']), f"{hours:.1f}", f"{d['amount']:.0f}", status])
+            writer.writerow([month_key, len(d['employees']), f'{hours:.1f}', f'{d["amount"]:.0f}', status])
 
     writer.writerow([])
 
@@ -615,9 +636,7 @@ def export_analytics():
         leave_days = {}
         for l in approved_leaves:
             leave_days[l.employee_id] = leave_days.get(l.employee_id, 0) + (l.total_days or 0)
-        balances = LeaveBalance.query.filter(
-            LeaveBalance.company_id == cid, LeaveBalance.year == year
-        ).all()
+        balances = LeaveBalance.query.filter(LeaveBalance.company_id == cid, LeaveBalance.year == year).all()
         balance_map = {lb.employee_id: lb.total_entitled or 0 for lb in balances}
         for emp in sorted(employees, key=lambda e: e.name):
             taken = leave_days.get(emp.id, 0)
@@ -640,17 +659,13 @@ def payroll_comparison():
     company_id = _company_id()
 
     # Get all completed runs
-    runs = PayrollRun.query.filter_by(
-        company_id=company_id, status='completed'
-    ).order_by(PayrollRun.run_date.desc()).all()
+    runs = (
+        PayrollRun.query.filter_by(company_id=company_id, status='completed').order_by(PayrollRun.run_date.desc()).all()
+    )
 
     if len(runs) < 2:
-        return render_template('payroll_comparison.html',
-            runs=runs,
-            run_a=None,
-            run_b=None,
-            comparison=None,
-            needs_two=True
+        return render_template(
+            'payroll_comparison.html', runs=runs, run_a=None, run_b=None, comparison=None, needs_two=True
         )
 
     # Get selected runs or default to latest two
@@ -704,7 +719,10 @@ def payroll_comparison():
                     'name': emp.name,
                     'emp_id': emp.employee_id,
                     'department': emp.department or '',
-                    'a_gross': 0, 'a_tax': 0, 'a_pension': 0, 'a_net': 0,
+                    'a_gross': 0,
+                    'a_tax': 0,
+                    'a_pension': 0,
+                    'a_net': 0,
                     'b_gross': ps.gross_salary or 0,
                     'b_tax': ps.tax or 0,
                     'b_pension': ps.employee_pension or 0,
@@ -730,18 +748,19 @@ def payroll_comparison():
     totals['headcount_change'] = totals['headcount_b'] - totals['headcount_a']
 
     if totals['a_gross'] > 0:
-        totals['gross_change_pct'] = (totals['gross_change'] / totals['a_gross'] * 100)
+        totals['gross_change_pct'] = totals['gross_change'] / totals['a_gross'] * 100
     else:
         totals['gross_change_pct'] = 0
 
     # Employee list sorted by change
     employees = sorted(emp_map.values(), key=lambda e: abs(e['b_net'] - e['a_net']), reverse=True)
 
-    return render_template('payroll_comparison.html',
+    return render_template(
+        'payroll_comparison.html',
         runs=runs,
         run_a=run_a,
         run_b=run_b,
         employees=employees,
         totals=totals,
-        needs_two=False
+        needs_two=False,
     )

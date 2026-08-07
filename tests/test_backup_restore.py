@@ -6,6 +6,7 @@ without requiring a real PostgreSQL installation.
 
 Run: python -m pytest tests/test_backup_restore.py -v
 """
+
 import hashlib
 import json
 import os
@@ -25,21 +26,22 @@ import verify_backup
 # Fixtures
 # ─────────────────────────────────────────────
 
+
 @pytest.fixture
 def db_url():
-    return "postgresql://payroll:secret@localhost:5432/ethiopayroll_test"
+    return 'postgresql://payroll:secret@localhost:5432/ethiopayroll_test'
 
 
 @pytest.fixture
 def tmp_backup_path(tmp_path):
-    return str(tmp_path / "backup.dump")
+    return str(tmp_path / 'backup.dump')
 
 
 @pytest.fixture
 def mock_backup_file(tmp_path):
     """Create a fake backup file with known content."""
-    content = b"fake pg_dump output for testing"
-    path = tmp_path / "backup.dump"
+    content = b'fake pg_dump output for testing'
+    path = tmp_path / 'backup.dump'
     path.write_bytes(content)
     return str(path), hashlib.sha256(content).hexdigest(), len(content)
 
@@ -70,8 +72,15 @@ def mock_psycopg2(sample_row_counts):
     # count_rows calls fetchone() for each table
     call_count = [0]
     table_order = [
-        'company', '"user"', 'employee', 'payroll_run', 'payslip',
-        'tax_rule', 'audit_log', 'leave_request', 'filing_record',
+        'company',
+        '"user"',
+        'employee',
+        'payroll_run',
+        'payslip',
+        'tax_rule',
+        'audit_log',
+        'leave_request',
+        'filing_record',
     ]
 
     def mock_fetchone():
@@ -89,8 +98,8 @@ def mock_psycopg2(sample_row_counts):
 # Tests: get_db_url
 # ─────────────────────────────────────────────
 
-class TestGetDbUrl:
 
+class TestGetDbUrl:
     def test_returns_url_from_env(self, monkeypatch):
         monkeypatch.setenv('DATABASE_URL', 'postgresql://u:p@h:5432/db')
         assert verify_backup.get_db_url() == 'postgresql://u:p@h:5432/db'
@@ -116,8 +125,8 @@ class TestGetDbUrl:
 # Tests: count_rows
 # ─────────────────────────────────────────────
 
-class TestCountRows:
 
+class TestCountRows:
     @patch('psycopg2.connect')
     def test_counts_all_tables(self, mock_connect, mock_psycopg2, sample_row_counts, db_url):
         mock_conn, mock_cur = mock_psycopg2
@@ -156,7 +165,7 @@ class TestCountRows:
 
     @patch('psycopg2.connect')
     def test_handles_connection_error(self, mock_connect, db_url):
-        mock_connect.side_effect = Exception("Connection refused")
+        mock_connect.side_effect = Exception('Connection refused')
         result = verify_backup.count_rows(db_url)
         assert 'error' in result
         assert 'Connection refused' in result['error']
@@ -166,12 +175,11 @@ class TestCountRows:
 # Tests: export_database
 # ─────────────────────────────────────────────
 
-class TestExportDatabase:
 
+class TestExportDatabase:
     @patch('verify_backup.count_rows')
     @patch('subprocess.run')
-    def test_successful_export(self, mock_run, mock_count, db_url,
-                                mock_backup_file, sample_row_counts):
+    def test_successful_export(self, mock_run, mock_count, db_url, mock_backup_file, sample_row_counts):
         backup_path, expected_checksum, expected_size = mock_backup_file
         mock_run.return_value = MagicMock(returncode=0, stderr='')
         mock_count.return_value = sample_row_counts
@@ -196,10 +204,7 @@ class TestExportDatabase:
 
     @patch('subprocess.run')
     def test_pg_dump_failure(self, mock_run, db_url, tmp_backup_path):
-        mock_run.return_value = MagicMock(
-            returncode=1,
-            stderr='pg_dump: error: connection failed'
-        )
+        mock_run.return_value = MagicMock(returncode=1, stderr='pg_dump: error: connection failed')
 
         result = verify_backup.export_database(db_url, tmp_backup_path)
 
@@ -229,8 +234,8 @@ class TestExportDatabase:
     @patch('subprocess.run')
     def test_checksum_is_sha256(self, mock_run, mock_count, db_url, tmp_path, sample_row_counts):
         # Create a file with known content
-        content = b"test backup data with known content"
-        backup_path = str(tmp_path / "test.dump")
+        content = b'test backup data with known content'
+        backup_path = str(tmp_path / 'test.dump')
         Path(backup_path).write_bytes(content)
         expected_sha = hashlib.sha256(content).hexdigest()
 
@@ -247,8 +252,8 @@ class TestExportDatabase:
 # Tests: restore_database
 # ─────────────────────────────────────────────
 
-class TestRestoreDatabase:
 
+class TestRestoreDatabase:
     @patch('subprocess.run')
     @patch('psycopg2.connect')
     def test_successful_restore(self, mock_connect, mock_run, db_url, tmp_backup_path):
@@ -278,10 +283,7 @@ class TestRestoreDatabase:
         mock_conn.cursor.return_value = mock_cur
         mock_conn.autocommit = True
         mock_connect.return_value = mock_conn
-        mock_run.return_value = MagicMock(
-            returncode=1,
-            stderr='WARNING: some objects could not be restored'
-        )
+        mock_run.return_value = MagicMock(returncode=1, stderr='WARNING: some objects could not be restored')
 
         result = verify_backup.restore_database(db_url, tmp_backup_path)
 
@@ -296,10 +298,7 @@ class TestRestoreDatabase:
         mock_conn.cursor.return_value = mock_cur
         mock_conn.autocommit = True
         mock_connect.return_value = mock_conn
-        mock_run.return_value = MagicMock(
-            returncode=2,
-            stderr='pg_restore: error: could not execute'
-        )
+        mock_run.return_value = MagicMock(returncode=2, stderr='pg_restore: error: could not execute')
 
         result = verify_backup.restore_database(db_url, tmp_backup_path)
 
@@ -308,7 +307,7 @@ class TestRestoreDatabase:
 
     @patch('psycopg2.connect')
     def test_restore_connection_error(self, mock_connect, db_url, tmp_backup_path):
-        mock_connect.side_effect = Exception("Connection refused")
+        mock_connect.side_effect = Exception('Connection refused')
 
         result = verify_backup.restore_database(db_url, tmp_backup_path)
 
@@ -343,7 +342,7 @@ class TestRestoreDatabase:
         mock_connect.return_value = mock_conn
         mock_run.return_value = MagicMock(returncode=0, stderr='')
 
-        url = "postgresql://admin:pass123@db.example.com:5433/mydb"
+        url = 'postgresql://admin:pass123@db.example.com:5433/mydb'
         verify_backup.restore_database(url, tmp_backup_path)
 
         # Admin URL should connect to 'postgres' database
@@ -356,8 +355,8 @@ class TestRestoreDatabase:
 # Tests: verify_restore
 # ─────────────────────────────────────────────
 
-class TestVerifyRestore:
 
+class TestVerifyRestore:
     @patch('verify_backup.count_rows')
     def test_all_counts_match(self, mock_count, db_url, sample_row_counts):
         mock_count.return_value = sample_row_counts
@@ -411,13 +410,12 @@ class TestVerifyRestore:
 # Tests: run_full_cycle
 # ─────────────────────────────────────────────
 
-class TestRunFullCycle:
 
+class TestRunFullCycle:
     @patch('verify_backup.verify_restore')
     @patch('verify_backup.restore_database')
     @patch('verify_backup.export_database')
-    def test_full_success(self, mock_export, mock_restore, mock_verify,
-                          db_url, sample_row_counts):
+    def test_full_success(self, mock_export, mock_restore, mock_verify, db_url, sample_row_counts):
         mock_export.return_value = {
             'success': True,
             'file_size_mb': 1.5,
@@ -452,8 +450,7 @@ class TestRunFullCycle:
 
     @patch('verify_backup.restore_database')
     @patch('verify_backup.export_database')
-    def test_restore_failure_stops_cycle(self, mock_export, mock_restore,
-                                          db_url, sample_row_counts):
+    def test_restore_failure_stops_cycle(self, mock_export, mock_restore, db_url, sample_row_counts):
         mock_export.return_value = {
             'success': True,
             'file_size_mb': 1.5,
@@ -473,8 +470,7 @@ class TestRunFullCycle:
     @patch('verify_backup.verify_restore')
     @patch('verify_backup.restore_database')
     @patch('verify_backup.export_database')
-    def test_verify_mismatch_fails(self, mock_export, mock_restore, mock_verify,
-                                    db_url, sample_row_counts):
+    def test_verify_mismatch_fails(self, mock_export, mock_restore, mock_verify, db_url, sample_row_counts):
         mock_export.return_value = {
             'success': True,
             'file_size_mb': 1.5,
@@ -495,10 +491,11 @@ class TestRunFullCycle:
     @patch('verify_backup.verify_restore')
     @patch('verify_backup.restore_database')
     @patch('verify_backup.export_database')
-    def test_report_has_timestamp(self, mock_export, mock_restore, mock_verify,
-                                   db_url, sample_row_counts):
+    def test_report_has_timestamp(self, mock_export, mock_restore, mock_verify, db_url, sample_row_counts):
         mock_export.return_value = {
-            'success': True, 'file_size_mb': 1, 'checksum': 'a' * 64,
+            'success': True,
+            'file_size_mb': 1,
+            'checksum': 'a' * 64,
             'row_counts': sample_row_counts,
         }
         mock_restore.return_value = {'success': True}
@@ -512,16 +509,17 @@ class TestRunFullCycle:
     @patch('verify_backup.verify_restore')
     @patch('verify_backup.restore_database')
     @patch('verify_backup.export_database')
-    def test_report_masks_db_url(self, mock_export, mock_restore, mock_verify,
-                                  sample_row_counts):
+    def test_report_masks_db_url(self, mock_export, mock_restore, mock_verify, sample_row_counts):
         mock_export.return_value = {
-            'success': True, 'file_size_mb': 1, 'checksum': 'a' * 64,
+            'success': True,
+            'file_size_mb': 1,
+            'checksum': 'a' * 64,
             'row_counts': sample_row_counts,
         }
         mock_restore.return_value = {'success': True}
         mock_verify.return_value = {'success': True, 'mismatches': {}}
 
-        url = "postgresql://user:password@db.render.com:5432/ethiopayroll"
+        url = 'postgresql://user:password@db.render.com:5432/ethiopayroll'
         result = verify_backup.run_full_cycle(url)
 
         # Should NOT contain password
@@ -531,10 +529,11 @@ class TestRunFullCycle:
     @patch('verify_backup.verify_restore')
     @patch('verify_backup.restore_database')
     @patch('verify_backup.export_database')
-    def test_restore_warnings_captured(self, mock_export, mock_restore, mock_verify,
-                                        db_url, sample_row_counts):
+    def test_restore_warnings_captured(self, mock_export, mock_restore, mock_verify, db_url, sample_row_counts):
         mock_export.return_value = {
-            'success': True, 'file_size_mb': 1, 'checksum': 'a' * 64,
+            'success': True,
+            'file_size_mb': 1,
+            'checksum': 'a' * 64,
             'row_counts': sample_row_counts,
         }
         mock_restore.return_value = {
@@ -553,8 +552,8 @@ class TestRunFullCycle:
 # Tests: main() CLI
 # ─────────────────────────────────────────────
 
-class TestMain:
 
+class TestMain:
     def test_requires_pg_flag(self, monkeypatch):
         monkeypatch.setattr(sys, 'argv', ['verify_backup.py'])
         with pytest.raises(SystemExit):
@@ -592,9 +591,8 @@ class TestMain:
     @patch('verify_backup.export_database')
     def test_export_only_mode(self, mock_export, monkeypatch, tmp_path):
         monkeypatch.setenv('DATABASE_URL', 'postgresql://u:p@h:5432/db')
-        output = str(tmp_path / "test.dump")
-        monkeypatch.setattr(sys, 'argv', ['verify_backup.py', '--pg',
-                                           '--export-only', '--output', output])
+        output = str(tmp_path / 'test.dump')
+        monkeypatch.setattr(sys, 'argv', ['verify_backup.py', '--pg', '--export-only', '--output', output])
         mock_export.return_value = {
             'success': True,
             'file_size_mb': 2.5,
@@ -609,9 +607,8 @@ class TestMain:
     @patch('verify_backup.run_full_cycle')
     def test_report_saved_to_file(self, mock_cycle, monkeypatch, tmp_path):
         monkeypatch.setenv('DATABASE_URL', 'postgresql://u:p@h:5432/db')
-        report_path = str(tmp_path / "report.json")
-        monkeypatch.setattr(sys, 'argv', ['verify_backup.py', '--pg',
-                                           '--full-cycle', '--report', report_path])
+        report_path = str(tmp_path / 'report.json')
+        monkeypatch.setattr(sys, 'argv', ['verify_backup.py', '--pg', '--full-cycle', '--report', report_path])
         mock_cycle.return_value = {
             'overall': 'PASSED',
             'steps': {},
@@ -630,6 +627,7 @@ class TestMain:
 # ─────────────────────────────────────────────
 # Tests: Integration with real SQLite (logic only)
 # ─────────────────────────────────────────────
+
 
 class TestLogicWithSQLite:
     """
@@ -705,21 +703,22 @@ class TestLogicWithSQLite:
 # Tests: Security
 # ─────────────────────────────────────────────
 
-class TestSecurity:
 
+class TestSecurity:
     @patch('verify_backup.verify_restore')
     @patch('verify_backup.restore_database')
     @patch('verify_backup.export_database')
-    def test_password_not_in_report(self, mock_export, mock_restore, mock_verify,
-                                     sample_row_counts):
+    def test_password_not_in_report(self, mock_export, mock_restore, mock_verify, sample_row_counts):
         mock_export.return_value = {
-            'success': True, 'file_size_mb': 1, 'checksum': 'a' * 64,
+            'success': True,
+            'file_size_mb': 1,
+            'checksum': 'a' * 64,
             'row_counts': sample_row_counts,
         }
         mock_restore.return_value = {'success': True}
         mock_verify.return_value = {'success': True, 'mismatches': {}}
 
-        url = "postgresql://admin:SuperSecret123@db.render.com:5432/prod"
+        url = 'postgresql://admin:SuperSecret123@db.render.com:5432/prod'
         result = verify_backup.run_full_cycle(url)
 
         report_json = json.dumps(result)
@@ -730,8 +729,8 @@ class TestSecurity:
     def test_pg_dump_receives_full_url(self, mock_run, db_url, tmp_path):
         """pg_dump needs the full URL including password to connect."""
         # Create a fake output file so export_database can read it
-        backup_path = str(tmp_path / "backup.dump")
-        Path(backup_path).write_bytes(b"fake backup data")
+        backup_path = str(tmp_path / 'backup.dump')
+        Path(backup_path).write_bytes(b'fake backup data')
         mock_run.return_value = MagicMock(returncode=0, stderr='')
 
         with patch('verify_backup.count_rows', return_value={}):

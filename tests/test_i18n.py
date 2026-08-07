@@ -1,6 +1,7 @@
 """
 i18n tests — verifies Amharic string lookup and language switching.
 """
+
 import os
 import sys
 
@@ -38,13 +39,22 @@ def test_all_strings_exist():
 def test_critical_strings_exist():
     """These strings must exist for the core flow to work."""
     critical = [
-        'dashboard', 'employees', 'payroll', 'reports',
-        'basic_salary', 'net_pay', 'income_tax', 'employee_pension',
-        'confirm_approve', 'download', 'save_employee', 'cancel',
+        'dashboard',
+        'employees',
+        'payroll',
+        'reports',
+        'basic_salary',
+        'net_pay',
+        'income_tax',
+        'employee_pension',
+        'confirm_approve',
+        'download',
+        'save_employee',
+        'cancel',
     ]
     for key in critical:
-        assert key in STRINGS, f"Missing critical string: {key}"
-        assert STRINGS[key] != '', f"Empty Amharic string: {key}"
+        assert key in STRINGS, f'Missing critical string: {key}'
+        assert STRINGS[key] != '', f'Empty Amharic string: {key}'
 
 
 # --- Afaan Oromoo Tests ---
@@ -63,31 +73,42 @@ def test_oromo_all_keys_have_translations():
     all_en = get_all_strings('en')
     all_om = get_all_strings('om')
     missing = set(all_en.keys()) - set(all_om.keys())
-    assert len(missing) == 0, f"Missing Afaan Oromoo translations: {missing}"
+    assert len(missing) == 0, f'Missing Afaan Oromoo translations: {missing}'
 
 
 def test_oromo_no_empty_values():
     """No Afaan Oromoo translation should be empty."""
     for key, value in STRINGS_OM.items():
-        assert value != '', f"Empty Afaan Oromoo string: {key}"
+        assert value != '', f'Empty Afaan Oromoo string: {key}'
 
 
 def test_oromo_has_minimum_strings():
     """At least 100 Afaan Oromoo strings for usable coverage."""
-    assert len(STRINGS_OM) >= 100, f"Only {len(STRINGS_OM)} Afaan Oromoo strings (need 100+)"
+    assert len(STRINGS_OM) >= 100, f'Only {len(STRINGS_OM)} Afaan Oromoo strings (need 100+)'
 
 
 def test_oromo_critical_strings():
     """Critical payroll flow strings must exist in Afaan Oromoo."""
     critical = [
-        'dashboard', 'employees', 'payroll', 'reports',
-        'basic_salary', 'net_pay', 'income_tax', 'employee_pension',
-        'confirm_approve', 'download', 'save_employee', 'cancel',
-        'erca_filing', 'pension_deadline', 'payslips',
+        'dashboard',
+        'employees',
+        'payroll',
+        'reports',
+        'basic_salary',
+        'net_pay',
+        'income_tax',
+        'employee_pension',
+        'confirm_approve',
+        'download',
+        'save_employee',
+        'cancel',
+        'erca_filing',
+        'pension_deadline',
+        'payslips',
     ]
     for key in critical:
-        assert key in STRINGS_OM, f"Missing critical Afaan Oromoo string: {key}"
-        assert STRINGS_OM[key] != '', f"Empty critical Afaan Oromoo string: {key}"
+        assert key in STRINGS_OM, f'Missing critical Afaan Oromoo string: {key}'
+        assert STRINGS_OM[key] != '', f'Empty critical Afaan Oromoo string: {key}'
 
 
 def test_oromo_fallback_to_key():

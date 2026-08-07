@@ -21,20 +21,20 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 # Default statutory minimums (cannot be reduced by company policy)
-DEFAULT_ANNUAL_BASE = 16          # Art. 77(1)(a): 16 days for year 1
-DEFAULT_ANNUAL_INCREMENT = 1      # Art. 77(1)(b): +1 day per 2 years of service
+DEFAULT_ANNUAL_BASE = 16  # Art. 77(1)(a): 16 days for year 1
+DEFAULT_ANNUAL_INCREMENT = 1  # Art. 77(1)(b): +1 day per 2 years of service
 DEFAULT_ANNUAL_INCREMENT_YEARS = 2  # Increment applies every 2 years
-DEFAULT_ANNUAL_MAX = 30           # reasonable cap (not in law)
+DEFAULT_ANNUAL_MAX = 30  # reasonable cap (not in law)
 
-DEFAULT_SICK_MAX_DAYS = 180       # Art. 85(2): 6 months in 12-month period
-DEFAULT_SICK_TIER_1_DAYS = 30     # Art. 86(1): 100% pay
-DEFAULT_SICK_TIER_2_DAYS = 60     # Art. 86(2): 50% pay (days 31-90)
+DEFAULT_SICK_MAX_DAYS = 180  # Art. 85(2): 6 months in 12-month period
+DEFAULT_SICK_TIER_1_DAYS = 30  # Art. 86(1): 100% pay
+DEFAULT_SICK_TIER_2_DAYS = 60  # Art. 86(2): 50% pay (days 31-90)
 # Days 91-180: 0% pay (Art. 86(3))
 
-DEFAULT_MATERNITY_DAYS = 120      # Art. 88(3): 30 pre + 90 post
-DEFAULT_PATERNITY_DAYS = 3        # Art. 81(2): 3 consecutive days, full pay
-DEFAULT_SPECIAL_DAYS = 5          # Art. 81(3): 5 days unpaid, max 2x/year
-DEFAULT_SPECIAL_UNPAID = True     # Art. 81(3): unpaid
+DEFAULT_MATERNITY_DAYS = 120  # Art. 88(3): 30 pre + 90 post
+DEFAULT_PATERNITY_DAYS = 3  # Art. 81(2): 3 consecutive days, full pay
+DEFAULT_SPECIAL_DAYS = 5  # Art. 81(3): 5 days unpaid, max 2x/year
+DEFAULT_SPECIAL_UNPAID = True  # Art. 81(3): unpaid
 DEFAULT_SPECIAL_MAX_PER_YEAR = 2  # Art. 81(3): max 2 times per budget year
 
 # Cache for leave rules
@@ -53,6 +53,7 @@ def _get_leave_rules(for_date=None) -> dict:
     """Fetch leave rules from database, falling back to defaults."""
     cache_key = str(for_date) if for_date else 'default'
     import time
+
     now = time.time()
     if cache_key in _rules_cache:
         cached_time = _rules_cache_timestamps.get(cache_key, 0)
@@ -78,6 +79,7 @@ def _get_leave_rules(for_date=None) -> dict:
 
     try:
         from payroll_engine.models import TaxRule
+
         rule = TaxRule.get_active_rule(for_date)
         if rule:
             lv = rule.rules_json.get('leave', {})
@@ -104,8 +106,7 @@ class LeaveType:
     ALL_STATUTORY = {ANNUAL, SICK, MATERNITY, PATERNITY, SPECIAL}
 
 
-def calculate_annual_entitlement(years_of_service: int, company_policy_days: int = None,
-                                  for_date=None) -> int:
+def calculate_annual_entitlement(years_of_service: int, company_policy_days: int | None = None, for_date=None) -> int:
     """Calculate annual leave entitlement based on years of service.
 
     Art. 77(1): 16 days for year 1, +1 day per 2 additional years.
@@ -133,8 +134,7 @@ def calculate_annual_entitlement(years_of_service: int, company_policy_days: int
     return statutory
 
 
-def calculate_sick_leave_pay(sick_days_used: int, daily_rate: Decimal,
-                              for_date=None) -> dict:
+def calculate_sick_leave_pay(sick_days_used: int, daily_rate: Decimal, for_date=None) -> dict:
     """Calculate sick leave payment based on tiered system.
 
     Args:
@@ -170,12 +170,14 @@ def calculate_sick_leave_pay(sick_days_used: int, daily_rate: Decimal,
     tier1_days = min(remaining_days, tier1)
     if tier1_days > 0:
         tier1_pay = (daily_rate * Decimal(str(tier1_days))).quantize(Decimal('0.01'))
-        tiers.append({
-            'tier': 1,
-            'days': tier1_days,
-            'pay_percentage': 100,
-            'pay': tier1_pay,
-        })
+        tiers.append(
+            {
+                'tier': 1,
+                'days': tier1_days,
+                'pay_percentage': 100,
+                'pay': tier1_pay,
+            }
+        )
         total_pay += tier1_pay
         remaining_days -= tier1_days
 
@@ -183,24 +185,28 @@ def calculate_sick_leave_pay(sick_days_used: int, daily_rate: Decimal,
     tier2_days = min(remaining_days, tier2)
     if tier2_days > 0:
         tier2_pay = (daily_rate * Decimal('0.5') * Decimal(str(tier2_days))).quantize(Decimal('0.01'))
-        tiers.append({
-            'tier': 2,
-            'days': tier2_days,
-            'pay_percentage': 50,
-            'pay': tier2_pay,
-        })
+        tiers.append(
+            {
+                'tier': 2,
+                'days': tier2_days,
+                'pay_percentage': 50,
+                'pay': tier2_pay,
+            }
+        )
         total_pay += tier2_pay
         remaining_days -= tier2_days
 
     # Tier 3: Remaining days at 0%
     tier3_days = min(remaining_days, max_days - tier1 - tier2)
     if tier3_days > 0:
-        tiers.append({
-            'tier': 3,
-            'days': tier3_days,
-            'pay_percentage': 0,
-            'pay': Decimal('0'),
-        })
+        tiers.append(
+            {
+                'tier': 3,
+                'days': tier3_days,
+                'pay_percentage': 0,
+                'pay': Decimal('0'),
+            }
+        )
         remaining_days -= tier3_days
 
     # Determine current tier
@@ -223,12 +229,14 @@ def calculate_sick_leave_pay(sick_days_used: int, daily_rate: Decimal,
     }
 
 
-def calculate_leave_balance(employee_start_date: date,
-                             leave_type: str,
-                             leave_taken: int = 0,
-                             year: int = None,
-                             company_policy_days: int = None,
-                             for_date=None) -> dict:
+def calculate_leave_balance(
+    employee_start_date: date,
+    leave_type: str,
+    leave_taken: int = 0,
+    year: int | None = None,
+    company_policy_days: int | None = None,
+    for_date=None,
+) -> dict:
     """Calculate current leave balance.
 
     Args:
@@ -337,12 +345,9 @@ def calculate_leave_balance(employee_start_date: date,
     }
 
 
-def validate_leave_request(leave_type: str,
-                           start_date: date,
-                           end_date: date,
-                           balance: dict,
-                           employee_name: str,
-                           for_date=None) -> dict:
+def validate_leave_request(
+    leave_type: str, start_date: date, end_date: date, balance: dict, employee_name: str, for_date=None
+) -> dict:
     """Validate a leave request against balances and rules.
 
     Returns:
@@ -372,8 +377,7 @@ def validate_leave_request(leave_type: str,
     maternity = rules['maternity_days']
     if leave_type == LeaveType.MATERNITY and requested_days < maternity:
         warnings.append(
-            f'Maternity leave is typically {maternity} continuous days. '
-            f'You requested {requested_days} days.'
+            f'Maternity leave is typically {maternity} continuous days. You requested {requested_days} days.'
         )
 
     # Sick leave: warn if approaching tier change
@@ -382,22 +386,17 @@ def validate_leave_request(leave_type: str,
         tier2 = rules['sick_tier_2_days']
         current_taken = balance.get('taken', 0)
         if current_taken + requested_days > tier1 and current_taken <= tier1:
+            warnings.append(f'This sick leave will cross the {tier1}-day mark. Pay will drop to 50% after day {tier1}.')
+        if current_taken + requested_days > (tier1 + tier2) and current_taken <= (tier1 + tier2):
             warnings.append(
-                f'This sick leave will cross the {tier1}-day mark. '
-                f'Pay will drop to 50% after day {tier1}.'
+                f'This sick leave will cross the {tier1 + tier2}-day mark. '
+                f'Pay will drop to 0% after day {tier1 + tier2}.'
             )
-        if current_taken + requested_days > (tier1 + tier2):
-            if current_taken <= (tier1 + tier2):
-                warnings.append(
-                    f'This sick leave will cross the {tier1 + tier2}-day mark. '
-                    f'Pay will drop to 0% after day {tier1 + tier2}.'
-                )
 
     # Annual leave: warn if requesting more than 5 consecutive days
     if leave_type == LeaveType.ANNUAL and requested_days > 5:
         warnings.append(
-            f'Requesting {requested_days} consecutive days of annual leave. '
-            f'Ensure this does not disrupt operations.'
+            f'Requesting {requested_days} consecutive days of annual leave. Ensure this does not disrupt operations.'
         )
 
     return {

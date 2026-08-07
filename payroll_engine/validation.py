@@ -28,9 +28,16 @@ def _D(value) -> Decimal:
 class ValidationResult:
     """A single validation finding."""
 
-    def __init__(self, rule_code: str, severity: str, message: str,
-                 employee_id: str = None, details: dict = None,
-                 employee_name: str = None, hint: str = None):
+    def __init__(
+        self,
+        rule_code: str,
+        severity: str,
+        message: str,
+        employee_id: str | None = None,
+        details: dict | None = None,
+        employee_name: str | None = None,
+        hint: str | None = None,
+    ):
         self.rule_code = rule_code
         self.severity = severity  # BLOCK / FLAG / WARN
         self.message = message
@@ -56,9 +63,11 @@ class ValidationResult:
         }
 
 
-def validate_payroll_data(employees_data: list[dict[str, Any]],
-                          company_id: int = None,
-                          previous_payslips: dict[str, dict] = None) -> list[ValidationResult]:
+def validate_payroll_data(
+    employees_data: list[dict[str, Any]],
+    company_id: int | None = None,
+    previous_payslips: dict[str, dict] | None = None,
+) -> list[ValidationResult]:
     """
     Run all pre-processing validation checks on payroll data.
 
@@ -74,11 +83,11 @@ def validate_payroll_data(employees_data: list[dict[str, Any]],
     results = []
 
     if not employees_data:
-        results.append(ValidationResult(
-            rule_code='EMPTY_DATA',
-            severity='BLOCK',
-            message='No employee data provided. CSV file may be empty.'
-        ))
+        results.append(
+            ValidationResult(
+                rule_code='EMPTY_DATA', severity='BLOCK', message='No employee data provided. CSV file may be empty.'
+            )
+        )
         return results
 
     # --- BLOCK checks (must fix before processing) ---
@@ -118,16 +127,18 @@ def _check_duplicate_employees(data: list[dict], results: list[ValidationResult]
             continue
         key = (name, bank)
         if key in seen:
-            results.append(ValidationResult(
-                rule_code='DUPLICATE_EMPLOYEE',
-                severity='BLOCK',
-                message=f"Possible duplicate: '{emp['name']}' appears twice with the same bank account. "
-                        f"Check if this is the same person.",
-                employee_id=emp.get('id'),
-                employee_name=emp.get('name', ''),
-                hint='Check if this is the same person listed twice.',
-                details={'matched_with': seen[key]}
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='DUPLICATE_EMPLOYEE',
+                    severity='BLOCK',
+                    message=f"Possible duplicate: '{emp['name']}' appears twice with the same bank account. "
+                    f'Check if this is the same person.',
+                    employee_id=emp.get('id'),
+                    employee_name=emp.get('name', ''),
+                    hint='Check if this is the same person listed twice.',
+                    details={'matched_with': seen[key]},
+                )
+            )
         else:
             seen[key] = emp.get('id', '')
 
@@ -137,17 +148,19 @@ def _check_negative_net_pay(data: list[dict], results: list[ValidationResult]):
     for emp in data:
         net = emp.get('net', 0)
         if net < 0:
-            results.append(ValidationResult(
-                rule_code='NEGATIVE_NET_PAY',
-                severity='BLOCK',
-                message=f"Negative net pay: ETB {net:,.2f}. "
-                        f"Gross ({emp.get('gross', 0):,.2f}) < "
-                        f"Deductions (tax {emp.get('tax', 0):,.2f} + "
-                        f"pension {emp.get('pension_employee', 0):,.2f})",
-                employee_id=emp.get('id'),
-                employee_name=emp.get('name', ''),
-                hint='Check the salary, tax, and pension values for this employee.'
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='NEGATIVE_NET_PAY',
+                    severity='BLOCK',
+                    message=f'Negative net pay: ETB {net:,.2f}. '
+                    f'Gross ({emp.get("gross", 0):,.2f}) < '
+                    f'Deductions (tax {emp.get("tax", 0):,.2f} + '
+                    f'pension {emp.get("pension_employee", 0):,.2f})',
+                    employee_id=emp.get('id'),
+                    employee_name=emp.get('name', ''),
+                    hint='Check the salary, tax, and pension values for this employee.',
+                )
+            )
 
 
 def _check_missing_bank(data: list[dict], results: list[ValidationResult]):
@@ -155,18 +168,19 @@ def _check_missing_bank(data: list[dict], results: list[ValidationResult]):
     for emp in data:
         bank = emp.get('bank', '').strip()
         if not bank:
-            results.append(ValidationResult(
-                rule_code='MISSING_BANK',
-                severity='BLOCK',
-                message=f"No bank/Telebirr details for '{emp.get('name', 'Unknown')}'",
-                employee_id=emp.get('id'),
-                employee_name=emp.get('name', ''),
-                hint='Add a bank account or Telebirr number so they can be paid.'
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='MISSING_BANK',
+                    severity='BLOCK',
+                    message=f"No bank/Telebirr details for '{emp.get('name', 'Unknown')}'",
+                    employee_id=emp.get('id'),
+                    employee_name=emp.get('name', ''),
+                    hint='Add a bank account or Telebirr number so they can be paid.',
+                )
+            )
 
 
-def _check_salary_typos(data: list[dict], previous: dict[str, dict],
-                        results: list[ValidationResult]):
+def _check_salary_typos(data: list[dict], previous: dict[str, dict], results: list[ValidationResult]):
     """FLAG: Salary > 10× previous month or > 500,000 ETB.
 
     This catches data entry errors (extra zeros, wrong decimal place).
@@ -180,16 +194,17 @@ def _check_salary_typos(data: list[dict], previous: dict[str, dict],
 
         # Absolute threshold
         if total > 500000:
-            results.append(ValidationResult(
-                rule_code='SALTYPO_ABSOLUTE',
-                severity='FLAG',
-                message=f"{emp_name}'s salary is unusually high: ETB {total:,.2f}. "
-                        f"Is this correct?",
-                employee_id=emp.get('id'),
-                employee_name=emp_name,
-                hint='Check with the employee if this amount is correct.',
-                details={'salary': total, 'threshold': 500000}
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='SALTYPO_ABSOLUTE',
+                    severity='FLAG',
+                    message=f"{emp_name}'s salary is unusually high: ETB {total:,.2f}. Is this correct?",
+                    employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Check with the employee if this amount is correct.',
+                    details={'salary': total, 'threshold': 500000},
+                )
+            )
             continue
 
         # Relative threshold (compared to previous month)
@@ -197,21 +212,22 @@ def _check_salary_typos(data: list[dict], previous: dict[str, dict],
             prev = previous[emp['id']]
             prev_total = prev.get('basic', 0) + prev.get('allowances', 0)
             if prev_total > 0 and total > prev_total * 10:
-                results.append(ValidationResult(
-                    rule_code='SALTYPO_RELATIVE',
-                    severity='FLAG',
-                    message=f"{emp_name}'s salary changed significantly "
-                            f"(ETB {prev_total:,.2f} → {total:,.2f}). "
-                            f"Is this correct?",
-                    employee_id=emp.get('id'),
-                    employee_name=emp_name,
-                    hint='Check with the employee if this change is correct.',
-                    details={'current': total, 'previous': prev_total}
-                ))
+                results.append(
+                    ValidationResult(
+                        rule_code='SALTYPO_RELATIVE',
+                        severity='FLAG',
+                        message=f"{emp_name}'s salary changed significantly "
+                        f'(ETB {prev_total:,.2f} → {total:,.2f}). '
+                        f'Is this correct?',
+                        employee_id=emp.get('id'),
+                        employee_name=emp_name,
+                        hint='Check with the employee if this change is correct.',
+                        details={'current': total, 'previous': prev_total},
+                    )
+                )
 
 
-def _check_salary_change_significant(data: list[dict], previous: dict[str, dict],
-                                     results: list[ValidationResult]):
+def _check_salary_change_significant(data: list[dict], previous: dict[str, dict], results: list[ValidationResult]):
     """FLAG: Salary changed by more than 30% from previous month.
 
     Catches real salary changes (raises, demotions) that Tigist should verify.
@@ -237,27 +253,28 @@ def _check_salary_change_significant(data: list[dict], previous: dict[str, dict]
 
         if change_pct > 30:
             direction = 'increased' if curr_total > prev_total else 'decreased'
-            results.append(ValidationResult(
-                rule_code='SALARY_CHANGE_30PCT',
-                severity='FLAG',
-                message=(
-                    f"{emp.get('name', 'Employee')}'s salary {direction} by {change_pct:.0f}% "
-                    f"(ETB {prev_total:,.0f} → ETB {curr_total:,.0f}). "
-                    f'Is this correct?'
-                ),
-                employee_id=emp_id,
-                employee_name=emp.get('name', ''),
-                hint='Verify this salary change with the employee or their contract.',
-                details={
-                    'previous': prev_total,
-                    'current': curr_total,
-                    'change_pct': round(change_pct, 1),
-                }
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='SALARY_CHANGE_30PCT',
+                    severity='FLAG',
+                    message=(
+                        f"{emp.get('name', 'Employee')}'s salary {direction} by {change_pct:.0f}% "
+                        f'(ETB {prev_total:,.0f} → ETB {curr_total:,.0f}). '
+                        f'Is this correct?'
+                    ),
+                    employee_id=emp_id,
+                    employee_name=emp.get('name', ''),
+                    hint='Verify this salary change with the employee or their contract.',
+                    details={
+                        'previous': prev_total,
+                        'current': curr_total,
+                        'change_pct': round(change_pct, 1),
+                    },
+                )
+            )
 
 
-def _check_payroll_variance(data: list[dict], company_id: int,
-                            results: list[ValidationResult]):
+def _check_payroll_variance(data: list[dict], company_id: int, results: list[ValidationResult]):
     """FLAG: Total payroll differs from last month by more than 20%.
 
     A large swing in total payroll is unusual and should be verified.
@@ -267,9 +284,12 @@ def _check_payroll_variance(data: list[dict], company_id: int,
         return
     try:
         from payroll_engine.models import PayrollRun
-        last_run = PayrollRun.query.filter_by(
-            company_id=company_id, status='completed'
-        ).order_by(PayrollRun.run_date.desc()).first()
+
+        last_run = (
+            PayrollRun.query.filter_by(company_id=company_id, status='completed')
+            .order_by(PayrollRun.run_date.desc())
+            .first()
+        )
         if not last_run:
             return
 
@@ -290,37 +310,37 @@ def _check_payroll_variance(data: list[dict], company_id: int,
             count_note = ''
             if curr_count != prev_count:
                 count_note = f' ({prev_count} → {curr_count} employees)'
-            results.append(ValidationResult(
-                rule_code='PAYROLL_VARIANCE',
-                severity='FLAG',
-                message=(
-                    f'Total payroll {direction} by {change_pct:.0f}% '
-                    f'(ETB {previous_net:,.0f} → ETB {current_net:,.0f}, '
-                    f'difference: ETB {diff:,.0f}){count_note}. '
-                    f'Is this correct?'
-                ),
-                hint=(
-                    'Common causes: new hires, terminations, salary changes, '
-                    'bonuses, or data entry errors. '
-                    'Check the employee list for unexpected additions or changes.'
-                ),
-                details={
-                    'previous_total': previous_net,
-                    'current_total': current_net,
-                    'change_pct': round(change_pct, 1),
-                    'previous_count': prev_count,
-                    'current_count': curr_count,
-                }
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='PAYROLL_VARIANCE',
+                    severity='FLAG',
+                    message=(
+                        f'Total payroll {direction} by {change_pct:.0f}% '
+                        f'(ETB {previous_net:,.0f} → ETB {current_net:,.0f}, '
+                        f'difference: ETB {diff:,.0f}){count_note}. '
+                        f'Is this correct?'
+                    ),
+                    hint=(
+                        'Common causes: new hires, terminations, salary changes, '
+                        'bonuses, or data entry errors. '
+                        'Check the employee list for unexpected additions or changes.'
+                    ),
+                    details={
+                        'previous_total': previous_net,
+                        'current_total': current_net,
+                        'change_pct': round(change_pct, 1),
+                        'previous_count': prev_count,
+                        'current_count': curr_count,
+                    },
+                )
+            )
     except Exception as e:
         import logging
-        logging.getLogger('payroll_engine.validation').warning(
-            'Payroll variance check skipped: %s', e
-        )
+
+        logging.getLogger('payroll_engine.validation').warning('Payroll variance check skipped: %s', e)
 
 
-def _check_pending_leave_impact(data: list[dict], company_id: int,
-                                results: list[ValidationResult]):
+def _check_pending_leave_impact(data: list[dict], company_id: int, results: list[ValidationResult]):
     """FLAG: Employee with approved unpaid leave still shows full salary.
 
     If an employee has approved unpaid leave this month, their salary
@@ -354,7 +374,7 @@ def _check_pending_leave_impact(data: list[dict], company_id: int,
         employees = Employee.query.filter(
             Employee.company_id == company_id,
             Employee.id.in_(emp_ids_on_leave),
-            Employee.is_deleted == False,
+            not Employee.is_deleted,
         ).all()
         emp_by_id = {e.id: e for e in employees}
 
@@ -374,34 +394,35 @@ def _check_pending_leave_impact(data: list[dict], company_id: int,
                         monthly_gross = float(emp.basic_salary) + float(emp.allowances)
                         daily_rate = monthly_gross / 30
                         est_deduction = daily_rate * leave_days
-                        results.append(ValidationResult(
-                            rule_code='PENDING_UNPAID_LEAVE',
-                            severity='FLAG',
-                            message=(
-                                f'{emp.name} has {leave_days} days of approved unpaid leave '
-                                f'({leave.start_date} to {leave.end_date}). '
-                                f'Salary may need prorating.'
-                            ),
-                            employee_id=emp.employee_id,
-                            employee_name=emp.name,
-                            hint=(
-                                f'Estimated deduction: ETB {est_deduction:,.0f} '
-                                f'({leave_days} days × ETB {daily_rate:,.0f}/day). '
-                                f'Use the salary proration or sick leave reduction field.'
-                            ),
-                            details={
-                                'leave_days': leave_days,
-                                'leave_start': str(leave.start_date),
-                                'leave_end': str(leave.end_date),
-                                'estimated_deduction': round(est_deduction, 2),
-                                'daily_rate': round(daily_rate, 2),
-                            }
-                        ))
+                        results.append(
+                            ValidationResult(
+                                rule_code='PENDING_UNPAID_LEAVE',
+                                severity='FLAG',
+                                message=(
+                                    f'{emp.name} has {leave_days} days of approved unpaid leave '
+                                    f'({leave.start_date} to {leave.end_date}). '
+                                    f'Salary may need prorating.'
+                                ),
+                                employee_id=emp.employee_id,
+                                employee_name=emp.name,
+                                hint=(
+                                    f'Estimated deduction: ETB {est_deduction:,.0f} '
+                                    f'({leave_days} days × ETB {daily_rate:,.0f}/day). '
+                                    f'Use the salary proration or sick leave reduction field.'
+                                ),
+                                details={
+                                    'leave_days': leave_days,
+                                    'leave_start': str(leave.start_date),
+                                    'leave_end': str(leave.end_date),
+                                    'estimated_deduction': round(est_deduction, 2),
+                                    'daily_rate': round(daily_rate, 2),
+                                },
+                            )
+                        )
     except Exception as e:
         import logging
-        logging.getLogger('payroll_engine.validation').warning(
-            'Unpaid leave check skipped: %s', e
-        )
+
+        logging.getLogger('payroll_engine.validation').warning('Unpaid leave check skipped: %s', e)
 
 
 def _check_pension_mismatch(data: list[dict], results: list[ValidationResult]):
@@ -413,17 +434,19 @@ def _check_pension_mismatch(data: list[dict], results: list[ValidationResult]):
         emp_name = emp.get('name', '')
 
         if basic > 0 and abs(pension - expected) > Decimal('0.01'):
-            results.append(ValidationResult(
-                rule_code='PENSION_MISMATCH',
-                severity='FLAG',
-                message=f"{emp_name}'s pension doesn't match: "
-                        f"expected ETB {expected:,.2f} (7% of {basic:,.2f}), "
-                        f"got ETB {pension:,.2f}",
-                employee_id=emp.get('id'),
-                employee_name=emp_name,
-                hint='Pension should be 7% of basic salary. Check the calculation.',
-                details={'expected': expected, 'actual': pension, 'basic': basic}
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='PENSION_MISMATCH',
+                    severity='FLAG',
+                    message=f"{emp_name}'s pension doesn't match: "
+                    f'expected ETB {expected:,.2f} (7% of {basic:,.2f}), '
+                    f'got ETB {pension:,.2f}',
+                    employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Pension should be 7% of basic salary. Check the calculation.',
+                    details={'expected': expected, 'actual': pension, 'basic': basic},
+                )
+            )
 
 
 def _check_tax_mismatch(data: list[dict], results: list[ValidationResult]):
@@ -437,27 +460,31 @@ def _check_tax_mismatch(data: list[dict], results: list[ValidationResult]):
 
         # Tax can never exceed gross
         if tax > gross:
-            results.append(ValidationResult(
-                rule_code='TAX_EXCEEDS_GROSS',
-                severity='FLAG',
-                message=f"{emp_name}'s tax (ETB {tax:,.2f}) exceeds gross salary (ETB {gross:,.2f}). "
-                        f"This should never happen.",
-                employee_id=emp.get('id'),
-                employee_name=emp_name,
-                hint='Check the tax calculation for this employee.',
-                details={'tax': tax, 'gross': gross}
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='TAX_EXCEEDS_GROSS',
+                    severity='FLAG',
+                    message=f"{emp_name}'s tax (ETB {tax:,.2f}) exceeds gross salary (ETB {gross:,.2f}). "
+                    f'This should never happen.',
+                    employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Check the tax calculation for this employee.',
+                    details={'tax': tax, 'gross': gross},
+                )
+            )
 
         # Tax on 0 salary should be 0
         if gross == 0 and tax != 0:
-            results.append(ValidationResult(
-                rule_code='TAX_ON_ZERO',
-                severity='FLAG',
-                message=f"{emp_name} has tax of ETB {tax:,.2f} on zero salary.",
-                employee_id=emp.get('id'),
-                employee_name=emp_name,
-                hint='Check if this employee should have a salary.'
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='TAX_ON_ZERO',
+                    severity='FLAG',
+                    message=f'{emp_name} has tax of ETB {tax:,.2f} on zero salary.',
+                    employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Check if this employee should have a salary.',
+                )
+            )
 
 
 def _check_missing_tin(data: list[dict], results: list[ValidationResult]):
@@ -466,15 +493,16 @@ def _check_missing_tin(data: list[dict], results: list[ValidationResult]):
         tin = emp.get('tin', '').strip()
         emp_name = emp.get('name', '')
         if not tin:
-            results.append(ValidationResult(
-                rule_code='MISSING_TIN',
-                severity='WARN',
-                message=f"{emp_name} has no TIN number. "
-                        f"Required for ERCA filing.",
-                employee_id=emp.get('id'),
-                employee_name=emp_name,
-                hint='Ask the employee for their TIN number before filing.'
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='MISSING_TIN',
+                    severity='WARN',
+                    message=f'{emp_name} has no TIN number. Required for ERCA filing.',
+                    employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Ask the employee for their TIN number before filing.',
+                )
+            )
 
 
 def _check_missing_fayda_fin(data: list[dict], results: list[ValidationResult]):
@@ -483,15 +511,16 @@ def _check_missing_fayda_fin(data: list[dict], results: list[ValidationResult]):
         fin = emp.get('fayda_fin', '').strip() if emp.get('fayda_fin') else ''
         emp_name = emp.get('name', '')
         if not fin:
-            results.append(ValidationResult(
-                rule_code='MISSING_FAYDA_FIN',
-                severity='HINT',
-                message=f"{emp_name} has no Fayda Digital ID (FIN). "
-                        f"Recommended for ERCA filing validation.",
-                employee_id=emp.get('id'),
-                employee_name=emp_name,
-                hint='Ask the employee for their 12-digit Fayda FIN from id.gov.et.'
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='MISSING_FAYDA_FIN',
+                    severity='HINT',
+                    message=f'{emp_name} has no Fayda Digital ID (FIN). Recommended for ERCA filing validation.',
+                    employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Ask the employee for their 12-digit Fayda FIN from id.gov.et.',
+                )
+            )
 
 
 def _check_cash_compliance(data: list[dict], results: list[ValidationResult]):
@@ -509,22 +538,23 @@ def _check_cash_compliance(data: list[dict], results: list[ValidationResult]):
         emp_name = emp.get('name', '')
 
         if net > CASH_LIMIT and not bank:
-            results.append(ValidationResult(
-                rule_code='CASH_COMPLIANCE',
-                severity='FLAG',
-                message=f"{emp_name}'s net pay (ETB {net:,.2f}) exceeds the "
-                        f"ETB {CASH_LIMIT:,} cash payment limit. Ethiopian law "
-                        f"requires electronic payment (bank transfer or Telebirr) "
-                        f"for salaries above this amount.",
-                employee_id=emp.get('id'),
-                employee_name=emp_name,
-                hint='Add a bank account for this employee to avoid a compliance violation.',
-                details={'net_pay': net, 'cash_limit': CASH_LIMIT}
-            ))
+            results.append(
+                ValidationResult(
+                    rule_code='CASH_COMPLIANCE',
+                    severity='FLAG',
+                    message=f"{emp_name}'s net pay (ETB {net:,.2f}) exceeds the "
+                    f'ETB {CASH_LIMIT:,} cash payment limit. Ethiopian law '
+                    f'requires electronic payment (bank transfer or Telebirr) '
+                    f'for salaries above this amount.',
+                    employee_id=emp.get('id'),
+                    employee_name=emp_name,
+                    hint='Add a bank account for this employee to avoid a compliance violation.',
+                    details={'net_pay': net, 'cash_limit': CASH_LIMIT},
+                )
+            )
 
 
-def _check_active_deductions(data: list[dict], company_id: int,
-                              results: list[ValidationResult]):
+def _check_active_deductions(data: list[dict], company_id: int, results: list[ValidationResult]):
     """FLAG: Check for active deductions and their warnings.
 
     Pulls active deductions for each employee and flags:
@@ -549,10 +579,11 @@ def _check_active_deductions(data: list[dict], company_id: int,
         # The deduction's employee_id is the FK to Employee.id (integer)
         # We need to look up by Employee.employee_id
         from payroll_engine.models import Employee
+
         employees = Employee.query.filter(
             Employee.company_id == company_id,
             Employee.employee_id.in_(emp_ids),
-            Employee.is_deleted == False,
+            not Employee.is_deleted,
         ).all()
         emp_by_eid = {e.employee_id: e for e in employees}
 
@@ -563,7 +594,7 @@ def _check_active_deductions(data: list[dict], company_id: int,
         deductions = EmployeeDeduction.query.filter(
             EmployeeDeduction.company_id == company_id,
             EmployeeDeduction.employee_id.in_(emp_int_ids),
-            EmployeeDeduction.is_active == True
+            EmployeeDeduction.is_active,
         ).all()
 
         # Group deductions by employee_id (integer)
@@ -586,14 +617,16 @@ def _check_active_deductions(data: list[dict], company_id: int,
                 # Check for balance warning
                 warning = ded.warning_message
                 if warning:
-                    results.append(ValidationResult(
-                        rule_code='DEDUCTION_LOW_BALANCE',
-                        severity='FLAG',
-                        message=f"{emp_name}: {warning}",
-                        employee_id=eid,
-                        employee_name=emp_name,
-                        hint='This deduction will stop after this payment. Verify the amount is correct.',
-                    ))
+                    results.append(
+                        ValidationResult(
+                            rule_code='DEDUCTION_LOW_BALANCE',
+                            severity='FLAG',
+                            message=f'{emp_name}: {warning}',
+                            employee_id=eid,
+                            employee_name=emp_name,
+                            hint='This deduction will stop after this payment. Verify the amount is correct.',
+                        )
+                    )
 
                 # Court order cap check
                 if ded.deduction_type == 'court_order' and ded.amount_mode == 'percentage':
@@ -601,48 +634,53 @@ def _check_active_deductions(data: list[dict], company_id: int,
                     if ded.amount > cap:
                         # Check if it exceeds 1/2 (child support max)
                         if ded.amount > Decimal('50'):
-                            results.append(ValidationResult(
-                                rule_code='COURT_ORDER_EXCEEDS_CAP',
-                                severity='BLOCK',
-                                message=f"{emp_name}: Court order deduction ({ded.amount}%) exceeds "
-                                        f"the statutory maximum of 50% (child support cap). "
-                                        f"This is illegal.",
-                                employee_id=eid,
-                                employee_name=emp_name,
-                                hint='Reduce the deduction percentage to 50% or less.',
-                            ))
+                            results.append(
+                                ValidationResult(
+                                    rule_code='COURT_ORDER_EXCEEDS_CAP',
+                                    severity='BLOCK',
+                                    message=f'{emp_name}: Court order deduction ({ded.amount}%) exceeds '
+                                    f'the statutory maximum of 50% (child support cap). '
+                                    f'This is illegal.',
+                                    employee_id=eid,
+                                    employee_name=emp_name,
+                                    hint='Reduce the deduction percentage to 50% or less.',
+                                )
+                            )
                         else:
-                            results.append(ValidationResult(
-                                rule_code='COURT_ORDER_ABOVE_STANDARD',
-                                severity='FLAG',
-                                message=f"{emp_name}: Court order deduction ({ded.amount}%) exceeds "
-                                        f"the standard 1/3 (33.33%) cap. Only allowed for "
-                                        f"child support/maintenance.",
-                                employee_id=eid,
-                                employee_name=emp_name,
-                                hint='Verify this is a child support/maintenance order.',
-                            ))
+                            results.append(
+                                ValidationResult(
+                                    rule_code='COURT_ORDER_ABOVE_STANDARD',
+                                    severity='FLAG',
+                                    message=f'{emp_name}: Court order deduction ({ded.amount}%) exceeds '
+                                    f'the standard 1/3 (33.33%) cap. Only allowed for '
+                                    f'child support/maintenance.',
+                                    employee_id=eid,
+                                    employee_name=emp_name,
+                                    hint='Verify this is a child support/maintenance order.',
+                                )
+                            )
 
                 # Net pay cap check: total deductions can't exceed net
                 total_ded_amount = sum(d.calculate_deduction(net) for d in emp_deds)
                 if total_ded_amount > net:
-                    results.append(ValidationResult(
-                        rule_code='DEDUCTIONS_EXCEED_NET',
-                        severity='BLOCK',
-                        message=f"{emp_name}: Total deductions (ETB {total_ded_amount:,.2f}) exceed "
-                                f"net pay (ETB {net:,.2f}). Paycheck would be negative.",
-                        employee_id=eid,
-                        employee_name=emp_name,
-                        hint='Reduce deduction amounts or stop one of the deductions.',
-                    ))
+                    results.append(
+                        ValidationResult(
+                            rule_code='DEDUCTIONS_EXCEED_NET',
+                            severity='BLOCK',
+                            message=f'{emp_name}: Total deductions (ETB {total_ded_amount:,.2f}) exceed '
+                            f'net pay (ETB {net:,.2f}). Paycheck would be negative.',
+                            employee_id=eid,
+                            employee_name=emp_name,
+                            hint='Reduce deduction amounts or stop one of the deductions.',
+                        )
+                    )
 
     except Exception as e:
         # Database not available during tests or CSV-only validation.
         # Log so operators can see when deduction checks silently skipped.
         import logging
-        logging.getLogger('payroll_engine.validation').warning(
-            'Deduction validation skipped (DB unavailable): %s', e
-        )
+
+        logging.getLogger('payroll_engine.validation').warning('Deduction validation skipped (DB unavailable): %s', e)
 
 
 def get_summary(results: list[ValidationResult]) -> dict[str, Any]:

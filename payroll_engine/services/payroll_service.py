@@ -3,6 +3,7 @@
 Extracted from payroll_bp.py to separate business logic from HTTP handling.
 The route handler handles auth/flash/redirects; this service handles the data.
 """
+
 from datetime import UTC, datetime
 
 from payroll_engine import db
@@ -19,8 +20,8 @@ from payroll_engine.shared import create_audit_log, create_notification
 
 class ApprovalResult:
     """Result of a payroll approval attempt."""
-    def __init__(self, success, message=None, error=None,
-                 employee_count=0, compliance_score=None, redirect_to=None):
+
+    def __init__(self, success, message=None, error=None, employee_count=0, compliance_score=None, redirect_to=None):
         self.success = success
         self.message = message
         self.error = error
@@ -31,9 +32,7 @@ class ApprovalResult:
 
 def apply_flag_overrides(run_id, form_data):
     """Apply FLAG overrides from form data. Returns list of unresolved BLOCKs."""
-    flags = PayrollValidationResult.query.filter_by(
-        payroll_run_id=run_id, severity='FLAG'
-    ).all()
+    flags = PayrollValidationResult.query.filter_by(payroll_run_id=run_id, severity='FLAG').all()
 
     for i, flag in enumerate(flags):
         override_key = f'override_{i}'
@@ -46,9 +45,11 @@ def apply_flag_overrides(run_id, form_data):
     db.session.flush()
 
     # Check for unresolved BLOCKs
-    blocks = PayrollValidationResult.query.filter_by(
-        payroll_run_id=run_id, severity='BLOCK'
-    ).filter(PayrollValidationResult.overridden == False).all()
+    blocks = (
+        PayrollValidationResult.query.filter_by(payroll_run_id=run_id, severity='BLOCK')
+        .filter(not PayrollValidationResult.overridden)
+        .all()
+    )
 
     return blocks
 
@@ -88,7 +89,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         existing_emps = Employee.query.filter(
             Employee.company_id == company_id,
             Employee.employee_id.in_(emp_ids),
-            Employee.is_deleted == False,
+            not Employee.is_deleted,
         ).all()
         emp_by_eid = {e.employee_id: e for e in existing_emps}
 
@@ -133,9 +134,10 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Compliance scoring
         from payroll_engine.models import Company
+
         company = db.session.get(Company, company_id)
         run_date_str = run.run_date.isoformat()
-        score, status = compute_compliance_score(
+        score, _status = compute_compliance_score(
             company=company,
             payroll_date=run_date_str,
             disbursement_date=run.approved_at.date().isoformat() if run.approved_at else None,
@@ -152,11 +154,12 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 'compliance_score': score,
                 'approved_by': user_email,
                 'approval_ip': request_ip,
-            }
+            },
         )
 
         # Notify each employee that their payslip is ready
         from payroll_engine.notifications import notify
+
         all_payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
         for ps in all_payslips:
             emp = ps.employee
@@ -173,9 +176,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     )
                 except Exception as e:
                     import logging
-                    logging.getLogger('payroll_engine').error(
-                        'Failed to notify employee %s: %s', emp.id, e
-                    )
+
+                    logging.getLogger('payroll_engine').error('Failed to notify employee %s: %s', emp.id, e)
 
         # Clean up draft
         PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
@@ -195,16 +197,21 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         # Fire webhook — payroll completed
         try:
             from payroll_engine.webhooks import fire_webhook
-            fire_webhook(company_id, 'payroll.completed', {
-                'run_id': run.id,
-                'reference': run.reference,
-                'period': run.period,
-                'employee_count': len(employees_data),
-                'total_gross': float(sum(e.get('gross', 0) for e in employees_data)),
-                'total_tax': float(sum(e.get('tax', 0) for e in employees_data)),
-                'total_net': float(sum(e.get('net', 0) for e in employees_data)),
-                'compliance_score': score,
-            })
+
+            fire_webhook(
+                company_id,
+                'payroll.completed',
+                {
+                    'run_id': run.id,
+                    'reference': run.reference,
+                    'period': run.period,
+                    'employee_count': len(employees_data),
+                    'total_gross': float(sum(e.get('gross', 0) for e in employees_data)),
+                    'total_tax': float(sum(e.get('tax', 0) for e in employees_data)),
+                    'total_net': float(sum(e.get('net', 0) for e in employees_data)),
+                    'compliance_score': score,
+                },
+            )
         except Exception:
             pass
 
@@ -232,7 +239,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 company_id=company_id,
                 user_id=user_id,
                 action='payroll_run_failed',
-                details={'run_id': run.id, 'error': str(e)}
+                details={'run_id': run.id, 'error': str(e)},
             )
             db.session.commit()
         except Exception:

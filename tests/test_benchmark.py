@@ -9,6 +9,7 @@ Thresholds:
 - Dashboard API: <3s for 200 employees
 - Full payroll cycle: <10s for 200 employees
 """
+
 import os
 import sys
 import time
@@ -99,10 +100,11 @@ def _seed_payroll(company_id, employees, period='2018-10'):
 # Trust Component Benchmarks
 # ─────────────────────────────────────────
 
+
 class TestTrustComponentBenchmarks:
     """Benchmark trust components at realistic employee counts."""
 
-    @pytest.mark.parametrize("emp_count", [50, 200, 500])
+    @pytest.mark.parametrize('emp_count', [50, 200, 500])
     def test_change_summary_performance(self, app, emp_count):
         """Change Summary should compute within threshold."""
         with app.app_context():
@@ -115,6 +117,7 @@ class TestTrustComponentBenchmarks:
             trust_cache.invalidate_trust_cache()
 
             from payroll_engine import models as trust_models
+
             start = time.perf_counter()
             result = compute_change_summary(run.id, company.id, db, trust_models)
             elapsed = time.perf_counter() - start
@@ -123,13 +126,12 @@ class TestTrustComponentBenchmarks:
             assert result.current_employee_count == emp_count
 
             threshold = 2.0 if emp_count <= 200 else 5.0
-            print(f"\n  Change Summary ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)")
+            print(f'\n  Change Summary ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)')
             assert elapsed < threshold, (
-                f'Change Summary with {emp_count} employees took {elapsed:.2f}s, '
-                f'exceeding threshold of {threshold}s'
+                f'Change Summary with {emp_count} employees took {elapsed:.2f}s, exceeding threshold of {threshold}s'
             )
 
-    @pytest.mark.parametrize("emp_count", [50, 200, 500])
+    @pytest.mark.parametrize('emp_count', [50, 200, 500])
     def test_evidence_performance(self, app, emp_count):
         """Evidence collection should complete within threshold."""
         with app.app_context():
@@ -142,6 +144,7 @@ class TestTrustComponentBenchmarks:
             trust_cache.invalidate_trust_cache()
 
             from payroll_engine import models as trust_models
+
             change = compute_change_summary(run.id, company.id, db, trust_models)
 
             start = time.perf_counter()
@@ -150,13 +153,12 @@ class TestTrustComponentBenchmarks:
 
             assert evidence is not None
             threshold = 2.0 if emp_count <= 200 else 5.0
-            print(f"\n  Evidence ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)")
+            print(f'\n  Evidence ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)')
             assert elapsed < threshold, (
-                f'Evidence with {emp_count} employees took {elapsed:.2f}s, '
-                f'exceeding threshold of {threshold}s'
+                f'Evidence with {emp_count} employees took {elapsed:.2f}s, exceeding threshold of {threshold}s'
             )
 
-    @pytest.mark.parametrize("emp_count", [50, 200, 500])
+    @pytest.mark.parametrize('emp_count', [50, 200, 500])
     def test_exceptions_performance(self, app, emp_count):
         """Exception classification should complete within threshold."""
         with app.app_context():
@@ -169,6 +171,7 @@ class TestTrustComponentBenchmarks:
             trust_cache.invalidate_trust_cache()
 
             from payroll_engine import models as trust_models
+
             change = compute_change_summary(run.id, company.id, db, trust_models)
 
             start = time.perf_counter()
@@ -177,13 +180,12 @@ class TestTrustComponentBenchmarks:
 
             assert exceptions is not None
             threshold = 2.0 if emp_count <= 200 else 5.0
-            print(f"\n  Exceptions ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)")
+            print(f'\n  Exceptions ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)')
             assert elapsed < threshold, (
-                f'Exceptions with {emp_count} employees took {elapsed:.2f}s, '
-                f'exceeding threshold of {threshold}s'
+                f'Exceptions with {emp_count} employees took {elapsed:.2f}s, exceeding threshold of {threshold}s'
             )
 
-    @pytest.mark.parametrize("emp_count", [50, 200, 500])
+    @pytest.mark.parametrize('emp_count', [50, 200, 500])
     def test_all_trust_components_combined(self, app, emp_count):
         """All trust components together should complete within threshold."""
         with app.app_context():
@@ -210,7 +212,7 @@ class TestTrustComponentBenchmarks:
             assert exceptions is not None
 
             threshold = 3.0 if emp_count <= 200 else 8.0
-            print(f"\n  All trust components ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)")
+            print(f'\n  All trust components ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)')
             assert elapsed < threshold, (
                 f'All trust components with {emp_count} employees took {elapsed:.2f}s, '
                 f'exceeding threshold of {threshold}s'
@@ -220,6 +222,7 @@ class TestTrustComponentBenchmarks:
 # ─────────────────────────────────────────
 # Cache Performance
 # ─────────────────────────────────────────
+
 
 class TestCachePerformance:
     """Benchmark cache hit vs miss performance."""
@@ -236,6 +239,7 @@ class TestCachePerformance:
             trust_cache.invalidate_trust_cache()
 
             from payroll_engine import models as trust_models
+
             # First call — cache miss
             change = compute_change_summary(run.id, company.id, db, trust_models)
             trust_cache.put_change_summary(run.id, company.id, change)
@@ -246,38 +250,47 @@ class TestCachePerformance:
             elapsed = time.perf_counter() - start
 
             assert cached is not None
-            print(f"\n  Cache hit: {elapsed*1000:.3f}ms")
-            assert elapsed < 0.001, f'Cache hit took {elapsed*1000:.2f}ms, should be <1ms'
+            print(f'\n  Cache hit: {elapsed * 1000:.3f}ms')
+            assert elapsed < 0.001, f'Cache hit took {elapsed * 1000:.2f}ms, should be <1ms'
 
 
 # ─────────────────────────────────────────
 # Dashboard API Benchmark
 # ─────────────────────────────────────────
 
+
 class TestDashboardBenchmarks:
     """Benchmark dashboard API response time."""
 
-    @pytest.mark.parametrize("emp_count", [50, 200, 500])
+    @pytest.mark.parametrize('emp_count', [50, 200, 500])
     def test_dashboard_api_performance(self, app, emp_count):
         """Dashboard API should respond within threshold."""
         with app.app_context():
             client = app.test_client()
-            client.post('/auth/register', data={
-                'company_name': 'Benchmark PLC',
-                'phone': '0911123456',
-                'password': 'TestPass123!',
-                'password2': 'TestPass123!',
-            }, follow_redirects=True)
+            client.post(
+                '/auth/register',
+                data={
+                    'company_name': 'Benchmark PLC',
+                    'phone': '0911123456',
+                    'password': 'TestPass123!',
+                    'password2': 'TestPass123!',
+                },
+                follow_redirects=True,
+            )
 
             company = Company.query.filter_by(name='Benchmark PLC').first()
             employees = _seed_employees(company.id, emp_count)
-            run = _seed_payroll(company.id, employees)
+            _seed_payroll(company.id, employees)
             trust_cache.invalidate_trust_cache()
 
-            client.post('/auth/login', data={
-                'login_id': '0911123456',
-                'password': 'TestPass123!',
-            }, follow_redirects=True)
+            client.post(
+                '/auth/login',
+                data={
+                    'login_id': '0911123456',
+                    'password': 'TestPass123!',
+                },
+                follow_redirects=True,
+            )
 
             start = time.perf_counter()
             resp = client.get('/payroll/api/dashboard')
@@ -285,16 +298,16 @@ class TestDashboardBenchmarks:
 
             assert resp.status_code == 200
             threshold = 3.0 if emp_count <= 200 else 6.0
-            print(f"\n  Dashboard API ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)")
+            print(f'\n  Dashboard API ({emp_count} employees): {elapsed:.3f}s (threshold: {threshold}s)')
             assert elapsed < threshold, (
-                f'Dashboard API with {emp_count} employees took {elapsed:.2f}s, '
-                f'exceeding threshold of {threshold}s'
+                f'Dashboard API with {emp_count} employees took {elapsed:.2f}s, exceeding threshold of {threshold}s'
             )
 
 
 # ─────────────────────────────────────────
 # Full Cycle Benchmark
 # ─────────────────────────────────────────
+
 
 class TestFullCycleBenchmark:
     """Benchmark the full payroll review cycle."""
@@ -303,30 +316,37 @@ class TestFullCycleBenchmark:
         """Full review cycle (compute all + render) should complete in <10s."""
         with app.app_context():
             client = app.test_client()
-            client.post('/auth/register', data={
-                'company_name': 'Benchmark PLC',
-                'phone': '0911123456',
-                'password': 'TestPass123!',
-                'password2': 'TestPass123!',
-            }, follow_redirects=True)
+            client.post(
+                '/auth/register',
+                data={
+                    'company_name': 'Benchmark PLC',
+                    'phone': '0911123456',
+                    'password': 'TestPass123!',
+                    'password2': 'TestPass123!',
+                },
+                follow_redirects=True,
+            )
 
             company = Company.query.filter_by(name='Benchmark PLC').first()
             employees = _seed_employees(company.id, 200)
             run = _seed_payroll(company.id, employees)
             trust_cache.invalidate_trust_cache()
 
-            client.post('/auth/login', data={
-                'login_id': '0911123456',
-                'password': 'TestPass123!',
-            }, follow_redirects=True)
+            client.post(
+                '/auth/login',
+                data={
+                    'login_id': '0911123456',
+                    'password': 'TestPass123!',
+                },
+                follow_redirects=True,
+            )
 
             start = time.perf_counter()
             resp = client.get(f'/payroll/runs/{run.id}/review')
             elapsed = time.perf_counter() - start
 
             assert resp.status_code == 200
-            print(f"\n  Full review cycle (200 employees): {elapsed:.3f}s (threshold: 10s)")
+            print(f'\n  Full review cycle (200 employees): {elapsed:.3f}s (threshold: 10s)')
             assert elapsed < 10.0, (
-                f'Full review cycle with 200 employees took {elapsed:.2f}s, '
-                f'exceeding threshold of 10s'
+                f'Full review cycle with 200 employees took {elapsed:.2f}s, exceeding threshold of 10s'
             )

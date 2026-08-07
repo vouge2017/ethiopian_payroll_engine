@@ -5,6 +5,7 @@ Tests the plain-English paragraph generation from Change Summary data.
 
 Run: python -m pytest tests/test_narrative.py -v
 """
+
 import sys
 from decimal import Decimal
 from pathlib import Path
@@ -17,6 +18,7 @@ from payroll_engine.narrative import generate_narrative
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
+
 
 def _make_summary(
     current_period='2018-10',
@@ -73,8 +75,8 @@ def _make_change(name, change_type='salary_change'):
 # Tests: Employee count
 # ─────────────────────────────────────────────
 
-class TestEmployeeCount:
 
+class TestEmployeeCount:
     def test_basic_employee_count(self):
         summary = _make_summary(current_employees=128)
         text = generate_narrative(summary)
@@ -92,14 +94,12 @@ class TestEmployeeCount:
         assert '+2' in text
 
     def test_headcount_decrease(self):
-        summary = _make_summary(headcount_change=-1, current_employees=125,
-                                previous_employees=126)
+        summary = _make_summary(headcount_change=-1, current_employees=125, previous_employees=126)
         text = generate_narrative(summary)
         assert '-1' in text
 
     def test_no_headcount_change(self):
-        summary = _make_summary(headcount_change=0, current_employees=126,
-                                previous_employees=126)
+        summary = _make_summary(headcount_change=0, current_employees=126, previous_employees=126)
         text = generate_narrative(summary)
         assert '126 employees' in text
         assert '+' not in text.split('.')[0]  # No +/- in first sentence
@@ -109,18 +109,16 @@ class TestEmployeeCount:
 # Tests: First payroll (no previous)
 # ─────────────────────────────────────────────
 
-class TestFirstPayroll:
 
+class TestFirstPayroll:
     def test_first_payroll_uses_period_name(self):
-        summary = _make_summary(previous_period=None, headcount_change=0,
-                                gross_delta_pct=0)
+        summary = _make_summary(previous_period=None, headcount_change=0, gross_delta_pct=0)
         text = generate_narrative(summary)
         assert '2018-10' in text
         assert 'includes' in text
 
     def test_first_payroll_no_delta_text(self):
-        summary = _make_summary(previous_period=None, headcount_change=0,
-                                gross_delta_pct=0)
+        summary = _make_summary(previous_period=None, headcount_change=0, gross_delta_pct=0)
         text = generate_narrative(summary)
         assert 'increased' not in text
         assert 'decreased' not in text
@@ -130,8 +128,8 @@ class TestFirstPayroll:
 # Tests: Event descriptions
 # ─────────────────────────────────────────────
 
-class TestEventDescriptions:
 
+class TestEventDescriptions:
     def test_single_new_hire(self):
         summary = _make_summary(new_hires=[_make_change('Dawit', 'new_hire')])
         text = generate_narrative(summary)
@@ -139,10 +137,12 @@ class TestEventDescriptions:
         assert '1 new hire' in text
 
     def test_multiple_new_hires(self):
-        summary = _make_summary(new_hires=[
-            _make_change('Dawit', 'new_hire'),
-            _make_change('Hana', 'new_hire'),
-        ])
+        summary = _make_summary(
+            new_hires=[
+                _make_change('Dawit', 'new_hire'),
+                _make_change('Hana', 'new_hire'),
+            ]
+        )
         text = generate_narrative(summary)
         assert '2 new hires' in text
 
@@ -157,9 +157,7 @@ class TestEventDescriptions:
         assert '1 salary change' in text
 
     def test_overtime_mentioned(self):
-        summary = _make_summary(overtime_entries=[
-            _make_change(f'Emp{i}', 'overtime') for i in range(12)
-        ])
+        summary = _make_summary(overtime_entries=[_make_change(f'Emp{i}', 'overtime') for i in range(12)])
         text = generate_narrative(summary)
         assert '12 overtime claims' in text
 
@@ -181,8 +179,11 @@ class TestEventDescriptions:
 
     def test_no_changes(self):
         summary = _make_summary(
-            new_hires=[], departures=[], salary_changes=[],
-            overtime_entries=[], adjustments=[],
+            new_hires=[],
+            departures=[],
+            salary_changes=[],
+            overtime_entries=[],
+            adjustments=[],
         )
         text = generate_narrative(summary)
         assert 'No changes from last period' in text
@@ -192,8 +193,8 @@ class TestEventDescriptions:
 # Tests: Delta explanation
 # ─────────────────────────────────────────────
 
-class TestDeltaExplanation:
 
+class TestDeltaExplanation:
     def test_increased(self):
         summary = _make_summary(gross_delta_pct=1.3)
         text = generate_narrative(summary)
@@ -235,8 +236,8 @@ class TestDeltaExplanation:
 # Tests: Variance verdict
 # ─────────────────────────────────────────────
 
-class TestVarianceVerdict:
 
+class TestVarianceVerdict:
     def test_no_unusual_variance(self):
         summary = _make_summary(has_unusual_variance=False)
         text = generate_narrative(summary)
@@ -262,8 +263,8 @@ class TestVarianceVerdict:
 # Tests: Full narrative examples
 # ─────────────────────────────────────────────
 
-class TestFullNarrative:
 
+class TestFullNarrative:
     def test_typical_month(self):
         summary = _make_summary(
             current_employees=128,
@@ -289,8 +290,11 @@ class TestFullNarrative:
             current_employees=126,
             headcount_change=0,
             gross_delta_pct=0.05,
-            new_hires=[], departures=[], salary_changes=[],
-            overtime_entries=[], adjustments=[],
+            new_hires=[],
+            departures=[],
+            salary_changes=[],
+            overtime_entries=[],
+            adjustments=[],
         )
         text = generate_narrative(summary)
 
@@ -305,8 +309,11 @@ class TestFullNarrative:
             current_employees=50,
             headcount_change=0,
             gross_delta_pct=0,
-            new_hires=[], departures=[], salary_changes=[],
-            overtime_entries=[], adjustments=[],
+            new_hires=[],
+            departures=[],
+            salary_changes=[],
+            overtime_entries=[],
+            adjustments=[],
         )
         text = generate_narrative(summary)
 
@@ -338,8 +345,8 @@ class TestFullNarrative:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_none_summary(self):
         text = generate_narrative(None)
         assert 'not available' in text

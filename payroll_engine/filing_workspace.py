@@ -9,6 +9,7 @@ Tracks status of each filing component:
 - Pension Remittance: Ready, Generated, Filed
 - Bank File: Ready, Generated, Disbursed
 """
+
 from dataclasses import dataclass, field
 from datetime import date
 
@@ -25,9 +26,10 @@ OVERDUE = 'overdue'
 @dataclass
 class FilingStep:
     """A single filing step."""
+
     name: str
-    name_am: str           # Amharic name
-    status: str            # not_ready, ready, generated, filed, overdue
+    name_am: str  # Amharic name
+    status: str  # not_ready, ready, generated, filed, overdue
     deadline: str | None = None  # ISO date string
     days_remaining: int | None = None
     filed_at: str | None = None
@@ -40,6 +42,7 @@ class FilingStep:
 @dataclass
 class FilingWorkspace:
     """Complete filing readiness for a payroll period."""
+
     period: str
     payroll_status: str
     steps: list = field(default_factory=list)
@@ -115,9 +118,7 @@ def build_filing_workspace(run_id, company_id, db, models):
 
     # Step 2: ERCA Tax Filing
     erca_deadline = get_deadline_for_type(company, 'erca', run.run_date) if run.run_date else None
-    erca_record = FilingRecord.query.filter_by(
-        company_id=company_id, filing_type='erca', period=period
-    ).first()
+    erca_record = FilingRecord.query.filter_by(company_id=company_id, filing_type='erca', period=period).first()
 
     if erca_record:
         erca_step = FilingStep(
@@ -150,9 +151,7 @@ def build_filing_workspace(run_id, company_id, db, models):
 
     # Step 3: Pension Remittance
     pension_deadline = get_deadline_for_type(company, 'pension', run.run_date) if run.run_date else None
-    pension_record = FilingRecord.query.filter_by(
-        company_id=company_id, filing_type='pension', period=period
-    ).first()
+    pension_record = FilingRecord.query.filter_by(company_id=company_id, filing_type='pension', period=period).first()
 
     if pension_record:
         pension_step = FilingStep(
@@ -184,9 +183,7 @@ def build_filing_workspace(run_id, company_id, db, models):
     workspace.steps.append(pension_step)
 
     # Step 4: Bank File
-    bank_record = FilingRecord.query.filter_by(
-        company_id=company_id, filing_type='bank', period=period
-    ).first()
+    bank_record = FilingRecord.query.filter_by(company_id=company_id, filing_type='bank', period=period).first()
 
     if bank_record or run.disbursement_status == 'disbursed':
         bank_step = FilingStep(
@@ -220,8 +217,7 @@ def build_filing_workspace(run_id, company_id, db, models):
     upcoming = [
         (s.deadline, s.days_remaining)
         for s in workspace.steps
-        if s.deadline and s.days_remaining is not None and s.days_remaining >= 0
-        and s.status != FILED
+        if s.deadline and s.days_remaining is not None and s.days_remaining >= 0 and s.status != FILED
     ]
     if upcoming:
         upcoming.sort(key=lambda x: x[1])

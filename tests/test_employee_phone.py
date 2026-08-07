@@ -7,6 +7,7 @@ any phone format (Ethiopian, Kenyan, US, etc.) without restriction.
 The Ethiopian format validation (validate_ethiopian_phone) applies ONLY
 to User.phone for login/auth, NOT to Employee.phone for contact info.
 """
+
 import os
 import sys
 
@@ -57,35 +58,37 @@ def _login(client, app):
 def test_employee_accepts_non_ethiopian_phone(app):
     """Employee phone field accepts Ethiopian numbers (validated)."""
     test_phones = [
-        '+251911234567',    # Ethiopian +251 format
-        '0911234567',       # Ethiopian local format
-        '911234567',        # Ethiopian without leading 0
-        '+251711234567',    # Ethiopian Safaricom
-        '0711234567',       # Ethiopian Safaricom local
-        '711234567',        # Ethiopian Safaricom without leading 0
+        '+251911234567',  # Ethiopian +251 format
+        '0911234567',  # Ethiopian local format
+        '911234567',  # Ethiopian without leading 0
+        '+251711234567',  # Ethiopian Safaricom
+        '0711234567',  # Ethiopian Safaricom local
+        '711234567',  # Ethiopian Safaricom without leading 0
     ]
 
     with app.test_client() as client:
         company_id = _login(client, app)
 
         for i, phone in enumerate(test_phones):
-            resp = client.post('/employees/add', data={
-                'employee_id': f'EMP-{i+1:03d}',
-                'name': f'Worker {i+1}',
-                'phone': phone,
-                'basic_salary': '10000',
-                'allowances': '0',
-            }, follow_redirects=True)
+            resp = client.post(
+                '/employees/add',
+                data={
+                    'employee_id': f'EMP-{i + 1:03d}',
+                    'name': f'Worker {i + 1}',
+                    'phone': phone,
+                    'basic_salary': '10000',
+                    'allowances': '0',
+                },
+                follow_redirects=True,
+            )
 
             # Should NOT get a phone validation error
-            assert b'Invalid' not in resp.data, \
-                f"Ethiopian phone {phone} was rejected by employee form"
+            assert b'Invalid' not in resp.data, f'Ethiopian phone {phone} was rejected by employee form'
 
     # Verify all employees were saved (must filter by company_id for TenantQuery)
     with app.app_context():
         employees = Employee.query.filter_by(company_id=company_id).all()
-        assert len(employees) == len(test_phones), \
-            f"Expected {len(test_phones)} employees, got {len(employees)}"
+        assert len(employees) == len(test_phones), f'Expected {len(test_phones)} employees, got {len(employees)}'
 
 
 def test_employee_phone_stored_as_is(app):
@@ -93,20 +96,23 @@ def test_employee_phone_stored_as_is(app):
     with app.test_client() as client:
         company_id = _login(client, app)
 
-        resp = client.post('/employees/add', data={
-            'employee_id': 'EMP001',
-            'name': 'Ethiopian Worker',
-            'phone': '+251911234567',
-            'basic_salary': '10000',
-            'allowances': '0',
-        }, follow_redirects=True)
+        client.post(
+            '/employees/add',
+            data={
+                'employee_id': 'EMP001',
+                'name': 'Ethiopian Worker',
+                'phone': '+251911234567',
+                'basic_salary': '10000',
+                'allowances': '0',
+            },
+            follow_redirects=True,
+        )
 
     with app.app_context():
         emp = Employee.query.filter_by(employee_id='EMP001', company_id=company_id).first()
         assert emp is not None
         # Phone is normalized to 0XXXXXXXXX format by validate_ethiopian_phone
-        assert emp.phone == '0911234567', \
-            f"Phone was stored as '{emp.phone}', expected '0911234567'"
+        assert emp.phone == '0911234567', f"Phone was stored as '{emp.phone}', expected '0911234567'"
 
 
 def test_ethiopian_phone_still_works_for_employees(app):
@@ -114,13 +120,17 @@ def test_ethiopian_phone_still_works_for_employees(app):
     with app.test_client() as client:
         company_id = _login(client, app)
 
-        resp = client.post('/employees/add', data={
-            'employee_id': 'EMP001',
-            'name': 'Ethiopian Worker',
-            'phone': '+251911234567',
-            'basic_salary': '10000',
-            'allowances': '0',
-        }, follow_redirects=True)
+        client.post(
+            '/employees/add',
+            data={
+                'employee_id': 'EMP001',
+                'name': 'Ethiopian Worker',
+                'phone': '+251911234567',
+                'basic_salary': '10000',
+                'allowances': '0',
+            },
+            follow_redirects=True,
+        )
 
     with app.app_context():
         emp = Employee.query.filter_by(employee_id='EMP001', company_id=company_id).first()

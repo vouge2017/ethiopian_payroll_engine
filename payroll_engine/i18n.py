@@ -44,7 +44,6 @@ STRINGS = {
     'show_calculation': 'ስሌት አሳይ',
     'entries': 'ምዝገባዎች',
     'overtime': 'ትርፍ ሰዓት',
-
     # Employee Fields
     'employee_id': 'የሰራተኛ መታወቂያ',
     'full_name': 'ሙሉ ስም',
@@ -64,7 +63,6 @@ STRINGS = {
     'status': 'ሁኔታ',
     'deactivated': 'የታገደ',
     'linked_user': 'የተያያዘ ተጠቃሚ',
-
     # Payroll
     'payroll_summary': 'የደመወዝ ማጠቃለያ',
     'payroll_history': 'የደመወዝ ታሪክ',
@@ -95,7 +93,6 @@ STRINGS = {
     'total_gross': 'ጠቅላላ ጥቅል ደመወዝ',
     'total_tax': 'ጠቅላላ ግብር',
     'total_net': 'ጠቅላላ የተጣራ ክፍያ',
-
     # Overtime
     'overtime_this_month': 'የዚህ ወር ትርፍ ሰዓት',
     'total_hours': 'ጠቅላላ ሰዓት',
@@ -103,7 +100,6 @@ STRINGS = {
     'hours': 'ሰዓታት',
     'type': 'ዓይነት',
     'rate': 'ተመን',
-
     # Compliance & Reports
     'compliance': 'ህግ ማክበር',
     'compliance_score': 'የህግ ማክበር ደረጃ',
@@ -120,25 +116,21 @@ STRINGS = {
     'reason': 'ምክንያት',
     'note': 'ማስታወሻ',
     'why_ok': 'ይህ ለምን ተፈቀደ?',
-
     # Dashboard
     'latest_net_pay': 'የቅርብ የተጣራ ክፍያ',
     'last_payroll_run': 'መጨረሻ የተሰራ ደመወዝ',
     'quick_actions': 'ፈጣን ተግባራት',
-
     # Termination
     'severance_preview': 'የስንብት ክፍያ ስሌት ቅድመ-እይታ',
     'termination_reason': 'የስንብት ምክንያት',
     'last_working_day': 'የመጨረሻ የስራ ቀን',
     'years_of_service': 'የአገልግሎት ዘመን',
-
     # Team & Linking
     'current_members': 'የአሁኑ አባላት',
     'add_team_member': 'የቡድን አባል መዝግብ',
     'phone_or_email': 'ስልክ ወይም ኢሜይል',
     'user_account': 'የተጠቃሚ መለያ',
     'link_employee_user': 'ሰራተኛውን ከተጠቃሚ መለያ ጋር አያይዝ',
-
     # Login & Registration
     'password': 'የይለፍ ቃል',
     'forgot_password': 'የይለፍ ቃል ረስተዋል?',
@@ -146,17 +138,15 @@ STRINGS = {
     'email': 'ኢሜይል',
     'yes': 'አዎ',
     'no': 'አይደለም',
-
     # CSV & Format
     'csv_format': 'የCSV ቅርፅ',
     'bank_telebirr': 'ባንክ / ቴሌብር',
-
     # Flash Messages
     'how_tax_calculated': 'ግብር እንዴት ይሰላል?',
     'tax_explainer_intro': 'የኢትዮጵያ ገቢ ግብር ተከታታይ ደረጃዎችን ይጠቀማል (ህግ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነሳል፣ የሚተካ ገቢዎን ይቀንሳል።',
     'bracket': 'ደረጃ',
     'taxable_range': 'የሚተካ ገቢ ክልል',
-    'rate': 'መጠን',
+    'tax_rate': 'መጠን',
     'personal_relief': 'የግል ማስታገሻ',
     'per_month': 'በወር',
     'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነሳል',

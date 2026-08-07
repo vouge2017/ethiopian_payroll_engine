@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 logger = logging.getLogger('payroll_engine')
 
@@ -19,20 +19,23 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["200 per hour"],
+    default_limits=['200 per hour'],
     storage_uri=os.environ.get('RATELIMIT_STORAGE_URI', 'memory://'),
 )
+
 
 @login_manager.user_loader
 def load_user(user_id):
     from .models import User
+
     return db.session.get(User, int(user_id))
 
 
 def _json_serializer(obj):
     """Custom JSON serializer that handles Decimal for db.JSON columns."""
-    import json as _json
+    import json as _json  # noqa: F401 — used below in this function
     from decimal import Decimal as _Dec
+
     if isinstance(obj, _Dec):
         return float(obj)
     raise TypeError(f'Object of type {type(obj).__name__} is not JSON serializable')
@@ -55,9 +58,9 @@ def _configure_logging(app):
     log_level = getattr(logging, app.config.get('LOG_LEVEL', 'INFO'), logging.INFO)
     handler = logging.StreamHandler()
     handler.setLevel(log_level)
-    handler.setFormatter(logging.Formatter(
-        '[%(asctime)s] %(levelname)s req=%(request_id)s %(method)s %(path)s %(message)s'
-    ))
+    handler.setFormatter(
+        logging.Formatter('[%(asctime)s] %(levelname)s req=%(request_id)s %(method)s %(path)s %(message)s')
+    )
     handler.addFilter(RequestIdFilter())
     app.logger.addHandler(handler)
     app.logger.setLevel(log_level)
@@ -86,6 +89,7 @@ def create_app():
         if errors:
             raise RuntimeError('Insecure production configuration: ' + '; '.join(errors))
         from config import ProductionConfig
+
         app.config.from_object(ProductionConfig())
     elif env == 'staging':
         secret = os.environ.get('SECRET_KEY', '')
@@ -103,9 +107,11 @@ def create_app():
         if errors:
             raise RuntimeError('Insecure staging configuration: ' + '; '.join(errors))
         from config import StagingConfig
+
         app.config.from_object(StagingConfig())
     else:
         from config import _env_bool
+
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-change-in-production')
         app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
         app.config['ENABLE_DEMO_MODE'] = _env_bool(
@@ -125,12 +131,14 @@ def create_app():
     # Connection pooling (only for non-SQLite — SQLite in-memory doesn't support these)
     db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
     if not db_url.startswith('sqlite'):
-        engine_options.update({
-            'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', '5')),
-            'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', '10')),
-            'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', '30')),
-            'pool_recycle': int(os.environ.get('SQLALCHEMY_POOL_RECYCLE', '300')),
-        })
+        engine_options.update(
+            {
+                'pool_size': int(os.environ.get('SQLALCHEMY_POOL_SIZE', '5')),
+                'max_overflow': int(os.environ.get('SQLALCHEMY_MAX_OVERFLOW', '10')),
+                'pool_timeout': int(os.environ.get('SQLALCHEMY_POOL_TIMEOUT', '30')),
+                'pool_recycle': int(os.environ.get('SQLALCHEMY_POOL_RECYCLE', '300')),
+            }
+        )
         # Render PostgreSQL requires SSL
         if os.environ.get('RENDER') and 'sslmode' not in db_url:
             engine_options['connect_args'] = {'sslmode': 'require'}
@@ -146,6 +154,7 @@ def create_app():
     app.config['GOOGLE_DISCOVERY_URL'] = 'https://accounts.google.com/.well-known/openid-configuration'
     try:
         from authlib.integrations.flask_client import OAuth
+
         oauth = OAuth(app)
         if app.config['GOOGLE_CLIENT_ID']:
             oauth.register(
@@ -158,7 +167,8 @@ def create_app():
         app.oauth = oauth
     except ImportError as e:
         import logging
-        logging.warning(f"OAuth disabled — missing dependency: {e}")
+
+        logging.warning(f'OAuth disabled — missing dependency: {e}')
         app.oauth = None
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -177,6 +187,7 @@ def create_app():
 
     # Register tenant-scoped models for structural isolation enforcement
     from .models import AuditLog, Employee, EmployeeDeduction, OvertimeEntry, PayrollRun, TenantQuery, UserCompany
+
     TenantQuery.register_model(Employee)
     TenantQuery.register_model(PayrollRun)
     TenantQuery.register_model(AuditLog)
@@ -188,6 +199,7 @@ def create_app():
     @app.template_filter('calculation_flow')
     def calculation_flow_filter(result):
         from payroll_engine.payroll import generate_calculation_flow
+
         return generate_calculation_flow(result)
 
     @app.before_request
@@ -221,6 +233,7 @@ def create_app():
             if now - login_time > abs_hours * 3600:
                 flask_session.clear()
                 from flask_login import logout_user
+
                 logout_user()
                 flash('Session expired. Please log in again.', 'warning')
                 return redirect(url_for('auth.login'))
@@ -231,6 +244,7 @@ def create_app():
         if now - last_active > idle_limit:
             flask_session.clear()
             from flask_login import logout_user
+
             logout_user()
             flash('Session expired due to inactivity. Please log in again.', 'warning')
             return redirect(url_for('auth.login'))
@@ -246,11 +260,13 @@ def create_app():
     def daily_retention_purge():
         """Purge expired artifacts once per day."""
         from flask_login import current_user
+
         if not current_user.is_authenticated:
             return
         today = date.today().isoformat()
         try:
             from .models import SystemSetting
+
             if SystemSetting.get('last_purge_date') == today:
                 return
             from .retention import (
@@ -259,6 +275,7 @@ def create_app():
                 purge_expired_uploads,
                 purge_old_login_attempts,
             )
+
             purge_expired_payslip_pdfs(app)
             purge_expired_drafts(app)
             purge_expired_uploads(app)
@@ -275,6 +292,7 @@ def create_app():
         Only runs for authenticated users with a company.
         """
         from flask_login import current_user
+
         if not current_user.is_authenticated:
             return
         company_id = current_user.company_id
@@ -289,6 +307,7 @@ def create_app():
             _last_draft_check[0] = today_str
             try:
                 from .services.proactive import prepare_monthly_draft
+
                 prepare_monthly_draft(company_id)
             except Exception:
                 logger.exception('Monthly draft preparation failed')
@@ -298,6 +317,7 @@ def create_app():
             _last_nudge_check[0] = today_str
             try:
                 from .services.proactive import send_compliance_nudges
+
                 send_compliance_nudges(company_id)
             except Exception:
                 logger.exception('Compliance nudges failed')
@@ -312,10 +332,12 @@ def create_app():
         return response
 
     from .auth import auth as auth_blueprint
+
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
     # CORS — restrict to configured origins, never wildcard with credentials
     from flask_cors import CORS
+
     cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '').strip()
     if cors_origins:
         allowed_origins = [o.strip() for o in cors_origins.split(',') if o.strip()]
@@ -340,6 +362,7 @@ def create_app():
     # HTTPS enforcement via Flask-Talisman
     if not app.debug and not app.config.get('TESTING', False) and os.environ.get('FLASK_ENV') != 'testing':
         from flask_talisman import Talisman
+
         Talisman(
             app,
             force_https=True,
@@ -351,59 +374,75 @@ def create_app():
                 'script-src': [
                     "'self'",
                     "'unsafe-inline'",
-                    "https://cdn.jsdelivr.net",
+                    'https://cdn.jsdelivr.net',
                 ],
                 'style-src': [
                     "'self'",
                     "'unsafe-inline'",
-                    "https://cdn.jsdelivr.net",
-                    "https://fonts.googleapis.com",
+                    'https://cdn.jsdelivr.net',
+                    'https://fonts.googleapis.com',
                 ],
                 'font-src': [
                     "'self'",
-                    "https://cdn.jsdelivr.net",
-                    "https://fonts.gstatic.com",
+                    'https://cdn.jsdelivr.net',
+                    'https://fonts.gstatic.com',
                 ],
                 'img-src': "'self' data:",
                 'connect-src': [
                     "'self'",
-                    "https://cdn.jsdelivr.net",
+                    'https://cdn.jsdelivr.net',
                 ],
             },
         )
     from .main import main as main_blueprint
+
     app.register_blueprint(main_blueprint)
     from .employees_bp import employees_bp
+
     app.register_blueprint(employees_bp)
     from .payroll_bp import payroll_bp
+
     app.register_blueprint(payroll_bp)
     from .reports_bp import reports_bp
+
     app.register_blueprint(reports_bp)
     from .settings_bp import settings_bp
+
     app.register_blueprint(settings_bp)
     from .portal_bp import portal_bp
+
     app.register_blueprint(portal_bp)
     from .api import api as api_blueprint
+
     app.register_blueprint(api_blueprint, url_prefix='/api/v1')
 
     from .wizard_bp import wizard_bp
+
     app.register_blueprint(wizard_bp)
     from .help_bp import help_bp
+
     app.register_blueprint(help_bp)
     from .attendance_bp import attendance_bp
+
     app.register_blueprint(attendance_bp)
     from .accounting_bp import accounting_bp
+
     app.register_blueprint(accounting_bp)
     from .calendar_bp import calendar_bp
+
     app.register_blueprint(calendar_bp)
     from .verification_bp import verification_bp
+
     app.register_blueprint(verification_bp)
     from .selfservice_bp import selfservice_bp
+
     app.register_blueprint(selfservice_bp)
+
     @app.cli.command('seed-holidays')
     def seed_holidays_cmd():
         """Seed Ethiopian national holidays."""
         from payroll_engine.holidays import seed_holidays
+
         added = seed_holidays()
         print(f'Seeded {added} holidays.')
 
@@ -411,14 +450,17 @@ def create_app():
     @app.route('/api/vapid-key')
     def vapid_key():
         from payroll_engine.push import get_vapid_public_key
+
         return {'key': get_vapid_public_key()}
 
     @app.route('/api/push/subscribe', methods=['POST'])
     def push_subscribe():
-        from flask_login import current_user, login_required
+        from flask_login import current_user, login_required  # noqa: F401
+
         if not current_user.is_authenticated:
             return {'error': 'Unauthorized'}, 401
         from payroll_engine.push import save_subscription
+
         data = request.get_json()
         if data:
             save_subscription(current_user.id, data)
@@ -432,6 +474,7 @@ def create_app():
     @app.route('/readyz')
     def readyz():
         from sqlalchemy import text
+
         status = {'self': 'up'}
         # Check DB connectivity
         try:
@@ -444,6 +487,7 @@ def create_app():
         # Check migration status
         try:
             from flask_migrate import current as migration_current
+
             with app.app_context():
                 heads = migration_current()
                 status['migrations'] = 'current' if heads else 'unknown'
@@ -458,17 +502,19 @@ def create_app():
 
     @app.route('/offline')
     def offline():
-        return ("<!doctype html><html><head>"
-               '<meta charset="utf-8">'
-               '<meta name="viewport" content="width=device-width,initial-scale=1">'
-               '<title>Offline — EthioPayroll</title>'
-               '<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f9;color:#333}'
-               '.box{text-align:center;padding:2rem}.box h1{font-size:1.5rem;margin-bottom:.5rem}.box p{color:#666}</style>'
-               '</head><body><div class="box">'
-               '<h1>You\u2019re offline</h1>'
-               '<p>EthioPayroll needs an internet connection to load payroll data.'
-               '<br>Please check your connection and try again.</p>'
-               '</div></body></html>'), 200
+        return (
+            '<!doctype html><html><head>'
+            '<meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<title>Offline — EthioPayroll</title>'
+            '<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f9;color:#333}'
+            '.box{text-align:center;padding:2rem}.box h1{font-size:1.5rem;margin-bottom:.5rem}.box p{color:#666}</style>'
+            '</head><body><div class="box">'
+            '<h1>You\u2019re offline</h1>'
+            '<p>EthioPayroll needs an internet connection to load payroll data.'
+            '<br>Please check your connection and try again.</p>'
+            '</div></body></html>'
+        ), 200
 
     # Make Ethiopian calendar available in all templates
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
@@ -478,6 +524,7 @@ def create_app():
     def inject_ethiopian_calendar():
         # Get language from session or default to English
         from flask import session
+
         lang = session.get('language', 'en')
 
         def _safe_dual_date(d):
@@ -486,6 +533,7 @@ def create_app():
                 return ''
             if isinstance(d, str):
                 from datetime import datetime as dt
+
                 try:
                     d = dt.strptime(d[:10], '%Y-%m-%d').date()
                 except (ValueError, IndexError):
@@ -498,6 +546,7 @@ def create_app():
                 return ''
             if isinstance(d, str):
                 from datetime import datetime as dt
+
                 try:
                     d = dt.strptime(d[:10], '%Y-%m-%d').date()
                 except (ValueError, IndexError):
@@ -517,14 +566,18 @@ def create_app():
         """Inject deadline notification banner data for authenticated users."""
         from flask import session as flask_session
         from flask_login import current_user
+
         try:
             if not current_user.is_authenticated or not current_user.company_id:
                 return {'deadline_alerts': []}
             company_id = flask_session.get('active_company_id', current_user.company_id)
             from payroll_engine.compliance import get_upcoming_deadlines
             from payroll_engine.models import Company, PayrollRun
+
             company = db.session.get(Company, company_id)
-            latest_run = PayrollRun.query.filter_by(company_id=company_id).order_by(PayrollRun.created_at.desc()).first()
+            latest_run = (
+                PayrollRun.query.filter_by(company_id=company_id).order_by(PayrollRun.created_at.desc()).first()
+            )
             payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
             deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
             alerts = []
@@ -552,17 +605,15 @@ def create_app():
         """
         from flask import session as flask_session
         from flask_login import current_user
+
         try:
             if not current_user.is_authenticated or not current_user.company_id:
                 return {'employee_count': 0, 'pending_profile_changes': 0}
             company_id = flask_session.get('active_company_id', current_user.company_id)
             from payroll_engine.models import Employee, ProfileChangeRequest
-            emp_count = Employee.query.filter_by(
-                company_id=company_id, is_deleted=False
-            ).count()
-            pending_changes = ProfileChangeRequest.query.filter_by(
-                company_id=company_id, status='pending'
-            ).count()
+
+            emp_count = Employee.query.filter_by(company_id=company_id, is_deleted=False).count()
+            pending_changes = ProfileChangeRequest.query.filter_by(company_id=company_id, status='pending').count()
             return {
                 'employee_count': emp_count,
                 'pending_profile_changes': pending_changes,
@@ -576,6 +627,7 @@ def create_app():
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
         from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+
         sentry_sdk.init(
             dsn=sentry_dsn,
             integrations=[FlaskIntegration(), SqlalchemyIntegration()],
@@ -591,11 +643,13 @@ def create_app():
     @app.errorhandler(403)
     def forbidden(e):
         from flask import render_template
+
         return render_template('errors/403.html'), 403
 
     @app.errorhandler(404)
     def not_found(e):
         from flask import render_template
+
         return render_template('errors/404.html'), 404
 
     @app.errorhandler(500)
@@ -603,6 +657,7 @@ def create_app():
         from flask import render_template
 
         from payroll_engine import db
+
         db.session.rollback()
         return render_template('errors/500.html'), 500
 

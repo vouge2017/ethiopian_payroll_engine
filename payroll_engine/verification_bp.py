@@ -4,6 +4,7 @@ Accountant Verification Blueprint — self-guided verification flow.
 Walks accountants through verifying the system's calculations step by step.
 Includes feedback form for flagging issues.
 """
+
 import json
 from datetime import UTC, datetime
 
@@ -257,13 +258,15 @@ def verification_summary():
     results = []
     for step in VERIFICATION_STEPS:
         p = progress.get(step['id'], {})
-        results.append({
-            'step': step,
-            'verified': p.get('verified', False),
-            'correct': p.get('correct', False),
-            'correction': p.get('correction', ''),
-            'notes': p.get('notes', ''),
-        })
+        results.append(
+            {
+                'step': step,
+                'verified': p.get('verified', False),
+                'correct': p.get('correct', False),
+                'correction': p.get('correction', ''),
+                'notes': p.get('notes', ''),
+            }
+        )
 
     verified_count = sum(1 for r in results if r['verified'])
     correct_count = sum(1 for r in results if r['verified'] and r['correct'])
@@ -295,12 +298,14 @@ def submit_feedback():
     # Store feedback
     feedback_json = SystemSetting.get('accountant_feedback')
     feedback_list = json.loads(feedback_json) if feedback_json else []
-    feedback_list.append({
-        'user_id': current_user.id,
-        'category': category,
-        'feedback': feedback_text,
-        'timestamp': datetime.now(UTC).isoformat(),
-    })
+    feedback_list.append(
+        {
+            'user_id': current_user.id,
+            'category': category,
+            'feedback': feedback_text,
+            'timestamp': datetime.now(UTC).isoformat(),
+        }
+    )
     SystemSetting.set('accountant_feedback', json.dumps(feedback_list))
 
     return jsonify({'status': 'received', 'message': 'Thank you for your feedback!'})

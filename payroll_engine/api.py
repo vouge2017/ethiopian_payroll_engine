@@ -55,6 +55,7 @@ def add_cache_headers(response):
 
     return response
 
+
 def _extract_bearer_token():
     """Extract Bearer token from Authorization header, or None."""
     auth = request.headers.get('Authorization', '')
@@ -71,6 +72,7 @@ def api_token_or_login_required(f):
     When no Bearer token:
       - Fall through to session cookie auth.
     """
+
     @wraps(f)
     def decorated(*args, **kwargs):
         token = _extract_bearer_token()
@@ -85,6 +87,7 @@ def api_token_or_login_required(f):
         if not current_user.is_authenticated:
             return jsonify({'error': 'Authentication required. Use Bearer token or login.'}), 401
         return f(*args, **kwargs)
+
     return decorated
 
 
@@ -97,6 +100,7 @@ def _get_company_id():
     if hasattr(flask_g, '_api_company_id'):
         return flask_g._api_company_id
     from flask import session as flask_session
+
     return flask_session.get('active_company_id', current_user.company_id if current_user.is_authenticated else None)
 
 
@@ -182,6 +186,7 @@ def _validate_employee_data(data, *, partial=False):
 
 def company_required(f):
     """Ensure user belongs to a company that exists in the database."""
+
     @wraps(f)
     def decorated(*args, **kwargs):
         user = _get_current_user()
@@ -189,13 +194,17 @@ def company_required(f):
         if user is None or not cid:
             return jsonify({'error': 'Unauthorized'}), 401
         if not _company_exists(cid):
-            return jsonify({'error': 'Company not found', 'detail': 'The company associated with your account no longer exists.'}), 404
+            return jsonify(
+                {'error': 'Company not found', 'detail': 'The company associated with your account no longer exists.'}
+            ), 404
         return f(*args, **kwargs)
+
     return decorated
 
 
 def api_role_required(*roles):
     """Restrict API access to specific roles. Supports API tokens."""
+
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
@@ -205,11 +214,14 @@ def api_role_required(*roles):
             if effective_role not in roles:
                 return jsonify({'error': 'Forbidden', 'required_roles': list(roles), 'your_role': effective_role}), 403
             return f(*args, **kwargs)
+
         return decorated
+
     return decorator
 
 
 # --- Employee endpoints ---
+
 
 @api.route('/employees', methods=['GET'])
 @api_token_or_login_required
@@ -219,31 +231,34 @@ def list_employees():
     per_page = request.args.get('per_page', 50, type=int)
     per_page = min(per_page, 200)  # hard cap
 
-    query = Employee.query.filter_by(
-        company_id=_get_company_id(), is_deleted=False
-    ).order_by(Employee.name)
+    query = Employee.query.filter_by(company_id=_get_company_id(), is_deleted=False).order_by(Employee.name)
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     employees = pagination.items
 
-    return jsonify({
-        'employees': [{
-            'id': e.id,
-            'employee_id': e.employee_id,
-            'name': e.name,
-            'basic_salary': e.basic_salary,
-            'allowances': e.allowances,
-            'bank_or_telebirr': e.bank_or_telebirr,
-        } for e in employees],
-        'pagination': {
-            'page': pagination.page,
-            'per_page': pagination.per_page,
-            'total': pagination.total,
-            'pages': pagination.pages,
-            'has_next': pagination.has_next,
-            'has_prev': pagination.has_prev,
-        },
-    })
+    return jsonify(
+        {
+            'employees': [
+                {
+                    'id': e.id,
+                    'employee_id': e.employee_id,
+                    'name': e.name,
+                    'basic_salary': e.basic_salary,
+                    'allowances': e.allowances,
+                    'bank_or_telebirr': e.bank_or_telebirr,
+                }
+                for e in employees
+            ],
+            'pagination': {
+                'page': pagination.page,
+                'per_page': pagination.per_page,
+                'total': pagination.total,
+                'pages': pagination.pages,
+                'has_next': pagination.has_next,
+                'has_prev': pagination.has_prev,
+            },
+        }
+    )
 
 
 @api.route('/employees', methods=['POST'])
@@ -276,6 +291,7 @@ def create_employee():
     db.session.add(emp)
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_get_company_id())
     return jsonify({'id': emp.id, 'employee_id': emp.employee_id}), 201
 
@@ -285,16 +301,18 @@ def create_employee():
 @company_required
 def get_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=_get_company_id(), is_deleted=False).first_or_404()
-    return jsonify({
-        'id': emp.id,
-        'employee_id': emp.employee_id,
-        'name': emp.name,
-        'basic_salary': emp.basic_salary,
-        'allowances': emp.allowances,
-        'fayda_fin': emp.fayda_fin,
-        'bank_or_telebirr': emp.bank_or_telebirr,
-        'tin': emp.tin,
-    })
+    return jsonify(
+        {
+            'id': emp.id,
+            'employee_id': emp.employee_id,
+            'name': emp.name,
+            'basic_salary': emp.basic_salary,
+            'allowances': emp.allowances,
+            'fayda_fin': emp.fayda_fin,
+            'bank_or_telebirr': emp.bank_or_telebirr,
+            'tin': emp.tin,
+        }
+    )
 
 
 @api.route('/employees/<int:emp_id>', methods=['PUT'])
@@ -322,6 +340,7 @@ def update_employee(emp_id):
         fin = data['fayda_fin']
         if fin:
             from payroll_engine.models import validate_fayda_fin
+
             is_valid, normalized, error = validate_fayda_fin(str(fin))
             if not is_valid:
                 return jsonify({'error': f'Fayda FIN: {error}'}), 422
@@ -330,6 +349,7 @@ def update_employee(emp_id):
             emp.fayda_fin = None
     db.session.commit()
     from payroll_engine import trust_cache
+
     trust_cache.invalidate_trust_cache(_get_company_id())
     return jsonify({'id': emp.id, 'employee_id': emp.employee_id})
 
@@ -345,20 +365,22 @@ def delete_employee(emp_id):
         db.session.delete(emp)
         db.session.commit()
         from payroll_engine import trust_cache
+
         trust_cache.invalidate_trust_cache(_get_company_id())
     except IntegrityError:
         db.session.rollback()
-        return jsonify({
-            'error': 'Cannot delete employee with payroll history. '
-                     'Use deactivation instead.',
-            'suggestion': f'POST /api/v1/employees/{emp_id}/deactivate'
-        }), 409
+        return jsonify(
+            {
+                'error': 'Cannot delete employee with payroll history. Use deactivation instead.',
+                'suggestion': f'POST /api/v1/employees/{emp_id}/deactivate',
+            }
+        ), 409
     # Log successful delete
     log = AuditLog(
         company_id=_get_company_id(),
         user_id=_get_current_user().id,
         action='employee_deleted_api',
-        details={'employee_id': emp.employee_id, 'employee_name': emp.name}
+        details={'employee_id': emp.employee_id, 'employee_name': emp.name},
     )
     db.session.add(log)
     db.session.commit()
@@ -367,17 +389,23 @@ def delete_employee(emp_id):
 
 # --- Payroll Run endpoints ---
 
+
 @api.route('/payroll-runs', methods=['GET'])
 @api_token_or_login_required
 @company_required
 def list_payroll_runs():
     runs = PayrollRun.query.filter_by(company_id=_get_company_id()).order_by(PayrollRun.run_date.desc()).all()
-    return jsonify([{
-        'id': r.id,
-        'run_date': r.run_date.isoformat(),
-        'status': r.status,
-        'payslip_count': len(r.payslips),
-    } for r in runs])
+    return jsonify(
+        [
+            {
+                'id': r.id,
+                'run_date': r.run_date.isoformat(),
+                'status': r.status,
+                'payslip_count': len(r.payslips),
+            }
+            for r in runs
+        ]
+    )
 
 
 @api.route('/payroll-runs/<int:run_id>', methods=['GET'])
@@ -385,22 +413,28 @@ def list_payroll_runs():
 @company_required
 def get_payroll_run(run_id):
     run = PayrollRun.query.filter_by(id=run_id, company_id=_get_company_id()).first_or_404()
-    return jsonify({
-        'id': run.id,
-        'run_date': run.run_date.isoformat(),
-        'status': run.status,
-        'payslips': [{
-            'id': p.id,
-            'employee_id': p.employee_id,
-            'gross_salary': p.gross_salary,
-            'tax': p.tax,
-            'net_pay': p.net_pay,
-            'pdf_path': p.pdf_file_path,
-        } for p in run.payslips]
-    })
+    return jsonify(
+        {
+            'id': run.id,
+            'run_date': run.run_date.isoformat(),
+            'status': run.status,
+            'payslips': [
+                {
+                    'id': p.id,
+                    'employee_id': p.employee_id,
+                    'gross_salary': p.gross_salary,
+                    'tax': p.tax,
+                    'net_pay': p.net_pay,
+                    'pdf_path': p.pdf_file_path,
+                }
+                for p in run.payslips
+            ],
+        }
+    )
 
 
 # --- Payslip endpoints ---
+
 
 @api.route('/payslips/<int:payslip_id>/download', methods=['GET'])
 @api_token_or_login_required
@@ -409,6 +443,7 @@ def download_payslip(payslip_id):
     import os
 
     from flask import send_file
+
     payslip = Payslip.query.filter_by(id=payslip_id).first_or_404()
     # Verify company access
     run = db.session.get(PayrollRun, payslip.payroll_run_id)
@@ -421,21 +456,28 @@ def download_payslip(payslip_id):
 
 # --- Audit Log endpoints ---
 
+
 @api.route('/audit-logs', methods=['GET'])
 @api_token_or_login_required
 @company_required
 @api_role_required('owner', 'accountant')
 def list_audit_logs():
     logs = AuditLog.query.filter_by(company_id=_get_company_id()).order_by(AuditLog.timestamp.desc()).limit(100).all()
-    return jsonify([{
-        'id': l.id,
-        'action': l.action,
-        'timestamp': l.timestamp.isoformat(),
-        'details': l.details,
-    } for l in logs])
+    return jsonify(
+        [
+            {
+                'id': l.id,
+                'action': l.action,
+                'timestamp': l.timestamp.isoformat(),
+                'details': l.details,
+            }
+            for l in logs
+        ]
+    )
 
 
 # --- Impact Preview API ---
+
 
 def _convert(obj):
     """Convert Decimal to string for JSON serialization."""
@@ -455,6 +497,7 @@ def _convert(obj):
 def impact_salary_raise():
     """Preview impact of a salary raise."""
     from payroll_engine.impact import preview_salary_raise
+
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Request body required'}), 400
@@ -478,6 +521,7 @@ def impact_salary_raise():
 def impact_new_hire():
     """Preview cost of hiring a new employee."""
     from payroll_engine.impact import preview_new_hire
+
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Request body required'}), 400
@@ -502,6 +546,7 @@ def impact_termination():
     from datetime import datetime as dt
 
     from payroll_engine.impact import preview_termination
+
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Request body required'}), 400
@@ -528,6 +573,7 @@ def impact_termination():
 def impact_allowance_change():
     """Preview impact of changing an allowance."""
     from payroll_engine.impact import preview_allowance_change
+
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Request body required'}), 400
@@ -545,6 +591,7 @@ def impact_allowance_change():
 
 # --- API Key management ---
 
+
 @api.route('/api-keys', methods=['GET'])
 @api_token_or_login_required
 @company_required
@@ -554,13 +601,18 @@ def list_api_keys():
     user = _get_current_user()
     cid = _get_company_id()
     keys = ApiKey.query.filter_by(user_id=user.id, company_id=cid).all()
-    return jsonify([{
-        'id': k.id,
-        'name': k.name,
-        'is_active': k.is_active,
-        'created_at': k.created_at.isoformat(),
-        'last_used_at': k.last_used_at.isoformat() if k.last_used_at else None,
-    } for k in keys])
+    return jsonify(
+        [
+            {
+                'id': k.id,
+                'name': k.name,
+                'is_active': k.is_active,
+                'created_at': k.created_at.isoformat(),
+                'last_used_at': k.last_used_at.isoformat() if k.last_used_at else None,
+            }
+            for k in keys
+        ]
+    )
 
 
 @api.route('/api-keys', methods=['POST'])
@@ -575,12 +627,14 @@ def create_api_key():
     data = request.get_json() or {}
     name = data.get('name', '').strip()[:100] or None
     key, raw_token = ApiKey.create_for_user(user, cid, name=name)
-    return jsonify({
-        'id': key.id,
-        'name': key.name,
-        'token': raw_token,
-        'message': 'Store this token securely. It will NOT be shown again.',
-    }), 201
+    return jsonify(
+        {
+            'id': key.id,
+            'name': key.name,
+            'token': raw_token,
+            'message': 'Store this token securely. It will NOT be shown again.',
+        }
+    ), 201
 
 
 @api.route('/api-keys/<int:key_id>', methods=['DELETE'])
@@ -597,6 +651,7 @@ def revoke_api_key(key_id):
 
 
 # --- Bulk Import API ---
+
 
 @api.route('/employees/bulk', methods=['POST'])
 @api_token_or_login_required
@@ -624,7 +679,7 @@ def bulk_import_employees():
         return jsonify({'error': 'Maximum 500 employees per import'}), 400
 
     cid = _get_company_id()
-    user = _get_current_user()
+    _get_current_user()
     imported = 0
     errors = []
 
@@ -657,9 +712,7 @@ def bulk_import_employees():
 
         emp_id_str = emp_data.get('employee_id', '').strip()
         if not emp_id_str:
-            existing_count = Employee.query.filter_by(
-                company_id=cid, is_deleted=False
-            ).count()
+            existing_count = Employee.query.filter_by(company_id=cid, is_deleted=False).count()
             emp_id_str = f'EMP{(existing_count + imported + 1):03d}'
 
         emp = Employee(
@@ -679,14 +732,17 @@ def bulk_import_employees():
 
     db.session.commit()
 
-    return jsonify({
-        'imported': imported,
-        'errors': errors[:20],
-        'total_errors': len(errors),
-    })
+    return jsonify(
+        {
+            'imported': imported,
+            'errors': errors[:20],
+            'total_errors': len(errors),
+        }
+    )
 
 
 # --- Accounting Export API ---
+
 
 @api.route('/payroll-runs/<int:run_id>/accounting', methods=['GET'])
 @api_token_or_login_required
@@ -699,7 +755,6 @@ def get_accounting_export(run_id):
 
     format: json (default), csv, iif, xero, peachtree
     """
-
 
     from payroll_engine.accounting_bp import _generate_journal_entries
 
@@ -726,14 +781,17 @@ def get_accounting_export(run_id):
             'balanced': journal['balanced'],
             'totals': {k: float(v) for k, v in journal['totals'].items()},
             'journal_lines': [
-                {**l, 'debit': float(l['debit']), 'credit': float(l['credit'])}
-                for l in journal['journal_lines']
+                {**l, 'debit': float(l['debit']), 'credit': float(l['credit'])} for l in journal['journal_lines']
             ],
             'entries': [
-                {**e, 'gross': float(e['gross']), 'tax': float(e['tax']),
-                 'pension_employee': float(e['pension_employee']),
-                 'pension_employer': float(e['pension_employer']),
-                 'net_pay': float(e['net_pay'])}
+                {
+                    **e,
+                    'gross': float(e['gross']),
+                    'tax': float(e['tax']),
+                    'pension_employee': float(e['pension_employee']),
+                    'pension_employer': float(e['pension_employer']),
+                    'net_pay': float(e['net_pay']),
+                }
                 for e in journal['entries']
             ],
         }
@@ -746,6 +804,7 @@ def get_accounting_export(run_id):
         _export_quickbooks_iif,
         _export_xero,
     )
+
     exporters = {
         'csv': _export_generic_csv,
         'iif': _export_quickbooks_iif,
@@ -761,6 +820,7 @@ def get_accounting_export(run_id):
 
 # --- Payroll Review Workspace API ---
 
+
 @api.route('/payroll-runs/<int:run_id>/review', methods=['GET'])
 @api_token_or_login_required
 @company_required
@@ -773,6 +833,7 @@ def get_payroll_review(run_id):
     Each component is wrapped in try/except so partial data is returned on failure.
     """
     import logging
+
     logger = logging.getLogger('payroll_engine')
 
     from payroll_engine import models as trust_models
@@ -845,10 +906,17 @@ def get_payroll_review(run_id):
 
     # Add evidence only if it computed successfully
     if evidence:
+
         def serialize_signal(s):
-            return {'name': s.name, 'status': s.status, 'category': s.category,
-                    'explanation': s.explanation, 'source': s.source, 'detail': s.detail,
-                    'blocking': s.blocking}
+            return {
+                'name': s.name,
+                'status': s.status,
+                'category': s.category,
+                'explanation': s.explanation,
+                'source': s.source,
+                'detail': s.detail,
+                'blocking': s.blocking,
+            }
 
         response['evidence'] = {
             'total': evidence.total,
@@ -863,13 +931,22 @@ def get_payroll_review(run_id):
 
     # Add exceptions only if they computed successfully
     if exceptions:
+
         def serialize_issue(i):
-            return {'severity': i.severity, 'code': i.code, 'title': i.title,
-                    'description': i.description, 'employee_id': i.employee_id,
-                    'employee_name': i.employee_name, 'blocking': i.blocking,
-                    'impact': i.impact, 'cause': i.cause,
-                    'recommendation': i.recommendation, 'action_url': i.action_url,
-                    'estimated_time': i.estimated_time}
+            return {
+                'severity': i.severity,
+                'code': i.code,
+                'title': i.title,
+                'description': i.description,
+                'employee_id': i.employee_id,
+                'employee_name': i.employee_name,
+                'blocking': i.blocking,
+                'impact': i.impact,
+                'cause': i.cause,
+                'recommendation': i.recommendation,
+                'action_url': i.action_url,
+                'estimated_time': i.estimated_time,
+            }
 
         response['exceptions'] = {
             'total': exceptions.total,
@@ -887,6 +964,7 @@ def get_payroll_review(run_id):
 
 
 # --- Bank File API ---
+
 
 @api.route('/payroll-runs/<int:run_id>/bank-file', methods=['GET'])
 @api_token_or_login_required
@@ -921,13 +999,15 @@ def get_bank_file(run_id):
         emp = ps.employee
         if not emp:
             continue
-        payments.append({
-            'employee_id': emp.employee_id,
-            'employee_name': emp.name,
-            'account_number': emp.bank_or_telebirr or '',
-            'amount': float(ps.net_pay or 0),
-            'bank': bank,
-        })
+        payments.append(
+            {
+                'employee_id': emp.employee_id,
+                'employee_name': emp.name,
+                'account_number': emp.bank_or_telebirr or '',
+                'amount': float(ps.net_pay or 0),
+                'bank': bank,
+            }
+        )
 
     # Validate
     errors = validate_payroll_for_bank(payments, bank)
@@ -939,12 +1019,12 @@ def get_bank_file(run_id):
         return Response(
             xlsx_data,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            headers={'Content-Disposition': f'attachment; filename=bank_{bank}_{run.reference}.xlsx'}
+            headers={'Content-Disposition': f'attachment; filename=bank_{bank}_{run.reference}.xlsx'},
         )
     else:
         csv_data = generate_csv(payments, bank)
         return Response(
             csv_data,
             mimetype='text/csv',
-            headers={'Content-Disposition': f'attachment; filename=bank_{bank}_{run.reference}.csv'}
+            headers={'Content-Disposition': f'attachment; filename=bank_{bank}_{run.reference}.csv'},
         )

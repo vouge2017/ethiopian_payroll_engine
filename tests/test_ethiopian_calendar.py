@@ -6,6 +6,7 @@ Key facts:
 - Ethiopian New Year (Meskerem 1) = September 11 in Gregorian calendar
 - Known date: July 7, 2026 = Sene 30, 2018
 """
+
 import os
 import sys
 
@@ -30,9 +31,9 @@ def test_known_date_july_7_2026():
     """July 7, 2026 should be Sene 30, 2018 in Ethiopian calendar."""
     greg = date(2026, 7, 7)
     eth_year, eth_month, eth_day = gregorian_to_ethiopian(greg)
-    assert eth_year == 2018, f"Expected year 2018, got {eth_year}"
-    assert eth_month == 10, f"Expected month 10 (Sene), got {eth_month}"
-    assert eth_day == 30, f"Expected day 30, got {eth_day}"
+    assert eth_year == 2018, f'Expected year 2018, got {eth_year}'
+    assert eth_month == 10, f'Expected month 10 (Sene), got {eth_month}'
+    assert eth_day == 30, f'Expected day 30, got {eth_day}'
 
 
 # ---------------------------------------------------------------
@@ -110,7 +111,7 @@ def test_dual_date():
     greg = date(2026, 7, 7)
     result = format_dual_date(greg)
     assert 'ሰኔ' in result  # Amharic month
-    assert 'Jul' in result   # English month
+    assert 'Jul' in result  # English month
     assert '2026' in result  # Gregorian year
     assert '2018' in result  # Ethiopian year
 

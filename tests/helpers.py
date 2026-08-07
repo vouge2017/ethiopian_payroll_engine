@@ -3,6 +3,7 @@ Shared test helpers — reusable mocks and fixtures.
 
 Import from this file instead of duplicating setup functions.
 """
+
 from datetime import date
 from unittest.mock import MagicMock
 
@@ -26,8 +27,7 @@ def make_company(company_id=1, name='Test PLC'):
     return company
 
 
-def make_run(run_id=1, period='2018-10', company_id=1, status='completed',
-             run_date=None, disbursement_status=None):
+def make_run(run_id=1, period='2018-10', company_id=1, status='completed', run_date=None, disbursement_status=None):
     """Create a mock payroll run."""
     run = MagicMock()
     run.id = run_id
@@ -39,8 +39,7 @@ def make_run(run_id=1, period='2018-10', company_id=1, status='completed',
     return run
 
 
-def make_employee(emp_id, name, department='IT', phone='0911', tin='123',
-                   bank='1000', user_id=None, is_deleted=False):
+def make_employee(emp_id, name, department='IT', phone='0911', tin='123', bank='1000', user_id=None, is_deleted=False):
     """Create a mock employee."""
     emp = MagicMock()
     emp.id = emp_id
@@ -56,8 +55,7 @@ def make_employee(emp_id, name, department='IT', phone='0911', tin='123',
     return emp
 
 
-def make_payslip(emp_id, gross=10000, tax=1500, pension_emp=700,
-                  pension_empr=1100, net=None, payslip_type='regular'):
+def make_payslip(emp_id, gross=10000, tax=1500, pension_emp=700, pension_empr=1100, net=None, payslip_type='regular'):
     """Create a mock payslip."""
     ps = MagicMock()
     ps.employee_id = emp_id

@@ -1,4 +1,5 @@
 """Employee portal blueprint."""
+
 from datetime import UTC, date, datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -27,23 +28,26 @@ def employee_dashboard():
     if not emp:
         flash('Your account is not linked to an employee record. Contact your HR officer.', 'warning')
         return render_template('employee_portal/dashboard.html', employee=None)
-    latest_payslip = Payslip.query.filter_by(employee_id=emp.id) \
-        .order_by(Payslip.generated_at.desc()).first()
+    latest_payslip = Payslip.query.filter_by(employee_id=emp.id).order_by(Payslip.generated_at.desc()).first()
     from payroll_engine.overtime import calculate_overtime_pay
+
     month_start = date.today().replace(day=1)
-    ot_entries = OvertimeEntry.query.filter_by(
-        employee_id=emp.id, company_id=_company_id()
-    ).filter(OvertimeEntry.date >= month_start).all()
+    ot_entries = (
+        OvertimeEntry.query.filter_by(employee_id=emp.id, company_id=_company_id())
+        .filter(OvertimeEntry.date >= month_start)
+        .all()
+    )
     ot_hours = sum(e.hours for e in ot_entries)
     ot_pay = sum(calculate_overtime_pay(emp.basic_salary, e.hours, e.overtime_type) for e in ot_entries)
-    recent_payslips = Payslip.query.filter_by(employee_id=emp.id) \
-        .order_by(Payslip.generated_at.desc()).limit(6).all()
-    return render_template('employee_portal/dashboard.html',
-                           employee=emp,
-                           latest_payslip=latest_payslip,
-                           ot_hours=round(ot_hours, 1),
-                           ot_pay=round(ot_pay, 2),
-                           recent_payslips=recent_payslips)
+    recent_payslips = Payslip.query.filter_by(employee_id=emp.id).order_by(Payslip.generated_at.desc()).limit(6).all()
+    return render_template(
+        'employee_portal/dashboard.html',
+        employee=emp,
+        latest_payslip=latest_payslip,
+        ot_hours=round(ot_hours, 1),
+        ot_pay=round(ot_pay, 2),
+        recent_payslips=recent_payslips,
+    )
 
 
 @portal_bp.route('/my/payslips')
@@ -53,8 +57,7 @@ def my_payslips():
     if not emp:
         flash('Your account is not linked to an employee record. Contact your HR officer.', 'warning')
         return render_template('employee_portal/payslips.html', employee=None, payslips=[])
-    payslips = Payslip.query.filter_by(employee_id=emp.id) \
-        .order_by(Payslip.generated_at.desc()).all()
+    payslips = Payslip.query.filter_by(employee_id=emp.id).order_by(Payslip.generated_at.desc()).all()
     return render_template('employee_portal/payslips.html', employee=emp, payslips=payslips)
 
 
@@ -76,49 +79,57 @@ def my_payslip_detail(payslip_id):
     payslip_month = payslip.generated_at.month if payslip.generated_at else None
     payslip_year = payslip.generated_at.year if payslip.generated_at else None
 
-    ot_entries = OvertimeEntry.query.filter_by(
-        employee_id=emp.id, company_id=emp.company_id
-    ).filter(
-        db.extract('month', OvertimeEntry.date) == payslip_month,
-        db.extract('year', OvertimeEntry.date) == payslip_year,
-    ).all()
+    ot_entries = (
+        OvertimeEntry.query.filter_by(employee_id=emp.id, company_id=emp.company_id)
+        .filter(
+            db.extract('month', OvertimeEntry.date) == payslip_month,
+            db.extract('year', OvertimeEntry.date) == payslip_year,
+        )
+        .all()
+    )
     overtime_details = []
-    total_ot_pay = 0
     for entry in ot_entries:
         hourly = calculate_hourly_rate(emp.basic_salary)
         multiplier = OVERTIME_RATES.get(entry.overtime_type, 1.0)
         pay = round(hourly * entry.hours * multiplier, 2)
-        overtime_details.append({
-            'date': entry.date,
-            'hours': entry.hours,
-            'type': entry.overtime_type,
-            'hourly_rate': hourly,
-            'multiplier': multiplier,
-            'pay': pay,
-        })
+        overtime_details.append(
+            {
+                'date': entry.date,
+                'hours': entry.hours,
+                'type': entry.overtime_type,
+                'hourly_rate': hourly,
+                'multiplier': multiplier,
+                'pay': pay,
+            }
+        )
 
     from payroll_engine.models import PayslipAcknowledgment
     from payroll_engine.payroll import generate_calculation_flow
 
-    calc_flow = generate_calculation_flow({
-        'gross': payslip.gross_salary,
-        'pension_employee': payslip.employee_pension,
-        'taxable': taxable,
-        'tax': payslip.tax,
-        'net': payslip.net_pay,
-    })
+    calc_flow = generate_calculation_flow(
+        {
+            'gross': payslip.gross_salary,
+            'pension_employee': payslip.employee_pension,
+            'taxable': taxable,
+            'tax': payslip.tax,
+            'net': payslip.net_pay,
+        }
+    )
 
     # Check acknowledgment status
     payslip_acknowledged = PayslipAcknowledgment.query.filter_by(
         payslip_id=payslip.id, employee_id=emp.id, company_id=_company_id()
     ).first()
 
-    return render_template('employee_portal/payslip_detail.html',
-                           employee=emp, payslip=payslip,
-                           tax_breakdown=tax_breakdown,
-                           overtime_details=overtime_details,
-                           calc_flow=calc_flow,
-                           payslip_acknowledged=payslip_acknowledged)
+    return render_template(
+        'employee_portal/payslip_detail.html',
+        employee=emp,
+        payslip=payslip,
+        tax_breakdown=tax_breakdown,
+        overtime_details=overtime_details,
+        calc_flow=calc_flow,
+        payslip_acknowledged=payslip_acknowledged,
+    )
 
 
 @portal_bp.route('/my/payslips/<int:payslip_id>/acknowledge', methods=['POST'])
@@ -152,8 +163,7 @@ def acknowledge_payslip(payslip_id):
     db.session.add(ack)
 
     create_audit_log(
-        _company_id(), current_user.id, 'payslip_acknowledged',
-        {'payslip_id': payslip.id, 'employee_id': emp.id}
+        _company_id(), current_user.id, 'payslip_acknowledged', {'payslip_id': payslip.id, 'employee_id': emp.id}
     )
 
     db.session.commit()
@@ -178,20 +188,24 @@ def download_my_payslip(payslip_id):
         flash('PDF not available for this payslip.', 'warning')
         return redirect(url_for('portal.my_payslip_detail', payslip_id=payslip.id))
 
-    return send_file(payslip.pdf_file_path, as_attachment=True,
-                     download_name=f"payslip_{payslip.id}.pdf")
+    return send_file(payslip.pdf_file_path, as_attachment=True, download_name=f'payslip_{payslip.id}.pdf')
 
 
 @portal_bp.route('/my/profile')
 def my_profile():
     """Employee's profile view."""
     from payroll_engine.models import ProfileChangeRequest
+
     emp = get_linked_employee()
     if not emp:
         flash('Your account is not linked to an employee record.', 'warning')
         return render_template('employee_portal/profile.html', employee=None)
-    leaves = Leave.query.filter_by(employee_id=emp.id, company_id=_company_id()) \
-        .order_by(Leave.start_date.desc()).limit(10).all()
+    leaves = (
+        Leave.query.filter_by(employee_id=emp.id, company_id=_company_id())
+        .order_by(Leave.start_date.desc())
+        .limit(10)
+        .all()
+    )
     # Mask bank account for display
     masked_bank = '****'
     if emp.bank_account:
@@ -199,15 +213,17 @@ def my_profile():
         masked_bank = acct[:4] + '****' + acct[-4:] if len(acct) > 8 else '****'
     # Get pending change requests
     pending = ProfileChangeRequest.query.filter_by(
-        employee_id=emp.id, company_id=_company_id(),
-        status=ProfileChangeRequest.STATUS_PENDING
+        employee_id=emp.id, company_id=_company_id(), status=ProfileChangeRequest.STATUS_PENDING
     ).all()
     pending_fields = {r.field_name for r in pending}
-    return render_template('employee_portal/profile.html',
-                           employee=emp, leaves=leaves,
-                           masked_bank=masked_bank,
-                           pending_fields=pending_fields,
-                           pending_changes=pending)
+    return render_template(
+        'employee_portal/profile.html',
+        employee=emp,
+        leaves=leaves,
+        masked_bank=masked_bank,
+        pending_fields=pending_fields,
+        pending_changes=pending,
+    )
 
 
 @portal_bp.route('/my/profile/edit', methods=['GET', 'POST'])
@@ -215,6 +231,7 @@ def edit_profile():
     """Employee edits their profile. Sensitive fields go through approval."""
     from payroll_engine.models import ProfileChangeRequest
     from payroll_engine.shared import create_audit_log
+
     emp = get_linked_employee()
     if not emp:
         abort(404)
@@ -225,11 +242,11 @@ def edit_profile():
         if emp.bank_account:
             acct = str(emp.bank_account)
             masked_bank = acct[:4] + '****' + acct[-4:] if len(acct) > 8 else '****'
-        return render_template('employee_portal/edit_profile.html',
-                               employee=emp, masked_bank=masked_bank)
+        return render_template('employee_portal/edit_profile.html', employee=emp, masked_bank=masked_bank)
 
     # Process form submission
     from payroll_engine.models import validate_ethiopian_phone
+
     changes_made = []
     pending = []
 
@@ -254,8 +271,10 @@ def edit_profile():
         if field in ProfileChangeRequest.SENSITIVE_FIELDS:
             # Check if there's already a pending request for this field
             existing = ProfileChangeRequest.query.filter_by(
-                employee_id=emp.id, company_id=_company_id(),
-                field_name=field, status=ProfileChangeRequest.STATUS_PENDING
+                employee_id=emp.id,
+                company_id=_company_id(),
+                field_name=field,
+                status=ProfileChangeRequest.STATUS_PENDING,
             ).first()
             if existing:
                 pending.append(field)
@@ -281,8 +300,7 @@ def edit_profile():
 
     if changes_made:
         create_audit_log(
-            _company_id(), current_user.id, 'profile_updated',
-            {'fields': changes_made, 'employee_id': emp.id}
+            _company_id(), current_user.id, 'profile_updated', {'fields': changes_made, 'employee_id': emp.id}
         )
         flash(f'Updated: {", ".join(changes_made)}.', 'success')
 
@@ -299,23 +317,27 @@ def edit_profile():
 def my_leave():
     """Employee's leave balance and history."""
     from payroll_engine.leave import LeaveType, calculate_leave_balance
+
     emp = get_linked_employee()
     if not emp:
         abort(404)
 
-    leaves = Leave.query.filter_by(employee_id=emp.id, company_id=_company_id()) \
-        .order_by(Leave.start_date.desc()).all()
+    leaves = Leave.query.filter_by(employee_id=emp.id, company_id=_company_id()).order_by(Leave.start_date.desc()).all()
 
     # Calculate balances for each leave type
     balances = {}
-    for lt in [LeaveType.ANNUAL, LeaveType.SICK, LeaveType.MATERNITY,
-               LeaveType.PATERNITY, LeaveType.SPECIAL]:
-        taken = db.session.query(db.func.sum(Leave.days_requested)).filter(
-            Leave.employee_id == emp.id,
-            Leave.leave_type == lt.value,
-            Leave.status == 'approved',
-            db.extract('year', Leave.start_date) == date.today().year
-        ).scalar() or 0
+    for lt in [LeaveType.ANNUAL, LeaveType.SICK, LeaveType.MATERNITY, LeaveType.PATERNITY, LeaveType.SPECIAL]:
+        taken = (
+            db.session.query(db.func.sum(Leave.days_requested))
+            .filter(
+                Leave.employee_id == emp.id,
+                Leave.leave_type == lt.value,
+                Leave.status == 'approved',
+                db.extract('year', Leave.start_date) == date.today().year,
+            )
+            .scalar()
+            or 0
+        )
         balance = calculate_leave_balance(
             employee_start_date=emp.start_date or emp.created_at.date(),
             leave_type=lt.value,
@@ -323,8 +345,7 @@ def my_leave():
         )
         balances[lt.value] = balance
 
-    return render_template('employee_portal/leave.html',
-                           employee=emp, leaves=leaves, balances=balances)
+    return render_template('employee_portal/leave.html', employee=emp, leaves=leaves, balances=balances)
 
 
 @portal_bp.route('/my/leave/request', methods=['POST'])
@@ -356,12 +377,17 @@ def my_request_leave():
         return redirect(url_for('portal.my_leave'))
 
     # Get current balance
-    taken = db.session.query(db.func.sum(Leave.days_requested)).filter(
-        Leave.employee_id == emp.id,
-        Leave.leave_type == leave_type,
-        Leave.status == 'approved',
-        db.extract('year', Leave.start_date) == date.today().year
-    ).scalar() or 0
+    taken = (
+        db.session.query(db.func.sum(Leave.days_requested))
+        .filter(
+            Leave.employee_id == emp.id,
+            Leave.leave_type == leave_type,
+            Leave.status == 'approved',
+            db.extract('year', Leave.start_date) == date.today().year,
+        )
+        .scalar()
+        or 0
+    )
 
     balance = calculate_leave_balance(
         employee_start_date=emp.start_date or emp.created_at.date(),

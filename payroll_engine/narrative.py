@@ -10,6 +10,7 @@ Example output:
     primarily because of overtime and new hires. No unusual variances
     were detected."
 """
+
 from payroll_engine.change_summary import ChangeSummary
 
 
@@ -60,15 +61,9 @@ def _employee_count_text(summary):
         return f'{period} payroll includes {count} employee{"s" if count != 1 else ""}.'
 
     if summary.headcount_change > 0:
-        return (
-            f'{period} payroll includes {count} employees '
-            f'(+{summary.headcount_change} from last period).'
-        )
+        return f'{period} payroll includes {count} employees (+{summary.headcount_change} from last period).'
     elif summary.headcount_change < 0:
-        return (
-            f'{period} payroll includes {count} employees '
-            f'({summary.headcount_change} from last period).'
-        )
+        return f'{period} payroll includes {count} employees ({summary.headcount_change} from last period).'
     else:
         suffix = 's' if count != 1 else ''
         return f'{period} payroll includes {count} employee{suffix}.'
@@ -117,7 +112,6 @@ def _delta_text(summary):
         return ''
 
     pct = summary.gross_delta_pct
-    delta = summary.gross_delta
 
     if abs(pct) < 0.1:
         return 'Total payroll is essentially unchanged.'

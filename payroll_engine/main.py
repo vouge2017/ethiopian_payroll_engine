@@ -1,4 +1,5 @@
 """Main blueprint: dashboard, employees, payroll upload/results, reports."""
+
 from datetime import date
 from decimal import Decimal
 
@@ -16,6 +17,7 @@ main = Blueprint('main', __name__)
 
 # --- Company Setup Guard ---
 
+
 @main.before_request
 def require_company():
     """Redirect users without a company to the setup page."""
@@ -29,6 +31,7 @@ def require_company():
 
 
 # --- Company Setup ---
+
 
 @main.route('/setup-company', methods=['GET', 'POST'])
 @login_required
@@ -67,6 +70,7 @@ def setup_company():
 
 # --- Multi-Company Dashboard ---
 
+
 @main.route('/companies')
 @login_required
 def companies_dashboard():
@@ -85,14 +89,10 @@ def companies_dashboard():
             continue
 
         # Latest payroll run
-        latest_run = PayrollRun.query.filter_by(
-            company_id=company.id
-        ).order_by(PayrollRun.created_at.desc()).first()
+        latest_run = PayrollRun.query.filter_by(company_id=company.id).order_by(PayrollRun.created_at.desc()).first()
 
         # Employee count
-        emp_count = Employee.query.filter_by(
-            company_id=company.id, is_deleted=False
-        ).count()
+        emp_count = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
 
         # Last payroll totals
         last_gross = Decimal('0')
@@ -111,16 +111,18 @@ def companies_dashboard():
         # Role for this company
         role = current_user.get_role_for_company(company.id)
 
-        company_cards.append({
-            'company': company,
-            'role': role,
-            'emp_count': emp_count,
-            'latest_run': latest_run,
-            'last_status': last_status,
-            'last_gross': last_gross,
-            'last_net': last_net,
-            'deadlines': deadlines,
-        })
+        company_cards.append(
+            {
+                'company': company,
+                'role': role,
+                'emp_count': emp_count,
+                'latest_run': latest_run,
+                'last_status': last_status,
+                'last_gross': last_gross,
+                'last_net': last_net,
+                'deadlines': deadlines,
+            }
+        )
 
     return render_template(
         'companies_dashboard.html',
@@ -142,9 +144,8 @@ def switch_company(company_id):
     return redirect(url_for('main.index'))
 
 
-
-
 # --- Demo Mode ---
+
 
 @main.route('/demo')
 def demo_mode():
@@ -152,15 +153,18 @@ def demo_mode():
     if not current_app.config.get('ENABLE_DEMO_MODE', False):
         abort(404)
     from payroll_engine.demo import create_demo_data
-    company, user, employees, run = create_demo_data()
+
+    _company, user, _employees, _run = create_demo_data()
     # Log in as demo user
     from flask_login import login_user
+
     login_user(user)
-    flash('Welcome to the demo! You\'re exploring with sample data. No real data is stored.', 'info')
+    flash("Welcome to the demo! You're exploring with sample data. No real data is stored.", 'info')
     return redirect(url_for('main.index'))
 
 
 # --- Dashboard ---
+
 
 @main.route('/')
 @login_required
@@ -170,47 +174,46 @@ def index():
     employee_count = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
 
     # All completed runs for the period selector
-    all_completed_runs = PayrollRun.query.filter_by(
-        company_id=company.id, status='completed'
-    ).order_by(PayrollRun.run_date.desc()).all()
+    all_completed_runs = (
+        PayrollRun.query.filter_by(company_id=company.id, status='completed').order_by(PayrollRun.run_date.desc()).all()
+    )
 
     # Period selection: use ?run_id=X or default to latest
     selected_run_id = request.args.get('run_id', type=int)
     if selected_run_id:
-        selected_run = PayrollRun.query.filter_by(
-            id=selected_run_id, company_id=company.id, status='completed'
-        ).first()
+        selected_run = PayrollRun.query.filter_by(id=selected_run_id, company_id=company.id, status='completed').first()
         if not selected_run:
             flash('Payroll run not found.', 'warning')
             selected_run = all_completed_runs[0] if all_completed_runs else None
     else:
         selected_run = all_completed_runs[0] if all_completed_runs else None
 
-    recent_runs = PayrollRun.query.filter_by(company_id=company.id) \
-        .order_by(PayrollRun.created_at.desc()) \
-        .limit(5).all()
+    recent_runs = (
+        PayrollRun.query.filter_by(company_id=company.id).order_by(PayrollRun.created_at.desc()).limit(5).all()
+    )
 
     # Use selected run for compliance scoring
     payroll_date_str = selected_run.run_date.isoformat() if selected_run else date.today().isoformat()
-    score, status = compute_compliance_score(
-        company=company,
-        payroll_date=payroll_date_str
-    )
+    score, status = compute_compliance_score(company=company, payroll_date=payroll_date_str)
     status_msg = get_status_message(status)
 
     # Get upcoming deadlines based on selected period
     from payroll_engine.compliance import get_upcoming_deadlines
+
     deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date_str)
 
     # Overtime summary for current month (eager-load employee to avoid N+1)
     from sqlalchemy.orm import joinedload
 
     from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
+
     month_start = date.today().replace(day=1)
-    ot_entries = OvertimeEntry.query.options(
-        joinedload(OvertimeEntry.employee)
-    ).filter_by(company_id=company.id) \
-        .filter(OvertimeEntry.date >= month_start).all()
+    ot_entries = (
+        OvertimeEntry.query.options(joinedload(OvertimeEntry.employee))
+        .filter_by(company_id=company.id)
+        .filter(OvertimeEntry.date >= month_start)
+        .all()
+    )
     ot_by_employee = {}
     for entry in ot_entries:
         if entry.employee_id not in ot_by_employee:
@@ -218,18 +221,20 @@ def index():
         ot_by_employee[entry.employee_id]['hours'] += entry.hours
     ot_total_hours = sum(v['hours'] for v in ot_by_employee.values())
     ot_employee_count = len(ot_by_employee)
-    ot_over_limit = [{'name': v['name'], 'hours': round(v['hours'], 1)}
-                     for v in ot_by_employee.values() if v['hours'] > MAX_OVERTIME_HOURS_MONTH]
+    ot_over_limit = [
+        {'name': v['name'], 'hours': round(v['hours'], 1)}
+        for v in ot_by_employee.values()
+        if v['hours'] > MAX_OVERTIME_HOURS_MONTH
+    ]
 
     # Count completed payroll runs for first-run wizard
-    completed_runs_count = PayrollRun.query.filter_by(
-        company_id=company.id, status='completed'
-    ).count()
+    completed_runs_count = PayrollRun.query.filter_by(company_id=company.id, status='completed').count()
 
     # "What happened" summary — based on selected run
     last_month_summary = None
     if selected_run:
         from payroll_engine.models import Payslip
+
         payslips = Payslip.query.filter_by(payroll_run_id=selected_run.id).all()
         if payslips:
             total_net = sum(p.net_pay for p in payslips)
@@ -247,6 +252,7 @@ def index():
 
     # Tax brackets for "How is tax calculated?" section
     from payroll_engine.tax import DEFAULT_BRACKETS, DEFAULT_PERSONAL_RELIEF
+
     tax_brackets = []
     cumulative = Decimal('0')
     for upper, rate in DEFAULT_BRACKETS:
@@ -258,6 +264,7 @@ def index():
 
     # Trust Layer: Change Summary
     from payroll_engine.services.trust import get_payroll_change_summary
+
     change_summary = get_payroll_change_summary(company.id)
 
     return render_template(
@@ -289,6 +296,7 @@ def index():
 
 # --- Referral Program ---
 
+
 @main.route('/referral')
 @login_required
 def my_referral():
@@ -303,9 +311,7 @@ def my_referral():
     # Count referrals
     referral_count = User.query.filter_by(referred_by=current_user.id).count()
 
-    return render_template('referral.html',
-                           referral_code=current_user.referral_code,
-                           referral_count=referral_count)
+    return render_template('referral.html', referral_code=current_user.referral_code, referral_count=referral_count)
 
 
 @main.route('/referral/<code>')
@@ -318,6 +324,7 @@ def apply_referral(code):
 
     # Store in session for use during registration
     from flask import session
+
     session['referral_code'] = code
     flash('You were referred! Sign up to get started.', 'info')
     return redirect(url_for('auth.register'))

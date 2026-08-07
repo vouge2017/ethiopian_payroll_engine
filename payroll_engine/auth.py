@@ -18,14 +18,17 @@ def _get_google_oauth():
         return oauth.create_client('google')
     return None
 
+
 # Endpoints allowed while must_change_password is True
-_PASSWORD_CHANGE_ALLOWED = frozenset({
-    'auth.change_password',
-    'auth.logout',
-    'auth.set_language',
-    'static',
-    'health',
-})
+_PASSWORD_CHANGE_ALLOWED = frozenset(
+    {
+        'auth.change_password',
+        'auth.logout',
+        'auth.set_language',
+        'static',
+        'health',
+    }
+)
 
 
 @auth.before_app_request
@@ -59,22 +62,28 @@ def login():
         if identifier:
             cleaned = identifier.replace(' ', '')
             looks_like_phone = (
-                cleaned.startswith('09') or cleaned.startswith('07') or
-                cleaned.startswith('+251') or
-                (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
+                cleaned.startswith('09')
+                or cleaned.startswith('07')
+                or cleaned.startswith('+251')
+                or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
             )
             if looks_like_phone:
                 from payroll_engine.models import validate_ethiopian_phone
+
                 is_valid, normalized, _ = validate_ethiopian_phone(identifier)
                 if is_valid:
                     identifier = normalized
 
         # Check brute-force lockout BEFORE processing
         from payroll_engine.models import LoginAttempt
+
         is_locked, remaining = LoginAttempt.is_locked_out(identifier)
         if is_locked:
             minutes = max(1, remaining // 60)
-            flash(f'Account temporarily locked due to too many failed attempts. Try again in {minutes} minute(s).', 'danger')
+            flash(
+                f'Account temporarily locked due to too many failed attempts. Try again in {minutes} minute(s).',
+                'danger',
+            )
             return redirect(url_for('auth.login'))
 
         # Try to find user by phone or email
@@ -83,9 +92,10 @@ def login():
             # Check if it looks like a phone number
             cleaned = login_id.replace(' ', '')
             looks_like_phone = (
-                cleaned.startswith('09') or cleaned.startswith('07') or
-                cleaned.startswith('+251') or
-                (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
+                cleaned.startswith('09')
+                or cleaned.startswith('07')
+                or cleaned.startswith('+251')
+                or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
             )
             if looks_like_phone:
                 # Normalize phone and look up
@@ -102,11 +112,12 @@ def login():
 
             # Audit: failed login attempt
             from payroll_engine.shared import create_audit_log
+
             create_audit_log(
                 company_id=user.company_id if user else None,
                 user_id=user.id if user else None,
                 action='login_failed',
-                details={'attempted_id': login_id[:120], 'locked': is_locked}
+                details={'attempted_id': login_id[:120], 'locked': is_locked},
             )
             db.session.commit()
 
@@ -121,16 +132,18 @@ def login():
         LoginAttempt.record_success(identifier)
         login_user(user, remember=remember)
         from datetime import datetime
+
         session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
         # Audit: successful login
         from payroll_engine.shared import create_audit_log
+
         create_audit_log(
             company_id=user.company_id,
             user_id=user.id,
             action='login_success',
-            details={'method': 'phone' if looks_like_phone else 'email'}
+            details={'method': 'phone' if looks_like_phone else 'email'},
         )
         db.session.commit()
         if user.must_change_password:
@@ -151,11 +164,8 @@ def login():
 def logout():
     # Audit: logout
     from payroll_engine.shared import create_audit_log
-    create_audit_log(
-        company_id=current_user.company_id,
-        user_id=current_user.id,
-        action='logout'
-    )
+
+    create_audit_log(company_id=current_user.company_id, user_id=current_user.id, action='logout')
     db.session.commit()
     logout_user()
     flash('You have been logged out.', 'info')
@@ -203,6 +213,7 @@ def set_language(lang):
     if lang not in ('en', 'am', 'om'):
         lang = 'en'
     from flask import session
+
     session['language'] = lang
     # referrer can be attacker-controlled; only follow safe same-host targets
     target = safe_redirect_target(request.referrer)
@@ -236,6 +247,7 @@ def register():
             flash('Passwords do not match.', 'danger')
             return redirect(url_for('auth.register'))
         from payroll_engine.password_policy import check_password_strength
+
         is_strong, pw_error = check_password_strength(password)
         if not is_strong:
             flash(pw_error, 'danger')
@@ -263,12 +275,7 @@ def register():
             db.session.flush()
 
         # Create user
-        user = User(
-            email=email,
-            phone=normalized_phone,
-            company_id=company.id if company else None,
-            role='owner'
-        )
+        user = User(email=email, phone=normalized_phone, company_id=company.id if company else None, role='owner')
         user.set_password(password)
 
         # Apply referral code if present
@@ -305,7 +312,7 @@ def google_callback():
         return redirect(url_for('auth.login'))
 
     try:
-        token = google.authorize_access_token()
+        google.authorize_access_token()
     except Exception as e:
         current_app.logger.error('Google OAuth error: %s', e)
         flash('Google sign-in failed. Please try again.', 'danger')
@@ -331,6 +338,7 @@ def google_callback():
         # Existing user — log them in
         login_user(user)
         from datetime import datetime
+
         session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
@@ -399,6 +407,7 @@ def google_register():
 
         login_user(user)
         from datetime import datetime
+
         session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
@@ -413,6 +422,7 @@ def google_register():
 
 
 # --- Password Reset ---
+
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])
 @limiter.limit('5 per minute')
@@ -431,9 +441,10 @@ def forgot_password():
         user = None
         cleaned = login_id.replace(' ', '')
         looks_like_phone = (
-            cleaned.startswith('09') or cleaned.startswith('07') or
-            cleaned.startswith('+251') or
-            (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
+            cleaned.startswith('09')
+            or cleaned.startswith('07')
+            or cleaned.startswith('+251')
+            or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
         )
         if looks_like_phone:
             is_valid, normalized, _ = validate_ethiopian_phone(login_id)
@@ -472,9 +483,7 @@ def reset_password():
 
         # Find user by token hash
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-        user = User.query.filter_by(
-            reset_token_hash=token_hash
-        ).first()
+        user = User.query.filter_by(reset_token_hash=token_hash).first()
 
         if not user or not user.verify_reset_token(token):
             flash('Invalid or expired reset code.', 'danger')
@@ -488,6 +497,7 @@ def reset_password():
             return redirect(url_for('auth.reset_password'))
 
         from payroll_engine.password_policy import check_password_strength
+
         is_strong, pw_error = check_password_strength(password)
         if not is_strong:
             flash(pw_error, 'danger')
@@ -505,6 +515,7 @@ def reset_password():
 
 # --- MFA / TOTP Setup ---
 
+
 @auth.route('/mfa/setup', methods=['GET', 'POST'])
 @login_required
 def mfa_setup():
@@ -521,6 +532,7 @@ def mfa_setup():
 
         # During setup, verify directly against the secret (not via verify_totp which bypasses when mfa_enabled=False)
         import pyotp
+
         totp = pyotp.TOTP(current_user.totp_secret)
         if totp.verify(code, valid_window=1):
             current_user.enable_mfa()
@@ -551,9 +563,11 @@ def mfa_verify():
         if current_user.verify_totp(code):
             # Mark MFA as verified for this session
             from flask import session
+
             session['mfa_verified'] = True
             if next_url:
                 from payroll_engine.security import safe_redirect_target
+
                 return redirect(safe_redirect_target(next_url))
             return redirect(url_for('main.index'))
         else:

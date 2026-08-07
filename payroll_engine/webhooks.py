@@ -13,6 +13,7 @@ Usage:
     from payroll_engine.webhooks import fire_webhook
     fire_webhook(company_id, 'payroll.approved', {'run_id': 1, 'total_net': 50000})
 """
+
 import hashlib
 import hmac
 import json
@@ -36,11 +37,7 @@ RETRY_DELAYS = [1, 5, 30]  # seconds between retries
 
 def _sign_payload(payload_bytes, secret):
     """Generate HMAC-SHA256 signature for the payload."""
-    return hmac.new(
-        secret.encode('utf-8'),
-        payload_bytes,
-        hashlib.sha256
-    ).hexdigest()
+    return hmac.new(secret.encode('utf-8'), payload_bytes, hashlib.sha256).hexdigest()
 
 
 def _deliver(url, payload, secret=None, max_retries=MAX_RETRIES):
@@ -50,6 +47,7 @@ def _deliver(url, payload, secret=None, max_retries=MAX_RETRIES):
     Uses exponential backoff: 1s, 5s, 30s.
     """
     import requests
+
     payload_bytes = json.dumps(payload).encode('utf-8')
     event = payload.get('event', 'unknown')
 
@@ -76,10 +74,7 @@ def _deliver(url, payload, secret=None, max_retries=MAX_RETRIES):
 
             # 4xx = permanent failure, don't retry
             if 400 <= resp.status_code < 500:
-                logger.warning(
-                    f'Webhook rejected [{delivery_id}] by {url}: {resp.status_code} '
-                    f'(permanent, no retry)'
-                )
+                logger.warning(f'Webhook rejected [{delivery_id}] by {url}: {resp.status_code} (permanent, no retry)')
                 return False
 
             # 5xx = server error, retry
@@ -89,19 +84,14 @@ def _deliver(url, payload, secret=None, max_retries=MAX_RETRIES):
             )
 
         except requests.exceptions.Timeout:
-            logger.warning(
-                f'Webhook timeout [{delivery_id}] to {url} '
-                f'(attempt {attempt + 1}/{max_retries + 1})'
-            )
+            logger.warning(f'Webhook timeout [{delivery_id}] to {url} (attempt {attempt + 1}/{max_retries + 1})')
         except requests.exceptions.ConnectionError:
             logger.warning(
-                f'Webhook connection error [{delivery_id}] to {url} '
-                f'(attempt {attempt + 1}/{max_retries + 1})'
+                f'Webhook connection error [{delivery_id}] to {url} (attempt {attempt + 1}/{max_retries + 1})'
             )
         except Exception as e:
             logger.error(
-                f'Webhook unexpected error [{delivery_id}] to {url}: {e} '
-                f'(attempt {attempt + 1}/{max_retries + 1})'
+                f'Webhook unexpected error [{delivery_id}] to {url}: {e} (attempt {attempt + 1}/{max_retries + 1})'
             )
 
         # Wait before retry (skip wait on last attempt)
@@ -124,6 +114,7 @@ def fire_webhook(company_id, event, data):
         return
 
     from payroll_engine.models import Company
+
     company = db.session.get(Company, company_id)
     if not company or not company.webhook_url:
         return

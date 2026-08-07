@@ -110,6 +110,7 @@ def get_deadline_for_type(company, filing_type: str, payroll_date: date) -> date
 
     # Handle months with fewer days (e.g., day 31 in February)
     import calendar
+
     max_day = calendar.monthrange(target_year, target_month)[1]
     actual_day = min(day, max_day)
 
@@ -124,10 +125,10 @@ def _days_late(deadline: date, actual: date) -> int:
 
 def compute_compliance_score(
     company=None,
-    payroll_date: str = None,
-    pension_deadline: str = None,
-    tax_deadline: str = None,
-    disbursement_date: str = None,
+    payroll_date: str | None = None,
+    pension_deadline: str | None = None,
+    tax_deadline: str | None = None,
+    disbursement_date: str | None = None,
 ) -> tuple[float, str]:
     """
     Compute a compliance score based on deadline adherence.
@@ -156,18 +157,26 @@ def compute_compliance_score(
         try:
             pension_dl = datetime.strptime(pension_deadline, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            pension_dl = get_deadline_for_type(company, 'pension', payroll_dt) or _fallback_deadline(payroll_dt, DEFAULT_PENSION_DEADLINE_DAY)
+            pension_dl = get_deadline_for_type(company, 'pension', payroll_dt) or _fallback_deadline(
+                payroll_dt, DEFAULT_PENSION_DEADLINE_DAY
+            )
     else:
-        pension_dl = get_deadline_for_type(company, 'pension', payroll_dt) or _fallback_deadline(payroll_dt, DEFAULT_PENSION_DEADLINE_DAY)
+        pension_dl = get_deadline_for_type(company, 'pension', payroll_dt) or _fallback_deadline(
+            payroll_dt, DEFAULT_PENSION_DEADLINE_DAY
+        )
 
     # ERCA tax filing deadline
     if tax_deadline:
         try:
             tax_dl = datetime.strptime(tax_deadline, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            tax_dl = get_deadline_for_type(company, 'erca', payroll_dt) or _fallback_deadline(payroll_dt, DEFAULT_ERCA_FILING_DAY)
+            tax_dl = get_deadline_for_type(company, 'erca', payroll_dt) or _fallback_deadline(
+                payroll_dt, DEFAULT_ERCA_FILING_DAY
+            )
     else:
-        tax_dl = get_deadline_for_type(company, 'erca', payroll_dt) or _fallback_deadline(payroll_dt, DEFAULT_ERCA_FILING_DAY)
+        tax_dl = get_deadline_for_type(company, 'erca', payroll_dt) or _fallback_deadline(
+            payroll_dt, DEFAULT_ERCA_FILING_DAY
+        )
 
     # Disbursement date
     if disbursement_date:
@@ -181,10 +190,12 @@ def compute_compliance_score(
     # Score each category
     pension_score = _deadline_score(pension_dl, today)
     tax_score = _deadline_score(tax_dl, today)
-    disbursement_score = _disbursement_score(payroll_dt, disb_dt, deadlines.get('_disbursement_days', DEFAULT_DISBURSEMENT_DAYS))
+    disbursement_score = _disbursement_score(
+        payroll_dt, disb_dt, deadlines.get('_disbursement_days', DEFAULT_DISBURSEMENT_DAYS)
+    )
 
     # Weighted average: pension 40%, tax 40%, disbursement 20%
-    total_score = (pension_score * 0.4 + tax_score * 0.4 + disbursement_score * 0.2)
+    total_score = pension_score * 0.4 + tax_score * 0.4 + disbursement_score * 0.2
     total_score = round(min(100.0, max(0.0, total_score)), 1)
 
     status = _status_from_score(total_score)
@@ -233,7 +244,7 @@ def get_status_message(status: str) -> str:
     return messages.get(status, 'Unknown / ያልታወቀ')
 
 
-def get_upcoming_deadlines(company=None, payroll_date: str = None) -> dict:
+def get_upcoming_deadlines(company=None, payroll_date: str | None = None) -> dict:
     """Get upcoming compliance deadlines for display on dashboard.
 
     Returns dict with deadline dates, days remaining, and status color
@@ -262,7 +273,11 @@ def get_upcoming_deadlines(company=None, payroll_date: str = None) -> dict:
         if not cfg.get('enabled', True):
             continue
 
-        dl = get_deadline_for_type(company, ftype, payroll_dt) if company else _fallback_deadline(payroll_dt, cfg.get('day', 10))
+        dl = (
+            get_deadline_for_type(company, ftype, payroll_dt)
+            if company
+            else _fallback_deadline(payroll_dt, cfg.get('day', 10))
+        )
         days_left = (dl - today).days
 
         result[f'{ftype}_deadline'] = dl.isoformat()
@@ -287,7 +302,11 @@ def get_upcoming_deadlines(company=None, payroll_date: str = None) -> dict:
             continue
         if not cfg.get('enabled', True):
             continue
-        dl = get_deadline_for_type(company, ftype, payroll_dt) if company else _fallback_deadline(payroll_dt, cfg.get('day', 10))
+        dl = (
+            get_deadline_for_type(company, ftype, payroll_dt)
+            if company
+            else _fallback_deadline(payroll_dt, cfg.get('day', 10))
+        )
         if dl:
             days_left = (dl - today).days
             result[f'{ftype}_deadline'] = dl.isoformat()
@@ -297,7 +316,7 @@ def get_upcoming_deadlines(company=None, payroll_date: str = None) -> dict:
     return result
 
 
-def get_reminder_candidates(company=None, days_before: int = None) -> list:
+def get_reminder_candidates(company=None, days_before: int | None = None) -> list:
     """Get filing types that need reminders sent.
 
     Returns list of dicts: [{filing_type, label, deadline, days_left}, ...]
@@ -320,12 +339,14 @@ def get_reminder_candidates(company=None, days_before: int = None) -> list:
 
         if 0 < days_left <= days_before:
             cfg = deadlines_cfg.get(ftype, FILING_TYPE_DEFAULTS.get(ftype, {}))
-            reminders.append({
-                'filing_type': ftype,
-                'label': cfg.get('label', ftype.upper()),
-                'label_am': cfg.get('label_am', ''),
-                'deadline': upcoming.get(f'{ftype}_deadline'),
-                'days_left': days_left,
-            })
+            reminders.append(
+                {
+                    'filing_type': ftype,
+                    'label': cfg.get('label', ftype.upper()),
+                    'label_am': cfg.get('label_am', ''),
+                    'deadline': upcoming.get(f'{ftype}_deadline'),
+                    'days_left': days_left,
+                }
+            )
 
     return reminders

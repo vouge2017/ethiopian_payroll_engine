@@ -9,6 +9,7 @@ Accountant Cockpit — Answers 5 questions in 10 seconds.
 
 Aggregates data from all trust components into one view.
 """
+
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -26,18 +27,20 @@ from payroll_engine.narrative import generate_narrative
 @dataclass
 class AttentionItem:
     """A single item requiring attention."""
-    priority: str       # urgent, important, info
+
+    priority: str  # urgent, important, info
     title: str
     description: str
     action_url: str | None = None
     action_label: str | None = None
     key: str | None = None  # Unique key for dismiss tracking
-    score: int = 0      # Priority score (higher = more urgent)
+    score: int = 0  # Priority score (higher = more urgent)
 
 
 @dataclass
 class CockpitData:
     """All data for the cockpit dashboard."""
+
     company_name: str
     period: str | None
     last_updated: str
@@ -89,7 +92,6 @@ def build_cockpit(company_id, db, models):
     """
     Company = models.Company
     PayrollRun = models.PayrollRun
-    Payslip = models.Payslip
     Employee = models.Employee
 
     company = db.session.get(Company, company_id)
@@ -103,24 +105,29 @@ def build_cockpit(company_id, db, models):
     )
 
     # Get latest completed run
-    latest_run = PayrollRun.query.filter_by(
-        company_id=company_id,
-    ).filter(
-        PayrollRun.status.in_(['completed', 'locked', 'draft'])
-    ).order_by(PayrollRun.run_date.desc()).first()
+    latest_run = (
+        PayrollRun.query.filter_by(
+            company_id=company_id,
+        )
+        .filter(PayrollRun.status.in_(['completed', 'locked', 'draft']))
+        .order_by(PayrollRun.run_date.desc())
+        .first()
+    )
 
     if not latest_run:
         cockpit.status = 'no_payroll'
         cockpit.status_message = 'No payroll runs yet. Create your first payroll to get started.'
-        cockpit.attention_items.append(AttentionItem(
-            priority='urgent',
-            title='No payroll runs',
-            key='no_payroll',
-            score=200,
-            description='Create your first payroll run to start using the system.',
-            action_url='/payroll/upload',
-            action_label='Create Payroll',
-        ))
+        cockpit.attention_items.append(
+            AttentionItem(
+                priority='urgent',
+                title='No payroll runs',
+                key='no_payroll',
+                score=200,
+                description='Create your first payroll run to start using the system.',
+                action_url='/payroll/upload',
+                action_label='Create Payroll',
+            )
+        )
         # Sort by priority score (highest first)
         cockpit.attention_items.sort(key=lambda x: x.score, reverse=True)
         return cockpit
@@ -128,9 +135,7 @@ def build_cockpit(company_id, db, models):
     cockpit.period = latest_run.period or str(latest_run.run_date)
 
     # Get active employees
-    employees = Employee.query.filter_by(
-        company_id=company_id, is_deleted=False
-    ).all()
+    employees = Employee.query.filter_by(company_id=company_id, is_deleted=False).all()
     cockpit.employee_count = len(employees)
 
     # ─────────────────────────────────────────
@@ -139,27 +144,31 @@ def build_cockpit(company_id, db, models):
 
     # Draft payroll needs attention
     if latest_run.status == 'draft':
-        cockpit.attention_items.append(AttentionItem(
-            priority='urgent',
-            title='Payroll draft incomplete',
-            key='draft_payroll',
-            score=100,
-            description=f'Payroll for {cockpit.period} is still in draft. Complete and approve it.',
-            action_url=f'/payroll/runs/{latest_run.id}/review',
-            action_label='Review Payroll',
-        ))
+        cockpit.attention_items.append(
+            AttentionItem(
+                priority='urgent',
+                title='Payroll draft incomplete',
+                key='draft_payroll',
+                score=100,
+                description=f'Payroll for {cockpit.period} is still in draft. Complete and approve it.',
+                action_url=f'/payroll/runs/{latest_run.id}/review',
+                action_label='Review Payroll',
+            )
+        )
 
     # Completed but not approved
     if latest_run.status == 'completed':
-        cockpit.attention_items.append(AttentionItem(
-            priority='important',
-            title='Payroll ready for approval',
-            key='ready_for_approval',
-            score=80,
-            description=f'Payroll for {cockpit.period} has been calculated. Review and approve.',
-            action_url=f'/payroll/runs/{latest_run.id}/review',
-            action_label='Review & Approve',
-        ))
+        cockpit.attention_items.append(
+            AttentionItem(
+                priority='important',
+                title='Payroll ready for approval',
+                key='ready_for_approval',
+                score=80,
+                description=f'Payroll for {cockpit.period} has been calculated. Review and approve.',
+                action_url=f'/payroll/runs/{latest_run.id}/review',
+                action_label='Review & Approve',
+            )
+        )
 
     # Check for missing employee data
     missing_data = []
@@ -173,15 +182,18 @@ def build_cockpit(company_id, db, models):
             missing_data.append(f'{emp.name}: {", ".join(issues)}')
 
     if missing_data:
-        cockpit.attention_items.append(AttentionItem(
-            priority='important',
-            title=f'{len(missing_data)} employee(s) with incomplete data',
-            key='missing_data',
-            score=60,
-            description=f'Missing: {"; ".join(missing_data[:3])}' + (f' and {len(missing_data)-3} more' if len(missing_data) > 3 else ''),
-            action_url='/employees',
-            action_label='Review Employees',
-        ))
+        cockpit.attention_items.append(
+            AttentionItem(
+                priority='important',
+                title=f'{len(missing_data)} employee(s) with incomplete data',
+                key='missing_data',
+                score=60,
+                description=f'Missing: {"; ".join(missing_data[:3])}'
+                + (f' and {len(missing_data) - 3} more' if len(missing_data) > 3 else ''),
+                action_url='/employees',
+                action_label='Review Employees',
+            )
+        )
 
     # Check filing deadlines
     if latest_run.run_date:
@@ -189,21 +201,25 @@ def build_cockpit(company_id, db, models):
         if erca_deadline:
             days_left = (erca_deadline - date.today()).days
             if days_left < 0:
-                cockpit.attention_items.append(AttentionItem(
-                    priority='urgent',
-                    title='ERCA filing overdue',
-                    description=f'ERCA filing for {cockpit.period} was due {abs(days_left)} days ago.',
-                    action_url=f'/payroll/runs/{latest_run.id}/filing',
-                    action_label='File Now',
-                ))
+                cockpit.attention_items.append(
+                    AttentionItem(
+                        priority='urgent',
+                        title='ERCA filing overdue',
+                        description=f'ERCA filing for {cockpit.period} was due {abs(days_left)} days ago.',
+                        action_url=f'/payroll/runs/{latest_run.id}/filing',
+                        action_label='File Now',
+                    )
+                )
             elif days_left <= 7:
-                cockpit.attention_items.append(AttentionItem(
-                    priority='important',
-                    title=f'ERCA filing due in {days_left} days',
-                    description=f'ERCA filing for {cockpit.period} is due on {erca_deadline}.',
-                    action_url=f'/payroll/runs/{latest_run.id}/filing',
-                    action_label='View Filing',
-                ))
+                cockpit.attention_items.append(
+                    AttentionItem(
+                        priority='important',
+                        title=f'ERCA filing due in {days_left} days',
+                        description=f'ERCA filing for {cockpit.period} is due on {erca_deadline}.',
+                        action_url=f'/payroll/runs/{latest_run.id}/filing',
+                        action_label='View Filing',
+                    )
+                )
 
     # ─────────────────────────────────────────
     # Question 2: What changed?
@@ -242,25 +258,29 @@ def build_cockpit(company_id, db, models):
         if change_summary and change_summary.has_unusual_variance:
             cockpit.has_unusual = True
             for note in change_summary.variance_notes:
-                cockpit.unusual_items.append(AttentionItem(
-                    priority='important',
-                    title='Unusual variance',
-                    description=note,
-                    action_url=f'/payroll/runs/{latest_run.id}/review',
-                    action_label='Review Variance',
-                ))
+                cockpit.unusual_items.append(
+                    AttentionItem(
+                        priority='important',
+                        title='Unusual variance',
+                        description=note,
+                        action_url=f'/payroll/runs/{latest_run.id}/review',
+                        action_label='Review Variance',
+                    )
+                )
 
         # Check for large salary changes
         if change_summary:
             for sc in change_summary.salary_changes:
                 if sc.delta_pct and abs(sc.delta_pct) > 20:
-                    cockpit.unusual_items.append(AttentionItem(
-                        priority='info',
-                        title=f'Large salary change: {sc.employee_name}',
-                        description=sc.description,
-                        action_url=f'/payroll/runs/{latest_run.id}/review',
-                        action_label='Review Change',
-                    ))
+                    cockpit.unusual_items.append(
+                        AttentionItem(
+                            priority='info',
+                            title=f'Large salary change: {sc.employee_name}',
+                            description=sc.description,
+                            action_url=f'/payroll/runs/{latest_run.id}/review',
+                            action_label='Review Change',
+                        )
+                    )
 
         if not cockpit.unusual_items:
             cockpit.has_unusual = False
@@ -299,23 +319,27 @@ def build_cockpit(company_id, db, models):
         if exceptions.has_blocking:
             cockpit.has_blocking = True
             for issue in exceptions.blocking_issues:
-                cockpit.blocking_items.append(AttentionItem(
-                    priority='urgent',
-                    title=issue.title,
-                    description=issue.description,
-                    action_url=issue.action_url,
-                    action_label='Fix This',
-                ))
+                cockpit.blocking_items.append(
+                    AttentionItem(
+                        priority='urgent',
+                        title=issue.title,
+                        description=issue.description,
+                        action_url=issue.action_url,
+                        action_label='Fix This',
+                    )
+                )
     except Exception as e:
         logger.exception('Error classifying exceptions for run %d', latest_run.id)
         cockpit.has_blocking = True  # Conservative: assume blocking if we can't check
-        cockpit.blocking_items.append(AttentionItem(
-            priority='urgent',
-            title='Unable to verify payroll issues',
-            description='Could not check for blocking issues. Review payroll manually before approving.',
-            action_url=f'/payroll/runs/{latest_run.id}/review',
-            action_label='Review Manually',
-        ))
+        cockpit.blocking_items.append(
+            AttentionItem(
+                priority='urgent',
+                title='Unable to verify payroll issues',
+                description='Could not check for blocking issues. Review payroll manually before approving.',
+                action_url=f'/payroll/runs/{latest_run.id}/review',
+                action_label='Review Manually',
+            )
+        )
         cockpit.component_errors['exceptions'] = str(e)
 
     # ─────────────────────────────────────────

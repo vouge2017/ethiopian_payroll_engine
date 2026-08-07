@@ -6,6 +6,7 @@ multiple fixtures share the same db engine.
 
 Solution: use StaticPool (single connection) for in-memory SQLite tests.
 """
+
 import os
 
 import pytest

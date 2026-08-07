@@ -53,8 +53,7 @@ def get_effective_allowances(employee: Employee) -> list[EmployeeAllowance]:
     return [virtual]
 
 
-def calculate_transport_exempt_amount(basic_salary: Decimal,
-                                       transport_amount: Decimal) -> Decimal:
+def calculate_transport_exempt_amount(basic_salary: Decimal, transport_amount: Decimal) -> Decimal:
     """Calculate the tax-exempt portion of transport allowance.
 
     Ethiopian law: exempt up to ETB 2,200 or 25% of basic salary,
@@ -71,13 +70,17 @@ def calculate_transport_exempt_amount(basic_salary: Decimal,
     return min(transport_amount, cap)
 
 
-def add_allowance_for_employee(employee: Employee, company_id: int,
-                                allowance_type: str, amount: Decimal,
-                                tax_treatment: str = 'taxable',
-                                exempt_cap: Decimal = None,
-                                regulation_ref: str = None,
-                                custom_type_name: str = None,
-                                db_session=None) -> EmployeeAllowance:
+def add_allowance_for_employee(
+    employee: Employee,
+    company_id: int,
+    allowance_type: str,
+    amount: Decimal,
+    tax_treatment: str = 'taxable',
+    exempt_cap: Decimal | None = None,
+    regulation_ref: str | None = None,
+    custom_type_name: str | None = None,
+    db_session=None,
+) -> EmployeeAllowance:
     """Add an allowance to an employee with proper tax treatment.
 
     Auto-applies regulatory rules for known allowance types.
@@ -98,9 +101,7 @@ def add_allowance_for_employee(employee: Employee, company_id: int,
     """
     # Auto-apply regulatory rules for known types
     if allowance_type == 'transport':
-        cap = calculate_transport_exempt_amount(
-            Decimal(str(employee.basic_salary)), amount
-        )
+        cap = calculate_transport_exempt_amount(Decimal(str(employee.basic_salary)), amount)
         tax_treatment = 'partial'
         exempt_cap = cap
         regulation_ref = regulation_ref or 'Income Tax Proclamation - Transport Allowance Exemption'
@@ -178,8 +179,7 @@ def get_taxable_allowances(employee: Employee) -> Decimal:
     return sum(a.taxable_amount for a in records)
 
 
-def migrate_legacy_allowances(employee: Employee, company_id: int,
-                                db_session) -> list[EmployeeAllowance]:
+def migrate_legacy_allowances(employee: Employee, company_id: int, db_session) -> list[EmployeeAllowance]:
     """Migrate a single 'allowances' field into EmployeeAllowance records.
 
     Called once per employee to convert legacy data to new format.
@@ -197,9 +197,7 @@ def migrate_legacy_allowances(employee: Employee, company_id: int,
         return []
 
     # Check if already migrated
-    existing = EmployeeAllowance.query.filter_by(
-        employee_id=employee.id, company_id=company_id
-    ).first()
+    existing = EmployeeAllowance.query.filter_by(employee_id=employee.id, company_id=company_id).first()
     if existing:
         return []  # Already has records
 

@@ -19,11 +19,11 @@ from decimal import Decimal, InvalidOperation
 def read_xlsx(file_path_or_bytes, sheet_name=None):
     """
     Read an Excel file and return rows as list of dicts.
-    
+
     Args:
         file_path_or_bytes: file path (str) or file-like object
         sheet_name: specific sheet to read (default: first sheet)
-    
+
     Returns:
         list of dicts with normalized column names as keys
     """
@@ -138,7 +138,8 @@ def normalize_phone(phone_str):
         return None
 
     from payroll_engine.models import validate_ethiopian_phone
-    is_valid, normalized, error = validate_ethiopian_phone(str(phone_str))
+
+    is_valid, normalized, _error = validate_ethiopian_phone(str(phone_str))
     return normalized if is_valid else None
 
 
@@ -155,10 +156,10 @@ def detect_file_type(filename):
 def read_file(file_storage):
     """
     Read uploaded file (CSV or Excel) and return rows as list of dicts.
-    
+
     Args:
         file_storage: Flask FileStorage object
-    
+
     Returns:
         list of dicts
     """
@@ -170,6 +171,7 @@ def read_file(file_storage):
     elif file_type == 'csv':
         import csv
         import io
+
         content = file_storage.read().decode('utf-8-sig')
         reader = csv.DictReader(io.StringIO(content))
         return [dict(row) for row in reader]

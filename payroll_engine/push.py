@@ -42,12 +42,7 @@ def save_subscription(user_id, subscription_info):
     _subscriptions[user_id] = subscription_info
 
     # Also store in-app notification
-    notif = Notification(
-        user_id=user_id,
-        message='Push notifications enabled',
-        notif_type='system',
-        is_read=True
-    )
+    notif = Notification(user_id=user_id, message='Push notifications enabled', notif_type='system', is_read=True)
     db.session.add(notif)
     db.session.commit()
 
@@ -64,10 +59,7 @@ def send_push_notification(user_id, title, body, url='/', notif_type='info'):
 
     # Always create in-app notification
     notif = Notification(
-        user_id=user_id,
-        message=f'{title}: {body}' if body else title,
-        notif_type=notif_type,
-        link=url
+        user_id=user_id, message=f'{title}: {body}' if body else title, notif_type=notif_type, link=url
     )
     db.session.add(notif)
     db.session.commit()
@@ -78,13 +70,15 @@ def send_push_notification(user_id, title, body, url='/', notif_type='info'):
         return False
 
     try:
-        from pywebpush import WebPushException, webpush
+        from pywebpush import WebPushException, webpush  # noqa: F401
 
-        payload = json.dumps({
-            'title': title,
-            'body': body,
-            'url': url,
-        })
+        payload = json.dumps(
+            {
+                'title': title,
+                'body': body,
+                'url': url,
+            }
+        )
 
         webpush(
             subscription_info=subscription,
@@ -92,7 +86,7 @@ def send_push_notification(user_id, title, body, url='/', notif_type='info'):
             vapid_private_key=VAPID_PRIVATE_KEY,
             vapid_claims={
                 'sub': VAPID_CLAIMS_EMAIL,
-            }
+            },
         )
         return True
 
@@ -111,7 +105,7 @@ def notify_payslip_ready(user_id, employee_name, period, payslip_id):
         title='Payslip Ready',
         body=f'{employee_name} — {period} payslip is ready to view.',
         url=f'/portal/payslips/{payslip_id}',
-        notif_type='payslip'
+        notif_type='payslip',
     )
 
 
@@ -122,7 +116,7 @@ def notify_payroll_approved(user_id, period, employee_count):
         title='Payroll Approved',
         body=f'{period} payroll approved for {employee_count} employees.',
         url='/payroll/runs',
-        notif_type='payroll'
+        notif_type='payroll',
     )
 
 
@@ -133,7 +127,7 @@ def notify_leave_request(user_id, employee_name, leave_type, days):
         title='Leave Request',
         body=f'{employee_name} requested {days} days of {leave_type} leave.',
         url='/employees/leave',
-        notif_type='leave'
+        notif_type='leave',
     )
 
 
@@ -144,5 +138,5 @@ def notify_deadline_approaching(user_id, deadline_name, days_left):
         title='Deadline Approaching',
         body=f'{deadline_name} is due in {days_left} days.',
         url='/reports',
-        notif_type='deadline'
+        notif_type='deadline',
     )

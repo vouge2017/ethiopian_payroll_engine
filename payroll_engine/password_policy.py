@@ -3,53 +3,193 @@
 import re
 
 # Expanded common passwords list (top 200 globally + Ethiopian-contextual)
-COMMON_PASSWORDS = frozenset({
-    # Global top 50
-    'password', '123456', '12345678', '123456789', '1234567890',
-    'qwerty', 'abc123', 'monkey', 'master', 'dragon',
-    '111111', 'baseball', 'iloveyou', 'trustno1', 'sunshine',
-    'princess', 'football', 'charlie', 'shadow', 'michael',
-    'password1', 'password123', 'letmein', 'welcome', 'admin',
-    'admin123', 'root', 'toor', 'pass', 'test',
-    'guest', 'hello', 'love', 'god', 'money',
-    'freedom', 'whatever', 'computer', 'internet', 'secret',
-    # Extended global
-    'login', 'starwars', 'batman', 'spiderman', 'superman',
-    'jordan', 'phoenix', 'mustang', 'access', 'killer',
-    'hunter', 'thomas', 'robert', 'daniel', 'jessica',
-    'matrix', 'apple', 'orange', 'banana', 'summer',
-    'winter', 'spring', 'autumn', 'soccer', 'hockey',
-    'ranger', 'pepper', 'cookie', 'samsung', 'iphone',
-    # Ethiopian-contextual
-    'ethiopia', 'addis', 'addisababa', 'tigist', 'dawit',
-    'ethiopian', 'payroll', 'salary', 'birr', 'etb',
-    'habesha', 'meskel', 'timkat', 'genna', 'ashenda',
-    'selam', 'merkato', 'bole', 'piassa', 'arada',
-    'amharic', 'oromia', 'tigray', 'harar', 'dire',
-})
+COMMON_PASSWORDS = frozenset(
+    {
+        # Global top 50
+        'password',
+        '123456',
+        '12345678',
+        '123456789',
+        '1234567890',
+        'qwerty',
+        'abc123',
+        'monkey',
+        'master',
+        'dragon',
+        '111111',
+        'baseball',
+        'iloveyou',
+        'trustno1',
+        'sunshine',
+        'princess',
+        'football',
+        'charlie',
+        'shadow',
+        'michael',
+        'password1',
+        'password123',
+        'letmein',
+        'welcome',
+        'admin',
+        'admin123',
+        'root',
+        'toor',
+        'pass',
+        'test',
+        'guest',
+        'hello',
+        'love',
+        'god',
+        'money',
+        'freedom',
+        'whatever',
+        'computer',
+        'internet',
+        'secret',
+        # Extended global
+        'login',
+        'starwars',
+        'batman',
+        'spiderman',
+        'superman',
+        'jordan',
+        'phoenix',
+        'mustang',
+        'access',
+        'killer',
+        'hunter',
+        'thomas',
+        'robert',
+        'daniel',
+        'jessica',
+        'matrix',
+        'apple',
+        'orange',
+        'banana',
+        'summer',
+        'winter',
+        'spring',
+        'autumn',
+        'soccer',
+        'hockey',
+        'ranger',
+        'pepper',
+        'cookie',
+        'samsung',
+        'iphone',
+        # Ethiopian-contextual
+        'ethiopia',
+        'addis',
+        'addisababa',
+        'tigist',
+        'dawit',
+        'ethiopian',
+        'payroll',
+        'salary',
+        'birr',
+        'etb',
+        'habesha',
+        'meskel',
+        'timkat',
+        'genna',
+        'ashenda',
+        'selam',
+        'merkato',
+        'bole',
+        'piassa',
+        'arada',
+        'amharic',
+        'oromia',
+        'tigray',
+        'harar',
+        'dire',
+    }
+)
 
 # Keyboard patterns (adjacent key sequences)
-KEYBOARD_PATTERNS = frozenset({
-    'qwerty', 'qwertyui', 'qwertyuiop', 'asdfgh', 'asdfghjkl',
-    'zxcvbn', 'zxcvbnm', 'qazwsx', 'edcrfv', 'tgbyhn',
-    'qweasd', 'asdzxc', '1qaz2wsx', 'q1w2e3', 'zaq1xsw2',
-    '1q2w3e', 'q1w2e3r4', '1qaz2wsx3edc', 'abcd', 'abcdef',
-    'abcdefg', 'abcdefgh', 'abcdefghi', 'abcdefghij',
-})
+KEYBOARD_PATTERNS = frozenset(
+    {
+        'qwerty',
+        'qwertyui',
+        'qwertyuiop',
+        'asdfgh',
+        'asdfghjkl',
+        'zxcvbn',
+        'zxcvbnm',
+        'qazwsx',
+        'edcrfv',
+        'tgbyhn',
+        'qweasd',
+        'asdzxc',
+        '1qaz2wsx',
+        'q1w2e3',
+        'zaq1xsw2',
+        '1q2w3e',
+        'q1w2e3r4',
+        '1qaz2wsx3edc',
+        'abcd',
+        'abcdef',
+        'abcdefg',
+        'abcdefgh',
+        'abcdefghi',
+        'abcdefghij',
+    }
+)
 
 # Common dictionary words that shouldn't be the base of a password
-DICTIONARY_WORDS = frozenset({
-    'password', 'passw0rd', 'p@ssword', 'p@ssw0rd',
-    'admin', 'root', 'user', 'login', 'welcome',
-    'master', 'dragon', 'monkey', 'shadow', 'sunshine',
-    'princess', 'football', 'baseball', 'soccer', 'hockey',
-    'computer', 'internet', 'security', 'system', 'network',
-    'company', 'office', 'school', 'college', 'university',
-    'family', 'friend', 'love', 'baby', 'angel',
-    'money', 'cash', 'bank', 'rich', 'gold',
-    'ethiopia', 'addis', 'habesha', 'tigist', 'dawit',
-    'payroll', 'salary', 'worker', 'employee', 'manager',
-})
+DICTIONARY_WORDS = frozenset(
+    {
+        'password',
+        'passw0rd',
+        'p@ssword',
+        'p@ssw0rd',
+        'admin',
+        'root',
+        'user',
+        'login',
+        'welcome',
+        'master',
+        'dragon',
+        'monkey',
+        'shadow',
+        'sunshine',
+        'princess',
+        'football',
+        'baseball',
+        'soccer',
+        'hockey',
+        'computer',
+        'internet',
+        'security',
+        'system',
+        'network',
+        'company',
+        'office',
+        'school',
+        'college',
+        'university',
+        'family',
+        'friend',
+        'love',
+        'baby',
+        'angel',
+        'money',
+        'cash',
+        'bank',
+        'rich',
+        'gold',
+        'ethiopia',
+        'addis',
+        'habesha',
+        'tigist',
+        'dawit',
+        'payroll',
+        'salary',
+        'worker',
+        'employee',
+        'manager',
+    }
+)
 
 
 def _has_keyboard_pattern(password: str, min_length: int = 4) -> bool:
@@ -59,18 +199,12 @@ def _has_keyboard_pattern(password: str, min_length: int = 4) -> bool:
         if pattern in lower:
             return True
     # Check for reverse patterns
-    for pattern in KEYBOARD_PATTERNS:
-        if pattern[::-1] in lower:
-            return True
-    return False
+    return any(pattern[::-1] in lower for pattern in KEYBOARD_PATTERNS)
 
 
 def _has_repeated_chars(password: str, min_repeat: int = 3) -> bool:
     """Check for repeated characters (e.g., 'aaa', '111')."""
-    for i in range(len(password) - min_repeat + 1):
-        if len(set(password[i:i + min_repeat])) == 1:
-            return True
-    return False
+    return any(len(set(password[i : i + min_repeat])) == 1 for i in range(len(password) - min_repeat + 1))
 
 
 def _has_dict_word_plus_year(password: str) -> bool:
@@ -79,12 +213,12 @@ def _has_dict_word_plus_year(password: str) -> bool:
 
     # Only match if the word part is in our known dictionary/common lists
     patterns = [
-        r'^([a-z]+)(20\d{2})$',        # word2024, word2025
-        r'^([a-z]+)(19\d{2})$',        # word1990
-        r'^([a-z]+)(\d{1,3})$',        # word1, word12, word123
-        r'^(\d{4})([a-z]+)$',          # 2025word
-        r'^([a-z]+)[!@#$%&*](\d*)$',   # word!123, word@2025
-        r'^([a-z]+)(\d*)[!@#$%&*]$',   # word123!, word2025@
+        r'^([a-z]+)(20\d{2})$',  # word2024, word2025
+        r'^([a-z]+)(19\d{2})$',  # word1990
+        r'^([a-z]+)(\d{1,3})$',  # word1, word12, word123
+        r'^(\d{4})([a-z]+)$',  # 2025word
+        r'^([a-z]+)[!@#$%&*](\d*)$',  # word!123, word@2025
+        r'^([a-z]+)(\d*)[!@#$%&*]$',  # word123!, word2025@
     ]
 
     known_words = DICTIONARY_WORDS | COMMON_PASSWORDS
@@ -104,29 +238,17 @@ def _has_sequential_chars(password: str, min_length: int = 4) -> bool:
     lower = password.lower()
     # Ascending sequences
     for i in range(len(lower) - min_length + 1):
-        chunk = lower[i:i + min_length]
-        if chunk.isalpha() and all(
-            ord(chunk[j + 1]) == ord(chunk[j]) + 1
-            for j in range(len(chunk) - 1)
-        ):
+        chunk = lower[i : i + min_length]
+        if chunk.isalpha() and all(ord(chunk[j + 1]) == ord(chunk[j]) + 1 for j in range(len(chunk) - 1)):
             return True
-        if chunk.isdigit() and all(
-            int(chunk[j + 1]) == int(chunk[j]) + 1
-            for j in range(len(chunk) - 1)
-        ):
+        if chunk.isdigit() and all(int(chunk[j + 1]) == int(chunk[j]) + 1 for j in range(len(chunk) - 1)):
             return True
     # Descending sequences
     for i in range(len(lower) - min_length + 1):
-        chunk = lower[i:i + min_length]
-        if chunk.isalpha() and all(
-            ord(chunk[j + 1]) == ord(chunk[j]) - 1
-            for j in range(len(chunk) - 1)
-        ):
+        chunk = lower[i : i + min_length]
+        if chunk.isalpha() and all(ord(chunk[j + 1]) == ord(chunk[j]) - 1 for j in range(len(chunk) - 1)):
             return True
-        if chunk.isdigit() and all(
-            int(chunk[j + 1]) == int(chunk[j]) - 1
-            for j in range(len(chunk) - 1)
-        ):
+        if chunk.isdigit() and all(int(chunk[j + 1]) == int(chunk[j]) - 1 for j in range(len(chunk) - 1)):
             return True
     return False
 

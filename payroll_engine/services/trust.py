@@ -25,6 +25,7 @@ def _D(value) -> Decimal:
 # PATTERN 1: Change Summary
 # ──────────────────────────────────────────────────────────────
 
+
 def get_payroll_change_summary(company_id: int) -> dict:
     """Compare current payroll run with previous month.
 
@@ -41,9 +42,12 @@ def get_payroll_change_summary(company_id: int) -> dict:
     from payroll_engine.models import PayrollRun
 
     # Get last two completed runs
-    runs = PayrollRun.query.filter_by(
-        company_id=company_id, status='completed'
-    ).order_by(PayrollRun.run_date.desc()).limit(2).all()
+    runs = (
+        PayrollRun.query.filter_by(company_id=company_id, status='completed')
+        .order_by(PayrollRun.run_date.desc())
+        .limit(2)
+        .all()
+    )
 
     if not runs:
         return {
@@ -72,7 +76,7 @@ def get_payroll_change_summary(company_id: int) -> dict:
             'delta_pct': None,
             'changes': _detect_changes(current_run, None),
             'variance_flag': False,
-            'summary': f"First payroll: {current['employee_count']} employees, ETB {current['total_net']:,.2f} net.",
+            'summary': f'First payroll: {current["employee_count"]} employees, ETB {current["total_net"]:,.2f} net.',
         }
 
     # Calculate deltas
@@ -95,9 +99,9 @@ def get_payroll_change_summary(company_id: int) -> dict:
     # Build summary
     direction = 'increased' if delta['total_net'] > 0 else 'decreased'
     summary = (
-        f"{current['employee_count']} employees · "
-        f"ETB {current['total_net']:,.2f} net · "
-        f"{direction} {abs(delta_pct['total_net'])}% from last month"
+        f'{current["employee_count"]} employees · '
+        f'ETB {current["total_net"]:,.2f} net · '
+        f'{direction} {abs(delta_pct["total_net"])}% from last month'
     )
 
     return {
@@ -145,25 +149,29 @@ def _detect_changes(current_run, previous_run) -> list:
     for emp_id in current_employees:
         if emp_id not in previous_employees:
             p = current_employees[emp_id]
-            changes.append({
-                'type': 'new_employee',
-                'description': f'New employee: {p.employee.name if p.employee else emp_id}',
-                'employee': p.employee.name if p.employee else emp_id,
-                'amount': float(p.net_pay),
-                'direction': 'up',
-            })
+            changes.append(
+                {
+                    'type': 'new_employee',
+                    'description': f'New employee: {p.employee.name if p.employee else emp_id}',
+                    'employee': p.employee.name if p.employee else emp_id,
+                    'amount': float(p.net_pay),
+                    'direction': 'up',
+                }
+            )
 
     # Removed employees
     for emp_id in previous_employees:
         if emp_id not in current_employees:
             p = previous_employees[emp_id]
-            changes.append({
-                'type': 'removed_employee',
-                'description': f'No longer in payroll: {p.employee.name if p.employee else emp_id}',
-                'employee': p.employee.name if p.employee else emp_id,
-                'amount': float(p.net_pay),
-                'direction': 'down',
-            })
+            changes.append(
+                {
+                    'type': 'removed_employee',
+                    'description': f'No longer in payroll: {p.employee.name if p.employee else emp_id}',
+                    'employee': p.employee.name if p.employee else emp_id,
+                    'amount': float(p.net_pay),
+                    'direction': 'down',
+                }
+            )
 
     # Salary changes (compare net pay)
     for emp_id in current_employees:
@@ -178,13 +186,15 @@ def _detect_changes(current_run, previous_run) -> list:
                 if change_pct > 5:  # > 5% change is noteworthy
                     direction = 'up' if curr_net > prev_net else 'down'
                     name = curr.employee.name if curr.employee else emp_id
-                    changes.append({
-                        'type': 'salary_change',
-                        'description': f'{name}: ETB {prev_net:,.0f} → {curr_net:,.0f} ({change_pct:.0f}% {direction})',
-                        'employee': name,
-                        'amount': float(curr_net - prev_net),
-                        'direction': direction,
-                    })
+                    changes.append(
+                        {
+                            'type': 'salary_change',
+                            'description': f'{name}: ETB {prev_net:,.0f} → {curr_net:,.0f} ({change_pct:.0f}% {direction})',
+                            'employee': name,
+                            'amount': float(curr_net - prev_net),
+                            'direction': direction,
+                        }
+                    )
 
     return changes
 
@@ -192,6 +202,7 @@ def _detect_changes(current_run, previous_run) -> list:
 # ──────────────────────────────────────────────────────────────
 # PATTERN 4: Safe Approval
 # ──────────────────────────────────────────────────────────────
+
 
 def get_approval_preview(run_id: int) -> dict:
     """Generate a clear list of what will happen when payroll is approved.
@@ -211,7 +222,7 @@ def get_approval_preview(run_id: int) -> dict:
     payslips = run.payslips or []
     employee_count = len(payslips)
     total_net = sum(_D(p.net_pay) for p in payslips)
-    total_tax = sum(_D(p.tax) for p in payslips)
+    sum(_D(p.tax) for p in payslips)
 
     actions = [
         f'{employee_count} payslips will be generated',
@@ -249,42 +260,52 @@ def _run_safety_checks(run) -> list:
 
     # Check for negative net pay
     negative_nets = [p for p in payslips if _D(p.net_pay) < 0]
-    checks.append({
-        'check': 'No negative net pay',
-        'status': 'pass' if not negative_nets else 'fail',
-        'detail': f'{len(negative_nets)} employee(s) have negative net pay' if negative_nets else '',
-    })
+    checks.append(
+        {
+            'check': 'No negative net pay',
+            'status': 'pass' if not negative_nets else 'fail',
+            'detail': f'{len(negative_nets)} employee(s) have negative net pay' if negative_nets else '',
+        }
+    )
 
     # Check for duplicate payslips
     emp_ids = [p.employee_id for p in payslips]
     duplicates = [eid for eid in emp_ids if emp_ids.count(eid) > 1]
-    checks.append({
-        'check': 'No duplicate employees',
-        'status': 'pass' if not duplicates else 'fail',
-        'detail': f'{len(set(duplicates))} duplicate(s) found' if duplicates else '',
-    })
+    checks.append(
+        {
+            'check': 'No duplicate employees',
+            'status': 'pass' if not duplicates else 'fail',
+            'detail': f'{len(set(duplicates))} duplicate(s) found' if duplicates else '',
+        }
+    )
 
     # Check for zero gross (likely data error)
     zero_gross = [p for p in payslips if _D(p.gross_salary) == 0]
-    checks.append({
-        'check': 'No zero-salary employees',
-        'status': 'pass' if not zero_gross else 'warn',
-        'detail': f'{len(zero_gross)} employee(s) have zero gross salary' if zero_gross else '',
-    })
+    checks.append(
+        {
+            'check': 'No zero-salary employees',
+            'status': 'pass' if not zero_gross else 'warn',
+            'detail': f'{len(zero_gross)} employee(s) have zero gross salary' if zero_gross else '',
+        }
+    )
 
     # Check tax brackets are current
-    checks.append({
-        'check': 'Tax calculated using current brackets',
-        'status': 'pass',
-        'detail': 'Proclamation 1395/2025',
-    })
+    checks.append(
+        {
+            'check': 'Tax calculated using current brackets',
+            'status': 'pass',
+            'detail': 'Proclamation 1395/2025',
+        }
+    )
 
     # Check pension rates
-    checks.append({
-        'check': 'Pension calculated at 7%/11%',
-        'status': 'pass',
-        'detail': 'Proclamation 1268/2022',
-    })
+    checks.append(
+        {
+            'check': 'Pension calculated at 7%/11%',
+            'status': 'pass',
+            'detail': 'Proclamation 1268/2022',
+        }
+    )
 
     return checks
 
@@ -293,7 +314,8 @@ def _run_safety_checks(run) -> list:
 # PATTERN 6: Filing Progress
 # ──────────────────────────────────────────────────────────────
 
-def get_filing_progress(company_id: int, period: str = None) -> dict:
+
+def get_filing_progress(company_id: int, period: str | None = None) -> dict:
     """Generate filing progress status for a payroll period.
 
     Returns dict with:
@@ -308,9 +330,11 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
     from payroll_engine.models import Company, FilingRecord, PayrollRun
 
     # Get the most recent completed run
-    run = PayrollRun.query.filter_by(
-        company_id=company_id, status='completed'
-    ).order_by(PayrollRun.run_date.desc()).first()
+    run = (
+        PayrollRun.query.filter_by(company_id=company_id, status='completed')
+        .order_by(PayrollRun.run_date.desc())
+        .first()
+    )
 
     if not run:
         return {
@@ -327,45 +351,49 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
     steps = []
 
     # Step 1: Payroll processed
-    steps.append({
-        'label': 'Payroll processed',
-        'status': 'done',
-        'date': str(run.run_date),
-        'action_url': None,
-    })
+    steps.append(
+        {
+            'label': 'Payroll processed',
+            'status': 'done',
+            'date': str(run.run_date),
+            'action_url': None,
+        }
+    )
 
     # Step 2: Payslips generated
     has_payslips = len(run.payslips or []) > 0
-    steps.append({
-        'label': 'Payslips generated',
-        'status': 'done' if has_payslips else 'pending',
-        'date': str(run.run_date) if has_payslips else None,
-        'action_url': None,
-    })
+    steps.append(
+        {
+            'label': 'Payslips generated',
+            'status': 'done' if has_payslips else 'pending',
+            'date': str(run.run_date) if has_payslips else None,
+            'action_url': None,
+        }
+    )
 
     # Step 3: ERCA filing
     erca_deadline = get_deadline_for_type(company, 'erca', run.run_date)
     try:
-        erca_record = FilingRecord.query.filter_by(
-            company_id=company_id, filing_type='erca', period=run.period
-        ).first()
+        erca_record = FilingRecord.query.filter_by(company_id=company_id, filing_type='erca', period=run.period).first()
     except Exception:
         erca_record = None
 
     erca_status = 'done' if erca_record else ('overdue' if erca_deadline and today > erca_deadline else 'pending')
     erca_days = (erca_deadline - today).days if erca_deadline else None
 
-    steps.append({
-        'label': 'ERCA filing',
-        'status': erca_status,
-        'date': str(erca_record.filed_at.date()) if erca_record else None,
-        'action_url': f'/reports/erca/{run.id}',
-        'mark_url': '/filing-history/mark',
-        'filing_type': 'erca',
-        'period': run.period or '',
-        'deadline': str(erca_deadline) if erca_deadline else None,
-        'days_remaining': erca_days,
-    })
+    steps.append(
+        {
+            'label': 'ERCA filing',
+            'status': erca_status,
+            'date': str(erca_record.filed_at.date()) if erca_record else None,
+            'action_url': f'/reports/erca/{run.id}',
+            'mark_url': '/filing-history/mark',
+            'filing_type': 'erca',
+            'period': run.period or '',
+            'deadline': str(erca_deadline) if erca_deadline else None,
+            'days_remaining': erca_days,
+        }
+    )
 
     # Step 4: Pension remittance
     pension_deadline = get_deadline_for_type(company, 'pension', run.run_date)
@@ -376,29 +404,35 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
     except Exception:
         pension_record = None
 
-    pension_status = 'done' if pension_record else ('overdue' if pension_deadline and today > pension_deadline else 'pending')
+    pension_status = (
+        'done' if pension_record else ('overdue' if pension_deadline and today > pension_deadline else 'pending')
+    )
     pension_days = (pension_deadline - today).days if pension_deadline else None
 
-    steps.append({
-        'label': 'Pension remittance',
-        'status': pension_status,
-        'date': str(pension_record.filed_at.date()) if pension_record else None,
-        'action_url': f'/reports/pension/{run.id}',
-        'mark_url': '/filing-history/mark',
-        'filing_type': 'pension',
-        'period': run.period or '',
-        'deadline': str(pension_deadline) if pension_deadline else None,
-        'days_remaining': pension_days,
-    })
+    steps.append(
+        {
+            'label': 'Pension remittance',
+            'status': pension_status,
+            'date': str(pension_record.filed_at.date()) if pension_record else None,
+            'action_url': f'/reports/pension/{run.id}',
+            'mark_url': '/filing-history/mark',
+            'filing_type': 'pension',
+            'period': run.period or '',
+            'deadline': str(pension_deadline) if pension_deadline else None,
+            'days_remaining': pension_days,
+        }
+    )
 
     # Step 5: Bank disbursement
     disbursement_status = run.disbursement_status or 'pending'
-    steps.append({
-        'label': 'Bank disbursement',
-        'status': 'done' if disbursement_status in ('disbursed', 'confirmed') else 'pending',
-        'date': None,
-        'action_url': f'/payroll/{run.id}/disbursement',
-    })
+    steps.append(
+        {
+            'label': 'Bank disbursement',
+            'status': 'done' if disbursement_status in ('disbursed', 'confirmed') else 'pending',
+            'date': None,
+            'action_url': f'/payroll/{run.id}/disbursement',
+        }
+    )
 
     # Find next action
     next_action = 'All filings complete!'
@@ -407,12 +441,12 @@ def get_filing_progress(company_id: int, period: str = None) -> dict:
 
     for step in steps:
         if step['status'] == 'overdue':
-            next_action = f"{step['label']} is OVERDUE"
+            next_action = f'{step["label"]} is OVERDUE'
             days_remaining = step.get('days_remaining', 0)
             is_overdue = True
             break
         elif step['status'] == 'pending':
-            next_action = f"Next: {step['label']}"
+            next_action = f'Next: {step["label"]}'
             days_remaining = step.get('days_remaining')
             break
 

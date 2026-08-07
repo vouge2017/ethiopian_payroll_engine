@@ -9,6 +9,7 @@ Covers:
 - Webhook handles missing webhook_url gracefully
 - WhatsApp send skipped when not configured
 """
+
 import os
 import sys
 
@@ -75,7 +76,9 @@ def _setup(app):
         db.session.flush()
 
         owner_uc = UserCompany(
-            user_id=owner.id, company_id=company.id, role='owner',
+            user_id=owner.id,
+            company_id=company.id,
+            role='owner',
         )
         db.session.add(owner_uc)
 
@@ -86,14 +89,21 @@ def _setup(app):
         db.session.flush()
 
         emp_uc = UserCompany(
-            user_id=emp_user.id, company_id=company.id, role='employee',
+            user_id=emp_user.id,
+            company_id=company.id,
+            role='employee',
         )
         db.session.add(emp_uc)
 
         emp = Employee(
-            employee_id='EMP001', name='Tigist Haile', phone='0911111111',
-            department='Finance', position='Accountant',
-            basic_salary=10000, company_id=company.id, user_id=emp_user.id,
+            employee_id='EMP001',
+            name='Tigist Haile',
+            phone='0911111111',
+            department='Finance',
+            position='Accountant',
+            basic_salary=10000,
+            company_id=company.id,
+            user_id=emp_user.id,
         )
         db.session.add(emp)
         db.session.commit()
@@ -108,7 +118,7 @@ class TestCreateInAppNotification:
     """Tests for create_in_app_notification."""
 
     def test_creates_notification_in_db(self, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             notif = create_in_app_notification(cid, owner_id, 'Test message', 'info', '/test')
             assert notif.id is not None
@@ -119,7 +129,7 @@ class TestCreateInAppNotification:
 
     def test_flush_not_commit(self, app):
         """Notification should be flushed, not committed. Caller owns the transaction."""
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             notif = create_in_app_notification(cid, owner_id, 'Flush test')
             assert notif.id is not None
@@ -133,7 +143,7 @@ class TestNotify:
     """Tests for the notify() dispatcher."""
 
     def test_creates_in_app_notification(self, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             notify(cid, owner_id, 'Dispatch test', notif_type='warning')
             notif = Notification.query.filter_by(user_id=owner_id).first()
@@ -142,7 +152,7 @@ class TestNotify:
 
     @patch('payroll_engine.notifications.send_whatsapp')
     def test_calls_whatsapp_when_phone_provided(self, mock_wa, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         mock_wa.return_value = True
         with app.app_context():
             notify(cid, owner_id, 'WA test', employee_phone='0911111111')
@@ -150,7 +160,7 @@ class TestNotify:
 
     @patch('payroll_engine.notifications.send_whatsapp')
     def test_skips_whatsapp_when_no_phone(self, mock_wa, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             notify(cid, owner_id, 'No WA test')
             mock_wa.assert_not_called()
@@ -161,6 +171,7 @@ class TestWhatsApp:
 
     def test_skips_when_not_configured(self):
         import payroll_engine.notifications as notif_mod
+
         orig = notif_mod.WHATSAPP_ENABLED
         notif_mod.WHATSAPP_ENABLED = False
         result = send_whatsapp('0911111111', 'test')
@@ -169,6 +180,7 @@ class TestWhatsApp:
 
     def test_returns_false_when_no_phone(self):
         import payroll_engine.notifications as notif_mod
+
         orig = notif_mod.WHATSAPP_ENABLED
         notif_mod.WHATSAPP_ENABLED = True
         result = send_whatsapp('', 'test')
@@ -178,6 +190,7 @@ class TestWhatsApp:
     @patch('requests.post')
     def test_sends_to_normalized_phone(self, mock_post, app):
         import payroll_engine.notifications as notif_mod
+
         orig = notif_mod.WHATSAPP_ENABLED
         notif_mod.WHATSAPP_ENABLED = True
 
@@ -195,6 +208,7 @@ class TestWhatsApp:
     @patch('requests.post')
     def test_returns_false_on_api_error(self, mock_post):
         import payroll_engine.notifications as notif_mod
+
         orig = notif_mod.WHATSAPP_ENABLED
         notif_mod.WHATSAPP_ENABLED = True
 
@@ -210,6 +224,7 @@ class TestWhatsApp:
     @patch('requests.post')
     def test_returns_false_on_network_error(self, mock_post):
         import payroll_engine.notifications as notif_mod
+
         orig = notif_mod.WHATSAPP_ENABLED
         notif_mod.WHATSAPP_ENABLED = True
 
@@ -223,7 +238,7 @@ class TestNotifyPayrollApproved:
     """Tests for notify_payroll_approved."""
 
     def test_notifies_owners_and_accountants(self, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             employees_data = [{'name': 'Tigist', 'phone': '0911111111', 'net': 8000}]
             notify_payroll_approved(cid, employees_data, 'PR-2026-07-001')
@@ -236,6 +251,7 @@ class TestNotifyPayrollApproved:
     @patch('requests.post')
     def test_sends_whatsapp_to_employees(self, mock_post, app):
         import payroll_engine.notifications as notif_mod
+
         orig = notif_mod.WHATSAPP_ENABLED
         notif_mod.WHATSAPP_ENABLED = True
 
@@ -243,7 +259,7 @@ class TestNotifyPayrollApproved:
         mock_resp.status_code = 200
         mock_post.return_value = mock_resp
 
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, _owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             employees_data = [{'name': 'Tigist', 'phone': '0911111111', 'net': 8000}]
             notify_payroll_approved(cid, employees_data, 'PR-2026-07-001')
@@ -261,10 +277,14 @@ class TestNotifyLeaveDecision:
         cid, owner_id, emp_uid, emp_id = _setup(app)
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=emp_id,
-                leave_type='annual', start_date=date(2026, 8, 1),
-                end_date=date(2026, 8, 5), days_requested=5,
-                status='approved', approved_by=owner_id,
+                company_id=cid,
+                employee_id=emp_id,
+                leave_type='annual',
+                start_date=date(2026, 8, 1),
+                end_date=date(2026, 8, 5),
+                days_requested=5,
+                status='approved',
+                approved_by=owner_id,
             )
             db.session.add(leave)
             db.session.commit()
@@ -277,12 +297,15 @@ class TestNotifyLeaveDecision:
             assert notif.type == 'success'
 
     def test_notification_created_on_leave_rejection(self, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, _owner_id, emp_uid, emp_id = _setup(app)
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=emp_id,
-                leave_type='sick', start_date=date(2026, 8, 1),
-                end_date=date(2026, 8, 3), days_requested=3,
+                company_id=cid,
+                employee_id=emp_id,
+                leave_type='sick',
+                start_date=date(2026, 8, 1),
+                end_date=date(2026, 8, 3),
+                days_requested=3,
                 status='rejected',
             )
             db.session.add(leave)
@@ -298,6 +321,7 @@ class TestNotifyLeaveDecision:
     @patch('requests.post')
     def test_whatsapp_sent_on_leave_decision(self, mock_post, app):
         import payroll_engine.notifications as notif_mod
+
         orig = notif_mod.WHATSAPP_ENABLED
         notif_mod.WHATSAPP_ENABLED = True
 
@@ -305,12 +329,15 @@ class TestNotifyLeaveDecision:
         mock_resp.status_code = 200
         mock_post.return_value = mock_resp
 
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, _owner_id, _emp_uid, emp_id = _setup(app)
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=emp_id,
-                leave_type='annual', start_date=date(2026, 8, 1),
-                end_date=date(2026, 8, 5), days_requested=5,
+                company_id=cid,
+                employee_id=emp_id,
+                leave_type='annual',
+                start_date=date(2026, 8, 1),
+                end_date=date(2026, 8, 5),
+                days_requested=5,
                 status='approved',
             )
             db.session.add(leave)
@@ -325,12 +352,15 @@ class TestNotifyLeaveDecision:
 
     def test_no_notification_when_employee_not_found(self, app):
         """If employee is deleted, no crash, no notification."""
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, _owner_id, emp_uid, _emp_id = _setup(app)
         with app.app_context():
             leave = Leave(
-                company_id=cid, employee_id=9999,
-                leave_type='annual', start_date=date(2026, 8, 1),
-                end_date=date(2026, 8, 5), days_requested=5,
+                company_id=cid,
+                employee_id=9999,
+                leave_type='annual',
+                start_date=date(2026, 8, 1),
+                end_date=date(2026, 8, 5),
+                days_requested=5,
                 status='approved',
             )
             db.session.add(leave)
@@ -368,7 +398,7 @@ class TestFireWebhook:
 
     @patch('payroll_engine.webhooks.threading.Thread')
     def test_fires_webhook_for_configured_company(self, mock_thread, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, _owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             fire_webhook(cid, 'payroll.approved', {'run_id': 1})
             mock_thread.assert_called_once()
@@ -376,7 +406,7 @@ class TestFireWebhook:
 
     @patch('payroll_engine.webhooks.threading.Thread')
     def test_webhook_url_passed_to_thread(self, mock_thread, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, _owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             fire_webhook(cid, 'payroll.approved', {'run_id': 1})
             args = mock_thread.call_args[1]['args']
@@ -405,9 +435,10 @@ class TestFireWebhook:
     @patch('payroll_engine.webhooks.threading.Thread')
     def test_skips_when_webhooks_disabled(self, mock_thread, app):
         import payroll_engine.webhooks as wh_mod
+
         orig = wh_mod.WEBHOOKS_ENABLED
         wh_mod.WEBHOOKS_ENABLED = False
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, _owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             fire_webhook(cid, 'payroll.approved', {'run_id': 1})
             mock_thread.assert_not_called()
@@ -463,7 +494,7 @@ class TestNotificationInPayrollTransaction:
     """Verify notifications are flush-not-commit inside payroll flow."""
 
     def test_notification_visible_in_same_transaction(self, app):
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             create_in_app_notification(cid, owner_id, 'In-tx test')
             found = Notification.query.filter_by(message='In-tx test').first()
@@ -471,7 +502,7 @@ class TestNotificationInPayrollTransaction:
 
     def test_notification_rolled_back_on_rollback(self, app):
         """If the caller rolls back, the notification should disappear."""
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             create_in_app_notification(cid, owner_id, 'Rollback test')
             db.session.rollback()
@@ -480,7 +511,7 @@ class TestNotificationInPayrollTransaction:
 
     def test_notification_committed_with_payroll(self, app):
         """When payroll commits, notification should be committed too."""
-        cid, owner_id, emp_uid, emp_id = _setup(app)
+        cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             create_in_app_notification(cid, owner_id, 'Commit test')
             db.session.commit()

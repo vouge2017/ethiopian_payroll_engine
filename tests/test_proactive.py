@@ -4,6 +4,7 @@ Tests for Phase 3 — Proactive System:
 - Compliance deadline nudges
 - Scheduler hook behavior
 """
+
 import os
 import sys
 
@@ -62,14 +63,24 @@ def _setup(app):
         db.session.add(owner_uc)
 
         emp1 = Employee(
-            employee_id='EMP001', name='Abebe Kebede', phone='0911111111',
-            basic_salary=10000, allowances=2000, company_id=company.id,
-            bank_account='cbe:1000123456789', tin='1234567890',
+            employee_id='EMP001',
+            name='Abebe Kebede',
+            phone='0911111111',
+            basic_salary=10000,
+            allowances=2000,
+            company_id=company.id,
+            bank_account='cbe:1000123456789',
+            tin='1234567890',
         )
         emp2 = Employee(
-            employee_id='EMP002', name='Hana Tesfaye', phone='0922222222',
-            basic_salary=8000, allowances=1000, company_id=company.id,
-            bank_account='dashen:2000987654321', tin='0987654321',
+            employee_id='EMP002',
+            name='Hana Tesfaye',
+            phone='0922222222',
+            basic_salary=8000,
+            allowances=1000,
+            company_id=company.id,
+            bank_account='dashen:2000987654321',
+            tin='0987654321',
         )
         db.session.add_all([emp1, emp2])
         db.session.commit()
@@ -121,7 +132,7 @@ class TestPrepareMonthlyDraft:
     """Test monthly draft pre-calculation."""
 
     def test_creates_draft_for_new_period(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             result = prepare_monthly_draft(cid)
             assert result is not None
@@ -130,7 +141,7 @@ class TestPrepareMonthlyDraft:
             assert result['total_net'] > 0
 
     def test_creates_draft_run_in_db(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             prepare_monthly_draft(cid)
             runs = PayrollRun.query.filter_by(company_id=cid, status='draft').all()
@@ -138,7 +149,7 @@ class TestPrepareMonthlyDraft:
             assert runs[0].period is not None
 
     def test_creates_draft_data_in_db(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             prepare_monthly_draft(cid)
             runs = PayrollRun.query.filter_by(company_id=cid, status='draft').all()
@@ -147,7 +158,7 @@ class TestPrepareMonthlyDraft:
             assert len(draft.employee_data) == 2
 
     def test_skips_if_run_already_exists(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             # First call creates the draft
             result1 = prepare_monthly_draft(cid)
@@ -158,7 +169,7 @@ class TestPrepareMonthlyDraft:
             assert result2 is None
 
     def test_skips_if_no_employees(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             # Delete all employees
             Employee.query.filter_by(company_id=cid).delete()
@@ -168,7 +179,7 @@ class TestPrepareMonthlyDraft:
             assert result is None
 
     def test_collects_bank_account_issues(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             # Remove bank account from one employee
             emp = Employee.query.filter_by(employee_id='EMP001', company_id=cid).first()
@@ -182,7 +193,7 @@ class TestPrepareMonthlyDraft:
             assert any('no bank account' in i for i in result['issues'])
 
     def test_collects_tin_issues(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             emp = Employee.query.filter_by(employee_id='EMP001', company_id=cid).first()
             emp.tin = None
@@ -201,9 +212,10 @@ class TestPrepareMonthlyDraft:
             assert 'Draft payroll' in notifs[0].message
 
     def test_draft_period_matches_current_ethiopian_month(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
+
             today = date.today()
             eth_year, eth_month, _ = gregorian_to_ethiopian(today)
             expected_period = f'{eth_year}-{eth_month:02d}'
@@ -220,11 +232,13 @@ class TestSendComplianceNudges:
     """Test compliance deadline notifications."""
 
     def test_no_nudge_when_deadlines_far_away(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             # Create a recent completed run (deadlines are far away)
             run = PayrollRun(
-                company_id=cid, run_date=date.today(), status='completed',
+                company_id=cid,
+                run_date=date.today(),
+                status='completed',
             )
             run.generate_period()
             db.session.add(run)
@@ -235,7 +249,7 @@ class TestSendComplianceNudges:
             assert len(alerts) == 0
 
     def test_no_nudge_when_no_completed_runs(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             alerts = send_compliance_nudges(cid)
             # Without a completed run, deadlines default to today — should be close
@@ -243,12 +257,14 @@ class TestSendComplianceNudges:
             assert isinstance(alerts, list)
 
     def test_sends_nudge_when_erca_deadline_close(self, app):
-        cid, uid = _setup(app)
+        cid, _uid = _setup(app)
         with app.app_context():
             # Create a run from 2 months ago — ERCA deadline should be past
             two_months_ago = date.today() - timedelta(days=60)
             run = PayrollRun(
-                company_id=cid, run_date=two_months_ago, status='completed',
+                company_id=cid,
+                run_date=two_months_ago,
+                status='completed',
             )
             run.generate_period()
             db.session.add(run)
@@ -265,7 +281,9 @@ class TestSendComplianceNudges:
             # Create an old run to trigger overdue alerts
             old_date = date.today() - timedelta(days=60)
             run = PayrollRun(
-                company_id=cid, run_date=old_date, status='completed',
+                company_id=cid,
+                run_date=old_date,
+                status='completed',
             )
             run.generate_period()
             db.session.add(run)
@@ -278,7 +296,7 @@ class TestSendComplianceNudges:
 
     def test_returns_empty_list_on_error(self, app):
         """Should not crash if DB has issues."""
-        cid, uid = _setup(app)
+        _cid, _uid = _setup(app)
         with app.app_context():
             # Pass invalid company_id — should not crash
             alerts = send_compliance_nudges(99999)

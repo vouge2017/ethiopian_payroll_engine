@@ -6,6 +6,7 @@ These tests prove that:
 2. Filtered queries work normally
 3. Two tenants can each have the same employee_id (composite unique)
 """
+
 import os
 import sys
 
@@ -57,8 +58,7 @@ def test_unfiltered_employee_query_raises(ctx):
     table must fail at query execution time, not silently return all rows.
     """
     c = Company.query.filter_by(name='Company A').first()
-    emp = Employee(employee_id='EMP001', name='Alice', basic_salary=5000,
-                   allowances=1000, company_id=c.id)
+    emp = Employee(employee_id='EMP001', name='Alice', basic_salary=5000, allowances=1000, company_id=c.id)
     db.session.add(emp)
     db.session.commit()
 
@@ -81,8 +81,7 @@ def test_unfiltered_employee_query_raises(ctx):
 def test_filtered_employee_query_works(ctx):
     """When company_id is provided, queries must work as expected."""
     c = Company.query.filter_by(name='Company A').first()
-    emp = Employee(employee_id='EMP001', name='Alice', basic_salary=5000,
-                   allowances=1000, company_id=c.id)
+    emp = Employee(employee_id='EMP001', name='Alice', basic_salary=5000, allowances=1000, company_id=c.id)
     db.session.add(emp)
     db.session.commit()
 
@@ -102,10 +101,8 @@ def test_same_employee_id_across_tenants(ctx):
     c1 = Company.query.filter_by(name='Company A').first()
     c2 = Company.query.filter_by(name='Company B').first()
 
-    emp1 = Employee(employee_id='EMP001', name='Alice', basic_salary=5000,
-                    allowances=1000, company_id=c1.id)
-    emp2 = Employee(employee_id='EMP001', name='Bob', basic_salary=6000,
-                    allowances=500, company_id=c2.id)
+    emp1 = Employee(employee_id='EMP001', name='Alice', basic_salary=5000, allowances=1000, company_id=c1.id)
+    emp2 = Employee(employee_id='EMP001', name='Bob', basic_salary=6000, allowances=500, company_id=c2.id)
     db.session.add_all([emp1, emp2])
     db.session.commit()  # Must not raise IntegrityError
 
@@ -114,8 +111,7 @@ def test_same_employee_id_across_tenants(ctx):
     assert Employee.query.filter_by(company_id=c2.id).count() == 1
 
     # Same employee_id within same company must fail
-    emp3 = Employee(employee_id='EMP001', name='Charlie', basic_salary=4000,
-                    allowances=0, company_id=c1.id)
+    emp3 = Employee(employee_id='EMP001', name='Charlie', basic_salary=4000, allowances=0, company_id=c1.id)
     db.session.add(emp3)
     with pytest.raises(Exception):  # IntegrityError
         db.session.commit()

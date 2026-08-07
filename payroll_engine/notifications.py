@@ -4,6 +4,7 @@ Usage:
     from payroll_engine.notifications import notify
     notify(company_id, user_id, "Payroll approved", employee_phone="+251911234567")
 """
+
 import logging
 import os
 
@@ -52,6 +53,7 @@ def send_whatsapp(phone, message):
 
     try:
         import requests
+
         resp = requests.post(
             WHATSAPP_API_URL,
             headers={
@@ -77,8 +79,7 @@ def send_whatsapp(phone, message):
         return False
 
 
-def notify(company_id, user_id, message, notif_type='info', link=None,
-           employee_phone=None, whatsapp_message=None):
+def notify(company_id, user_id, message, notif_type='info', link=None, employee_phone=None, whatsapp_message=None):
     """Send notification via all channels: in-app + WhatsApp (if configured).
 
     Args:
@@ -110,10 +111,11 @@ def notify_payroll_approved(company_id, employees_data, run_reference):
     from payroll_engine.models import User, UserCompany
 
     # Notify all owners/accountants in the company
-    users = User.query.join(UserCompany).filter(
-        UserCompany.company_id == company_id,
-        User.role.in_(['owner', 'accountant'])
-    ).all()
+    users = (
+        User.query.join(UserCompany)
+        .filter(UserCompany.company_id == company_id, User.role.in_(['owner', 'accountant']))
+        .all()
+    )
 
     for user in users:
         notify(
@@ -150,9 +152,7 @@ def notify_leave_decision(leave, decision, manager_name=None):
     """
     from payroll_engine.models import Employee, User
 
-    emp = Employee.query.filter_by(
-        id=leave.employee_id, company_id=leave.company_id, is_deleted=False
-    ).first()
+    emp = Employee.query.filter_by(id=leave.employee_id, company_id=leave.company_id, is_deleted=False).first()
     if not emp:
         return
 
@@ -161,10 +161,7 @@ def notify_leave_decision(leave, decision, manager_name=None):
     if not user:
         user = User.query.filter_by(phone=emp.phone).first()
     if user:
-        msg = (
-            f'Your {leave.leave_type} leave request '
-            f'({leave.start_date} to {leave.end_date}) has been {decision}.'
-        )
+        msg = f'Your {leave.leave_type} leave request ({leave.start_date} to {leave.end_date}) has been {decision}.'
         if manager_name:
             msg += f' by {manager_name}.'
 

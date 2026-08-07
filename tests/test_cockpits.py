@@ -5,6 +5,7 @@ Tests each role's view: Owner, Accountant, HR, Employee.
 
 Run: python -m pytest tests/test_cockpits.py -v
 """
+
 import sys
 from datetime import date
 from pathlib import Path
@@ -19,6 +20,7 @@ from payroll_engine.cockpits import (
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
+
 
 def _make_user(user_id=1, name='Dawit', role='owner'):
     user = MagicMock()
@@ -47,8 +49,7 @@ def _make_run(run_id=1, period='2018-10', company_id=1, status='completed', run_
     return run
 
 
-def _make_employee(emp_id, name, department='IT', phone='0911', tin='123',
-                    bank='1000', user_id=None):
+def _make_employee(emp_id, name, department='IT', phone='0911', tin='123', bank='1000', user_id=None):
     emp = MagicMock()
     emp.id = emp_id
     emp.employee_id = f'EMP-{emp_id:03d}'
@@ -83,6 +84,7 @@ def _setup_db(company, run=None, employees=None, payslips=None, leaves=None):
         if id == company.id:
             return company
         return None
+
     mock_session = MagicMock()
     mock_session.get.side_effect = session_get
     mock_db.session = mock_session
@@ -117,8 +119,8 @@ def _setup_db(company, run=None, employees=None, payslips=None, leaves=None):
 # Tests: Owner cockpit
 # ─────────────────────────────────────────────
 
-class TestOwnerCockpit:
 
+class TestOwnerCockpit:
     @patch('payroll_engine.cockpits.build_filing_workspace')
     @patch('payroll_engine.cockpits.classify_exceptions')
     @patch('payroll_engine.cockpits.collect_evidence')
@@ -164,8 +166,8 @@ class TestOwnerCockpit:
 # Tests: Accountant cockpit
 # ─────────────────────────────────────────────
 
-class TestAccountantCockpit:
 
+class TestAccountantCockpit:
     @patch('payroll_engine.cockpits.build_filing_workspace')
     @patch('payroll_engine.cockpits.classify_exceptions')
     @patch('payroll_engine.cockpits.collect_evidence')
@@ -176,8 +178,10 @@ class TestAccountantCockpit:
         mock_cs.return_value = None
         mock_ev.return_value = MagicMock(passed=[MagicMock()], total=5)
         mock_exc.return_value = MagicMock(
-            has_blocking=False, blocking_issues=[],
-            summary='No issues', total=0,
+            has_blocking=False,
+            blocking_issues=[],
+            summary='No issues',
+            total=0,
         )
         mock_fw.return_value = MagicMock(steps=[], all_filed=False, has_overdue=False)
 
@@ -197,8 +201,8 @@ class TestAccountantCockpit:
 # Tests: HR cockpit
 # ─────────────────────────────────────────────
 
-class TestHRCockpit:
 
+class TestHRCockpit:
     @patch('payroll_engine.cockpits.get_deadline_for_type')
     def test_hr_gets_people_view(self, mock_dl):
         mock_dl.return_value = None
@@ -223,8 +227,8 @@ class TestHRCockpit:
 # Tests: Employee cockpit
 # ─────────────────────────────────────────────
 
-class TestEmployeeCockpit:
 
+class TestEmployeeCockpit:
     @patch('payroll_engine.cockpits.get_deadline_for_type')
     def test_employee_gets_self_service_view(self, mock_dl):
         mock_dl.return_value = None
@@ -237,7 +241,9 @@ class TestEmployeeCockpit:
 
         mock_db, mock_models = _setup_db(company, None, [emp], [ps])
         mock_models.Employee.query.filter_by.return_value.first.return_value = emp
-        mock_models.PayrollRun.query.filter.return_value.order_by.return_value.first.return_value = MagicMock(period='2018-10')
+        mock_models.PayrollRun.query.filter.return_value.order_by.return_value.first.return_value = MagicMock(
+            period='2018-10'
+        )
 
         cockpit = build_role_cockpit(user, 1, mock_db, mock_models)
 
@@ -249,8 +255,8 @@ class TestEmployeeCockpit:
 # Tests: Multi-role
 # ─────────────────────────────────────────────
 
-class TestMultiRole:
 
+class TestMultiRole:
     @patch('payroll_engine.cockpits.build_filing_workspace')
     @patch('payroll_engine.cockpits.classify_exceptions')
     @patch('payroll_engine.cockpits.collect_evidence')
@@ -282,8 +288,8 @@ class TestMultiRole:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_invalid_company_returns_none(self):
         user = _make_user()
         mock_db = MagicMock()

@@ -7,6 +7,7 @@ Verifies:
 - Invalid inputs return 400/404 with clear messages
 - Valid requests still work normally
 """
+
 import os
 import sys
 
@@ -45,37 +46,50 @@ def client(app):
 def seed_data(app, client):
     """Register company and create payroll."""
     with app.app_context():
-        client.post('/auth/register', data={
-            'company_name': 'Test PLC',
-            'phone': '0911123456',
-            'password': 'TestPass123!',
-            'password2': 'TestPass123!',
-        }, follow_redirects=True)
+        client.post(
+            '/auth/register',
+            data={
+                'company_name': 'Test PLC',
+                'phone': '0911123456',
+                'password': 'TestPass123!',
+                'password2': 'TestPass123!',
+            },
+            follow_redirects=True,
+        )
 
         company = Company.query.filter_by(name='Test PLC').first()
         user = User.query.filter_by(phone='0911123456').first()
 
         emp = Employee(
-            employee_id='EMP-001', name='Dawit Kebede',
-            basic_salary=Decimal('15000'), allowances=Decimal('0'),
-            bank_or_telebirr='1000123456789', tin='TIN001',
-            phone='+251911000001', company_id=company.id,
+            employee_id='EMP-001',
+            name='Dawit Kebede',
+            basic_salary=Decimal('15000'),
+            allowances=Decimal('0'),
+            bank_or_telebirr='1000123456789',
+            tin='TIN001',
+            phone='+251911000001',
+            company_id=company.id,
         )
         db.session.add(emp)
         db.session.commit()
 
         run = PayrollRun(
-            company_id=company.id, run_date=date(2026, 8, 1),
-            status='completed', period='2018-10',
+            company_id=company.id,
+            run_date=date(2026, 8, 1),
+            status='completed',
+            period='2018-10',
             reference='PR-2018-10-001',
         )
         db.session.add(run)
         db.session.flush()
 
         ps = Payslip(
-            payroll_run_id=run.id, employee_id=emp.id,
-            gross_salary=Decimal('15000'), tax=Decimal('2250'),
-            employee_pension=Decimal('1050'), employer_pension=Decimal('1050'),
+            payroll_run_id=run.id,
+            employee_id=emp.id,
+            gross_salary=Decimal('15000'),
+            tax=Decimal('2250'),
+            employee_pension=Decimal('1050'),
+            employer_pension=Decimal('1050'),
             net_pay=Decimal('11700'),
         )
         db.session.add(ps)
@@ -90,10 +104,14 @@ def seed_data(app, client):
 
 
 def login(client):
-    return client.post('/auth/login', data={
-        'login_id': '0911123456',
-        'password': 'TestPass123!',
-    }, follow_redirects=True)
+    return client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911123456',
+            'password': 'TestPass123!',
+        },
+        follow_redirects=True,
+    )
 
 
 class TestCompanyValidation:
@@ -152,8 +170,10 @@ class TestRunIdOwnership:
             db.session.flush()
 
             other_run = PayrollRun(
-                company_id=other.id, run_date=date(2026, 8, 1),
-                status='completed', period='2018-10',
+                company_id=other.id,
+                run_date=date(2026, 8, 1),
+                status='completed',
+                period='2018-10',
             )
             db.session.add(other_run)
             db.session.commit()
@@ -170,10 +190,14 @@ class TestRunIdOwnership:
             db.session.flush()
 
             other_emp = Employee(
-                employee_id='EMP-999', name='Other Employee',
-                basic_salary=Decimal('10000'), allowances=Decimal('0'),
-                bank_or_telebirr='1000999999999', tin='TIN999',
-                phone='+251911999999', company_id=other.id,
+                employee_id='EMP-999',
+                name='Other Employee',
+                basic_salary=Decimal('10000'),
+                allowances=Decimal('0'),
+                bank_or_telebirr='1000999999999',
+                tin='TIN999',
+                phone='+251911999999',
+                company_id=other.id,
             )
             db.session.add(other_emp)
             db.session.commit()
@@ -199,34 +223,43 @@ class TestEmployeeInputValidation:
         """Should return 422 if salary is negative."""
         with app.app_context():
             login(client)
-            resp = client.post('/api/v1/employees', json={
-                'employee_id': 'EMP-002',
-                'name': 'Test Employee',
-                'basic_salary': -1000,
-            })
+            resp = client.post(
+                '/api/v1/employees',
+                json={
+                    'employee_id': 'EMP-002',
+                    'name': 'Test Employee',
+                    'basic_salary': -1000,
+                },
+            )
             assert resp.status_code == 422
 
     def test_create_employee_valid_data(self, app, client, seed_data):
         """Should return 201 if data is valid."""
         with app.app_context():
             login(client)
-            resp = client.post('/api/v1/employees', json={
-                'employee_id': 'EMP-002',
-                'name': 'Valid Employee',
-                'basic_salary': 10000,
-                'bank_or_telebirr': '1000123456789',
-            })
+            resp = client.post(
+                '/api/v1/employees',
+                json={
+                    'employee_id': 'EMP-002',
+                    'name': 'Valid Employee',
+                    'basic_salary': 10000,
+                    'bank_or_telebirr': '1000123456789',
+                },
+            )
             assert resp.status_code == 201
 
     def test_create_employee_duplicate_id(self, app, client, seed_data):
         """Should return 409 if employee_id already exists."""
         with app.app_context():
             login(client)
-            resp = client.post('/api/v1/employees', json={
-                'employee_id': 'EMP-001',  # Already exists
-                'name': 'Duplicate',
-                'basic_salary': 10000,
-            })
+            resp = client.post(
+                '/api/v1/employees',
+                json={
+                    'employee_id': 'EMP-001',  # Already exists
+                    'name': 'Duplicate',
+                    'basic_salary': 10000,
+                },
+            )
             assert resp.status_code == 409
 
 
@@ -252,29 +285,33 @@ class TestInputSanitization:
         """Should reject employee_id longer than 20 chars."""
         with app.app_context():
             login(client)
-            resp = client.post('/api/v1/employees', json={
-                'employee_id': 'A' * 21,
-                'name': 'Test',
-                'basic_salary': 10000,
-            })
+            resp = client.post(
+                '/api/v1/employees',
+                json={
+                    'employee_id': 'A' * 21,
+                    'name': 'Test',
+                    'basic_salary': 10000,
+                },
+            )
             assert resp.status_code == 422
 
     def test_long_name_rejected(self, app, client, seed_data):
         """Should reject name longer than 100 chars."""
         with app.app_context():
             login(client)
-            resp = client.post('/api/v1/employees', json={
-                'employee_id': 'EMP-NEW',
-                'name': 'A' * 101,
-                'basic_salary': 10000,
-            })
+            resp = client.post(
+                '/api/v1/employees',
+                json={
+                    'employee_id': 'EMP-NEW',
+                    'name': 'A' * 101,
+                    'basic_salary': 10000,
+                },
+            )
             assert resp.status_code == 422
 
     def test_empty_body_rejected(self, app, client, seed_data):
         """Should reject empty request body."""
         with app.app_context():
             login(client)
-            resp = client.post('/api/v1/employees',
-                              data='',
-                              content_type='application/json')
+            resp = client.post('/api/v1/employees', data='', content_type='application/json')
             assert resp.status_code in (400, 422)

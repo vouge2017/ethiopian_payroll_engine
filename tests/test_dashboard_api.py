@@ -3,6 +3,7 @@ Tests for dashboard_api.py — Dashboard API with trends and drill-down.
 
 Run: python -m pytest tests/test_dashboard_api.py -v
 """
+
 import sys
 from datetime import date
 from pathlib import Path
@@ -17,6 +18,7 @@ from payroll_engine.dashboard_api import (
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
+
 
 def _make_user(user_id=1, role='owner'):
     user = MagicMock()
@@ -77,7 +79,9 @@ def _setup(company, run=None, prev_run=None, employees=None, payslips=None):
     # Runs
     runs = [r for r in [run, prev_run] if r is not None]
     mock_models.PayrollRun.query.filter_by.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = runs
-    mock_models.PayrollRun.query.filter_by.return_value.filter.return_value.order_by.return_value.first.return_value = run
+    mock_models.PayrollRun.query.filter_by.return_value.filter.return_value.order_by.return_value.first.return_value = (
+        run
+    )
 
     # Employees
     mock_models.Employee.query.filter_by.return_value.all.return_value = employees or []
@@ -96,8 +100,8 @@ def _setup(company, run=None, prev_run=None, employees=None, payslips=None):
 # Tests: Owner metrics
 # ─────────────────────────────────────────────
 
-class TestOwnerMetrics:
 
+class TestOwnerMetrics:
     @patch('payroll_engine.dashboard_api.classify_exceptions')
     @patch('payroll_engine.dashboard_api.collect_evidence')
     @patch('payroll_engine.dashboard_api.compute_change_summary')
@@ -138,7 +142,7 @@ class TestOwnerMetrics:
 
         result = get_dashboard_data(user, 1, mock_db, mock_models)
 
-        cost_metric = [m for m in result['metrics'] if m['name'] == 'Total Payroll Cost'][0]
+        cost_metric = next(m for m in result['metrics'] if m['name'] == 'Total Payroll Cost')
         assert 'ETB' in cost_metric['display']
         assert '25,000' in cost_metric['display']
 
@@ -147,8 +151,8 @@ class TestOwnerMetrics:
 # Tests: Accountant metrics
 # ─────────────────────────────────────────────
 
-class TestAccountantMetrics:
 
+class TestAccountantMetrics:
     @patch('payroll_engine.dashboard_api.classify_exceptions')
     @patch('payroll_engine.dashboard_api.collect_evidence')
     @patch('payroll_engine.dashboard_api.compute_change_summary')
@@ -174,8 +178,8 @@ class TestAccountantMetrics:
 # Tests: HR metrics
 # ─────────────────────────────────────────────
 
-class TestHRMetrics:
 
+class TestHRMetrics:
     @patch('payroll_engine.dashboard_api.classify_exceptions')
     @patch('payroll_engine.dashboard_api.collect_evidence')
     @patch('payroll_engine.dashboard_api.compute_change_summary')
@@ -203,8 +207,8 @@ class TestHRMetrics:
 # Tests: Trends
 # ─────────────────────────────────────────────
 
-class TestTrends:
 
+class TestTrends:
     @patch('payroll_engine.dashboard_api.classify_exceptions')
     @patch('payroll_engine.dashboard_api.collect_evidence')
     @patch('payroll_engine.dashboard_api.compute_change_summary')
@@ -231,8 +235,8 @@ class TestTrends:
 # Tests: Widgets
 # ─────────────────────────────────────────────
 
-class TestWidgets:
 
+class TestWidgets:
     @patch('payroll_engine.dashboard_api.classify_exceptions')
     @patch('payroll_engine.dashboard_api.collect_evidence')
     @patch('payroll_engine.dashboard_api.compute_change_summary')
@@ -260,8 +264,8 @@ class TestWidgets:
 # Tests: Edge cases
 # ─────────────────────────────────────────────
 
-class TestEdgeCases:
 
+class TestEdgeCases:
     def test_invalid_company(self):
         user = _make_user()
         mock_db = MagicMock()

@@ -2,6 +2,7 @@
 
 Extracted from employees_bp.py to separate business logic from HTTP handling.
 """
+
 from datetime import datetime as dt
 from decimal import Decimal, InvalidOperation
 
@@ -12,6 +13,7 @@ from payroll_engine.shared import create_audit_log
 
 class EmployeeResult:
     """Result of an employee operation."""
+
     def __init__(self, success, employee=None, error=None):
         self.success = success
         self.employee = employee
@@ -107,9 +109,7 @@ def create_employee(data, company_id, user_id):
 
     # Auto-generate employee_id if not provided
     if not emp_id:
-        last_emp = Employee.query.filter_by(
-            company_id=company_id
-        ).order_by(Employee.id.desc()).first()
+        last_emp = Employee.query.filter_by(company_id=company_id).order_by(Employee.id.desc()).first()
         if last_emp and last_emp.employee_id.startswith('EMP'):
             try:
                 next_num = int(last_emp.employee_id[3:]) + 1
@@ -120,9 +120,7 @@ def create_employee(data, company_id, user_id):
         emp_id = f'EMP{next_num:03d}'
 
     # Check for duplicate
-    existing = Employee.query.filter_by(
-        company_id=company_id, employee_id=emp_id
-    ).first()
+    existing = Employee.query.filter_by(company_id=company_id, employee_id=emp_id).first()
     if existing:
         return EmployeeResult(False, error=f'Employee ID {emp_id} already exists.')
 
@@ -152,7 +150,7 @@ def create_employee(data, company_id, user_id):
         company_id=company_id,
         user_id=user_id,
         action='employee_added',
-        details={'employee_id': emp_id, 'name': data['name']}
+        details={'employee_id': emp_id, 'name': data['name']},
     )
     db.session.commit()
 

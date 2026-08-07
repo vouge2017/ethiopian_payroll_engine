@@ -1,4 +1,5 @@
 """Tests for SystemSetting model and DB-backed retention purge."""
+
 import os
 import sys
 

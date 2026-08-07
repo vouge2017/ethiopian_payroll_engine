@@ -37,7 +37,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 Q = Decimal('0.01')
 
 # Default values per Ethiopian law Art. 40
-DEFAULT_BASE_DAYS = 30           # Art. 40(1): 30 days for first year
+DEFAULT_BASE_DAYS = 30  # Art. 40(1): 30 days for first year
 DEFAULT_INCREMENT_FACTOR = Decimal('0.333')  # Art. 40(2): 1/3 increment per year
 DEFAULT_MAX_SEVERANCE_MONTHS = 12  # Art. 40(3): cap at 12 months
 
@@ -67,6 +67,7 @@ def _get_severance_rules(for_date=None) -> dict:
     """Fetch severance rules from database, falling back to defaults."""
     cache_key = str(for_date) if for_date else 'default'
     import time
+
     now = time.time()
     if cache_key in _rules_cache:
         cached_time = _rules_cache_timestamps.get(cache_key, 0)
@@ -83,6 +84,7 @@ def _get_severance_rules(for_date=None) -> dict:
 
     try:
         from payroll_engine.models import TaxRule
+
         rule = TaxRule.get_active_rule(for_date)
         if rule:
             sv = rule.rules_json.get('severance', {})
@@ -135,8 +137,7 @@ def calculate_years_of_service(start_date, end_date) -> Decimal:
     return (Decimal(str(delta.days)) / Decimal('365.25')).quantize(Q, rounding=ROUND_HALF_UP)
 
 
-def calculate_severance(monthly_salary, start_date, end_date,
-                        termination_reason: str, for_date=None) -> dict:
+def calculate_severance(monthly_salary, start_date, end_date, termination_reason: str, for_date=None) -> dict:
     """
     Calculate severance pay for a terminated employee.
 
@@ -232,27 +233,27 @@ def calculate_severance(monthly_salary, start_date, end_date,
 
 def _ineligibility_reason(reason: str) -> str:
     if reason == TerminationReason.RESIGNATION:
-        return "Resignation — no severance payable (Labor Proclamation 1156/2019, Art. 40)"
+        return 'Resignation — no severance payable (Labor Proclamation 1156/2019, Art. 40)'
     elif reason == TerminationReason.TERMINATION_FOR_CAUSE:
-        return "Termination for cause — no severance payable (Labor Proclamation 1156/2019, Art. 40)"
-    return f"Not eligible for severance: {reason}"
+        return 'Termination for cause — no severance payable (Labor Proclamation 1156/2019, Art. 40)'
+    return f'Not eligible for severance: {reason}'
 
 
 def _calculation_explanation(salary, years, calculated, cap, final, max_months) -> str:
     """Generate plain-language explanation of severance calculation."""
     daily_rate = salary / Decimal('30')
     lines = [
-        "Severance calculation (Labor Proclamation 1156/2019, Art. 40):",
-        f"  Monthly salary: ETB {salary:,.2f}",
-        f"  Daily rate (salary/30): ETB {daily_rate:,.2f}",
-        f"  Years of service: {years}",
-        "  Formula: 30 days (year 1) + 10 days per additional year",
-        f"  Calculated: ETB {calculated:,.2f}",
+        'Severance calculation (Labor Proclamation 1156/2019, Art. 40):',
+        f'  Monthly salary: ETB {salary:,.2f}',
+        f'  Daily rate (salary/30): ETB {daily_rate:,.2f}',
+        f'  Years of service: {years}',
+        '  Formula: 30 days (year 1) + 10 days per additional year',
+        f'  Calculated: ETB {calculated:,.2f}',
     ]
     if calculated > cap:
-        lines.append(f"  Capped at {max_months} months: ETB {cap:,.2f}")
-    lines.append(f"  Severance payable: ETB {final:,.2f}")
-    return "\n".join(lines)
+        lines.append(f'  Capped at {max_months} months: ETB {cap:,.2f}')
+    lines.append(f'  Severance payable: ETB {final:,.2f}')
+    return '\n'.join(lines)
 
 
 def format_severance_for_payslip(result: dict) -> dict:

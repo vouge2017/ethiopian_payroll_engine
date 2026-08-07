@@ -7,6 +7,7 @@ Provides:
 
 RQ is optional — if Redis is unavailable, callers fall back to inline generation.
 """
+
 import logging
 import os
 import uuid
@@ -30,6 +31,7 @@ def _get_queue():
     try:
         import redis
         from rq import Queue
+
         conn = redis.from_url(redis_url)
         conn.ping()  # fail fast if Redis is down
         _rq_queue = Queue('pdf_generation', connection=conn)
@@ -87,7 +89,9 @@ def generate_payslip_pdf(job_id):
                 'address': company.address if company else '',
                 'tin': company.tin if company else '',
                 'phone': company.phone if company else '',
-                'logo_path': os.path.join('payroll_engine', 'static', company.logo_path) if company and company.logo_path else '',
+                'logo_path': os.path.join('payroll_engine', 'static', company.logo_path)
+                if company and company.logo_path
+                else '',
             }
 
             emp_data = {
@@ -137,9 +141,7 @@ def enqueue_batch(run_id, company_id):
     from payroll_engine.models import Payslip, PayslipGenerationJob
 
     batch_id = str(uuid.uuid4())
-    payslips = Payslip.query.filter_by(payroll_run_id=run_id).filter(
-        Payslip.pdf_status != 'generated'
-    ).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run_id).filter(Payslip.pdf_status != 'generated').all()
 
     if not payslips:
         return batch_id, 0
@@ -181,12 +183,12 @@ def get_batch_status(batch_id):
     from payroll_engine import db
     from payroll_engine.models import PayslipGenerationJob
 
-    rows = db.session.query(
-        PayslipGenerationJob.status,
-        func.count(PayslipGenerationJob.id)
-    ).filter(
-        PayslipGenerationJob.batch_id == batch_id
-    ).group_by(PayslipGenerationJob.status).all()
+    rows = (
+        db.session.query(PayslipGenerationJob.status, func.count(PayslipGenerationJob.id))
+        .filter(PayslipGenerationJob.batch_id == batch_id)
+        .group_by(PayslipGenerationJob.status)
+        .all()
+    )
 
     counts = {status: count for status, count in rows}
     counts['total'] = sum(counts.values())
@@ -205,12 +207,14 @@ def get_batch_jobs(batch_id):
     for job in jobs:
         ps = job.payslip
         emp = ps.employee if ps else None
-        results.append({
-            'job_id': job.id,
-            'payslip_id': job.payslip_id,
-            'employee_id': emp.employee_id if emp else None,
-            'employee_name': emp.name if emp else None,
-            'status': job.status,
-            'error_message': job.error_message,
-        })
+        results.append(
+            {
+                'job_id': job.id,
+                'payslip_id': job.payslip_id,
+                'employee_id': emp.employee_id if emp else None,
+                'employee_name': emp.name if emp else None,
+                'status': job.status,
+                'error_message': job.error_message,
+            }
+        )
     return results

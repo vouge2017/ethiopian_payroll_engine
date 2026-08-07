@@ -3,6 +3,7 @@ Tests for Phase 4 — Employee Self-Service:
 - Payslip acknowledgment
 - Notification when payslip is ready
 """
+
 import os
 import sys
 
@@ -57,15 +58,21 @@ def _setup(app):
         db.session.flush()
 
         emp = Employee(
-            employee_id='EMP001', name='Tigist Haile', phone='0911111111',
-            basic_salary=10000, allowances=2000, company_id=company.id,
+            employee_id='EMP001',
+            name='Tigist Haile',
+            phone='0911111111',
+            basic_salary=10000,
+            allowances=2000,
+            company_id=company.id,
             user_id=emp_user.id,
         )
         db.session.add(emp)
         db.session.flush()
 
         run = PayrollRun(
-            company_id=company.id, run_date=date.today(), status='completed',
+            company_id=company.id,
+            run_date=date.today(),
+            status='completed',
         )
         run.generate_period()
         db.session.add(run)
@@ -73,9 +80,13 @@ def _setup(app):
         run.generate_reference()
 
         payslip = Payslip(
-            payroll_run_id=run.id, employee_id=emp.id,
-            gross_salary=12000, tax=1500, employee_pension=700,
-            employer_pension=1100, net_pay=9800,
+            payroll_run_id=run.id,
+            employee_id=emp.id,
+            gross_salary=12000,
+            tax=1500,
+            employee_pension=700,
+            employer_pension=1100,
+            net_pay=9800,
         )
         db.session.add(payslip)
         db.session.commit()
@@ -90,11 +101,14 @@ class TestPayslipAcknowledgmentModel:
     """Test the model itself."""
 
     def test_model_creation(self, app):
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        cid, _oid, _euid, eid, _rid, pid = _setup(app)
         with app.app_context():
             from datetime import datetime
+
             ack = PayslipAcknowledgment(
-                company_id=cid, payslip_id=pid, employee_id=eid,
+                company_id=cid,
+                payslip_id=pid,
+                employee_id=eid,
                 acknowledged_at=datetime.now(UTC).replace(tzinfo=None),
             )
             db.session.add(ack)
@@ -103,19 +117,24 @@ class TestPayslipAcknowledgmentModel:
 
     def test_unique_constraint(self, app):
         """Can't acknowledge same payslip twice."""
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        cid, _oid, _euid, eid, _rid, pid = _setup(app)
         with app.app_context():
             from datetime import datetime
+
             now = datetime.now(UTC).replace(tzinfo=None)
             ack1 = PayslipAcknowledgment(
-                company_id=cid, payslip_id=pid, employee_id=eid,
+                company_id=cid,
+                payslip_id=pid,
+                employee_id=eid,
                 acknowledged_at=now,
             )
             db.session.add(ack1)
             db.session.commit()
 
             ack2 = PayslipAcknowledgment(
-                company_id=cid, payslip_id=pid, employee_id=eid,
+                company_id=cid,
+                payslip_id=pid,
+                employee_id=eid,
                 acknowledged_at=now,
             )
             db.session.add(ack2)
@@ -130,7 +149,7 @@ class TestAcknowledgePayslip:
     """Test the /my/payslips/<id>/acknowledge route."""
 
     def test_acknowledge_creates_record(self, app):
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        _cid, _oid, _euid, eid, _rid, pid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0911111111', 'password': 'EmpPass1!'})
         resp = client.post(f'/my/payslips/{pid}/acknowledge', follow_redirects=True)
@@ -142,7 +161,7 @@ class TestAcknowledgePayslip:
             assert ack is not None
 
     def test_acknowledge_shows_badge_on_payslip(self, app):
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        _cid, _oid, _euid, _eid, _rid, pid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0911111111', 'password': 'EmpPass1!'})
 
@@ -156,7 +175,7 @@ class TestAcknowledgePayslip:
         assert b'Acknowledged' in resp.data
 
     def test_duplicate_acknowledge_shows_info(self, app):
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        _cid, _oid, _euid, _eid, _rid, pid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0911111111', 'password': 'EmpPass1!'})
 
@@ -168,22 +187,21 @@ class TestAcknowledgePayslip:
         assert b'already acknowledged' in resp.data
 
     def test_acknowledge_creates_audit_log(self, app):
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        cid, _oid, _euid, _eid, _rid, pid = _setup(app)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0911111111', 'password': 'EmpPass1!'})
         client.post(f'/my/payslips/{pid}/acknowledge')
 
         with app.app_context():
             from payroll_engine.models import AuditLog
-            log = AuditLog.query.filter_by(
-                action='payslip_acknowledged', company_id=cid
-            ).first()
+
+            log = AuditLog.query.filter_by(action='payslip_acknowledged', company_id=cid).first()
             assert log is not None
             assert log.details['payslip_id'] == pid
 
     def test_cannot_acknowledge_other_employee_payslip(self, app):
         """Employee can't acknowledge someone else's payslip."""
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        cid, _oid, _euid, _eid, _rid, pid = _setup(app)
         with app.app_context():
             # Create another employee
             other_user = User(phone='0933333333', role='employee', company_id=cid)
@@ -191,8 +209,12 @@ class TestAcknowledgePayslip:
             db.session.add(other_user)
             db.session.flush()
             other_emp = Employee(
-                employee_id='EMP002', name='Other Person', phone='0933333333',
-                basic_salary=5000, company_id=cid, user_id=other_user.id,
+                employee_id='EMP002',
+                name='Other Person',
+                phone='0933333333',
+                basic_salary=5000,
+                company_id=cid,
+                user_id=other_user.id,
             )
             db.session.add(other_emp)
             db.session.commit()
@@ -213,15 +235,17 @@ class TestPayslipReadyNotification:
     def test_employee_notified_after_approval(self, app):
         """This tests the notification logic in payroll_service.process_payroll.
         We verify that the notification code path works by checking the model."""
-        cid, oid, euid, eid, rid, pid = _setup(app)
+        cid, _oid, euid, _eid, _rid, pid = _setup(app)
         with app.app_context():
             # The notification would be created during process_payroll.
             # Here we verify the PayslipAcknowledgment model is accessible
             # and the notification infrastructure works.
             notif = Notification(
-                company_id=cid, user_id=euid,
+                company_id=cid,
+                user_id=euid,
                 message='Your payslip is ready. Net pay: ETB 9,800.',
-                type='success', link=f'/my/payslips/{pid}',
+                type='success',
+                link=f'/my/payslips/{pid}',
             )
             db.session.add(notif)
             db.session.commit()

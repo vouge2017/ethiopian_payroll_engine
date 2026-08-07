@@ -1,4 +1,5 @@
 """Settings & team management blueprint."""
+
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -33,6 +34,7 @@ def company_profile():
 
         # Validate company phone
         from payroll_engine.models import validate_ethiopian_phone
+
         phone_raw = request.form.get('phone', '').strip()
         if phone_raw:
             is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
@@ -65,7 +67,7 @@ def company_profile():
             company_id=company.id,
             user_id=current_user.id,
             action='company_settings_change',
-            details={'fields_updated': ['name', 'address', 'phone', 'tin', 'webhook_url', 'webhook_secret']}
+            details={'fields_updated': ['name', 'address', 'phone', 'tin', 'webhook_url', 'webhook_secret']},
         )
         db.session.commit()
         flash('Company profile updated.', 'success')
@@ -79,10 +81,10 @@ def company_profile():
 def team_settings():
     """Show team members and invite form."""
     from payroll_engine.models import UserCompany
+
     members = User.query.filter_by(company_id=_company_id()).all()
     linked = UserCompany.query.filter_by(company_id=_company_id()).all()
-    return render_template('team_settings.html', members=members, linked=linked,
-                           year=date.today().year)
+    return render_template('team_settings.html', members=members, linked=linked, year=date.today().year)
 
 
 @settings_bp.route('/settings/team/invite', methods=['POST'])
@@ -92,6 +94,7 @@ def invite_team_member():
     import secrets as _secrets
 
     from payroll_engine.models import UserCompany, validate_ethiopian_phone
+
     phone = request.form.get('phone', '').strip()
     name = request.form.get('name', '').strip()
     role = request.form.get('role', 'employee').strip()
@@ -126,16 +129,19 @@ def invite_team_member():
     db.session.add(user)
     db.session.commit()
     from payroll_engine.models import AuditLog
+
     log = AuditLog(
-        company_id=_company_id(), user_id=current_user.id,
+        company_id=_company_id(),
+        user_id=current_user.id,
         action='team_member_invited',
-        details={'phone': normalized, 'name': name, 'role': role}
+        details={'phone': normalized, 'name': name, 'role': role},
     )
     db.session.add(log)
     db.session.commit()
     # One-shot display — password shown only in this rendered page.
-    return render_template('team_invite_credentials.html', invited_user=user,
-                           temp_password=temp_password, invitee_name=name)
+    return render_template(
+        'team_invite_credentials.html', invited_user=user, temp_password=temp_password, invitee_name=name
+    )
 
 
 @settings_bp.route('/settings/team/remove/<int:user_id>', methods=['POST'])
@@ -143,6 +149,7 @@ def invite_team_member():
 def remove_team_member(user_id):
     """Remove a team member by unlinking them from the company."""
     from payroll_engine.models import UserCompany
+
     target = User.query.get_or_404(user_id)
     if target.id == current_user.id:
         flash('You cannot remove yourself.', 'danger')
@@ -155,10 +162,12 @@ def remove_team_member(user_id):
         db.session.delete(uc)
         db.session.commit()
     from payroll_engine.models import AuditLog
+
     log = AuditLog(
-        company_id=_company_id(), user_id=current_user.id,
+        company_id=_company_id(),
+        user_id=current_user.id,
         action='team_member_removed',
-        details={'removed_user_id': user_id}
+        details={'removed_user_id': user_id},
     )
     db.session.add(log)
     db.session.commit()
@@ -189,10 +198,12 @@ def link_employee_user():
         user.role = 'employee'
         db.session.commit()
         from payroll_engine.models import AuditLog
+
         log = AuditLog(
-            company_id=_company_id(), user_id=current_user.id,
+            company_id=_company_id(),
+            user_id=current_user.id,
             action='employee_user_linked',
-            details={'employee_id': emp.employee_id, 'user_id': user_id}
+            details={'employee_id': emp.employee_id, 'user_id': user_id},
         )
         db.session.add(log)
         db.session.commit()
@@ -207,11 +218,13 @@ def link_employee_user():
 # Compliance Deadline Settings
 # ---------------------------------------------------------------------------
 
+
 @settings_bp.route('/settings/compliance', methods=['GET', 'POST'])
 @role_required('owner', 'accountant')
 def compliance_deadlines():
     """Configure compliance deadlines and reminder settings."""
     from payroll_engine.compliance import FILING_TYPE_DEFAULTS, get_company_deadlines
+
     company = current_user.company
 
     if request.method == 'POST':
@@ -261,7 +274,7 @@ def compliance_deadlines():
             company_id=company.id,
             user_id=current_user.id,
             action='compliance_deadlines_change',
-            details={'deadlines': deadlines}
+            details={'deadlines': deadlines},
         )
         db.session.commit()
         flash('Compliance deadlines updated.', 'success')
@@ -269,10 +282,9 @@ def compliance_deadlines():
 
     # GET
     current = get_company_deadlines(company)
-    return render_template('settings/compliance_deadlines.html',
-                           company=company,
-                           current=current,
-                           defaults=FILING_TYPE_DEFAULTS)
+    return render_template(
+        'settings/compliance_deadlines.html', company=company, current=current, defaults=FILING_TYPE_DEFAULTS
+    )
 
 
 # Need to import date for team_settings
@@ -281,6 +293,7 @@ from datetime import date
 # ---------------------------------------------------------------------------
 # Report Template Settings
 # ---------------------------------------------------------------------------
+
 
 @settings_bp.route('/settings/reports', methods=['GET', 'POST'])
 @role_required('owner', 'accountant')
@@ -292,6 +305,7 @@ def report_templates():
         get_report_template,
         save_report_template,
     )
+
     company = current_user.company
 
     if request.method == 'POST':
@@ -305,12 +319,14 @@ def report_templates():
             enabled = request.form.get(f'enabled_{key}') == 'on'
             label = request.form.get(f'label_{key}', col['label']).strip() or col['label']
             order = int(request.form.get(f'order_{key}', i))
-            columns.append({
-                'key': key,
-                'label': label,
-                'enabled': enabled,
-                'order': order,
-            })
+            columns.append(
+                {
+                    'key': key,
+                    'label': label,
+                    'enabled': enabled,
+                    'order': order,
+                }
+            )
 
         # Sort by order
         columns.sort(key=lambda c: c['order'])
@@ -321,7 +337,7 @@ def report_templates():
             company_id=company.id,
             user_id=current_user.id,
             action='report_template_change',
-            details={'report_type': report_type, 'column_count': len(columns)}
+            details={'report_type': report_type, 'column_count': len(columns)},
         )
         db.session.commit()
         flash('Report template updated.', 'success')
@@ -333,8 +349,10 @@ def report_templates():
     available = get_all_available_columns(report_type)
     default = get_default_template(report_type)
 
-    return render_template('settings/report_templates.html',
-                           template=template,
-                           available=available,
-                           default=default,
-                           report_type=report_type)
+    return render_template(
+        'settings/report_templates.html',
+        template=template,
+        available=available,
+        default=default,
+        report_type=report_type,
+    )

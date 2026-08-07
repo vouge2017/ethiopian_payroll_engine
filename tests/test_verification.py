@@ -8,6 +8,7 @@ Verifies:
 - Summary page shows results
 - Feedback form works
 """
+
 import os
 import sys
 
@@ -42,16 +43,24 @@ def client(app):
 def logged_in(app, client):
     """Register and log in a user."""
     with app.app_context():
-        client.post('/auth/register', data={
-            'company_name': 'Test PLC',
-            'phone': '0911123456',
-            'password': 'TestPass123!',
-            'password2': 'TestPass123!',
-        }, follow_redirects=True)
-        client.post('/auth/login', data={
-            'login_id': '0911123456',
-            'password': 'TestPass123!',
-        }, follow_redirects=True)
+        client.post(
+            '/auth/register',
+            data={
+                'company_name': 'Test PLC',
+                'phone': '0911123456',
+                'password': 'TestPass123!',
+                'password2': 'TestPass123!',
+            },
+            follow_redirects=True,
+        )
+        client.post(
+            '/auth/login',
+            data={
+                'login_id': '0911123456',
+                'password': 'TestPass123!',
+            },
+            follow_redirects=True,
+        )
 
 
 class TestVerificationHome:
@@ -87,8 +96,16 @@ class TestVerificationSteps:
     def test_each_step_loads(self, app, client, logged_in):
         """Each of the 10 steps should load."""
         steps = [
-            'tax_brackets', 'paye_method', 'pension', 'overtime', 'leave',
-            'severance', 'allowances', 'erca_filing', 'deadlines', 'record_keeping',
+            'tax_brackets',
+            'paye_method',
+            'pension',
+            'overtime',
+            'leave',
+            'severance',
+            'allowances',
+            'erca_filing',
+            'deadlines',
+            'record_keeping',
         ]
         with app.app_context():
             for step_id in steps:
@@ -104,23 +121,31 @@ class TestVerificationSteps:
     def test_step_form_submission(self, app, client, logged_in):
         """Submitting a step should save progress."""
         with app.app_context():
-            resp = client.post('/verification/tax_brackets', data={
-                'verified': 'on',
-                'correct': 'on',
-                'correction': '',
-                'notes': 'Looks correct',
-            }, follow_redirects=True)
+            resp = client.post(
+                '/verification/tax_brackets',
+                data={
+                    'verified': 'on',
+                    'correct': 'on',
+                    'correction': '',
+                    'notes': 'Looks correct',
+                },
+                follow_redirects=True,
+            )
             assert resp.status_code == 200
 
     def test_step_with_correction(self, app, client, logged_in):
         """Submitting a correction should save it."""
         with app.app_context():
-            resp = client.post('/verification/tax_brackets', data={
-                'verified': 'on',
-                'correct': '',
-                'correction': 'Rate should be 10% not 15%',
-                'notes': 'Checked against proclamation',
-            }, follow_redirects=True)
+            resp = client.post(
+                '/verification/tax_brackets',
+                data={
+                    'verified': 'on',
+                    'correct': '',
+                    'correction': 'Rate should be 10% not 15%',
+                    'notes': 'Checked against proclamation',
+                },
+                follow_redirects=True,
+            )
             assert resp.status_code == 200
 
 
@@ -138,10 +163,14 @@ class TestVerificationSummary:
         """Summary should show progress after submitting steps."""
         with app.app_context():
             # Submit a step
-            client.post('/verification/tax_brackets', data={
-                'verified': 'on',
-                'correct': 'on',
-            }, follow_redirects=True)
+            client.post(
+                '/verification/tax_brackets',
+                data={
+                    'verified': 'on',
+                    'correct': 'on',
+                },
+                follow_redirects=True,
+            )
 
             resp = client.get('/verification/summary')
             assert resp.status_code == 200
@@ -154,17 +183,17 @@ class TestFeedback:
     def test_feedback_requires_login(self, app, client):
         """Feedback should require login."""
         with app.app_context():
-            resp = client.post('/verification/feedback',
-                               json={'feedback': 'test'},
-                               content_type='application/json')
+            resp = client.post('/verification/feedback', json={'feedback': 'test'}, content_type='application/json')
             assert resp.status_code == 302
 
     def test_feedback_submission(self, app, client, logged_in):
         """Submitting feedback should return success."""
         with app.app_context():
-            resp = client.post('/verification/feedback',
-                               json={'feedback': 'Tax brackets look correct', 'category': 'general'},
-                               content_type='application/json')
+            resp = client.post(
+                '/verification/feedback',
+                json={'feedback': 'Tax brackets look correct', 'category': 'general'},
+                content_type='application/json',
+            )
             assert resp.status_code == 200
             data = resp.get_json()
             assert data['status'] == 'received'
@@ -172,7 +201,5 @@ class TestFeedback:
     def test_feedback_empty_rejected(self, app, client, logged_in):
         """Empty feedback should be rejected."""
         with app.app_context():
-            resp = client.post('/verification/feedback',
-                               json={'feedback': ''},
-                               content_type='application/json')
+            resp = client.post('/verification/feedback', json={'feedback': ''}, content_type='application/json')
             assert resp.status_code == 400

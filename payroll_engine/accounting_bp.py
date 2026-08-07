@@ -46,7 +46,7 @@ def _generate_journal_entries(run_id, company_id):
     total_pension_emp = Decimal('0')
     total_pension_empr = Decimal('0')
     total_net = Decimal('0')
-    total_deductions = Decimal('0')
+    Decimal('0')
 
     for ps in payslips:
         emp = Employee.query.get(ps.employee_id)
@@ -59,16 +59,18 @@ def _generate_journal_entries(run_id, company_id):
         total_pension_empr += ps.employer_pension or Decimal('0')
         total_net += ps.net_pay or Decimal('0')
 
-        entries.append({
-            'employee_id': emp.employee_id,
-            'employee_name': emp.name,
-            'department': emp.department or '',
-            'gross': ps.gross_salary or Decimal('0'),
-            'tax': ps.tax or Decimal('0'),
-            'pension_employee': ps.employee_pension or Decimal('0'),
-            'pension_employer': ps.employer_pension or Decimal('0'),
-            'net_pay': ps.net_pay or Decimal('0'),
-        })
+        entries.append(
+            {
+                'employee_id': emp.employee_id,
+                'employee_name': emp.name,
+                'department': emp.department or '',
+                'gross': ps.gross_salary or Decimal('0'),
+                'tax': ps.tax or Decimal('0'),
+                'pension_employee': ps.employee_pension or Decimal('0'),
+                'pension_employer': ps.employer_pension or Decimal('0'),
+                'net_pay': ps.net_pay or Decimal('0'),
+            }
+        )
 
     period = run.period or run.run_date.strftime('%Y-%m')
     ref = run.reference or f'PR-{period}'
@@ -87,13 +89,43 @@ def _generate_journal_entries(run_id, company_id):
             'net': total_net,
         },
         'journal_lines': [
-            {'account': '5100', 'name': 'Salary Expense', 'debit': total_gross, 'credit': Decimal('0'), 'type': 'expense'},
-            {'account': '5200', 'name': 'Employer Pension Expense', 'debit': total_pension_empr, 'credit': Decimal('0'), 'type': 'expense'},
-            {'account': '2100', 'name': 'PAYE Tax Payable', 'debit': Decimal('0'), 'credit': total_tax, 'type': 'liability'},
-            {'account': '2200', 'name': 'Pension Payable (Employee)', 'debit': Decimal('0'), 'credit': total_pension_emp, 'type': 'liability'},
-            {'account': '2210', 'name': 'Pension Payable (Employer)', 'debit': Decimal('0'), 'credit': total_pension_empr, 'type': 'liability'},
+            {
+                'account': '5100',
+                'name': 'Salary Expense',
+                'debit': total_gross,
+                'credit': Decimal('0'),
+                'type': 'expense',
+            },
+            {
+                'account': '5200',
+                'name': 'Employer Pension Expense',
+                'debit': total_pension_empr,
+                'credit': Decimal('0'),
+                'type': 'expense',
+            },
+            {
+                'account': '2100',
+                'name': 'PAYE Tax Payable',
+                'debit': Decimal('0'),
+                'credit': total_tax,
+                'type': 'liability',
+            },
+            {
+                'account': '2200',
+                'name': 'Pension Payable (Employee)',
+                'debit': Decimal('0'),
+                'credit': total_pension_emp,
+                'type': 'liability',
+            },
+            {
+                'account': '2210',
+                'name': 'Pension Payable (Employer)',
+                'debit': Decimal('0'),
+                'credit': total_pension_empr,
+                'type': 'liability',
+            },
             {'account': '1000', 'name': 'Bank/Cash', 'debit': Decimal('0'), 'credit': total_net, 'type': 'asset'},
-        ]
+        ],
     }
 
     # Verify balanced
@@ -108,20 +140,22 @@ def _generate_journal_entries(run_id, company_id):
 
 @accounting_bp.route('/accounting')
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def accounting_home():
     """Accounting export home — list completed runs."""
-    runs = PayrollRun.query.filter_by(
-        company_id=current_user.company_id,
-        status='completed'
-    ).order_by(PayrollRun.run_date.desc()).limit(12).all()
+    runs = (
+        PayrollRun.query.filter_by(company_id=current_user.company_id, status='completed')
+        .order_by(PayrollRun.run_date.desc())
+        .limit(12)
+        .all()
+    )
 
     return render_template('accounting.html', runs=runs)
 
 
 @accounting_bp.route('/accounting/export/<int:run_id>')
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def export_journal(run_id):
     """Export journal entries as CSV."""
     journal = _generate_journal_entries(run_id, current_user.company_id)
@@ -153,48 +187,60 @@ def _export_generic_csv(journal):
     # Journal lines
     for line in journal['journal_lines']:
         if line['debit'] > 0 or line['credit'] > 0:
-            writer.writerow([
-                journal['date'],
-                journal['reference'],
-                line['account'],
-                line['name'],
-                f'Payroll {journal["period"]}',
-                f'{line["debit"]:.2f}' if line['debit'] > 0 else '',
-                f'{line["credit"]:.2f}' if line['credit'] > 0 else '',
-                ''
-            ])
+            writer.writerow(
+                [
+                    journal['date'],
+                    journal['reference'],
+                    line['account'],
+                    line['name'],
+                    f'Payroll {journal["period"]}',
+                    f'{line["debit"]:.2f}' if line['debit'] > 0 else '',
+                    f'{line["credit"]:.2f}' if line['credit'] > 0 else '',
+                    '',
+                ]
+            )
 
     # Employee detail lines
     writer.writerow([])
     writer.writerow(['--- Employee Detail ---'])
-    writer.writerow(['Employee ID', 'Employee Name', 'Department', 'Gross', 'Tax', 'Pension (Emp)', 'Pension (Empr)', 'Net Pay'])
+    writer.writerow(
+        ['Employee ID', 'Employee Name', 'Department', 'Gross', 'Tax', 'Pension (Emp)', 'Pension (Empr)', 'Net Pay']
+    )
 
     for entry in journal['entries']:
-        writer.writerow([
-            entry['employee_id'],
-            entry['employee_name'],
-            entry['department'],
-            f'{entry["gross"]:.2f}',
-            f'{entry["tax"]:.2f}',
-            f'{entry["pension_employee"]:.2f}',
-            f'{entry["pension_employer"]:.2f}',
-            f'{entry["net_pay"]:.2f}',
-        ])
+        writer.writerow(
+            [
+                entry['employee_id'],
+                entry['employee_name'],
+                entry['department'],
+                f'{entry["gross"]:.2f}',
+                f'{entry["tax"]:.2f}',
+                f'{entry["pension_employee"]:.2f}',
+                f'{entry["pension_employer"]:.2f}',
+                f'{entry["net_pay"]:.2f}',
+            ]
+        )
 
     # Totals
     writer.writerow([])
-    writer.writerow(['', '', 'TOTALS',
-        f'{journal["totals"]["gross"]:.2f}',
-        f'{journal["totals"]["tax"]:.2f}',
-        f'{journal["totals"]["pension_employee"]:.2f}',
-        f'{journal["totals"]["pension_employer"]:.2f}',
-        f'{journal["totals"]["net"]:.2f}'])
+    writer.writerow(
+        [
+            '',
+            '',
+            'TOTALS',
+            f'{journal["totals"]["gross"]:.2f}',
+            f'{journal["totals"]["tax"]:.2f}',
+            f'{journal["totals"]["pension_employee"]:.2f}',
+            f'{journal["totals"]["pension_employer"]:.2f}',
+            f'{journal["totals"]["net"]:.2f}',
+        ]
+    )
 
     output.seek(0)
     return Response(
         output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=journal_{journal["reference"]}.csv'}
+        headers={'Content-Disposition': f'attachment; filename=journal_{journal["reference"]}.csv'},
     )
 
 
@@ -210,16 +256,20 @@ def _export_quickbooks_iif(journal):
     # Transaction
     for line in journal['journal_lines']:
         if line['debit'] > 0:
-            output.write(f'TRNS\tGENERAL JOURNAL\t{journal["date"]}\t{line["account"]}\t{journal["company"]}\t{line["debit"]:.2f}\t{journal["reference"]}\t{line["name"]}\n')
+            output.write(
+                f'TRNS\tGENERAL JOURNAL\t{journal["date"]}\t{line["account"]}\t{journal["company"]}\t{line["debit"]:.2f}\t{journal["reference"]}\t{line["name"]}\n'
+            )
         if line['credit'] > 0:
-            output.write(f'SPL\tGENERAL JOURNAL\t{journal["date"]}\t{line["account"]}\t{journal["company"]}\t-{line["credit"]:.2f}\t{journal["reference"]}\t{line["name"]}\n')
+            output.write(
+                f'SPL\tGENERAL JOURNAL\t{journal["date"]}\t{line["account"]}\t{journal["company"]}\t-{line["credit"]:.2f}\t{journal["reference"]}\t{line["name"]}\n'
+            )
 
     output.write('ENDTRNS\n')
 
     return Response(
         output.getvalue(),
         mimetype='text/plain',
-        headers={'Content-Disposition': f'attachment; filename=journal_{journal["reference"]}.iif'}
+        headers={'Content-Disposition': f'attachment; filename=journal_{journal["reference"]}.iif'},
     )
 
 
@@ -233,20 +283,22 @@ def _export_peachtree(journal):
 
     for line in journal['journal_lines']:
         if line['debit'] > 0 or line['credit'] > 0:
-            writer.writerow([
-                journal['date'],
-                journal['reference'],
-                line['account'],
-                line['name'],
-                f'{line["debit"]:.2f}' if line['debit'] > 0 else '0.00',
-                f'{line["credit"]:.2f}' if line['credit'] > 0 else '0.00',
-            ])
+            writer.writerow(
+                [
+                    journal['date'],
+                    journal['reference'],
+                    line['account'],
+                    line['name'],
+                    f'{line["debit"]:.2f}' if line['debit'] > 0 else '0.00',
+                    f'{line["credit"]:.2f}' if line['credit'] > 0 else '0.00',
+                ]
+            )
 
     output.seek(0)
     return Response(
         output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=peachtree_{journal["reference"]}.csv'}
+        headers={'Content-Disposition': f'attachment; filename=peachtree_{journal["reference"]}.csv'},
     )
 
 
@@ -260,38 +312,49 @@ def _export_xero(journal):
     writer = csv.writer(output)
 
     # Xero header
-    writer.writerow([
-        'JournalDate', 'JournalNumber', 'AccountCode', 'AccountName',
-        'Description', 'Debit', 'Credit', 'TaxType',
-        'TrackingName1', 'TrackingOption1',
-    ])
+    writer.writerow(
+        [
+            'JournalDate',
+            'JournalNumber',
+            'AccountCode',
+            'AccountName',
+            'Description',
+            'Debit',
+            'Credit',
+            'TaxType',
+            'TrackingName1',
+            'TrackingOption1',
+        ]
+    )
 
     for line in journal['journal_lines']:
         if line['debit'] > 0 or line['credit'] > 0:
-            writer.writerow([
-                journal['date'],
-                journal['reference'],
-                line['account'],
-                line['name'],
-                f'Payroll {journal["period"]} — {journal["company"]}',
-                f'{line["debit"]:.2f}' if line['debit'] > 0 else '',
-                f'{line["credit"]:.2f}' if line['credit'] > 0 else '',
-                'Tax Exempt' if line['type'] in ('expense', 'asset') else 'No Tax',
-                '',
-                '',
-            ])
+            writer.writerow(
+                [
+                    journal['date'],
+                    journal['reference'],
+                    line['account'],
+                    line['name'],
+                    f'Payroll {journal["period"]} — {journal["company"]}',
+                    f'{line["debit"]:.2f}' if line['debit'] > 0 else '',
+                    f'{line["credit"]:.2f}' if line['credit'] > 0 else '',
+                    'Tax Exempt' if line['type'] in ('expense', 'asset') else 'No Tax',
+                    '',
+                    '',
+                ]
+            )
 
     output.seek(0)
     return Response(
         output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=xero_{journal["reference"]}.csv'}
+        headers={'Content-Disposition': f'attachment; filename=xero_{journal["reference"]}.csv'},
     )
 
 
 @accounting_bp.route('/accounting/preview/<int:run_id>')
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def preview_journal(run_id):
     """Preview journal entries before export."""
     journal = _generate_journal_entries(run_id, current_user.company_id)

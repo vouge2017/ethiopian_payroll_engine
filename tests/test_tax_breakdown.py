@@ -2,6 +2,7 @@
 Tax breakdown tests — verifies bracket-by-bracket calculation
 and that the breakdown total matches the tax amount.
 """
+
 import os
 import sys
 
@@ -17,8 +18,7 @@ def test_breakdown_matches_total():
     for taxable in [0, 1000, 2000, 2001, 5000, 7000, 10000, 11300, 14000, 16950, 20000]:
         tax = calculate_tax(taxable)
         bd = calculate_tax_breakdown(taxable)
-        assert bd['total_tax'] == tax, \
-            f"Breakdown {bd['total_tax']} != tax {tax} on {taxable}"
+        assert bd['total_tax'] == tax, f'Breakdown {bd["total_tax"]} != tax {tax} on {taxable}'
 
 
 def test_breakdown_zero():
@@ -49,7 +49,7 @@ def test_breakdown_two_brackets():
     assert len(bd['brackets']) == 2
     assert bd['brackets'][0]['rate_pct'] == 0
     assert bd['brackets'][1]['rate_pct'] == 15
-    assert bd["brackets"][1]["bracket_tax"] == Decimal("150")  # 1000 * 0.15
+    assert bd['brackets'][1]['bracket_tax'] == Decimal('150')  # 1000 * 0.15
 
 
 def test_breakdown_all_brackets():
@@ -62,8 +62,8 @@ def test_breakdown_all_brackets():
 def test_breakdown_personal_relief():
     """No personal relief in current law — total equals gross tax."""
     bd = calculate_tax_breakdown(5000)
-    assert bd["personal_relief"] == Decimal("0")
-    assert bd["total_tax"] == bd["gross_tax"]
+    assert bd['personal_relief'] == Decimal('0')
+    assert bd['total_tax'] == bd['gross_tax']
 
 
 def test_breakdown_bracket_amounts_sum():
@@ -71,15 +71,16 @@ def test_breakdown_bracket_amounts_sum():
     for taxable in [5000, 11300, 16950]:
         bd = calculate_tax_breakdown(taxable)
         bracket_sum = sum(b['bracket_tax'] for b in bd['brackets'])
-        assert abs(bracket_sum - bd["gross_tax"]) < Decimal("0.01"), \
-            f"Bracket sum {bracket_sum} != gross_tax {bd['gross_tax']} on {taxable}"
+        assert abs(bracket_sum - bd['gross_tax']) < Decimal('0.01'), (
+            f'Bracket sum {bracket_sum} != gross_tax {bd["gross_tax"]} on {taxable}'
+        )
 
 
 def test_dawit_taxable_11300():
     """Dawit's tax: 11300 taxable → 2040 total (no personal relief)."""
     bd = calculate_tax_breakdown(11300)
     assert bd['total_tax'] == 2040.0
-    assert bd["personal_relief"] == Decimal("0")
+    assert bd['personal_relief'] == Decimal('0')
     assert len(bd['brackets']) == 5
 
 

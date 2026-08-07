@@ -10,6 +10,7 @@ Verifies the password strength requirements after the 2.1 hardening:
 - Repeated characters rejected
 - Sequential characters rejected
 """
+
 import os
 import sys
 
@@ -25,17 +26,18 @@ from payroll_engine.password_policy import check_password_strength
 # SHOULD PASS
 # ---------------------------------------------------------------
 
+
 def test_valid_passwords():
     """Strong passwords should be accepted."""
     valid = [
-        'Tr0ub4dor&3',       # xkcd-style with special
-        'MyP@ssw0rd!',       # mixed case + digit + special
-        'Ethiopia#2026X',    # country + year but mixed case + special
-        'C0mpl3x!Pass',      # all requirements met
-        'SunRise4Ver',       # mixed case + digit
-        'Xkcd9393!',         # random-ish
-        'G3nu1n3ly$trong',   # long, complex
-        'Qw3rTy!829',        # keyboard-ish but mixed + digit + special
+        'Tr0ub4dor&3',  # xkcd-style with special
+        'MyP@ssw0rd!',  # mixed case + digit + special
+        'Ethiopia#2026X',  # country + year but mixed case + special
+        'C0mpl3x!Pass',  # all requirements met
+        'SunRise4Ver',  # mixed case + digit
+        'Xkcd9393!',  # random-ish
+        'G3nu1n3ly$trong',  # long, complex
+        'Qw3rTy!829',  # keyboard-ish but mixed + digit + special
     ]
     for pw in valid:
         is_strong, error = check_password_strength(pw)
@@ -46,22 +48,38 @@ def test_valid_passwords():
 # SHOULD FAIL — Common passwords
 # ---------------------------------------------------------------
 
+
 def test_common_passwords_rejected():
     """Common passwords must be rejected."""
     common = [
-        'password', '123456', '12345678', 'qwerty', 'abc123',
-        'admin', 'admin123', 'letmein', 'welcome', 'monkey',
-        'ethiopia', 'addis', 'tigist', 'dawit', 'payroll',
-        'Password1', 'password!', 'Password123',  # common + suffix
+        'password',
+        '123456',
+        '12345678',
+        'qwerty',
+        'abc123',
+        'admin',
+        'admin123',
+        'letmein',
+        'welcome',
+        'monkey',
+        'ethiopia',
+        'addis',
+        'tigist',
+        'dawit',
+        'payroll',
+        'Password1',
+        'password!',
+        'Password123',  # common + suffix
     ]
     for pw in common:
-        is_strong, error = check_password_strength(pw)
+        is_strong, _error = check_password_strength(pw)
         assert not is_strong, f"'{pw}' should be rejected but was accepted"
 
 
 # ---------------------------------------------------------------
 # SHOULD FAIL — Mixed case requirement
 # ---------------------------------------------------------------
+
 
 def test_requires_uppercase():
     """Password without uppercase must be rejected."""
@@ -88,12 +106,20 @@ def test_requires_digit():
 # SHOULD FAIL — Patterns from checkpoint review
 # ---------------------------------------------------------------
 
+
 def test_dict_word_plus_year_rejected():
     """Dictionary word + year patterns must be rejected."""
     patterns = [
-        'ethiopia2025', 'addis2026', 'tigist123', 'dawit99',
-        'habesha2025', 'payroll2026', 'salary1234',
-        'password2025', 'admin2026', 'welcome123',
+        'ethiopia2025',
+        'addis2026',
+        'tigist123',
+        'dawit99',
+        'habesha2025',
+        'payroll2026',
+        'salary1234',
+        'password2025',
+        'admin2026',
+        'welcome123',
     ]
     for pw in patterns:
         is_strong, error = check_password_strength(pw)
@@ -136,6 +162,7 @@ def test_sequential_chars_rejected():
 # SHOULD FAIL — Edge cases
 # ---------------------------------------------------------------
 
+
 def test_empty_password():
     is_strong, error = check_password_strength('')
     assert not is_strong
@@ -155,7 +182,7 @@ def test_too_long():
 
 
 def test_all_same_char():
-    is_strong, error = check_password_strength('aaaaaaaa')
+    is_strong, _error = check_password_strength('aaaaaaaa')
     assert not is_strong
 
 

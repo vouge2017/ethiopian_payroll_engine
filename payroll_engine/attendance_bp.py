@@ -27,13 +27,13 @@ attendance_bp = Blueprint('attendance', __name__)
 def _parse_date(date_str):
     """Try multiple date formats common in biometric device exports."""
     formats = [
-        '%Y-%m-%d',        # 2026-07-15
-        '%d/%m/%Y',        # 15/07/2026
-        '%m/%d/%Y',        # 07/15/2026
-        '%d-%m-%Y',        # 15-07-2026
-        '%Y/%m/%d',        # 2026/07/15
-        '%d-%b-%Y',        # 15-Jul-2026
-        '%d %b %Y',        # 15 Jul 2026
+        '%Y-%m-%d',  # 2026-07-15
+        '%d/%m/%Y',  # 15/07/2026
+        '%m/%d/%Y',  # 07/15/2026
+        '%d-%m-%Y',  # 15-07-2026
+        '%Y/%m/%d',  # 2026/07/15
+        '%d-%b-%Y',  # 15-Jul-2026
+        '%d %b %Y',  # 15 Jul 2026
     ]
     for fmt in formats:
         try:
@@ -80,22 +80,14 @@ def _match_employee(emp_id_str, company_id):
     emp_id_str = emp_id_str.strip()
 
     # Try exact employee_id match
-    emp = Employee.query.filter_by(
-        company_id=company_id,
-        employee_id=emp_id_str,
-        is_deleted=False
-    ).first()
+    emp = Employee.query.filter_by(company_id=company_id, employee_id=emp_id_str, is_deleted=False).first()
     if emp:
         return emp
 
     # Try numeric ID
     try:
         numeric_id = int(emp_id_str)
-        emp = Employee.query.filter_by(
-            company_id=company_id,
-            id=numeric_id,
-            is_deleted=False
-        ).first()
+        emp = Employee.query.filter_by(company_id=company_id, id=numeric_id, is_deleted=False).first()
         if emp:
             return emp
     except ValueError:
@@ -104,8 +96,8 @@ def _match_employee(emp_id_str, company_id):
     # Try name match (case-insensitive)
     emp = Employee.query.filter(
         Employee.company_id == company_id,
-        Employee.is_deleted == False,
-        db.func.lower(Employee.name) == emp_id_str.strip().lower()
+        not Employee.is_deleted,
+        db.func.lower(Employee.name) == emp_id_str.strip().lower(),
     ).first()
     if emp:
         return emp
@@ -115,7 +107,7 @@ def _match_employee(emp_id_str, company_id):
 
 @attendance_bp.route('/attendance')
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def attendance_list():
     """View attendance records for current month."""
     today = date.today()
@@ -134,54 +126,34 @@ def attendance_list():
         end = date(end.year, end.month, 1)
         month = start.strftime('%Y-%m')
 
-    records = db.session.query(
-        Attendance,
-        Employee.name,
-        Employee.employee_id.label('emp_code')
-    ).join(
-        Employee, Attendance.employee_id == Employee.id
-    ).filter(
-        Employee.company_id == current_user.company_id,
-        Attendance.date >= start,
-        Attendance.date < end
-    ).order_by(Attendance.date.desc()).all()
+    records = (
+        db.session.query(Attendance, Employee.name, Employee.employee_id.label('emp_code'))
+        .join(Employee, Attendance.employee_id == Employee.id)
+        .filter(Employee.company_id == current_user.company_id, Attendance.date >= start, Attendance.date < end)
+        .order_by(Attendance.date.desc())
+        .all()
+    )
 
     # Group by employee
     by_employee = {}
     for att, name, emp_code in records:
         if att.employee_id not in by_employee:
-            by_employee[att.employee_id] = {
-                'name': name,
-                'emp_code': emp_code,
-                'records': [],
-                'total_hours': 0
-            }
+            by_employee[att.employee_id] = {'name': name, 'emp_code': emp_code, 'records': [], 'total_hours': 0}
         by_employee[att.employee_id]['records'].append(att)
         by_employee[att.employee_id]['total_hours'] += att.hours_worked
 
-    employees = Employee.query.filter_by(
-        company_id=current_user.company_id,
-        is_deleted=False
-    ).all()
+    employees = Employee.query.filter_by(company_id=current_user.company_id, is_deleted=False).all()
 
-    return render_template('attendance.html',
-        by_employee=by_employee,
-        employees=employees,
-        month=month,
-        today=today
-    )
+    return render_template('attendance.html', by_employee=by_employee, employees=employees, month=month, today=today)
 
 
 @attendance_bp.route('/attendance/import', methods=['GET', 'POST'])
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def attendance_import():
     """Import attendance from CSV file."""
     if request.method == 'GET':
-        employees = Employee.query.filter_by(
-            company_id=current_user.company_id,
-            is_deleted=False
-        ).all()
+        employees = Employee.query.filter_by(company_id=current_user.company_id, is_deleted=False).all()
         return render_template('attendance_import.html', employees=employees)
 
     file = request.files.get('file')
@@ -210,7 +182,7 @@ def attendance_import():
                     # May vary — try common column positions
                     emp_id_str = row[0].strip()
                     att_date = _parse_date(row[2] if len(row) > 2 else row[1])
-                    time_val = _parse_time(row[3] if len(row) > 3 else row[2])
+                    _parse_time(row[3] if len(row) > 3 else row[2])
 
                     if not att_date:
                         errors.append(f'Line {line_num}: invalid date')
@@ -256,19 +228,12 @@ def attendance_import():
                     continue
 
                 # Check for existing record
-                existing = Attendance.query.filter_by(
-                    employee_id=emp.id,
-                    date=att_date
-                ).first()
+                existing = Attendance.query.filter_by(employee_id=emp.id, date=att_date).first()
 
                 if existing:
                     existing.hours_worked = hours
                 else:
-                    record = Attendance(
-                        employee_id=emp.id,
-                        date=att_date,
-                        hours_worked=hours
-                    )
+                    record = Attendance(employee_id=emp.id, date=att_date, hours_worked=hours)
                     db.session.add(record)
 
                 imported += 1
@@ -284,12 +249,7 @@ def attendance_import():
             user_id=current_user.id,
             company_id=company_id,
             action='attendance_import',
-            details={
-                'imported': imported,
-                'skipped': skipped,
-                'format': fmt,
-                'filename': file.filename
-            }
+            details={'imported': imported, 'skipped': skipped, 'format': fmt, 'filename': file.filename},
         )
         db.session.add(audit)
         db.session.commit()
@@ -311,7 +271,7 @@ def attendance_import():
 
 @attendance_bp.route('/attendance/add', methods=['POST'])
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def attendance_add():
     """Add manual attendance record."""
     emp_id = request.form.get('employee_id', type=int)
@@ -322,11 +282,7 @@ def attendance_add():
         flash('All fields required.', 'danger')
         return redirect(url_for('attendance.attendance_list'))
 
-    emp = Employee.query.filter_by(
-        id=emp_id,
-        company_id=current_user.company_id,
-        is_deleted=False
-    ).first_or_404()
+    emp = Employee.query.filter_by(id=emp_id, company_id=current_user.company_id, is_deleted=False).first_or_404()
 
     try:
         att_date = datetime.strptime(att_date, '%Y-%m-%d').date()
@@ -349,7 +305,7 @@ def attendance_add():
 
 @attendance_bp.route('/attendance/delete/<int:att_id>', methods=['POST'])
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def attendance_delete(att_id):
     """Delete attendance record."""
     record = Attendance.query.get_or_404(att_id)
@@ -367,14 +323,14 @@ def attendance_delete(att_id):
 
 @attendance_bp.route('/attendance/download-template')
 @login_required
-@role_required("owner", "accountant")
+@role_required('owner', 'accountant')
 def download_template():
     """Download attendance CSV template."""
     from flask import Response
 
-    csv_content = "employee_id,date,hours_worked\nEMP001,2026-07-15,8\nEMP001,2026-07-16,8\nEMP002,2026-07-15,7.5\n"
+    csv_content = 'employee_id,date,hours_worked\nEMP001,2026-07-15,8\nEMP001,2026-07-16,8\nEMP002,2026-07-15,7.5\n'
     return Response(
         csv_content,
         mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment; filename=attendance_template.csv'}
+        headers={'Content-Disposition': 'attachment; filename=attendance_template.csv'},
     )

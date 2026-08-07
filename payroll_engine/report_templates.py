@@ -16,7 +16,6 @@ Usage:
     columns = template['columns']  # list of {key, label, enabled, order, data_path, ...}
 """
 
-
 # Predefined column library — users can use these or create their own
 # key: internal field name
 # label: default header label
@@ -28,8 +27,18 @@ COLUMN_LIBRARY = [
     {'key': 'start_date', 'label': 'Start Date', 'data_path': 'employee.start_date', 'group': 'employee'},
     {'key': 'end_date', 'label': 'End Date', 'data_path': '_end_date', 'group': 'employee'},
     {'key': 'basic_salary', 'label': 'Basic Salary', 'data_path': 'employee.basic_salary', 'group': 'salary'},
-    {'key': 'transport_allowance', 'label': 'Transport Allowance', 'data_path': '_transport_allowance', 'group': 'salary'},
-    {'key': 'taxable_transport', 'label': 'Taxable Transport Allowance', 'data_path': '_taxable_transport', 'group': 'salary'},
+    {
+        'key': 'transport_allowance',
+        'label': 'Transport Allowance',
+        'data_path': '_transport_allowance',
+        'group': 'salary',
+    },
+    {
+        'key': 'taxable_transport',
+        'label': 'Taxable Transport Allowance',
+        'data_path': '_taxable_transport',
+        'group': 'salary',
+    },
     {'key': 'overtime_pay', 'label': 'Over Time', 'data_path': 'overtime_pay', 'group': 'salary'},
     {'key': 'other_taxable', 'label': 'Other Taxable Benefit', 'data_path': '_other_taxable', 'group': 'salary'},
     {'key': 'total_taxable', 'label': 'Total Taxable', 'data_path': 'taxable', 'group': 'tax'},
@@ -67,10 +76,28 @@ ERCA_DEFAULT_COLUMNS = [
     {'key': 'start_date', 'label': 'Start Date', 'data_path': 'employee.start_date', 'enabled': True, 'order': 1},
     {'key': 'end_date', 'label': 'End Date', 'data_path': '_end_date', 'enabled': True, 'order': 2},
     {'key': 'basic_salary', 'label': 'Basic Salary', 'data_path': 'employee.basic_salary', 'enabled': True, 'order': 3},
-    {'key': 'transport_allowance', 'label': 'Transport Allowance', 'data_path': '_transport_allowance', 'enabled': True, 'order': 4},
-    {'key': 'taxable_transport', 'label': 'Taxable Transport Allowance', 'data_path': '_taxable_transport', 'enabled': True, 'order': 5},
+    {
+        'key': 'transport_allowance',
+        'label': 'Transport Allowance',
+        'data_path': '_transport_allowance',
+        'enabled': True,
+        'order': 4,
+    },
+    {
+        'key': 'taxable_transport',
+        'label': 'Taxable Transport Allowance',
+        'data_path': '_taxable_transport',
+        'enabled': True,
+        'order': 5,
+    },
     {'key': 'overtime_pay', 'label': 'Over Time', 'data_path': 'overtime_pay', 'enabled': True, 'order': 6},
-    {'key': 'other_taxable', 'label': 'Other Taxable Benefit', 'data_path': '_other_taxable', 'enabled': True, 'order': 7},
+    {
+        'key': 'other_taxable',
+        'label': 'Other Taxable Benefit',
+        'data_path': '_other_taxable',
+        'enabled': True,
+        'order': 7,
+    },
     {'key': 'total_taxable', 'label': 'Total Taxable', 'data_path': 'taxable', 'enabled': True, 'order': 8},
     {'key': 'tax_withheld', 'label': 'Tax withheld', 'data_path': 'tax', 'enabled': True, 'order': 9},
 ]
@@ -105,7 +132,7 @@ def _merge_with_defaults(stored: dict, report_type: str) -> dict:
     default = get_default_template(report_type)
     stored_cols = stored.get('columns', [])
     stored_keys = {c['key'] for c in stored_cols}
-    default_keys = {c['key'] for c in default['columns']}
+    {c['key'] for c in default['columns']}
 
     # Start with stored columns — preserves everything the user configured
     merged = list(stored_cols)
@@ -141,8 +168,15 @@ def save_report_template(company, report_type: str, columns: list) -> None:
     company.report_templates[report_type] = {'columns': columns}
 
 
-def add_column(company, report_type: str, key: str, label: str,
-               data_path: str = None, static_value=None, enabled: bool = True) -> None:
+def add_column(
+    company,
+    report_type: str,
+    key: str,
+    label: str,
+    data_path: str | None = None,
+    static_value=None,
+    enabled: bool = True,
+) -> None:
     """Add a single column to a report template.
 
     Args:

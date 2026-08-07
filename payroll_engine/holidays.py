@@ -29,8 +29,8 @@ NATIONAL_HOLIDAYS_2025 = [
     {'name': 'Adwa Victory Day', 'name_am': 'የአድዋ ድል በዓል', 'date': date(2025, 3, 2), 'recurring': False},
     {'name': 'Ethiopian Good Friday', 'name_am': 'ስቅለት', 'date': date(2025, 4, 18), 'recurring': False},
     {'name': 'Ethiopian Easter', 'name_am': 'ፋሲካ', 'date': date(2025, 4, 20), 'recurring': False},
-    {'name': 'International Workers\' Day', 'name_am': 'የሰራተኞች ቀን', 'date': date(2025, 5, 1), 'recurring': True},
-    {'name': 'Patriots\' Victory Day', 'name_am': 'የአርበኞች ድል በዓል', 'date': date(2025, 5, 28), 'recurring': False},
+    {'name': "International Workers' Day", 'name_am': 'የሰራተኞች ቀን', 'date': date(2025, 5, 1), 'recurring': True},
+    {'name': "Patriots' Victory Day", 'name_am': 'የአርበኞች ድል በዓል', 'date': date(2025, 5, 28), 'recurring': False},
     {'name': 'Downfall of the Dergue', 'name_am': 'ደርግ የወደቀበት ቀን', 'date': date(2025, 5, 28), 'recurring': False},
     {'name': 'Enkutatash (New Year)', 'name_am': 'እንኳታሽ', 'date': date(2025, 9, 11), 'recurring': False},
     {'name': 'Finding of the True Cross', 'name_am': 'መስቀል', 'date': date(2025, 9, 27), 'recurring': False},
@@ -42,8 +42,8 @@ NATIONAL_HOLIDAYS_2026 = [
     {'name': 'Adwa Victory Day', 'name_am': 'የአድዋ ድል በዓል', 'date': date(2026, 3, 2), 'recurring': False},
     {'name': 'Ethiopian Good Friday', 'name_am': 'ስቅለት', 'date': date(2026, 4, 10), 'recurring': False},
     {'name': 'Ethiopian Easter', 'name_am': 'ፋሲካ', 'date': date(2026, 4, 12), 'recurring': False},
-    {'name': 'International Workers\' Day', 'name_am': 'የሰራተኞች ቀን', 'date': date(2026, 5, 1), 'recurring': True},
-    {'name': 'Patriots\' Victory Day', 'name_am': 'የአርበኞች ድል በዓል', 'date': date(2026, 5, 28), 'recurring': False},
+    {'name': "International Workers' Day", 'name_am': 'የሰራተኞች ቀን', 'date': date(2026, 5, 1), 'recurring': True},
+    {'name': "Patriots' Victory Day", 'name_am': 'የአርበኞች ድል በዓል', 'date': date(2026, 5, 28), 'recurring': False},
     {'name': 'Downfall of the Dergue', 'name_am': 'ደርግ የወደቀበት ቀን', 'date': date(2026, 5, 28), 'recurring': False},
     {'name': 'Enkutatash (New Year)', 'name_am': 'እንኳታሽ', 'date': date(2026, 9, 11), 'recurring': False},
     {'name': 'Finding of the True Cross', 'name_am': 'መስቀል', 'date': date(2026, 9, 27), 'recurring': False},
@@ -57,10 +57,7 @@ def seed_holidays():
     added = 0
     for h in all_holidays:
         existing = Holiday.query.filter_by(
-            name=h['name'],
-            holiday_date=h['date'],
-            is_national=True,
-            company_id=None
+            name=h['name'], holiday_date=h['date'], is_national=True, company_id=None
         ).first()
 
         if not existing:
@@ -71,7 +68,7 @@ def seed_holidays():
                 holiday_date=h['date'],
                 is_national=True,
                 is_recurring=h.get('recurring', False),
-                description="Ethiopian national holiday"
+                description='Ethiopian national holiday',
             )
             db.session.add(holiday)
             added += 1
@@ -90,27 +87,27 @@ def get_holidays_for_month(year, month, company_id=None):
     else:
         end = dt_date(year, month + 1, 1)
 
-    holidays = Holiday.query.filter(
-        Holiday.holiday_date >= start,
-        Holiday.holiday_date < end,
-        db.or_(
-            Holiday.is_national == True,
-            Holiday.company_id == company_id
+    holidays = (
+        Holiday.query.filter(
+            Holiday.holiday_date >= start,
+            Holiday.holiday_date < end,
+            db.or_(Holiday.is_national, Holiday.company_id == company_id),
         )
-    ).order_by(Holiday.holiday_date).all()
+        .order_by(Holiday.holiday_date)
+        .all()
+    )
 
     return holidays
 
 
 def is_holiday(check_date, company_id=None):
     """Check if a date is a holiday."""
-    return Holiday.query.filter(
-        Holiday.holiday_date == check_date,
-        db.or_(
-            Holiday.is_national == True,
-            Holiday.company_id == company_id
-        )
-    ).first() is not None
+    return (
+        Holiday.query.filter(
+            Holiday.holiday_date == check_date, db.or_(Holiday.is_national, Holiday.company_id == company_id)
+        ).first()
+        is not None
+    )
 
 
 def get_working_days(year, month, company_id=None):

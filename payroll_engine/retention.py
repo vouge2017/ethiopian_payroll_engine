@@ -3,6 +3,7 @@
 Configurable purge windows for PDF payslips, draft payrolls,
 and uploaded files. Each purge is audit-logged.
 """
+
 import logging
 import os
 from datetime import UTC, datetime, timedelta
@@ -12,7 +13,9 @@ logger = logging.getLogger('payroll_engine.retention')
 
 # Default retention periods (in days)
 RETENTION_DAYS = {
-    'payslip_pdf': int(os.environ.get('RETENTION_PAYSLIP_PDF_DAYS', '3650')),  # 10 years — Ethiopian tax record retention requirement
+    'payslip_pdf': int(
+        os.environ.get('RETENTION_PAYSLIP_PDF_DAYS', '3650')
+    ),  # 10 years — Ethiopian tax record retention requirement
     'payroll_draft': int(os.environ.get('RETENTION_PAYROLL_DRAFT_DAYS', '90')),
     'uploaded_file': int(os.environ.get('RETENTION_UPLOAD_FILE_DAYS', '180')),
 }
@@ -24,6 +27,7 @@ def purge_expired_payslip_pdfs(app):
     with app.app_context():
         from payroll_engine import db
         from payroll_engine.models import AuditLog, Payslip
+
         expired = Payslip.query.filter(
             Payslip.pdf_file_path.isnot(None),
             Payslip.generated_at < cutoff,
@@ -41,7 +45,8 @@ def purge_expired_payslip_pdfs(app):
         if purged:
             db.session.commit()
             log = AuditLog(
-                company_id=0, user_id=None,
+                company_id=0,
+                user_id=None,
                 action='retention_purge_pdfs',
                 details={'count': purged, 'cutoff': cutoff.isoformat()},
             )
@@ -57,6 +62,7 @@ def purge_expired_drafts(app):
     with app.app_context():
         from payroll_engine import db
         from payroll_engine.models import AuditLog, PayrollDraft
+
         expired = PayrollDraft.query.filter(
             PayrollDraft.created_at < cutoff,
         ).all()
@@ -66,7 +72,8 @@ def purge_expired_drafts(app):
                 db.session.delete(d)
             db.session.commit()
             log = AuditLog(
-                company_id=0, user_id=None,
+                company_id=0,
+                user_id=None,
                 action='retention_purge_drafts',
                 details={'count': count, 'cutoff': cutoff.isoformat()},
             )
@@ -107,6 +114,7 @@ def purge_old_login_attempts(app, days=7):
     """
     with app.app_context():
         from payroll_engine.models import LoginAttempt
+
         deleted = LoginAttempt.cleanup_old(days=days)
         if deleted:
             logger.info('Purged %d login attempt records older than %d days', deleted, days)

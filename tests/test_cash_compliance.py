@@ -5,6 +5,7 @@ Ethiopian law (Proclamation No. 1395/2025, Article 81) requires electronic
 payment for salaries above ETB 50,000. The system flags this as a FLAG
 (not BLOCK) — it informs the owner but does not prevent payroll from proceeding.
 """
+
 import os
 import sys
 
@@ -80,9 +81,9 @@ def test_cash_compliance_one_above_limit():
 def test_cash_compliance_multiple_employees():
     """Mixed scenario: one over no bank, one over with bank, one under."""
     employees = [
-        _make_emp(name='Alemayehu', net=55000, bank=''),           # FLAG
-        _make_emp(name='Tigist', net=60000, bank='cbe:1000123'),   # OK
-        _make_emp(name='Hana', net=30000, bank=''),                # OK (under limit)
+        _make_emp(name='Alemayehu', net=55000, bank=''),  # FLAG
+        _make_emp(name='Tigist', net=60000, bank='cbe:1000123'),  # OK
+        _make_emp(name='Hana', net=30000, bank=''),  # OK (under limit)
     ]
     # Fix IDs to avoid duplicate check
     employees[0]['id'] = 'EMP001'
@@ -108,6 +109,7 @@ def test_cash_compliance_does_not_block():
     assert cash_flags[0].severity == 'FLAG'  # Not BLOCK
     # Verify MISSING_BANK is the blocker, not CASH_COMPLIANCE
     from payroll_engine.validation import get_summary
+
     summary = get_summary(results)
     assert summary['blocks'] == 1  # Only MISSING_BANK blocks
     block_codes = [r.rule_code for r in results if r.severity == 'BLOCK' and not r.overridden]

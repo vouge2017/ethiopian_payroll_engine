@@ -386,6 +386,8 @@ def create_app():
                     "'self'",
                     'https://cdn.jsdelivr.net',
                     'https://fonts.gstatic.com',
+                    "https://fonts.googleapis.com",
+                    "https://fonts.gstatic.com",
                 ],
                 'img-src': "'self' data:",
                 'connect-src': [

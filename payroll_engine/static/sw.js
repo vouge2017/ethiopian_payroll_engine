@@ -32,6 +32,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  
+  // Skip service worker intercept for HTML navigation requests to let standard browser handle login redirects cleanly
+  if (request.mode === 'navigate') return;
+
   if (request.url.includes('/api/') || request.url.includes('/auth/')) return;
 
   event.respondWith(

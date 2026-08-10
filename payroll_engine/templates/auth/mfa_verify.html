@@ -1,23 +1,32 @@
-{% extends "base.html" %}
+{% extends "auth/auth-base.html" %}
 {% block title %}Verify MFA — EthioPayroll{% endblock %}
+
+{% block tagline %}One more step to verify it's you.{% endblock %}
+
 {% block content %}
-<div class="container" style="max-width: 480px; margin-top: 2rem;">
-  <div class="card">
-    <h2>🔐 Two-Factor Verification</h2>
-    <p>Enter the 6-digit code from your authenticator app to continue.</p>
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% if next_url %}
-      <input type="hidden" name="next" value="{{ next_url }}">
-      {% endif %}
-      <div class="form-group">
+<h2 class="auth-card-title">Two-Factor Verification</h2>
+<p class="auth-card-subtitle">Enter the 6-digit code from your authenticator app to continue.</p>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if next_url %}
+    <input type="hidden" name="next" value="{{ next_url }}">
+    {% endif %}
+
+    <div class="auth-input-group">
         <label for="code">Verification Code</label>
-        <input type="text" id="code" name="code" class="form-control form-control-lg"
+        <input type="text" id="code" name="code" class="form-control auth-code-input"
                placeholder="000000" pattern="[0-9]{6}" maxlength="6" required autofocus
                autocomplete="one-time-code" inputmode="numeric">
-      </div>
-      <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1rem;">Verify</button>
-    </form>
-  </div>
-</div>
+    </div>
+
+    <button type="submit" class="auth-submit-btn">
+        <i class="bi bi-check-lg"></i>
+        Verify
+    </button>
+</form>
+{% endblock %}
+
+{% block footer_links %}
+<a href="{{ url_for('auth.login') }}"><i class="bi bi-arrow-left"></i> Back to sign in</a>
 {% endblock %}

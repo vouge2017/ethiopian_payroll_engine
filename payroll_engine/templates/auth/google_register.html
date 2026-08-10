@@ -1,101 +1,101 @@
-{% extends "base.html" %}
-{% block title %}Complete Registration - Ethiopian Payroll Engine{% endblock %}
-{% block content %}
-<div class="container">
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-5">
-            <div class="text-center mb-4">
-                <i class="bi bi-google text-primary" style="font-size: 3rem;"></i>
-                <h2 class="mt-2">Complete Your Registration</h2>
-                <p class="text-muted">Signed in as <strong>{{ email }}</strong></p>
-            </div>
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <form method="POST" action="{{ url_for('auth.google_register') }}" id="googleRegisterForm">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">Phone Number *</label>
-                            <div class="input-group">
-                                <span class="input-group-text">+251</span>
-                                <input type="tel" class="form-control" id="phone" name="phone"
-                                       required placeholder="9XXXXXXXX" pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
-                                       title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
-                            </div>
-                            <div class="form-text">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</div>
-                            <script>
-                            document.getElementById('phone').addEventListener('input', function(e) {
-                                let v = e.target.value.replace(/\D/g, '');
-                                if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
-                                    e.target.value = v.substring(1);
-                                }
-                            });
-                            </script>
-                        </div>
-                        <div class="mb-3">
-                            <label for="company_name" class="form-label">Company Name *</label>
-                            <input type="text" class="form-control" id="company_name" name="company_name"
-                                   required placeholder="Your company name">
-                            <div class="form-text">This will be used for your payroll workspace</div>
-                        </div>
-                        <div class="d-grid">
-                            <button type="button" class="btn btn-primary btn-lg" id="reviewBtn">
-                                <i class="bi bi-check-circle me-2"></i>Complete Registration
-                            </button>
-                        </div>
-                    </form>
+{% extends "auth/auth-base.html" %}
+{% block title %}Complete Registration — EthioPayroll{% endblock %}
 
-                    <!-- Confirmation Modal -->
-                    <div class="modal fade" id="confirmModal" tabindex="-1">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Confirm Your Details</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p class="text-muted mb-3">Please verify before completing registration:</p>
-                                    <table class="table table-borderless">
-                                        <tr>
-                                            <td class="text-muted" style="width:40%">Phone</td>
-                                            <td><strong id="confirmPhone"></strong></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted">Company</td>
-                                            <td><strong id="confirmCompany"></strong></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted">Google Account</td>
-                                            <td><strong>{{ email }}</strong></td>
-                                        </tr>
-                                    </table>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Edit</button>
-                                    <button type="button" class="btn btn-primary" id="confirmSubmit">Looks Correct — Register</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <script>
-                    document.getElementById('reviewBtn').addEventListener('click', function() {
-                        const form = document.getElementById('googleRegisterForm');
-                        if (!form.checkValidity()) { form.reportValidity(); return; }
-                        const phone = document.getElementById('phone').value.replace(/\D/g, '');
-                        if (phone.length < 9 || !['7','9'].includes(phone[0])) {
-                            alert('Phone must be 9 digits starting with 7 or 9.'); return;
-                        }
-                        const display = phone.length === 10 && phone.startsWith('0') ? phone.substring(1) : phone;
-                        document.getElementById('confirmPhone').textContent = '+251 ' + display;
-                        document.getElementById('confirmCompany').textContent = document.getElementById('company_name').value;
-                        new bootstrap.Modal(document.getElementById('confirmModal')).show();
-                    });
-                    document.getElementById('confirmSubmit').addEventListener('click', function() {
-                        document.getElementById('googleRegisterForm').submit();
-                    });
-                    </script>
-                </div>
+{% block tagline %}Just a few more details to get started.{% endblock %}
+
+{% block content %}
+<h2 class="auth-card-title">Complete your registration</h2>
+<p class="auth-card-subtitle">Signed in as <strong>{{ email }}</strong>. Set up your company below.</p>
+
+<form method="POST" action="{{ url_for('auth.google_register') }}" id="googleRegisterForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Phone -->
+    <div class="auth-input-group">
+        <label for="phone">Phone Number <span style="color: var(--color-danger);">*</span></label>
+        <div class="auth-phone-input">
+            <span class="auth-phone-prefix">+251</span>
+            <input type="tel" class="form-control" id="phone" name="phone"
+                   required placeholder="9XXXXXXXX"
+                   pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
+                   title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+        </div>
+        <small class="auth-hint">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</small>
+        <script>
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
+                e.target.value = v.substring(1);
+            }
+        });
+        </script>
+    </div>
+
+    <!-- Company Name -->
+    <div class="auth-input-group">
+        <label for="company_name">Company Name <span style="color: var(--color-danger);">*</span></label>
+        <input type="text" class="form-control" id="company_name" name="company_name"
+               required placeholder="Your company name">
+        <small class="auth-hint">This will be used for your payroll workspace.</small>
+    </div>
+
+    <button type="button" class="auth-submit-btn" id="reviewBtn">
+        <i class="bi bi-check-circle"></i>
+        Complete Registration
+    </button>
+</form>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Your Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Please verify before completing registration:</p>
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="text-muted" style="width:40%">Phone</td>
+                        <td><strong id="confirmPhone"></strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Company</td>
+                        <td><strong id="confirmCompany"></strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Google Account</td>
+                        <td><strong>{{ email }}</strong></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Edit</button>
+                <button type="button" class="btn btn-primary" id="confirmSubmit">Looks Correct — Register</button>
             </div>
         </div>
     </div>
 </div>
+<script>
+document.getElementById('reviewBtn').addEventListener('click', function() {
+    const form = document.getElementById('googleRegisterForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const phone = document.getElementById('phone').value.replace(/\D/g, '');
+    if (phone.length < 9 || !['7','9'].includes(phone[0])) {
+        alert('Phone must be 9 digits starting with 7 or 9.'); return;
+    }
+    const display = phone.length === 10 && phone.startsWith('0') ? phone.substring(1) : phone;
+    document.getElementById('confirmPhone').textContent = '+251 ' + display;
+    document.getElementById('confirmCompany').textContent = document.getElementById('company_name').value;
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+});
+document.getElementById('confirmSubmit').addEventListener('click', function() {
+    document.getElementById('googleRegisterForm').submit();
+});
+</script>
+{% endblock %}
+
+{% block footer_links %}
+<a href="{{ url_for('auth.login') }}"><i class="bi bi-arrow-left"></i> Back to sign in</a>
 {% endblock %}

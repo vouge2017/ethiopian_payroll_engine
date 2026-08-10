@@ -1,33 +1,42 @@
-{% extends "base.html" %}
+{% extends "auth/auth-base.html" %}
 {% block title %}Set Up MFA — EthioPayroll{% endblock %}
-{% block content %}
-<div class="container" style="max-width: 520px; margin-top: 2rem;">
-  <div class="card">
-    <h2>🔐 Set Up Two-Factor Authentication</h2>
-    <p>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.):</p>
 
-    <div class="text-center my-3">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ uri | urlencode }}"
-           alt="QR Code" class="border rounded" style="width: 200px; height: 200px;">
+{% block tagline %}Add an extra layer of security to your account.{% endblock %}
+
+{% block content %}
+<h2 class="auth-card-title">Two-Factor Authentication</h2>
+<p class="auth-card-subtitle">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.):</p>
+
+<div class="text-center mb-4">
+    <div class="auth-qr-container">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ uri | urlencode }}"
+             alt="QR Code for MFA setup" width="180" height="180">
+    </div>
+</div>
+
+<div class="auth-info">
+    <i class="bi bi-key"></i>
+    <span>Can't scan? Enter this secret manually: <code style="font-weight: 700;">{{ secret }}</code></span>
+</div>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="auth-input-group">
+        <label for="code">Verification Code</label>
+        <input type="text" id="code" name="code" class="form-control auth-code-input"
+               placeholder="000000" pattern="[0-9]{6}" maxlength="6" required autofocus
+               autocomplete="one-time-code" inputmode="numeric">
+        <small class="auth-hint">Enter the 6-digit code shown in your authenticator app.</small>
     </div>
 
-    <p class="text-muted small">Can't scan? Enter this secret manually: <code>{{ secret }}</code></p>
+    <button type="submit" class="auth-submit-btn">
+        <i class="bi bi-shield-check"></i>
+        Enable MFA
+    </button>
+</form>
+{% endblock %}
 
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-group">
-        <label for="code">Verification Code</label>
-        <input type="text" id="code" name="code" class="form-control"
-               placeholder="Enter 6-digit code" pattern="[0-9]{6}" maxlength="6" required autofocus
-               autocomplete="one-time-code">
-        <div class="form-text">Enter the 6-digit code shown in your authenticator app to confirm setup.</div>
-      </div>
-      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Enable MFA</button>
-    </form>
-
-    <p style="margin-top: 1rem; text-align: center;">
-      <a href="{{ url_for('main.index') }}">Skip for now</a>
-    </p>
-  </div>
-</div>
+{% block footer_links %}
+<a href="{{ url_for('main.index') }}">Skip for now</a>
 {% endblock %}

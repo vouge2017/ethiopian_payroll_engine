@@ -1,51 +1,59 @@
-{% extends "base.html" %}
-{% block title %}Accept Invite - Ethiopian Payroll Engine{% endblock %}
+{% extends "auth/auth-base.html" %}
+{% block title %}Accept Invite — EthioPayroll{% endblock %}
+
+{% block tagline %}You've been invited to join the team.{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card border-0 shadow">
-                <div class="card-header bg-primary text-white text-center">
-                    <h5 class="mb-0">Create Your Account</h5>
-                </div>
-                <div class="card-body p-4">
-                    <p class="text-muted mb-4">
-                        You've been invited to join <strong>{{ emp.name }}</strong>'s payroll account.
-                        Create your login below.
-                    </p>
-                    <form method="POST">
-                        <div class="mb-3">
-                            <label class="form-label">Phone Number</label>
-                            <div class="input-group">
-                                <span class="input-group-text">+251</span>
-                                <input type="tel" class="form-control" name="phone"
-                                       placeholder="9XXXXXXXX" required autofocus pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
-                                       pattern="[0-9]{9}" maxlength="9"
-                                       title="Enter 9 digits starting with 9 or 7">
-                            </div>
-                            <small class="text-muted">9 digits starting with 9 or 7</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-control" name="password"
-                                   minlength="8" required>
-                            <small class="text-muted">Min 8 chars, mixed case, digit</small>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" name="password2"
-                                   minlength="8" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            Create Account
-                        </button>
-                    </form>
-                </div>
-                <div class="card-footer text-center text-muted small">
-                    Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>
-                </div>
-            </div>
+<h2 class="auth-card-title">Create your account</h2>
+<p class="auth-card-subtitle">You've been invited to join <strong>{{ emp.name }}</strong>'s payroll account. Create your login below.</p>
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- Phone -->
+    <div class="auth-input-group">
+        <label for="phone">Phone Number</label>
+        <div class="auth-phone-input">
+            <span class="auth-phone-prefix">+251</span>
+            <input type="tel" class="form-control" id="phone" name="phone"
+                   required placeholder="9XXXXXXXX"
+                   pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
+                   title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+        </div>
+        <small class="auth-hint">9 digits starting with 9 or 7.</small>
+    </div>
+
+    <!-- Password -->
+    <div class="auth-input-group">
+        <label for="password">Password</label>
+        <div class="auth-password-wrapper">
+            <input type="password" class="form-control" id="password" name="password"
+                   required minlength="8" placeholder="Min 8 characters">
+            <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                <i class="bi bi-eye"></i>
+            </button>
         </div>
     </div>
-</div>
+
+    <!-- Confirm Password -->
+    <div class="auth-input-group">
+        <label for="password2">Confirm Password</label>
+        <div class="auth-password-wrapper">
+            <input type="password" class="form-control" id="password2" name="password2"
+                   required minlength="8" placeholder="Type it again">
+            <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+    </div>
+
+    <button type="submit" class="auth-submit-btn">
+        <i class="bi bi-person-plus"></i>
+        Create Account
+    </button>
+</form>
+{% endblock %}
+
+{% block footer_links %}
+<small class="text-muted">Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></small>
 {% endblock %}

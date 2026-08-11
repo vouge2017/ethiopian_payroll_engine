@@ -111,6 +111,7 @@ def test_migration_chain_has_no_cycles(migration_dir):
         'a25e900abcde',
         'b8c9d0e1f2a3',
         'a7b8c9d0e1f2',
+        'z6a7b8c9d0e2',
     }
     visited = set()
     in_stack = set()

@@ -1799,3 +1799,21 @@ class Holiday(db.Model):
 
     def __repr__(self):
         return f'<Holiday {self.name} on {self.holiday_date}>'
+
+
+class PushSubscription(db.Model):
+    """PWA Push Subscription storage for Web Push / VAPID persistence."""
+
+    __tablename__ = 'push_subscription'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    # The unique endpoint prevents duplicate subscriptions for the same browser session
+    endpoint = db.Column(db.String(500), nullable=False, unique=True, index=True)
+    subscription_json = db.Column(db.JSON, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+
+    user = db.relationship('User', backref=db.backref('push_subscriptions', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f'<PushSubscription user={self.user_id} endpoint={self.endpoint[:50]}>'

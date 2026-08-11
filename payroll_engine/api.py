@@ -1028,3 +1028,52 @@ def get_bank_file(run_id):
             mimetype='text/csv',
             headers={'Content-Disposition': f'attachment; filename=bank_{bank}_{run.reference}.csv'},
         )
+
+
+
+# --- OpenAPI / Swagger API Docs ---
+
+@api.route('/openapi.json', methods=['GET'])
+def openapi_json():
+    """Return the OpenAPI specification as JSON."""
+    from .openapi_spec import get_openapi_spec
+    return jsonify(get_openapi_spec())
+
+
+@api.route('/docs', methods=['GET'])
+def api_docs():
+    """Serve Swagger UI HTML page."""
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EthioPayroll API Documentation</title>
+  <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css />
+  <style>
+    html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+    *, *:before, *:after { box-sizing: inherit; }
+    body { margin: 0; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js" charset="UTF-8"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+  <script>
+    window.onload = () => {
+      window.ui = SwaggerUIBundle({
+        url: '/api/v1/openapi.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "BaseLayout"
+      });
+    };
+  </script>
+</body>
+</html>
+"""

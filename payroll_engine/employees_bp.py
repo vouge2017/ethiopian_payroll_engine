@@ -44,7 +44,12 @@ def list_employees():
     page = request.args.get('page', 1, type=int)
     # Filter out soft-deleted employees by default
     show_archived = request.args.get('archived', '') == '1'
-    query = Employee.query.filter_by(company_id=_company_id())
+    from sqlalchemy.orm import defer
+    query = Employee.query.options(
+        defer(Employee.bank_account),
+        defer(Employee.tin),
+        defer(Employee.fayda_fin),
+    ).filter_by(company_id=_company_id())
     if not show_archived:
         query = query.filter_by(is_deleted=False)
     if search:

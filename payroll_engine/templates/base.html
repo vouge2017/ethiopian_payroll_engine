@@ -36,7 +36,11 @@
         <div class="sidebar-brand">
             <div class="brand-logo">
                 <div class="brand-icon">
-                    <i class="bi bi-bank2"></i>
+                    {% if current_user.company and current_user.company.logo_path %}
+                        <img src="{{ url_for('static', filename=current_user.company.logo_path) }}" alt="Logo" style="max-height: 32px; max-width: 32px; border-radius: 4px; object-fit: contain;">
+                    {% else %}
+                        <i class="bi bi-bank2"></i>
+                    {% endif %}
                 </div>
                 <div class="brand-text">
                     <span class="brand-name">EthioPayroll</span>

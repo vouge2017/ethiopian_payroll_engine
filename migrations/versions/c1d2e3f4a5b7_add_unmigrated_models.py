@@ -1,6 +1,6 @@
 """add unmigrated models — api_key, employee_deduction, payslip_acknowledgment, notification, system_setting, filing_record, holiday
 
-Revision ID: c1d2e3f4a5b6
+Revision ID: c1d2e3f4a5b7
 Revises: z5a6b7c8d9e0
 Create Date: 2026-07-27
 """
@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers
-revision = 'c1d2e3f4a5b6'
+revision = 'c1d2e3f4a5b7'
 down_revision = 'z5a6b7c8d9e0'
 branch_labels = None
 depends_on = None

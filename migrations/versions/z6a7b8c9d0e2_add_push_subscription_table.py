@@ -1,14 +1,14 @@
 """add push subscription table
 
 Revision ID: z6a7b8c9d0e2
-Revises: z5a6b7c8d9e0
+Revises: c1d2e3f4a5b7
 Create Date: 2026-08-11
 """
 import sqlalchemy as sa
 from alembic import op
 
 revision = 'z6a7b8c9d0e2'
-down_revision = 'z5a6b7c8d9e0'
+down_revision = 'c1d2e3f4a5b7'
 branch_labels = None
 depends_on = None
 

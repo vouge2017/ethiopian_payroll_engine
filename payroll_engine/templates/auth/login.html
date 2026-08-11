@@ -2,9 +2,44 @@
 {% block title %}Sign In — EthioPayroll{% endblock %}
 
 {% block content %}
-<!-- Empty stepper spacer for layout alignment -->
-<aside class="onboarding-stepper" style="visibility: hidden;">
-    <div class="onboarding-stepper-card" style="opacity: 0;">&nbsp;</div>
+<!-- Left: Quick-start sidebar -->
+<aside class="onboarding-stepper">
+    <div class="onboarding-stepper-card">
+        <h3 class="onboarding-stepper-title">Quick Start</h3>
+        <ul class="onboarding-stepper-list">
+            <li class="onboarding-step completed">
+                <div class="onboarding-step-dot">
+                    <span class="step-check material-symbols-outlined">check</span>
+                    <span class="step-number">1</span>
+                </div>
+                <div>
+                    <div class="onboarding-step-label">Create Account</div>
+                    <div class="onboarding-step-desc">Register your company</div>
+                </div>
+            </li>
+            <li class="onboarding-step">
+                <div class="onboarding-step-dot">2</div>
+                <div>
+                    <div class="onboarding-step-label">Add Employees</div>
+                    <div class="onboarding-step-desc">Import or add manually</div>
+                </div>
+            </li>
+            <li class="onboarding-step">
+                <div class="onboarding-step-dot">3</div>
+                <div>
+                    <div class="onboarding-step-label">Run Payroll</div>
+                    <div class="onboarding-step-desc">Calculate tax & pension</div>
+                </div>
+            </li>
+            <li class="onboarding-step">
+                <div class="onboarding-step-dot">4</div>
+                <div>
+                    <div class="onboarding-step-label">File with ERCA</div>
+                    <div class="onboarding-step-desc">Export & submit</div>
+                </div>
+            </li>
+        </ul>
+    </div>
 </aside>
 
 <!-- Main Content: Login Form -->
@@ -12,7 +47,7 @@
     <h1 class="onboarding-form-title">Welcome back</h1>
     <p class="onboarding-form-subtitle">Sign in to manage your payroll.</p>
 
-    <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm" style="max-width: 480px;">
+    <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Phone or Email -->

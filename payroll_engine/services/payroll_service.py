@@ -194,6 +194,46 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         # Single commit — all or nothing
         db.session.commit()
 
+        # Trigger background PDF pre-generation (unless in test environment to avoid SQLite locking)
+        from flask import current_app
+        if not current_app.config.get('TESTING'):
+            try:
+                import threading
+                def run_pre_generation(run_id):
+                    from payroll_engine import create_app, db
+                    from payroll_engine.models import Payslip
+                    from payroll_engine.pdf import _ensure_pdf
+                    import logging
+                    logger = logging.getLogger('payroll_engine')
+                    logger.info("Starting background PDF pre-generation for run %d", run_id)
+
+                    thread_app = create_app()
+                    with thread_app.app_context():
+                        try:
+                            from sqlalchemy.orm import joinedload
+                            payslips = Payslip.query.options(joinedload(Payslip.employee)).filter_by(
+                                payroll_run_id=run_id
+                            ).filter(Payslip.pdf_status != 'generated').all()
+
+                            for ps in payslips:
+                                try:
+                                    emp = ps.employee
+                                    if emp:
+                                        _ensure_pdf(ps, emp)
+                                        db.session.commit()
+                                except Exception as thread_ex:
+                                    db.session.rollback()
+                                    logger.error("Failed to pre-generate PDF for payslip %d: %s", ps.id, thread_ex)
+                        except Exception as e:
+                            logger.error("Error in background pre-generation task for run %d: %s", run_id, e)
+                    logger.info("Background PDF pre-generation completed for run %d", run_id)
+
+                t = threading.Thread(target=run_pre_generation, args=(run.id,), daemon=True)
+                t.start()
+            except Exception as thread_spawn_err:
+                import logging
+                logging.getLogger('payroll_engine').error("Failed to spawn PDF pre-generation thread: %s", thread_spawn_err)
+
         # Fire webhook — payroll completed
         try:
             from payroll_engine.webhooks import fire_webhook

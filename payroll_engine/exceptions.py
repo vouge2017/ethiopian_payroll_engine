@@ -156,22 +156,46 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
     # Get payslips
     payslips = Payslip.query.filter_by(payroll_run_id=current_run_id).all()
     if not payslips:
-        report.issues.append(
-            Issue(
-                severity=CRITICAL,
-                code='NO_PAYSLIPS',
-                title='No payslips',
-                description='This payroll run has no payslips. Add employees before approving.',
-                action_required='Add employees to this payroll run',
-                blocking=True,
-                impact='Payroll cannot be approved or disbursed without payslips.',
-                cause='No employees were included in this payroll run.',
-                recommendation='Go to the payroll upload page and add employees, or import from CSV.',
-                action_url=f'/payroll/runs/{current_run_id}/upload',
-                estimated_time='5 minutes',
+        # Check if there is draft data for review/draft runs
+        PayrollDraft = getattr(models, 'PayrollDraft', None)
+        draft = None
+        if PayrollDraft:
+            try:
+                draft = db.session.query(PayrollDraft).filter_by(payroll_run_id=current_run_id).first()
+            except Exception:
+                draft = None
+        if draft and isinstance(draft.employee_data, list):
+            from types import SimpleNamespace
+            payslips = []
+            for emp_data in draft.employee_data:
+                # Find employee
+                emp = Employee.query.filter_by(employee_id=emp_data['id'], company_id=company_id, is_deleted=False).first()
+                emp_id = emp.id if emp else None
+                payslips.append(SimpleNamespace(
+                    employee_id=emp_id,
+                    gross_salary=emp_data.get('gross'),
+                    tax=emp_data.get('tax'),
+                    employee_pension=emp_data.get('pension_employee'),
+                    employer_pension=emp_data.get('pension_employer'),
+                    net_pay=emp_data.get('net'),
+                ))
+        else:
+            report.issues.append(
+                Issue(
+                    severity=CRITICAL,
+                    code='NO_PAYSLIPS',
+                    title='No payslips',
+                    description='This payroll run has no payslips. Add employees before approving.',
+                    action_required='Add employees to this payroll run',
+                    blocking=True,
+                    impact='Payroll cannot be approved or disbursed without payslips.',
+                    cause='No employees were included in this payroll run.',
+                    recommendation='Go to the payroll upload page and add employees, or import from CSV.',
+                    action_url=f'/payroll/runs/{current_run_id}/upload',
+                    estimated_time='5 minutes',
+                )
             )
-        )
-        return report
+            return report
 
     # Check each payslip for issues
     for ps in payslips:

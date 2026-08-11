@@ -109,6 +109,9 @@ def create_app():
         from config import StagingConfig
 
         app.config.from_object(StagingConfig())
+    elif env == 'testing':
+        from config import TestingConfig
+        app.config.from_object(TestingConfig())
     else:
         from config import _env_bool
 

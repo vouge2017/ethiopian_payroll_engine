@@ -25,9 +25,6 @@ VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
 VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_CLAIMS_EMAIL = os.environ.get('VAPID_CLAIMS_EMAIL', 'mailto:admin@ethiopayroll.com')
 
-# In-memory subscription store (replace with DB in production)
-_subscriptions = {}
-
 
 def get_vapid_public_key():
     """Get VAPID public key for client-side subscription."""
@@ -35,14 +32,34 @@ def get_vapid_public_key():
 
 
 def save_subscription(user_id, subscription_info):
-    """Save a push subscription for a user."""
+    """Save a push subscription for a user to the database."""
     from payroll_engine import db
-    from payroll_engine.models import Notification
+    from payroll_engine.models import Notification, PushSubscription, User
 
-    _subscriptions[user_id] = subscription_info
+    endpoint = subscription_info.get('endpoint')
+    if not endpoint:
+        return False
+
+    # Look up existing subscription by endpoint
+    existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+    if existing:
+        existing.user_id = user_id
+        existing.subscription_json = subscription_info
+    else:
+        sub = PushSubscription(
+            user_id=user_id,
+            endpoint=endpoint,
+            subscription_json=subscription_info
+        )
+        db.session.add(sub)
+
+    # Fetch user to get company_id
+    user = db.session.get(User, user_id)
+    company_id = user.company_id if user else None
+
 
     # Also store in-app notification
-    notif = Notification(user_id=user_id, message='Push notifications enabled', notif_type='system', is_read=True)
+    notif = Notification(company_id=company_id, user_id=user_id, message='Push notifications enabled', type='system', is_read=True)
     db.session.add(notif)
     db.session.commit()
 
@@ -50,52 +67,72 @@ def save_subscription(user_id, subscription_info):
 
 
 def send_push_notification(user_id, title, body, url='/', notif_type='info'):
-    """Send a push notification to a user.
+    """Send a push notification to all user's registered devices.
 
     Also creates an in-app notification as fallback.
     """
     from payroll_engine import db
-    from payroll_engine.models import Notification
+    from payroll_engine.models import Notification, PushSubscription, User
+
+    # Fetch user to get company_id
+    user = db.session.get(User, user_id)
+    company_id = user.company_id if user else None
 
     # Always create in-app notification
     notif = Notification(
-        user_id=user_id, message=f'{title}: {body}' if body else title, notif_type=notif_type, link=url
+        company_id=company_id, user_id=user_id, message=f"{title}: {body}" if body else title, type=notif_type, link=url
     )
     db.session.add(notif)
     db.session.commit()
 
-    # Try push notification if subscription exists
-    subscription = _subscriptions.get(user_id)
-    if not subscription or not VAPID_PRIVATE_KEY:
+    # Get all active subscriptions for the user
+    subscriptions = PushSubscription.query.filter_by(user_id=user_id).all()
+    if not subscriptions or not VAPID_PRIVATE_KEY:
         return False
 
-    try:
-        from pywebpush import WebPushException, webpush  # noqa: F401
+    success = False
+    for sub in subscriptions:
+        try:
+            from pywebpush import WebPushException, webpush
 
-        payload = json.dumps(
-            {
-                'title': title,
-                'body': body,
-                'url': url,
-            }
-        )
+            payload = json.dumps(
+                {
+                    'title': title,
+                    'body': body,
+                    'url': url,
+                }
+            )
 
-        webpush(
-            subscription_info=subscription,
-            data=payload,
-            vapid_private_key=VAPID_PRIVATE_KEY,
-            vapid_claims={
-                'sub': VAPID_CLAIMS_EMAIL,
-            },
-        )
-        return True
+            webpush(
+                subscription_info=sub.subscription_json,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={
+                    'sub': VAPID_CLAIMS_EMAIL,
+                },
+            )
+            success = True
 
-    except ImportError:
-        logger.warning('pywebpush not installed — push notifications disabled')
-        return False
-    except Exception as e:
-        logger.error(f'Push notification failed for user {user_id}: {e}')
-        return False
+        except ImportError:
+            logger.warning('pywebpush not installed — push notifications disabled')
+            return False
+        except WebPushException as e:
+            # Handle stale/expired subscription (410 Gone / 404 Not Found)
+            # Delete stale subscription from database
+            if e.response is not None and e.response.status_code in (410, 404):
+                try:
+                    db.session.delete(sub)
+                    db.session.commit()
+                    logger.info(f'Deleted stale push subscription for user {user_id}')
+                except Exception as db_err:
+                    db.session.rollback()
+                    logger.error(f'Failed to delete stale push subscription: {db_err}')
+            else:
+                logger.error(f'Push notification WebPushException for user {user_id}: {e}')
+        except Exception as e:
+            logger.error(f'Push notification failed for user {user_id}: {e}')
+
+    return success
 
 
 def notify_payslip_ready(user_id, employee_name, period, payslip_id):

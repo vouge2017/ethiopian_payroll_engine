@@ -431,6 +431,7 @@
                                 {% endif %}
                             </td>
                             <td data-label="Balance">
+                                {% if d.remaining_balance is not none %}
                                     {% if d.remaining_balance <= d.amount %}
                                         <span class="text-warning"><i class="bi bi-exclamation-triangle"></i> ETB {{ '%.2f'|format(d.remaining_balance) }}</span>
                                     {% else %}

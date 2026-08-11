@@ -198,8 +198,14 @@ def change_password():
         current_user.set_password(new_password)
         current_user.must_change_password = False
         db.session.commit()
-        flash('Password updated. You can continue.', 'success')
-        return redirect(url_for('main.index'))
+
+        # Invalidate current session and log out, forcing re-authentication
+        from flask_login import logout_user
+        logout_user()
+        session.clear()
+
+        flash('Password updated successfully. Please log in again with your new password.', 'success')
+        return redirect(url_for('auth.login'))
 
     return render_template(
         'auth/change_password.html',

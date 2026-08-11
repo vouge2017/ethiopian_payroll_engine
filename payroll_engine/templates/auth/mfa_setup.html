@@ -1,42 +1,89 @@
-{% extends "auth/auth-base.html" %}
+{% extends "auth/onboarding-base.html" %}
 {% block title %}Set Up MFA — EthioPayroll{% endblock %}
 
-{% block tagline %}Add an extra layer of security to your account.{% endblock %}
-
 {% block content %}
-<h2 class="auth-card-title">Two-Factor Authentication</h2>
-<p class="auth-card-subtitle">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.):</p>
-
-<div class="text-center mb-4">
-    <div class="auth-qr-container">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ uri | urlencode }}"
-             alt="QR Code for MFA setup" width="180" height="180">
+<!-- Left: Stepper -->
+<aside class="onboarding-stepper">
+    <div class="onboarding-stepper-card">
+        <h3 class="onboarding-stepper-title">Security</h3>
+        <ul class="onboarding-stepper-list">
+            <li class="onboarding-step completed">
+                <div class="onboarding-step-dot">
+                    <span class="step-check material-symbols-outlined">check</span>
+                    <span class="step-number">1</span>
+                </div>
+                <div>
+                    <div class="onboarding-step-label">Change Password</div>
+                    <div class="onboarding-step-desc">Update your credentials</div>
+                </div>
+            </li>
+            <li class="onboarding-step active">
+                <div class="onboarding-step-dot">
+                    <span class="step-number">2</span>
+                </div>
+                <div>
+                    <div class="onboarding-step-label">MFA Setup</div>
+                    <div class="onboarding-step-desc">Two-factor authentication</div>
+                </div>
+            </li>
+        </ul>
     </div>
+</aside>
+
+<!-- Main Content -->
+<div class="onboarding-form-area">
+    <h1 class="onboarding-form-title">Two-Factor Authentication</h1>
+    <p class="onboarding-form-subtitle">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.):</p>
+
+    <div style="text-align: center; margin-bottom: var(--space-6);">
+        <div style="display: inline-block; padding: var(--space-4); background: var(--bg-primary); border: 2px solid var(--border-light); border-radius: var(--radius-xl);">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ uri | urlencode }}"
+                 alt="QR Code for MFA setup" width="180" height="180" style="display: block; border-radius: var(--radius-md);">
+        </div>
+    </div>
+
+    <div style="background: var(--color-info-light); color: #1e40af; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); margin-bottom: var(--space-6); display: flex; align-items: flex-start; gap: var(--space-2); font-size: 14px; font-weight: 500;">
+        <span class="material-symbols-outlined" style="font-size: 18px; flex-shrink: 0; margin-top: 1px;">key</span>
+        <span>Can't scan? Enter this secret manually: <code style="font-weight: 700;">{{ secret }}</code></span>
+    </div>
+
+    <form method="POST" id="mfaSetupForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="onboarding-field">
+            <label for="code">Verification Code</label>
+            <div class="onboarding-field-wrapper">
+                <input type="text" id="code" name="code"
+                       placeholder="000000" pattern="[0-9]{6}" maxlength="6" required autofocus
+                       autocomplete="one-time-code" inputmode="numeric"
+                       style="text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 0.3em; font-family: var(--font-mono); height: 56px;">
+            </div>
+            <span class="field-hint">Enter the 6-digit code shown in your authenticator app.</span>
+        </div>
+
+        <div class="onboarding-actions">
+            <a href="{{ url_for('main.index') }}" class="onboarding-btn-back">
+                Skip for now
+            </a>
+            <button type="submit" class="onboarding-btn-next">
+                Enable MFA
+                <span class="material-symbols-outlined">shield</span>
+            </button>
+        </div>
+    </form>
 </div>
 
-<div class="auth-info">
-    <i class="bi bi-key"></i>
-    <span>Can't scan? Enter this secret manually: <code style="font-weight: 700;">{{ secret }}</code></span>
-</div>
-
-<form method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-    <div class="auth-input-group">
-        <label for="code">Verification Code</label>
-        <input type="text" id="code" name="code" class="form-control auth-code-input"
-               placeholder="000000" pattern="[0-9]{6}" maxlength="6" required autofocus
-               autocomplete="one-time-code" inputmode="numeric">
-        <small class="auth-hint">Enter the 6-digit code shown in your authenticator app.</small>
+<!-- Right Sidebar -->
+<aside class="onboarding-sidebar">
+    <div class="onboarding-help-card">
+        <div class="onboarding-help-header">
+            <span class="material-symbols-outlined">support_agent</span>
+            <h4>Need Help?</h4>
+        </div>
+        <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
+        <a href="#" class="onboarding-help-link">
+            Contact Support <span class="material-symbols-outlined">open_in_new</span>
+        </a>
     </div>
-
-    <button type="submit" class="auth-submit-btn">
-        <i class="bi bi-shield-check"></i>
-        Enable MFA
-    </button>
-</form>
-{% endblock %}
-
-{% block footer_links %}
-<a href="{{ url_for('main.index') }}">Skip for now</a>
+</aside>
 {% endblock %}

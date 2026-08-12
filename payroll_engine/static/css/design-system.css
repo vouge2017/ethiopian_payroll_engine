@@ -301,6 +301,15 @@
     gap: var(--space-1);
 }
 
+/* User can manually collapse even active sections */
+.nav-section.collapsed .nav-section-items {
+    display: none !important;
+}
+
+.nav-section.collapsed .section-chevron {
+    transform: rotate(0deg) !important;
+}
+
 .sidebar-nav .nav-link {
     display: flex;
     align-items: center;

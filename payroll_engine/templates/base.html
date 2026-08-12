@@ -343,7 +343,12 @@ function toggleSidebar() {
 // Toggle collapsible sidebar sections
 function toggleNavSection(labelEl) {
     var section = labelEl.closest('.nav-section');
-    section.classList.toggle('expanded');
+    if (section.classList.contains('has-active')) {
+        // Active sections: toggle collapsed to override has-active
+        section.classList.toggle('collapsed');
+    } else {
+        section.classList.toggle('expanded');
+    }
 }
 
 // Close sidebar on mobile link click

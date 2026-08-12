@@ -7,17 +7,6 @@
         <div>
             <h2 class="fw-bold mb-1">Dashboard</h2>
             <p class="text-muted mb-0">{{ today_eth }}</p>
-            <div class="d-flex gap-2 mt-2">
-                <span class="trust-badge trust-badge-success"><i class="bi bi-shield-check"></i> Tax verified</span>
-                <span class="trust-badge trust-badge-success"><i class="bi bi-check-circle"></i> Pension correct</span>
-                {% if compliance_status == 'green' %}
-                <span class="trust-badge trust-badge-success"><i class="bi bi-patch-check"></i> Compliant</span>
-                {% elif compliance_status == 'yellow' %}
-                <span class="trust-badge trust-badge-warning"><i class="bi bi-exclamation-circle"></i> Check deadlines</span>
-                {% else %}
-                <span class="trust-badge trust-badge-danger"><i class="bi bi-exclamation-triangle"></i> Action needed</span>
-                {% endif %}
-            </div>
         </div>
         <div class="d-flex gap-2">
             <button onclick="window.print()" class="btn btn-ghost no-print">
@@ -32,71 +21,47 @@
         </div>
     </div>
 
-    <!-- Metric Cards -->
+    <!-- Metric Cards — label + number only, no icon badges -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
-            <div class="card metric-card animate-fade-in {% if employee_count == 0 %}border-warning{% endif %}">
-                <div class="metric-icon blue"><i class="bi bi-people"></i></div>
+            <div class="card metric-card animate-fade-in">
                 <div class="metric-label">Employees</div>
                 <div class="metric-value">{{ employee_count }}</div>
-                {% if employee_count > 0 %}
-                <div class="metric-trend up"><i class="bi bi-arrow-up"></i> Active</div>
-                {% else %}
-                <a href="{{ url_for('employees.add_employee') }}" class="metric-trend text-decoration-none" style="color: var(--brand-primary);">
-                    <i class="bi bi-plus-circle"></i> Add first employee
-                </a>
-                {% endif %}
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-icon green"><i class="bi bi-shield-check"></i></div>
                 <div class="metric-label">Compliance</div>
                 <div class="metric-value">{{ compliance_score|round(0)|int }}%</div>
-                <div class="metric-trend {{ 'up' if compliance_status == 'green' else 'down' if compliance_status == 'red' else 'neutral' }}">
-                    {% if compliance_status == 'green' %}<i class="bi bi-check-circle-fill"></i> On track
-                    {% elif compliance_status == 'yellow' %}<i class="bi bi-exclamation-circle"></i> {{ status_message }}
-                    {% else %}<i class="bi bi-exclamation-triangle"></i> {{ status_message }}{% endif %}
-                </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-icon cyan"><i class="bi bi-clock-history"></i></div>
                 <div class="metric-label">Payroll Runs</div>
                 <div class="metric-value">{{ recent_runs|length }}</div>
-                {% if recent_runs|length > 0 %}
-                <div class="metric-trend neutral"><i class="bi bi-arrow-right"></i> {{ recent_runs[0].period or 'Latest' }}</div>
-                {% endif %}
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-icon amber"><i class="bi bi-calendar-check"></i></div>
                 <div class="metric-label">Overtime</div>
                 <div class="metric-value">{{ ot_total_hours or 0 }}h</div>
-                {% if ot_employee_count > 0 %}
-                <div class="metric-trend {{ 'down' if ot_over_limit else 'up' }}">
-                    {% if ot_over_limit %}<i class="bi bi-exclamation-triangle"></i> Over limit{% else %}<i class="bi bi-check-circle"></i> Within limit{% endif %}
-                </div>
-                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Trust Layer: Change Summary -->
+    <!-- Trust Layer: Change Summary — distinct card with left accent border -->
     {% if change_summary and change_summary.has_previous %}
-    <div class="card mb-4 animate-fade-in">
+    <div class="card trust-card mb-4 animate-fade-in" style="border-left: 4px solid {% if change_summary.variance_flag %}var(--color-warning){% else %}var(--color-success){% endif %};">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h5 class="mb-1"><i class="bi bi-arrow-left-right me-2"></i>Payroll Change Summary</h5>
+                    <h5 class="mb-1">Payroll Change Summary</h5>
                     <p class="text-muted mb-0">{{ change_summary.current.period }} vs {{ change_summary.previous.period }}</p>
                 </div>
                 {% if change_summary.variance_flag %}
-                <span class="badge bg-warning text-dark fs-6"><i class="bi bi-exclamation-triangle me-1"></i>Review needed</span>
+                <span class="badge bg-warning text-dark fs-6">Review needed</span>
                 {% else %}
-                <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>No unusual changes</span>
+                <span class="badge bg-success fs-6">No unusual changes</span>
                 {% endif %}
             </div>
 

@@ -27,38 +27,30 @@
         </div>
     </div>
 
-    <!-- YTD Summary Cards -->
+    <!-- YTD Summary Cards — label + number only -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon blue"><i class="bi bi-cash-stack"></i></div>
                 <div class="metric-label">Total Gross</div>
                 <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.gross) }}</div>
-                <div class="metric-trend neutral">{{ ytd.months_paid }} months</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon amber"><i class="bi bi-receipt"></i></div>
                 <div class="metric-label">Total Tax Paid</div>
                 <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.tax) }}</div>
-                <div class="metric-trend neutral">{{ "{:.1f}".format(ytd.tax / ytd.gross * 100 if ytd.gross > 0 else 0) }}% effective</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon green"><i class="bi bi-piggy-bank"></i></div>
                 <div class="metric-label">Total Pension</div>
                 <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.pension_employee) }}</div>
-                <div class="metric-trend neutral">Employee 7%</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon cyan"><i class="bi bi-wallet2"></i></div>
                 <div class="metric-label">Total Net</div>
-                <div class="metric-value text-success">ETB {{ "{:,.0f}".format(ytd.net) }}</div>
-                <div class="metric-trend up">Take-home</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.net) }}</div>
             </div>
         </div>
     </div>

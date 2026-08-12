@@ -56,55 +56,30 @@
         </div>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Summary Cards — label + number only -->
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon blue"><i class="bi bi-people"></i></div>
                 <div class="metric-label">Headcount</div>
                 <div class="metric-value">{{ totals.headcount_b }}</div>
-                <div class="metric-trend {{ 'up' if totals.headcount_change > 0 else 'down' if totals.headcount_change < 0 else 'neutral' }}">
-                    {% if totals.headcount_change > 0 %}<i class="bi bi-arrow-up"></i> +{{ totals.headcount_change }}
-                    {% elif totals.headcount_change < 0 %}<i class="bi bi-arrow-down"></i> {{ totals.headcount_change }}
-                    {% else %}<i class="bi bi-dash"></i> No change{% endif %}
-                </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon cyan"><i class="bi bi-cash-stack"></i></div>
                 <div class="metric-label">Total Gross</div>
                 <div class="metric-value">ETB {{ "{:,.0f}".format(totals.b_gross) }}</div>
-                <div class="metric-trend {{ 'up' if totals.gross_change > 0 else 'down' if totals.gross_change < 0 else 'neutral' }}">
-                    {% if totals.gross_change > 0 %}<i class="bi bi-arrow-up"></i> +ETB {{ "{:,.0f}".format(totals.gross_change) }}
-                    {% elif totals.gross_change < 0 %}<i class="bi bi-arrow-down"></i> -ETB {{ "{:,.0f}".format(totals.gross_change|abs) }}
-                    {% else %}<i class="bi bi-dash"></i> No change{% endif %}
-                    {% if totals.gross_change_pct != 0 %} ({{ "{:+.1f}".format(totals.gross_change_pct) }}%){% endif %}
-                </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon amber"><i class="bi bi-receipt"></i></div>
                 <div class="metric-label">Total Tax</div>
                 <div class="metric-value">ETB {{ "{:,.0f}".format(totals.b_tax) }}</div>
-                <div class="metric-trend {{ 'up' if totals.tax_change > 0 else 'down' if totals.tax_change < 0 else 'neutral' }}">
-                    {% if totals.tax_change > 0 %}<i class="bi bi-arrow-up"></i> +ETB {{ "{:,.0f}".format(totals.tax_change) }}
-                    {% elif totals.tax_change < 0 %}<i class="bi bi-arrow-down"></i> -ETB {{ "{:,.0f}".format(totals.tax_change|abs) }}
-                    {% else %}<i class="bi bi-dash"></i> No change{% endif %}
-                </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card">
-                <div class="metric-icon green"><i class="bi bi-wallet2"></i></div>
                 <div class="metric-label">Total Net</div>
                 <div class="metric-value">ETB {{ "{:,.0f}".format(totals.b_net) }}</div>
-                <div class="metric-trend {{ 'up' if totals.net_change > 0 else 'down' if totals.net_change < 0 else 'neutral' }}">
-                    {% if totals.net_change > 0 %}<i class="bi bi-arrow-up"></i> +ETB {{ "{:,.0f}".format(totals.net_change) }}
-                    {% elif totals.net_change < 0 %}<i class="bi bi-arrow-down"></i> -ETB {{ "{:,.0f}".format(totals.net_change|abs) }}
-                    {% else %}<i class="bi bi-dash"></i> No change{% endif %}
-                </div>
             </div>
         </div>
     </div>

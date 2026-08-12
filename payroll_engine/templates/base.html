@@ -71,81 +71,123 @@
                 <i class="bi bi-question-circle"></i><span>{{ _('help') }}</span>
             </a>
             {% else %}
-            <!-- Owner/Accountant Nav -->
-            <div class="nav-section">
-                <span class="nav-section-label">Overview</span>
-                <a href="{{ url_for('main.index') }}" class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-grid-1x2"></i><span>{{ _('dashboard') }}</span>
-                </a>
-                {% if current_user.companies|length > 1 %}
-                <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-buildings"></i><span>My Companies</span>
-                </a>
-                {% endif %}
+            <!-- Owner/Accountant Nav — 5 collapsible groups -->
+
+            <!-- Dashboard (always visible, outside groups) -->
+            <a href="{{ url_for('main.index') }}" class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" role="menuitem">
+                <i class="bi bi-grid-1x2"></i><span>{{ _('dashboard') }}</span>
+            </a>
+            {% if current_user.companies|length > 1 %}
+            <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in request.endpoint %}active{% endif %}" role="menuitem">
+                <i class="bi bi-buildings"></i><span>My Companies</span>
+            </a>
+            {% endif %}
+
+            <!-- Setup -->
+            <div class="nav-section {% if 'employee' in request.endpoint and 'my' not in request.endpoint or 'team' in request.endpoint %}expanded has-active{% endif %}">
+                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                    <span>Setup</span>
+                    <i class="bi bi-chevron-right section-chevron"></i>
+                </div>
+                <div class="nav-section-items">
+                    <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-people"></i><span>{{ _('employees') }}</span>
+                    </a>
+                    {% if current_user.role == 'owner' %}
+                    <a href="{{ url_for('settings.team_settings') }}" class="nav-link {% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-gear"></i><span>{{ _('team') }}</span>
+                    </a>
+                    {% endif %}
+                </div>
             </div>
 
-            <div class="nav-section">
-                <span class="nav-section-label">Payroll</span>
-                <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-people"></i><span>{{ _('employees') }}</span>
-                </a>
-                <a href="{{ url_for('payroll.payroll_upload') }}" class="nav-link {% if request.endpoint == 'payroll.payroll_upload' %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-cloud-upload"></i><span>{{ _('run_payroll') }}</span>
-                </a>
-                <a href="{{ url_for('payroll.payroll_runs') }}" class="nav-link {% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-clock-history"></i><span>{{ _('payroll_runs') }}</span>
-                </a>
-                <a href="{{ url_for('attendance.attendance_list') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-calendar-check"></i><span>Attendance</span>
-                </a>
-                {% if employee_count > 5 %}
-                <a href="{{ url_for('employees.leave_management') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-calendar-event"></i><span>Leave</span>
-                </a>
-                <a href="{{ url_for('calendar.leave_calendar') }}" class="nav-link {% if 'calendar' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-calendar3"></i><span>Calendar</span>
-                </a>
-                {% endif %}
-                {% if pending_profile_changes > 0 %}
-                <a href="{{ url_for('employees.profile_changes') }}" class="nav-link {% if 'profile_change' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-person-lines-fill"></i><span>Profile Requests</span>
-                    <span class="nav-badge">{{ pending_profile_changes }}</span>
-                </a>
-                {% endif %}
+            <!-- Run -->
+            <div class="nav-section {% if request.endpoint == 'payroll.payroll_upload' or 'payroll_runs' in request.endpoint or 'attendance' in request.endpoint or 'leave' in request.endpoint or 'calendar' in request.endpoint %}expanded has-active{% endif %}">
+                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                    <span>Run</span>
+                    <i class="bi bi-chevron-right section-chevron"></i>
+                </div>
+                <div class="nav-section-items">
+                    <a href="{{ url_for('payroll.payroll_upload') }}" class="nav-link {% if request.endpoint == 'payroll.payroll_upload' %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-cloud-upload"></i><span>{{ _('run_payroll') }}</span>
+                    </a>
+                    <a href="{{ url_for('payroll.payroll_runs') }}" class="nav-link {% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-clock-history"></i><span>{{ _('payroll_runs') }}</span>
+                    </a>
+                    <a href="{{ url_for('attendance.attendance_list') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-calendar-check"></i><span>Attendance</span>
+                    </a>
+                    {% if employee_count > 5 %}
+                    <a href="{{ url_for('employees.leave_management') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-calendar-event"></i><span>Leave</span>
+                    </a>
+                    <a href="{{ url_for('calendar.leave_calendar') }}" class="nav-link {% if 'calendar' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-calendar3"></i><span>Calendar</span>
+                    </a>
+                    {% endif %}
+                </div>
             </div>
 
-            <div class="nav-section">
-                <span class="nav-section-label">Insights</span>
-                <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-bar-chart-line"></i><span>{{ _('reports') }}</span>
-                </a>
-                <a href="{{ url_for('reports.analytics') }}" class="nav-link {% if 'analytics' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-graph-up"></i><span>Analytics</span>
-                </a>
-                <a href="{{ url_for('accounting.accounting_home') }}" class="nav-link {% if 'accounting' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-journal-text"></i><span>Accounting</span>
-                </a>
-                <a href="{{ url_for('reports.payroll_comparison') }}" class="nav-link {% if 'comparison' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-bar-chart-steps"></i><span>Compare</span>
-                </a>
-                {% if employee_count > 20 %}
-                <a href="{{ url_for('reports.impact_calculator') }}" class="nav-link {% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-calculator"></i><span>Impact Calculator</span>
-                </a>
-                {% endif %}
+            <!-- Review -->
+            <div class="nav-section {% if 'profile_change' in request.endpoint or 'comparison' in request.endpoint %}expanded has-active{% endif %}">
+                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                    <span>Review</span>
+                    <i class="bi bi-chevron-right section-chevron"></i>
+                </div>
+                <div class="nav-section-items">
+                    {% if pending_profile_changes > 0 %}
+                    <a href="{{ url_for('employees.profile_changes') }}" class="nav-link {% if 'profile_change' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-person-lines-fill"></i><span>Approvals</span>
+                        <span class="nav-badge">{{ pending_profile_changes }}</span>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('reports.payroll_comparison') }}" class="nav-link {% if 'comparison' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-bar-chart-steps"></i><span>Compare</span>
+                    </a>
+                </div>
             </div>
 
-            <div class="nav-section">
-                <span class="nav-section-label">System</span>
-                {% if current_user.role == 'owner' %}
-                <a href="{{ url_for('settings.team_settings') }}" class="nav-link {% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-gear"></i><span>{{ _('team') }}</span>
-                </a>
-                {% endif %}
-                <a href="{{ url_for('help.help_center') }}" class="nav-link {% if 'help' in request.endpoint %}active{% endif %}" role="menuitem">
-                    <i class="bi bi-question-circle"></i><span>{{ _('help') }}</span>
-                </a>
+            <!-- File -->
+            <div class="nav-section {% if 'filing' in request.endpoint or 'erc' in request.endpoint or 'bank' in request.endpoint %}expanded has-active{% endif %}">
+                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                    <span>File</span>
+                    <i class="bi bi-chevron-right section-chevron"></i>
+                </div>
+                <div class="nav-section-items">
+                    <a href="{{ url_for('reports.filing_history') }}" class="nav-link {% if 'filing' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-folder-check"></i><span>Filing History</span>
+                    </a>
+                </div>
             </div>
+
+            <!-- Report -->
+            <div class="nav-section {% if 'report' in request.endpoint or 'analytics' in request.endpoint or 'accounting' in request.endpoint or 'impact' in request.endpoint %}expanded has-active{% endif %}">
+                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                    <span>Report</span>
+                    <i class="bi bi-chevron-right section-chevron"></i>
+                </div>
+                <div class="nav-section-items">
+                    <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-bar-chart-line"></i><span>{{ _('reports') }}</span>
+                    </a>
+                    <a href="{{ url_for('reports.analytics') }}" class="nav-link {% if 'analytics' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-graph-up"></i><span>Analytics</span>
+                    </a>
+                    <a href="{{ url_for('accounting.accounting_home') }}" class="nav-link {% if 'accounting' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-journal-text"></i><span>Accounting</span>
+                    </a>
+                    {% if employee_count > 20 %}
+                    <a href="{{ url_for('reports.impact_calculator') }}" class="nav-link {% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
+                        <i class="bi bi-calculator"></i><span>Impact Calculator</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Help (always visible, outside groups) -->
+            <a href="{{ url_for('help.help_center') }}" class="nav-link {% if 'help' in request.endpoint %}active{% endif %}" role="menuitem">
+                <i class="bi bi-question-circle"></i><span>{{ _('help') }}</span>
+            </a>
             {% endif %}
         </nav>
 
@@ -296,6 +338,12 @@ function toggleSidebar() {
     const isOpen = nav.classList.toggle('show');
     if (footer) footer.classList.toggle('show', isOpen);
     if (btn) btn.setAttribute('aria-expanded', isOpen);
+}
+
+// Toggle collapsible sidebar sections
+function toggleNavSection(labelEl) {
+    var section = labelEl.closest('.nav-section');
+    section.classList.toggle('expanded');
 }
 
 // Close sidebar on mobile link click

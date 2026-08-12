@@ -30,34 +30,25 @@
     </div>
     {% endif %}
 
-    <!-- Compliance Metrics -->
+    <!-- Compliance Metrics — label + number only -->
     <div class="row g-3 mb-4">
         <div class="col-md-4 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-icon {{ 'green' if compliance_status == 'green' else 'amber' if compliance_status == 'yellow' else 'red' }}">
-                    <i class="bi bi-shield-check"></i>
-                </div>
                 <div class="metric-label">Compliance Score</div>
                 <div class="metric-value">{{ compliance_score|round(0)|int }}%</div>
-                <div class="metric-trend {{ 'up' if compliance_status == 'green' else 'down' if compliance_status == 'red' else 'neutral' }}">
-                    {{ status_message }}
-                </div>
             </div>
         </div>
         <div class="col-md-4 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-icon blue"><i class="bi bi-people"></i></div>
                 <div class="metric-label">Total Employees</div>
                 <div class="metric-value">{{ total_employees }}</div>
             </div>
         </div>
         <div class="col-md-4 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-icon cyan"><i class="bi bi-clock-history"></i></div>
                 <div class="metric-label">Last Run</div>
                 {% if last_run %}
                 <div class="metric-value" style="font-size: var(--text-lg);">{{ last_run.run_date }}</div>
-                <div class="metric-trend neutral">{{ last_run.payslips|length }} payslips</div>
                 {% else %}
                 <div class="metric-value text-muted">—</div>
                 {% endif %}
@@ -200,7 +191,7 @@
         <div class="col-md-4">
             <a href="{{ url_for('reports.filing_history') }}" class="card text-decoration-none animate-fade-in">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="metric-icon blue"><i class="bi bi-clock-history"></i></div>
+                    <div class="metric-icon"><i class="bi bi-clock-history"></i></div>
                     <div>
                         <div class="fw-semibold">Filing History</div>
                         <small class="text-muted">View past ERCA filings</small>
@@ -211,7 +202,7 @@
         <div class="col-md-4">
             <a href="{{ url_for('reports.audit_log') }}" class="card text-decoration-none animate-fade-in">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="metric-icon green"><i class="bi bi-journal-text"></i></div>
+                    <div class="metric-icon"><i class="bi bi-journal-text"></i></div>
                     <div>
                         <div class="fw-semibold">Audit Log</div>
                         <small class="text-muted">Who did what, when</small>
@@ -222,7 +213,7 @@
         <div class="col-md-4">
             <a href="{{ url_for('reports.analytics') }}" class="card text-decoration-none animate-fade-in">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <div class="metric-icon amber"><i class="bi bi-graph-up"></i></div>
+                    <div class="metric-icon"><i class="bi bi-graph-up"></i></div>
                     <div>
                         <div class="fw-semibold">Analytics</div>
                         <small class="text-muted">Department costs, trends</small>

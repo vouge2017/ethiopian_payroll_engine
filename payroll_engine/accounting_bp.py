@@ -46,7 +46,6 @@ def _generate_journal_entries(run_id, company_id):
     total_pension_emp = Decimal('0')
     total_pension_empr = Decimal('0')
     total_net = Decimal('0')
-    Decimal('0')
 
     for ps in payslips:
         emp = Employee.query.get(ps.employee_id)

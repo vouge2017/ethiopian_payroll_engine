@@ -46,18 +46,38 @@ def run_pytest():
         )
         output = result.stdout + result.stderr
 
-        # Parse summary line: "X passed, Y failed, Z errors"
-        passed_match = re.search(r'(\d+) passed', output)
-        failed_match = re.search(r'(\d+) failed', output)
-        error_match = re.search(r'(\d+) error', output)
-        skipped_match = re.search(r'(\d+) skipped', output)
-        collected_match = re.search(r'collected (\d+) items', output)
+        # Parse the FINAL summary line.
+        # pytest -q can produce intermediate summary lines, so find the last
+        # line matching 'X passed ... in Ns' and extract counts from it.
+        summary_lines = [line for line in output.split('\n') if re.search(r'in \d+\.\d+s', line)]
+        last_line = summary_lines[-1] if summary_lines else ''
 
-        passed = int(passed_match.group(1)) if passed_match else 0
-        failed = int(failed_match.group(1)) if failed_match else 0
-        errors = int(error_match.group(1)) if error_match else 0
-        skipped = int(skipped_match.group(1)) if skipped_match else 0
+        if last_line:
+            passed_m = re.search(r'(\d+) passed', last_line)
+            failed_m = re.search(r'(\d+) failed', last_line)
+            errors_m = re.search(r'(\d+) error(?:s)?', last_line)
+            skipped_m = re.search(r'(\d+) skipped', last_line)
+            passed = int(passed_m.group(1)) if passed_m else 0
+            failed = int(failed_m.group(1)) if failed_m else 0
+            errors = int(errors_m.group(1)) if errors_m else 0
+            skipped = int(skipped_m.group(1)) if skipped_m else 0
+        else:
+            # Fallback: last occurrence of each count
+            all_passed = re.findall(r'(\d+) passed', output)
+            all_failed = re.findall(r'(\d+) failed', output)
+            all_errors = re.findall(r'(\d+) error(?:s)?', output)
+            all_skipped = re.findall(r'(\d+) skipped', output)
+            passed = int(all_passed[-1]) if all_passed else 0
+            failed = int(all_failed[-1]) if all_failed else 0
+            errors = int(all_errors[-1]) if all_errors else 0
+            skipped = int(all_skipped[-1]) if all_skipped else 0
+
+        collected_match = re.search(r'collected (\d+) items', output)
         collected = int(collected_match.group(1)) if collected_match else (passed + failed + errors + skipped)
+
+        # If collected is 0 but we have results, fix it
+        if collected == 0 and (passed + failed + errors + skipped) > 0:
+            collected = passed + failed + errors + skipped
 
         # Get failed test names
         failed_tests = []

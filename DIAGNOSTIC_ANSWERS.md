@@ -17,8 +17,8 @@
 | Pension employee 7% | `pension.py:13-14` (DEFAULT_EMPLOYEE_RATE) | ✅ Yes (fallback) | ✅ Via TaxRule.rules_json.pension | ✅ Via TaxRule | ⚠️ Proclamation 1268/2022 cited but no human verification |
 | Pension employer 11% | `pension.py:15` (DEFAULT_EMPLOYER_RATE) | ✅ Yes (fallback) | ✅ Via TaxRule.rules_json.pension | ✅ Via TaxRule | ⚠️ Same |
 | Pension ceiling (none) | `pension.py:18` (DEFAULT_CEILING = None) | ✅ Yes | ✅ Via TaxRule.rules_json.pension.ceiling | ✅ Via TaxRule | ✅ Removed after research confirmed no statutory cap |
-| Overtime day 1.25x | `overtime.py:14` (OVERTIME_RATES) | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Proclamation 1156/2019 Art. 68 cited |
-| Overtime night 1.50x | `overtime.py:15` | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Same |
+| Overtime day 1.50x | `overtime.py:14` (DEFAULT_OVERTIME_RATES) | ✅ Yes (fallback) | ✅ Via TaxRule.rules_json.overtime | ✅ Via TaxRule | ⚠️ Proclamation 1156/2019 Art. 68(1)(a) |
+| Overtime night 1.75x | `overtime.py:15` | ✅ Yes (fallback) | ✅ Via TaxRule.rules_json.overtime | ✅ Via TaxRule | ⚠️ Proclamation 1156/2019 Art. 68(1)(b) |
 | Overtime holiday 2.0x | `overtime.py:16` | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Same |
 | Overtime rest+holiday 2.5x | `overtime.py:17` | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Same |
 | Overtime monthly limit 20h | `overtime.py:20` (MAX_OVERTIME_HOURS_MONTH) | ✅ Yes | ❌ Not configurable | ❌ Not versioned | ⚠️ Art. 89 cited |
@@ -141,8 +141,8 @@ Build a unified `StatutoryRule` model that covers ALL rule types (tax, pension, 
 | Pension employee rate | 7% | `pension.py:22` | ✅ Configurable via DB |
 | Pension employer rate | 11% | `pension.py:23` | ✅ Configurable via DB |
 | Pension ceiling | None (no cap) | `pension.py` | ✅ Configurable via DB |
-| Overtime day multiplier | 1.25x | `overtime.py` | ✅ Configurable via DB |
-| Overtime night multiplier | 1.50x | `overtime.py` | ✅ Configurable via DB |
+| Overtime day multiplier | 1.50x | `overtime.py` | ✅ Configurable via DB |
+| Overtime night multiplier | 1.75x | `overtime.py` | ✅ Configurable via DB |
 | Overtime holiday multiplier | 2.0x | `overtime.py` | ✅ Configurable via DB |
 | Overtime rest+holiday multiplier | 2.5x | `overtime.py` | ✅ Configurable via DB |
 | Overtime monthly limit | 20 hours | `overtime.py` | ✅ Configurable via DB |

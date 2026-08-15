@@ -708,6 +708,37 @@ a:hover {
     color: var(--gray-500);
 }
 
+/* --- Dashboard Layout --- */
+.container-xxl {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.metric-card .metric-label {
+    text-align: center;
+}
+
+.metric-card .metric-value {
+    text-align: center;
+}
+
+.metric-card {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+}
+
+/* Dashboard charts centered */
+.chart-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* --- Buttons --- */
 .btn {
     font-weight: 600;

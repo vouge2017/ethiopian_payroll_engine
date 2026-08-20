@@ -1670,12 +1670,14 @@ class LoginAttempt(db.Model):
         """
         from datetime import datetime, timedelta
 
+   @classmethod
+    def is_locked_out(cls, identifier):
         now = datetime.now(UTC)
-    if locked_until:
-        if locked_until.tzinfo is None:
-            locked_until = locked_until.replace(tzinfo=UTC)
-        if locked_until > now:
-            # account  locked out
+        if locked_until:
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=UTC)
+            if locked_until > now:
+                return True, int((locked_until - now).total_seconds())
 
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
 

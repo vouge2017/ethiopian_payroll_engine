@@ -1671,6 +1671,9 @@ class LoginAttempt(db.Model):
         from datetime import datetime, timedelta
 
         now = datetime.now(UTC)
+        if locked_until and locked_until.tzinfo is None:
+        locked_until = locked_until.replace(tzinfo=UTC)
+
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
 
         # Use naive UTC for SQLite compatibility

@@ -831,8 +831,10 @@ class PayrollRun(db.Model):
     disbursed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     disbursement_notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    version_id = db.Column(db.Integer, nullable=False, default=1)  # Optimistic concurrency lock
 
     __table_args__ = (db.Index('ix_payrollrun_company_status', 'company_id', 'status'),)
+    __mapper_args__ = {'version_id_col': version_id}
 
     # Relationships
     payslips = db.relationship('Payslip', backref='payroll_run', lazy=True, cascade='all, delete-orphan')

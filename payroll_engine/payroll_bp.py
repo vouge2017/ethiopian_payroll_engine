@@ -888,14 +888,21 @@ def approve_payroll():
         flash('Cannot process: there are unresolved BLOCK issues.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    # Process payroll (single transaction)
-    result = process_payroll(
-        run=run,
-        company_id=_company_id(),
-        user_id=current_user.id,
-        user_email=current_user.email,
-        request_ip=request.remote_addr,
-    )
+    # Process payroll (single transaction) — with optimistic concurrency guard
+    from sqlalchemy.orm.exc import StaleDataError
+
+    try:
+        result = process_payroll(
+            run=run,
+            company_id=_company_id(),
+            user_id=current_user.id,
+            user_email=current_user.email,
+            request_ip=request.remote_addr,
+        )
+    except StaleDataError:
+        db.session.rollback()
+        flash('Concurrency Conflict: This payroll period was modified by another user. Please refresh and try again.', 'warning')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=int(run_id)))
 
     if result.success:
         # Send notifications (in-app + WhatsApp)

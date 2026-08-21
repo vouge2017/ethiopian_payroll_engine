@@ -577,7 +577,7 @@ def mfa_verify():
                 return redirect(safe_redirect_target(next_url))
             return redirect(url_for('main.index'))
         else:
-            flash('Invalid code. Please try again.', 'danger')
+            flash('Invalid authentication code. Please check your authenticator app and try again.', 'danger')
 
     return render_template('auth/mfa_verify.html', next_url=next_url)
 

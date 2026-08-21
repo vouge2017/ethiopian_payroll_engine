@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from payroll_engine import db
+from payroll_engine import db, limiter
 from payroll_engine.models import Leave, OvertimeEntry, Payslip
 from payroll_engine.shared import _company_id, get_linked_employee
 
@@ -134,6 +134,7 @@ def my_payslip_detail(payslip_id):
 
 @portal_bp.route('/my/payslips/<int:payslip_id>/acknowledge', methods=['POST'])
 @login_required
+@limiter.limit('20 per minute')
 def acknowledge_payslip(payslip_id):
     """Employee acknowledges receipt of payslip."""
     from payroll_engine.models import PayslipAcknowledgment
@@ -227,6 +228,7 @@ def my_profile():
 
 
 @portal_bp.route('/my/profile/edit', methods=['GET', 'POST'])
+@limiter.limit('10 per minute')
 def edit_profile():
     """Employee edits their profile. Sensitive fields go through approval."""
     from payroll_engine.models import ProfileChangeRequest
@@ -349,6 +351,7 @@ def my_leave():
 
 
 @portal_bp.route('/my/leave/request', methods=['POST'])
+@limiter.limit('10 per minute')
 def my_request_leave():
     """Employee requests leave from the portal."""
     from datetime import datetime as dt

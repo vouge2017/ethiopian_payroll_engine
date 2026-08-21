@@ -132,6 +132,44 @@
 
 ---
 
+## Render PITR (Point-In-Time Recovery)
+
+Render's managed PostgreSQL supports continuous PITR, allowing restoration to any point in time within the retention window.
+
+**How PITR works on Render:**
+- Render takes continuous WAL (Write-Ahead Log) backups alongside daily snapshots
+- You can restore to any second within the retention period (typically 7-30 days depending on plan)
+- PITR is available on Standard plans and above (not available on free/Basic)
+
+**How to use PITR:**
+1. Go to Render Dashboard → PostgreSQL database
+2. Click "Backups" tab
+3. Select "Point-in-Time Recovery"
+4. Choose the exact date and time to restore to
+5. Render creates a new database instance with the restored state
+6. Update `DATABASE_URL` in your web service to point to the new database
+7. Verify data integrity
+
+**PITR vs. Snapshot Restore:**
+
+| Feature | Snapshot Restore | PITR |
+|---|---|---|
+| Granularity | Daily snapshots | Any second |
+| Data loss window | Up to 24 hours | Near-zero |
+| Use case | Accidental deletion, corruption | Precise recovery to before incident |
+| Cost | Included in plan | Requires Standard+ plan |
+
+**Dry-run restoration protocol:**
+1. Schedule quarterly DR drill
+2. Create a test database instance on Render
+3. Restore latest backup to test instance
+4. Point staging app to test database
+5. Verify: login, employee data, payroll history, ERCA export
+6. Document results in DR drill log
+7. Tear down test instance
+
+---
+
 ## Backup Verification Schedule
 
 | Frequency | Action | Who |

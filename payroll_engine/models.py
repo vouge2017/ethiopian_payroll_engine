@@ -1670,8 +1670,6 @@ class LoginAttempt(db.Model):
         """
         from datetime import datetime, timedelta
 
-   @classmethod
-    def is_locked_out(cls, identifier):
         now = datetime.now(UTC)
         if locked_until:
             if locked_until.tzinfo is None:

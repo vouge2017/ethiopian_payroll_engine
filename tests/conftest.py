@@ -35,3 +35,16 @@ def _configure_test_db():
             db.engine.dispose()
     except Exception:
         pass
+
+
+@pytest.fixture(autouse=True)
+def _db_session_cleanup():
+    """Clean up database session after each test to prevent deadlocks."""
+    yield
+    try:
+        from payroll_engine import db
+
+        db.session.rollback()
+        db.session.remove()
+    except Exception:
+        pass

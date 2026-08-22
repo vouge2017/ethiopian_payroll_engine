@@ -1,0 +1,6 @@
+employee_id,name,basic_salary,allowances,bank_or_telebirr,tin
+EMP001,Abebe Kebede,8000,2000,telebirr:0912345678,1234567890
+EMP002,Bekelech Wondimu,12000,3000,bank:cbe,2345678901
+EMP003,Daniel Tesfaye,5000,1000,telebirr:0987654321,3456789012
+EMP004,Dawit Mengistu,25000,5000,bank:abyssinia,4567890123
+EMP005,Eleni Haile,1800,0,cash,

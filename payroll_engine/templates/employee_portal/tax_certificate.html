@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Tax Certificate — {{ year }} — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Tax Certificate</h2>
+            <p class="text-muted mb-0">{{ year }} · {{ employee.name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('selfservice.ytd_earnings', year=year) }}" class="btn btn-ghost">
+                <i class="bi bi-arrow-left me-1"></i>YTD
+            </a>
+            <a href="{{ url_for('selfservice.download_tax_certificate', year=year) }}" class="btn btn-primary">
+                <i class="bi bi-download me-1"></i>Download CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Certificate Card -->
+    <div class="card" style="max-width:800px;margin:0 auto;">
+        <div class="card-body p-4 p-md-5">
+            <!-- Header -->
+            <div class="text-center mb-4 pb-3 border-bottom">
+                <h3 class="fw-bold mb-1">{{ company.name }}</h3>
+                {% if company.address %}<p class="text-muted mb-0">{{ company.address }}</p>{% endif %}
+                {% if company.tin %}<p class="text-muted mb-0">TIN: {{ company.tin }}</p>{% endif %}
+                <h4 class="fw-bold mt-3 mb-0">Tax Certificate / የታክስ ሰርቲፊኬት</h4>
+                <p class="text-muted">Tax Year {{ year }}</p>
+            </div>
+
+            <!-- Employee Info -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background:var(--bg-tertiary);">
+                        <small class="text-muted">Employee Name / ስም</small>
+                        <div class="fw-bold">{{ employee.name }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background:var(--bg-tertiary);">
+                        <small class="text-muted">Employee ID / መለያ</small>
+                        <div class="fw-bold">{{ employee.employee_id }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background:var(--bg-tertiary);">
+                        <small class="text-muted">TIN / ታክስ መለያ ቁጥር</small>
+                        <div class="fw-bold">{{ employee.tin or 'Not provided' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background:var(--bg-tertiary);">
+                        <small class="text-muted">Fayda FIN / ፋይዳ መለያ</small>
+                        <div class="fw-bold">{{ employee.fayda_fin or 'Not provided' }}</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3" style="background:var(--bg-tertiary);">
+                        <small class="text-muted">Department / ክፍል</small>
+                        <div class="fw-bold">{{ employee.department or 'N/A' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- YTD Summary -->
+            <h5 class="fw-bold mb-3">Income Summary / የገቢ ማጠቃለያ</h5>
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered responsive-card">
+                    <tbody>
+                        <tr>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Gross Income / ጠቅላይ ገቢ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5">ETB {{ "{:,.2f}".format(ytd.gross) }}</td></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Income Tax Paid / የተከፈለ ታክስ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5 text-warning">ETB {{ "{:,.2f}".format(ytd.tax) }}</td></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Pension Contribution / የፋንድ ተጠቃሚ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5">ETB {{ "{:,.2f}".format(ytd.pension_employee) }}</td></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Total Net Income / የተቀረ ገቢ</td>
+                            <td data-label="Amount" class="text-end fw-bold fs-5 text-success">ETB {{ "{:,.2f}".format(ytd.net) }}</td></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Item" class="fw-semibold" style="background:var(--bg-tertiary);">Months Paid / የተከፈሉ ወራት</td>
+                            <td data-label="Amount" class="text-end fw-bold">{{ ytd.months_paid }}</td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Monthly Detail -->
+            {% if ytd.payslips %}
+            <h5 class="fw-bold mb-3">Monthly Detail / ወርሃዊ ዝርዝር</h5>
+            <div class="table-responsive mb-4">
+                <table class="table table-sm table-bordered responsive-card">
+                    <thead>
+                        <tr style="background:var(--bg-tertiary);">
+                            <th>Period</th>
+                            <th class="text-end">Gross</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Pension</th>
+                            <th class="text-end">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ps in ytd.payslips %}
+                        <tr>
+                            <td data-label="Period">{{ ps.period }}</td>
+                            <td data-label="Gross" class="text-end">{{ "{:,.0f}".format(ps.gross) }}</td>
+                            <td data-label="Tax" class="text-end">{{ "{:,.0f}".format(ps.tax) }}</td>
+                            <td data-label="Pension" class="text-end">{{ "{:,.0f}".format(ps.pension) }}</td>
+                            <td data-label="Net" class="text-end fw-semibold">{{ "{:,.0f}".format(ps.net) }}</td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- Declaration -->
+            <div class="border-top pt-4 mt-4">
+                <p class="small text-muted mb-2">
+                    <strong>Declaration:</strong> This certificate is issued to confirm that the above-named employee
+                    has received the income and paid the taxes stated herein during the tax year {{ year }}.
+                </p>
+                <p class="small text-muted mb-4">
+                    <strong>ማረጋገጫ:</strong> ይህ ሰርቲፊኬት ከላይ ባለው ስም የተጠቀሰ ሰራተኛ በታክስ ዓመት {{ year }} ውስጥ
+                    ከላይ ባለው ገቢ እና ታክስ እንደተከፈለ ለማረጋገጥ ይሰጣል።
+                </p>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="border-bottom pb-2 mb-1" style="min-height:40px;"></div>
+                        <small class="text-muted">Authorized Signature / ሥልጣን ያለው ፊርማ</small>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border-bottom pb-2 mb-1" style="min-height:40px;"></div>
+                        <small class="text-muted">Date / ቀን</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-4 pt-3 border-top">
+                <small class="text-muted">
+                    Generated by EthioPayroll · {{ eth_date(generated_at) }}
+                    <br>ይህ ሰነድ በኮምፒውተር የተመረተ ነው።
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

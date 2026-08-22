@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="theme-color" content="#004bca">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <title>{% block title %}EthioPayroll{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Ethiopic:wght@300;400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Design System -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="onboarding-page">
+<!-- Skip Link -->
+<a href="#mainContent" class="skip-link" tabindex="1">Skip to main content</a>
+
+<!-- ========== STICKY HEADER ========== -->
+<header class="onboarding-header">
+    <div class="onboarding-header-inner">
+        <div class="onboarding-header-brand">
+            <div class="brand-icon" style="width: 32px; height: 32px; font-size: 1rem;">
+                <i class="bi bi-bank2"></i>
+            </div>
+            <span class="onboarding-header-name">EthioPayroll</span>
+        </div>
+        <nav class="onboarding-header-nav">
+            <div class="onboarding-lang-switcher">
+                <span class="material-symbols-outlined" style="font-size: 18px;">language</span>
+                <a href="{{ url_for('auth.set_language', lang='en') }}" class="{% if current_language == 'en' %}active{% endif %}">EN</a>
+                <span class="text-muted">/</span>
+                <a href="{{ url_for('auth.set_language', lang='am') }}" class="{% if current_language == 'am' %}active{% endif %}">አማርኛ</a>
+            </div>
+            <a href="/help" class="onboarding-header-link">
+                <span class="material-symbols-outlined" style="font-size: 16px;">support_agent</span>
+                Contact Support
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="onboarding-header-btn">Login</a>
+        </nav>
+    </div>
+</header>
+
+<!-- ========== MAIN CONTENT ========== -->
+<main class="onboarding-main" id="mainContent" role="main">
+    <div class="onboarding-layout">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<!-- ========== FOOTER ========== -->
+<footer class="onboarding-footer">
+    <div class="onboarding-footer-inner">
+        <span class="onboarding-footer-copy">&copy; {{ now.year if now else '2026' }} EthioPayroll. Localized Compliance for Ethiopian Businesses.</span>
+        <div class="onboarding-footer-links">
+            <a href="#">Terms</a>
+            <a href="#">Privacy Policy</a>
+        </div>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Theme
+(function() {
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+})();
+
+// Password toggle
+function initPasswordToggles() {
+    document.querySelectorAll('.password-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const input = btn.closest('.onboarding-field-wrapper').querySelector('input');
+            const icon = btn.querySelector('.material-symbols-outlined');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility';
+                btn.setAttribute('aria-label', 'Hide password');
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility_off';
+                btn.setAttribute('aria-label', 'Show password');
+            }
+        });
+    });
+}
+document.addEventListener('DOMContentLoaded', initPasswordToggles);
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

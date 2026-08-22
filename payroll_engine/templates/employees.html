@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Employees — EthioPayroll{% endblock %}
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb breadcrumb-sm mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        {% block breadcrumb_items %}
+        <li class="breadcrumb-item active">Employees</li>
+    {% endblock %}
+    </ol>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{% if show_archived %}Archived Employees{% else %}Employees{% endif %}</h2>
+            <p class="text-muted mb-0">{{ employees|length }} {{ 'archived' if show_archived else 'active' }} employees</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if show_archived %}
+            <a href="{{ url_for('employees.list_employees') }}" class="btn btn-ghost">
+                <i class="bi bi-arrow-left me-1"></i>Active
+            </a>
+            {% else %}
+            <a href="{{ url_for('employees.list_employees', archived='1') }}" class="btn btn-ghost">
+                <i class="bi bi-archive me-1"></i>Archived
+            </a>
+            {% endif %}
+            <a href="{{ url_for('employees.export_employees') }}" class="btn btn-ghost">
+                <i class="bi bi-download me-1"></i>Export
+            </a>
+            <button onclick="window.print()" class="btn btn-ghost no-print">
+                <i class="bi bi-printer me-1"></i>Print
+            </button>
+            <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus me-1"></i>{{ _('add_employee') }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('employees.list_employees') }}" class="row g-2 align-items-end">
+                {% if show_archived %}
+                <input type="hidden" name="archived" value="1">
+                {% endif %}
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" name="q" placeholder="Name or employee ID..." value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Department</label>
+                    <select name="dept" class="form-select">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" {% if dept == selected_dept %}selected{% endif %}>{{ dept }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel me-1"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employees Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            {% if employees %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sticky mb-0 responsive-card sortable filterable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Basic Salary</th>
+                            <th>Gross</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        <tr>
+                            <td data-label="ID"><code>{{ emp.employee_id }}</code></td>
+                            <td data-label="Name">
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar me-2" style="width: 32px; height: 32px; font-size: 0.75rem; background: var(--brand-primary-light); color: var(--brand-primary);">
+                                        {{ emp.display_name[0]|upper }}
+                                    </div>
+                                    <strong>{{ emp.display_name }}</strong>
+                                </div>
+                            </td>
+                            <td data-label="Department">{{ emp.department or '—' }}</td>
+                            <td data-label="Position">{{ emp.position or '—' }}</td>
+                            <td data-label="Basic Salary" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.basic_salary) }}</td>
+                            <td data-label="Gross" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.gross_salary) }}</td>
+                            <td data-label="Actions">
+                                <div class="d-flex gap-1">
+                                    <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('employees.edit_employee', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-ghost text-danger" title="Deactivate"
+                                            onclick="deactivateEmployee({{ emp.id }}, '{{ emp.display_name|e }}')">
+                                        <i class="bi bi-person-dash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-people"></i></div>
+                <h4>{% if search %}No employees found{% else %}No employees yet{% endif %}</h4>
+                <p>{% if search %}Try a different search term.{% else %}Add your first employee to get started with payroll.{% endif %}</p>
+                {% if not search %}
+                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-1"></i>Add Employee
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages and total_pages > 1 %}
+    <nav class="mt-4" aria-label="Employee pagination">
+        <ul class="pagination justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item"><a class="page-link" href="?page={{ page - 1 }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">Previous</a></li>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            {% if page < total_pages %}
+            <li class="page-item"><a class="page-link" href="?page={{ page + 1 }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function deactivateEmployee(empId, empName) {
+    if (!confirm(`Deactivate ${empName}? Their payroll history will be preserved.`)) return;
+
+    try {
+        const data = await EthioPayroll.ajax(`/employees/${empId}/deactivate`, {
+            method: 'POST',
+        });
+        if (data.success) {
+            EthioPayroll.toast(data.message, 'success');
+            // Remove the row from the table with fade-out
+            const rows = document.querySelectorAll('tr');
+            let row = null;
+            for (const r of rows) {
+                const btn = r.querySelector(`button[onclick*="deactivateEmployee(${empId},"]`);
+                if (btn) { row = r; break; }
+            }
+            if (row) {
+                row.style.transition = 'opacity 0.3s ease';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 300);
+            }
+        } else {
+            EthioPayroll.toast(data.error || 'Failed to deactivate', 'error');
+        }
+    } catch (err) {
+        EthioPayroll.toast(err.message || 'Network error', 'error');
+    }
+}
+</script>
+{% endblock %}

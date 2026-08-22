@@ -1,0 +1,77 @@
+{% extends "auth/onboarding-base.html" %}
+{% block title %}Verify MFA — EthioPayroll{% endblock %}
+
+{% block content %}
+<!-- Left: Stepper -->
+<aside class="onboarding-stepper">
+    <div class="onboarding-stepper-card">
+        <h3 class="onboarding-stepper-title">Verification</h3>
+        <ul class="onboarding-stepper-list">
+            <li class="onboarding-step active">
+                <div class="onboarding-step-dot">
+                    <span class="step-number">1</span>
+                </div>
+                <div>
+                    <div class="onboarding-step-label">Enter Code</div>
+                    <div class="onboarding-step-desc">From your authenticator</div>
+                </div>
+            </li>
+            <li class="onboarding-step">
+                <div class="onboarding-step-dot">2</div>
+                <div>
+                    <div class="onboarding-step-label">Access Granted</div>
+                    <div class="onboarding-step-desc">Enter your dashboard</div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<div class="onboarding-form-area">
+    <h1 class="onboarding-form-title">Two-Factor Verification</h1>
+    <p class="onboarding-form-subtitle">Enter the 6-digit code from your authenticator app to continue.</p>
+
+    <form method="POST" id="mfaVerifyForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if next_url %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+        {% endif %}
+
+        <div class="onboarding-field">
+            <label for="code">Verification Code</label>
+            <div class="onboarding-field-wrapper">
+                <input type="text" id="code" name="code"
+                       placeholder="000000" pattern="[0-9]{6}" maxlength="6" required autofocus
+                       autocomplete="one-time-code" inputmode="numeric"
+                       style="text-align: center; font-size: 24px; font-weight: 700; letter-spacing: 0.3em; font-family: var(--font-mono); height: 56px;">
+            </div>
+            <span class="field-hint">Enter the 6-digit code shown in your authenticator app.</span>
+        </div>
+
+        <div class="onboarding-actions">
+            <a href="{{ url_for('auth.login') }}" class="onboarding-btn-back">
+                <span class="material-symbols-outlined">arrow_back</span> Back to sign in
+            </a>
+            <button type="submit" class="onboarding-btn-next">
+                Verify
+                <span class="material-symbols-outlined">check</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Right Sidebar -->
+<aside class="onboarding-sidebar">
+    <div class="onboarding-help-card">
+        <div class="onboarding-help-header">
+            <span class="material-symbols-outlined">support_agent</span>
+            <h4>Need Help?</h4>
+        </div>
+        <p class="onboarding-help-text">Lost access to your authenticator? Contact support to reset your MFA.</p>
+        <a href="/help" class="onboarding-help-link">
+            Contact Support <span class="material-symbols-outlined">open_in_new</span>
+        </a>
+    </div>
+</aside>
+{% endblock %}

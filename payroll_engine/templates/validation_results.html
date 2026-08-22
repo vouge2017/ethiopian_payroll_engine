@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Validation Results - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            Pre-Processing Validation
+        </h3>
+        <span class="badge bg-{{ 'success' if summary.can_proceed and not summary.requires_approval else 'warning' if summary.can_proceed else 'danger' }} fs-6">
+            {% if not summary.can_proceed %}
+                ❌ BLOCKED — Fix issues before proceeding
+            {% elif summary.requires_approval %}
+                ⚠️ FLAGS — Review and approve to continue
+            {% else %}
+                ✅ PASSED — Ready to process
+            {% endif %}
+        </span>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('total_checks') }}</h6>
+                    <h4>{{ summary.total }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-{{ 'danger' if summary.blocks > 0 else 'success' }} shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-{{ 'danger' if summary.blocks > 0 else 'success' }}">❌ Blocked</h6>
+                    <h4>{{ summary.blocks }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-{{ 'warning' if summary.flags > 0 else 'success' }} shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-{{ 'warning' if summary.flags > 0 else 'success' }}">⚠️ Flags</h6>
+                    <h4>{{ summary.flags }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-info">ℹ️ Warnings</h6>
+                    <h4>{{ summary.warns }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payroll Summary -->
+    <div class="card mb-4">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>{{ _('payroll_summary') }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <h6 class="text-muted">{{ _('total_employees') }}</h6>
+                    <h4>{{ employees|length }}</h4>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="text-muted">{{ _('total_gross') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(total_gross) }}</h4>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="text-muted">{{ _('total_tax') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(total_tax) }}</h4>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="text-muted">{{ _('total_net') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(total_net) }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if results %}
+    <!-- BLOCK Issues -->
+    {% set blocks = results|selectattr('severity', 'equalto', 'BLOCK')|list %}
+    {% if blocks %}
+    <div class="card border-danger shadow-sm mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0"><i class="bi bi-x-circle me-2"></i>Must Fix Before Processing ({{ blocks|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ _('name') }}</th>
+                            <th>{{ _('issue') }}</th>
+                            <th>What to do?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in blocks %}
+                        <tr>
+                            <td><strong>{{ r.employee_name or r.employee_id or '—' }}</strong></td>
+                            <td>{{ r.message }}</td>
+                            <td class="text-muted">{{ r.hint }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- FLAG Issues -->
+    {% set flags = results|selectattr('severity', 'equalto', 'FLAG')|list %}
+    {% if flags %}
+    <div class="card border-warning shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Review and Approve ({{ flags|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+            <form method="POST" action="{{ url_for('payroll.approve_payroll') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="run_id" value="{{ run_id }}">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 responsive-card">
+                        <thead class="table-light">
+                            <tr>
+                                <th>{{ _('name') }}</th>
+                                <th>{{ _('issue') }}</th>
+                                <th>What to do?</th>
+                                <th>{{ _('override') }}</th>
+                                <th>{{ _('reason') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in flags %}
+                            <tr>
+                                <td><strong>{{ r.employee_name or r.employee_id or '—' }}</strong></td>
+                                <td>{{ r.message }}</td>
+                                <td class="text-muted">{{ r.hint }}</td>
+                                <td>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="override_{{ loop.index0 }}" value="1">
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm"
+                                           name="reason_{{ loop.index0 }}" placeholder="{{ _('why_ok') }}">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- WARN Issues -->
+    {% set warns = results|selectattr('severity', 'equalto', 'WARN')|list %}
+    {% if warns %}
+    <div class="card border-info shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informational ({{ warns|length }})</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ _('name') }}</th>
+                            <th>{{ _('note') }}</th>
+                            <th>What to do?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in warns %}
+                        <tr>
+                            <td><strong>{{ r.employee_name or r.employee_id or '—' }}</strong></td>
+                            <td>{{ r.message }}</td>
+                            <td class="text-muted">{{ r.hint }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Upload
+        </a>
+        {% if summary.can_proceed and not summary.blocks %}
+        <a href="{{ url_for('payroll.payroll_confirm', run_id=run_id) }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-shield-lock me-1"></i> Review & Confirm
+        </a>
+        {% elif summary.blocks %}
+        <button class="btn btn-secondary btn-lg" disabled>
+            <i class="bi bi-x-circle me-1"></i> Fix BLOCK issues first
+        </button>
+        {% endif %}
+    </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

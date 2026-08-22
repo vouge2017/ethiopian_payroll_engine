@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Profile Changes — Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            <i class="bi bi-person-lines-fill me-2"></i>Profile Change Requests
+            {% if pending_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ pending_count }}</span>
+            {% endif %}
+        </h3>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body py-2">
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('employees.profile_changes', status='pending') }}"
+                   class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Pending {% if pending_count > 0 %}({{ pending_count }}){% endif %}
+                </a>
+                <a href="{{ url_for('employees.profile_changes', status='approved') }}"
+                   class="btn btn-sm {% if status_filter == 'approved' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                    Approved
+                </a>
+                <a href="{{ url_for('employees.profile_changes', status='rejected') }}"
+                   class="btn btn-sm {% if status_filter == 'rejected' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+                    Rejected
+                </a>
+                <a href="{{ url_for('employees.profile_changes', status='') }}"
+                   class="btn btn-sm {% if not status_filter %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+                    All
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if changes %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 sortable filterable responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee</th>
+                            <th>Field</th>
+                            <th>Current Value</th>
+                            <th>Requested Value</th>
+                            <th>Requested By</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for change in changes %}
+                        <tr>
+                            <td data-label="Employee">
+                                <strong>{{ change.employee.name }}</strong>
+                                <br><small class="text-muted">{{ change.employee.employee_id }}</small>
+                            </td>
+                            <td data-label="Field"><span class="badge badge-info">{{ change.field_label }}</span></td>
+                            <td data-label="Current Value" class="text-muted">{{ change.old_value or '—' }}</td>
+                            <td data-label="Requested Value"><strong>{{ change.new_value }}</strong></td>
+                            <td data-label="Requested By">{{ change.requester.phone or change.requester.email or '—' }}</td>
+                            <td data-label="Date"><small>{{ change.created_at.strftime('%Y-%m-%d %H:%M') if change.created_at else '—' }}</small></td>
+                            <td data-label="Status">
+                                {% if change.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif change.status == 'approved' %}
+                                    <span class="badge badge-success">Approved</span>
+                                    {% if change.reviewed_at %}
+                                    <br><small class="text-muted">{{ change.reviewed_at.strftime('%Y-%m-%d') }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-danger">Rejected</span>
+                                    {% if change.rejection_reason %}
+                                    <br><small class="text-danger">{{ change.rejection_reason[:50] }}</small>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td data-label="Actions" class="text-end">
+                                {% if change.status == 'pending' %}
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-success btn-sm" title="Approve"
+                                            onclick="approveProfileChange({{ change.id }}, '{{ change.field_label|e }}', this)">
+                                        <i class="bi bi-check-lg"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm" title="Reject"
+                                            data-bs-toggle="modal" data-bs-target="#rejectModal{{ change.id }}">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Reject Modal -->
+                                <div class="modal fade" id="rejectModal{{ change.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form method="POST" action="{{ url_for('employees.reject_profile_change', change_id=change.id) }}"
+                                                  onsubmit="return rejectProfileChangeAjax({{ change.id }}, this)">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Reject {{ change.field_label }} Change</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p><strong>Employee:</strong> {{ change.employee.name }}</p>
+                                                    <p><strong>Requested change:</strong> {{ change.field_label }} → <code>{{ change.new_value }}</code></p>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Reason for rejection (optional)</label>
+                                                        <textarea name="reason" class="form-control" rows="2"
+                                                                  placeholder="e.g. Please provide supporting document"></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-danger" data-confirm="Reject this profile change?">Reject</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('employees.profile_changes', status=status_filter, page=page_num) }}">{{ page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+            <h5 class="mt-3 text-muted">
+                {% if status_filter == 'pending' %}
+                No pending requests
+                {% else %}
+                No change requests found
+                {% endif %}
+            </h5>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function approveProfileChange(changeId, fieldLabel, btn) {
+    if (!confirm(`Approve this ${fieldLabel} change?`)) return;
+    try {
+        const data = await EthioPayroll.ajax(`/profile-changes/${changeId}/approve`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        const row = btn.closest('tr');
+        if (row) {
+            const statusCell = row.querySelector('[data-label="Status"]');
+            if (statusCell) statusCell.innerHTML = '<span class="badge badge-success">Approved</span>';
+            const actionsCell = row.querySelector('[data-label="Actions"]');
+            if (actionsCell) actionsCell.innerHTML = '<span class="text-muted">—</span>';
+        }
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function rejectProfileChangeAjax(changeId, form) {
+    const reason = form.querySelector('[name="reason"]')?.value || '';
+    try {
+        const data = await EthioPayroll.ajax(`/profile-changes/${changeId}/reject`, {
+            method: 'POST',
+            body: JSON.stringify({ reason: reason }),
+        });
+        EthioPayroll.toast(data.message, 'success');
+        // Close modal
+        const modal = form.closest('.modal');
+        if (modal) bootstrap.Modal.getInstance(modal)?.hide();
+        // Update row
+        const rows = document.querySelectorAll('tr');
+        for (const row of rows) {
+            const approveBtn = row.querySelector(`button[onclick*="approveProfileChange(${changeId}"]`);
+            if (approveBtn) {
+                const statusCell = row.querySelector('[data-label="Status"]');
+                if (statusCell) statusCell.innerHTML = '<span class="badge badge-danger">Rejected</span>';
+                const actionsCell = row.querySelector('[data-label="Actions"]');
+                if (actionsCell) actionsCell.innerHTML = '<span class="text-muted">—</span>';
+                break;
+            }
+        }
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+    return false; // Prevent form submit
+}
+</script>
+{% endblock %}

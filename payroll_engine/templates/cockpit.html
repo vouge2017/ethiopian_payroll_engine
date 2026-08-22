@@ -1,0 +1,334 @@
+<!-- Accountant Cockpit — Landing Page -->
+<!-- Answers 5 questions in 10 seconds. Supports inline actions and polling. -->
+
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ cockpit.company_name }}{% endblock %}
+
+{% block content %}
+<div class="p-4 p-md-5" id="cockpit" style="max-width: 960px; margin: 0 auto;">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold mb-1">{{ cockpit.company_name }}</h2>
+      <p class="text-muted mb-0">
+        {% if cockpit.period %}Period: {{ cockpit.period }} · {% endif %}
+        Updated: {{ cockpit.last_updated }}
+      </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      {% if cockpit.status == 'ready' %}
+        <span id="status-badge" class="badge badge-success fs-6 px-3 py-2">
+          <i class="bi bi-check-circle me-1"></i> {{ cockpit.status_message }}
+        </span>
+      {% elif cockpit.status == 'blocked' %}
+        <span id="status-badge" class="badge badge-danger fs-6 px-3 py-2">
+          <i class="bi bi-x-circle me-1"></i> {{ cockpit.status_message }}
+        </span>
+      {% elif cockpit.status == 'attention' %}
+        <span id="status-badge" class="badge badge-warning fs-6 px-3 py-2">
+          <i class="bi bi-exclamation-circle me-1"></i> {{ cockpit.status_message }}
+        </span>
+      {% else %}
+        <span id="status-badge" class="badge bg-secondary fs-6 px-3 py-2">
+          {{ cockpit.status_message }}
+        </span>
+      {% endif %}
+      <button onclick="refreshCockpit()" class="btn btn-ghost btn-sm" title="Refresh">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Q1: What needs my attention? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-bell text-danger me-2"></i>What needs my attention?</h5>
+
+      {% if cockpit.attention_items %}
+      <div id="attention-list">
+        {% for item in cockpit.attention_items %}
+        <div class="attention-item d-flex align-items-start gap-3 p-3 rounded-3 mb-2
+          {% if item.priority == 'urgent' %}bg-danger-subtle border border-danger-subtle
+          {% elif item.priority == 'important' %}bg-warning-subtle border border-warning-subtle
+          {% else %}bg-body-tertiary border{% endif %}"
+          data-key="{{ item.key or '' }}">
+          <span class="flex-shrink-0 mt-1">
+            {% if item.priority == 'urgent' %}<i class="bi bi-exclamation-octagon-fill text-danger"></i>
+            {% elif item.priority == 'important' %}<i class="bi bi-exclamation-triangle-fill text-warning"></i>
+            {% else %}<i class="bi bi-info-circle-fill text-primary"></i>{% endif %}
+          </span>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="fw-semibold small">{{ item.title }}</div>
+            <div class="text-muted small">{{ item.description }}</div>
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            {% if item.action_url %}
+            <a href="{{ item.action_url }}" class="btn btn-sm btn-outline-primary">
+              {{ item.action_label or 'View' }} <i class="bi bi-arrow-right"></i>
+            </a>
+            {% endif %}
+            {% if item.key %}
+            <button onclick="dismissItem('{{ item.key }}', this)"
+                    class="btn btn-sm btn-ghost text-muted" title="Dismiss">
+              <i class="bi bi-x"></i>
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0" id="attention-empty">Nothing needs attention right now.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Q2: What changed? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  {% if cockpit.component_errors and cockpit.component_errors.change_summary %}
+    {% set component_name = 'Change Summary' %}
+    {% set error_message = cockpit.component_errors.change_summary %}
+    {% include '_component_error.html' with context %}
+  {% else %}
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart text-primary me-2"></i>What changed?</h5>
+
+      <p class="text-body" id="narrative">{{ cockpit.narrative }}</p>
+
+      {% if cockpit.change_summary_available %}
+      <div class="d-flex gap-4 mt-3 small">
+        <div>
+          <span class="text-muted">Employees:</span>
+          <span class="fw-semibold">{{ cockpit.employee_count }}</span>
+          {% if cockpit.headcount_change != 0 %}
+          <span class="{% if cockpit.headcount_change > 0 %}text-success{% else %}text-danger{% endif %}">
+            ({{ cockpit.headcount_change }}+)
+          </span>
+          {% endif %}
+        </div>
+        <div>
+          <span class="text-muted">Payroll change:</span>
+          <span class="fw-semibold {% if cockpit.gross_delta_pct > 0 %}text-success{% elif cockpit.gross_delta_pct < 0 %}text-danger{% endif %}">
+            {{ cockpit.gross_delta_pct }}%
+          </span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Q3: Is anything unusual? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Is anything unusual?</h5>
+
+      {% if cockpit.has_unusual %}
+      <div id="unusual-list">
+        {% for item in cockpit.unusual_items %}
+        <div class="d-flex align-items-start gap-3 p-3 rounded-3 mb-2 bg-warning-subtle border border-warning-subtle">
+          <i class="bi bi-exclamation-triangle text-warning flex-shrink-0 mt-1"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">{{ item.title }}</div>
+            <div class="text-muted small">{{ item.description }}</div>
+          </div>
+          {% if item.action_url %}
+          <a href="{{ item.action_url }}" class="btn btn-sm btn-outline-primary flex-shrink-0">
+            {{ item.action_label or 'Review' }} <i class="bi bi-arrow-right"></i>
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0" id="unusual-empty">No unusual variances or anomalies detected.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Q4: Am I ready to file? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  {% if cockpit.component_errors and cockpit.component_errors.filing %}
+    {% set component_name = 'Filing Status' %}
+    {% set error_message = cockpit.component_errors.filing %}
+    {% include '_component_error.html' with context %}
+  {% else %}
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-folder text-purple me-2" style="color: #8b5cf6;"></i>Am I ready to file?</h5>
+
+      {% if cockpit.filing_steps %}
+      <div id="filing-steps">
+        {% for step in cockpit.filing_steps %}
+        <div class="d-flex align-items-center gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+          {% if step.status == 'filed' %}
+            <span class="badge bg-success-subtle text-success rounded-circle p-2"><i class="bi bi-check"></i></span>
+          {% elif step.status == 'ready' %}
+            <span class="badge bg-primary-subtle text-primary rounded-circle p-2"><i class="bi bi-arrow-right"></i></span>
+          {% elif step.status == 'overdue' %}
+            <span class="badge bg-danger-subtle text-danger rounded-circle p-2"><i class="bi bi-exclamation"></i></span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary rounded-circle p-2"><i class="bi bi-circle"></i></span>
+          {% endif %}
+          <div class="flex-grow-1">
+            <span class="small">{{ step.name }}</span>
+            <span class="text-muted small ms-1">{{ step.name_am }}</span>
+          </div>
+          <div class="text-end">
+            {% if step.status == 'filed' %}
+              <span class="badge badge-success">Filed</span>
+            {% elif step.status == 'overdue' %}
+              <span class="badge badge-danger">Overdue</span>
+            {% elif step.status == 'ready' %}
+              {% if step.action_url %}
+                <a href="{{ step.action_url }}" class="btn btn-sm btn-outline-primary">
+                  {{ step.action_label or 'Generate' }} <i class="bi bi-arrow-right"></i>
+                </a>
+              {% endif %}
+            {% else %}
+              <span class="text-muted small">{{ step.detail or 'Waiting' }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if cockpit.filing_all_done %}
+      <div class="alert alert-success text-center mt-3 mb-0 py-2">
+        <i class="bi bi-check-circle me-1"></i> All filings complete for this period.
+      </div>
+      {% endif %}
+
+      {% else %}
+      <p class="text-muted small mb-0">No filing data available. Complete payroll first.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Q5: What is blocking me? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  {% if cockpit.component_errors and cockpit.component_errors.exceptions %}
+    {% set component_name = 'Blocking Issues' %}
+    {% set error_message = cockpit.component_errors.exceptions %}
+    {% include '_component_error.html' with context %}
+  {% else %}
+  <div class="card mb-4 animate-fade-in">
+    <div class="card-body">
+      <h5 class="fw-bold mb-3"><i class="bi bi-cone-striped text-danger me-2"></i>What is blocking me?</h5>
+
+      {% if cockpit.has_blocking %}
+      <div id="blocking-list">
+        {% for item in cockpit.blocking_items %}
+        <div class="d-flex align-items-start gap-3 p-3 rounded-3 mb-2 bg-danger-subtle border border-danger-subtle">
+          <i class="bi bi-x-octagon-fill text-danger flex-shrink-0 mt-1"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">{{ item.title }}</div>
+            <div class="text-muted small">{{ item.description }}</div>
+          </div>
+          {% if item.action_url %}
+          <a href="{{ item.action_url }}" class="btn btn-sm btn-danger flex-shrink-0">
+            {{ item.action_label or 'Fix' }} <i class="bi bi-arrow-right"></i>
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0" id="blocking-empty">Nothing is blocking you. All systems operational.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Quick Actions -->
+  <div class="d-flex justify-content-center gap-3 mt-4">
+    <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary px-4">
+      <i class="bi bi-cloud-upload me-1"></i> Create Payroll
+    </a>
+    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-ghost px-4">
+      <i class="bi bi-people me-1"></i> Manage Employees
+    </a>
+    <a href="{{ url_for('reports.reports') }}" class="btn btn-ghost px-4">
+      <i class="bi bi-bar-chart-line me-1"></i> Reports
+    </a>
+  </div>
+
+</div>
+
+<script>
+// Dismiss an attention item
+function dismissItem(key, btn) {
+  const item = btn.closest('.attention-item');
+  if (item) {
+    item.style.opacity = '0.5';
+    item.style.textDecoration = 'line-through';
+  }
+
+  fetch('/payroll/api/cockpit/dismiss', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({key: key})
+  }).then(resp => {
+    if (resp.ok) {
+      setTimeout(() => {
+        item.style.transition = 'all 0.3s';
+        item.style.maxHeight = '0';
+        item.style.padding = '0';
+        item.style.margin = '0';
+        item.style.overflow = 'hidden';
+        setTimeout(() => item.remove(), 300);
+      }, 500);
+    } else {
+      if (item) {
+        item.style.opacity = '1';
+        item.style.textDecoration = 'none';
+      }
+    }
+  });
+}
+
+// Refresh cockpit data via API
+function refreshCockpit() {
+  fetch('/payroll/api/cockpit')
+    .then(resp => resp.json())
+    .then(data => {
+      // Update narrative
+      const narrativeEl = document.getElementById('narrative');
+      if (narrativeEl) narrativeEl.textContent = data.narrative;
+
+      // Update status badge
+      const badge = document.getElementById('status-badge');
+      if (badge) {
+        const icon = data.status === 'ready' ? 'bi-check-circle' :
+                     data.status === 'blocked' ? 'bi-x-circle' :
+                     data.status === 'attention' ? 'bi-exclamation-circle' : 'bi-info-circle';
+        const cls = data.status === 'ready' ? 'badge-success' :
+                    data.status === 'blocked' ? 'badge-danger' :
+                    data.status === 'attention' ? 'badge-warning' : 'bg-secondary';
+        badge.className = `badge ${cls} fs-6 px-3 py-2`;
+        badge.innerHTML = `<i class="bi ${icon} me-1"></i> ${data.status_message}`;
+      }
+    })
+    .catch(err => console.error('Refresh failed:', err));
+}
+
+// Auto-refresh every 30 seconds
+setInterval(refreshCockpit, 30000);
+</script>
+
+{% endblock %}

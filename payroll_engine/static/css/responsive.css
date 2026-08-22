@@ -1,0 +1,648 @@
+/*
+ * Responsive CSS — EthioPayroll 2026
+ * Works with design-system.css sidebar.
+ * Single source of truth for responsive behavior.
+ */
+
+/* ============================================
+   MOBILE: Screens under 768px
+   ============================================ */
+@media (max-width: 767.98px) {
+    /* Sidebar → collapsed top bar */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100% !important;
+        height: auto;
+        min-height: auto;
+        z-index: var(--z-sidebar);
+        flex-wrap: wrap;
+    }
+
+    .sidebar .sidebar-nav,
+    .sidebar .sidebar-footer {
+        display: none;
+        width: 100%;
+    }
+
+    .sidebar .sidebar-nav.show,
+    .sidebar .sidebar-footer.show {
+        display: flex;
+    }
+
+    .sidebar .sidebar-toggle {
+        display: block !important;
+    }
+
+    .sidebar .brand-company {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        margin-top: 60px;
+    }
+
+    /* Metric cards: 2-column */
+    .col-md-3.col-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    .metric-card .metric-value {
+        font-size: var(--text-2xl);
+    }
+
+    .metric-card .metric-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+
+    /* Tables: horizontal scroll */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+    }
+
+    .table {
+        min-width: 500px;
+        font-size: var(--text-sm);
+    }
+
+    .table th, .table td {
+        padding: var(--space-2) var(--space-3);
+        white-space: nowrap;
+    }
+
+    /* Forms: prevent iOS zoom */
+    .form-control, .form-select {
+        font-size: 16px;
+        padding: var(--space-3);
+        min-height: 44px;
+    }
+
+    .btn {
+        min-height: 44px;
+        font-size: var(--text-sm);
+    }
+
+    /* Page headers: stack */
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: var(--space-3);
+    }
+
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+
+    .d-flex.gap-2 .btn {
+        width: 100%;
+    }
+
+    /* Charts: smaller */
+    .chart-container canvas {
+        max-height: 220px;
+    }
+
+    /* Cards: less padding */
+    .card-body {
+        padding: var(--space-4);
+    }
+
+    /* Page padding */
+    .p-4, .p-md-5 {
+        padding: var(--space-4) !important;
+    }
+
+    .p-4.p-md-5 {
+        padding: var(--space-4) !important;
+    }
+}
+
+/* ============================================
+   SMALL PHONES: under 360px
+   ============================================ */
+@media (max-width: 359.98px) {
+    .col-md-3.col-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .table {
+        min-width: 400px;
+    }
+}
+
+/* ============================================
+   TABLETS: 768px - 1024px
+   ============================================ */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .sidebar {
+        width: 72px !important;
+    }
+
+    .sidebar .brand-text,
+    .sidebar .nav-section-label,
+    .sidebar .nav-link span,
+    .sidebar .nav-badge,
+    .sidebar .user-details,
+    .sidebar .lang-switcher {
+        display: none;
+    }
+
+    .sidebar .nav-link {
+        justify-content: center;
+        padding: var(--space-3);
+    }
+
+    .sidebar .nav-link i {
+        font-size: 1.25rem;
+    }
+
+    .sidebar .nav-link.active::before {
+        left: -12px;
+    }
+
+    .main-content {
+        margin-left: 72px !important;
+    }
+}
+
+/* ============================================
+   DESKTOP: above 768px
+   ============================================ */
+@media (min-width: 768px) {
+    .sidebar-toggle {
+        display: none !important;
+    }
+
+    .sidebar.collapsed {
+        width: 72px !important;
+    }
+
+    .sidebar.collapsed .brand-text,
+    .sidebar.collapsed .nav-section-label,
+    .sidebar.collapsed .nav-link span,
+    .sidebar.collapsed .nav-badge,
+    .sidebar.collapsed .user-details,
+    .sidebar.collapsed .lang-switcher {
+        display: none;
+    }
+
+    .sidebar.collapsed .nav-link {
+        justify-content: center;
+        padding: var(--space-3);
+    }
+
+    .sidebar.collapsed .nav-link i {
+        font-size: 1.25rem;
+    }
+}
+
+/* ============================================
+   RESPONSIVE CARD TABLES
+   ============================================ */
+@media (max-width: 600px) {
+    table.responsive-card thead {
+        display: none;
+    }
+
+    table.responsive-card tr {
+        display: block;
+        margin-bottom: var(--space-3);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3);
+        background: var(--bg-primary);
+    }
+
+    table.responsive-card td {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--space-2) 0;
+        border: none;
+    }
+
+    table.responsive-card td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-right: var(--space-4);
+        flex-shrink: 0;
+        font-size: var(--text-sm);
+    }
+}
+
+/* ============================================
+   BOTTOM NAVIGATION BAR (Mobile)
+   Fixed at bottom of screen for key actions.
+   ============================================ */
+
+.bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-light);
+    z-index: var(--z-sidebar, 1040);
+    padding: var(--space-1) 0;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+}
+
+.bottom-nav .nav-list {
+    display: flex;
+    justify-content: space-around;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.bottom-nav .nav-item {
+    flex: 1;
+    text-align: center;
+}
+
+.bottom-nav .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: var(--space-1) var(--space-2);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.65rem;
+    font-weight: 500;
+    min-height: 48px;
+    justify-content: center;
+    transition: color 0.15s;
+}
+
+.bottom-nav .nav-link i {
+    font-size: 1.25rem;
+}
+
+.bottom-nav .nav-link.active {
+    color: var(--brand-primary);
+}
+
+.bottom-nav .nav-link:active {
+    opacity: 0.7;
+}
+
+@media (max-width: 767.98px) {
+    .bottom-nav {
+        display: block;
+    }
+
+    /* Add padding to main content so it doesn't hide behind bottom nav */
+    .main-content {
+        padding-bottom: 70px !important;
+    }
+}
+
+/* ============================================
+   MOBILE SIDEBAR GROUPING
+   Collapsible sections in mobile hamburger menu.
+   ============================================ */
+
+@media (max-width: 767.98px) {
+    .sidebar .sidebar-nav {
+        max-height: 70vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar .nav-section-label {
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-400);
+        padding: var(--space-2) var(--space-4);
+        font-weight: 600;
+    }
+
+    .sidebar .nav-link {
+        padding: var(--space-3) var(--space-4);
+        min-height: 48px;
+    }
+}
+
+/* ============================================
+   RESPONSIVE CARD TABLES (Enhanced)
+   Tables become cards on small screens.
+   Requires data-label attributes on <td> elements.
+   ============================================ */
+
+@media (max-width: 600px) {
+    /* Auto-generate labels from header if data-label missing */
+    table.sortable thead,
+    table.filterable thead {
+        display: none;
+    }
+
+    table.sortable tbody tr,
+    table.filterable tbody tr {
+        display: block;
+        margin-bottom: var(--space-3);
+        border: 1px solid var(--border-light);
+        border-radius: var(--radius-lg);
+        padding: var(--space-3);
+        background: var(--bg-primary);
+    }
+
+    table.sortable tbody td,
+    table.filterable tbody td {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--space-2) 0;
+        border: none;
+    }
+
+    /* Hide filter input on mobile (too small) */
+    .table-filter .input-group {
+        max-width: 100% !important;
+    }
+
+    /* Sort indicators hidden on mobile (no hover) */
+    .sort-indicator {
+        display: none;
+    }
+}
+
+/* ============================================
+   PRINT STYLES — All Pages
+   ============================================ */
+@media print {
+    /* ── Global: hide navigation & UI chrome ── */
+    .sidebar, .sidebar-toggle, .toast-container, .theme-toggle,
+    .bottom-nav, .breadcrumb, .alert-flash,
+    .sidebar-brand, .sidebar-footer,
+    .no-print,
+    [data-confirm],
+    .btn {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0.5cm !important;
+        width: 100% !important;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 11pt;
+        line-height: 1.4;
+    }
+
+    h2, h3, h4 {
+        color: black !important;
+        page-break-after: avoid;
+    }
+
+    /* ── Cards ── */
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        margin-bottom: 0.5cm;
+    }
+
+    .card-header {
+        background: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 0.4cm !important;
+    }
+
+    /* ── Tables — universal ── */
+    .table {
+        font-size: 9pt;
+        border-collapse: collapse !important;
+    }
+
+    .table th, .table td {
+        padding: 4px 8px !important;
+        border: 1px solid #ddd !important;
+    }
+
+    .table th {
+        background: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-weight: 600;
+    }
+
+    .table-responsive {
+        overflow: visible !important;
+        border: none !important;
+    }
+
+    /* ── Metric cards (reports, dashboard) ── */
+    .metric-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .metric-card .metric-icon {
+        display: none !important;
+    }
+
+    .metric-card .metric-label {
+        font-size: 8pt;
+        color: #666;
+    }
+
+    .metric-card .metric-value {
+        font-size: 14pt;
+        font-weight: 700;
+    }
+
+    .metric-card .metric-trend {
+        font-size: 8pt;
+    }
+
+    /* ── Trust badges ── */
+    .trust-badge {
+        font-size: 8pt;
+        padding: 2px 6px;
+        border: 1px solid #ccc;
+    }
+
+    /* ── Charts: hide canvas ── */
+    canvas, .chart-container {
+        display: none !important;
+    }
+
+    /* ── Tabs: show all content, hide tab nav ── */
+    .nav-tabs, .nav-pills {
+        display: none !important;
+    }
+
+    .tab-pane {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .tab-pane.fade {
+        opacity: 1 !important;
+    }
+
+    /* ── Search / filter forms ── */
+    .card:has(form) {
+        display: none !important;
+    }
+
+    /* ── Pagination ── */
+    nav[aria-label*="pagination"],
+    .pagination {
+        display: none !important;
+    }
+
+    /* ── Empty states ── */
+    .empty-state {
+        display: none !important;
+    }
+
+    /* ── Progress bars ── */
+    .progress {
+        background: #eee !important;
+        border: 1px solid #ccc;
+    }
+
+    .progress-bar {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── Badges ── */
+    .badge {
+        border: 1px solid currentColor;
+        padding: 1px 6px;
+        font-size: 8pt;
+    }
+
+    /* ── Alerts ── */
+    .alert {
+        border: 1px solid #ccc;
+        background: #fafafa !important;
+    }
+
+    /* ── Page header layout ── */
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* ── Links ── */
+    a {
+        color: black !important;
+        text-decoration: none !important;
+    }
+
+    a[href]::after {
+        content: none !important;
+    }
+
+    /* ── Page numbers ── */
+    @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 8pt;
+        color: #999;
+    }
+
+    /* ── Payslip ── */
+    .payslip-header {
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .payslip-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .payslip-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .payslip-table th,
+    .payslip-table td {
+        padding: 0.35rem 0.5rem;
+        border: 1px solid #ddd;
+        font-size: 0.85rem;
+    }
+
+    .payslip-table th {
+        background: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .payslip-total {
+        font-weight: 700;
+        border-top: 2px solid #333;
+    }
+
+    .card.payslip {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* ── Audit log: details column ── */
+    .audit-log-table td:last-child {
+        max-width: 300px;
+        word-wrap: break-word;
+    }
+
+    /* ── Quick links (reports page) ── */
+    a.card {
+        border: 1px solid #ddd !important;
+        pointer-events: none;
+    }
+
+    /* ── Compliance deadlines: read-only ── */
+    .form-check, .form-switch, .input-group {
+        display: none !important;
+    }
+
+    .form-control, .form-select {
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+}
+
+/* --- Breadcrumbs mobile --- */
+@media (max-width: 767.98px) {
+    .breadcrumb {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        font-size: var(--text-xs);
+    }
+
+    .breadcrumb::-webkit-scrollbar {
+        display: none;
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        padding: 0 var(--space-1);
+    }
+}

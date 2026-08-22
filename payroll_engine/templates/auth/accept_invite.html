@@ -1,0 +1,133 @@
+{% extends "auth/onboarding-base.html" %}
+{% block title %}Accept Invite — EthioPayroll{% endblock %}
+
+{% block content %}
+<!-- Left: Stepper -->
+<aside class="onboarding-stepper">
+    <div class="onboarding-stepper-card">
+        <h3 class="onboarding-stepper-title">Join Team</h3>
+        <ul class="onboarding-stepper-list">
+            <li class="onboarding-step active">
+                <div class="onboarding-step-dot">
+                    <span class="step-number">1</span>
+                </div>
+                <div>
+                    <div class="onboarding-step-label">Create Account</div>
+                    <div class="onboarding-step-desc">Set your credentials</div>
+                </div>
+            </li>
+            <li class="onboarding-step">
+                <div class="onboarding-step-dot">2</div>
+                <div>
+                    <div class="onboarding-step-label">Access Granted</div>
+                    <div class="onboarding-step-desc">Enter the workspace</div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<div class="onboarding-form-area">
+    <h1 class="onboarding-form-title">Create your account</h1>
+    <p class="onboarding-form-subtitle">You've been invited to join <strong>{{ emp.name }}</strong>'s payroll account. Create your login below.</p>
+
+    <form method="POST" id="inviteForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="onboarding-field">
+            <label for="phone">Phone Number</label>
+            <div class="onboarding-field-wrapper">
+                <div class="onboarding-phone-wrapper">
+                    <span class="onboarding-phone-prefix">+251</span>
+                    <input type="tel" id="phone" name="phone"
+                           required placeholder="911 234 567"
+                           pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
+                           title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+                </div>
+            </div>
+            <span class="field-hint">9 digits starting with 9 or 7.</span>
+        </div>
+
+        <div class="onboarding-field">
+            <label for="password">Password</label>
+            <div class="onboarding-field-wrapper">
+                <input type="password" id="password" name="password"
+                       required minlength="8" placeholder="Min 8 characters">
+                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                    <span class="material-symbols-outlined">visibility_off</span>
+                </button>
+            </div>
+            <span class="field-hint">Must be at least 8 characters with a number and symbol.</span>
+        </div>
+
+        <div class="onboarding-field">
+            <label for="password2">Confirm Password</label>
+            <div class="onboarding-field-wrapper">
+                <input type="password" id="password2" name="password2"
+                       required minlength="8" placeholder="Type it again">
+                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                    <span class="material-symbols-outlined">visibility_off</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="onboarding-actions">
+            <span></span>
+            <button type="submit" class="onboarding-btn-next">
+                Create Account
+                <span class="material-symbols-outlined">person_add</span>
+            </button>
+        </div>
+    </form>
+
+    <div style="margin-top: var(--space-6); text-align: center;">
+        <span style="font-size: 14px; color: var(--text-secondary);">Already have an account? <a href="{{ url_for('auth.login') }}" style="font-weight: 600; color: var(--brand-primary); text-decoration: none;">Log in</a></span>
+    </div>
+</div>
+
+<!-- Right Sidebar -->
+<aside class="onboarding-sidebar">
+    <div class="onboarding-checklist">
+        <div class="onboarding-checklist-header">
+            <span class="material-symbols-outlined">verified_user</span>
+            <h3>What's Next?</h3>
+        </div>
+        <p class="onboarding-checklist-desc">After creating your account, you'll have access to:</p>
+        <ul class="onboarding-checklist-items">
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">receipt_long</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">View Payslips</span>
+                    <span class="onboarding-checklist-item-desc">Download your monthly payslips</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">event_available</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Request Leave</span>
+                    <span class="onboarding-checklist-item-desc">Submit leave requests online</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">badge</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Update Profile</span>
+                    <span class="onboarding-checklist-item-desc">Keep your details current</span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="onboarding-help-card">
+        <div class="onboarding-help-header">
+            <span class="material-symbols-outlined">support_agent</span>
+            <h4>Need Help?</h4>
+        </div>
+        <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
+        <a href="/help" class="onboarding-help-link">
+            Contact Support <span class="material-symbols-outlined">open_in_new</span>
+        </a>
+    </div>
+</aside>
+{% endblock %}

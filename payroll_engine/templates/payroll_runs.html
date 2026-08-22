@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Payroll History - Ethiopian Payroll Engine{% endblock %}
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb breadcrumb-sm mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        {% block breadcrumb_items %}
+        <li class="breadcrumb-item active">Payroll Runs</li>
+    {% endblock %}
+    </ol>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('payroll_history') }}</h3>
+        <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+            <i class="bi bi-cloud-upload me-1"></i> New Run
+        </a>
+        <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-outline-success ms-2">
+            <i class="bi bi-table me-1"></i> Spreadsheet
+        </a>
+        <a href="{{ url_for('payroll.payroll_register') }}" class="btn btn-outline-secondary ms-2">
+            <i class="bi bi-printer me-1"></i> Register
+        </a>
+        <a href="{{ url_for('payroll.batch_payslips') }}" class="btn btn-outline-info ms-2">
+            <i class="bi bi-file-earmark-zip me-1"></i> ZIP
+        </a>
+        <a href="{{ url_for('payroll.historical_import') }}" class="btn btn-outline-warning ms-2">
+            <i class="bi bi-clock-history me-1"></i> Import History
+        </a>
+        <a href="{{ url_for('payroll.export_payroll_history') }}" class="btn btn-outline-success ms-2">
+            <i class="bi bi-download me-1"></i> Export CSV
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            {% if runs %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 sortable filterable responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>{{ _('period') }}</th>
+                            <th>{{ _('date') }}</th>
+                            <th>{{ _('status') }}</th>
+                            <th>{{ _('payslips') }}</th>
+                            <th>{{ _('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                        <tr>
+                            <td data-label="#">{{ run.reference or run.id }}</td>
+                            <td data-label="Period">
+                                {% if run.period %}
+                                    <strong>{{ run.period }}</strong>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Date">{{ run.run_date }}</td>
+                            <td data-label="Status">
+                                {% if run.status == 'locked' %}
+                                    <span class="badge bg-dark"><i class="bi bi-lock-fill"></i> locked</span>
+                                {% elif run.status == 'completed' %}
+                                    <span class="badge badge-success">completed</span>
+                                {% elif run.status == 'processing' %}
+                                    <span class="badge badge-warning">processing</span>
+                                {% elif run.status == 'failed' %}
+                                    <span class="badge badge-danger">failed</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ run.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Payslips">{{ run.payslips|length }}</td>
+                            <td data-label="Actions">
+                                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if run.payslips %}
+                                <a href="{{ url_for('payroll.download_all_payslips', run_id=run.id) }}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-download"></i> ZIP
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                <h4>{{ _('no_runs') }}</h4>
+                <p>Run your first payroll to get started. The system will calculate tax, pension, and net pay for each employee.</p>
+                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+                    <i class="bi bi-cloud-upload me-1"></i>{{ _('run_payroll') }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% from "_pagination.html" import render_pagination %}
+    {{ render_pagination(pagination, 'main.payroll_runs') }}
+</div>
+{% endblock %}

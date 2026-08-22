@@ -1,0 +1,382 @@
+{% extends "auth/onboarding-base.html" %}
+{% block title %}Quick Start — EthioPayroll{% endblock %}
+
+{% block content %}
+<!-- Left Sidebar: Progress Stepper (Desktop) -->
+<aside class="onboarding-stepper">
+    <div class="onboarding-stepper-card">
+        <h3 class="onboarding-stepper-title">Setup</h3>
+        <ol class="onboarding-stepper-list">
+            <li class="onboarding-step completed">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">1</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Account</h4>
+                <p class="onboarding-step-desc">Credentials created</p>
+            </li>
+            <li class="onboarding-step completed">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">2</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Business Details</h4>
+                <p class="onboarding-step-desc">Company created</p>
+            </li>
+            <li class="onboarding-step active">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">3</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Employee Setup</h4>
+                <p class="onboarding-step-desc">Import your team</p>
+            </li>
+            <li class="onboarding-step">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">4</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Verification</h4>
+                <p class="onboarding-step-desc">Final check</p>
+            </li>
+        </ol>
+    </div>
+</aside>
+
+<!-- Mobile Stepper -->
+<div class="onboarding-mobile-stepper">
+    <div class="onboarding-mobile-step completed">
+        <span class="onboarding-mobile-step-dot">✓</span>
+        <span>Account</span>
+    </div>
+    <span class="onboarding-mobile-step-connector active"></span>
+    <div class="onboarding-mobile-step completed">
+        <span class="onboarding-mobile-step-dot">✓</span>
+        <span>Business</span>
+    </div>
+    <span class="onboarding-mobile-step-connector active"></span>
+    <div class="onboarding-mobile-step active">
+        <span class="onboarding-mobile-step-dot">3</span>
+        <span>Employees</span>
+    </div>
+    <span class="onboarding-mobile-step-connector"></span>
+    <div class="onboarding-mobile-step">
+        <span class="onboarding-mobile-step-dot">4</span>
+        <span>Verify</span>
+    </div>
+</div>
+
+<!-- Main Content: Import Steps -->
+<div class="onboarding-form-area">
+    <!-- Step 1: Paste Data -->
+    <div id="step-1">
+        <h1 class="onboarding-form-title">Add Your Employees</h1>
+        <p class="onboarding-form-subtitle">Paste your employee data from Excel, or upload a CSV file. You need at least <strong>Name</strong> and <strong>Salary</strong>.</p>
+
+        <div style="max-width: 672px;">
+            <div class="onboarding-field">
+                <label for="paste-data">Paste from Excel (tab-separated)</label>
+                <textarea class="form-control font-monospace" id="paste-data" rows="8"
+                    placeholder="Abebe Kebede	0911234567	8000
+Tigist Hailu	0922345678	12000
+Dawit Tesfaye	0933456789	6000
+Fatima Mohamed	0944567890	15000"
+                    style="border-radius: var(--radius-lg); border: 2px solid var(--border-default); padding: var(--space-4); font-size: var(--text-sm); resize: vertical;"></textarea>
+                <span class="field-hint">Each row: Name, Phone (optional), Salary. Tab or comma separated.</span>
+            </div>
+
+            <div class="onboarding-field">
+                <label for="csv-upload">Or upload a CSV file</label>
+                <input type="file" class="form-control" id="csv-upload" accept=".csv,.txt"
+                       style="border-radius: var(--radius-lg); border: 2px solid var(--border-default); padding: var(--space-3);">
+            </div>
+
+            <div class="onboarding-field">
+                <label>Separator</label>
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="separator" id="sep-tab" value="	" checked>
+                    <label class="btn btn-outline-primary" for="sep-tab">Tab</label>
+                    <input type="radio" class="btn-check" name="separator" id="sep-comma" value=",">
+                    <label class="btn btn-outline-primary" for="sep-comma">Comma</label>
+                </div>
+            </div>
+
+            <div class="onboarding-actions">
+                <a href="{{ url_for('main.index') }}" class="onboarding-btn-back">
+                    <i class="bi bi-arrow-left"></i> Skip to Dashboard
+                </a>
+                <button type="button" class="onboarding-btn-next" onclick="parseData()">
+                    Preview & Continue
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Preview -->
+    <div id="step-2" style="display: none;">
+        <h1 class="onboarding-form-title">Preview Employees</h1>
+        <p class="onboarding-form-subtitle" id="preview-subtitle">Review your data before importing.</p>
+
+        <div style="max-width: 672px;">
+            <div class="table-responsive mb-4" style="max-height: 400px; overflow-y: auto; border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
+                <table class="table table-sm table-hover mb-0">
+                    <thead style="position: sticky; top: 0; background: var(--bg-primary); z-index: 1;">
+                        <tr>
+                            <th style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em;">#</th>
+                            <th style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em;">Name</th>
+                            <th style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em;">Phone</th>
+                            <th style="font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em;">Salary (ETB)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preview-body"></tbody>
+                </table>
+            </div>
+
+            <div id="preview-errors" class="mb-3" style="display: none;">
+                <div class="alert alert-warning" style="border-radius: var(--radius-lg); font-size: var(--text-sm);">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong id="error-count"></strong>
+                    <ul id="error-list" class="mb-0 mt-2" style="padding-left: 1.5em;"></ul>
+                </div>
+            </div>
+
+            <div class="onboarding-actions">
+                <button type="button" class="onboarding-btn-back" onclick="goBack()">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+                <button type="button" class="onboarding-btn-next" onclick="importEmployees()" id="import-btn">
+                    Import <span id="import-count"></span> Employees
+                    <span class="material-symbols-outlined">check_circle</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Done -->
+    <div id="step-3" style="display: none;">
+        <div style="max-width: 672px; text-align: center; padding: var(--space-10) 0;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--color-success-light); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--space-6);">
+                <span class="material-symbols-outlined" style="font-size: 40px; color: var(--color-success);">check_circle</span>
+            </div>
+            <h1 class="onboarding-form-title">Employees Imported!</h1>
+            <p class="onboarding-form-subtitle" id="import-summary"></p>
+
+            <div class="onboarding-actions" style="justify-content: center; margin-top: var(--space-8);">
+                <a href="{{ url_for('main.index') }}" class="onboarding-btn-next" style="text-decoration: none;">
+                    Go to Dashboard
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Right Sidebar: Tips -->
+<aside class="onboarding-sidebar">
+    <div class="onboarding-checklist">
+        <div class="onboarding-checklist-header">
+            <span class="material-symbols-outlined">tips_and_updates</span>
+            <h3>Tips</h3>
+        </div>
+        <ul class="onboarding-checklist-items">
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">table_chart</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Copy from Excel</span>
+                    <span class="onboarding-checklist-item-desc">Select rows in Excel, Ctrl+C, then paste here</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">phone_android</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Phone is optional</span>
+                    <span class="onboarding-checklist-item-desc">Leave blank if you don't have it yet</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">edit</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Edit later</span>
+                    <span class="onboarding-checklist-item-desc">You can add more employees or edit these anytime</span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="onboarding-help-card">
+        <div class="onboarding-help-header">
+            <span class="material-symbols-outlined">support_agent</span>
+            <h4>Need Help?</h4>
+        </div>
+        <p class="onboarding-help-text">Having trouble importing? Contact us.</p>
+        <a href="{{ url_for('help.help_center') }}" class="onboarding-help-link">
+            Contact Support <span class="material-symbols-outlined">open_in_new</span>
+        </a>
+    </div>
+</aside>
+
+<script>
+let parsedEmployees = [];
+
+function getSeparator() {
+    const checked = document.querySelector('input[name="separator"]:checked');
+    return checked ? checked.value : '\t';
+}
+
+function parseData() {
+    const textarea = document.getElementById('paste-data');
+    const fileInput = document.getElementById('csv-upload');
+    let rawText = textarea.value.trim();
+
+    if (!rawText && fileInput.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            textarea.value = e.target.result;
+            parseDataFromText(e.target.result);
+        };
+        reader.readAsText(fileInput.files[0]);
+        return;
+    }
+
+    if (!rawText) {
+        alert('Please paste your employee data or upload a CSV file.');
+        return;
+    }
+
+    parseDataFromText(rawText);
+}
+
+function parseDataFromText(rawText) {
+    const sep = getSeparator();
+    const lines = rawText.split('\n').filter(l => l.trim());
+    parsedEmployees = [];
+    const errors = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const cols = lines[i].split(sep).map(c => c.trim());
+        if (cols.length < 2) {
+            errors.push(`Row ${i + 1}: need at least Name and Salary (2 columns), got ${cols.length}`);
+            continue;
+        }
+
+        let name, phone, salary;
+        if (cols.length === 2) {
+            name = cols[0];
+            phone = '';
+            salary = parseFloat(cols[1].replace(/,/g, ''));
+        } else {
+            name = cols[0];
+            phone = cols[1];
+            salary = parseFloat(cols[2].replace(/,/g, ''));
+        }
+
+        if (!name) {
+            errors.push(`Row ${i + 1}: missing name`);
+            continue;
+        }
+        if (isNaN(salary) || salary <= 0) {
+            errors.push(`Row ${i + 1}: invalid salary "${cols.length === 2 ? cols[1] : cols[2]}"`);
+            continue;
+        }
+        parsedEmployees.push({ name, phone, salary });
+    }
+
+    if (errors.length > 0 && parsedEmployees.length === 0) {
+        alert('Could not parse any rows:\n\n' + errors.join('\n'));
+        return;
+    }
+
+    // Show preview
+    const tbody = document.getElementById('preview-body');
+    tbody.innerHTML = '';
+    parsedEmployees.forEach((emp, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i + 1}</td><td>${emp.name}</td><td>${emp.phone || '—'}</td><td>${emp.salary.toLocaleString()}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    // Show errors if any
+    const errDiv = document.getElementById('preview-errors');
+    if (errors.length > 0) {
+        errDiv.style.display = 'block';
+        document.getElementById('error-count').textContent = `${errors.length} row(s) skipped:`;
+        document.getElementById('error-list').innerHTML = errors.map(e => `<li>${e}</li>`).join('');
+    } else {
+        errDiv.style.display = 'none';
+    }
+
+    // Update counts
+    document.getElementById('preview-subtitle').textContent = `${parsedEmployees.length} employees ready to import.`;
+    document.getElementById('import-count').textContent = parsedEmployees.length;
+
+    // Switch steps
+    document.getElementById('step-1').style.display = 'none';
+    document.getElementById('step-2').style.display = 'block';
+
+    // Update stepper
+    updateStepper(3);
+}
+
+function goBack() {
+    document.getElementById('step-1').style.display = 'block';
+    document.getElementById('step-2').style.display = 'none';
+    updateStepper(3);
+}
+
+function updateStepper(activeStep) {
+    // Desktop stepper
+    const steps = document.querySelectorAll('.onboarding-stepper .onboarding-step');
+    steps.forEach((el, i) => {
+        el.classList.remove('active', 'completed');
+        if (i + 1 < activeStep) el.classList.add('completed');
+        if (i + 1 === activeStep) el.classList.add('active');
+    });
+    // Mobile stepper
+    const mobileSteps = document.querySelectorAll('.onboarding-mobile-step');
+    mobileSteps.forEach((el, i) => {
+        el.classList.remove('active', 'completed');
+        if (i + 1 < activeStep) {
+            el.classList.add('completed');
+            el.querySelector('.onboarding-mobile-step-dot').textContent = '✓';
+        }
+        if (i + 1 === activeStep) el.classList.add('active');
+    });
+    const connectors = document.querySelectorAll('.onboarding-mobile-step-connector');
+    connectors.forEach((el, i) => {
+        el.classList.toggle('active', i + 1 < activeStep);
+    });
+}
+
+async function importEmployees() {
+    const btn = document.getElementById('import-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Importing...';
+
+    try {
+        const resp = await fetch('{{ url_for("wizard.quick_import") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+            body: JSON.stringify({ employees: parsedEmployees }),
+        });
+        const data = await resp.json();
+
+        if (data.status === 'ok') {
+            document.getElementById('import-summary').textContent =
+                `${data.imported} employees imported successfully. ${data.total_errors > 0 ? data.total_errors + ' rows had errors.' : ''} You can now run payroll.`;
+            document.getElementById('step-2').style.display = 'none';
+            document.getElementById('step-3').style.display = 'block';
+            updateStepper(4);
+        } else {
+            alert('Import failed: ' + (data.message || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = `Import ${parsedEmployees.length} Employees <span class="material-symbols-outlined">check_circle</span>`;
+        }
+    } catch (e) {
+        alert('Connection error: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = `Import ${parsedEmployees.length} Employees <span class="material-symbols-outlined">check_circle</span>`;
+    }
+}
+</script>
+{% endblock %}

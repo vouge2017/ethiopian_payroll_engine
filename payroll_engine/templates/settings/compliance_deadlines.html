@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Compliance Deadlines - Settings{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-calendar-check me-2"></i>Compliance Deadlines</h4>
+            <p class="text-muted mb-0">Configure filing deadlines for your company. These are used for compliance scoring and reminders.</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-ghost btn-sm no-print">
+            <i class="bi bi-printer me-1"></i>Print
+        </button>
+    </div>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Filing Deadlines -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-building me-2"></i>Filing Deadlines</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Set the day of month each filing is due. These are sent to ERCA/eTax, pension authority, etc.
+                    Adjust based on your regional office's requirements.
+                </p>
+
+                {% for ftype, cfg in defaults.items() %}
+                <div class="row align-items-center mb-3 p-2 border rounded">
+                    <div class="col-md-1">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input"
+                                   name="enabled_{{ ftype }}"
+                                   id="enabled_{{ ftype }}"
+                                   {% if current.get(ftype, {}).get('enabled', True) %}checked{% endif %}>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold mb-0" for="day_{{ ftype }}">
+                            {{ cfg.label }}
+                        </label>
+                        <div class="text-muted small">{{ cfg.label_am }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Day</span>
+                            <input type="number" class="form-control"
+                                   name="day_{{ ftype }}"
+                                   id="day_{{ ftype }}"
+                                   value="{{ current.get(ftype, {}).get('day', cfg.day) }}"
+                                   min="1" max="28">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">
+                            {% if ftype == 'erca' %}
+                                ERCA monthly tax filing via eTax portal
+                            {% elif ftype == 'pension' %}
+                                Proclamation 1268/2022, Art. 10(6): first 10 working days
+                            {% elif ftype == 'pssa' %}
+                                Private Social Security Agency contribution
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Disbursement -->
+                <div class="row align-items-center mb-3 p-2 border rounded">
+                    <div class="col-md-1">
+                        <span class="badge bg-info">Auto</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold mb-0" for="disbursement_days">
+                            Salary Disbursement
+                        </label>
+                        <div class="text-muted small">Days after month end</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Days</span>
+                            <input type="number" class="form-control"
+                                   name="disbursement_days"
+                                   id="disbursement_days"
+                                   value="{{ current.get('_disbursement_days', 5) }}"
+                                   min="1" max="30">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">Net pay must be disbursed within this many days of month end</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reminder Settings -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-bell me-2"></i>Reminder Settings</h6>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold mb-0" for="reminder_days_before">
+                            Remind me before each deadline
+                        </label>
+                        <div class="text-muted small">Notifications sent to company owners</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Days</span>
+                            <input type="number" class="form-control"
+                                   name="reminder_days_before"
+                                   id="reminder_days_before"
+                                   value="{{ current.get('_reminder_days_before', 3) }}"
+                                   min="1" max="14">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">You'll get a push notification this many days before each deadline</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Filing Types -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Additional Filing Types</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCustomRow()">
+                    <i class="bi bi-plus"></i> Add
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Add any additional filings your company needs to track (e.g., regional taxes, industry-specific filings).
+                </p>
+                <div id="custom-filings">
+                    {% set custom_deadlines = company.compliance_deadlines.get('custom_deadlines', []) if company.compliance_deadlines else [] %}
+                    {% for custom in custom_deadlines %}
+                    <div class="row align-items-center mb-2 custom-row">
+                        <div class="col-md-1">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" class="form-check-input"
+                                       name="custom_enabled_{{ loop.index0 }}"
+                                       {% if custom.get('enabled', True) %}checked{% endif %}>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm"
+                                   name="custom_name_{{ loop.index0 }}"
+                                   value="{{ custom.get('name', '') }}"
+                                   placeholder="Filing name">
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Day</span>
+                                <input type="number" class="form-control"
+                                       name="custom_day_{{ loop.index0 }}"
+                                       value="{{ custom.get('day', 10) }}"
+                                       min="1" max="28">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.custom-row').remove()">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div id="no-custom" class="text-muted small {% if custom_deadlines %}d-none{% endif %}">
+                    No additional filing types configured.
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mb-4">
+            <a href="{{ url_for('settings.company_profile') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>Save Deadlines
+            </button>
+        </div>
+    </form>
+
+    <!-- Current eTax Info -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>About eTax Filing</h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-2">ERCA monthly tax filing is done through the <strong>eTax portal</strong>. The process:</p>
+            <ol class="small text-muted">
+                <li>Generate the ERCA export from EthioPayroll (Reports → ERCA Export)</li>
+                <li>Log into the eTax portal for your regional/sub-city office</li>
+                <li>Upload or enter the data using the eTax template</li>
+                <li>Save the confirmation number in EthioPayroll (Reports → Mark as Filed)</li>
+            </ol>
+            <p class="small text-muted mb-0">
+                <strong>Note:</strong> Column format may vary by regional office. Configure your ERCA export columns in
+                <a href="{{ url_for('settings.report_templates', type='erca') }}">Settings → Report Templates</a>
+                to match your eTax template.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+let customIndex = {{ custom_deadlines|length }};
+
+function addCustomRow() {
+    const container = document.getElementById('custom-filings');
+    const noCustom = document.getElementById('no-custom');
+    noCustom.classList.add('d-none');
+
+    const row = document.createElement('div');
+    row.className = 'row align-items-center mb-2 custom-row';
+    row.innerHTML = `
+        <div class="col-md-1">
+            <div class="form-check form-switch">
+                <input type="checkbox" class="form-check-input"
+                       name="custom_enabled_${customIndex}" checked>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <input type="text" class="form-control form-control-sm"
+                   name="custom_name_${customIndex}"
+                   placeholder="Filing name (e.g., Regional Tax)">
+        </div>
+        <div class="col-md-3">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">Day</span>
+                <input type="number" class="form-control"
+                       name="custom_day_${customIndex}"
+                       value="10" min="1" max="28">
+            </div>
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.custom-row').remove()">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(row);
+    customIndex++;
+}
+</script>
+{% endblock %}

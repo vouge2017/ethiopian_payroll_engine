@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}Payroll Comparison — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Payroll Comparison</h2>
+        <p class="text-muted mb-0">Compare two payroll runs side by side</p>
+    </div>
+
+    {% if needs_two %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon"><i class="bi bi-bar-chart-steps"></i></div>
+            <h4>Need at least 2 payroll runs</h4>
+            <p>Complete two payroll runs to compare them.</p>
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+                <i class="bi bi-cloud-upload me-1"></i>Run Payroll
+            </a>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- Run Selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Period A (baseline)</label>
+                    <select name="run_a" class="form-select">
+                        {% for r in runs %}
+                        <option value="{{ r.id }}" {% if r.id == run_a.id %}selected{% endif %}>
+                            {{ r.period or r.run_date.strftime('%B %Y') }} — {{ r.payslips|length }} employees
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1 text-center">
+                    <span class="text-muted fw-bold">vs</span>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Period B (comparison)</label>
+                    <select name="run_b" class="form-select">
+                        {% for r in runs %}
+                        <option value="{{ r.id }}" {% if r.id == run_b.id %}selected{% endif %}>
+                            {{ r.period or r.run_date.strftime('%B %Y') }} — {{ r.payslips|length }} employees
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-left-right me-1"></i>Compare
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards — label + number only -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Headcount</div>
+                <div class="metric-value">{{ totals.headcount_b }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Total Gross</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(totals.b_gross) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Total Tax</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(totals.b_tax) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Total Net</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(totals.b_net) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Cost Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height:280px;">
+                        <canvas id="comparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height:280px;">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Detail Table -->
+    <div class="card">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Employee Detail</h5>
+            <span class="badge badge-info">{{ employees|length }} employees</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Dept</th>
+                            <th class="text-end">Gross A</th>
+                            <th class="text-end">Gross B</th>
+                            <th class="text-end">Change</th>
+                            <th class="text-end">Net A</th>
+                            <th class="text-end">Net B</th>
+                            <th class="text-end">Net Change</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        {% set gross_diff = emp.b_gross - emp.a_gross %}
+                        {% set net_diff = emp.b_net - emp.a_net %}
+                        <tr>
+                            <td data-label="Employee">
+                                <strong>{{ emp.name }}</strong>
+                                <br><small class="text-muted">{{ emp.emp_id }}</small>
+                            </td>
+                            <td data-label="Dept">{{ emp.department }}</td>
+                            <td data-label="Gross A" class="text-end">{{ "{:,.0f}".format(emp.a_gross) }}</td>
+                            <td data-label="Gross B" class="text-end">{{ "{:,.0f}".format(emp.b_gross) }}</td>
+                            <td data-label="Change" class="text-end fw-semibold {% if gross_diff > 0 %}text-danger{% elif gross_diff < 0 %}text-success{% endif %}">
+                                {% if gross_diff > 0 %}+{% endif %}{{ "{:,.0f}".format(gross_diff) }}
+                            </td>
+                            <td data-label="Net A" class="text-end">{{ "{:,.0f}".format(emp.a_net) }}</td>
+                            <td data-label="Net B" class="text-end fw-bold">{{ "{:,.0f}".format(emp.b_net) }}</td>
+                            <td data-label="Net Change" class="text-end fw-bold {% if net_diff > 0 %}text-success{% elif net_diff < 0 %}text-danger{% endif %}">
+                                {% if net_diff > 0 %}+{% endif %}{{ "{:,.0f}".format(net_diff) }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td>TOTAL</td>
+                            <td></td>
+                            <td class="text-end">{{ "{:,.0f}".format(totals.a_gross) }}</td>
+                            <td class="text-end">{{ "{:,.0f}".format(totals.b_gross) }}</td>
+                            <td class="text-end {% if totals.gross_change > 0 %}text-danger{% elif totals.gross_change < 0 %}text-success{% endif %}">
+                                {% if totals.gross_change > 0 %}+{% endif %}{{ "{:,.0f}".format(totals.gross_change) }}
+                            </td>
+                            <td class="text-end">{{ "{:,.0f}".format(totals.a_net) }}</td>
+                            <td class="text-end">{{ "{:,.0f}".format(totals.b_net) }}</td>
+                            <td class="text-end {% if totals.net_change > 0 %}text-success{% elif totals.net_change < 0 %}text-danger{% endif %}">
+                                {% if totals.net_change > 0 %}+{% endif %}{{ "{:,.0f}".format(totals.net_change) }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if not needs_two and totals %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Comparison bar chart
+new Chart(document.getElementById('comparisonChart'), {
+    type: 'bar',
+    data: {
+        labels: ['Gross', 'Tax', 'Pension', 'Net'],
+        datasets: [
+            {
+                label: '{{ run_a.period or run_a.run_date.strftime("%b %Y") }}',
+                data: [{{ totals.a_gross }}, {{ totals.a_tax }}, {{ totals.a_pension }}, {{ totals.a_net }}],
+                backgroundColor: '#94a3b8',
+                borderRadius: 6
+            },
+            {
+                label: '{{ run_b.period or run_b.run_date.strftime("%b %Y") }}',
+                data: [{{ totals.b_gross }}, {{ totals.b_tax }}, {{ totals.b_pension }}, {{ totals.b_net }}],
+                backgroundColor: '#2563eb',
+                borderRadius: 6
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                backgroundColor: '#0f172a',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: { label: (ctx) => `${ctx.dataset.label}: ETB ${ctx.parsed.y.toLocaleString()}` }
+            }
+        },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => `ETB ${(v/1000).toFixed(0)}k` } } }
+    }
+});
+
+// Distribution doughnut
+new Chart(document.getElementById('distributionChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Net Pay', 'Tax', 'Pension'],
+        datasets: [{
+            data: [{{ totals.b_net }}, {{ totals.b_tax }}, {{ totals.b_pension }}],
+            backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+            borderWidth: 0,
+            hoverOffset: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 16 } },
+            tooltip: {
+                backgroundColor: '#0f172a',
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: { label: (ctx) => `${ctx.label}: ETB ${ctx.parsed.toLocaleString()}` }
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

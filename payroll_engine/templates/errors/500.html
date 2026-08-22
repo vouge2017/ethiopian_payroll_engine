@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Something Went Wrong — EthioPayroll{% endblock %}
+{% block content %}
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
+    <div class="text-center" style="max-width: 480px;">
+        <!-- Illustration -->
+        <div class="mb-4">
+            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="56" stroke="var(--color-danger)" stroke-width="2" stroke-dasharray="8 4" opacity="0.2"/>
+                <circle cx="60" cy="60" r="40" fill="var(--color-danger)" opacity="0.05"/>
+                <text x="60" y="68" text-anchor="middle" font-size="36" font-weight="800" fill="var(--color-danger)" opacity="0.4">500</text>
+            </svg>
+        </div>
+
+        <h2 class="fw-bold mb-2">Something Went Wrong</h2>
+        <h5 class="text-muted fw-normal mb-1" style="font-size: 1rem;">ችግር ተፈጥሯል</h5>
+        <p class="text-muted mb-4">
+            An unexpected error occurred. Our team has been notified automatically.
+            This is usually temporary — please try again.
+        </p>
+
+        <!-- Auto-retry countdown -->
+        <div id="retrySection" class="mb-4">
+            <p class="text-muted small mb-2">Auto-retrying in <strong id="countdown">30</strong> seconds...</p>
+            <div class="progress" style="height: 4px; max-width: 200px; margin: 0 auto;">
+                <div id="retryBar" class="progress-bar bg-primary" role="progressbar" style="width: 100%; transition: width 1s linear;"></div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-4">
+            <a href="javascript:location.reload()" class="btn btn-primary btn-lg" id="btnRetry">
+                <i class="bi bi-arrow-clockwise me-2"></i>Try Again Now
+            </a>
+            <a href="{{ url_for('main.companies_dashboard') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-house me-2"></i>Go to Dashboard
+            </a>
+        </div>
+
+        <!-- Help -->
+        <div class="card border-0 bg-light">
+            <div class="card-body py-3">
+                <p class="text-muted small mb-1 fw-semibold">If this keeps happening:</p>
+                <ul class="text-muted small mb-0 text-start" style="max-width: 350px; margin: 0 auto;">
+                    <li>Try refreshing the page</li>
+                    <li>Clear your browser cache</li>
+                    <li>Check your internet connection</li>
+                    <li>Contact support if the problem persists</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    let seconds = 30;
+    const countdown = document.getElementById('countdown');
+    const retryBar = document.getElementById('retryBar');
+
+    const timer = setInterval(function() {
+        seconds--;
+        countdown.textContent = seconds;
+        retryBar.style.width = (seconds / 30 * 100) + '%';
+
+        if (seconds <= 0) {
+            clearInterval(timer);
+            location.reload();
+        }
+    }, 1000);
+
+    // Cancel auto-retry if user clicks anything
+    document.getElementById('btnRetry').addEventListener('click', function() {
+        clearInterval(timer);
+    });
+})();
+</script>
+{% endblock %}

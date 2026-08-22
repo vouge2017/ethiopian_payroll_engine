@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Reports — EthioPayroll{% endblock %}
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb breadcrumb-sm mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        {% block breadcrumb_items %}
+        <li class="breadcrumb-item active">Reports</li>
+    {% endblock %}
+    </ol>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Reports & Compliance</h2>
+            <p class="text-muted mb-0">Download filings, view compliance status, and export data</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-ghost no-print">
+            <i class="bi bi-printer me-1"></i>Print
+        </button>
+    </div>
+
+    <!-- Period Selector -->
+    {% if all_completed_runs and all_completed_runs|length > 0 %}
+    <div class="no-print">
+    {% include '_period_selector.html' %}
+    </div>
+    {% endif %}
+
+    <!-- Compliance Metrics — label + number only -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-label">Compliance Score</div>
+                <div class="metric-value">{{ compliance_score|round(0)|int }}%</div>
+            </div>
+        </div>
+        <div class="col-md-4 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-label">Total Employees</div>
+                <div class="metric-value">{{ total_employees }}</div>
+            </div>
+        </div>
+        <div class="col-md-4 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-label">Last Run</div>
+                {% if last_run %}
+                <div class="metric-value" style="font-size: var(--text-lg);">{{ last_run.run_date }}</div>
+                {% else %}
+                <div class="metric-value text-muted">—</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Trust Layer: Filing Progress -->
+    {% if filing_progress and filing_progress.steps %}
+    <div class="card mb-4 animate-fade-in">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Filing Status</h5>
+        </div>
+        <div class="card-body">
+            <!-- Next action banner -->
+            {% if filing_progress.is_overdue %}
+            <div class="alert alert-danger mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>{{ filing_progress.next_action }}</strong>
+            </div>
+            {% elif filing_progress.days_remaining is not none and filing_progress.days_remaining <= 7 %}
+            <div class="alert alert-warning mb-3">
+                <i class="bi bi-clock me-2"></i>
+                <strong>{{ filing_progress.next_action }}</strong>
+                {% if filing_progress.days_remaining is not none %}
+                — {{ filing_progress.days_remaining }} days remaining
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Steps -->
+            <div class="d-flex flex-column gap-3">
+                {% for step in filing_progress.steps %}
+                <div class="d-flex align-items-start gap-3">
+                    <div class="flex-shrink-0" style="width: 24px; text-align: center;">
+                        {% if step.status == 'done' %}
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        {% elif step.status == 'overdue' %}
+                        <i class="bi bi-x-circle-fill text-danger"></i>
+                        {% else %}
+                        <i class="bi bi-circle text-muted"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">{{ step.label }}</div>
+                        <div class="text-muted small">
+                            {% if step.status == 'done' and step.date %}
+                            Completed {{ step.date }}
+                            {% elif step.deadline %}
+                            Due {{ step.deadline }}
+                            {% if step.days_remaining is not none %}
+                            {% if step.days_remaining < 0 %}
+                            <span class="text-danger">({{ step.days_remaining|abs }} days overdue)</span>
+                            {% else %}
+                            ({{ step.days_remaining }} days remaining)
+                            {% endif %}
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if step.action_url and step.status != 'done' %}
+                    <div class="d-flex gap-2">
+                        <a href="{{ step.action_url }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download me-1"></i>Download
+                        </a>
+                        {% if step.mark_url %}
+                        <form method="POST" action="{{ step.mark_url }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="filing_type" value="{{ step.filing_type }}">
+                            <input type="hidden" name="period" value="{{ step.period }}">
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="bi bi-check-circle me-1"></i>Mark as Filed
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if filing_progress.next_action == 'All filings complete!' %}
+            <div class="alert alert-success mt-3 mb-0">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong>All filings complete for this period.</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Download Reports -->
+    {% if selected_run %}
+    <div class="card mb-4 animate-fade-in">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">Download Reports — {{ selected_run.period or selected_run.run_date }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center p-3 rounded-3" style="background: var(--bg-tertiary);">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">ERCA Tax Report</div>
+                            <small class="text-muted">Excel format for ERCA filing</small>
+                        </div>
+                        <a href="{{ url_for('reports.download_erca_report', run_id=selected_run.id) }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-download me-1"></i>.xlsx
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center p-3 rounded-3" style="background: var(--bg-tertiary);">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Pension Report</div>
+                            <small class="text-muted">PSSA contribution report</small>
+                        </div>
+                        <a href="{{ url_for('reports.download_pension_report', run_id=selected_run.id) }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-download me-1"></i>.xlsx
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center p-3 rounded-3" style="background: var(--bg-tertiary);">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Payroll Register</div>
+                            <small class="text-muted">Printable payroll summary</small>
+                        </div>
+                        <a href="{{ url_for('payroll.payroll_register', run_id=selected_run.id) }}" class="btn btn-ghost btn-sm">
+                            <i class="bi bi-printer me-1"></i>Print
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Links -->
+    <div class="row g-3">
+        <div class="col-md-4">
+            <a href="{{ url_for('reports.filing_history') }}" class="card text-decoration-none animate-fade-in">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="metric-icon"><i class="bi bi-clock-history"></i></div>
+                    <div>
+                        <div class="fw-semibold">Filing History</div>
+                        <small class="text-muted">View past ERCA filings</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('reports.audit_log') }}" class="card text-decoration-none animate-fade-in">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="metric-icon"><i class="bi bi-journal-text"></i></div>
+                    <div>
+                        <div class="fw-semibold">Audit Log</div>
+                        <small class="text-muted">Who did what, when</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('reports.analytics') }}" class="card text-decoration-none animate-fade-in">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="metric-icon"><i class="bi bi-graph-up"></i></div>
+                    <div>
+                        <div class="fw-semibold">Analytics</div>
+                        <small class="text-muted">Department costs, trends</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

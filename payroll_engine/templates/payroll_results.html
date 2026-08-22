@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Payroll Results - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+
+<!-- Payroll Wizard Stepper -->
+<div class="wizard-stepper">
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Upload</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Review</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Confirm</span>
+    </div>
+    <div class="wizard-step-connector completed"></div>
+    <div class="wizard-step completed">
+        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
+        <span class="wizard-step-label">Done</span>
+    </div>
+</div>
+
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <a href="{{ url_for('payroll.payroll_runs') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            {{ run.reference or ('Payroll Run #' ~ run.id) }}
+            {% if run.period %}
+                <small class="text-muted ms-2">{{ run.period }}</small>
+            {% endif %}
+        </h3>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary">{{ run.run_date }}</span>
+            {% if run.status == 'locked' %}
+                <span class="badge bg-dark"><i class="bi bi-lock-fill"></i> locked</span>
+            {% elif run.status == 'completed' %}
+                <span class="badge badge-success">completed</span>
+            {% elif run.status == 'processing' %}
+                <span class="badge badge-warning">processing</span>
+            {% elif run.status == 'failed' %}
+                <span class="badge badge-danger">failed</span>
+            {% else %}
+                <span class="badge bg-secondary">{{ run.status }}</span>
+            {% endif %}
+            {% if run.payslips %}
+            <a href="{{ url_for('payroll.download_all_payslips', run_id=run.id) }}" class="btn btn-sm btn-success">
+                <i class="bi bi-download me-1"></i> {{ _('download') }} All (ZIP)
+            </a>
+            {% endif %}
+            {% if run.status == 'completed' and run.disbursement_status == 'pending' %}
+            <form method="POST" action="{{ url_for('payroll.undo_approval', run_id=run.id) }}" class="d-inline"
+                  onsubmit="return confirm('Undo this approval? This will delete all payslips and revert to review status.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning" title="Undo approval — reverts to review (1 hour window)">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Undo Approval
+                </button>
+            </form>
+            {% endif %}
+            {% if run.status == 'completed' %}
+            <button type="button" class="btn btn-sm btn-outline-dark" title="Lock this period — prevents new runs and edits"
+                    onclick="lockPayroll({{ run.id }})">
+                <i class="bi bi-lock me-1"></i> Lock Period
+            </button>
+            {% endif %}
+            {% if run.status == 'locked' %}
+            <button type="button" class="btn btn-sm btn-outline-warning" title="Unlock — allows corrections"
+                    onclick="unlockPayroll({{ run.id }})">
+                <i class="bi bi-unlock me-1"></i> Unlock
+            </button>
+            {% endif %}
+
+            <!-- Disbursement tracking -->
+            {% if run.status == 'completed' %}
+            <a href="{{ url_for('payroll.disbursement_progress', run_id=run.id) }}" class="btn btn-sm btn-outline-primary" title="View disbursement progress and download bank files">
+                <i class="bi bi-cash-stack me-1"></i> Disbursement
+            </a>
+            {% endif %}
+            {% if run.status == 'completed' and run.disbursement_status == 'pending' %}
+            <button type="button" class="btn btn-sm btn-outline-info" title="Mark as disbursed — bank file has been sent"
+                    onclick="markDisbursed({{ run.id }})">
+                <i class="bi bi-bank me-1"></i> Mark Disbursed
+            </button>
+            {% elif run.disbursement_status == 'disbursed' %}
+            <span class="badge badge-info"><i class="bi bi-bank me-1"></i> Disbursed</span>
+            <form method="POST" action="{{ url_for('payroll.confirm_payment', run_id=run.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-success" title="Confirm bank has processed payment">
+                    <i class="bi bi-check-circle me-1"></i> Confirm Payment
+                </button>
+            </form>
+            {% elif run.disbursement_status == 'confirmed' %}
+            <span class="badge badge-success"><i class="bi bi-check-circle me-1"></i> Payment Confirmed</span>
+            {% elif run.disbursement_status == 'failed' %}
+            <span class="badge badge-danger"><i class="bi bi-x-circle me-1"></i> Payment Failed</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    {% if run.payslips %}
+    {% set total_gross = run.payslips|sum(attribute='gross_salary') %}
+    {% set total_tax = run.payslips|sum(attribute='tax') %}
+    {% set total_net = run.payslips|sum(attribute='net_pay') %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('total_employees') }}</h6>
+                    <h4>{{ run.payslips|length }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('total_gross') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(total_gross) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('total_tax') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(total_tax) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('total_net') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(total_net) }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Payslip Table -->
+    <div class="card">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>{{ _('payslips') }}</h5>
+            <input type="text" class="form-control form-control-sm" style="max-width: 200px;" id="searchTable" placeholder="Search...">
+        </div>
+        <div class="card-body p-0">
+            {% if run.payslips %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sticky mb-0 responsive-card" id="payslipTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>{{ _('name') }}</th>
+                            <th>{{ _('department') }}</th>
+                            <th>{{ _('gross') }} (ETB)</th>
+                            <th>Tax (ETB)</th>
+                            <th>Pension (ETB)</th>
+                            <th>{{ _('net') }} (ETB)</th>
+                            <th>{{ _('download') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in run.payslips %}
+                        <tr>
+                            <td data-label="#">{{ loop.index }}</td>
+                            <td data-label="Name">{{ p.employee.name }} <small class="text-muted">({{ p.employee.employee_id }})</small></td>
+                            <td data-label="Department">{{ p.employee.department or '-' }}</td>
+                            <td data-label="Gross">{{ '%.2f'|format(p.gross_salary) }}</td>
+                            <td data-label="Tax">{{ '%.2f'|format(p.tax) }}</td>
+                            <td data-label="Pension">{{ '%.2f'|format(p.employee_pension) }}</td>
+                            <td data-label="Net Pay"><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
+                            <td data-label="Download">
+                                {% if p.pdf_file_path %}
+                                <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary btn-approve-lg">
+                                    <i class="bi bi-download"></i> PDF
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <p>{{ _('no_payslips') }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Adjustment Payslips -->
+    {% if run.status in ('completed', 'locked') %}
+    {% set adjustments = run.payslips|selectattr('payslip_type', 'eq', 'adjustment')|list %}
+    {% if adjustments %}
+    <div class="card mt-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Adjustment Payslips</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee</th>
+                            <th>Reason</th>
+                            <th class="text-end">Gross</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for adj in adjustments %}
+                        <tr>
+                            <td>{{ adj.employee.name if adj.employee else 'N/A' }}</td>
+                            <td>{{ adj.reason }}</td>
+                            <td class="text-end">ETB {{ '{:,.2f}'.format(adj.gross_salary) }}</td>
+                            <td class="text-end">ETB {{ '{:,.2f}'.format(adj.tax) }}</td>
+                            <td class="text-end fw-bold">ETB {{ '{:,.2f}'.format(adj.net_pay) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Create Adjustment Form -->
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create Adjustment</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('payroll.create_adjustment', run_id=run.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Employee</label>
+                        <select name="employee_id" class="form-select" required>
+                            <option value="">Select employee...</option>
+                            {% for ps in run.payslips|selectattr('payslip_type', 'eq', 'regular')|list %}
+                            <option value="{{ ps.employee_id }}">{{ ps.employee.name if ps.employee else 'N/A' }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Amount (ETB gross)</label>
+                        <input type="number" name="amount" class="form-control" min="1" step="100" required placeholder="e.g. 2000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Reason</label>
+                        <input type="text" name="reason" class="form-control" required placeholder="e.g. Overtime correction">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-plus-circle me-1"></i> Create
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('searchTable').addEventListener('keyup', function() {
+    var query = this.value.toLowerCase();
+    var rows = document.querySelectorAll('#payslipTable tbody tr');
+    rows.forEach(function(row) {
+        var text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+    });
+});
+
+// Confetti on completed payroll
+{% if run.status == 'completed' %}
+EthioPayroll.confetti();
+{% endif %}
+
+async function lockPayroll(runId) {
+    if (!confirm('Lock this period? No further changes will be allowed.')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/lock`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function unlockPayroll(runId) {
+    if (!confirm('Unlock this period? This allows corrections.')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/unlock`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'warning');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function markDisbursed(runId) {
+    if (!confirm('Mark as disbursed? This indicates the bank file has been sent.')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/disburse`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+</script>
+{% endblock %}

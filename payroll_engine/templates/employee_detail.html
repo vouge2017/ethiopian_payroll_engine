@@ -1,0 +1,588 @@
+{% extends "base.html" %}
+{% from "_pagination.html" import render_pagination %}
+{% block title %}Employee Detail - Ethiopian Payroll Engine{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+            {{ employee.name }}
+        </h3>
+        <div>
+            <span class="badge bg-secondary me-2">{{ employee.employee_id }}</span>
+            {% if not employee.is_deleted %}
+            {% if not employee.user_id %}
+            <form method="POST" action="{{ url_for('employees.generate_invite', emp_id=employee.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-info me-1" title="Generate invite link for employee to create their own account">
+                    <i class="bi bi-link-45deg me-1"></i> Invite
+                </button>
+            </form>
+            {% else %}
+            <span class="badge bg-success me-1"><i class="bi bi-person-check"></i> Has Account</span>
+            {% endif %}
+            <a href="{{ url_for('employees.edit_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <a href="{{ url_for('employees.terminate_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-danger me-1" data-confirm="Terminate this employee?">
+                <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
+            </a>
+            <form method="POST" action="{{ url_for('employees.deactivate_employee', emp_id=employee.id) }}" style="display:inline"
+                  onsubmit="return confirm('Deactivate {{ employee.name }}? Their payroll history will be preserved.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-person-dash me-1"></i>{{ _('deactivated') }}
+                </button>
+            </form>
+            {% else %}
+            <span class="badge bg-warning text-dark">{{ _('deactivated') }}</span>
+            <button type="button" class="btn btn-sm btn-outline-success"
+                    onclick="reactivateEmployee({{ employee.id }}, '{{ employee.display_name|e }}')">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>{{ _('reactivate') }}
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('basic_salary') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(employee.basic_salary) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('allowances') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(employee.allowances) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('gross') }}</h6>
+                    <h4>ETB {{ '%.2f'|format(employee.gross_salary) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('payment') }}</h6>
+                    <p class="mb-0">{{ employee.bank_account or employee.bank_or_telebirr or 'Cash' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('phone') }}</h6>
+                    <p class="mb-0">{% if employee.phone %}+251 {{ employee.phone }}{% else %}Not set{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('department') }}</h6>
+                    <p class="mb-0">{{ employee.department or 'Not set' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('position') }}</h6>
+                    <p class="mb-0">{{ employee.position or 'Not set' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('start_date') }}</h6>
+                    <p class="mb-0">{{ eth_date(employee.start_date) if employee.start_date else 'Not set' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('tin') }}</h6>
+                    <p class="mb-0">{{ employee.tin or 'Not set' }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">{{ _('linked_user') }}</h6>
+                    <p class="mb-0">{{ _('yes') if employee.user_id else _('no') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overtime Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="Overtime rates: Day=1.5×, Night=1.75×, Holiday=2×, Rest+Holiday=2.5× hourly rate. Hourly rate = basic salary ÷ 208. Max 4 hrs/day, 12 hrs/week. Proclamation No. 1156/2019, Art. 67-68."><i class="bi bi-info-circle text-muted" style="font-size:0.8em;cursor:help"></i></span></h5>
+            {% if total_ot_hours > 0 %}
+            <span class="badge bg-light text-dark">{{ total_ot_hours }}h / ETB {{ '%.2f'|format(total_ot_pay) }}</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Add Overtime Form -->
+            <form method="POST" action="{{ url_for('employees.add_overtime', emp_id=employee.id) }}" class="row g-2 mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-3">
+                    <input type="date" class="form-control" name="date" required>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control" name="hours" placeholder="Hours" step="0.5" min="0.5" max="24" required>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="overtime_type">
+                        {% for ot_type in overtime_types %}
+                        <option value="{{ ot_type }}">{{ ot_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus me-1"></i>{{ _('add') }}</button>
+                </div>
+            </form>
+
+            <!-- Overtime History -->
+            {% if overtime_data %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ _('date') }}</th>
+                            <th>{{ _('hours') }}</th>
+                            <th>{{ _('type') }}</th>
+                            <th>{{ _('rate') }}</th>
+                            <th>Pay (ETB)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in overtime_data %}
+                        <tr>
+                            <td data-label="Date">{{ item.entry.date }}</td>
+                            <td data-label="Hours">{{ item.entry.hours }}</td>
+                            <td data-label="Type">{{ item.entry.overtime_type }}</td>
+                            <td data-label="Rate">{{ item.rate }}x</td>
+                            <td data-label="Pay (ETB)">{{ '%.2f'|format(item.pay) }}</td>
+                            <td data-label="">
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                                        onclick="deleteOvertime({{ item.entry.id }}, this)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if total_ot_hours > 20 %}
+            <div class="alert alert-warning mt-2 mb-0">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>{{ total_ot_hours }} hours</strong> overtime this month (legal limit: 20h — Labor Proclamation Art. 89).
+            </div>
+            {% endif %}
+            {% else %}
+            <p class="text-muted mb-0">No overtime recorded this month.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Allowances Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Allowances</h5>
+            {% if employee.allowance_records %}
+            <span class="badge bg-light text-dark">{{ employee.allowance_records|length }} type(s)</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Add Allowance Form -->
+            <form method="POST" action="{{ url_for('employees.add_allowance', emp_id=employee.id) }}" class="row g-2 mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="allowance_type" required id="allowance_type_select">
+                        <option value="">Type...</option>
+                        {% for key, label in allowance_types %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control form-control-sm" name="amount" placeholder="Amount (ETB)" step="0.01" min="0.01" required>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="tax_treatment">
+                        {% for key, label in tax_treatments %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" name="exempt_cap_amount" placeholder="Exempt cap (ETB)">
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" name="regulation_reference" placeholder="Reg. reference">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus me-1"></i>Add</button>
+                </div>
+            </form>
+
+            <!-- Allowance Summary -->
+            {% if allowance_records %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Amount (ETB)</th>
+                            <th>Tax Treatment</th>
+                            <th>Exempt Cap</th>
+                            <th>Taxable</th>
+                            <th>Regulation</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for allowance in allowance_records %}
+                        {% if allowance.is_active %}
+                        <tr>
+                            <td data-label="Type">
+                                <strong>{{ allowance.type_label }}</strong>
+                                {% if allowance.custom_type_name %}
+                                <small class="text-muted d-block">{{ allowance.custom_type_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td data-label="Amount (ETB)">ETB {{ '%.2f'|format(allowance.amount) }}</td>
+                            <td data-label="Tax Treatment">
+                                {% if allowance.tax_treatment == 'exempt' %}
+                                <span class="badge badge-success">Exempt</span>
+                                {% elif allowance.tax_treatment == 'partial' %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Taxable</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Exempt Cap">
+                                {% if allowance.exempt_cap_amount %}
+                                ETB {{ '%.2f'|format(allowance.exempt_cap_amount) }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td data-label="Taxable">ETB {{ '%.2f'|format(allowance.taxable_amount) }}</td>
+                            <td data-label="Regulation">
+                                {% if allowance.regulation_reference %}
+                                <small class="text-muted">{{ allowance.regulation_reference }}</small>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td data-label="Action">
+                                <form method="POST" action="{{ url_for('employees.delete_allowance', allowance_id=allowance.id) }}" onsubmit="return confirm('Remove this allowance?')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Are you sure you want to delete this?"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center py-2">
+                                <small class="text-muted">Total Allowances</small>
+                                <h5 class="mb-0">ETB {{ '%.2f'|format(employee.total_allowances) }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center py-2">
+                                <small class="text-muted">Tax-Exempt Portion</small>
+                                <h5 class="mb-0 text-success">ETB {{ '%.2f'|format(employee.allowance_records|selectattr('is_active')|map(attribute='calculated_exempt_amount')|sum) }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center py-2">
+                                <small class="text-muted">Taxable Portion</small>
+                                <h5 class="mb-0 text-danger">ETB {{ '%.2f'|format(employee.allowance_records|selectattr('is_active')|map(attribute='taxable_amount')|sum) }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-wallet2 fs-3 d-block mb-2"></i>
+                No allowances configured. Add transport, hardship, or other allowances above.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Deductions Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Deductions</h5>
+        </div>
+        <div class="card-body">
+            <!-- Add Deduction Form -->
+            <form method="POST" action="{{ url_for('employees.add_deduction', emp_id=employee.id) }}" enctype="multipart/form-data" class="row g-2 mb-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" name="deduction_type" required>
+                        <option value="">Type...</option>
+                        {% for key, label in deduction_types %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control form-control-sm" name="label" placeholder="Label (e.g. MoE Batch 2024-07)" required>
+                </div>
+                <div class="col-md-1">
+                    <select class="form-select form-select-sm" name="amount_mode">
+                        <option value="fixed">Fixed ETB</option>
+                        <option value="percentage">% of Net</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" class="form-control form-control-sm" name="amount" placeholder="Amount" step="0.01" min="0.01" required>
+                </div>
+                <div class="col-md-1">
+                    <select class="form-select form-select-sm" name="tracking_mode">
+                        <option value="declining">Balance</option>
+                        <option value="date_bounded">Date Range</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <input type="number" class="form-control form-control-sm" name="total_to_recover" placeholder="Total" step="0.01" min="0">
+                </div>
+                <div class="col-md-1">
+                    <input type="date" class="form-control form-control-sm" name="start_date" title="Start date">
+                </div>
+                <div class="col-md-1">
+                    <input type="date" class="form-control form-control-sm" name="end_date" title="End date">
+                </div>
+                <div class="col-md-1">
+                    <input type="text" class="form-control form-control-sm" name="reference_number" placeholder="Ref #">
+                </div>
+                <div class="col-md-1">
+                    <input type="file" class="form-control form-control-sm" name="document" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-sm btn-warning">
+                        <i class="bi bi-plus-circle me-1"></i> Add Deduction
+                    </button>
+                </div>
+            </form>
+
+            <!-- Active Deductions -->
+            {% if active_deductions %}
+            <h6 class="text-muted mb-2">Active Deductions</h6>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Label</th>
+                            <th>Amount</th>
+                            <th>Balance</th>
+                            <th>Period</th>
+                            <th>Ref #</th>
+                            <th>Doc</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in active_deductions %}
+                        <tr>
+                            <td data-label="Type"><span class="badge bg-{{ 'danger' if d.deduction_type == 'court_order' else 'warning' if d.deduction_type == 'cost_sharing' else 'info' }}">{{ d.type_label }}</span></td>
+                            <td data-label="Label">{{ d.label }}</td>
+                            <td data-label="Amount">
+                                {% if d.amount_mode == 'percentage' %}
+                                    {{ d.amount }}% of net
+                                {% else %}
+                                    ETB {{ '%.2f'|format(d.amount) }}
+                                {% endif %}
+                            </td>
+                            <td data-label="Balance">
+                                {% if d.remaining_balance is not none %}
+                                    {% if d.remaining_balance <= d.amount %}
+                                        <span class="text-warning"><i class="bi bi-exclamation-triangle"></i> ETB {{ '%.2f'|format(d.remaining_balance) }}</span>
+                                    {% else %}
+                                        ETB {{ '%.2f'|format(d.remaining_balance) }}
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Period">
+                                {{ d.start_date }}
+                                {% if d.end_date %} → {{ d.end_date }}{% else %} → ongoing{% endif %}
+                            </td>
+                            <td data-label="Ref #">{{ d.reference_number or '—' }}</td>
+                            <td data-label="Doc">
+                                {% if d.document_path %}
+                                    <a href="{{ d.document_path }}" target="_blank" class="btn btn-sm btn-outline-info"><i class="bi bi-file-earmark"></i></a>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Action">
+                                <button type="button" class="btn btn-sm btn-outline-danger" title="Stop deduction"
+                                        onclick="stopDeduction({{ d.id }}, '{{ d.label|e }}', this)">
+                                    <i class="bi bi-stop-circle"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No active deductions.</p>
+            {% endif %}
+
+            <!-- Inactive Deductions -->
+            {% if inactive_deductions %}
+            <details class="mt-2">
+                <summary class="text-muted" style="cursor:pointer">Stopped/Exhausted ({{ inactive_deductions|length }})</summary>
+                <div class="table-responsive mt-2">
+                    <table class="table table-sm table-hover mb-0 responsive-card">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Label</th>
+                                <th>Amount</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in inactive_deductions %}
+                            <tr class="text-muted">
+                                <td data-label="Type">{{ d.type_label }}</td>
+                                <td data-label="Label">{{ d.label }}</td>
+                                <td data-label="Amount">ETB {{ '%.2f'|format(d.amount) }}</td>
+                                <td data-label="Reason">{{ d.stopped_reason or '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Payslip History -->
+    <div class="card">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>{{ _('payslip_history') }}</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if payslips %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ _('date') }}</th>
+                            <th>{{ _('gross') }}</th>
+                            <th>Tax</th>
+                            <th>{{ employee_pension }}</th>
+                            <th>{{ _('net') }}</th>
+                            <th>{{ _('pdf') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payslips %}
+                        <tr>
+                            <td data-label="Date">{{ eth_only(p.generated_at) }}</td>
+                            <td data-label="Gross">{{ '%.2f'|format(p.gross_salary) }}</td>
+                            <td data-label="Tax">{{ '%.2f'|format(p.tax) }}</td>
+                            <td data-label="Pension">{{ '%.2f'|format(p.employee_pension) }}</td>
+                            <td data-label="Net"><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
+                            <td data-label="PDF">
+                                {% if p.pdf_file_path %}
+                                <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if payslips_pagination and payslips_pagination.pages > 1 %}
+            {{ render_pagination(payslips_pagination, 'employees.employee_detail', extra={'emp_id': employee.id}) }}
+            {% endif %}
+            {% else %}
+            <div class="text-center py-4 text-muted">
+                <p>{{ _('no_payslips') }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function deleteOvertime(entryId, btn) {
+    if (!confirm('Delete this overtime entry?')) return;
+    try {
+        const data = await EthioPayroll.ajax(`/overtime/${entryId}/delete`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        const row = btn.closest('tr');
+        if (row) { row.style.transition = 'opacity 0.3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function stopDeduction(dedId, label, btn) {
+    if (!confirm(`Stop deduction "${label}"?`)) return;
+    try {
+        const data = await EthioPayroll.ajax(`/deductions/${dedId}/stop`, {
+            method: 'POST',
+            body: JSON.stringify({ reason: 'Manually stopped' }),
+        });
+        EthioPayroll.toast(data.message, 'success');
+        const row = btn.closest('tr');
+        if (row) { row.style.transition = 'opacity 0.3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+
+async function reactivateEmployee(empId, name) {
+    if (!confirm(`Reactivate ${name}?`)) return;
+    try {
+        const data = await EthioPayroll.ajax(`/employees/${empId}/reactivate`, { method: 'POST' });
+        EthioPayroll.toast(data.message, 'success');
+        setTimeout(() => window.location.reload(), 500);
+    } catch (err) { EthioPayroll.toast(err.message, 'error'); }
+}
+</script>
+{% endblock %}

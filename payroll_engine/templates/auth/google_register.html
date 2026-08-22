@@ -1,0 +1,185 @@
+{% extends "auth/onboarding-base.html" %}
+{% block title %}Complete Registration — EthioPayroll{% endblock %}
+
+{% block content %}
+<!-- Left: Stepper -->
+<aside class="onboarding-stepper">
+    <div class="onboarding-stepper-card">
+        <h3 class="onboarding-stepper-title">Registration</h3>
+        <ul class="onboarding-stepper-list">
+            <li class="onboarding-step completed">
+                <div class="onboarding-step-dot">
+                    <span class="step-check material-symbols-outlined">check</span>
+                    <span class="step-number">1</span>
+                </div>
+                <div>
+                    <div class="onboarding-step-label">Google Sign-In</div>
+                    <div class="onboarding-step-desc">Authenticated</div>
+                </div>
+            </li>
+            <li class="onboarding-step active">
+                <div class="onboarding-step-dot">
+                    <span class="step-number">2</span>
+                </div>
+                <div>
+                    <div class="onboarding-step-label">Company Details</div>
+                    <div class="onboarding-step-desc">Phone & company</div>
+                </div>
+            </li>
+            <li class="onboarding-step">
+                <div class="onboarding-step-dot">3</div>
+                <div>
+                    <div class="onboarding-step-label">Complete</div>
+                    <div class="onboarding-step-desc">Access your workspace</div>
+                </div>
+            </li>
+        </ul>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<div class="onboarding-form-area">
+    <h1 class="onboarding-form-title">Complete your registration</h1>
+    <p class="onboarding-form-subtitle">Signed in as <strong>{{ email }}</strong>. Set up your company below.</p>
+
+    <form method="POST" action="{{ url_for('auth.google_register') }}" id="googleRegisterForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="onboarding-field">
+            <label for="phone">Phone Number <span style="color: var(--color-danger);">*</span></label>
+            <div class="onboarding-field-wrapper">
+                <div class="onboarding-phone-wrapper">
+                    <span class="onboarding-phone-prefix">+251</span>
+                    <input type="tel" id="phone" name="phone"
+                           required placeholder="911 234 567"
+                           pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
+                           title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+                </div>
+            </div>
+            <span class="field-hint">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</span>
+            <script>
+            document.getElementById('phone').addEventListener('input', function(e) {
+                let v = e.target.value.replace(/\D/g, '');
+                if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
+                    e.target.value = v.substring(1);
+                }
+            });
+            </script>
+        </div>
+
+        <div class="onboarding-field">
+            <label for="company_name">Company Name <span style="color: var(--color-danger);">*</span></label>
+            <div class="onboarding-field-wrapper">
+                <input type="text" id="company_name" name="company_name"
+                       required placeholder="Your company name">
+            </div>
+            <span class="field-hint">This will be used for your payroll workspace.</span>
+        </div>
+
+        <div class="onboarding-actions">
+            <a href="{{ url_for('auth.login') }}" class="onboarding-btn-back">
+                <span class="material-symbols-outlined">arrow_back</span> Back to sign in
+            </a>
+            <button type="button" class="onboarding-btn-next" id="reviewBtn">
+                Complete Registration
+                <span class="material-symbols-outlined">check</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Right Sidebar -->
+<aside class="onboarding-sidebar">
+    <div class="onboarding-checklist">
+        <div class="onboarding-checklist-header">
+            <span class="material-symbols-outlined">verified_user</span>
+            <h3>Preparation</h3>
+        </div>
+        <p class="onboarding-checklist-desc">To ensure a smooth setup process in accordance with Ethiopian regulations, gather these details:</p>
+        <ul class="onboarding-checklist-items">
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">info</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">TIN Number</span>
+                    <span class="onboarding-checklist-item-desc">Tax Identification Number</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">badge</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Employee Details</span>
+                    <span class="onboarding-checklist-item-desc">Basic info &amp; salaries</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">account_balance</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Bank Information</span>
+                    <span class="onboarding-checklist-item-desc">For direct deposits</span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="onboarding-help-card">
+        <div class="onboarding-help-header">
+            <span class="material-symbols-outlined">support_agent</span>
+            <h4>Need Help?</h4>
+        </div>
+        <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
+        <a href="/help" class="onboarding-help-link">
+            Contact Support <span class="material-symbols-outlined">open_in_new</span>
+        </a>
+    </div>
+</aside>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Your Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Please verify before completing registration:</p>
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="text-muted" style="width:40%">Phone</td>
+                        <td><strong id="confirmPhone"></strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Company</td>
+                        <td><strong id="confirmCompany"></strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Google Account</td>
+                        <td><strong>{{ email }}</strong></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Edit</button>
+                <button type="button" class="btn btn-primary" id="confirmSubmit">Looks Correct — Register</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.getElementById('reviewBtn').addEventListener('click', function() {
+    const form = document.getElementById('googleRegisterForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const phone = document.getElementById('phone').value.replace(/\D/g, '');
+    if (phone.length < 9 || !['7','9'].includes(phone[0])) {
+        alert('Phone must be 9 digits starting with 7 or 9.'); return;
+    }
+    const display = phone.length === 10 && phone.startsWith('0') ? phone.substring(1) : phone;
+    document.getElementById('confirmPhone').textContent = '+251 ' + display;
+    document.getElementById('confirmCompany').textContent = document.getElementById('company_name').value;
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+});
+document.getElementById('confirmSubmit').addEventListener('click', function() {
+    document.getElementById('googleRegisterForm').submit();
+});
+</script>
+{% endblock %}

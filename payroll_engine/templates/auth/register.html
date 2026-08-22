@@ -1,0 +1,291 @@
+{% extends "auth/onboarding-base.html" %}
+{% block title %}Register — EthioPayroll{% endblock %}
+
+{% block content %}
+<!-- Left Sidebar: Progress Stepper (Desktop) -->
+<aside class="onboarding-stepper">
+    <div class="onboarding-stepper-card">
+        <h3 class="onboarding-stepper-title">Registration</h3>
+        <ol class="onboarding-stepper-list">
+            <li class="onboarding-step active">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">1</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Account</h4>
+                <p class="onboarding-step-desc">Basic credentials</p>
+            </li>
+            <li class="onboarding-step">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">2</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Business Details</h4>
+                <p class="onboarding-step-desc">Company info</p>
+            </li>
+            <li class="onboarding-step">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">3</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Employee Setup</h4>
+                <p class="onboarding-step-desc">Initial batch</p>
+            </li>
+            <li class="onboarding-step">
+                <span class="onboarding-step-dot">
+                    <span class="step-number">4</span>
+                    <span class="material-symbols-outlined step-check">check</span>
+                </span>
+                <h4 class="onboarding-step-label">Verification</h4>
+                <p class="onboarding-step-desc">Final check</p>
+            </li>
+        </ol>
+    </div>
+</aside>
+
+<!-- Mobile Stepper -->
+<div class="onboarding-mobile-stepper">
+    <div class="onboarding-mobile-step active">
+        <span class="onboarding-mobile-step-dot">1</span>
+        <span>Account</span>
+    </div>
+    <span class="onboarding-mobile-step-connector"></span>
+    <div class="onboarding-mobile-step">
+        <span class="onboarding-mobile-step-dot">2</span>
+        <span>Business</span>
+    </div>
+    <span class="onboarding-mobile-step-connector"></span>
+    <div class="onboarding-mobile-step">
+        <span class="onboarding-mobile-step-dot">3</span>
+        <span>Employees</span>
+    </div>
+    <span class="onboarding-mobile-step-connector"></span>
+    <div class="onboarding-mobile-step">
+        <span class="onboarding-mobile-step-dot">4</span>
+        <span>Verify</span>
+    </div>
+</div>
+
+<!-- Main Content: Registration Form -->
+<div class="onboarding-form-area">
+    <h1 class="onboarding-form-title">Create Account</h1>
+    <p class="onboarding-form-subtitle">Enter your basic details to start setting up your payroll environment.</p>
+
+    <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" style="max-width: 672px;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Name fields (3-column grid) -->
+        <div class="onboarding-field-grid">
+            <div class="onboarding-field">
+                <label for="firstName">First Name</label>
+                <input type="text" id="firstName" name="first_name" placeholder="e.g. Abebe">
+                <span class="field-hint">Legal given name.</span>
+            </div>
+            <div class="onboarding-field">
+                <label for="middleName">Middle Name</label>
+                <input type="text" id="middleName" name="middle_name" placeholder="e.g. Bekele">
+                <span class="field-hint">Father's name.</span>
+            </div>
+            <div class="onboarding-field">
+                <label for="lastName">Last Name</label>
+                <input type="text" id="lastName" name="last_name" placeholder="e.g. Kebede">
+                <span class="field-hint">Family name or Patronymic.</span>
+            </div>
+        </div>
+
+        <!-- Phone -->
+        <div class="onboarding-field">
+            <label for="phone">Phone Number <span style="color: var(--color-danger);">*</span></label>
+            <div class="onboarding-field-wrapper">
+                <div class="onboarding-phone-wrapper">
+                    <span class="onboarding-phone-prefix">+251</span>
+                    <input type="tel" id="phone" name="phone"
+                           required placeholder="911 234 567"
+                           pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
+                           title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+                </div>
+            </div>
+            <span class="field-hint">Used for two-factor authentication.</span>
+            <script>
+            document.getElementById('phone').addEventListener('input', function(e) {
+                let v = e.target.value.replace(/\D/g, '');
+                if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
+                    e.target.value = v.substring(1);
+                }
+            });
+            </script>
+        </div>
+
+        <!-- Email -->
+        <div class="onboarding-field">
+            <label for="email">{{ _('email') }} <span style="font-weight: 400; color: var(--text-tertiary);">(optional)</span></label>
+            <input type="email" id="email" name="email" placeholder="name@company.com" inputmode="email">
+            <span class="field-hint">Enter your work email for corporate security and communication.</span>
+        </div>
+
+        <!-- Password -->
+        <div class="onboarding-field">
+            <label for="password">{{ _('password') }} <span style="color: var(--color-danger);">*</span></label>
+            <div class="onboarding-field-wrapper">
+                <input type="password" id="password" name="password"
+                       required minlength="8" placeholder="••••••••">
+                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                    <span class="material-symbols-outlined">visibility_off</span>
+                </button>
+            </div>
+            <span class="field-hint">Must be at least 8 characters with a number and symbol.</span>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="onboarding-field">
+            <label for="password2">Confirm Password <span style="color: var(--color-danger);">*</span></label>
+            <div class="onboarding-field-wrapper">
+                <input type="password" id="password2" name="password2"
+                       required placeholder="••••••••">
+                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                    <span class="material-symbols-outlined">visibility_off</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="onboarding-actions">
+            <a href="{{ url_for('auth.login') }}" class="onboarding-btn-back">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            <button type="button" class="onboarding-btn-next" id="reviewBtn">
+                Continue
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+        </div>
+
+        <!-- Google Sign-In -->
+        {% if google_enabled %}
+        <div class="onboarding-social-section">
+            <span class="onboarding-social-label">Or continue with</span>
+            <a href="{{ url_for('auth.google_login') }}" class="onboarding-google-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                Sign in with Google
+            </a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Right Sidebar: Compliance Checklist -->
+<aside class="onboarding-sidebar">
+    <div class="onboarding-checklist">
+        <div class="onboarding-checklist-header">
+            <span class="material-symbols-outlined">verified_user</span>
+            <h3>Preparation</h3>
+        </div>
+        <p class="onboarding-checklist-desc">To ensure a smooth setup process in accordance with Ethiopian regulations, gather these details:</p>
+        <ul class="onboarding-checklist-items">
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">info</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">TIN Number</span>
+                    <span class="onboarding-checklist-item-desc">Tax Identification Number</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">badge</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Employee Details</span>
+                    <span class="onboarding-checklist-item-desc">Basic info &amp; salaries</span>
+                </div>
+            </li>
+            <li class="onboarding-checklist-item">
+                <span class="material-symbols-outlined">account_balance</span>
+                <div>
+                    <span class="onboarding-checklist-item-label">Bank Information</span>
+                    <span class="onboarding-checklist-item-desc">For direct deposits</span>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="onboarding-help-card">
+        <div class="onboarding-help-header">
+            <span class="material-symbols-outlined">support_agent</span>
+            <h4>Need Help?</h4>
+        </div>
+        <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
+        <a href="/help" class="onboarding-help-link">
+            Contact Support <span class="material-symbols-outlined">open_in_new</span>
+        </a>
+    </div>
+</aside>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Your Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Please verify your information before creating your account:</p>
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="text-muted" style="width:40%">Name</td>
+                        <td><strong id="confirmName"></strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Phone</td>
+                        <td><strong id="confirmPhone"></strong></td>
+                    </tr>
+                    <tr id="confirmEmailRow" style="display:none">
+                        <td class="text-muted">Email</td>
+                        <td><strong id="confirmEmail"></strong></td>
+                    </tr>
+                </table>
+                <div class="auth-info">
+                    <i class="bi bi-info-circle"></i>
+                    <span>You'll use <strong>+251 <span id="confirmPhoneLogin"></span></strong> to log in.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Edit</button>
+                <button type="button" class="btn btn-primary" id="confirmSubmit">Looks Correct — Create Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.getElementById('reviewBtn').addEventListener('click', function() {
+    const form = document.getElementById('registerForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const pw = document.getElementById('password').value;
+    const pw2 = document.getElementById('password2').value;
+    if (pw !== pw2) { alert('Passwords do not match.'); return; }
+    const phone = document.getElementById('phone').value.replace(/\D/g, '');
+    if (phone.length < 9 || !['7','9'].includes(phone[0])) {
+        alert('Phone must be 9 digits starting with 7 or 9.'); return;
+    }
+    const display = phone.length === 10 && phone.startsWith('0') ? phone.substring(1) : phone;
+    // Build name
+    const first = document.getElementById('firstName').value;
+    const middle = document.getElementById('middleName').value;
+    const last = document.getElementById('lastName').value;
+    const fullName = [first, middle, last].filter(Boolean).join(' ') || '—';
+    document.getElementById('confirmName').textContent = fullName;
+    document.getElementById('confirmPhone').textContent = '+251 ' + display;
+    document.getElementById('confirmPhoneLogin').textContent = display;
+    const email = document.getElementById('email').value;
+    const emailRow = document.getElementById('confirmEmailRow');
+    if (email) { emailRow.style.display = ''; document.getElementById('confirmEmail').textContent = email; }
+    else { emailRow.style.display = 'none'; }
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+});
+document.getElementById('confirmSubmit').addEventListener('click', function() {
+    document.getElementById('registerForm').submit();
+});
+</script>
+{% endblock %}

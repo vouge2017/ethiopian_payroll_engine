@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}Final Settlement - {{ employee.name }}{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="mb-1">Final Settlement</h4>
+                    <p class="text-muted mb-0">{{ employee.name }} ({{ employee.employee_id }})</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Employee
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Settlement Summary -->
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header bg-transparent">
+                            <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Settlement Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Employee Info -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Employee</small>
+                                    <div class="fw-bold">{{ employee.name }}</div>
+                                    <div>{{ employee.employee_id }} · {{ employee.department or 'No department' }}</div>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <small class="text-muted">Termination</small>
+                                    <div class="fw-bold">{{ settlement.termination_reason|replace('_', ' ')|title }}</div>
+                                    <div>{{ settlement.end_date.strftime('%d %B %Y') }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Service Period -->
+                            <div class="alert alert-light mb-4">
+                                <div class="row">
+                                    <div class="col-4">
+                                        <small class="text-muted">Start Date</small>
+                                        <div>{{ settlement.start_date.strftime('%d %B %Y') }}</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted">End Date</small>
+                                        <div>{{ settlement.end_date.strftime('%d %B %Y') }}</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted">Years of Service</small>
+                                        <div class="fw-bold">{{ settlement.years_of_service }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Earnings -->
+                            <h6 class="text-success mb-3"><i class="bi bi-plus-circle me-2"></i>EARNINGS</h6>
+                            <div class="table-responsive">
+                            <table class="table table-sm responsive-card">
+                                <tbody>
+                                    <tr>
+                                        <td>Outstanding Salary ({{ settlement.end_date.strftime('%B %Y') }})</td>
+                                        <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.outstanding_salary) }}</td>
+                                    </tr>
+                                    {% if settlement.severance_pay > 0 %}
+                                    <tr>
+                                        <td>
+                                            Severance Pay
+                                            <small class="text-muted d-block">Monthly salary × {{ settlement.years_of_service }} years (capped at 12 months)</small>
+                                        </td>
+                                        <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.severance_pay) }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if settlement.leave_encashment > 0 %}
+                                    <tr>
+                                        <td>
+                                            Leave Encashment
+                                            <small class="text-muted d-block">Unused annual leave days</small>
+                                        </td>
+                                        <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.leave_encashment) }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr class="table-success">
+                                        <td class="fw-bold">Total Earnings</td>
+                                        <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.total_earnings) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+</div>
+
+                            <!-- Deductions -->
+                            <h6 class="text-danger mt-4 mb-3"><i class="bi bi-dash-circle me-2"></i>DEDUCTIONS</h6>
+                            <div class="table-responsive">
+                            <table class="table table-sm responsive-card">
+                                <tbody>
+                                    <tr>
+                                        <td>Pension (7% of basic salary)</td>
+                                        <td class="text-end">- ETB {{ '%.2f'|format(settlement.pension_deduction) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Income Tax on salary portion</td>
+                                        <td class="text-end">- ETB {{ '%.2f'|format(settlement.tax_on_salary) }}</td>
+                                    </tr>
+                                    {% if settlement.pending_deductions > 0 %}
+                                    <tr>
+                                        <td>
+                                            Pending Deductions
+                                            {% if settlement.deduction_details %}
+                                            <small class="text-muted d-block">
+                                                {% for ded in settlement.deduction_details %}
+                                                {{ ded.label }}: ETB {{ ded.amount }}{% if not loop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">- ETB {{ '%.2f'|format(settlement.pending_deductions) }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr class="table-danger">
+                                        <td class="fw-bold">Total Deductions</td>
+                                        <td class="text-end fw-bold">- ETB {{ '%.2f'|format(settlement.total_deductions) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+</div>
+
+                            <!-- Net Final Payment -->
+                            <div class="alert alert-success mt-4 mb-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0">NET FINAL PAYMENT</h5>
+                                        <small class="text-muted">Amount payable to {{ employee.name }}</small>
+                                    </div>
+                                    <h3 class="mb-0 text-success">ETB {{ '%.2f'|format(settlement.net_final_payment) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Legal Reference -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h6 class="mb-3"><i class="bi bi-book me-2"></i>Legal Reference</h6>
+                            <p class="text-muted small mb-2">
+                                Severance calculation per <strong>Labor Proclamation No. 1156/2019, Articles 40-42</strong>:
+                            </p>
+                            <ul class="text-muted small mb-0">
+                                <li>Severance = monthly salary × years of service</li>
+                                <li>Maximum cap: 12 months of salary</li>
+                                <li>Applies to: redundancy, mutual agreement</li>
+                                <li>Does not apply to: resignation, termination for cause</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-md-4">
+                    <!-- Payment Info -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-transparent">
+                            <h6 class="mb-0"><i class="bi bi-bank me-2"></i>Payment Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <small class="text-muted">Payment Method</small>
+                                <div class="fw-bold">{{ settlement.payment_method or 'Not specified' }}</div>
+                            </div>
+                            {% if employee.bank_account %}
+                            <div class="mb-3">
+                                <small class="text-muted">Bank Account</small>
+                                <div class="fw-bold">{{ employee.bank_account }}</div>
+                            </div>
+                            {% endif %}
+                            <div class="mb-3">
+                                <small class="text-muted">Settlement Created</small>
+                                <div>{{ settlement.created_at.strftime('%d %B %Y at %H:%M') }}</div>
+                            </div>
+                            {% if settlement.paid_at %}
+                            <div class="mb-3">
+                                <small class="text-muted">Paid On</small>
+                                <div class="text-success fw-bold">{{ settlement.paid_at.strftime('%d %B %Y') }}</div>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Pending Payment</strong>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-transparent">
+                            <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" onclick="window.print()">
+                                    <i class="bi bi-printer me-2"></i>Print Settlement
+                                </button>
+                                <button class="btn btn-outline-success" disabled>
+                                    <i class="bi bi-check-circle me-2"></i>Mark as Paid
+                                </button>
+                                <button class="btn btn-outline-info" disabled>
+                                    <i class="bi bi-download me-2"></i>Download PDF
+                                </button>
+                            </div>
+                            <hr>
+                            <div class="text-muted small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                PDF generation and payment tracking will be available in a future update.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Trail -->
+                    <div class="card">
+                        <div class="card-header bg-transparent">
+                            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Audit Trail</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="small">
+                                <div class="d-flex mb-2">
+                                    <div class="text-muted me-2">{{ settlement.created_at.strftime('%H:%M') }}</div>
+                                    <div>Settlement created</div>
+                                </div>
+                                <div class="d-flex mb-2">
+                                    <div class="text-muted me-2">{{ settlement.created_at.strftime('%H:%M') }}</div>
+                                    <div>Employee deactivated</div>
+                                </div>
+                                {% if settlement.paid_at %}
+                                <div class="d-flex">
+                                    <div class="text-muted me-2">{{ settlement.paid_at.strftime('%H:%M') }}</div>
+                                    <div>Payment processed</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .card:last-child, .card:nth-last-child(2) { display: none !important; }
+    .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Year-to-Date Earnings — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Year-to-Date Earnings</h2>
+            <p class="text-muted mb-0">{{ employee.name }} · {{ year }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-ghost dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-calendar me-1"></i>{{ year }}
+                </button>
+                <ul class="dropdown-menu">
+                    {% for y in available_years %}
+                    <li><a class="dropdown-item {% if y == year %}active{% endif %}" href="{{ url_for('selfservice.ytd_earnings', year=y) }}">{{ y }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <a href="{{ url_for('selfservice.tax_certificate', year=year) }}" class="btn btn-ghost">
+                <i class="bi bi-file-earmark-text me-1"></i>Tax Certificate
+            </a>
+            <a href="{{ url_for('selfservice.download_tax_certificate', year=year) }}" class="btn btn-primary">
+                <i class="bi bi-download me-1"></i>Download
+            </a>
+        </div>
+    </div>
+
+    <!-- YTD Summary Cards — label + number only -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Total Gross</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.gross) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Total Tax Paid</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.tax) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Total Pension</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.pension_employee) }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card">
+                <div class="metric-label">Total Net</div>
+                <div class="metric-value">ETB {{ "{:,.0f}".format(ytd.net) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Breakdown -->
+    <div class="card mb-4">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">Monthly Breakdown</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if ytd.payslips %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th class="text-end">Gross</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Pension</th>
+                            <th class="text-end">Net</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ps in ytd.payslips %}
+                        <tr>
+                            <td data-label="Period"><strong>{{ ps.period }}</strong></td>
+                            <td data-label="Gross" class="text-end">ETB {{ "{:,.0f}".format(ps.gross) }}</td>
+                            <td data-label="Tax" class="text-end text-warning">ETB {{ "{:,.0f}".format(ps.tax) }}</td>
+                            <td data-label="Pension" class="text-end">ETB {{ "{:,.0f}".format(ps.pension) }}</td>
+                            <td data-label="Net" class="text-end fw-bold text-success">ETB {{ "{:,.0f}".format(ps.net) }}</td>
+                            <td data-label="" class="text-end">
+                                <a href="{{ url_for('portal.my_payslip_detail', payslip_id=ps.payslip_id) }}" class="btn btn-sm btn-ghost">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td>YTD TOTAL</td>
+                            <td class="text-end">ETB {{ "{:,.0f}".format(ytd.gross) }}</td>
+                            <td class="text-end text-warning">ETB {{ "{:,.0f}".format(ytd.tax) }}</td>
+                            <td class="text-end">ETB {{ "{:,.0f}".format(ytd.pension_employee) }}</td>
+                            <td class="text-end text-success">ETB {{ "{:,.0f}".format(ytd.net) }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-receipt"></i></div>
+                <h4>No payslips for {{ year }}</h4>
+                <p>Your payslip history will appear here once payroll is processed.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Chart -->
+    {% if ytd.payslips|length > 1 %}
+    <div class="card">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">Earnings Trend</h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container" style="height:250px;">
+                <canvas id="ytdChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if ytd.payslips|length > 1 %}
+<script>
+new Chart(document.getElementById('ytdChart'), {
+    type: 'line',
+    data: {
+        labels: [{% for ps in ytd.payslips %}'{{ ps.period }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [
+            {
+                label: 'Gross',
+                data: [{% for ps in ytd.payslips %}{{ ps.gross }}{% if not loop.last %},{% endif %}{% endfor %}],
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37,99,235,0.1)',
+                fill: true,
+                tension: 0.3
+            },
+            {
+                label: 'Net',
+                data: [{% for ps in ytd.payslips %}{{ ps.net }}{% if not loop.last %},{% endif %}{% endfor %}],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.1)',
+                fill: true,
+                tension: 0.3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8 } },
+        scales: { y: { beginAtZero: true, ticks: { callback: (v) => `ETB ${(v/1000).toFixed(0)}k` } } }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

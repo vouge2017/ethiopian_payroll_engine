@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Verification Summary — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5" style="max-width: 900px; margin: 0 auto;">
+  <div class="mb-4">
+    <h2 class="fw-bold mb-1">Verification Summary</h2>
+    <p class="text-muted">Your review of EthioPayroll's calculations</p>
+  </div>
+
+  <!-- Summary stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="fs-1 fw-bold text-success">{{ correct_count }}</div>
+          <small class="text-muted">Confirmed Correct</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="fs-1 fw-bold text-warning">{{ flagged_count }}</div>
+          <small class="text-muted">Flagged with Corrections</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body text-center">
+          <div class="fs-1 fw-bold text-muted">{{ total - verified_count }}</div>
+          <small class="text-muted">Not Yet Reviewed</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if flagged_count > 0 %}
+  <!-- Corrections needed -->
+  <div class="alert alert-warning mb-4">
+    <h5 class="fw-semibold mb-3"><i class="bi bi-exclamation-triangle me-2"></i>Corrections Needed</h5>
+    {% for r in results %}
+    {% if r.verified and not r.correct %}
+    <div class="{% if not loop.last %}border-bottom pb-2 mb-2{% endif %}">
+      <div class="fw-semibold">{{ r.step.title }}</div>
+      {% if r.correction %}
+      <div class="small mt-1"><strong>Correction:</strong> {{ r.correction }}</div>
+      {% endif %}
+      {% if r.notes %}
+      <div class="small text-muted mt-1"><strong>Notes:</strong> {{ r.notes }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if correct_count == total %}
+  <!-- All correct -->
+  <div class="alert alert-success text-center mb-4">
+    <i class="bi bi-check-circle-fill fs-1 d-block mb-2"></i>
+    <h4 class="fw-semibold">All Calculations Verified</h4>
+    <p class="mb-0">All {{ total }} sections confirmed as correct. The system is ready for pilot use.</p>
+  </div>
+  {% endif %}
+
+  <!-- Detailed results -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="fw-semibold mb-3">Detailed Results</h5>
+      {% for r in results %}
+      <div class="d-flex align-items-center gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+        <div class="flex-shrink-0">
+          {% if r.verified and r.correct %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+          {% elif r.verified and not r.correct %}
+            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+          {% else %}
+            <i class="bi bi-circle text-muted"></i>
+          {% endif %}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-semibold small">{{ r.step.title }}</div>
+          {% if r.correction %}
+            <small class="text-warning">Correction: {{ r.correction[:80] }}{% if r.correction|length > 80 %}...{% endif %}</small>
+          {% endif %}
+        </div>
+        <a href="{{ url_for('verification.verification_step', step_id=r.step.id) }}"
+           class="btn btn-sm btn-outline-primary flex-shrink-0">
+          {% if r.verified %}Review{% else %}Start{% endif %}
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="d-flex align-items-center gap-3 mt-4">
+    <a href="{{ url_for('verification.verification_home') }}" class="btn btn-ghost">
+      <i class="bi bi-arrow-left me-1"></i>Back to Verification
+    </a>
+    {% if flagged_count > 0 %}
+    <small class="text-muted">Corrections have been saved. The development team will review them.</small>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — EthioPayroll{% endblock %}
+{% block content %}
+<div class="container-xxl py-4 px-3 px-md-4 px-lg-5">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Dashboard</h2>
+            <p class="text-muted mb-0">{{ today_eth }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-ghost no-print">
+                <i class="bi bi-printer me-1"></i>Print
+            </button>
+            <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost no-print">
+                <i class="bi bi-person-plus me-1"></i>Add Employee
+            </a>
+            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary no-print">
+                <i class="bi bi-cloud-upload me-1"></i>{{ _('run_payroll') }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Metric Cards — label + number only, no icon badges -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-label">Employees</div>
+                <div class="metric-value">{{ employee_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-label">Compliance</div>
+                <div class="metric-value">{{ compliance_score|round(0)|int }}%</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-label">Payroll Runs</div>
+                <div class="metric-value">{{ recent_runs|length }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card metric-card animate-fade-in">
+                <div class="metric-label">Overtime</div>
+                <div class="metric-value">{{ ot_total_hours or 0 }}h</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trust Layer: Change Summary — distinct card with left accent border -->
+    {% if change_summary and change_summary.has_previous %}
+    <div class="card trust-card mb-4 animate-fade-in" style="border-left: 4px solid {% if change_summary.variance_flag %}var(--color-warning){% else %}var(--color-success){% endif %};">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h5 class="mb-1">Payroll Change Summary</h5>
+                    <p class="text-muted mb-0">{{ change_summary.current.period }} vs {{ change_summary.previous.period }}</p>
+                </div>
+                {% if change_summary.variance_flag %}
+                <span class="badge bg-warning text-dark fs-6">Review needed</span>
+                {% else %}
+                <span class="badge bg-success fs-6">No unusual changes</span>
+                {% endif %}
+            </div>
+
+            <!-- Delta summary -->
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-2 rounded" style="background: var(--bg-tertiary);">
+                        <div class="text-muted small">Employees</div>
+                        <div class="fw-bold">{{ change_summary.current.employee_count }}</div>
+                        <small class="{% if change_summary.delta.employee_count > 0 %}text-success{% elif change_summary.delta.employee_count < 0 %}text-danger{% else %}text-muted{% endif %}">
+                            {% if change_summary.delta.employee_count > 0 %}+{% endif %}{{ change_summary.delta.employee_count }}
+                        </small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-2 rounded" style="background: var(--bg-tertiary);">
+                        <div class="text-muted small">Total Gross</div>
+                        <div class="fw-bold">ETB {{ '{:,.0f}'.format(change_summary.current.total_gross) }}</div>
+                        <small class="{% if change_summary.delta_pct.total_gross > 0 %}text-success{% elif change_summary.delta_pct.total_gross < 0 %}text-danger{% else %}text-muted{% endif %}">
+                            {% if change_summary.delta_pct.total_gross > 0 %}+{% endif %}{{ change_summary.delta_pct.total_gross }}%
+                        </small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-2 rounded" style="background: var(--bg-tertiary);">
+                        <div class="text-muted small">Tax Withheld</div>
+                        <div class="fw-bold">ETB {{ '{:,.0f}'.format(change_summary.current.total_tax) }}</div>
+                        <small class="{% if change_summary.delta_pct.total_tax > 0 %}text-warning{% elif change_summary.delta_pct.total_tax < 0 %}text-success{% else %}text-muted{% endif %}">
+                            {% if change_summary.delta_pct.total_tax > 0 %}+{% endif %}{{ change_summary.delta_pct.total_tax }}%
+                        </small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-2 rounded" style="background: var(--bg-tertiary);">
+                        <div class="text-muted small">Total Net</div>
+                        <div class="fw-bold">ETB {{ '{:,.0f}'.format(change_summary.current.total_net) }}</div>
+                        <small class="{% if change_summary.delta_pct.total_net > 0 %}text-success{% elif change_summary.delta_pct.total_net < 0 %}text-danger{% else %}text-muted{% endif %}">
+                            {% if change_summary.delta_pct.total_net > 0 %}+{% endif %}{{ change_summary.delta_pct.total_net }}%
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What changed -->
+            {% if change_summary.changes %}
+            <div class="mt-3">
+                <h6 class="fw-bold mb-2">What changed:</h6>
+                <ul class="mb-0">
+                    {% for change in change_summary.changes[:5] %}
+                    <li class="mb-1">
+                        {% if change.direction == 'up' %}
+                        <i class="bi bi-arrow-up-circle text-success me-1"></i>
+                        {% elif change.direction == 'down' %}
+                        <i class="bi bi-arrow-down-circle text-danger me-1"></i>
+                        {% else %}
+                        <i class="bi bi-info-circle text-muted me-1"></i>
+                        {% endif %}
+                        {{ change.description }}
+                    </li>
+                    {% endfor %}
+                    {% if change_summary.changes|length > 5 %}
+                    <li class="text-muted">... and {{ change_summary.changes|length - 5 }} more changes</li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0 mt-2"><i class="bi bi-check-circle text-success me-1"></i>No changes from last month.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Needed -->
+    {% set has_actions = false %}
+    {% if deadlines %}
+        {% if deadlines.erca_days_left is defined and deadlines.erca_days_left <= 3 %}{% set has_actions = true %}{% endif %}
+        {% if deadlines.pension_days_left is defined and deadlines.pension_days_left <= 3 %}{% set has_actions = true %}{% endif %}
+        {% if deadlines.pssa_days_left is defined and deadlines.pssa_days_left <= 3 %}{% set has_actions = true %}{% endif %}
+    {% endif %}
+    {% if has_actions or ot_over_limit %}
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <h5 class="fw-bold mb-3"><i class="bi bi-exclamation-circle me-2 text-warning"></i>Action Needed</h5>
+        </div>
+        {% if deadlines.erca_days_left is defined and deadlines.erca_days_left <= 3 %}
+        <div class="col-md-4">
+            <div class="card action-card {{ 'danger' if deadlines.erca_days_left < 0 else '' }}">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-building"></i>
+                        <div>
+                            <div class="fw-bold">ERCA Filing</div>
+                            <div class="text-muted small">{% if deadlines.erca_days_left < 0 %}Overdue by {{ abs(deadlines.erca_days_left) }} days{% else %}Due in {{ deadlines.erca_days_left }} days{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if deadlines.pension_days_left is defined and deadlines.pension_days_left <= 3 %}
+        <div class="col-md-4">
+            <div class="card action-card {{ 'danger' if deadlines.pension_days_left < 0 else '' }}">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-piggy-bank"></i>
+                        <div>
+                            <div class="fw-bold">Pension Remittance</div>
+                            <div class="text-muted small">{% if deadlines.pension_days_left < 0 %}Overdue by {{ abs(deadlines.pension_days_left) }} days{% else %}Due in {{ deadlines.pension_days_left }} days{% endif %}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if ot_over_limit %}
+        <div class="col-md-4">
+            <div class="card action-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history"></i>
+                        <div>
+                            <div class="fw-bold">Overtime Alert</div>
+                            <div class="text-muted small">{{ ot_employee_count }} employee(s) over monthly limit</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Charts Row -->
+    {% if last_month_summary %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card animate-fade-in">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Payroll Summary — {{ last_month_summary.period }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="text-muted small mb-1">Gross</div>
+                                <div class="fw-bold">ETB {{ "{:,.0f}".format(last_month_summary.total_gross) }}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="text-muted small mb-1">Tax Withheld</div>
+                                <div class="fw-bold text-warning">ETB {{ "{:,.0f}".format(last_month_summary.total_tax) }}</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="text-muted small mb-1">Net Paid</div>
+                                <div class="fw-bold text-success">ETB {{ "{:,.0f}".format(last_month_summary.total_net) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container" id="chart-payroll-skeleton">
+                        <div class="skeleton skeleton-card" style="height: 220px;"></div>
+                    </div>
+                    <div class="chart-container" id="chart-payroll-real" style="display:none;">
+                        <canvas id="payrollBreakdownChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card animate-fade-in">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0">Deductions Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" id="chart-deductions-skeleton">
+                        <div class="skeleton skeleton-card" style="height: 220px;"></div>
+                    </div>
+                    <div class="chart-container" id="chart-deductions-real" style="display:none;">
+                        <canvas id="deductionsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if completed_runs_count == 0 %}
+    <!-- First-Run Wizard -->
+    <div class="card border-0 mb-4" style="background: linear-gradient(135deg, var(--brand-primary-soft) 0%, #f0f9ff 100%); border: 2px solid var(--brand-primary-light) !important;">
+        <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-3 mb-3" style="width: 64px; height: 64px; background: var(--brand-primary); box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);">
+                    <i class="bi bi-lightning-charge text-white fs-3"></i>
+                </div>
+                <h3 class="fw-bold">Welcome! Let's run your first payroll</h3>
+                <p class="text-muted mb-0">Follow these steps to get started.</p>
+            </div>
+
+            <!-- Onboarding Progress -->
+            <div class="d-flex justify-content-center mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>Company Created</span>
+                    </div>
+                    <i class="bi bi-arrow-right text-muted"></i>
+                    <div class="d-flex align-items-center gap-1">
+                        {% if employee_count > 0 %}
+                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>{{ employee_count }} Employees</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-primary px-3 py-2">2. Add Employees</span>
+                        {% endif %}
+                    </div>
+                    <i class="bi bi-arrow-right text-muted"></i>
+                    <div class="d-flex align-items-center gap-1">
+                        {% if recent_runs|length > 0 %}
+                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>Payroll Run</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-secondary px-3 py-2">3. Run Payroll</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                {% if employee_count == 0 %}
+                <a href="{{ url_for('wizard.quick_start') }}" class="btn btn-primary btn-lg me-2" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
+                    <i class="bi bi-lightning me-2"></i>Quick Start
+                </a>
+                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost btn-lg" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
+                    <i class="bi bi-person-plus me-2"></i>Add One by One
+                </a>
+                {% else %}
+                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary btn-lg" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
+                    <i class="bi bi-cloud-upload me-2"></i>Run Your First Payroll
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Compliance Deadlines -->
+    {% if deadlines %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card animate-fade-in">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-muted small fw-semibold">ERCA Filing</div>
+                            <div class="fw-bold">{{ eth_date(deadlines.erca_deadline[:10]|default(deadlines.erca_deadline, true)) if deadlines.erca_deadline else 'N/A' }}</div>
+                        </div>
+                        <span class="badge {{ 'badge-success' if deadlines.erca_days_left > 7 else 'badge-warning' if deadlines.erca_days_left > 0 else 'badge-danger' }}">
+                            {% if deadlines.erca_days_left < 0 %}OVERDUE{% else %}{{ deadlines.erca_days_left }}d{% endif %}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('reports.download_erca_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="bi bi-download me-1"></i>Download ERCA
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card animate-fade-in">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-muted small fw-semibold">PSSA Remittance</div>
+                            <div class="fw-bold">{{ eth_date(deadlines.pssa_deadline[:10]|default(deadlines.pssa_deadline, true)) if deadlines.pssa_deadline else 'N/A' }}</div>
+                        </div>
+                        <span class="badge {{ 'badge-success' if deadlines.pssa_days_left > 7 else 'badge-warning' if deadlines.pssa_days_left > 0 else 'badge-danger' }}">
+                            {% if deadlines.pssa_days_left < 0 %}OVERDUE{% else %}{{ deadlines.pssa_days_left }}d{% endif %}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('reports.download_pension_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="bi bi-download me-1"></i>Download Pension
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card animate-fade-in">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <div class="text-muted small fw-semibold">Disbursement</div>
+                            <div class="fw-bold">{{ eth_date(deadlines.pension_deadline[:10]|default(deadlines.pension_deadline, true)) if deadlines.pension_deadline else 'N/A' }}</div>
+                        </div>
+                        <span class="badge {{ 'badge-success' if deadlines.pension_days_left > 7 else 'badge-warning' if deadlines.pension_days_left > 0 else 'badge-danger' }}">
+                            {% if deadlines.pension_days_left < 0 %}OVERDUE{% else %}{{ deadlines.pension_days_left }}d{% endif %}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('reports.filing_history') }}" class="btn btn-sm btn-ghost w-100 mt-2">
+                        <i class="bi bi-clock-history me-1"></i>Filing History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Overtime Alert -->
+    {% if ot_over_limit %}
+    <div class="alert alert-danger mb-4 animate-fade-in">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+            <div>
+                <strong>Overtime Limit Exceeded</strong>
+                <div class="small mt-1">
+                    {% for item in ot_over_limit %}
+                    <span class="badge bg-danger me-1">{{ item.name }}: {{ item.hours }}h</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Payroll Runs -->
+    <div class="card animate-fade-in">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Payroll Runs</h5>
+            <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-sm btn-ghost">View All</a>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_runs %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Period</th>
+                            <th>Status</th>
+                            <th>Payslips</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in recent_runs %}
+                        <tr>
+                            <td data-label="Reference"><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</code></td>
+                            <td data-label="Period">{{ run.period or eth_only(run.run_date) }}</td>
+                            <td data-label="Status">
+                                {% if run.status == 'completed' %}<span class="badge badge-success">Completed</span>
+                                {% elif run.status == 'locked' %}<span class="badge bg-dark">Locked</span>
+                                {% elif run.status == 'processing' %}<span class="badge badge-warning">Processing</span>
+                                {% else %}<span class="badge badge-info">{{ run.status|capitalize }}</span>{% endif %}
+                            </td>
+                            <td data-label="Payslips">{{ run.payslips|length }}</td>
+                            <td data-label="Actions">
+                                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-sm btn-ghost">
+                                    <i class="bi bi-eye me-1"></i>View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                <h4>No payroll runs yet</h4>
+                <p>Run your first payroll to see it here.</p>
+                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+                    <i class="bi bi-cloud-upload me-1"></i>Run Payroll
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if last_month_summary %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+function showChart(skeletonId, realId) {
+    const sk = document.getElementById(skeletonId);
+    const re = document.getElementById(realId);
+    if (sk) { sk.style.transition = 'opacity 0.2s'; sk.style.opacity = '0'; setTimeout(() => sk.style.display = 'none', 200); }
+    if (re) { re.style.display = 'block'; re.style.opacity = '0'; re.style.transition = 'opacity 0.3s'; requestAnimationFrame(() => re.style.opacity = '1'); }
+}
+
+// Payroll Breakdown Bar Chart
+const payrollCtx = document.getElementById('payrollBreakdownChart');
+if (payrollCtx) {
+    showChart('chart-payroll-skeleton', 'chart-payroll-real');
+    new Chart(payrollCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Gross', 'Pension', 'Tax', 'Net'],
+            datasets: [{
+                label: 'ETB',
+                data: [
+                    {{ last_month_summary.total_gross }},
+                    {{ last_month_summary.total_gross - last_month_summary.total_net - last_month_summary.total_tax }},
+                    {{ last_month_summary.total_tax }},
+                    {{ last_month_summary.total_net }}
+                ],
+                backgroundColor: ['#2563eb', '#f59e0b', '#ef4444', '#10b981'],
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    titleFont: { weight: '600' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (ctx) => `ETB ${ctx.parsed.y.toLocaleString()}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (v) => `ETB ${(v/1000).toFixed(0)}k`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Deductions Donut Chart
+const dedCtx = document.getElementById('deductionsChart');
+if (dedCtx) {
+    showChart('chart-deductions-skeleton', 'chart-deductions-real');
+    new Chart(dedCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Net Pay', 'Tax', 'Pension'],
+            datasets: [{
+                data: [
+                    {{ last_month_summary.total_net }},
+                    {{ last_month_summary.total_tax }},
+                    {{ last_month_summary.total_gross - last_month_summary.total_net - last_month_summary.total_tax }}
+                ],
+                backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                borderWidth: 0,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 16 }
+                },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (ctx) => `${ctx.label}: ETB ${ctx.parsed.toLocaleString()}`
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

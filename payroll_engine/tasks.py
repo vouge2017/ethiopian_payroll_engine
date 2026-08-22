@@ -195,14 +195,27 @@ def get_batch_status(batch_id):
     return counts
 
 
-def get_batch_jobs(batch_id):
+def get_batch_jobs(batch_id, company_id=None):
     """Get all jobs in a batch with their individual status.
+
+    Args:
+        batch_id: Batch UUID.
+        company_id: When provided, only jobs whose payslip belongs to this
+            company are returned. ALWAYS pass this from request-facing code —
+            batch IDs are client-supplied and must never be trusted alone.
 
     Returns list of dicts with payslip details.
     """
-    from payroll_engine.models import PayslipGenerationJob
+    from payroll_engine.models import PayrollRun, Payslip, PayslipGenerationJob
 
-    jobs = PayslipGenerationJob.query.filter_by(batch_id=batch_id).all()
+    query = PayslipGenerationJob.query.filter_by(batch_id=batch_id)
+    if company_id is not None:
+        query = (
+            query.join(Payslip, PayslipGenerationJob.payslip_id == Payslip.id)
+            .join(PayrollRun, Payslip.payroll_run_id == PayrollRun.id)
+            .filter(PayrollRun.company_id == company_id)
+        )
+    jobs = query.all()
     results = []
     for job in jobs:
         ps = job.payslip

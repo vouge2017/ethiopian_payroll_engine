@@ -17,6 +17,23 @@ def _company_id():
     return session.get('active_company_id', current_user.company_id)
 
 
+def get_tenant_or_404(model, record_id, company_id=None):
+    """Fetch a tenant-scoped record by ID, enforcing company ownership.
+
+    Use this INSTEAD of Model.query.get() / db.session.get() / get_or_404()
+    whenever the ID comes from a route parameter on a model that carries
+    company_id. Returns 404 (not 403) so IDs are not enumerable across tenants.
+
+    Args:
+        model: Model class with a company_id column.
+        record_id: Primary key from the request.
+        company_id: Defaults to the session's active company.
+    """
+    return (
+        model.query.filter_by(id=record_id, company_id=company_id or _company_id()).first_or_404()
+    )
+
+
 def role_required(*roles):
     """Restrict access to users with specific roles.
 

@@ -22,6 +22,7 @@ from flask import (
     url_for,
 )
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 
 from payroll_engine import db, limiter, trust_cache
@@ -1302,6 +1303,28 @@ def historical_import():
                     flash(f'... and {len(errors) - 10} more errors.', 'warning')
                 return redirect(request.url)
 
+            # Guard: never mutate payslips on LOCKED runs — abort before any write
+            locked_periods = sorted(
+                {buf['period_str'] for buf in rows_buffer if buf['existing'] and buf['existing'].status == 'locked'}
+            )
+            if locked_periods:
+                db.session.rollback()
+                flash(
+                    f'Import aborted: period(s) {", ".join(locked_periods)} are LOCKED. '
+                    'Ask the owner to unlock them first.',
+                    'danger',
+                )
+                return redirect(request.url)
+
+            # Employer pension is 11% of salary (Proclamation 1268/2022).
+            # The CSV carries the employee share only; derive the employer
+            # share instead of writing 0 (which corrupted pension filings).
+            from payroll_engine.pension import DEFAULT_EMPLOYER_RATE
+
+            def _employer_share(buf):
+                base = buf['basic'] if buf['basic'] > 0 else buf['gross']
+                return (base * DEFAULT_EMPLOYER_RATE).quantize(Decimal('0.01'))
+
             # Apply buffered rows
             for buf in rows_buffer:
                 if buf['existing']:
@@ -1312,6 +1335,7 @@ def historical_import():
                         existing_payslip.gross_salary = buf['gross']
                         existing_payslip.tax = buf['tax']
                         existing_payslip.employee_pension = buf['pension']
+                        existing_payslip.employer_pension = _employer_share(buf)
                         existing_payslip.net_pay = buf['net']
                     else:
                         ps = Payslip(
@@ -1321,7 +1345,7 @@ def historical_import():
                             gross_salary=buf['gross'],
                             tax=buf['tax'],
                             employee_pension=buf['pension'],
-                            employer_pension=Decimal('0'),
+                            employer_pension=_employer_share(buf),
                             net_pay=buf['net'],
                         )
                         db.session.add(ps)
@@ -1344,12 +1368,23 @@ def historical_import():
                         gross_salary=buf['gross'],
                         tax=buf['tax'],
                         employee_pension=buf['pension'],
-                        employer_pension=Decimal('0'),
+                        employer_pension=_employer_share(buf),
                         net_pay=buf['net'],
                     )
                     db.session.add(ps)
 
-            db.session.commit()
+            try:
+                db.session.commit()
+            except IntegrityError:
+                # uq_company_period_active fired: a concurrent import created
+                # the same company+period between our check and this commit.
+                db.session.rollback()
+                flash(
+                    'Import aborted: another user imported one of these periods at the same time. '
+                    'Review the runs list and retry with the remaining rows.',
+                    'danger',
+                )
+                return redirect(url_for('payroll.payroll_runs'))
             trust_cache.invalidate_trust_cache(_company_id())
 
             if imported > 0:
@@ -2382,7 +2417,7 @@ def batch_pdf_status(batch_id):
     from payroll_engine.tasks import get_batch_jobs, get_batch_status
 
     status = get_batch_status(batch_id)
-    jobs = get_batch_jobs(batch_id)
+    jobs = get_batch_jobs(batch_id, company_id=_company_id())
 
     run_id = request.args.get('run_id', type=int)
 
@@ -2407,7 +2442,7 @@ def batch_pdf_download(batch_id):
     """
     from payroll_engine.tasks import get_batch_jobs
 
-    jobs = get_batch_jobs(batch_id)
+    jobs = get_batch_jobs(batch_id, company_id=_company_id())
     if not jobs:
         flash('Batch not found.', 'danger')
         return redirect(url_for('payroll.payroll_runs'))

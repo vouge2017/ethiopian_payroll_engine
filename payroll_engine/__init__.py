@@ -20,7 +20,10 @@ csrf = CSRFProtect()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=['200 per hour'],
-    storage_uri=os.environ.get('RATELIMIT_STORAGE_URI', 'memory://'),
+    # Shared storage when Redis is available — with memory:// every gunicorn
+    # worker counts separately, making rate limits N-times looser behind a
+    # multi-worker deployment. RATELIMIT_STORAGE_URI overrides both.
+    storage_uri=os.environ.get('RATELIMIT_STORAGE_URI') or os.environ.get('REDIS_URL') or 'memory://',
 )
 
 
@@ -146,6 +149,17 @@ def create_app():
         if os.environ.get('RENDER') and 'sslmode' not in db_url:
             engine_options['connect_args'] = {'sslmode': 'require'}
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
+
+    # Behind Render's proxy the real client IP arrives in X-Forwarded-For.
+    # Without ProxyFix, get_remote_address sees the proxy IP — all users share
+    # one rate-limit bucket and IP-based audit logs are wrong. Only enabled
+    # when actually deployed behind a proxy (never for local dev, where those
+    # headers are trivially spoofable).
+    if os.environ.get('RENDER') or os.environ.get('TRUST_PROXY') == '1':
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
     csrf.init_app(app)
     limiter.init_app(app)
     login_manager.init_app(app)
@@ -282,12 +296,14 @@ def create_app():
             from .retention import (
                 purge_expired_drafts,
                 purge_expired_payslip_pdfs,
+                purge_expired_previews,
                 purge_expired_uploads,
                 purge_old_login_attempts,
             )
 
             purge_expired_payslip_pdfs(app)
             purge_expired_drafts(app)
+            purge_expired_previews(app)
             purge_expired_uploads(app)
             purge_old_login_attempts(app)
             SystemSetting.set('last_purge_date', today)

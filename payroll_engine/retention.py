@@ -119,3 +119,24 @@ def purge_old_login_attempts(app, days=7):
         if deleted:
             logger.info('Purged %d login attempt records older than %d days', deleted, days)
         return deleted
+
+
+def purge_expired_previews(app):
+    """Delete PayrollPreview rows past their expiry (default TTL: 1 hour).
+
+    Previews hold full payroll payloads server-side; expired rows from users
+    who never complete the wizard must not accumulate. Single-use consumption
+    handles the normal path — this is the safety net.
+    """
+    with app.app_context():
+        from datetime import UTC
+
+        from payroll_engine import db
+        from payroll_engine.models import PayrollPreview
+
+        now = datetime.now(UTC).replace(tzinfo=None)
+        deleted = PayrollPreview.query.filter(PayrollPreview.expires_at < now).delete()
+        if deleted:
+            db.session.commit()
+            logger.info('Purged %d expired payroll previews', deleted)
+        return deleted

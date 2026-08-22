@@ -308,13 +308,11 @@ def attendance_add():
 @role_required('owner', 'accountant')
 def attendance_delete(att_id):
     """Delete attendance record."""
-    record = Attendance.query.get_or_404(att_id)
-    emp = Employee.query.get(record.employee_id)
+    from payroll_engine.shared import get_tenant_or_404
 
-    if emp.company_id != current_user.company_id:
-        flash('Unauthorized.', 'danger')
-        return redirect(url_for('attendance.attendance_list'))
-
+    # Tenant-scoped: 404 unless the record belongs to the ACTIVE company
+    # (never current_user.company_id — multi-company users switch context).
+    record = get_tenant_or_404(Attendance, att_id)
     db.session.delete(record)
     db.session.commit()
     flash('Attendance record deleted.', 'success')

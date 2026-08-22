@@ -1,0 +1,19 @@
+{
+  "name": "ethiopian-payroll-uiux-audits",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UI/UX evaluation toolchain for the Ethiopian Payroll Engine: accessibility (axe), responsive mobile/web screens (Playwright), network performance & PWA (Lighthouse)",
+  "type": "module",
+  "scripts": {
+    "audit:a11y": "node axe-audit.mjs",
+    "audit:responsive": "node responsive-check.mjs",
+    "audit:pwa": "node pwa-check.mjs",
+    "audit:lighthouse": "node lighthouse-audit.mjs",
+    "audit:all": "node axe-audit.mjs && node responsive-check.mjs && node pwa-check.mjs && node lighthouse-audit.mjs"
+  },
+  "devDependencies": {
+    "axe-core": "^4.10.2",
+    "lighthouse": "^12.6.1",
+    "playwright-core": "^1.49.1"
+  }
+}

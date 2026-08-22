@@ -76,6 +76,23 @@ pytest --cov=payroll_engine
 python3 verify_status.py
 ```
 
+## UI/UX Quality Audits
+
+The platform ships with an automated **UI/UX evaluation toolchain** in [`qa/`](qa/) covering the core frontend-engineering skill areas: accessibility, responsive mobile/web screens, network resilience, and performance.
+
+```bash
+cd qa
+npm install          # one-time setup
+
+npm run audit:a11y         # WCAG 2.1 A/AA accessibility scan (axe-core)
+npm run audit:responsive   # mobile 360/375/414px, tablet 768px, desktop 1440px checks + screenshots
+npm run audit:pwa          # manifest, service worker & offline behaviour
+npm run audit:lighthouse   # throttled-network performance, a11y, best practices, SEO scores
+npm run audit:all          # run everything; reports land in qa/reports/
+```
+
+See **[UI_UX_SKILLS_EVALUATION_GUIDE.md](UI_UX_SKILLS_EVALUATION_GUIDE.md)** for the full skill matrix, targets, and how to read the reports.
+
 ## Project Structure
 
 ```

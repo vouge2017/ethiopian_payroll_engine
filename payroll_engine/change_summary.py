@@ -97,7 +97,7 @@ def compute_change_summary(current_run_id, company_id, db, models):
         return None
 
     # Get current payslips
-    current_payslips = Payslip.query.filter_by(payroll_run_id=current_run_id).all()
+    current_payslips = Payslip.query.filter_by(payroll_run_id=current_run_id, company_id=company_id).all()
 
     if not current_payslips:
         return None
@@ -138,7 +138,7 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
 
     previous_employees = {}
     if previous_run:
-        prev_payslips = Payslip.query.filter_by(payroll_run_id=previous_run.id).all()
+        prev_payslips = Payslip.query.filter_by(payroll_run_id=previous_run.id, company_id=company_id).all()
         for ps in prev_payslips:
             emp = db.session.get(Employee, ps.employee_id)
             if emp:

@@ -141,7 +141,13 @@ def enqueue_batch(run_id, company_id):
     from payroll_engine.models import Payslip, PayslipGenerationJob
 
     batch_id = str(uuid.uuid4())
-    payslips = Payslip.query.filter_by(payroll_run_id=run_id).filter(Payslip.pdf_status != 'generated').all()
+    # enqueue_batch receives company_id from the approving request; scope the
+    # query so a worker can never touch another tenant's payslips.
+    payslips = (
+        Payslip.query.filter_by(payroll_run_id=run_id, company_id=company_id)
+        .filter(Payslip.pdf_status != 'generated')
+        .all()
+    )
 
     if not payslips:
         return batch_id, 0

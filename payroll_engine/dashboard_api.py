@@ -172,7 +172,7 @@ def _owner_metrics(current_run, recent_runs, company_id, db, models):
     metrics = []
 
     # Current payslips
-    payslips = Payslip.query.filter_by(payroll_run_id=current_run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=current_run.id, company_id=current_run.company_id).all()
     total_cost = float(sum(ps.gross_salary or 0 for ps in payslips))
     total_net = float(sum(ps.net_pay or 0 for ps in payslips))
     total_tax = float(sum(ps.tax or 0 for ps in payslips))
@@ -184,7 +184,7 @@ def _owner_metrics(current_run, recent_runs, company_id, db, models):
     prev_run = recent_runs[1] if len(recent_runs) > 1 else None
     prev_cost = 0.0
     if prev_run:
-        prev_payslips = Payslip.query.filter_by(payroll_run_id=prev_run.id).all()
+        prev_payslips = Payslip.query.filter_by(payroll_run_id=prev_run.id, company_id=prev_run.company_id).all()
         prev_cost = float(sum(ps.gross_salary or 0 for ps in prev_payslips))
 
     cost_change = ((total_cost - prev_cost) / prev_cost * 100) if prev_cost > 0 else 0.0
@@ -358,7 +358,7 @@ def _hr_metrics(current_run, recent_runs, company_id, db, models):
 
     # New hires / departures
     if len(recent_runs) >= 2:
-        current_payslips = Payslip.query.filter_by(payroll_run_id=current_run.id).all()
+        current_payslips = Payslip.query.filter_by(payroll_run_id=current_run.id, company_id=current_run.company_id).all()
         prev_payslips = Payslip.query.filter_by(payroll_run_id=recent_runs[1].id).all()
         current_ids = {ps.employee_id for ps in current_payslips}
         prev_ids = {ps.employee_id for ps in prev_payslips}
@@ -526,7 +526,7 @@ def _build_trends(recent_runs, company_id, db, models):
 
     # Batch fetch all payslips for recent runs (avoid N+1)
     run_ids = [r.id for r in recent_runs]
-    all_payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all() if run_ids else []
+    all_payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == company_id).all() if run_ids else []
 
     # Group by run_id
     payslips_by_run = {}
@@ -624,7 +624,7 @@ def _dept_chart_data(current_run, company_id, db, models):
     Payslip = models.Payslip
     Employee = models.Employee
 
-    payslips = Payslip.query.filter_by(payroll_run_id=current_run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=current_run.id, company_id=current_run.company_id).all()
     employees = Employee.query.filter_by(company_id=company_id, is_deleted=False).all()
     emp_map = {e.id: e for e in employees}
 

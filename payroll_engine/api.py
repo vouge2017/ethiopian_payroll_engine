@@ -445,11 +445,9 @@ def download_payslip(payslip_id):
 
     from flask import send_file
 
-    payslip = Payslip.query.filter_by(id=payslip_id).first_or_404()
-    # Verify company access
+    # Tenant-scoped fetch: 404 (not 403) so payslip IDs are not enumerable
+    payslip = Payslip.query.filter_by(id=payslip_id, company_id=_get_company_id()).first_or_404()
     run = db.session.get(PayrollRun, payslip.payroll_run_id)
-    if run.company_id != _get_company_id():
-        return jsonify({'error': 'Forbidden'}), 403
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
         return jsonify({'error': 'PDF not found'}), 404
     return send_file(payslip.pdf_file_path, as_attachment=True)
@@ -987,7 +985,7 @@ def get_bank_file(run_id):
     if run.status not in ('completed', 'locked'):
         return jsonify({'error': 'Run must be completed before generating bank file'}), 400
 
-    payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run_id, company_id=cid).all()
     if not payslips:
         return jsonify({'error': 'No payslips found'}), 404
 

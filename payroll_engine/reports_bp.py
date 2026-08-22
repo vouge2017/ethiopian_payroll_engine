@@ -433,7 +433,7 @@ def analytics():
     # ── Department Cost Analysis (single query) ──
     dept_costs = {}
     if run_ids:
-        payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
+        payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == _company_id()).all()
         for ps in payslips:
             emp = ps.employee
             dept = emp.department or 'Unassigned'
@@ -508,7 +508,7 @@ def analytics():
     # ── Headcount (count payslips per month in Python) ──
     headcount_by_month = {}
     if run_ids:
-        all_payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
+        all_payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == _company_id()).all()
         run_map = {r.id: r.run_date.strftime('%Y-%m') for r in runs}
         for ps in all_payslips:
             month_key = run_map.get(ps.payroll_run_id)
@@ -567,7 +567,7 @@ def export_analytics():
     writer.writerow(['DEPARTMENT COSTS'])
     writer.writerow(['Department', 'Employees', 'Gross (ETB)', 'Tax (ETB)', 'Pension (ETB)', 'Net (ETB)', 'Avg Gross'])
     if run_ids:
-        payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
+        payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == _company_id()).all()
         dept_costs = {}
         for ps in payslips:
             emp = ps.employee
@@ -682,8 +682,8 @@ def payroll_comparison():
     from payroll_engine.models import Payslip
 
     # Get payslips for both runs
-    payslips_a = Payslip.query.filter_by(payroll_run_id=run_a.id).all()
-    payslips_b = Payslip.query.filter_by(payroll_run_id=run_b.id).all()
+    payslips_a = Payslip.query.filter_by(payroll_run_id=run_a.id, company_id=run_a.company_id).all()
+    payslips_b = Payslip.query.filter_by(payroll_run_id=run_b.id, company_id=run_b.company_id).all()
 
     # Build employee-level comparison
     from payroll_engine.models import Employee

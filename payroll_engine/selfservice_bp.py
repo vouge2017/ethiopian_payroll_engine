@@ -23,13 +23,13 @@ from payroll_engine.models import Employee, PayrollRun, Payslip
 selfservice_bp = Blueprint('selfservice', __name__)
 
 
-def _get_ytd_data(employee_id, year=None):
+def _get_ytd_data(employee_id, year=None, company_id=None):
     """Get year-to-date earnings data for an employee."""
     if year is None:
         year = date.today().year
 
     # Get all payslips for this employee in this year
-    payslips = (
+    query = (
         db.session.query(Payslip)
         .join(PayrollRun, Payslip.payroll_run_id == PayrollRun.id)
         .filter(
@@ -37,9 +37,10 @@ def _get_ytd_data(employee_id, year=None):
             db.extract('year', PayrollRun.run_date) == year,
             PayrollRun.status == 'completed',
         )
-        .order_by(PayrollRun.run_date)
-        .all()
     )
+    if company_id is not None:
+        query = query.filter(Payslip.company_id == company_id)
+    payslips = query.order_by(PayrollRun.run_date).all()
 
     ytd = {
         'year': year,
@@ -89,7 +90,7 @@ def ytd_earnings():
         return redirect(url_for('portal.employee_dashboard'))
 
     year = request.args.get('year', date.today().year, type=int)
-    ytd = _get_ytd_data(employee.id, year)
+    ytd = _get_ytd_data(employee.id, year, company_id=employee.company_id)
 
     # Available years
     available_years = (
@@ -116,7 +117,7 @@ def tax_certificate():
         return redirect(url_for('portal.employee_dashboard'))
 
     year = request.args.get('year', date.today().year, type=int)
-    ytd = _get_ytd_data(employee.id, year)
+    ytd = _get_ytd_data(employee.id, year, company_id=employee.company_id)
 
     company = current_user.company
 
@@ -141,7 +142,7 @@ def download_tax_certificate():
         return redirect(url_for('portal.employee_dashboard'))
 
     year = request.args.get('year', date.today().year, type=int)
-    ytd = _get_ytd_data(employee.id, year)
+    ytd = _get_ytd_data(employee.id, year, company_id=employee.company_id)
     company = current_user.company
 
     output = io.StringIO()

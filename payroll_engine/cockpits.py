@@ -255,14 +255,14 @@ def _build_owner_view(company_id, company, latest_run, db, models):
     PayrollRun = models.PayrollRun
 
     # Total payroll cost
-    payslips = Payslip.query.filter_by(payroll_run_id=latest_run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=latest_run.id, company_id=latest_run.company_id).all()
     view.total_payroll_cost = float(sum(ps.gross_salary or 0 for ps in payslips))
 
     # Previous period for comparison
     prev_run = _find_previous_run(PayrollRun, company_id, latest_run.id)
 
     if prev_run:
-        prev_payslips = Payslip.query.filter_by(payroll_run_id=prev_run.id).all()
+        prev_payslips = Payslip.query.filter_by(payroll_run_id=prev_run.id, company_id=prev_run.company_id).all()
         prev_total = float(sum(ps.gross_salary or 0 for ps in prev_payslips))
         if prev_total > 0:
             view.payroll_change_pct = round((view.total_payroll_cost - prev_total) / prev_total * 100, 1)
@@ -453,13 +453,13 @@ def _build_hr_view(company_id, company, latest_run, db, models):
     if latest_run:
         Payslip = models.Payslip
         PayrollRun = models.PayrollRun
-        current_payslips = Payslip.query.filter_by(payroll_run_id=latest_run.id).all()
+        current_payslips = Payslip.query.filter_by(payroll_run_id=latest_run.id, company_id=latest_run.company_id).all()
         current_emp_ids = {ps.employee_id for ps in current_payslips}
 
         prev_run = _find_previous_run(PayrollRun, company_id, latest_run.id)
 
         if prev_run:
-            prev_payslips = Payslip.query.filter_by(payroll_run_id=prev_run.id).all()
+            prev_payslips = Payslip.query.filter_by(payroll_run_id=prev_run.id, company_id=prev_run.company_id).all()
             prev_emp_ids = {ps.employee_id for ps in prev_payslips}
             new_hire_ids = current_emp_ids - prev_emp_ids
             view.new_hires_this_month = len(new_hire_ids)

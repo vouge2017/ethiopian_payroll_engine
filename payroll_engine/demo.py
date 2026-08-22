@@ -91,18 +91,22 @@ def create_demo_data():
     # 0. Cleanup old demos (older than 24 hours)
     from datetime import timedelta
 
+    from payroll_engine.models import TenantQuery
+
     cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(hours=24)
     old_demos = Company.query.filter(Company.is_demo, Company.created_at < cutoff).all()
-    for old in old_demos:
-        # Delete employees, runs, payslips, users for this demo company
-        Payslip.query.filter(
-            Payslip.payroll_run_id.in_(db.session.query(PayrollRun.id).filter_by(company_id=old.id))
-        ).delete(synchronize_session='fetch')
-        PayrollRun.query.filter_by(company_id=old.id).delete()
-        OvertimeEntry.query.filter_by(company_id=old.id).delete()
-        AuditLog.query.filter_by(company_id=old.id).delete()
-        Employee.query.filter_by(company_id=old.id).delete()
-        User.query.filter_by(company_id=old.id).delete()
+    # System-wide demo cleanup — sentinel id 0 satisfies the tenant check
+    with TenantQuery.tenant_context(0):
+        for old in old_demos:
+            # Delete employees, runs, payslips, users for this demo company
+            Payslip.query.filter(
+                Payslip.company_id == old.id
+            ).delete(synchronize_session='fetch')
+            PayrollRun.query.filter_by(company_id=old.id).delete()
+            OvertimeEntry.query.filter_by(company_id=old.id).delete()
+            AuditLog.query.filter_by(company_id=old.id).delete()
+            Employee.query.filter_by(company_id=old.id).delete()
+            User.query.filter_by(company_id=old.id).delete()
         db.session.delete(old)
     db.session.commit()
 

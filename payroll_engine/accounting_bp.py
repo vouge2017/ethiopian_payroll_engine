@@ -35,7 +35,7 @@ def _generate_journal_entries(run_id, company_id):
     run = PayrollRun.query.filter_by(id=run_id, company_id=company_id).first_or_404()
     company = Company.query.get(company_id)
 
-    payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run_id, company_id=company_id).all()
 
     if not payslips:
         return None

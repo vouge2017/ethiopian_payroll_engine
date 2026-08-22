@@ -154,7 +154,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
         return report
 
     # Get payslips
-    payslips = Payslip.query.filter_by(payroll_run_id=current_run_id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=current_run_id, company_id=company_id).all()
     if not payslips:
         # Check if there is draft data for review/draft runs
         PayrollDraft = getattr(models, 'PayrollDraft', None)

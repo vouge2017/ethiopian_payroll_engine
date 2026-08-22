@@ -82,6 +82,7 @@ def company_with_data(ctx):
     payslip = Payslip(
         payroll_run_id=run.id,
         employee_id=emp.id,
+        company_id=company.id,
         gross_salary=12000,
         tax=2000,
         employee_pension=700,
@@ -110,7 +111,7 @@ def test_employee_can_view_own_payslip(company_with_data):
         pass
 
     # Test model access
-    found = Payslip.query.filter_by(employee_id=emp.id).first()
+    found = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).first()
     assert found is not None
     assert found.net_pay == 9300
 
@@ -157,6 +158,7 @@ def test_multiple_payslips_ordered(company_with_data):
     payslip2 = Payslip(
         payroll_run_id=run2.id,
         employee_id=emp.id,
+        company_id=company.id,
         gross_salary=12000,
         tax=2000,
         employee_pension=700,
@@ -166,7 +168,7 @@ def test_multiple_payslips_ordered(company_with_data):
     db.session.add(payslip2)
     db.session.commit()
 
-    payslips = Payslip.query.filter_by(employee_id=emp.id).order_by(Payslip.generated_at.desc()).all()
+    payslips = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).order_by(Payslip.generated_at.desc()).all()
     assert len(payslips) == 2
     assert payslips[0].generated_at > payslips[1].generated_at
 

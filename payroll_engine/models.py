@@ -908,6 +908,8 @@ class PayrollRun(db.Model):
 
 
 class Payslip(db.Model):
+    query_class = TenantQuery
+
     id = db.Column(db.Integer, primary_key=True)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)

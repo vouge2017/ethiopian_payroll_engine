@@ -127,7 +127,7 @@ def generate_payroll_summary_email(company_id, run_id):
     if not run or not company:
         return None
 
-    payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run_id, company_id=run.company_id).all()
 
     total_gross = sum(ps.gross_salary or 0 for ps in payslips)
     total_tax = sum(ps.tax or 0 for ps in payslips)

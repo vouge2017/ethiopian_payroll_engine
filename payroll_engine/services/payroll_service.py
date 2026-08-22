@@ -170,7 +170,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         # Notify each employee that their payslip is ready
         from payroll_engine.notifications import notify
 
-        all_payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+        all_payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
         for ps in all_payslips:
             emp = ps.employee
             if emp and emp.user_id:

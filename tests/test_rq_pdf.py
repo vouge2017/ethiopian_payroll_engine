@@ -103,6 +103,7 @@ def _setup(app, num_employees=2):
 
         draft = PayrollDraft(
             payroll_run_id=run.id,
+            company_id=company.id,
             employee_data=employees_data,
         )
         db.session.add(draft)
@@ -188,11 +189,11 @@ class TestBatchStatus:
 
     def test_batch_status_counts_jobs(self, app):
         """get_batch_status() correctly counts jobs by status."""
-        _cid, _oid, rid = _setup(app)
+        cid, _oid, rid = _setup(app)
 
         with app.app_context():
             # Create some jobs manually
-            payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
+            payslips = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).all()
             batch_id = 'test-batch-123'
 
             for i, ps in enumerate(payslips):
@@ -220,10 +221,10 @@ class TestPayslipGenerationJob:
 
     def test_job_lifecycle(self, app):
         """Job transitions: queued → running → generated."""
-        _cid, _oid, rid = _setup(app)
+        cid, _oid, rid = _setup(app)
 
         with app.app_context():
-            payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
+            payslip = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).first()
             job = PayslipGenerationJob(
                 payslip_id=payslip.id,
                 batch_id='lifecycle-test',
@@ -247,10 +248,10 @@ class TestPayslipGenerationJob:
 
     def test_job_failure_with_error(self, app):
         """Failed job stores error message."""
-        _cid, _oid, rid = _setup(app)
+        cid, _oid, rid = _setup(app)
 
         with app.app_context():
-            payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
+            payslip = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).first()
             job = PayslipGenerationJob(
                 payslip_id=payslip.id,
                 batch_id='fail-test',
@@ -269,10 +270,10 @@ class TestPayslipGenerationJob:
 
     def test_job_payslip_relationship(self, app):
         """Job has correct relationship to payslip."""
-        _cid, _oid, rid = _setup(app)
+        cid, _oid, rid = _setup(app)
 
         with app.app_context():
-            payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
+            payslip = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).first()
             job = PayslipGenerationJob(
                 payslip_id=payslip.id,
                 batch_id='rel-test',
@@ -293,11 +294,11 @@ class TestInlineFallbackCaps:
 
     def test_batch_payslips_cap_at_50(self, app):
         """batch_payslips route warns and returns to runs page when >50 uncached PDFs and no Redis."""
-        _cid, _oid, rid = _setup(app, num_employees=3)
+        cid, _oid, rid = _setup(app, num_employees=3)
 
         with app.app_context():
             # Verify all payslips are not_generated (lazy PDF)
-            payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
+            payslips = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).all()
             for ps in payslips:
                 assert ps.pdf_status == 'not_generated'
 
@@ -310,10 +311,10 @@ class TestInlineFallbackCaps:
 
     def test_download_all_cap_at_100(self, app):
         """download_all route warns when >100 uncached PDFs and no Redis."""
-        _cid, _oid, rid = _setup(app, num_employees=3)
+        cid, _oid, rid = _setup(app, num_employees=3)
 
         with app.app_context():
-            payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
+            payslips = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).all()
             from payroll_engine.payroll_bp import INLINE_PDF_CAP_DOWNLOAD
 
             uncached = sum(1 for p in payslips if p.pdf_status != 'generated')

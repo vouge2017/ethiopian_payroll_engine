@@ -460,7 +460,7 @@ def employee_detail(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
     page = request.args.get('page', 1, type=int)
     payslips_pagination = (
-        Payslip.query.filter_by(employee_id=emp.id)
+        Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id)
         .order_by(Payslip.generated_at.desc())
         .paginate(page=page, per_page=12, error_out=False)
     )

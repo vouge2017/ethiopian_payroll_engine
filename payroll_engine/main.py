@@ -100,7 +100,7 @@ def companies_dashboard():
         last_status = 'No payroll'
         if latest_run:
             last_status = latest_run.status.replace('_', ' ').title()
-            payslips = Payslip.query.filter_by(payroll_run_id=latest_run.id).all()
+            payslips = Payslip.query.filter_by(payroll_run_id=latest_run.id, company_id=company.id).all()
             last_gross = sum(p.gross_salary for p in payslips)
             last_net = sum(p.net_pay for p in payslips)
 
@@ -235,7 +235,7 @@ def index():
     if selected_run:
         from payroll_engine.models import Payslip
 
-        payslips = Payslip.query.filter_by(payroll_run_id=selected_run.id).all()
+        payslips = Payslip.query.filter_by(payroll_run_id=selected_run.id, company_id=selected_run.company_id).all()
         if payslips:
             total_net = sum(p.net_pay for p in payslips)
             total_gross = sum(p.gross_salary for p in payslips)

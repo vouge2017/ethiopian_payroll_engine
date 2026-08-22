@@ -975,7 +975,7 @@ def approve_payroll():
         try:
             from payroll_engine.notifications import notify_payroll_approved
 
-            payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+            payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
             employees_data = []
             for ps in payslips:
                 emp = ps.employee
@@ -1058,7 +1058,7 @@ def undo_approval(run_id):
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     # Undo: delete payslips and their PDFs, revert to review
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
     for ps in payslips:
         if ps.pdf_file_path and os.path.exists(ps.pdf_file_path):
             with contextlib.suppress(OSError):
@@ -1927,7 +1927,7 @@ def disbursement_progress(run_id):
         flash('Payroll must be completed before disbursement.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
 
     # Build employee list grouped by bank
     employees = []
@@ -2108,7 +2108,7 @@ def export_payroll_history():
         ]
     )
     for run in runs:
-        payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+        payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
         total_gross = sum(p.gross_salary for p in payslips)
         total_tax = sum(p.tax for p in payslips)
         total_pension_emp = sum(p.employee_pension for p in payslips)
@@ -2178,7 +2178,7 @@ def export_payslips():
         ]
     )
     for run in runs:
-        payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+        payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
         for ps in payslips:
             emp = ps.employee
             taxable = (ps.gross_salary or 0) - (ps.employee_pension or 0)
@@ -2236,7 +2236,7 @@ def batch_payslips():
         flash('No completed payroll run found.', 'warning')
         return redirect(url_for('payroll.payroll_runs'))
 
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
     if not payslips:
         flash('No payslips found for this run.', 'warning')
         return redirect(url_for('payroll.payroll_runs'))
@@ -2457,7 +2457,7 @@ def batch_pdf_download(batch_id):
     skipped = 0
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
         for j in generated_jobs:
-            payslip = Payslip.query.get(j['payslip_id'])
+            payslip = Payslip.query.filter_by(id=j['payslip_id'], company_id=_company_id()).first()
             if not payslip or not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
                 skipped += 1
                 continue
@@ -2568,7 +2568,8 @@ def download_all_payslips(run_id):
 @login_required
 def download_payslip(payslip_id):
     """Download a single payslip PDF. Generates on-demand if not yet cached."""
-    payslip = Payslip.query.get_or_404(payslip_id)
+    from payroll_engine.shared import get_tenant_or_404 as _gt404
+    payslip = _gt404(Payslip, payslip_id)
     run = db.session.get(PayrollRun, payslip.payroll_run_id)
     if run.company_id != _company_id():
         abort(403)

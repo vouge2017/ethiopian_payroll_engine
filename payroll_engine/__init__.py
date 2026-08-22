@@ -218,6 +218,7 @@ def create_app():
         OvertimeEntry,
         PayrollDraft,
         PayrollRun,
+        Payslip,
         TenantQuery,
         UserCompany,
     )
@@ -229,9 +230,13 @@ def create_app():
     TenantQuery.register_model(EmployeeDeduction)
     TenantQuery.register_model(UserCompany)
     # Batch 2 (Phase 2b): swept 2026-08-22 — all query sites carry explicit
-    # company_id filters; retention purge uses tenant_context(None).
+    # company_id filters; retention purge uses tenant_context(0).
     TenantQuery.register_model(Attendance)
     TenantQuery.register_model(PayrollDraft)
+    # Batch 3 (Phase 3): Payslip swept across 18 files — routes use verified
+    # run/emp context; retention + demo cleanup use tenant_context(0);
+    # service-layer fns (exceptions/evidence/change_summary) thread company_id.
+    TenantQuery.register_model(Payslip)
 
     # Template filter: calculation flow for transparent payslips
     @app.template_filter('calculation_flow')

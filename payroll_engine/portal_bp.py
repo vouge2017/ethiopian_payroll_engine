@@ -28,7 +28,7 @@ def employee_dashboard():
     if not emp:
         flash('Your account is not linked to an employee record. Contact your HR officer.', 'warning')
         return render_template('employee_portal/dashboard.html', employee=None)
-    latest_payslip = Payslip.query.filter_by(employee_id=emp.id).order_by(Payslip.generated_at.desc()).first()
+    latest_payslip = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).order_by(Payslip.generated_at.desc()).first()
     from payroll_engine.overtime import calculate_overtime_pay
 
     month_start = date.today().replace(day=1)
@@ -39,7 +39,7 @@ def employee_dashboard():
     )
     ot_hours = sum(e.hours for e in ot_entries)
     ot_pay = sum(calculate_overtime_pay(emp.basic_salary, e.hours, e.overtime_type) for e in ot_entries)
-    recent_payslips = Payslip.query.filter_by(employee_id=emp.id).order_by(Payslip.generated_at.desc()).limit(6).all()
+    recent_payslips = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).order_by(Payslip.generated_at.desc()).limit(6).all()
     return render_template(
         'employee_portal/dashboard.html',
         employee=emp,
@@ -57,7 +57,7 @@ def my_payslips():
     if not emp:
         flash('Your account is not linked to an employee record. Contact your HR officer.', 'warning')
         return render_template('employee_portal/payslips.html', employee=None, payslips=[])
-    payslips = Payslip.query.filter_by(employee_id=emp.id).order_by(Payslip.generated_at.desc()).all()
+    payslips = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).order_by(Payslip.generated_at.desc()).all()
     return render_template('employee_portal/payslips.html', employee=emp, payslips=payslips)
 
 
@@ -71,7 +71,7 @@ def my_payslip_detail(payslip_id):
     emp = get_linked_employee()
     if not emp:
         abort(404)
-    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
+    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id, company_id=emp.company_id).first_or_404()
 
     taxable = payslip.gross_salary - payslip.employee_pension
     tax_breakdown = calculate_tax_breakdown(taxable)
@@ -144,7 +144,7 @@ def acknowledge_payslip(payslip_id):
     if not emp:
         abort(404)
 
-    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
+    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id, company_id=emp.company_id).first_or_404()
 
     # Check if already acknowledged
     existing = PayslipAcknowledgment.query.filter_by(
@@ -183,7 +183,7 @@ def download_my_payslip(payslip_id):
     emp = get_linked_employee()
     if not emp:
         abort(404)
-    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id).first_or_404()
+    payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id, company_id=emp.company_id).first_or_404()
 
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
         flash('PDF not available for this payslip.', 'warning')

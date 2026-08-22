@@ -132,7 +132,7 @@ def collect_evidence(current_run_id, company_id, db, models, change_summary=None
         return report
 
     # Get payslips
-    payslips = Payslip.query.filter_by(payroll_run_id=current_run_id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=current_run_id, company_id=company_id).all()
 
     # Get all active employees
     employees = Employee.query.filter_by(company_id=company_id, is_deleted=False).all()

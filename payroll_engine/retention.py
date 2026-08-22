@@ -26,12 +26,15 @@ def purge_expired_payslip_pdfs(app):
     cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=RETENTION_DAYS['payslip_pdf'])
     with app.app_context():
         from payroll_engine import db
-        from payroll_engine.models import AuditLog, Payslip
+        from payroll_engine.models import AuditLog, Payslip, TenantQuery
 
-        expired = Payslip.query.filter(
-            Payslip.pdf_file_path.isnot(None),
-            Payslip.generated_at < cutoff,
-        ).all()
+        # System-wide retention purge — sentinel id 0 satisfies the
+        # "context set" check (None means unset).
+        with TenantQuery.tenant_context(0):
+            expired = Payslip.query.filter(
+                Payslip.pdf_file_path.isnot(None),
+                Payslip.generated_at < cutoff,
+            ).all()
         purged = 0
         for p in expired:
             if p.pdf_file_path and os.path.exists(p.pdf_file_path):

@@ -361,7 +361,17 @@ def update_employee(emp_id):
 @limiter.limit('10 per minute')
 def delete_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=_get_company_id(), is_deleted=False).first_or_404()
+    # Capture identity BEFORE deletion — the audit row and the delete must
+    # commit atomically so a destructive action can never go unlogged.
+    emp_ref = {'employee_id': emp.employee_id, 'employee_name': emp.name}
     try:
+        log = AuditLog(
+            company_id=_get_company_id(),
+            user_id=_get_current_user().id,
+            action='employee_deleted_api',
+            details=emp_ref,
+        )
+        db.session.add(log)
         db.session.delete(emp)
         db.session.commit()
         from payroll_engine import trust_cache
@@ -375,15 +385,6 @@ def delete_employee(emp_id):
                 'suggestion': f'POST /api/v1/employees/{emp_id}/deactivate',
             }
         ), 409
-    # Log successful delete
-    log = AuditLog(
-        company_id=_get_company_id(),
-        user_id=_get_current_user().id,
-        action='employee_deleted_api',
-        details={'employee_id': emp.employee_id, 'employee_name': emp.name},
-    )
-    db.session.add(log)
-    db.session.commit()
     return jsonify({'message': 'Deleted'})
 
 
@@ -425,7 +426,7 @@ def get_payroll_run(run_id):
                     'gross_salary': p.gross_salary,
                     'tax': p.tax,
                     'net_pay': p.net_pay,
-                    'pdf_path': p.pdf_file_path,
+                    'pdf_status': p.pdf_status,
                 }
                 for p in run.payslips
             ],

@@ -13,20 +13,28 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from payroll_engine import db
 
 # Encryption key for sensitive fields (bank_account, tin, fayda_fin)
-# In production: set DB_ENCRYPTION_KEY env var (32-byte hex or base64)
-# In dev/test: falls back to a deterministic key (NOT secure, only for development)
+# In production: set DB_ENCRYPTION_KEY env var (32-byte hex or base64).
+# Losing this key makes all encrypted fields unrecoverable — store it in a
+# secret manager and keep an offline escrow copy.
+# In dev/test: falls back to a deterministic key (NOT secure).
+import logging as _logging
+
 _ENCRYPTION_KEY = os.environ.get('DB_ENCRYPTION_KEY')
+_IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production'
 
-# In production, encryption is mandatory. Fail fast if key is missing.
-if not _ENCRYPTION_KEY and os.environ.get('FLASK_ENV') != 'development' and not os.environ.get('TESTING'):
-    raise RuntimeError(
-        'DB_ENCRYPTION_KEY environment variable is required in production. '
-        'Set it to a 32-byte hex or base64 string.'
-    )
-
-# Fallback only for explicit development/testing
+# Hard-fail ONLY in production; warn loudly everywhere else so CI, tests,
+# and local development are never blocked by missing local env vars.
 if not _ENCRYPTION_KEY:
+    if _IS_PRODUCTION:
+        raise RuntimeError(
+            'DB_ENCRYPTION_KEY environment variable is required in production. '
+            'Set it to a 32-byte hex or base64 string.'
+        )
     _ENCRYPTION_KEY = 'dev-encryption-key-not-for-production-use-only-32b'
+    _logging.getLogger('payroll_engine').warning(
+        'DB_ENCRYPTION_KEY not set — using INSECURE development key. '
+        'Never run with real data in this mode.'
+    )
 
 try:
     from sqlalchemy_utils import EncryptedType
@@ -34,12 +42,16 @@ try:
 
     _HAS_ENCRYPTION = True
 except ImportError:
-    _HAS_ENCRYPTION = False
-    if os.environ.get('FLASK_ENV') != 'development' and not os.environ.get('TESTING'):
+    if _IS_PRODUCTION:
         raise RuntimeError(
             'sqlalchemy-utils is required for database encryption in production. '
             'Install it with: pip install sqlalchemy-utils'
         )
+    _HAS_ENCRYPTION = False
+    _logging.getLogger('payroll_engine').warning(
+        'sqlalchemy-utils not installed — sensitive columns will be PLAINTEXT. '
+        'Install it before storing real data.'
+    )
 
 
 def validate_ethiopian_phone(phone: str) -> tuple:

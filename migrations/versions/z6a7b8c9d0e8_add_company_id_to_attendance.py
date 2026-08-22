@@ -18,11 +18,14 @@ def upgrade():
         batch_op.add_column(sa.Column('company_id', sa.Integer(), nullable=True))
 
     conn = op.get_bind()
+    # Correlated subquery works on both PostgreSQL and SQLite
     conn.execute(sa.text("""
         UPDATE attendance
-        SET company_id = employee.company_id
-        FROM employee
-        WHERE attendance.employee_id = employee.id
+        SET company_id = (
+            SELECT employee.company_id FROM employee
+            WHERE employee.id = attendance.employee_id
+        )
+        WHERE company_id IS NULL
     """))
 
     with op.batch_alter_table('attendance', schema=None) as batch_op:

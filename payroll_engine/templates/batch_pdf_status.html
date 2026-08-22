@@ -105,6 +105,7 @@
                                         {% endif %}
                                     </td>
                                     <td data-label="Error">
+                                        {% if job.error_message %}
                                             <small class="text-danger">{{ job.error_message }}</small>
                                         {% else %}
                                             <span class="text-muted">—</span>

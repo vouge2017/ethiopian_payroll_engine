@@ -72,11 +72,13 @@ def test_purge_expired_drafts(app, ctx):
     db.session.commit()
     draft_old = PayrollDraft(
         payroll_run_id=run.id,
+        company_id=c.id,
         employee_data='{}',
         created_at=datetime.now(UTC) - timedelta(days=200),
     )
     draft_new = PayrollDraft(
         payroll_run_id=run.id,
+        company_id=c.id,
         employee_data='{}',
     )
     db.session.add(draft_old)

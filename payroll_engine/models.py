@@ -270,20 +270,33 @@ class SoftDeleteQuery(TenantQuery):
     """
 
     _with_deleted = False
+    _soft_delete_applied = False
 
     def _apply_soft_delete_filter(self):
         """Apply is_deleted=False filter if the model has the column."""
-        if self._with_deleted:
+        if self._with_deleted or self._soft_delete_applied:
             return self
         try:
             ent = self._entity_from_pre_ent_zero()
             if ent is not None and hasattr(ent, 'mapper'):
                 mapper = ent.mapper
                 if hasattr(mapper.c, 'is_deleted'):
-                    return self.filter(mapper.c.is_deleted == False)
+                    filtered = self.filter(mapper.c.is_deleted == False)
+                    filtered._soft_delete_applied = True
+                    return filtered
         except (AttributeError, IndexError):
             pass
         return self
+
+    # Filters must be attached BEFORE limit/offset (SQLAlchemy forbids
+    # filter() afterwards), so eager-apply them when slicing is requested.
+    def limit(self, n):
+        filtered = self._apply_soft_delete_filter()
+        return super(SoftDeleteQuery, filtered).limit(n)
+
+    def offset(self, n):
+        filtered = self._apply_soft_delete_filter()
+        return super(SoftDeleteQuery, filtered).offset(n)
 
     def all(self):
         return super(SoftDeleteQuery, self._apply_soft_delete_filter()).all()
@@ -990,6 +1003,8 @@ class PayrollDraft(db.Model):
     Data is stored as JSONB (Postgres) or JSON (SQLite) for flexibility.
     """
 
+    query_class = TenantQuery
+
     id = db.Column(db.Integer, primary_key=True)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
@@ -1024,6 +1039,8 @@ class PayrollPreview(db.Model):
 
 
 class Attendance(db.Model):
+    query_class = TenantQuery
+
     id = db.Column(db.Integer, primary_key=True)
     employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)

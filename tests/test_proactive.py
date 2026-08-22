@@ -153,7 +153,7 @@ class TestPrepareMonthlyDraft:
         with app.app_context():
             prepare_monthly_draft(cid)
             runs = PayrollRun.query.filter_by(company_id=cid, status='draft').all()
-            draft = PayrollDraft.query.filter_by(payroll_run_id=runs[0].id).first()
+            draft = PayrollDraft.query.filter_by(payroll_run_id=runs[0].id, company_id=cid).first()
             assert draft is not None
             assert len(draft.employee_data) == 2
 

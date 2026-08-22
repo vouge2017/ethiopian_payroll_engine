@@ -134,6 +134,7 @@ def test_payroll_history_preserved_after_soft_delete(company_user_employee):
     payslip = Payslip(
         payroll_run_id=run.id,
         employee_id=emp.id,
+        company_id=company.id,
         gross_salary=12000,
         tax=2000,
         employee_pension=700,
@@ -149,7 +150,7 @@ def test_payroll_history_preserved_after_soft_delete(company_user_employee):
     db.session.commit()
 
     # Payslip still exists
-    found_payslip = Payslip.query.filter_by(employee_id=emp.id).first()
+    found_payslip = Payslip.query.filter_by(employee_id=emp.id, company_id=company.id).first()
     assert found_payslip is not None
     assert found_payslip.gross_salary == 12000
 

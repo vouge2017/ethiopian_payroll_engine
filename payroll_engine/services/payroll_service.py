@@ -68,7 +68,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
     Returns:
         ApprovalResult
     """
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).first()
     if not draft:
         db.session.rollback()
         return ApprovalResult(
@@ -190,7 +190,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     logging.getLogger('payroll_engine').error('Failed to notify employee %s: %s', emp.id, e)
 
         # Clean up draft
-        PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
+        PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).delete()
 
         # Notify the approver
         create_notification(

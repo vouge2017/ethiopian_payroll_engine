@@ -228,7 +228,7 @@ def attendance_import():
                     continue
 
                 # Check for existing record
-                existing = Attendance.query.filter_by(employee_id=emp.id, date=att_date).first()
+                existing = Attendance.query.filter_by(employee_id=emp.id, company_id=emp.company_id, date=att_date).first()
 
                 if existing:
                     existing.hours_worked = hours
@@ -290,7 +290,7 @@ def attendance_add():
         flash('Invalid date format.', 'danger')
         return redirect(url_for('attendance.attendance_list'))
 
-    existing = Attendance.query.filter_by(employee_id=emp.id, date=att_date).first()
+    existing = Attendance.query.filter_by(employee_id=emp.id, company_id=emp.company_id, date=att_date).first()
     if existing:
         existing.hours_worked = hours
         flash(f'Updated attendance for {emp.name} on {att_date}.', 'success')

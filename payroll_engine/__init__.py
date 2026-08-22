@@ -210,7 +210,17 @@ def create_app():
     # Additional models (Payslip, PayrollDraft, Attendance, ApiKey, Leave,
     # FinalSettlement, etc.) must be added ONLY after a per-model sweep of
     # every call site (Phase 2), never in bulk.
-    from .models import AuditLog, Employee, EmployeeDeduction, OvertimeEntry, PayrollRun, TenantQuery, UserCompany
+    from .models import (
+        Attendance,
+        AuditLog,
+        Employee,
+        EmployeeDeduction,
+        OvertimeEntry,
+        PayrollDraft,
+        PayrollRun,
+        TenantQuery,
+        UserCompany,
+    )
 
     TenantQuery.register_model(Employee)
     TenantQuery.register_model(PayrollRun)
@@ -218,6 +228,10 @@ def create_app():
     TenantQuery.register_model(OvertimeEntry)
     TenantQuery.register_model(EmployeeDeduction)
     TenantQuery.register_model(UserCompany)
+    # Batch 2 (Phase 2b): swept 2026-08-22 — all query sites carry explicit
+    # company_id filters; retention purge uses tenant_context(None).
+    TenantQuery.register_model(Attendance)
+    TenantQuery.register_model(PayrollDraft)
 
     # Template filter: calculation flow for transparent payslips
     @app.template_filter('calculation_flow')

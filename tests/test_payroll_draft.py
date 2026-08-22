@@ -83,12 +83,12 @@ def test_draft_store_and_retrieve(ctx):
         },
     ]
 
-    draft = PayrollDraft(payroll_run_id=run.id, employee_data=sample_data)
+    draft = PayrollDraft(payroll_run_id=run.id, company_id=run.company_id, employee_data=sample_data)
     db.session.add(draft)
     db.session.commit()
 
     # Retrieve
-    retrieved = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    retrieved = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).first()
     assert retrieved is not None
     assert len(retrieved.employee_data) == 2
     assert retrieved.employee_data[0]['id'] == 'EMP001'
@@ -124,7 +124,7 @@ def test_draft_survives_session_expiry(ctx):
         }
     ]
 
-    draft = PayrollDraft(payroll_run_id=run.id, employee_data=sample_data)
+    draft = PayrollDraft(payroll_run_id=run.id, company_id=run.company_id, employee_data=sample_data)
     db.session.add(draft)
     db.session.commit()
     draft_id = draft.id
@@ -146,15 +146,15 @@ def test_draft_cleanup_after_approval(ctx):
     """After payroll is approved, draft should be deleted."""
     _company, run = _create_company_and_run()
 
-    draft = PayrollDraft(payroll_run_id=run.id, employee_data=[{'id': 'EMP001'}])
+    draft = PayrollDraft(payroll_run_id=run.id, company_id=run.company_id, employee_data=[{'id': 'EMP001'}])
     db.session.add(draft)
     db.session.commit()
 
     # Simulate approval cleanup
-    PayrollDraft.query.filter_by(payroll_run_id=run.id).delete()
+    PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).delete()
     db.session.commit()
 
-    assert PayrollDraft.query.filter_by(payroll_run_id=run.id).first() is None
+    assert PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).first() is None
 
 
 # ---------------------------------------------------------------
@@ -164,7 +164,7 @@ def test_draft_relationship(ctx):
     """PayrollRun.draft should return the associated draft."""
     _company, run = _create_company_and_run()
 
-    draft = PayrollDraft(payroll_run_id=run.id, employee_data=[{'id': 'EMP001'}])
+    draft = PayrollDraft(payroll_run_id=run.id, company_id=run.company_id, employee_data=[{'id': 'EMP001'}])
     db.session.add(draft)
     db.session.commit()
 
@@ -179,11 +179,11 @@ def test_draft_empty_data(ctx):
     """An empty list is valid (edge case: CSV with headers but no rows)."""
     _company, run = _create_company_and_run()
 
-    draft = PayrollDraft(payroll_run_id=run.id, employee_data=[])
+    draft = PayrollDraft(payroll_run_id=run.id, company_id=run.company_id, employee_data=[])
     db.session.add(draft)
     db.session.commit()
 
-    retrieved = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    retrieved = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).first()
     assert retrieved.employee_data == []
 
 
@@ -212,10 +212,10 @@ def test_draft_large_dataset(ctx):
             }
         )
 
-    draft = PayrollDraft(payroll_run_id=run.id, employee_data=large_data)
+    draft = PayrollDraft(payroll_run_id=run.id, company_id=run.company_id, employee_data=large_data)
     db.session.add(draft)
     db.session.commit()
 
-    retrieved = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    retrieved = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).first()
     assert len(retrieved.employee_data) == 100
     assert retrieved.employee_data[99]['id'] == 'EMP099'

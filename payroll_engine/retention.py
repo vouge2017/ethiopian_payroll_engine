@@ -61,11 +61,14 @@ def purge_expired_drafts(app):
     cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=RETENTION_DAYS['payroll_draft'])
     with app.app_context():
         from payroll_engine import db
-        from payroll_engine.models import AuditLog, PayrollDraft
+        from payroll_engine.models import AuditLog, PayrollDraft, TenantQuery
 
-        expired = PayrollDraft.query.filter(
-            PayrollDraft.created_at < cutoff,
-        ).all()
+        # System-wide retention purge — intentionally crosses tenants.
+        # Sentinel id 0 satisfies the "context set" check (None means unset).
+        with TenantQuery.tenant_context(0):
+            expired = PayrollDraft.query.filter(
+                PayrollDraft.created_at < cutoff,
+            ).all()
         count = len(expired)
         if count:
             for d in expired:

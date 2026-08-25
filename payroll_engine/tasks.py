@@ -61,7 +61,7 @@ def generate_payslip_pdf(job_id):
             logger.error('PayslipGenerationJob %s not found', job_id)
             return
 
-        payslip = db.session.get(Payslip, job.payslip_id)
+        payslip = db.session.get(Payslip, job.payslip_id)  # tenant-ok: id originates server-side in RQ queue; PayslipGenerationJob carries no tenant column
         if not payslip:
             job.status = 'failed'
             job.error_message = 'Payslip not found'
@@ -82,7 +82,9 @@ def generate_payslip_pdf(job_id):
         try:
             from payroll_engine.payroll import generate_calculation_flow
 
-            run = db.session.get(PayrollRun, payslip.payroll_run_id)
+            run = PayrollRun.query.filter_by(
+                id=payslip.payroll_run_id, company_id=payslip.company_id
+            ).first()
             company = db.session.get(Company, run.company_id) if run else None
             company_info = {
                 'name': company.name if company else 'Company',

@@ -91,9 +91,9 @@ def compute_change_summary(current_run_id, company_id, db, models):
     PayrollRun = models.PayrollRun
     Payslip = models.Payslip
 
-    # Get current run
-    current_run = db.session.get(PayrollRun, current_run_id)
-    if not current_run or current_run.company_id != company_id:
+    # Get current run (tenant-scoped: company filter replaces post-hoc check)
+    current_run = PayrollRun.query.filter_by(id=current_run_id, company_id=company_id).first()
+    if not current_run:
         return None
 
     # Get current payslips
@@ -129,7 +129,7 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
     # Build employee maps
     current_employees = {}
     for ps in current_payslips:
-        emp = db.session.get(Employee, ps.employee_id)
+        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
         if emp:
             current_employees[emp.id] = {
                 'payslip': ps,
@@ -140,7 +140,7 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
     if previous_run:
         prev_payslips = Payslip.query.filter_by(payroll_run_id=previous_run.id, company_id=company_id).all()
         for ps in prev_payslips:
-            emp = db.session.get(Employee, ps.employee_id)
+            emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
             if emp:
                 previous_employees[emp.id] = {
                     'payslip': ps,

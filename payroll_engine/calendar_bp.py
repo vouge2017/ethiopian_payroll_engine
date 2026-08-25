@@ -21,7 +21,7 @@ from flask_login import current_user, login_required
 
 from payroll_engine.holidays import get_holidays_for_month, get_working_days
 from payroll_engine.models import Employee, Leave
-from payroll_engine.shared import role_required
+from payroll_engine.shared import role_required, tenant_get
 
 calendar_bp = Blueprint('calendar', __name__)
 
@@ -165,7 +165,7 @@ def api_leaves():
 
     result = []
     for leave in leaves:
-        emp = Employee.query.get(leave.employee_id)
+        emp = tenant_get(Employee, leave.employee_id, company_id)
         if emp:
             result.append(
                 {

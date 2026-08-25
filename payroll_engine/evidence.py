@@ -127,8 +127,8 @@ def collect_evidence(current_run_id, company_id, db, models, change_summary=None
     report = EvidenceReport()
 
     # Get current run
-    current_run = db.session.get(PayrollRun, current_run_id)
-    if not current_run or current_run.company_id != company_id:
+    current_run = PayrollRun.query.filter_by(id=current_run_id, company_id=company_id).first()
+    if not current_run:
         return report
 
     # Get payslips
@@ -183,7 +183,7 @@ def collect_evidence(current_run_id, company_id, db, models, change_summary=None
     # Check 2: No validation errors (payslip amounts make sense)
     validation_errors = []
     for ps in payslips:
-        emp = db.session.get(Employee, ps.employee_id)
+        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
         if not emp:
             continue
         if ps.net_pay and ps.net_pay < 0:

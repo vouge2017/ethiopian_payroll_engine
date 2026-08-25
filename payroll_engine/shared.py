@@ -34,6 +34,19 @@ def get_tenant_or_404(model, record_id, company_id=None):
     )
 
 
+def tenant_get(model, record_id, company_id):
+    """Fetch a tenant-scoped record by ID, returning None instead of aborting.
+
+    Internal/service-safe counterpart to get_tenant_or_404(): use inside
+    service functions, loops, and background tasks where a 404 abort is
+    wrong and the caller handles missing rows. Replaces raw
+    db.session.get(Model, pk) which bypasses TenantQuery isolation.
+    """
+    if record_id is None or company_id is None:
+        return None
+    return model.query.filter_by(id=record_id, company_id=company_id).first()
+
+
 def role_required(*roles):
     """Restrict access to users with specific roles.
 

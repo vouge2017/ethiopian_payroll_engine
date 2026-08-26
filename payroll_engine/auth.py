@@ -110,16 +110,22 @@ def login():
             # Record failed attempt and check lockout
             is_locked, remaining = LoginAttempt.record_failure(identifier, request.remote_addr)
 
-            # Audit: failed login attempt
-            from payroll_engine.shared import create_audit_log
+            # Audit: failed login attempt (tenant-scoped table requires a
+            # company; skip for unknown identifiers — logged instead).
+            if user:
+                from payroll_engine.shared import create_audit_log
 
-            create_audit_log(
-                company_id=user.company_id if user else None,
-                user_id=user.id if user else None,
-                action='login_failed',
-                details={'attempted_id': login_id[:120], 'locked': is_locked},
-            )
-            db.session.commit()
+                create_audit_log(
+                    company_id=user.company_id,
+                    user_id=user.id,
+                    action='login_failed',
+                    details={'attempted_id': login_id[:120], 'locked': is_locked},
+                )
+                db.session.commit()
+            else:
+                current_app.logger.warning(
+                    'Login failed for unknown identifier (%s)', identifier
+                )
 
             if is_locked:
                 minutes = max(1, remaining // 60)

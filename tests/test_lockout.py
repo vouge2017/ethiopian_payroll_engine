@@ -249,3 +249,13 @@ class TestLoginLockoutIntegration:
         with app.app_context():
             is_locked, _ = LoginAttempt.is_locked_out('0910000000')
             assert is_locked is False
+
+    def test_unknown_identifier_no_500(self, client):
+        """Failed login with UNKNOWN account must flash, never 500 (bugfix)."""
+        resp = client.post(
+            '/auth/login',
+            data={'login_id': '0999999999', 'password': 'Whatever1!'},
+            follow_redirects=True,
+        )
+        assert resp.status_code == 200
+        assert b'Invalid credentials' in resp.data

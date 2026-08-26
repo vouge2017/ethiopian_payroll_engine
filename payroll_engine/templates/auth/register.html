@@ -101,17 +101,17 @@
                     <span class="onboarding-phone-prefix">+251</span>
                     <input type="tel" id="phone" name="phone"
                            required placeholder="911 234 567"
-                           pattern="(\+?251|0)?[79][0-9]{8}" maxlength="13" inputmode="tel"
-                           title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+                           pattern="[79][0-9]{8}" maxlength="9" inputmode="numeric"
+                           title="Enter 9 digits starting with 9 or 7">
                 </div>
             </div>
             <span class="field-hint">Used for two-factor authentication.</span>
             <script>
             document.getElementById('phone').addEventListener('input', function(e) {
-                let v = e.target.value.replace(/\D/g, '');
-                if (v.startsWith('251') && v.length === 12) v = v.substring(3);
-                if (v.length === 10 && v.startsWith('0')) v = v.substring(1);
-                e.target.value = v;
+                let d = e.target.value.replace(/\D/g, '');
+                if (d.startsWith('251')) d = d.substring(3);
+                while (d.startsWith('0')) d = d.substring(1);
+                e.target.value = d.slice(0, 9);
             });
             </script>
         </div>

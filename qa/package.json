@@ -9,11 +9,13 @@
     "audit:responsive": "node responsive-check.mjs",
     "audit:pwa": "node pwa-check.mjs",
     "audit:lighthouse": "node lighthouse-audit.mjs",
-    "audit:all": "node axe-audit.mjs && node responsive-check.mjs && node pwa-check.mjs && node lighthouse-audit.mjs"
+    "lint:css": "stylelint --config ../stylelint.config.json \"../payroll_engine/static/css/design-system.css\"",
+    "audit:all": "npm run lint:css && node axe-audit.mjs && node responsive-check.mjs && node pwa-check.mjs && node lighthouse-audit.mjs"
   },
   "devDependencies": {
     "axe-core": "^4.10.2",
     "lighthouse": "^12.6.1",
-    "playwright-core": "^1.49.1"
+    "playwright-core": "^1.49.1",
+    "stylelint": "^16.10.0"
   }
 }

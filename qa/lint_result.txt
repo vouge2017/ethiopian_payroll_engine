@@ -1,0 +1,9 @@
+ConfigurationError: No rules found within configuration. Have you provided a "rules" property?
+    at augmentConfigFull (file:///C:/Users/Hp%20G3/Desktop/ethiopian_payroll_engine/qa/node_modules/stylelint/lib/augmentConfig.mjs:125:9)
+    at async load (C:\Users\Hp G3\Desktop\ethiopian_payroll_engine\qa\node_modules\cosmiconfig\dist\Explorer.js:20:20)
+    at async Explorer.load (C:\Users\Hp G3\Desktop\ethiopian_payroll_engine\qa\node_modules\cosmiconfig\dist\Explorer.js:23:20)
+    at async getConfigForFile (file:///C:/Users/Hp%20G3/Desktop/ethiopian_payroll_engine/qa/node_modules/stylelint/lib/getConfigForFile.mjs:68:5)
+    at async resolveOptionValue (file:///C:/Users/Hp%20G3/Desktop/ethiopian_payroll_engine/qa/node_modules/stylelint/lib/utils/resolveOptionValue.mjs:27:24)
+    at async getFormatter (file:///C:/Users/Hp%20G3/Desktop/ethiopian_payroll_engine/qa/node_modules/stylelint/lib/utils/getFormatter.mjs:17:18)
+    at async standalone (file:///C:/Users/Hp%20G3/Desktop/ethiopian_payroll_engine/qa/node_modules/stylelint/lib/standalone.mjs:131:28)
+LINT_FAIL

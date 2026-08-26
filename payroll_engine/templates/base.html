@@ -313,6 +313,7 @@ function toggleTheme() {
     html.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     updateThemeIcon(next);
+    applyChartTheme();
 }
 
 function updateThemeIcon(theme) {
@@ -389,18 +390,39 @@ function showToast(message, type = 'info', duration = 4000) {
     }
 }
 
-// Chart.js defaults
+// Chart.js defaults — themed from design-system tokens, re-applied on theme change
+function applyChartTheme() {
+    if (typeof Chart === 'undefined') return;
+    const css = getComputedStyle(document.documentElement);
+    const textColor = css.getPropertyValue('--text-secondary').trim() || '#424656';
+    const gridColor = css.getPropertyValue('--border-light').trim() || '#e1e1ee';
+    Chart.defaults.color = textColor;
+    Chart.defaults.scale.grid = { color: gridColor, drawBorder: false };
+    // Live-update any charts already on the page
+    if (Chart.instances) {
+        Object.values(Chart.instances).forEach(function (inst) {
+            if (!inst || !inst.options) return;
+            inst.options.color = textColor;
+            if (inst.options.scales) {
+                Object.values(inst.options.scales).forEach(function (s) {
+                    if (s && s.grid) s.grid.color = gridColor;
+                });
+            }
+            inst.update('none');
+        });
+    }
+}
+
 if (typeof Chart !== 'undefined') {
     Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
     Chart.defaults.font.size = 12;
-    Chart.defaults.color = '#64748b';
     Chart.defaults.plugins.legend.labels.usePointStyle = true;
     Chart.defaults.plugins.legend.labels.padding = 16;
     Chart.defaults.elements.bar.borderRadius = 6;
     Chart.defaults.elements.line.tension = 0.3;
     Chart.defaults.elements.point.radius = 4;
     Chart.defaults.elements.point.hoverRadius = 6;
-    Chart.defaults.scale.grid = { color: '#e2e8f0', drawBorder: false };
+    applyChartTheme();
 }
 </script>
 {% block extra_js %}{% endblock %}

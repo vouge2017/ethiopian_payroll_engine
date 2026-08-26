@@ -71,6 +71,26 @@ const EthioPayroll = {
         return div.innerHTML;
     },
 
+    /**
+     * Format a number as Ethiopian Birr for display.
+     * Uses Intl.NumberFormat with graceful fallback.
+     * @param {number|string} value - Amount to format
+     * @param {number} [decimals=2] - Decimal places
+     * @returns {string} e.g. "ETB 15,000.00" (empty string for invalid input)
+     */
+    formatETB(value, decimals = 2) {
+        const n = typeof value === 'number' ? value : parseFloat(value);
+        if (!isFinite(n)) return '';
+        try {
+            return 'ETB ' + n.toLocaleString('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals,
+            });
+        } catch (e) {
+            return 'ETB ' + n.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+    },
+
 
     // =============================================
     // SKELETON LOADING

@@ -2284,7 +2284,7 @@ kbd {
     font-size: 20px;
 }
 
-.onboarding-help-header h4 {
+.onboarding-help-header h3 {
     font-size: 14px;
     font-weight: 600;
     color: var(--brand-primary);

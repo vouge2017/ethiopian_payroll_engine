@@ -191,10 +191,11 @@ def test_tenant_can_submit_payment_reference(app):
     with app.app_context():
         c = _company(plan_code='free')
         owner = _owner(c.id)
-        uid, cid = owner.id, c.id
+        uid, _cid = owner.id, c.id
     def login(client, uid):
         with client.session_transaction() as sess:
-            sess['_user_id'] = str(uid); sess['_fresh'] = True
+            sess['_user_id'] = str(uid)
+            sess['_fresh'] = True
     login(client, uid)
     resp = client.post('/billing/submit-payment',
         data={'period_month': '2026-09', 'plan_code': 'standard', 'reference': 'FT123'},
@@ -224,7 +225,8 @@ def test_operator_confirm_activates_company(app):
 
     client = app.test_client()
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(oid); sess['_fresh'] = True
+        sess['_user_id'] = str(oid)
+        sess['_fresh'] = True
     resp = client.post(f'/platform/payments/{pid}/confirm', follow_redirects=True)
     assert resp.status_code == 200
 

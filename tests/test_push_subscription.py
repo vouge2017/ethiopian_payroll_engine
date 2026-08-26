@@ -1,9 +1,9 @@
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Mock pywebpush and its WebPushException before any imports
 mock_pywebpush = MagicMock()
-class MockWebPushException(Exception):
+class MockWebPushException(Exception):  # noqa: N818
     def __init__(self, message, response=None):
         super().__init__(message)
         self.response = response
@@ -12,9 +12,11 @@ mock_pywebpush.WebPushException = MockWebPushException
 sys.modules['pywebpush'] = mock_pywebpush
 
 import pytest
+
 from payroll_engine import create_app, db
-from payroll_engine.models import User, Company, PushSubscription, Notification
+from payroll_engine.models import Company, Notification, PushSubscription, User
 from payroll_engine.push import save_subscription, send_push_notification
+
 
 @pytest.fixture
 def app():

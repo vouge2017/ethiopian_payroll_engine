@@ -12,10 +12,15 @@ Platform side (User.is_platform_admin only):
 """
 
 import calendar
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from flask import (
-    Blueprint, abort, current_app, flash, redirect, render_template, request,
+    Blueprint,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
     url_for,
 )
 from flask_login import current_user, login_required
@@ -28,7 +33,7 @@ from payroll_engine.billing import (
     employee_count,
     get_plan,
 )
-from payroll_engine.models import BillingPayment, Company, User
+from payroll_engine.models import BillingPayment, Company
 from payroll_engine.shared import create_audit_log
 
 billing_bp = Blueprint('billing', __name__)
@@ -93,7 +98,7 @@ def submit_payment():
         flash('Enter the transfer reference number from your bank/Telebirr receipt.', 'danger')
         return redirect(url_for('billing.view'))
     try:
-        year, month = int(period_month[:4]), int(period_month[5:7])
+        _year, month = int(period_month[:4]), int(period_month[5:7])
         if not (1 <= month <= 12) or len(period_month) != 7 or period_month[4] != '-':
             raise ValueError
     except (ValueError, IndexError):

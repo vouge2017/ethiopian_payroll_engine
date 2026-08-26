@@ -30,10 +30,9 @@ from payroll_engine.models import (
     Employee,
     PayrollDraft,
     PayrollRun,
+    PayrollValidationResult,
     Payslip,
     PayslipGenerationJob,
-    PayrollValidationResult,
-    TenantQuery,
     User,
 )
 

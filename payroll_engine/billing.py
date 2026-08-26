@@ -24,7 +24,7 @@ The request gate (see enforce_billing_gate) turns these into:
 import os
 from datetime import date, datetime, timedelta
 
-from flask import g, jsonify, redirect, request, url_for, flash
+from flask import flash, g, jsonify, redirect, request, url_for
 from flask_login import current_user
 
 from payroll_engine import db

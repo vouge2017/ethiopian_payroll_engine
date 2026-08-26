@@ -10,14 +10,14 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from payroll_engine import db
-
 # Encryption key for sensitive fields (bank_account, tin, fayda_fin)
 # In production: set DB_ENCRYPTION_KEY env var (32-byte hex or base64).
 # Losing this key makes all encrypted fields unrecoverable — store it in a
 # secret manager and keep an offline escrow copy.
 # In dev/test: falls back to a deterministic key (NOT secure).
 import logging as _logging
+
+from payroll_engine import db
 
 _ENCRYPTION_KEY = os.environ.get('DB_ENCRYPTION_KEY')
 _IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production'
@@ -41,12 +41,12 @@ try:
     from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
     _HAS_ENCRYPTION = True
-except ImportError:
+except ImportError as err:
     if _IS_PRODUCTION:
         raise RuntimeError(
             'sqlalchemy-utils is required for database encryption in production. '
             'Install it with: pip install sqlalchemy-utils'
-        )
+        ) from err
     _HAS_ENCRYPTION = False
     _logging.getLogger('payroll_engine').warning(
         'sqlalchemy-utils not installed — sensitive columns will be PLAINTEXT. '

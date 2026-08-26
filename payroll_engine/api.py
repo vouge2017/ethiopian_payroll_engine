@@ -448,6 +448,9 @@ def download_payslip(payslip_id):
     # Tenant-scoped fetch: 404 (not 403) so payslip IDs are not enumerable
     payslip = Payslip.query.filter_by(id=payslip_id, company_id=_get_company_id()).first_or_404()
     run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=_get_company_id()).first()
+    # Ensure run exists for audit/tenant security verification
+    if not run:
+        return jsonify({'error': 'Payroll run not found'}), 404
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
         return jsonify({'error': 'PDF not found'}), 404
     return send_file(payslip.pdf_file_path, as_attachment=True)

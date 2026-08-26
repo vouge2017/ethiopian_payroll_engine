@@ -86,9 +86,9 @@ def _seed_company_with_employees():
 
 def test_full_money_path_smoke(app):
     """upload-shape data -> validate -> run+draft -> process -> payslips -> bank rows."""
-    from payroll_engine.validation import validate_payroll_data
     from payroll_engine.services import payroll_workflow
     from payroll_engine.services.payroll_service import process_payroll
+    from payroll_engine.validation import validate_payroll_data
 
     company, owner, employees_data = _seed_company_with_employees()
 

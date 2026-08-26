@@ -101,7 +101,7 @@
                     <span class="onboarding-phone-prefix">+251</span>
                     <input type="tel" id="phone" name="phone"
                            required placeholder="911 234 567"
-                           pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
+                           pattern="(\+?251|0)?[79][0-9]{8}" maxlength="13" inputmode="tel"
                            title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
                 </div>
             </div>
@@ -109,9 +109,9 @@
             <script>
             document.getElementById('phone').addEventListener('input', function(e) {
                 let v = e.target.value.replace(/\D/g, '');
-                if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
-                    e.target.value = v.substring(1);
-                }
+                if (v.startsWith('251') && v.length === 12) v = v.substring(3);
+                if (v.length === 10 && v.startsWith('0')) v = v.substring(1);
+                e.target.value = v;
             });
             </script>
         </div>

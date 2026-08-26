@@ -27,8 +27,8 @@ def upgrade():
 
     with op.batch_alter_table('payroll_draft', schema=None) as batch_op:
         batch_op.alter_column('company_id', nullable=False)
-        batch_op.create_foreign_key('fk_payroll_draft_company_id', 'payroll_draft', 'company', ['company_id'], ['id'])
-        batch_op.create_index('ix_payroll_draft_company_id', 'payroll_draft', ['company_id'])
+        batch_op.create_foreign_key('fk_payroll_draft_company_id', 'company', ['company_id'], ['id'])
+        batch_op.create_index('ix_payroll_draft_company_id', ['company_id'])
 
 
 def downgrade():

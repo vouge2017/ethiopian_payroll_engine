@@ -149,8 +149,8 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
     report = ExceptionReport()
 
     # Get current run
-    current_run = db.session.get(PayrollRun, current_run_id)
-    if not current_run or current_run.company_id != company_id:
+    current_run = PayrollRun.query.filter_by(id=current_run_id, company_id=company_id).first()
+    if not current_run:
         return report
 
     # Get payslips
@@ -199,7 +199,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
 
     # Check each payslip for issues
     for ps in payslips:
-        emp = db.session.get(Employee, ps.employee_id)
+        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
         if not emp:
             continue
 
@@ -380,7 +380,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
 
     # MEDIUM: Cash limit (ETB 50,000)
     for ps in payslips:
-        emp = db.session.get(Employee, ps.employee_id)
+        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
         if emp and ps.net_pay and ps.net_pay > 50000:
             report.issues.append(
                 Issue(

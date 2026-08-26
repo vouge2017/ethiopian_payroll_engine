@@ -690,7 +690,7 @@ def payroll_comparison():
 
     emp_map = {}
     for ps in payslips_a:
-        emp = Employee.query.get(ps.employee_id)
+        emp = Employee.query.filter_by(id=ps.employee_id, company_id=run_a.company_id).first()
         if emp:
             emp_map[ps.employee_id] = {
                 'name': emp.name,
@@ -713,7 +713,7 @@ def payroll_comparison():
             emp_map[ps.employee_id]['b_pension'] = ps.employee_pension or 0
             emp_map[ps.employee_id]['b_net'] = ps.net_pay or 0
         else:
-            emp = Employee.query.get(ps.employee_id)
+            emp = Employee.query.filter_by(id=ps.employee_id, company_id=run_b.company_id).first()
             if emp:
                 emp_map[ps.employee_id] = {
                     'name': emp.name,

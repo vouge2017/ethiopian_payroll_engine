@@ -103,7 +103,9 @@ def _ensure_pdf(payslip, emp, company_info=None):
         # Get period from the payroll run
         from payroll_engine.models import PayrollRun
 
-        run = db.session.get(PayrollRun, payslip.payroll_run_id)
+        run = PayrollRun.query.filter_by(
+            id=payslip.payroll_run_id, company_id=payslip.company_id
+        ).first()
         if run:
             emp_data['period'] = run.period or (run.run_date.strftime('%B %Y') if run.run_date else '')
 

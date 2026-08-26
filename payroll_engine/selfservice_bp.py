@@ -57,7 +57,7 @@ def _get_ytd_data(employee_id, year=None, company_id=None):
     }
 
     for ps in payslips:
-        run = PayrollRun.query.get(ps.payroll_run_id)
+        run = PayrollRun.query.filter_by(id=ps.payroll_run_id, company_id=ps.company_id).first()
         ytd['gross'] += ps.gross_salary or Decimal('0')
         ytd['tax'] += ps.tax or Decimal('0')
         ytd['pension_employee'] += ps.employee_pension or Decimal('0')

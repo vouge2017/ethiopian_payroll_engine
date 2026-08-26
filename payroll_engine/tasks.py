@@ -12,7 +12,9 @@ import logging
 import os
 import uuid
 
-logger = logging.getLogger('payroll_engine')
+from payroll_engine.worker_health import beat, note_job_failure, note_job_success
+
+logger = logging.getLogger('payroll_engine.tasks')
 
 # RQ is optional; graceful fallback if Redis isn't configured
 _rq_queue = None
@@ -61,7 +63,12 @@ def generate_payslip_pdf(job_id):
             logger.error('PayslipGenerationJob %s not found', job_id)
             return
 
-        payslip = db.session.get(Payslip, job.payslip_id)
+        if job.company_id:
+            # Tenant-stamped job (2026-08+): structural scoping applies.
+            payslip = Payslip.query.filter_by(id=job.payslip_id, company_id=job.company_id).first()
+        else:
+            # Legacy job row created before company stamping — server-side id
+            payslip = db.session.get(Payslip, job.payslip_id)  # tenant-ok: pre-stamping legacy rows only
         if not payslip:
             job.status = 'failed'
             job.error_message = 'Payslip not found'
@@ -82,7 +89,9 @@ def generate_payslip_pdf(job_id):
         try:
             from payroll_engine.payroll import generate_calculation_flow
 
-            run = db.session.get(PayrollRun, payslip.payroll_run_id)
+            run = PayrollRun.query.filter_by(
+                id=payslip.payroll_run_id, company_id=payslip.company_id
+            ).first()
             company = db.session.get(Company, run.company_id) if run else None
             company_info = {
                 'name': company.name if company else 'Company',
@@ -118,13 +127,15 @@ def generate_payslip_pdf(job_id):
             payslip.pdf_status = 'generated'
             job.status = 'generated'
             db.session.commit()
+            beat()
+            note_job_success()
 
         except Exception as e:
             payslip.pdf_status = 'failed'
             job.status = 'failed'
             job.error_message = str(e)[:500]
             db.session.commit()
-            logger.error('PDF generation failed for payslip %s (job %s): %s', payslip.id, job_id, e)
+            note_job_failure(job_id, e)
 
 
 def enqueue_batch(run_id, company_id):
@@ -154,9 +165,11 @@ def enqueue_batch(run_id, company_id):
 
     enqueued = 0
     for ps in payslips:
-        # Create job record
+        # Create job record — tenant-stamped so the worker can fetch scoped
+        company_id = getattr(ps, 'company_id', None)
         job = PayslipGenerationJob(
             payslip_id=ps.id,
+            company_id=company_id,
             batch_id=batch_id,
             status='queued',
         )

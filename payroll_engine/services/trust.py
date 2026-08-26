@@ -204,8 +204,12 @@ def _detect_changes(current_run, previous_run) -> list:
 # ──────────────────────────────────────────────────────────────
 
 
-def get_approval_preview(run_id: int) -> dict:
+def get_approval_preview(run_id: int, company_id: int) -> dict:
     """Generate a clear list of what will happen when payroll is approved.
+
+    Args:
+        run_id: PayrollRun.id to preview.
+        company_id: Tenant scope — required so the fetch cannot cross companies.
 
     Returns dict with:
         actions: list of str (what will happen)
@@ -215,7 +219,7 @@ def get_approval_preview(run_id: int) -> dict:
     """
     from payroll_engine.models import PayrollRun
 
-    run = PayrollRun.query.get(run_id)
+    run = PayrollRun.query.filter_by(id=run_id, company_id=company_id).first()
     if not run:
         return {'error': 'Payroll run not found.'}
 

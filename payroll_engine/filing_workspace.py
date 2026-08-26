@@ -92,8 +92,8 @@ def build_filing_workspace(run_id, company_id, db, models):
     Company = models.Company
     FilingRecord = models.FilingRecord
 
-    run = db.session.get(PayrollRun, run_id)
-    if not run or run.company_id != company_id:
+    run = PayrollRun.query.filter_by(id=run_id, company_id=company_id).first()
+    if not run:
         return None
 
     company = db.session.get(Company, company_id)

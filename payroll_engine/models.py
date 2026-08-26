@@ -176,6 +176,23 @@ class TenantQuery(db.Query):
         self._check_tenant_scope()
         return super().scalar(*args, **kwargs)
 
+    def get(self, ident, *args, **kwargs):
+        """PK fetch — same structural guard as terminal operations.
+
+        Bugfix 2026-08: .get() previously bypassed the company_id check,
+        letting Model.query.get(pk) return another tenant's row.
+        """
+        self._check_tenant_scope()
+        return super().get(ident, *args, **kwargs)
+
+    def get_or_404(self, ident, *args, **kwargs):
+        self._check_tenant_scope()
+        return super().get_or_404(ident, *args, **kwargs)
+
+    def paginate(self, *args, **kwargs):
+        self._check_tenant_scope()
+        return super().paginate(*args, **kwargs)
+
     def _check_tenant_scope(self):
         """Raise if this is a tenant-scoped model and company_id is not filtered."""
         # Determine which model this query targets
@@ -358,6 +375,16 @@ class Company(db.Model):
     address = db.Column(db.String(300), nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     tin = db.Column(db.String(20), nullable=True)  # Tax Identification Number
+    # Multi-country schema (2026-08): Ethiopia-only logic today, but the
+    # dimension lives in the schema now so regional expansion never needs a
+    # painful backfill. ISO 3166-1 alpha-2, default Ethiopia.
+    country = db.Column(db.String(2), nullable=False, server_default='ET', default='ET')
+    currency = db.Column(db.String(8), nullable=False, server_default='ETB', default='ETB')
+    # Billing spine (2026-08): see payroll_engine/billing.py for semantics.
+    plan_code = db.Column(db.String(20), nullable=False, server_default='free', default='free')
+    billing_status = db.Column(db.String(20), nullable=False, server_default='trialing', default='trialing')
+    trial_ends_at = db.Column(db.DateTime, nullable=True)  # NULL = grandfathered unlimited trial
+    paid_until = db.Column(db.Date, nullable=True)  # active while >= today
     logo_path = db.Column(db.String(500), nullable=True)  # Path to uploaded logo
     is_demo = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
@@ -422,6 +449,9 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), unique=True, nullable=True)  # 9XXXXXXXX format
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='owner')  # owner, accountant, employee
+    # Platform operator flag (2026-08): grants access to /platform/* routes
+    # (payment reconciliation across tenants). Never set from public signup.
+    is_platform_admin = db.Column(db.Boolean, nullable=False, server_default='0', default=False)
     company_id = db.Column(
         db.Integer, db.ForeignKey('company.id'), nullable=True
     )  # Null until user creates/joins a company
@@ -1407,6 +1437,9 @@ class TaxRule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     version_name = db.Column(db.String(50), nullable=False)  # e.g., '2025-v1'
     effective_date = db.Column(db.Date, nullable=False)
+    # Country dimension (2026-08): rule resolution is (country, effective_date).
+    # Default 'ET' keeps every existing query and seed row valid.
+    country = db.Column(db.String(2), nullable=False, server_default='ET', default='ET')
     rules_json = db.Column(db.JSON, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='draft')  # draft / active / archived
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -1417,11 +1450,12 @@ class TaxRule(db.Model):
         return f'<TaxRule {self.version_name} ({self.status})>'
 
     @staticmethod
-    def get_active_rule(for_date=None):
-        """Get the active tax rule for a given date.
+    def get_active_rule(for_date=None, country='ET'):
+        """Get the active tax rule for a given date (and country).
 
         Args:
             for_date: date string (YYYY-MM-DD) or date object. Defaults to today.
+            country: ISO 3166-1 alpha-2 code. Defaults to 'ET' (Ethiopia).
 
         Returns:
             TaxRule instance or None
@@ -1434,7 +1468,11 @@ class TaxRule(db.Model):
             target = for_date
 
         return (
-            TaxRule.query.filter(TaxRule.status == 'active', TaxRule.effective_date <= target)
+            TaxRule.query.filter(
+                TaxRule.status == 'active',
+                TaxRule.effective_date <= target,
+                TaxRule.country == country,
+            )
             .order_by(TaxRule.effective_date.desc())
             .first()
         )
@@ -1692,6 +1730,7 @@ class PayslipGenerationJob(db.Model):
     """
 
     id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True, index=True)
     payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=False, index=True)
     batch_id = db.Column(db.String(36), nullable=False, index=True)  # UUID
     status = db.Column(db.String(20), nullable=False, default='queued')  # queued/running/generated/failed
@@ -1735,38 +1774,38 @@ class LoginAttempt(db.Model):
     def is_locked_out(cls, identifier):
         """Check if the identifier is currently locked out.
 
+        Stateless sliding-window lockout derived from attempt history:
+        MAX_ATTEMPTS failures within LOCKOUT_WINDOW_MINUTES locks the
+        identifier until (last failure in window + LOCKOUT_DURATION_MINUTES).
+
         Returns (is_locked, remaining_seconds) tuple.
         """
         from datetime import datetime, timedelta
 
-        now = datetime.now(UTC)
-        if locked_until:
-            if locked_until.tzinfo is None:
-                locked_until = locked_until.replace(tzinfo=UTC)
-            if locked_until > now:
-                return True, int((locked_until - now).total_seconds())
-
+        # DB stores naive UTC datetimes (DateTime without timezone); compare in
+        # the same space. (Bugfix 2026-08: previously referenced an undefined
+        # ``locked_until`` local -> NameError on EVERY login; filters used
+        # ``not cls.success`` which Python evaluates to a constant False,
+        # compiling the whole query to ``WHERE 0 = 1``.)
+        now = datetime.now(UTC).replace(tzinfo=None)
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
-
-        # Use naive UTC for SQLite compatibility
-        now.replace(tzinfo=None)
-        window_start_naive = window_start.replace(tzinfo=None)
 
         # Count recent failed attempts
         recent_failures = cls.query.filter(
             cls.identifier == identifier,
-            not cls.success,
-            cls.created_at >= window_start_naive,
+            cls.success.is_(False),
+            cls.created_at >= window_start,
         ).count()
 
         if recent_failures < cls.MAX_ATTEMPTS:
             return False, 0
 
-        # Find the last failure to calculate lockout end
+        # Find the most recent failure to calculate lockout end
         last_failure = (
             cls.query.filter(
                 cls.identifier == identifier,
-                not cls.success,
+                cls.success.is_(False),
+                cls.created_at >= window_start,
             )
             .order_by(cls.created_at.desc())
             .first()
@@ -1775,15 +1814,13 @@ class LoginAttempt(db.Model):
         if not last_failure:
             return False, 0
 
-        # Handle both naive and aware datetimes
         last_failure_time = last_failure.created_at
-        if last_failure_time.tzinfo is None:
-            last_failure_time = last_failure_time.replace(tzinfo=UTC)
+        if last_failure_time.tzinfo is not None:
+            last_failure_time = last_failure_time.replace(tzinfo=None)
 
         lockout_end = last_failure_time + timedelta(minutes=cls.LOCKOUT_DURATION_MINUTES)
         if now < lockout_end:
-            remaining = int((lockout_end - now).total_seconds())
-            return True, remaining
+            return True, int((lockout_end - now).total_seconds())
 
         return False, 0
 
@@ -1803,15 +1840,13 @@ class LoginAttempt(db.Model):
         """Record a successful login and clear recent failures for this identifier."""
         from datetime import datetime, timedelta
 
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
         window_start = now - timedelta(minutes=cls.LOCKOUT_WINDOW_MINUTES)
-        # Use naive UTC for SQLite compatibility
-        window_start_naive = window_start.replace(tzinfo=None)
         cls.query.filter(
             cls.identifier == identifier,
-            not cls.success,
-            cls.created_at >= window_start_naive,
-        ).delete()
+            cls.success.is_(False),
+            cls.created_at >= window_start,
+        ).delete(synchronize_session=False)
 
         # Record the success
         attempt = cls(identifier=identifier, success=True)
@@ -1887,8 +1922,42 @@ class PushSubscription(db.Model):
     endpoint = db.Column(db.String(500), nullable=False, unique=True, index=True)
     subscription_json = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
-
     user = db.relationship('User', backref=db.backref('push_subscriptions', lazy='dynamic', cascade='all, delete-orphan'))
 
     def __repr__(self):
         return f'<PushSubscription user={self.user_id} endpoint={self.endpoint[:50]}>'
+
+
+class BillingPayment(db.Model):
+    """Manual bank-transfer payment submitted by a tenant, confirmed by the
+    platform operator (see payroll_engine/billing.py).
+
+    Flow: tenant submits reference -> status 'pending' -> operator confirms
+    -> company.billing_status='active', paid_until=end of period_month,
+    plan_code applied if the payment carries an upgrade request.
+    """
+
+    __tablename__ = 'billing_payment'
+    __table_args__ = (
+        db.Index('ix_billing_payment_company_status', 'company_id', 'status'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    # Optional upgrade request: plan the tenant wants activated on confirmation.
+    plan_code = db.Column(db.String(20), nullable=True)  # free / standard / pro
+    amount_etb = db.Column(db.Numeric(12, 2), nullable=False)
+    period_month = db.Column(db.String(7), nullable=False)  # 'YYYY-MM' being paid for
+    method = db.Column(db.String(20), nullable=False, default='bank_transfer')
+    reference = db.Column(db.String(100), nullable=False)  # transfer ref / Telebirr txn id
+    note = db.Column(db.Text, nullable=True)
+
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending/confirmed/rejected
+    submitted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    submitted_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_note = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f'<BillingPayment {self.company_id} {self.period_month} {self.status}>'

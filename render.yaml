@@ -62,7 +62,7 @@ services:
 
 databases:
   - name: ethiopian-payroll-db
-    plan: starter       # free tier includes automated backups
+    plan: standard      # managed PG w/ PITR backups (production requirement)
     databaseName: ethiopayroll
     ipAllowList: []     # only internal services
 

@@ -189,7 +189,10 @@ def create_app():
         app.oauth = None
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-    if not app.debug:
+    # Bugfix 2026-08: previously only excluded .debug, so pytest runs got
+    # Secure cookies which http-only test clients silently dropped —
+    # killing every session-backed flow (flash, login) in the suite.
+    if not (app.debug or app.config.get('TESTING')):
         app.config['SESSION_COOKIE_SECURE'] = True
 
     # Session timeout: idle timeout (configurable, default30 min)
@@ -484,6 +487,15 @@ def create_app():
     from .selfservice_bp import selfservice_bp
 
     app.register_blueprint(selfservice_bp)
+    from .billing_bp import billing_bp, platform_bp
+
+    app.register_blueprint(billing_bp)
+    app.register_blueprint(platform_bp)
+
+    # Billing enforcement gate: derived state -> access control on every request.
+    from .billing import enforce_billing_gate
+
+    app.before_request(enforce_billing_gate)
 
     @app.cli.command('seed-holidays')
     def seed_holidays_cmd():
@@ -541,6 +553,13 @@ def create_app():
         except Exception as e:
             status['migrations'] = f'error: {e}'
             current_app.logger.warning('readyz migration check failed: %s', e)
+        # Background worker liveness (RQ heartbeat; non-fatal when unknown)
+        try:
+            from .worker_health import heartbeat_status
+
+            status['worker'] = heartbeat_status()
+        except Exception:  # pragma: no cover
+            status['worker'] = 'unknown'
         return {'status': 'ready', 'checks': status}, 200
 
     @app.route('/sw.js')

@@ -2569,10 +2569,12 @@ def download_all_payslips(run_id):
 def download_payslip(payslip_id):
     """Download a single payslip PDF. Generates on-demand if not yet cached."""
     from payroll_engine.shared import get_tenant_or_404 as _gt404
+
     payslip = _gt404(Payslip, payslip_id)
-    run = db.session.get(PayrollRun, payslip.payroll_run_id)
-    if run.company_id != _company_id():
-        abort(403)
+    run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=_company_id()).first()
+    if not run:
+        # Payslip is same-company-verified above; a missing parent means data corruption.
+        abort(404)
     try:
         pdf_path = _ensure_pdf(payslip, payslip.employee)
         db.session.commit()

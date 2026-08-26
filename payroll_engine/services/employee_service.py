@@ -7,7 +7,7 @@ from datetime import datetime as dt
 from decimal import Decimal, InvalidOperation
 
 from payroll_engine import db
-from payroll_engine.models import Employee
+from payroll_engine.models import Company, Employee
 from payroll_engine.shared import create_audit_log
 
 
@@ -105,6 +105,15 @@ def parse_employee_form(form_data):
 
 def create_employee(data, company_id, user_id):
     """Create a new employee. Returns EmployeeResult."""
+    # Billing tier cap (2026-08): plan limits employee count.
+    from payroll_engine.billing import check_employee_slot
+
+    company = db.session.get(Company, company_id)
+    if company is not None:
+        slot_ok, slot_error = check_employee_slot(company)
+        if not slot_ok:
+            return EmployeeResult(False, error=slot_error)
+
     emp_id = data['emp_id']
 
     # Auto-generate employee_id if not provided

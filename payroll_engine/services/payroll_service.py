@@ -15,7 +15,7 @@ from payroll_engine.models import (
     PayrollValidationResult,
     Payslip,
 )
-from payroll_engine.shared import create_audit_log, create_notification
+from payroll_engine.shared import create_audit_log, create_notification, tenant_get
 
 
 class ApprovalResult:
@@ -247,7 +247,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Log the failure in a separate transaction
         try:
-            failed_run = db.session.get(PayrollRun, run.id)
+            failed_run = tenant_get(PayrollRun, run.id, company_id)
             if failed_run:
                 failed_run.status = 'failed'
             create_audit_log(

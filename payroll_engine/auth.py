@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC
+from datetime import UTC, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
@@ -136,16 +136,17 @@ def login():
         session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
-        # Audit: successful login
-        from payroll_engine.shared import create_audit_log
+        # Audit: successful login (skip for platform-operator accounts with no tenant)
+        if user.company_id:
+            from payroll_engine.shared import create_audit_log
 
-        create_audit_log(
-            company_id=user.company_id,
-            user_id=user.id,
-            action='login_success',
-            details={'method': 'phone' if looks_like_phone else 'email'},
-        )
-        db.session.commit()
+            create_audit_log(
+                company_id=user.company_id,
+                user_id=user.id,
+                action='login_success',
+                details={'method': 'phone' if looks_like_phone else 'email'},
+            )
+            db.session.commit()
         if user.must_change_password:
             flash('Please set a new password to continue. Your temporary password needs to be changed.', 'warning')
             return redirect(url_for('auth.change_password'))
@@ -277,6 +278,10 @@ def register():
                 flash('A company with that name already exists.', 'danger')
                 return redirect(url_for('auth.register'))
             company = Company(name=company_name)
+            # 30-day trial for new signups (see payroll_engine/billing.py).
+            from payroll_engine.billing import TRIAL_DAYS
+
+            company.trial_ends_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=TRIAL_DAYS)
             db.session.add(company)
             db.session.flush()
 

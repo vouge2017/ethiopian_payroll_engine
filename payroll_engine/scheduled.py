@@ -121,7 +121,7 @@ def generate_payroll_summary_email(company_id, run_id):
     """
     from payroll_engine.models import Company, Employee, PayrollRun, Payslip
 
-    run = PayrollRun.query.get(run_id)
+    run = PayrollRun.query.filter_by(id=run_id, company_id=company_id).first()
     company = Company.query.get(company_id)
 
     if not run or not company:
@@ -150,7 +150,7 @@ def generate_payroll_summary_email(company_id, run_id):
     ]
 
     for ps in payslips:
-        emp = Employee.query.get(ps.employee_id)
+        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
         if emp:
             lines.append(f'  {emp.name}: ETB {ps.net_pay:,.2f}')
 

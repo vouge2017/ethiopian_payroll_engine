@@ -25,7 +25,7 @@ from flask import Blueprint, Response, flash, redirect, render_template, request
 from flask_login import current_user, login_required
 
 from payroll_engine.models import Company, Employee, PayrollRun, Payslip
-from payroll_engine.shared import role_required
+from payroll_engine.shared import role_required, tenant_get
 
 accounting_bp = Blueprint('accounting', __name__)
 
@@ -48,7 +48,7 @@ def _generate_journal_entries(run_id, company_id):
     total_net = Decimal('0')
 
     for ps in payslips:
-        emp = Employee.query.get(ps.employee_id)
+        emp = tenant_get(Employee, ps.employee_id, company_id)
         if not emp:
             continue
 

@@ -16,9 +16,6 @@ depends_on = None
 def upgrade():
     with op.batch_alter_table('payslip_generation_job', schema=None) as batch_op:
         batch_op.add_column(sa.Column('company_id', sa.Integer(), nullable=True))
-        batch_op.create_foreign_key(
-            'fk_payslipgenjob_company', 'payslip_generation_job', ['company_id'], ['company.id']
-        )
         batch_op.create_index('ix_payslip_generation_job_company_id', ['company_id'])
 
 

@@ -333,12 +333,23 @@ class ExcelPayrollEngine:
                     taxable_total += amt - exempt_part
                 else:
                     taxable_total += amt
+                # Per-allowance exempt/taxable split
+                if treatment == 'exempt':
+                    a_exempt = amt
+                    a_taxable = Decimal('0')
+                elif treatment == 'partial':
+                    cap = _D(rec.get('exempt_cap_amount', 0))
+                    a_exempt = min(amt, cap) if cap > 0 else Decimal('0')
+                    a_taxable = amt - a_exempt
+                else:
+                    a_exempt = Decimal('0')
+                    a_taxable = amt
                 allowance_details.append(
                     {
                         'type': rec.get('allowance_type', 'other'),
                         'amount': amt,
-                        'exempt': exempt_total if treatment == 'exempt' else (min(amt, _D(rec.get('exempt_cap_amount', 0))) if treatment == 'partial' else Decimal('0')),
-                        'taxable': taxable_total if treatment == 'taxable' else (amt - min(amt, _D(rec.get('exempt_cap_amount', 0))) if treatment == 'partial' else Decimal('0')),
+                        'exempt': a_exempt,
+                        'taxable': a_taxable,
                         'treatment': treatment,
                     }
                 )
@@ -742,7 +753,7 @@ class ExcelPayrollEngine:
             # Handle CSV files directly
             with open(filepath, newline='', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
-                rows = [dict(row) for reader in [reader] for row in reader]
+                rows = [dict(row) for row in reader]
         else:
             from payroll_engine.excel_import import read_xlsx
             rows = read_xlsx(filepath)
@@ -1158,8 +1169,9 @@ class ExcelPayrollEngine:
             cell.font = totals_font
 
         # Auto-width
+        from openpyxl.utils import get_column_letter
         for col in range(1, len(headers) + 1):
-            ws2.column_dimensions[chr(64 + col) if col <= 26 else 'A'].width = 15
+            ws2.column_dimensions[get_column_letter(col)].width = 15
 
         # ---- Sheet 3: Calculation Flow ----
         ws3 = wb.create_sheet('Calculation Flow')

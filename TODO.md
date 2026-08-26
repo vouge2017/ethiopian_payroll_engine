@@ -1,8 +1,9 @@
 # TODO — Path to World-Class SaaS
 
-**Last updated:** 2026-08-06
-**Current score:** 9.6/10 (functional) → Target: 9.5/10 (polished + lovable)
-**Grand Plan:** See `GRAND_PLAN.md` for full details
+**Last updated:** 2026-08-26
+**Current score:** 5.6/10 (strategic benchmark) → Target: 7.0/10 (pilot-ready)
+**Working decision:** CONDITIONAL GO for one controlled accountant pilot
+**Grand Plan:** See `PLATFORM_GAP_ANALYSIS_AND_STRATEGIC_SCORECARD.md` for full details
 
 ---
 

@@ -7,6 +7,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- Excel-compatible payroll engine (`excel_payroll.py`) — deterministic, explainable, auditable
+- Per-employee calculation flow (8-12 steps with formula, inputs, result, legal reference)
+- SHA-256 determinism proof (input hash + output hash)
+- Multi-sheet Excel export (8 sheets: Summary, Payroll, Calculation Flow, Tax Breakdown, Exceptions, Changes, Bank File, Approval)
+- 9 validation rules in new engine (BLOCK/FLAG/WARN)
+- Change detection vs previous period (new hires, departures, salary changes)
+- Approval state machine (draft → review → approved → locked)
+- Bank file auto-generation from approved payroll
+- Adjustment payslip service (`services/adjustment_service.py`) — addition, deduction, net_override
+- Month-end close workflow (`services/month_close.py`) — 7-step guided sequence
+- Web calculation flow template (`templates/components/calculation_flow.html`)
+- Month-end close template (`templates/payroll/month_close.html`)
+- Strategic benchmark audit (`PLATFORM_GAP_ANALYSIS_AND_STRATEGIC_SCORECARD.md`)
 - Async PDF generation (RQ + Redis background workers)
 - Full test suite runner (`run_tests.py`) — subprocess isolation for CI
 - Verification package for accountant review (15 sections)

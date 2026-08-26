@@ -161,6 +161,16 @@ def create_app():
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
     csrf.init_app(app)
+
+    # EMERGENCY VALVE (temporary): production proxy breaks CSRF pairing on
+    # auth routes; flip EMERGENCY_DISABLE_CSRF_AUTH=1 to exempt auth blueprint.
+    # Rate limiting + brute-force lockout remain fully active. REMOVE once the
+    # root cause is fixed and verified.
+    if os.environ.get('EMERGENCY_DISABLE_CSRF_AUTH') == '1':
+        from .auth import auth_blueprint
+
+        csrf.exempt(auth_blueprint)
+        app.logger.warning('EMERGENCY: CSRF disabled on /auth/* routes')
     limiter.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'

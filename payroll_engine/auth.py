@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC
+from datetime import UTC, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
@@ -277,6 +277,10 @@ def register():
                 flash('A company with that name already exists.', 'danger')
                 return redirect(url_for('auth.register'))
             company = Company(name=company_name)
+            # 30-day trial for new signups (see payroll_engine/billing.py).
+            from payroll_engine.billing import TRIAL_DAYS
+
+            company.trial_ends_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=TRIAL_DAYS)
             db.session.add(company)
             db.session.flush()
 

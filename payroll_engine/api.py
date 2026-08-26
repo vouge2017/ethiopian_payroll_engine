@@ -679,6 +679,27 @@ def bulk_import_employees():
 
     cid = _get_company_id()
     _get_current_user()
+
+    # Billing tier cap: reject imports exceeding remaining plan headroom.
+    from payroll_engine.billing import employee_count, get_plan
+
+    company = db.session.get(Company, cid)
+    if company is not None:
+        headroom = max(0, get_plan(company)['max_employees'] - employee_count(cid))
+        if len(employees) > headroom:
+            return (
+                jsonify(
+                    {
+                        'error': (
+                            f'Your {get_plan(company)["name"]} plan allows {headroom} more '
+                            f'employee(s); import contains {len(employees)}. Upgrade on the '
+                            'Billing page.'
+                        )
+                    }
+                ),
+                402,
+            )
+
     imported = 0
     errors = []
 

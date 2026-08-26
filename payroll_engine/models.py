@@ -380,6 +380,11 @@ class Company(db.Model):
     # painful backfill. ISO 3166-1 alpha-2, default Ethiopia.
     country = db.Column(db.String(2), nullable=False, server_default='ET', default='ET')
     currency = db.Column(db.String(8), nullable=False, server_default='ETB', default='ETB')
+    # Billing spine (2026-08): see payroll_engine/billing.py for semantics.
+    plan_code = db.Column(db.String(20), nullable=False, server_default='free', default='free')
+    billing_status = db.Column(db.String(20), nullable=False, server_default='trialing', default='trialing')
+    trial_ends_at = db.Column(db.DateTime, nullable=True)  # NULL = grandfathered unlimited trial
+    paid_until = db.Column(db.Date, nullable=True)  # active while >= today
     logo_path = db.Column(db.String(500), nullable=True)  # Path to uploaded logo
     is_demo = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
@@ -444,6 +449,9 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20), unique=True, nullable=True)  # 9XXXXXXXX format
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='owner')  # owner, accountant, employee
+    # Platform operator flag (2026-08): grants access to /platform/* routes
+    # (payment reconciliation across tenants). Never set from public signup.
+    is_platform_admin = db.Column(db.Boolean, nullable=False, server_default='0', default=False)
     company_id = db.Column(
         db.Integer, db.ForeignKey('company.id'), nullable=True
     )  # Null until user creates/joins a company
@@ -1913,8 +1921,42 @@ class PushSubscription(db.Model):
     endpoint = db.Column(db.String(500), nullable=False, unique=True, index=True)
     subscription_json = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
-
     user = db.relationship('User', backref=db.backref('push_subscriptions', lazy='dynamic', cascade='all, delete-orphan'))
 
     def __repr__(self):
         return f'<PushSubscription user={self.user_id} endpoint={self.endpoint[:50]}>'
+
+
+class BillingPayment(db.Model):
+    """Manual bank-transfer payment submitted by a tenant, confirmed by the
+    platform operator (see payroll_engine/billing.py).
+
+    Flow: tenant submits reference -> status 'pending' -> operator confirms
+    -> company.billing_status='active', paid_until=end of period_month,
+    plan_code applied if the payment carries an upgrade request.
+    """
+
+    __tablename__ = 'billing_payment'
+    __table_args__ = (
+        db.Index('ix_billing_payment_company_status', 'company_id', 'status'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    # Optional upgrade request: plan the tenant wants activated on confirmation.
+    plan_code = db.Column(db.String(20), nullable=True)  # free / standard / pro
+    amount_etb = db.Column(db.Numeric(12, 2), nullable=False)
+    period_month = db.Column(db.String(7), nullable=False)  # 'YYYY-MM' being paid for
+    method = db.Column(db.String(20), nullable=False, default='bank_transfer')
+    reference = db.Column(db.String(100), nullable=False)  # transfer ref / Telebirr txn id
+    note = db.Column(db.Text, nullable=True)
+
+    status = db.Column(db.String(20), nullable=False, default='pending')  # pending/confirmed/rejected
+    submitted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    submitted_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_note = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f'<BillingPayment {self.company_id} {self.period_month} {self.status}>'

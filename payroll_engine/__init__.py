@@ -484,6 +484,15 @@ def create_app():
     from .selfservice_bp import selfservice_bp
 
     app.register_blueprint(selfservice_bp)
+    from .billing_bp import billing_bp, platform_bp
+
+    app.register_blueprint(billing_bp)
+    app.register_blueprint(platform_bp)
+
+    # Billing enforcement gate: derived state -> access control on every request.
+    from .billing import enforce_billing_gate
+
+    app.before_request(enforce_billing_gate)
 
     @app.cli.command('seed-holidays')
     def seed_holidays_cmd():

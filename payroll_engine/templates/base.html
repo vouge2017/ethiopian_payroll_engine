@@ -26,7 +26,7 @@
 </head>
 <body>
 <!-- Skip Link -->
-<a href="#mainContent" class="skip-link" tabindex="1">Skip to main content</a>
+<a href="#mainContent" class="skip-link">Skip to main content</a>
 
 {% if current_user.is_authenticated %}
 <div class="app-layout d-flex">
@@ -85,10 +85,10 @@
 
             <!-- Setup -->
             <div class="nav-section {% if 'employee' in request.endpoint and 'my' not in request.endpoint or 'team' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Setup</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
                     <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
                         <i class="bi bi-people"></i><span>{{ _('employees') }}</span>
@@ -103,10 +103,10 @@
 
             <!-- Run -->
             <div class="nav-section {% if request.endpoint == 'payroll.payroll_upload' or 'payroll_runs' in request.endpoint or 'attendance' in request.endpoint or 'leave' in request.endpoint or 'calendar' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Run</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
                     <a href="{{ url_for('payroll.payroll_upload') }}" class="nav-link {% if request.endpoint == 'payroll.payroll_upload' %}active{% endif %}" role="menuitem">
                         <i class="bi bi-cloud-upload"></i><span>{{ _('run_payroll') }}</span>
@@ -130,10 +130,10 @@
 
             <!-- Review -->
             <div class="nav-section {% if 'profile_change' in request.endpoint or 'comparison' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Review</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
                     {% if pending_profile_changes > 0 %}
                     <a href="{{ url_for('employees.profile_changes') }}" class="nav-link {% if 'profile_change' in request.endpoint %}active{% endif %}" role="menuitem">
@@ -149,10 +149,10 @@
 
             <!-- File -->
             <div class="nav-section {% if 'filing' in request.endpoint or 'erc' in request.endpoint or 'bank' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>File</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
                     <a href="{{ url_for('reports.filing_history') }}" class="nav-link {% if 'filing' in request.endpoint %}active{% endif %}" role="menuitem">
                         <i class="bi bi-folder-check"></i><span>Filing History</span>
@@ -162,10 +162,10 @@
 
             <!-- Report -->
             <div class="nav-section {% if 'report' in request.endpoint or 'analytics' in request.endpoint or 'accounting' in request.endpoint or 'impact' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Report</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
                     <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
                         <i class="bi bi-bar-chart-line"></i><span>{{ _('reports') }}</span>
@@ -340,16 +340,32 @@ function toggleSidebar() {
     if (btn) btn.setAttribute('aria-expanded', isOpen);
 }
 
-// Toggle collapsible sidebar sections
+// Toggle collapsible sidebar sections (keeps aria-expanded in sync)
 function toggleNavSection(labelEl) {
     var section = labelEl.closest('.nav-section');
+    var expanded;
     if (section.classList.contains('has-active')) {
         // Active sections: toggle collapsed to override has-active
         section.classList.toggle('collapsed');
+        expanded = !section.classList.contains('collapsed');
     } else {
         section.classList.toggle('expanded');
+        expanded = section.classList.contains('expanded');
     }
+    labelEl.setAttribute('aria-expanded', expanded ? 'true' : 'false');
 }
+
+// Initialize aria-expanded from each section's server-rendered state
+(function() {
+    document.querySelectorAll('.nav-section-label').forEach(function(btn) {
+        var section = btn.closest('.nav-section');
+        var expanded =
+            section.classList.contains('expanded') ||
+            (section.classList.contains('has-active') &&
+                !section.classList.contains('collapsed'));
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+})();
 
 // Close sidebar on mobile link click
 document.querySelectorAll('.sidebar-nav .nav-link').forEach(function(a) {
@@ -365,33 +381,12 @@ document.querySelectorAll('.sidebar-nav .nav-link').forEach(function(a) {
     });
 });
 
-// Toast Notifications
+// Toast Notifications — delegated to EthioPayroll.toast (HTML-escaped,
+// rendered into an aria-live container). Shim kept for legacy callers.
 function showToast(message, type = 'info', duration = 4000) {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const icons = {
-        success: 'bi-check-circle-fill',
-        error: 'bi-x-circle-fill',
-        warning: 'bi-exclamation-triangle-fill',
-        info: 'bi-info-circle-fill'
-    };
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <i class="toast-icon bi ${icons[type] || icons.info}"></i>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>
-    `;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(16px)';
-        toast.style.transition = 'all 300ms ease';
-        setTimeout(() => toast.remove(), 300);
-    }, duration);
+    if (window.EthioPayroll && typeof EthioPayroll.toast === 'function') {
+        EthioPayroll.toast(message, type, '', duration);
+    }
 }
 
 // Chart.js defaults

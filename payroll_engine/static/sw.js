@@ -1,9 +1,14 @@
-// EthioPayroll service worker — offline shell + push notifications.
+// EthioPayroll service worker — offline shell + offline pages + push notifications.
+//
+// Strategy:
+//   - Static assets: cache-first (shell cache)
+//   - Page navigations: network-first, cached for offline reuse, /offline fallback
+//   - /api/* and /auth/*: never intercepted (always live)
 
-const CACHE_NAME = 'ethiopayroll-shell-v2';
+const SHELL_CACHE = 'ethiopayroll-shell-v3';
+const PAGE_CACHE = 'ethiopayroll-pages-v1';
 
 const SHELL_ASSETS = [
-  '/',
   '/static/css/design-system.css',
   '/static/css/responsive.css',
   '/static/icons/icon-192.png',
@@ -13,31 +18,80 @@ const SHELL_ASSETS = [
 // Install
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_ASSETS))
   );
   self.skipWaiting();
 });
 
-// Activate
+// Activate — clean up any caches from previous versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter((k) => k !== SHELL_CACHE && k !== PAGE_CACHE)
+          .map((k) => caches.delete(k))
+      )
     )
   );
   self.clients.claim();
 });
 
-// Fetch — cache-first for static, network-first for everything else
+// Fetch
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
-  
-  // Skip service worker intercept for HTML navigation requests to let standard browser handle login redirects cleanly
-  if (request.mode === 'navigate') return;
 
-  if (request.url.includes('/api/') || request.url.includes('/auth/')) return;
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return;
+  }
 
+  // Never intercept cross-origin requests (CDNs, fonts, analytics).
+  if (url.origin !== self.location.origin) return;
+
+  // ── Page navigations: network-first with offline fallback ──
+  // This is what makes the app usable during power/network outages:
+  // the last-seen pages are served from cache, and if nothing is cached
+  // the friendly /offline screen renders instead of a browser error.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache successful, non-login pages for offline reuse.
+          // Login/register pages are never cached (avoids stale auth states).
+          const finalUrl = response.url || request.url;
+          const isLoginPage =
+            finalUrl.includes('/auth/login') || finalUrl.includes('/auth/register');
+          if (response && response.ok && !isLoginPage && !response.redirected) {
+            const copy = response.clone();
+            caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached =
+            (await caches.match(request)) || (await caches.match('/offline'));
+          return (
+            cached ||
+            new Response('<h1>Offline</h1><p>You are offline.</p>', {
+              status: 503,
+              headers: { 'Content-Type': 'text/html' },
+            })
+          );
+        })
+    );
+    return;
+  }
+
+  // ── API & auth requests: always hit the network ──
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) {
+    return;
+  }
+
+  // ── Same-origin static assets: cache-first ──
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
@@ -70,9 +124,7 @@ self.addEventListener('push', (event) => {
     ],
   };
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 // Notification click

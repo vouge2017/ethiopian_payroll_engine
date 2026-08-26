@@ -1,0 +1,7 @@
+[main 159caec] P0 UI/UX fixes: offline-capable service worker, a11y repairs (skip-link tabindex, viewport zoom, keyboard nav buttons), CSS dedup (.skeleton/.metric-card/.chart-container), toast dedup
+ 5 files changed, 122 insertions(+), 94 deletions(-)
+From https://github.com/vouge2017/ethiopian_payroll_engine
+ * branch            main       -> FETCH_HEAD
+Current branch main is up to date.
+To https://github.com/vouge2017/ethiopian_payroll_engine.git
+   7e87ebb..159caec  main -> main

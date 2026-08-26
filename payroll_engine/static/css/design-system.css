@@ -7,7 +7,8 @@
 /* Inter: primary UI font (exceptional legibility, tabular data) */
 /* JetBrains Mono: financial figures, currency, tax IDs */
 /* Noto Sans Ethiopic: Amharic/Afaan Oromoo text */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Ethiopic:wght@300;400;500;600;700&display=swap');
+/* Fonts are loaded via <link> in the templates (preconnected, non-blocking).
+   Do NOT re-add an @import here — it double-fetches and delays first paint. */
 
 /* --- CSS Variables --- */
 :root {
@@ -1145,6 +1146,18 @@ pre {
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* Respect users who prefer reduced motion (WCAG 2.3.3 / modern baseline) */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
 /* --- Empty State --- */
 .empty-state {
     text-align: center;
@@ -1308,7 +1321,7 @@ pre {
     position: fixed;
     top: 1rem;
     right: 1rem;
-    z-index: 9999;
+    z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -2199,7 +2212,7 @@ kbd {
     font-size: 24px;
 }
 
-.onboarding-checklist-header h3 {
+.onboarding-checklist-header h2 {
     font-family: var(--font-heading);
     font-size: 24px;
     font-weight: 600;

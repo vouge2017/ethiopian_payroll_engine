@@ -1,0 +1,16 @@
+From https://github.com/vouge2017/ethiopian_payroll_engine
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+---
+2a597fa Remove temporary verification logs
+1732f8f Register service worker on auth/onboarding pages so offline fallback covers public pages too
+159caec P0 UI/UX fixes: offline-capable service worker, a11y repairs (skip-link tabindex, viewport zoom, keyboard nav buttons), CSS dedup (.skeleton/.metric-card/.chart-container), toast dedup
+7e87ebb Add professional UI/UX audit: gap analysis, SaaS benchmarking, maturity rating, roadmap
+f4a635f Add UI/UX evaluation toolchain: accessibility, responsive, PWA/network, Lighthouse audits + skills guide
+c68af06 Phase 3c: end-to-end money-path smoke test
+32e0a84 Phase 3b: Payslip under enforced tenant isolation (51-site sweep)
+3406bd6 chore: remove dead test_concurrency.py (imports nonexistent package)
+aafb705 Phase 2b+3: tenant re-registration (Attendance, PayrollDraft) + regression suite
+94ede06 Phase 2: tenant enforcement, cross-tenant leak fix, import integrity
+9dbb09f Phase 1: migration hygiene, encryption gate, API hardening
+c78f28f Phase 0: fix runtime-breaking regressions (company_id population, tenant query rollback, token-based preview)

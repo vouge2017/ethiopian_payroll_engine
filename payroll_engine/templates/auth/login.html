@@ -1,11 +1,11 @@
-{% extends "auth/onboarding-base.html" %}
+﻿{% extends "auth/onboarding-base.html" %}
 {% block title %}Sign In — EthioPayroll{% endblock %}
 
 {% block content %}
 <!-- Left: Quick-start sidebar -->
-<aside class="onboarding-stepper">
+<aside class="onboarding-stepper" aria-label="Quick start steps">
     <div class="onboarding-stepper-card">
-        <h3 class="onboarding-stepper-title">Quick Start</h3>
+        <h2 class="onboarding-stepper-title">Quick Start</h2>
         <ul class="onboarding-stepper-list">
             <li class="onboarding-step completed">
                 <div class="onboarding-step-dot">
@@ -138,7 +138,7 @@
     <div class="onboarding-checklist">
         <div class="onboarding-checklist-header">
             <span class="material-symbols-outlined">rocket_launch</span>
-            <h3>New Here?</h3>
+            <h2>New Here?</h2>
         </div>
         <p class="onboarding-checklist-desc">Create an account to start running compliant payroll for your Ethiopian business.</p>
         <a href="{{ url_for('auth.register') }}" class="onboarding-btn-next" style="text-decoration: none; width: 100%; justify-content: center;">

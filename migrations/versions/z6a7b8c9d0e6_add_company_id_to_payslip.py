@@ -30,8 +30,8 @@ def upgrade():
 
     with op.batch_alter_table('payslip', schema=None) as batch_op:
         batch_op.alter_column('company_id', nullable=False)
-        batch_op.create_foreign_key('fk_payslip_company_id', 'payslip', 'company', ['company_id'], ['id'])
-        batch_op.create_index('ix_payslip_company_id', 'payslip', ['company_id'])
+        batch_op.create_foreign_key('fk_payslip_company_id', 'company', ['company_id'], ['id'])
+        batch_op.create_index('ix_payslip_company_id', ['company_id'])
 
 
 def downgrade():

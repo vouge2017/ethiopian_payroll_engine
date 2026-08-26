@@ -30,7 +30,7 @@ def upgrade():
 
     with op.batch_alter_table('user', schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column('is_platform_admin', sa.Boolean(), nullable=False, server_default=sa.text('0'))
+            sa.Column('is_platform_admin', sa.Boolean(), nullable=False, server_default=sa.text('false'))
         )
 
     op.create_table(

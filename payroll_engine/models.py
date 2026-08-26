@@ -1730,6 +1730,7 @@ class PayslipGenerationJob(db.Model):
     """
 
     id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True, index=True)
     payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=False, index=True)
     batch_id = db.Column(db.String(36), nullable=False, index=True)  # UUID
     status = db.Column(db.String(20), nullable=False, default='queued')  # queued/running/generated/failed

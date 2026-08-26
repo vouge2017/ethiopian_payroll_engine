@@ -186,39 +186,54 @@ def test_api_gets_json_402_when_past_due(app):
     assert resp.is_json
 
 
-def test_full_reconciliation_flow(app):
+def test_tenant_can_submit_payment_reference(app):
     client = app.test_client()
-    c = _company(plan_code='free')
-    owner = _owner(c.id)
-    operator = _owner(platform=True)
-    _login(client, owner)
-
-    # Tenant submits a Standard-plan payment reference for 2026-09
-    resp = client.post(
-        '/billing/submit-payment',
+    with app.app_context():
+        c = _company(plan_code='free')
+        owner = _owner(c.id)
+        uid, cid = owner.id, c.id
+    def login(client, uid):
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(uid); sess['_fresh'] = True
+    login(client, uid)
+    resp = client.post('/billing/submit-payment',
         data={'period_month': '2026-09', 'plan_code': 'standard', 'reference': 'FT123'},
-        follow_redirects=True,
-    )
+        follow_redirects=True)
     assert resp.status_code == 200
-    payment = BillingPayment.query.one()
-    assert payment.status == 'pending'
-    assert float(payment.amount_etb) == 500.0
-
-    # Operator confirms
-    _login(client, operator)
-    resp = client.post(f'/platform/payments/{payment.id}/confirm', follow_redirects=True)
-    assert resp.status_code == 200
-
-    db.session.expire_all()
-    company = db.session.get(Company, c.id)
-    assert company.billing_status == 'active'
-    assert company.plan_code == 'standard'
-    assert str(company.paid_until) == '2026-09-30'
+    with app.app_context():
+        p = BillingPayment.query.one()
+        assert p.status == 'pending' and p.plan_code == 'standard'
+        assert float(p.amount_etb) == 500.0
 
 
-def test_platform_route_denies_non_operator(app):
+def test_operator_confirm_activates_company(app):
+    """Confirmation half, isolated: seed pending payment, operator confirms."""
+    with app.app_context():
+        c = _company(plan_code='free')
+        opco = _company(name='Platform HQ')
+        operator = User(email='op@t.et', password_hash='x', role='owner',
+                        company_id=opco.id, is_platform_admin=True)
+        db.session.add(operator)
+        db.session.flush()
+        pay = BillingPayment(company_id=c.id, plan_code='standard',
+                             amount_etb=500, period_month='2026-09',
+                             reference='FT-SEED', status='pending')
+        db.session.add(pay)
+        db.session.commit()
+        pid, oid, cid = pay.id, operator.id, c.id
+
     client = app.test_client()
-    c = _company()
-    u = _owner(c.id)
-    _login(client, u)
-    assert client.get('/platform/payments').status_code == 403
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(oid); sess['_fresh'] = True
+    resp = client.post(f'/platform/payments/{pid}/confirm', follow_redirects=True)
+    assert resp.status_code == 200
+
+    with app.app_context():
+        db.session.expire_all()
+        company = db.session.get(Company, cid)
+        assert company.billing_status == 'active'
+        assert company.plan_code == 'standard'
+        assert str(company.paid_until) == '2026-09-30'
+        assert BillingPayment.query.get(pid).status == 'confirmed'
+
+

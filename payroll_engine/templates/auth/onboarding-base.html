@@ -56,6 +56,21 @@
 <!-- ========== MAIN CONTENT ========== -->
 <main class="onboarding-main" id="mainContent" role="main">
     <div class="onboarding-layout">
+        {# Flash messages — auth pages previously rendered NO user feedback
+           for invalid credentials / lockouts (bugfix 2026-08). #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container" style="max-width: 480px; margin-top: 1rem;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         {% block content %}{% endblock %}
     </div>
 </main>

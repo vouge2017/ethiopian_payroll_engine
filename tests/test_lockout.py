@@ -20,6 +20,7 @@ def app():
     app = create_app()
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    # CSRFProtect is global; integration POSTs below submit raw form data.
     app.config['WTF_CSRF_ENABLED'] = False
     # Disable rate limiter for lockout tests
     from payroll_engine import limiter
@@ -219,7 +220,7 @@ class TestLoginLockoutIntegration:
             follow_redirects=True,
         )
         assert b'locked' in resp.data.lower() or b'temporarily' in resp.data.lower()
-        assert b'Welcome back' not in resp.data
+        assert b'Logged in as' not in resp.data  # success-flash absent; page copy itself says 'Welcome back'
 
     def test_successful_login_resets_counter(self, client, app):
         """Successful login resets the failure counter."""

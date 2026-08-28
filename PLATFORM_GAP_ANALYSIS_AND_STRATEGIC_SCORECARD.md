@@ -26,19 +26,19 @@ Capabilities are split into explicit individual evidence claims rather than comp
 
 | Component / Sub-Capability | True Status & Classification | Detailed Evidence & Reality |
 | :--- | :--- | :--- |
-| **2025 Progressive Tax Math** | 🟢 **TESTED / IMPLEMENTED** | Proclamation 1395/2025 brackets (0%-35%) verified via unit and regression tests in `tests/test_tax.py`. |
-| **POSSA Pension Math** | 🟢 **TESTED / IMPLEMENTED** | 7% employee / 11% employer rates (Proc. 1268/2022) verified with no statutory ceiling in `tests/test_pension.py`. |
-| **Overtime & Severance Math** | 🟢 **TESTED / IMPLEMENTED** | Overtime multipliers (1.5x to 2.5x) and severance formulas verified in `tests/test_overtime.py` & `tests/test_severance.py`. |
-| **Multi-Tenant Data Isolation** | 🟢 **TESTED / IMPLEMENTED** | `TenantQuery` in `models.py` enforces `company_id` scoping; verified via `tests/test_usercompany_tenant.py`. |
-| **Audit Log Hash Chain** | 🟢 **TESTED / IMPLEMENTED** | SHA-256 hash chaining on audit logs in `models.py` verified via `tests/test_audit_hash.py`. |
-| **ERCA eTax File Generation** | 🟡 **TESTED / FILE ONLY** | Outputs valid Excel files matching ERCA portal templates in `reports_bp.py`; submission remains manual portal upload. |
-| **Bank Batch File Generation** | 🟡 **TESTED / FILE ONLY** | Generates formatted bank payout text files (CBE, Telebirr, Dashen, etc.) in `bank_file.py`; direct payout API missing. |
-| **PDF Payslip Generation** | 🟢 **TESTED / IMPLEMENTED** | PDF generation via ReportLab verified in `tests/test_pdf.py`. |
+| **2025 Progressive Tax Math** | 🟢 **TESTED IN CODE** | Proclamation 1395/2025 brackets (0%-35%) verified via unit and regression tests in `tests/test_tax.py`. |
+| **POSSA Pension Math** | 🟢 **TESTED IN CODE** | 7% employee / 11% employer rates (Proc. 1268/2022) verified with no statutory ceiling in `tests/test_pension.py`. |
+| **Overtime & Severance Math** | 🟢 **TESTED IN CODE** | Overtime multipliers (1.5x to 2.5x) and severance formulas verified in `tests/test_overtime.py` & `tests/test_severance.py`. |
+| **Multi-Tenant Data Isolation** | 🟢 **TESTED IN CODE** | `TenantQuery` in `models.py` enforces `company_id` scoping; verified via `tests/test_usercompany_tenant.py`. |
+| **Audit Log Hash Chain** | 🟢 **TESTED IN CODE** | SHA-256 hash chaining on audit logs in `models.py` verified via `tests/test_audit_hash.py`. |
+| **ERCA eTax File Generation** | 🟡 **TESTED / FILE GENERATION ONLY** | Outputs valid Excel files matching ERCA portal templates in `reports_bp.py`; submission remains manual portal upload. |
+| **Bank Batch File Generation** | 🟡 **TESTED / FILE GENERATION ONLY** | Generates formatted bank payout text files (CBE, Telebirr, Dashen, etc.) in `bank_file.py`; direct payout API missing. |
+| **PDF Payslip Generation** | 🟢 **TESTED IN CODE** | PDF generation via ReportLab verified in `tests/test_pdf.py`. |
 | **WebPush Notifications** | 🟡 **IMPLEMENTED — MOCKED TEST ONLY** | Bot structure exists in `push.py`; tested via `mock_pywebpush`; real device delivery unproven. |
 | **Telegram Bot Delivery & Actions** | 🟡 **IMPLEMENTED — MOCKED TEST ONLY** | Bot structure exists in `push.py`; tested via mock framework; live Telegram API delivery unproven. |
 | **Month-over-Month Variance Math** | 🟡 **IMPLEMENTED — NOT PROVEN** | Delta calculation logic in `change_summary.py` works on unit data but lacks accountant pilot validation. |
 | **Exception Detection Inbox** | 🟡 **IMPLEMENTED — NOT PROVEN** | 14 exception rules coded in `exceptions.py`; one-click resolution UI needs live pilot testing. |
-| **Dual Ge'ez/Gregorian Calendar** | 🟢 **TESTED / IMPLEMENTED** | Date conversion verified in `ethiopian_calendar.py` and `tests/test_ethiopian_calendar.py`. |
+| **Dual Ge'ez/Gregorian Calendar** | 🟢 **TESTED IN CODE** | Date conversion verified in `ethiopian_calendar.py` and `tests/test_ethiopian_calendar.py`. |
 | **PWA Offline Asset Caching** | 🟡 **IMPLEMENTED — NOT PROVEN** | Service worker caches static assets; offline data persistence and background sync remain unverified in production. |
 | **Direct Host-to-Host Bank APIs** | 🔴 **MISSING** | Current implementation uses bank-specific file exports. Direct API capability missing. |
 | **Direct Government eTax Filing API** | 🔴 **MISSING** | Current product generates filing package; submission remains manual web portal upload. |
@@ -61,11 +61,11 @@ Instead of arbitrary percentages, platform maturity is evaluated using qualitati
 |  [Maturity Level: ESTABLISHED] - Statutory sources cited; 24 pending |
 +-----------------------------------------------------------------------+
 |  Layer 1: Deterministic Ethiopian Payroll Calculation Engine         |
-|  [Maturity Level: MATURE] - Core tax & pension math fully verified   |
+|  [Maturity Level: ESTABLISHED / HIGH TEST CONFIDENCE] - Core math solid|
 +-----------------------------------------------------------------------+
 ```
 
-1. **Layer 1 (Deterministic Payroll Engine) — MATURE:** Versioned rules for Proclamation 1395/2025 (Tax) and Proclamation 1268/2022 (Pension) are fully verified in automated test suites.
+1. **Layer 1 (Deterministic Payroll Engine) — ESTABLISHED / HIGH TEST CONFIDENCE:** Versioned rules for Proclamation 1395/2025 (Tax) and Proclamation 1268/2022 (Pension) are verified in automated test suites.
 2. **Layer 2 (Knowledge Platform) — ESTABLISHED:** Cites legal sources for statutory rules. Out of 34 identified rules, 10 are code-tested, while 24 remain cited but pending legal auditor sign-off.
 3. **Layer 3 (Trust Platform) — INTERMEDIATE:** Implements core trust patterns (variance analysis, exception detection, audit hash chains, pre-flight checklists). However, exception resolution and variance UX remain unproven in live accountant workflows.
 4. **Layer 4 (Accountant Operating System) — EMERGING:** Includes guided onboarding and period locking, but lacks a dedicated Multi-Company Accountant Cockpit allowing accounting firms to manage multiple client SMEs seamlessly.

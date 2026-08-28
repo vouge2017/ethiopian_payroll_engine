@@ -1,69 +1,59 @@
-# COMPETITOR BENCHMARK MATRIX
+# COMPETITOR BENCHMARK MATRIX (RECONCILED EDITION)
 **Global & African Payroll Benchmark Evaluation**
 
 **Main Deliverable Link:** [`PLATFORM_GAP_ANALYSIS_AND_STRATEGIC_SCORECARD.md`](PLATFORM_GAP_ANALYSIS_AND_STRATEGIC_SCORECARD.md)
 
 ---
 
-## 1. 20-DIMENSION UNIVERSAL SCORECARD (23 PLATFORMS)
+## 1. RESEARCH TIERING & METHODOLOGY
 
-Each platform is evaluated across 20 core product dimensions on a 1–10 scale based on industry documentation, product audits, and verified architectural capabilities:
-
-| # | Dimension | ADP | Gusto | Rippling | Paychex | Paylocity | UKG | Workday | Deel | Remote | Oyster | PayFit | Sage | Personio | HiBob | SD Worx | Visma | Zellis | IRIS | CloudPay | PaySpace | Workpay | SeamlessHR | WorkForce Africa | EthioPayroll (Current) |
-|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1 | Payroll Depth | 10 | 8 | 8 | 9 | 8 | 9 | 10 | 8 | 8 | 7 | 8 | 9 | 7 | 6 | 9 | 8 | 9 | 9 | 8 | 9 | 7 | 7 | 6 | **8** |
-| 2 | SME Usability | 5 | 10 | 9 | 6 | 7 | 5 | 3 | 9 | 8 | 8 | 10 | 6 | 8 | 8 | 5 | 8 | 5 | 6 | 7 | 7 | 9 | 8 | 7 | **8** |
-| 3 | Accountant Experience | 8 | 8 | 7 | 9 | 7 | 6 | 4 | 7 | 6 | 6 | 9 | 10 | 6 | 5 | 7 | 9 | 7 | 10 | 6 | 8 | 7 | 6 | 6 | **7** |
-| 4 | Employee Experience | 6 | 10 | 9 | 6 | 9 | 7 | 5 | 9 | 9 | 9 | 9 | 6 | 9 | 10 | 6 | 7 | 6 | 6 | 7 | 7 | 8 | 8 | 7 | **7** |
-| 5 | Payslip Experience | 7 | 10 | 9 | 7 | 9 | 7 | 6 | 9 | 9 | 8 | 10 | 7 | 8 | 8 | 7 | 7 | 7 | 7 | 8 | 8 | 8 | 8 | 7 | **8** |
-| 6 | Payroll Review & Trust | 9 | 9 | 8 | 8 | 7 | 8 | 9 | 8 | 8 | 7 | 9 | 8 | 7 | 6 | 8 | 8 | 9 | 8 | 8 | 8 | 7 | 7 | 6 | **8** |
-| 7 | Compliance Automation | 10 | 9 | 8 | 9 | 8 | 9 | 10 | 9 | 9 | 8 | 9 | 9 | 7 | 6 | 9 | 8 | 9 | 8 | 9 | 9 | 7 | 8 | 7 | **8** |
-| 8 | AI / Automation | 5 | 7 | 10 | 5 | 6 | 7 | 8 | 8 | 7 | 6 | 7 | 5 | 7 | 7 | 5 | 6 | 5 | 5 | 6 | 6 | 6 | 6 | 5 | **6** |
-| 9 | Mobile Experience | 6 | 9 | 9 | 6 | 10 | 7 | 7 | 8 | 8 | 7 | 8 | 6 | 9 | 9 | 6 | 7 | 5 | 5 | 6 | 7 | 9 | 7 | 6 | **7** |
-| 10| Messaging / Notifications | 5 | 8 | 8 | 5 | 7 | 6 | 5 | 8 | 7 | 7 | 8 | 6 | 7 | 8 | 5 | 6 | 5 | 5 | 6 | 6 | 8 | 7 | 6 | **7** |
-| 11| Payments / Banking | 10 | 9 | 8 | 9 | 8 | 7 | 7 | 10 | 9 | 8 | 7 | 7 | 6 | 5 | 8 | 7 | 8 | 7 | 10 | 8 | 9 | 8 | 7 | **6** |
-| 12| Multi-Company Capability | 9 | 7 | 8 | 9 | 7 | 8 | 10 | 8 | 7 | 6 | 7 | 10 | 6 | 5 | 8 | 9 | 8 | 10 | 7 | 9 | 7 | 7 | 6 | **6** |
-| 13| Integrations / API | 8 | 9 | 10 | 7 | 8 | 8 | 9 | 9 | 8 | 8 | 8 | 8 | 9 | 9 | 7 | 8 | 6 | 7 | 8 | 7 | 8 | 7 | 6 | **6** |
-| 14| Reporting / Analytics | 9 | 8 | 9 | 8 | 8 | 9 | 10 | 8 | 8 | 7 | 8 | 9 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 7 | 7 | 6 | **7** |
-| 15| Auditability / Security | 10 | 8 | 9 | 9 | 8 | 9 | 10 | 9 | 9 | 8 | 8 | 9 | 8 | 7 | 9 | 8 | 9 | 8 | 9 | 8 | 7 | 7 | 7 | **8** |
-| 16| Country Localization | 9 | 8 | 7 | 8 | 7 | 8 | 9 | 10 | 9 | 8 | 9 | 8 | 7 | 6 | 9 | 9 | 8 | 8 | 9 | 9 | 8 | 8 | 8 | **9** |
-| 17| Multi-Country Scalability| 8 | 3 | 7 | 4 | 4 | 6 | 10 | 10 | 10 | 9 | 6 | 7 | 5 | 5 | 8 | 8 | 7 | 6 | 10 | 10 | 8 | 7 | 8 | **4** |
-| 18| African Relevance | 2 | 2 | 3 | 2 | 2 | 2 | 3 | 6 | 5 | 5 | 2 | 6 | 2 | 2 | 2 | 2 | 2 | 2 | 5 | 10 | 10 | 10 | 9 | **10** |
-| 19| Product Simplicity | 4 | 10 | 8 | 5 | 6 | 4 | 2 | 8 | 8 | 8 | 10 | 5 | 8 | 8 | 4 | 6 | 4 | 5 | 5 | 6 | 8 | 7 | 6 | **8** |
-| 20| Strategic Differentiation| 8 | 9 | 10 | 6 | 7 | 7 | 9 | 9 | 8 | 7 | 9 | 7 | 7 | 8 | 6 | 7 | 6 | 6 | 8 | 9 | 9 | 8 | 7 | **9** |
+To ensure evidence discipline, platforms are split into explicit research tiers:
+* **Tier 1 (Deep Strategic Research):** Detailed feature, workflow, and architectural analysis based on official documentation, product demos, developer API specs, and industry studies.
+  * *Companies:* ADP, Gusto, Rippling, PayFit, Sage, IRIS, Deel, CloudPay, PaySpace, Workpay, SeamlessHR, WorkForce Africa.
+* **Tier 2 (Comparative Benchmarking Framework):** Working hypothesis scores for comparative context across industry standards.
+  * *Companies:* Paychex, Paylocity, UKG, Workday, Remote, Oyster, Personio, HiBob, SD Worx, Visma, Zellis.
 
 ---
 
-## 2. STRATEGIC LESSONS BY COMPANY
+## 2. 20-DIMENSION UNIVERSAL BENCHMARK MATRIX
 
-### ADP (US) — *Lesson: Infrastructure Trust*
-* **What to learn:** Unwavering calculation reliability, tamper-proof audit trails, and multi-tenant security architecture.
-* **What NOT to copy:** Enterprise sales complexity and heavy multi-tier configuration menus.
+Scores represent a working hypothesis framework evaluated on a 1–10 scale:
 
-### Gusto (US) — *Lesson: SME Onboarding & Visual Simplicity*
-* **What to learn:** Step-by-step onboarding progress bars, clear plain-language payroll summaries, and anxiety-reducing UX.
-* **What NOT to copy:** US-specific health insurance and 401(k) benefit administration workflows.
-
-### Rippling (US) — *Lesson: Event-Driven Automation*
-* **What to learn:** Automatic triggers that adjust payroll when employee status changes (e.g., promotion, exit, raise).
-* **What NOT to copy:** Massive unified IT device management and app provisioning suite.
-
-### PayFit (Europe) — *Lesson: Accountant-Guided SME Experience*
-* **What to learn:** High visual clarity, interactive payslip breakdown, and hiding complex labor law inside guided wizards.
-* **What NOT to copy:** French-specific complex collective bargaining agreement engine.
-
-### PaySpace & Workpay (Africa) — *Lesson: African Reality & Mobile Payouts*
-* **What to learn:** Support for local payment rails (M-Pesa, mobile wallets) and multi-country tax rule pack isolation.
-* **What NOT to copy:** Premature multi-country expansion before achieving single-market density.
+| # | Dimension | Tier 1 / Tier 2 Platform Benchmarks | EthioPayroll Status & Confidence |
+|---|---|---|:---:|
+| 1 | Payroll Depth | ADP (10), Workday (10), Sage (9), PaySpace (9), EthioPayroll (8) | 🟢 High (Deterministic tax/pension engine verified) |
+| 2 | SME Usability | PayFit (10), Gusto (10), Workpay (9), EthioPayroll (8) | 🟡 Medium (Guided wizard works; spreadsheet editor needs tuning) |
+| 3 | Accountant Experience | Sage (10), IRIS (10), PayFit (9), EthioPayroll (7) | 🟡 Medium (Single-company mode complete; multi-client dashboard pending) |
+| 4 | Employee Experience | Gusto (10), Paylocity (9), HiBob (9), EthioPayroll (7) | 🟡 Medium (PDF payslips complete; interactive breakdown pending) |
+| 5 | Payslip Experience | PayFit (10), Gusto (10), Deel (9), EthioPayroll (8) | 🟢 High (PDF payslip generation verified) |
+| 6 | Payroll Review & Trust | ADP (9), Workday (9), PayFit (9), EthioPayroll (8) | 🟡 Medium (Audit hash chain verified; exception UX needs pilot testing) |
+| 7 | Compliance Automation | ADP (10), Workday (10), PaySpace (9), EthioPayroll (8) | 🟡 Medium (Tax/pension math verified; 24 rules pending auditor sign-off) |
+| 8 | AI / Automation | Rippling (10), Workday (8), Gusto (7), EthioPayroll (6) | 🟢 High (AI restricted to assistive summaries & anomaly alerts) |
+| 9 | Mobile Experience | Paylocity (10), Gusto (9), Workpay (9), EthioPayroll (7) | 🟡 Medium (Responsive web verified; PWA offline sync unproven under load) |
+| 10| Messaging / Notifications | Workpay (8), PayFit (8), EthioPayroll (7) | 🟡 Medium (WebPush verified; Telegram bot in prototype) |
+| 11| Payments / Banking | CloudPay (10), ADP (10), Workpay (9), EthioPayroll (6) | 🟢 High (Bank batch text file exports verified) |
+| 12| Multi-Company Capability | Sage (10), IRIS (10), Workday (10), EthioPayroll (6) | 🟡 Medium (Database supports multi-tenancy; multi-client UI pending) |
+| 13| Integrations / API | Rippling (10), Workday (9), Gusto (9), EthioPayroll (6) | 🟢 High (REST API verified) |
+| 14| Reporting / Analytics | Workday (10), ADP (9), Sage (9), EthioPayroll (7) | 🟢 High (ERCA & PSSA Excel exports verified) |
+| 15| Auditability / Security | Workday (10), ADP (10), Deel (9), EthioPayroll (8) | 🟢 High (SHA-256 hash chains verified) |
+| 16| Country Localization | Deel (10), PaySpace (9), EthioPayroll (9) | 🟢 High (Native Ge'ez/Gregorian calendar & Amharic UI verified) |
+| 17| Multi-Country Scalability| Deel (10), Remote (10), PaySpace (10), EthioPayroll (4) | 🟢 High (Single-market Ethiopia focus initially) |
+| 18| African Relevance | PaySpace (10), Workpay (10), SeamlessHR (10), EthioPayroll (10) | 🟢 High (Designed specifically for Ethiopian operating realities) |
+| 19| Product Simplicity | PayFit (10), Gusto (10), Workpay (8), EthioPayroll (8) | 🟢 High (Clean Bootstrap UI & wizard flows verified) |
+| 20| Strategic Differentiation| Rippling (10), PaySpace (9), EthioPayroll (9) | 🟢 High (Ultimate trusted compliance engine + accountant workbench) |
 
 ---
 
-## 3. ETHIOPAYROLL GAP & CAPABILITY MATRIX
+## 3. PAYSLIP EXPERIENCE RE-FRAMING
 
-| Feature Area | Industry Benchmark Leader | EthioPayroll Current Capability | Gap Assessment | Priority |
-|---|---|---|---|:---:|
-| **Spreadsheet Data Entry** | Custom Grid / Excel | Inline Spreadsheet Editor (`spreadsheet_editor`) | Needs enhanced keyboard shortcuts (Tab/Enter navigation). | 🟢 High |
-| **Multi-Company Management** | Sage / IRIS / ADP | Single-company focus per user session | Missing single-login multi-client switcher dashboard for accounting firms. | 🟢 High |
-| **Payslip Breakdown** | Gusto / PayFit | PDF generation + basic HTML portal view | Missing interactive digital breakdown explaining tax bracket math. | 🔵 Medium |
-| **Telegram / Messaging** | Workpay (SMS/WhatsApp) | Prototype WebPush & Telegram bot structure | Needs production deep-link notification triggers. | 🔵 Medium |
-| **Direct Bank Payments** | CloudPay / Workpay | Export file generation (CBE, Telebirr, etc.) | Direct API payout blocked by bank infrastructure; file approach is correct. | 🟣 Low |
+* **Core Requirement:** The fundamental objective of the payslip is **employee understanding and trust**—answering *What did I earn? What was deducted? Why did my pay change?*
+* **Solution Positioning:** An "interactive digital breakdown" is one potential solution, alongside clear bilingual PDFs and automated change summaries.
+
+---
+
+## 4. TIER 1 DETAILED LESSONS
+
+* **PayFit:** Model for visual onboarding wizards and hiding complex labor rules behind guided questions.
+* **ADP / Workday:** Model for boringly reliable calculations, immutable audit trails, and strict tenant security.
+* **Gusto:** Model for plain-language change summaries that reduce payroll anxiety.
+* **PaySpace / Workpay:** Model for isolating country statutory packs and supporting local payout rails.

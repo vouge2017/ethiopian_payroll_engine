@@ -1,7 +1,7 @@
-# PLATFORM GAP ANALYSIS & STRATEGIC SCORECARD
+# PLATFORM GAP ANALYSIS & STRATEGIC SCORECARD (RECONCILED EDITION)
 **EthioPayroll — Ethiopian Payroll & Accountant Operating System**
 
-**Executive Summary & Strategic Evaluation**
+**Executive Summary & Evidence-Backed Strategic Evaluation**
 **Date:** August 2026
 **Primary Deliverable:** `PLATFORM_GAP_ANALYSIS_AND_STRATEGIC_SCORECARD.md`
 **Supporting Strategic Artifacts:**
@@ -21,250 +21,151 @@ The platform is a multi-tenant, web-based payroll system tailored for Ethiopian 
 * **ReconEt-api — excluded because no production dependency was established.** An audit of the entire repository confirms that `ReconEt-api` is neither imported, configured, nor called by the payroll engine. The payroll platform operates autonomously with its own REST API (`payroll_engine/api.py`), worker architecture (`Dockerfile.worker`), and background task queue (`payroll_engine/tasks.py`).
 
 ### A.2 Core Engine Capabilities & Classification Summary
-Every major component of the platform has been evaluated against explicit evidence levels rather than raw code presence:
+Capabilities are split into explicit individual evidence claims rather than composite workflow blocks:
 
-| Component / Module | Evidence Level & Classification | Detailed Reality & Notes |
+| Component / Sub-Capability | Evidence Level & Classification | Detailed Evidence & Reality |
 | :--- | :--- | :--- |
-| **Gross-to-Net Calculation** | 🟢 **VERIFIED WORKING** | Accurately calculates 2025 progressive tax brackets (Proclamation 1395/2025), POSSA pension (7% emp / 11% employer), and overtime multipliers (1.5x, 1.75x, 2.0x, 2.5x). Fully verified with automated test suites. |
-| **Multi-Tenant Data Isolation** | 🟢 **VERIFIED WORKING** | `TenantQuery` in `models.py` enforces `company_id` filter across all database sessions. Unit and integration tests verify no cross-tenant leakage. |
-| **Audit Log & SHA-256 Hash Chain** | 🟢 **VERIFIED WORKING** | Immutability backed by SHA-256 hash chains across critical security and payroll lifecycle events (`models.py`, `employees_bp.py`). |
-| **ERCA & PSSA Export Formatting** | 🟢 **VERIFIED WORKING** | Exports valid Excel files matching exact ERCA tax filing and PSSA pension submission specifications (`reports_bp.py`). |
-| **Bank Payment File Exports** | 🟢 **VERIFIED WORKING** | Supports CBE, Dashen, Awash, BOA, Wegagen, NIB, Bunna, Zemen, Lion, Telebirr, and M-Pesa batch text/CSV formats (`bank_file.py`). |
-| **Variance Analysis & Change Explanations** | 🟡 **IMPLEMENTED — NOT PROVEN** | Code exists in `change_summary.py` and `cockpit.py` to compare month-over-month deltas. However, user testing with live accountant datasets remains unproven. |
-| **Exception Management Inbox** | 🟡 **IMPLEMENTED — NOT PROVEN** | 14 exception rules (missing TIN, duplicate bank account, negative net pay, high overtime) are coded in `exceptions.py`. Operational resolution workflows need pilot validation. |
-| **Telegram / Push Notifications** | 🟡 **IMPLEMENTED — NOT PROVEN** | Push notification framework (`push.py`) and WebPush subscriptions exist. Direct Telegram bot deep-linking and action triggers remain in prototype state. |
-| **Dual Calendar System (Gregorian/Ethiopian)** | 🟢 **VERIFIED WORKING** | `ethiopian_calendar.py` accurately converts dates for payroll calculation, pay period boundaries, and statutory report formatting. |
-| **Direct Bank Payment APIs** | ❌ **MISSING** | Payments are strictly file-export based. No live host-to-host banking API connections exist in Ethiopia today. |
-| **Automated Tax Filing Submissions** | ❌ **MISSING** | ERCA/eTax requires manual portal upload. No public government API exists for direct electronic filing submission. |
+| **2025 Progressive Tax Math** | 🟢 **VERIFIED WORKING** | Proclamation 1395/2025 brackets (0%-35%) verified via unit and regression tests in `tests/test_tax.py`. |
+| **POSSA Pension Math** | 🟢 **VERIFIED WORKING** | 7% employee / 11% employer rates verified with no statutory ceiling in `tests/test_pension.py`. |
+| **Overtime & Severance Math** | 🟢 **VERIFIED WORKING** | Overtime multipliers (1.5x to 2.5x) and severance formulas verified in `tests/test_overtime.py` & `tests/test_severance.py`. |
+| **Multi-Tenant Data Isolation** | 🟢 **VERIFIED WORKING** | `TenantQuery` in `models.py` enforces `company_id` scoping; verified via `tests/test_usercompany_tenant.py`. |
+| **Audit Log Hash Chain** | 🟢 **VERIFIED WORKING** | SHA-256 hash chaining on audit logs in `models.py` verified via `tests/test_audit_hash.py`. |
+| **ERCA eTax File Generation** | 🟢 **VERIFIED WORKING** | Outputs valid Excel files matching ERCA portal templates in `reports_bp.py`; verified via `tests/test_erca_export.py`. |
+| **Bank Batch File Generation** | 🟢 **VERIFIED WORKING** | Generates formatted bank payout text files (CBE, Telebirr, Dashen, etc.) in `bank_file.py`; verified via `tests/test_bank_files.py`. |
+| **PDF Payslip Generation** | 🟢 **VERIFIED WORKING** | PDF generation via ReportLab verified in `tests/test_pdf.py`. |
+| **Payslip Telegram Delivery** | 🟡 **IMPLEMENTED — NOT PROVEN** | Bot structure exists in `push.py`, but end-to-end delivery in live Telegram production environment is not proven. |
+| **Month-over-Month Variance Math** | 🟡 **IMPLEMENTED — NOT PROVEN** | Delta calculation logic in `change_summary.py` works on unit data but lacks accountant pilot validation. |
+| **Exception Detection Inbox** | 🟡 **IMPLEMENTED — NOT PROVEN** | 14 exception rules coded in `exceptions.py`; one-click resolution UI needs live pilot testing. |
+| **Dual Ge'ez/Gregorian Calendar** | 🟢 **VERIFIED WORKING** | Date conversion verified in `ethiopian_calendar.py` and `tests/test_ethiopian_calendar.py`. |
+| **PWA Offline Asset Caching** | 🟡 **IMPLEMENTED — NOT PROVEN** | Service worker caches static assets; offline data persistence and background sync remain unverified in production. |
+| **Direct Host-to-Host Bank APIs** | ❌ **MISSING** | Current implementation uses bank-specific file exports. Direct API capability should be validated with target banks and pilot customers before investment. |
+| **Direct Government eTax Filing Submission** | ❌ **MISSING** | Current product generates the filing package; submission remains outside the product. |
 
 ---
 
 ## SECTION B — FOUR-LAYER MATURITY MODEL
 
-The platform's evolution is measured against the four structural layers required to displace Excel in Ethiopian businesses:
+Instead of arbitrary percentages, platform maturity is evaluated using qualitative, evidence-backed maturity tiers:
 
 ```
 +-----------------------------------------------------------------------+
 |  Layer 4: Accountant Operating System (SaaS Workbench)              |
-|  [Status: 🟡 65% Complete] - Needs multi-company client switcher      |
+|  [Maturity Level: EMERGING] - Lacks Multi-Company Client Switcher     |
 +-----------------------------------------------------------------------+
 |  Layer 3: Trust Platform (Intelligence & Exception Management)        |
-|  [Status: 🟢 80% Complete] - 7 Trust Patterns coded in Cockpit        |
+|  [Maturity Level: INTERMEDIATE] - Trust patterns coded; unproven UX   |
 +-----------------------------------------------------------------------+
 |  Layer 2: Knowledge Platform (Rule Traceability & Compliance)         |
-|  [Status: 🟡 70% Complete] - Proclamations linked; 24 rules pending    |
+|  [Maturity Level: ESTABLISHED] - Statutory sources cited; 24 pending |
 +-----------------------------------------------------------------------+
 |  Layer 1: Deterministic Ethiopian Payroll Calculation Engine         |
-|  [Status: 🟢 95% Complete] - Tax, Pension, Severance, Overtime Solid |
+|  [Maturity Level: FOUNDATIONAL / MATURE] - Core tax & pension solid    |
 +-----------------------------------------------------------------------+
 ```
 
-### Layer 1: Deterministic Ethiopian Payroll Engine (🟢 95% Complete)
-* **Strengths:** Fully versioned rules for Proclamation 1395/2025 (Tax) and Proclamation 715/2011 (Pension). Handles daily workers, proration, non-taxable allowance ceilings, and severance calculations deterministically.
-* **Gap:** Complex custom organizational benefits (e.g., non-standard hardship allowances) still require manual allowance setup.
-
-### Layer 2: Knowledge Platform (🟡 70% Complete)
-* **Strengths:** Implements `RuleSource` model linking tax formulas and exemption limits directly to official gazette citations.
-* **Gap:** Out of 34 identified statutory rules, 10 are fully verified in production test cases, while 24 remain cited but unverified by an external Ethiopian tax auditor.
-
-### Layer 3: Trust Platform (🟢 80% Complete)
-* **Strengths:** Implements the 7 core trust patterns:
-  1. *What changed?* (Month-over-month salary, headcount, and deduction comparison)
-  2. *Why did it change?* (Audit-logged change reasons attached to employee records)
-  3. *Is anything unusual?* (Automated exception detection in `exceptions.py`)
-  4. *Can I prove it?* (SHA-256 tamper-evident hash chain)
-  5. *Am I ready to file?* (Pre-flight validation checklist in `validation.py`)
-  6. *What happens if I am wrong?* (Draft rollback & period lock mechanisms)
-  7. *What happened this month?* (Cockpit executive summary narratives)
-* **Gap:** Exception resolution currently requires web dashboard navigation rather than quick interactive Telegram/SMS confirmation.
-
-### Layer 4: Accountant Operating System (🟡 65% Complete)
-* **Strengths:** Guided monthly wizard, approval lock, PDF payslip distribution, and ERCA/pension file generation.
-* **Gap:** Lacks a dedicated **Multi-Company Accountant Cockpit** allowing outsourced accounting firms to manage 20–50 client SMEs from a single unified portal without logging out.
+1. **Layer 1 (Deterministic Payroll Engine) — FOUNDATIONAL / MATURE:** Versioned rules for Proclamation 1395/2025 (Tax) and Proclamation 715/2011 (Pension) are fully verified in automated test suites.
+2. **Layer 2 (Knowledge Platform) — ESTABLISHED:** Cites legal sources for statutory rules. Out of 34 identified rules, 10 are fully verified through production test cases, while 24 remain cited but unverified by an external tax auditor.
+3. **Layer 3 (Trust Platform) — INTERMEDIATE:** Implements core trust patterns (variance analysis, exception detection, audit hash chains, pre-flight checklists). However, exception resolution and variance UX remain unproven in live accountant workflows.
+4. **Layer 4 (Accountant Operating System) — EMERGING:** Includes guided onboarding and period locking, but lacks a dedicated Multi-Company Accountant Cockpit allowing accounting firms to manage multiple client SMEs seamlessly.
 
 ---
 
 ## SECTION C — CRITICAL GAPS & EXCEL REPLACEMENT MECHANICS
 
-### C.1 Why Ethiopian Accountants Retain Excel
-Through market research and workflow analysis, accountants revert to Excel for four primary reasons:
-1. **Formula Control & Flexibility:** Freedom to add ad-hoc deductions or mid-month bonuses without software constraint.
-2. **Speed of Data Entry:** Keyboard-only navigation across hundreds of employee rows.
-3. **Fear of Lock-In / Software Errors:** Suspicion that web software will miscalculate tax or lock period data prematurely.
-4. **Offline Capability:** Frequent Internet outages in Addis Ababa and regional industrial parks.
+### C.1 Workflow Reality: Reconciling the "13 of 15" Conclusion
+* **Accurate Workflow Assessment:** **13 of 15 workflow stages have an implemented standalone path; 2 critical review/control stages remain implemented but insufficiently proven in realistic accountant workflows.**
+* **The 2 Unproven Review Stages:**
+  1. *Change & Variance Analysis:* Must prove that accountants can quickly verify why net pay shifted without checking raw spreadsheet rows.
+  2. *Exception Management:* Must prove that open exceptions can be cleared efficiently during high-pressure monthly runs.
 
-### C.2 How EthioPayroll Replaces Excel
-* **Grid Data Entry (`spreadsheet_editor`):** Provides a high-speed, keyboard-driven inline table editor mimicking Excel navigation.
-* **Calculation Transparency:** Every payslip line item includes an explicit breakdown formula showing exact tax bracket application.
-* **Excel Bridge:** High-fidelity bulk import (`excel_import.py`) and full period export allow accountants to export to Excel at any time, removing fear of software lock-in.
-* **PWA Offline Resilience:** Service worker caching enables offline data collection and draft viewing during connectivity drops.
+### C.2 Beyond Multi-Company: Primary Operational Friction Points
+While a Multi-Company Accountant Cockpit is the largest scaling gap for accounting agencies, it is **not the only critical friction point**. Accountants also face key operational barriers in:
+1. *Keyboard-First Grid Navigation:* Need sub-second data entry speed matching Excel.
+2. *Variance & Exception Resolution Speed:* One-click clearing of false positives before locking payroll.
+3. *Filing Verification:* Confidence that generated ERCA eTax files match portal schema updates exactly.
+4. *Production Resilience:* Graceful handling of temporary connectivity drops during period lock operations.
+
+### C.3 Excel Positioning Strategy
+* **Realistic Strategic Objective:** **Make Excel unnecessary for the core monthly payroll workflow while preserving import/export for flexibility and auditability.**
+* Do not promise to "eliminate Excel" entirely; accountants require CSV/Excel export freedom for external reporting and peace of mind.
 
 ---
 
 ## SECTION D — GLOBAL & AFRICAN LESSONS
 
-### D.1 Key Insights from 23 International & Regional Platforms
-We conducted a deep strategic audit across global leaders (ADP, Gusto, Rippling, PayFit, Workday, Deel) and African pioneers (PaySpace, Workpay, SeamlessHR). Full scorecard data is detailed in [`COMPETITOR_BENCHMARK_MATRIX.md`](COMPETITOR_BENCHMARK_MATRIX.md).
+### D.1 Research Tiering
+* **Tier 1 (Deep Strategic Research):** ADP, Gusto, Rippling, PayFit, Sage, IRIS, Deel, CloudPay, PaySpace, Workpay, SeamlessHR, WorkForce Africa.
+* **Tier 2 (Comparative Benchmarking Framework):** Paychex, Paylocity, UKG, Workday, Remote, Oyster, Personio, HiBob, SD Worx, Visma, Zellis.
 
-#### 1. PayFit (Europe) — The Gold Standard for Localized SME Simplicity
-* **Lesson:** PayFit succeeded by building custom localized calculation engines ("JetLang") paired with extreme visual simplicity. Complex tax rules are completely hidden behind intuitive workflow questions.
-* **EthioPayroll Application:** We must mirror PayFit's visual onboarding wizard and step-by-step exception clearing.
-
-#### 2. PaySpace & Workpay (Africa) — Regional Modular Architecture
-* **Lesson:** PaySpace built an engine separating core payroll math from country-specific tax packs. Workpay focused heavily on mobile-first payment orchestration (M-Pesa/bank transfers).
-* **EthioPayroll Application:** Keep our Ethiopian rule pack cleanly isolated from the core calculation model to facilitate future expansion into East and South Africa without re-architecting the system.
-
-#### 3. Sage & IRIS (UK/Europe) — Accountants as the Primary Distribution Channel
-* **Lesson:** In emerging and mature markets alike, accountants manage payroll for dozens of SMEs. Winning the accountant wins hundreds of client companies.
-* **EthioPayroll Application:** Build an **Accountant Firm Dashboard** allowing single-sign-on client switching.
+### D.2 Core Takeaways
+1. **PayFit (Europe):** Demonstrates how extreme visual simplicity and guided wizards hide complex labor rules.
+2. **Payslip Benchmarking:** The goal of modern payslip design is **employee understanding and trust**—answering *What did I earn? What was deducted? Why did my pay change?*—rather than merely delivering a PDF.
+3. **Sage / IRIS (UK):** Demonstrates that accountants act as the primary distribution channel when provided with multi-client practice tools.
 
 ---
 
 ## SECTION E — ETHIOPIA-SPECIFIC PRODUCT STRATEGY
 
-To win in Ethiopia, the product must treat local constraints as first-class architectural features:
-
-1. **Dual Calendar Engine:** Native support for the Ethiopian calendar (Ge'ez/13 months) alongside the Gregorian calendar across all inputs, reports, and UI views.
-2. **Multi-Script Support:** Complete localization in English, Amharic (`i18n.py`), and Afaan Oromo (`i18n_om.py`).
-3. **Statutory Exemption Rules:** Strict enforcement of non-taxable transportation allowances (1/4 basic salary up to ETB 2,200 ceiling) and telephone allowance exemptions.
-4. **Low-Bandwidth Optimization:** Asset minification, light PWA caching, and minimal payload size for mobile networks.
+1. **Dual Calendar Engine:** Native Ge'ez and Gregorian calendar support across UI and reporting outputs.
+2. **Multi-Script Support:** English, Amharic (`i18n.py`), and Afaan Oromo (`i18n_om.py`).
+3. **Statutory Exemption Ceilings:** Transport allowance exemptions (1/4 basic salary up to ETB 2,200 ceiling) enforced deterministically.
+4. **Low-Bandwidth Web/PWA:** Optimized asset loading for local connectivity environments.
 
 ---
 
 ## SECTION F — TELEGRAM, MOBILE & PAYMENTS STRATEGY
 
-### F.1 Telegram Integration Architecture
-* **Strategic Role:** Telegram should be a **Notification & Action Channel**, NOT the system of record.
-* **Permitted Actions:**
-  * Payroll approval alert sent to Finance Manager with secure deep-link.
-  * Exception summary alerts (e.g., "3 duplicate bank account warnings detected").
-  * Secure PDF payslip delivery via authenticated Telegram bot link.
-* **Forbidden Actions:** No raw salary entry or sensitive data storage inside Telegram chat histories.
-
-### F.2 Mobile vs. Desktop Positioning
-* **Desktop-First (Web/PWA):** Accountant data entry, variance review, exception clearing, and ERCA file generation.
-* **Mobile-First (PWA/Responsive):** Manager approvals, employee payslip viewing, leave requests, and push alert responses.
-
-### F.3 Payments & FinTech Roadmap
-* **Phase 1 (Current):** Standardized bank batch file generation for CBE, Dashen, Awash, Telebirr, etc.
-* **Phase 2 (Next):** Telebirr / M-Pesa direct merchant payment API integration.
-* **Phase 3 (Future):** Working capital forecasting and consent-based earned wage access (EWA) partnerships with licensed financial institutions.
+1. **Telegram Role:** Positioned strictly as a **Notification & Action Channel** (approval triggers, exception alerts, payslip links), NOT the system of record or primary data entry interface.
+2. **Mobile vs. Desktop:** Desktop-first for accountant data entry and statutory file exports; mobile-first for manager approvals, payslip viewing, and leave requests.
+3. **Payments:** File-based payouts for CBE, Telebirr, Dashen, and Awash are verified working. Direct host-to-host APIs remain a future phase to be validated with commercial bank partners.
 
 ---
 
 ## SECTION G — ARTIFICIAL INTELLIGENCE BOUNDARIES
 
-EthioPayroll enforces strict boundaries regarding AI usage:
-
 ```
 +-----------------------------------------------------------------------+
 |  ALLOWED AI USAGE (Assistive & Explanatory)                          |
-|  - Anomaly detection (flagging net pay spikes >20%)                   |
-|  - Plain-language change summaries ("Basic salary increased for 3...")|
-|  - Employee self-service Q&A ("How was my tax calculated?")           |
+|  - Anomaly detection assistance & plain-language change summaries     |
+|  - Document OCR (reading contract letters into human review queues)   |
+|  - Conversational Q&A for employee self-service portal                |
 +-----------------------------------------------------------------------+
 |  FORBIDDEN AI USAGE (Deterministic Operations)                        |
 |  - NEVER allow AI to calculate tax, pension, or net pay               |
-|  - NEVER allow AI to alter tax rules or statutory brackets            |
+|  - NEVER allow AI to alter statutory rules or tax brackets            |
 |  - NEVER allow AI to independently approve payroll or release funds   |
 +-----------------------------------------------------------------------+
 ```
 
 ---
 
-## SECTION H — ANSWERS TO THE 20 STRATEGIC QUESTIONS
+## SECTION H — CUSTOMER PROBLEM TO RECOMMENDATION FRAMEWORK
 
-Below are the concise responses to the 20 strategic research questions (detailed analysis in [`STRATEGIC_RECOMMENDATIONS.md`](STRATEGIC_RECOMMENDATIONS.md)):
+Every major recommendation follows a strict problem-driven structure:
 
-1. **Top 10 Global Ideas to Learn:** Guided onboarding (PayFit), accountant partner portal (Sage), automated change detection (Gusto), event-driven payroll triggers (Rippling), employee self-service (Paylocity), multi-entity audit trails (Workday), country rule abstraction (Deel), payroll-to-payment orchestration (CloudPay), progressive disclosure UX (Gusto), transparent calculation breakdowns (PayFit).
-2. **Top 10 African Ideas to Learn:** Mobile money disbursement (Workpay), multi-country statutory packs (PaySpace), HR-to-payroll sync (SeamlessHR), offline-resilient data capture (WorkForce Africa), SMS payslip notifications (Workpay), local currency precision handling, statutory filing export packages, local bank file templates, employer compliance calendars, regional partner networks.
-3. **10 Ethiopian-Specific Adaptations:** Dual Ge'ez/Gregorian calendar engine, Amharic/Afaan Oromo UI, ERCA eTax format compliance, POSSA pension rules, ETB cash limits enforcement, local bank batch file formats, low-bandwidth PWA, Telegram notification layer, custom allowance tax exemption ceilings, local holiday calendar support.
-4. **10 Things NOT to Copy:** Enterprise US/EU benefit setup complexity, AI direct legal interpretation, mobile-only data entry tables, US-centric tax form architectures, bloated HR/ATS suites, unverified automatic filing, rigid first/last name databases, pure online-only desktop requirements, unauthenticated chat approvals, proprietary balance-sheet lending.
-5. **Exceptional Payslip Experience:** Interactive digital payslip explaining net pay changes, breakdown of tax brackets applied, YTD totals, dual-language PDF generation, and secure push/Telegram delivery.
-6. **Exceptional Accountant Experience:** Keyboard-driven spreadsheet editor, multi-company client switcher, zero-click variance analysis, pre-flight filing validation checklist, and one-click ERCA export.
-7. **Exceptional Trust Experience:** Visible 12-stage period timeline, exception inbox, immutable SHA-256 audit trail, draft recalculation preview, and clear period lock state.
-8. **What to Automate with AI:** Variance explanations, document OCR (reading contract salary letters into review queues), exception summary generation, and conversational employee portal Q&A.
-9. **What AI Must Never Do:** Direct gross-to-net tax calculations, rule updates, or autonomous payroll approvals.
-10. **Telegram Integration Strategy:** Use as a secondary notification and secure authorization trigger channel, NOT the main transaction platform.
-11. **Mobile-First Workflows:** Payslip access, leave requests, approval sign-offs, and exception notifications.
-12. **Desktop-First Workflows:** Bulk employee imports, grid spreadsheet editing, policy configuration, bank reconciliation, and statutory filing exports.
-13. **Replacing Excel Realistically:** Provide high-speed keyboard data entry, 100% transparent formula breakdowns, full CSV/Excel import/export freedom, and PWA offline capability.
-14. **Priority Payment Integrations:** Commercial Bank of Ethiopia (CBE), Telebirr, Dashen Bank, Awash Bank, and M-Pesa.
-15. **FinTech/Working-Capital Potential:** High strategic value long-term for payroll-backed cash flow forecasting and Earned Wage Access (EWA) in partnership with licensed banks.
-16. **Architecture for African Expansion:** Maintain a modular `PayrollEngine` core separated from country-specific `TaxRulePack` implementations.
-17. **Competitive Moat:** The ultimate trusted Ethiopian compliance engine + accountant multi-company workflow.
-18. **Build vs. Partner vs. Ignore:**
-    * *Build:* Deterministic payroll, trust cockpit, ERCA/pension reports, accountant multi-company portal.
-    * *Partner:* Direct bank payment execution, biometric attendance hardware, licensed lending/EWA.
-    * *Ignore:* Full ERP procurement, recruitment/ATS, international equity administration.
-19. **Explicitly Refuse to Build:** Heavy custom ERP modules, unverified AI tax calculators, and unauthenticated chat-based payroll execution.
-20. **12-Month Product Strategy:** Focus 100% on winning Ethiopian SMEs and accountants by perfecting Layer 3 (Trust Platform) and Layer 4 (Accountant OS) before expanding geographically.
+| Customer Problem | Ethiopian Relevance | Current Capability | Evidence | Identified Gap | Recommendation |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Accounting firms manage 20-50 SME client payrolls in separate Excel files. | High (Outsourced accounting is standard for Ethiopian SMEs) | Single-company user session | `auth.py`, `models.py` | Lacks multi-client switcher dashboard | 🟢 **BUILD NOW:** Multi-Company Accountant Cockpit |
+| Pre-flight payroll errors are discovered late after portal upload. | High (ERCA penalty risks) | Validation engine (`validation.py`) | `tests/test_validation.py` | Exception resolution UX needs pilot tuning | 🟢 **BUILD NOW:** Streamlined Exception Clearing UX |
+| Employee payslips generate phone calls regarding tax bracket shifts. | High (Proclamation 1395 progressive tax confusion) | PDF generator (`pdf.py`) | `tests/test_pdf.py` | Payslips show numbers without change explanations | 🔵 **BUILD NEXT:** Interactive Digital Payslip Variance UI |
 
 ---
 
-## SECTION I — DECISION FRAMEWORK & ROADMAP
+## SECTION I — FINAL READINESS DECISION MATRIX
 
-We classify all future platform enhancements into five strict action categories:
+The readiness of EthioPayroll across deployment tiers is evaluated against evidence-clean criteria:
 
-```
-+-----------------------------------------------------------------------+
-|  🟢 BUILD NOW (Days 1 - 30)                                           |
-|  - Multi-Company Accountant Cockpit (Client Switcher)                  |
-|  - Full verification of remaining 24 statutory compliance rules       |
-|  - Polish spreadsheet grid data entry keyboard shortcuts              |
-+-----------------------------------------------------------------------+
-|  🔵 BUILD NEXT (Days 31 - 90)                                         |
-|  - Telegram notification & action link bot                            |
-|  - Interactive digital payslip breakdown UI                           |
-|  - Enhanced PWA offline draft caching                                 |
-+-----------------------------------------------------------------------+
-|  🟣 BUILD LATER (Months 4 - 6)                                        |
-|  - Direct Telebirr / M-Pesa merchant payment API integration          |
-|  - Automated OCR for employment contract imports                      |
-|  - Modular African country rule pack architecture                     |
-+-----------------------------------------------------------------------+
-|  🟡 PARTNER / INTEGRATE (Months 7 - 12)                               |
-|  - Biometric attendance hardware connectors                           |
-|  - Bank API direct host-to-host payout connectors                     |
-|  - Consent-based Earned Wage Access (EWA) with licensed banks         |
-+-----------------------------------------------------------------------+
-|  🔴 DO NOT BUILD (Explicitly Excluded)                                |
-|  - AI-driven tax calculation engine                                   |
-|  - In-house balance-sheet employee lending                            |
-|  - Native recruiting / ATS / inventory ERP modules                    |
-+-----------------------------------------------------------------------+
-```
+| Deployment Tier | Readiness Status | Exact Blocking Evidence / Prerequisites Needed |
+| :--- | :--- | :--- |
+| **Internal Use** | 🟢 **GO** | Core gross-to-net tax, pension, and audit chain fully verified in automated test suite. |
+| **1 Controlled Pilot** | 🟢 **GO** | Ready for single-company pilot with supervised accountant oversight. |
+| **10 Companies** | 🟡 **CONDITIONAL GO** | Requires pilot validation of exception resolution UX and complete auditor sign-off on 24 cited statutory rules. |
+| **100 Companies** | 🔴 **NO-GO** | Blocked until Multi-Company Accountant Cockpit is built and PWA offline sync resilience is proven under load. |
+| **1,000+ Companies** | 🔴 **NO-GO** | Blocked until host-to-host bank API integrations and regional partner networks are established. |
 
 ---
 
-## SECTION J — 90-DAY EXECUTION PLAN
-
-```
-Month 1: Accountant Workbench & Compliance Verification
-├── Week 1-2: Implement Multi-Company Accountant Switcher in UI
-├── Week 3: Complete legal/tax auditor verification of 24 cited rules
-└── Week 4: Optimize spreadsheet grid editor keyboard performance
-
-Month 2: Trust Platform & Telegram Notifications
-├── Week 5-6: Deploy Telegram notification & deep-link authorization bot
-├── Week 7: Implement interactive digital payslip variance view
-└── Week 8: Conduct pilot testing with 5 partner accounting firms
-
-Month 3: Offline PWA & Payment File Refinements
-├── Week 9-10: Enhance PWA service worker background sync
-├── Week 11: Validate CBE, Telebirr, and Dashen payment files in live pilot
-└── Week 12: Production readiness sign-off & commercial launch
-```
-
----
-
-## SECTION K — 12-MONTH PRODUCT DIRECTION
-
-By Month 12, EthioPayroll will be established as the **de facto Payroll Operating System for Ethiopian SMEs and Accounting Firms**. It will manage the complete lifecycle from employee hire to tax filing, providing accountants with zero-friction multi-company client management, 100% compliance trust, and seamless bank/mobile payment file generation.
-
----
-
-## SECTION L — FINAL VERDICT
+## SECTION J — FINAL VERDICT
 
 > **If this were my company, my money, and my reputation:**
-> I would focus 100% of engineering resources on perfecting the **Accountant Operating System for Ethiopia**. I would build the **Multi-Company Accountant Cockpit**, complete the legal verification of all 34 statutory rules, and optimize the Excel grid editor. I would deliberately **refuse to build** an ERP, refuse to build native recruiting tools, and strictly forbid AI from calculating taxes. By serving Ethiopian accountants with an undeniably fast, accurate, and trustworthy platform, EthioPayroll will eliminate Excel and secure a dominant market position.
+> I would focus 100% of engineering effort on proving the **Accountant Operating System in controlled pilots**. I would build the **Multi-Company Accountant Cockpit**, complete the legal auditor review of all 34 statutory rules, and streamline exception clearing. I would refuse to build an ERP, refuse to build recruitment tools, and strictly forbid AI from calculating taxes. By delivering evidence-backed compliance confidence and an indispensable accountant workbench, EthioPayroll will make Excel unnecessary for monthly payroll across Ethiopian SMEs.

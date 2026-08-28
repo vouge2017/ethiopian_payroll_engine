@@ -43,7 +43,9 @@ async function auditPage(page, path) {
   await goto(page, path);
   // Give client-side rendering / fonts a moment to settle.
   await page.waitForTimeout(1_500);
-  await page.addScriptTag({ path: AXE_PATH });
+  // CSP-safe injection: evaluate axe-core source directly via CDP (not subject to page CSP)
+  const axeSource = readFileSync(AXE_PATH, 'utf8');
+  await page.evaluate(axeSource);
   const results = await page.evaluate(async () => {
     const axe = window.axe;
     return await axe.run(document, {

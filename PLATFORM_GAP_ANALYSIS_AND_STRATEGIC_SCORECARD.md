@@ -8,8 +8,8 @@
 - [`COMPETITOR_BENCHMARK_MATRIX.md`](COMPETITOR_BENCHMARK_MATRIX.md)
 - [`ACCOUNTANT_JOURNEY_AUDIT.md`](ACCOUNTANT_JOURNEY_AUDIT.md)
 - [`STRATEGIC_RECOMMENDATIONS.md`](STRATEGIC_RECOMMENDATIONS.md)
-- [`TRUTH_VERIFICATION_AUDIT.md`](TRUTH_VERIFICATION_AUDIT.md)
 - [`PRODUCT_TRACEABILITY_MATRIX.md`](PRODUCT_TRACEABILITY_MATRIX.md)
+- [`TRUTH_VERIFICATION_AUDIT.md`](TRUTH_VERIFICATION_AUDIT.md)
 
 ---
 
@@ -24,23 +24,24 @@ The platform is a multi-tenant, web-based payroll system tailored for Ethiopian 
 ### A.2 Core Engine Capabilities & Classification Summary
 Capabilities are split into explicit individual evidence claims rather than composite workflow blocks:
 
-| Component / Sub-Capability | Evidence Level & Classification | Detailed Evidence & Reality |
+| Component / Sub-Capability | True Status & Classification | Detailed Evidence & Reality |
 | :--- | :--- | :--- |
-| **2025 Progressive Tax Math** | 🟢 **VERIFIED WORKING** | Proclamation 1395/2025 brackets (0%-35%) verified via unit and regression tests in `tests/test_tax.py`. |
-| **POSSA Pension Math** | 🟢 **VERIFIED WORKING** | 7% employee / 11% employer rates verified with no statutory ceiling in `tests/test_pension.py`. |
-| **Overtime & Severance Math** | 🟢 **VERIFIED WORKING** | Overtime multipliers (1.5x to 2.5x) and severance formulas verified in `tests/test_overtime.py` & `tests/test_severance.py`. |
-| **Multi-Tenant Data Isolation** | 🟢 **VERIFIED WORKING** | `TenantQuery` in `models.py` enforces `company_id` scoping; verified via `tests/test_usercompany_tenant.py`. |
-| **Audit Log Hash Chain** | 🟢 **VERIFIED WORKING** | SHA-256 hash chaining on audit logs in `models.py` verified via `tests/test_audit_hash.py`. |
-| **ERCA eTax File Generation** | 🟢 **VERIFIED WORKING** | Outputs valid Excel files matching ERCA portal templates in `reports_bp.py`; verified via `tests/test_erca_export.py`. |
-| **Bank Batch File Generation** | 🟢 **VERIFIED WORKING** | Generates formatted bank payout text files (CBE, Telebirr, Dashen, etc.) in `bank_file.py`; verified via `tests/test_bank_files.py`. |
-| **PDF Payslip Generation** | 🟢 **VERIFIED WORKING** | PDF generation via ReportLab verified in `tests/test_pdf.py`. |
-| **Payslip Telegram Delivery** | 🟡 **IMPLEMENTED — NOT PROVEN** | Bot structure exists in `push.py`, but end-to-end delivery in live Telegram production environment is not proven. |
+| **2025 Progressive Tax Math** | 🟢 **TESTED / IMPLEMENTED** | Proclamation 1395/2025 brackets (0%-35%) verified via unit and regression tests in `tests/test_tax.py`. |
+| **POSSA Pension Math** | 🟢 **TESTED / IMPLEMENTED** | 7% employee / 11% employer rates (Proc. 1268/2022) verified with no statutory ceiling in `tests/test_pension.py`. |
+| **Overtime & Severance Math** | 🟢 **TESTED / IMPLEMENTED** | Overtime multipliers (1.5x to 2.5x) and severance formulas verified in `tests/test_overtime.py` & `tests/test_severance.py`. |
+| **Multi-Tenant Data Isolation** | 🟢 **TESTED / IMPLEMENTED** | `TenantQuery` in `models.py` enforces `company_id` scoping; verified via `tests/test_usercompany_tenant.py`. |
+| **Audit Log Hash Chain** | 🟢 **TESTED / IMPLEMENTED** | SHA-256 hash chaining on audit logs in `models.py` verified via `tests/test_audit_hash.py`. |
+| **ERCA eTax File Generation** | 🟡 **TESTED / FILE ONLY** | Outputs valid Excel files matching ERCA portal templates in `reports_bp.py`; submission remains manual portal upload. |
+| **Bank Batch File Generation** | 🟡 **TESTED / FILE ONLY** | Generates formatted bank payout text files (CBE, Telebirr, Dashen, etc.) in `bank_file.py`; direct payout API missing. |
+| **PDF Payslip Generation** | 🟢 **TESTED / IMPLEMENTED** | PDF generation via ReportLab verified in `tests/test_pdf.py`. |
+| **WebPush Notifications** | 🟡 **IMPLEMENTED — MOCKED TEST ONLY** | Bot structure exists in `push.py`; tested via `mock_pywebpush`; real device delivery unproven. |
+| **Telegram Bot Delivery & Actions** | 🟡 **IMPLEMENTED — MOCKED TEST ONLY** | Bot structure exists in `push.py`; tested via mock framework; live Telegram API delivery unproven. |
 | **Month-over-Month Variance Math** | 🟡 **IMPLEMENTED — NOT PROVEN** | Delta calculation logic in `change_summary.py` works on unit data but lacks accountant pilot validation. |
 | **Exception Detection Inbox** | 🟡 **IMPLEMENTED — NOT PROVEN** | 14 exception rules coded in `exceptions.py`; one-click resolution UI needs live pilot testing. |
-| **Dual Ge'ez/Gregorian Calendar** | 🟢 **VERIFIED WORKING** | Date conversion verified in `ethiopian_calendar.py` and `tests/test_ethiopian_calendar.py`. |
+| **Dual Ge'ez/Gregorian Calendar** | 🟢 **TESTED / IMPLEMENTED** | Date conversion verified in `ethiopian_calendar.py` and `tests/test_ethiopian_calendar.py`. |
 | **PWA Offline Asset Caching** | 🟡 **IMPLEMENTED — NOT PROVEN** | Service worker caches static assets; offline data persistence and background sync remain unverified in production. |
-| **Direct Host-to-Host Bank APIs** | ❌ **MISSING** | Current implementation uses bank-specific file exports. Direct API capability should be validated with target banks and pilot customers before investment. |
-| **Direct Government eTax Filing Submission** | ❌ **MISSING** | Current product generates the filing package; submission remains outside the product. |
+| **Direct Host-to-Host Bank APIs** | 🔴 **MISSING** | Current implementation uses bank-specific file exports. Direct API capability missing. |
+| **Direct Government eTax Filing API** | 🔴 **MISSING** | Current product generates filing package; submission remains manual web portal upload. |
 
 ---
 
@@ -60,12 +61,12 @@ Instead of arbitrary percentages, platform maturity is evaluated using qualitati
 |  [Maturity Level: ESTABLISHED] - Statutory sources cited; 24 pending |
 +-----------------------------------------------------------------------+
 |  Layer 1: Deterministic Ethiopian Payroll Calculation Engine         |
-|  [Maturity Level: FOUNDATIONAL / MATURE] - Core tax & pension solid    |
+|  [Maturity Level: MATURE] - Core tax & pension math fully verified   |
 +-----------------------------------------------------------------------+
 ```
 
-1. **Layer 1 (Deterministic Payroll Engine) — FOUNDATIONAL / MATURE:** Versioned rules for Proclamation 1395/2025 (Tax) and Proclamation 715/2011 (Pension) are fully verified in automated test suites.
-2. **Layer 2 (Knowledge Platform) — ESTABLISHED:** Cites legal sources for statutory rules. Out of 34 identified rules, 10 are fully verified through production test cases, while 24 remain cited but unverified by an external tax auditor.
+1. **Layer 1 (Deterministic Payroll Engine) — MATURE:** Versioned rules for Proclamation 1395/2025 (Tax) and Proclamation 1268/2022 (Pension) are fully verified in automated test suites.
+2. **Layer 2 (Knowledge Platform) — ESTABLISHED:** Cites legal sources for statutory rules. Out of 34 identified rules, 10 are code-tested, while 24 remain cited but pending legal auditor sign-off.
 3. **Layer 3 (Trust Platform) — INTERMEDIATE:** Implements core trust patterns (variance analysis, exception detection, audit hash chains, pre-flight checklists). However, exception resolution and variance UX remain unproven in live accountant workflows.
 4. **Layer 4 (Accountant Operating System) — EMERGING:** Includes guided onboarding and period locking, but lacks a dedicated Multi-Company Accountant Cockpit allowing accounting firms to manage multiple client SMEs seamlessly.
 
@@ -118,7 +119,7 @@ While a Multi-Company Accountant Cockpit is the largest scaling gap for accounti
 
 1. **Telegram Role:** Positioned strictly as a **Notification & Action Channel** (approval triggers, exception alerts, payslip links), NOT the system of record or primary data entry interface.
 2. **Mobile vs. Desktop:** Desktop-first for accountant data entry and statutory file exports; mobile-first for manager approvals, payslip viewing, and leave requests.
-3. **Payments:** File-based payouts for CBE, Telebirr, Dashen, and Awash are verified working. Direct host-to-host APIs remain a future phase to be validated with commercial bank partners.
+3. **Payments:** File-based payouts for CBE, Telebirr, Dashen, and Awash are verified working as files. Direct host-to-host APIs remain a future phase to be validated with commercial bank partners.
 
 ---
 
@@ -159,9 +160,9 @@ The readiness of EthioPayroll across deployment tiers is evaluated against evide
 | Deployment Tier | Readiness Status | Exact Blocking Evidence / Prerequisites Needed |
 | :--- | :--- | :--- |
 | **Internal Use** | 🟢 **GO** | Core gross-to-net tax, pension, and audit chain fully verified in automated test suite. |
-| **1 Controlled Pilot** | 🟢 **GO** | Ready for single-company pilot with supervised accountant oversight. |
-| **10 Companies** | 🟡 **CONDITIONAL GO** | Requires pilot validation of exception resolution UX and complete auditor sign-off on 24 cited statutory rules. |
-| **100 Companies** | 🔴 **NO-GO** | Blocked until Multi-Company Accountant Cockpit is built and PWA offline sync resilience is proven under load. |
+| **1 Controlled Pilot** | 🟢 **GO — CONTROLLED / SUPERVISED PILOT** | Requires human accountant supervision during first monthly run. |
+| **10 Companies** | 🟡 **CONDITIONAL GO** | Blocked until pilot validation of exception clearing UX and legal sign-off on 24 cited rules. |
+| **100 Companies** | 🔴 **NO-GO** | Blocked until Multi-Company Accountant Cockpit is built and PWA offline sync is proven under load. |
 | **1,000+ Companies** | 🔴 **NO-GO** | Blocked until host-to-host bank API integrations and regional partner networks are established. |
 
 ---
@@ -169,4 +170,4 @@ The readiness of EthioPayroll across deployment tiers is evaluated against evide
 ## SECTION J — FINAL VERDICT
 
 > **If this were my company, my money, and my reputation:**
-> I would focus 100% of engineering effort on proving the **Accountant Operating System in controlled pilots**. I would build the **Multi-Company Accountant Cockpit**, complete the legal auditor review of all 34 statutory rules, and streamline exception clearing. I would refuse to build an ERP, refuse to build recruitment tools, and strictly forbid AI from calculating taxes. By delivering evidence-backed compliance confidence and an indispensable accountant workbench, EthioPayroll will make Excel unnecessary for monthly payroll across Ethiopian SMEs.
+> I would focus 100% of engineering effort on proving the **Accountant Operating System in controlled pilots**. I would freeze the audit baseline and conduct a supervised 1-company pilot to validate exception UX and variance explanations before expanding development into multi-company features or broader commercial scale.

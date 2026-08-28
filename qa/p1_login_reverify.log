@@ -1,9 +1,0 @@
-Warming up a11y target: https://ethiopian-payroll-engine.onrender.com ...
-Target is up.
-Auditing /auth/login ...
-
-=== ACCESSIBILITY SUMMARY (WCAG 2.1 A/AA) ===
-page | passes | violating rules | nodes | verdict
-/auth/login | 39 passed | 1 rules | 1 nodes | PASS
-
-Full reports saved to: C:\Users\Hp G3\Desktop\ethiopian_payroll_engine\qa\reports\2026-08-26T07-05-29-a11y

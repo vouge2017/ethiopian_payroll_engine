@@ -162,15 +162,9 @@ def create_app():
 
     csrf.init_app(app)
 
-    # EMERGENCY VALVE (temporary): production proxy breaks CSRF pairing on
-    # auth routes; flip EMERGENCY_DISABLE_CSRF_AUTH=1 to exempt auth blueprint.
-    # Rate limiting + brute-force lockout remain fully active. REMOVE once the
-    # root cause is fixed and verified.
-    if os.environ.get('EMERGENCY_DISABLE_CSRF_AUTH') == '1':
-        from .auth import auth_blueprint
-
-        csrf.exempt(auth_blueprint)
-        app.logger.warning('EMERGENCY: CSRF disabled on /auth/* routes')
+    # CSRF is enforced on all blueprints. The emergency valve
+    # (EMERGENCY_DISABLE_CSRF_AUTH) was removed 2026-08-29 — the root-cause
+    # proxy fix (ProxyFix + Render HTTPS) has been stable since 2026-08-26.
     limiter.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
@@ -251,6 +245,11 @@ def create_app():
     # service-layer fns (exceptions/evidence/change_summary) thread company_id.
     TenantQuery.register_model(Payslip)
 
+    # CSP nonce — available in all templates as {{ csp_nonce }}
+    @app.context_processor
+    def inject_csp_nonce():
+        return {'csp_nonce': getattr(g, 'csp_nonce', '')}
+
     # Template filter: calculation flow for transparent payslips
     @app.template_filter('calculation_flow')
     def calculation_flow_filter(result):
@@ -261,6 +260,7 @@ def create_app():
     @app.before_request
     def set_request_id():
         g.request_id = request.headers.get('X-Request-Id', uuid.uuid4().hex[:12])
+        g.csp_nonce = uuid.uuid4().hex[:16]
 
     @app.before_request
     def check_session_timeout():
@@ -431,9 +431,10 @@ def create_app():
                 'default-src': "'self'",
                 'script-src': [
                     "'self'",
-                    "'unsafe-inline'",
+                    "'unsafe-inline'",  # fallback for old browsers; modern browsers prefer nonce
                     'https://cdn.jsdelivr.net',
                 ],
+                'script-src-attr': ["'unsafe-inline'"],  # inline event handlers (onclick, etc.)
                 'style-src': [
                     "'self'",
                     "'unsafe-inline'",

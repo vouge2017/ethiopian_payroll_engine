@@ -441,7 +441,7 @@
 {% block extra_js %}
 {% if last_month_summary %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 function showChart(skeletonId, realId) {
     const sk = document.getElementById(skeletonId);
     const re = document.getElementById(realId);

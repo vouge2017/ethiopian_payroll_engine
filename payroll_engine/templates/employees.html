@@ -161,7 +161,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 async function deactivateEmployee(empId, empName) {
     if (!confirm(`Deactivate ${empName}? Their payroll history will be preserved.`)) return;
 

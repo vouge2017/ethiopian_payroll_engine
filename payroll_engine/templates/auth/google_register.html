@@ -57,7 +57,7 @@
                 </div>
             </div>
             <span class="field-hint">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</span>
-            <script>
+            <script nonce="{{ csp_nonce }}">
             document.getElementById('phone').addEventListener('input', function(e) {
                 let v = e.target.value.replace(/\D/g, '');
                 if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
@@ -165,7 +165,7 @@
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 document.getElementById('reviewBtn').addEventListener('click', function() {
     const form = document.getElementById('googleRegisterForm');
     if (!form.checkValidity()) { form.reportValidity(); return; }

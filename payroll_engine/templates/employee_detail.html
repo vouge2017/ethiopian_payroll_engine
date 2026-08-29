@@ -552,7 +552,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 async function deleteOvertime(entryId, btn) {
     if (!confirm('Delete this overtime entry?')) return;
     try {

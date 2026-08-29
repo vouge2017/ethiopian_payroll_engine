@@ -57,7 +57,7 @@
                                            title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
                                 </div>
                                 <div class="form-text">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</div>
-                                <script>
+                                <script nonce="{{ csp_nonce }}">
                                 document.getElementById('phone').addEventListener('input', function(e) {
                                     let v = e.target.value.replace(/\D/g, '');
                                     if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
@@ -153,7 +153,7 @@
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 // Auto-populate hidden name field from structured Ethiopian name fields
 function updateNameField() {
     const first = document.getElementById('first_name').value.trim();

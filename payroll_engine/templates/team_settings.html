@@ -119,7 +119,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 async function removeTeamMember(userId, btn) {
     if (!confirm('Remove this team member?')) return;
     try {

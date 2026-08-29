@@ -390,7 +390,10 @@ class Company(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Webhook for external integrations
     webhook_url = db.Column(db.String(500), nullable=True)
-    webhook_secret = db.Column(db.String(64), nullable=True)  # For HMAC signature verification
+    if _HAS_ENCRYPTION:
+        webhook_secret = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
+    else:
+        webhook_secret = db.Column(db.String(64), nullable=True)  # PLAINTEXT fallback — not for production
 
     # Report templates (JSON) — per-company column configuration
     # Structure: {"erca": {"columns": [{"key": "tin", "label": "TIN", "enabled": true, "order": 1}, ...]}}
@@ -1425,6 +1428,31 @@ def _audit_log_before_insert(mapper, connection, target):
         result = connection.execute(stmt).scalar()
         target.previous_hash = result
     target.hash = target.compute_hash()
+
+
+@db.event.listens_for(db.Session, 'before_flush')
+def _sync_employee_name(session, flush_context, instances):
+    """Auto-sync Employee.name from structured fields before flush.
+
+    When first_name/father_name/grandfather_name change, rebuild the
+    legacy name field so they never drift apart.
+    """
+    for obj in session.dirty:
+        if not isinstance(obj, Employee):
+            continue
+        if not obj.first_name:
+            continue
+        # Check if any structured field is dirty
+        history = db.inspect(obj).attrs.first_name.history
+        father_history = db.inspect(obj).attrs.father_name.history
+        grand_history = db.inspect(obj).attrs.grandfather_name.history
+        if history.has_changes() or father_history.has_changes() or grand_history.has_changes():
+            parts = [obj.first_name]
+            if obj.father_name:
+                parts.append(obj.father_name)
+            if obj.grandfather_name:
+                parts.append(obj.grandfather_name)
+            obj.name = ' '.join(parts)
 
 
 class TaxRule(db.Model):

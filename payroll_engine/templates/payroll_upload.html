@@ -342,7 +342,7 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     'use strict';
 

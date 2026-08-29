@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC, timedelta
+from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
@@ -234,6 +234,7 @@ def set_language(lang):
 
 
 @auth.route('/register', methods=['GET', 'POST'])
+@limiter.limit('3 per minute')
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -413,6 +414,7 @@ def google_register():
             phone=normalized_phone,
             company_id=company.id,
             role='owner',
+            must_change_password=True,  # Force password change on first login
         )
         user.set_password(User._generate_temp_password())
         db.session.add(user)
@@ -428,8 +430,8 @@ def google_register():
         session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
-        flash('Account created with Google!', 'success')
-        return redirect(url_for('main.index'))
+        flash('Account created with Google! Please set your password.', 'success')
+        return redirect(url_for('auth.change_password'))
 
     return render_template(
         'auth/google_register.html',

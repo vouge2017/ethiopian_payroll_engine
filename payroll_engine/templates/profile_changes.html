@@ -167,7 +167,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 async function approveProfileChange(changeId, fieldLabel, btn) {
     if (!confirm(`Approve this ${fieldLabel} change?`)) return;
     try {

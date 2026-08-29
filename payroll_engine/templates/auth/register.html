@@ -106,7 +106,7 @@
                 </div>
             </div>
             <span class="field-hint">Used for two-factor authentication.</span>
-            <script>
+            <script nonce="{{ csp_nonce }}">
             document.getElementById('phone').addEventListener('input', function(e) {
                 let d = e.target.value.replace(/\D/g, '');
                 if (d.startsWith('251')) d = d.substring(3);
@@ -258,7 +258,7 @@
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 document.getElementById('reviewBtn').addEventListener('click', function() {
     const form = document.getElementById('registerForm');
     if (!form.checkValidity()) { form.reportValidity(); return; }

@@ -312,7 +312,7 @@ def get_adjustment_summary(db, models, run_id: int, company_id: int) -> Adjustme
         # Find original
         original_net = Decimal('0')
         if adj.original_payslip_id:
-            original = Payslip.query.filter_by(id=adj.original_payslip_id).first()
+            original = Payslip.query.filter_by(id=adj.original_payslip_id, company_id=company_id).first()
             if original:
                 original_net = _D(original.net_pay)
 

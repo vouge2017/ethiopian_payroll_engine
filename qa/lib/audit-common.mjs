@@ -34,7 +34,17 @@ export async function launchBrowser() {
   let lastErr;
   for (const channel of CHANNELS) {
     try {
-      return await chromium.launch({ channel, headless: true });
+      return await chromium.launch({
+        channel,
+        headless: true,
+        args: [
+          '--no-proxy-server',
+          '--proxy-server=direct://',
+          '--proxy-bypass-list=*',
+          // Prevent Chrome from auto-upgrading http:// to https:// (breaks local HTTP servers)
+          '--disable-features=HttpsUpgrades,HttpsFirstModeV2,HttpsFirstBalancedModeAutoEnable,HttpsFirstModeVisitedEngagement',
+        ],
+      });
     } catch (err) {
       lastErr = err;
     }
@@ -54,6 +64,7 @@ export async function newPage(browser, viewport) {
   const context = await browser.newContext({
     viewport: viewport || { width: 1280, height: 800 },
     locale: 'en-US',
+    ignoreHTTPSErrors: true, // allow audits against local/staging self-signed TLS
   });
   const page = await context.newPage();
   return { context, page };

@@ -61,10 +61,17 @@ def parse_employee_form(form_data):
 
     phone = None
     if phone_raw:
-        is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
-        if not is_valid:
-            return None, f'Employee phone: {phone_error}'
-        phone = normalized_phone
+        # Try Ethiopian normalization first (for consistent storage)
+        is_valid, normalized_phone, _ = validate_ethiopian_phone(phone_raw)
+        if is_valid:
+            phone = normalized_phone
+        else:
+            # Accept non-Ethiopian numbers as-is (international employees)
+            cleaned = phone_raw.replace(' ', '')
+            if len(cleaned) >= 7 and len(cleaned) <= 20 and cleaned.replace('+', '').replace('-', '').isdigit():
+                phone = cleaned
+            else:
+                return None, f'Employee phone: invalid format. Enter 7-20 digits (Ethiopian or international).'
 
     # Validate Fayda FIN if provided
     if fayda_fin:

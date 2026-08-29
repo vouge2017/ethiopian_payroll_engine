@@ -321,11 +321,18 @@ def edit_employee(emp_id):
         from payroll_engine.models import validate_ethiopian_phone, validate_fayda_fin
 
         if phone_raw:
-            is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
-            if not is_valid:
-                flash(f'Employee phone: {phone_error}', 'danger')
-                return redirect(url_for('employees.edit_employee', emp_id=emp_id))
-            phone = normalized_phone
+            # Try Ethiopian normalization first
+            is_valid, normalized_phone, _ = validate_ethiopian_phone(phone_raw)
+            if is_valid:
+                phone = normalized_phone
+            else:
+                # Accept non-Ethiopian numbers as-is
+                cleaned = phone_raw.replace(' ', '')
+                if len(cleaned) >= 7 and len(cleaned) <= 20 and cleaned.replace('+', '').replace('-', '').isdigit():
+                    phone = cleaned
+                else:
+                    flash('Employee phone: invalid format. Enter 7-20 digits.', 'danger')
+                    return redirect(url_for('employees.edit_employee', emp_id=emp_id))
         else:
             phone = None
 

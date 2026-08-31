@@ -281,7 +281,7 @@ def export_leave_balances():
     writer.writerow(['Employee ID', 'Name', 'Leave Type', 'Balance (days)'])
 
     for emp in employees:
-        balances = LeaveBalance.query.filter_by(employee_id=emp.id).all()
+        balances = LeaveBalance.query.filter_by(employee_id=emp.id, company_id=_company_id()).all()
         if balances:
             for b in balances:
                 writer.writerow([emp.employee_id, emp.name, b.leave_type, str(b.balance)])

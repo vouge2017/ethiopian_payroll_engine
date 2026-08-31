@@ -34,3 +34,9 @@ payslip_*.pdf
 -e 
 # Internal planning docs (contain security gap analysis — not for public repo)
 .mimo/
+
+# Migration artifacts (2026-08-31)
+ethiopian_payroll_engine_BACKUP_*/
+/ethiopian_payroll_engine/
+docs/migration-2026-08-31/
+

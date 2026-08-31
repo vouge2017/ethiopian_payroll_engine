@@ -82,6 +82,7 @@ def _create_completed_run(app, company_id, user_id, approved_minutes_ago=30):
         ps = Payslip(
             payroll_run_id=run.id,
             employee_id=1,  # doesn't need to exist for this test
+            company_id=company_id,  # P0-F: not-null constraint
             gross_salary=10000,
             tax=1000,
             employee_pension=700,
@@ -150,7 +151,7 @@ def test_undo_deletes_payslips(app, company_user, client):
     assert resp.status_code == 200
 
     with app.app_context():
-        payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
+        payslips = Payslip.query.filter_by(payroll_run_id=run_id, company_id=cid).all()
         assert len(payslips) == 0
 
 

@@ -827,7 +827,7 @@ def payroll_confirm(run_id):
     if run.status != 'review':
         flash('This payroll run is not in review status.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=_company_id()).first()
     employees_data = draft.employee_data if draft else []
     total_gross = sum(e.get('gross', 0) for e in employees_data)
     total_tax = sum(e.get('tax', 0) for e in employees_data)
@@ -892,6 +892,7 @@ def reject_payroll(run_id):
 @login_required
 @role_required('owner')
 @limiter.limit('10 per minute')
+@idempotent
 def approve_payroll():
     """
     Approve a payroll run and process it.
@@ -1066,7 +1067,7 @@ def undo_approval(run_id):
         db.session.delete(ps)
 
     # Delete draft
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=_company_id()).first()
     if draft:
         db.session.delete(draft)
 
@@ -1894,6 +1895,7 @@ def unlock_payroll(run_id):
 @payroll_bp.route('/payroll/runs/<int:run_id>/disburse', methods=['POST'])
 @login_required
 @role_required('owner')
+@idempotent
 def mark_disbursed(run_id):
     """Mark a payroll run as disbursed (bank file sent to bank)."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
@@ -1935,6 +1937,7 @@ def mark_disbursed(run_id):
 @payroll_bp.route('/payroll/runs/<int:run_id>/confirm-payment', methods=['POST'])
 @login_required
 @role_required('owner')
+@idempotent
 def confirm_payment(run_id):
     """Confirm that bank has processed the payment."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()

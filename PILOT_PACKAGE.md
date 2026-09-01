@@ -1,6 +1,6 @@
 # PILOT PACKAGE
 **Date:** 2026-08-31
-**Commit:** `70143e7`
+**Commit:** `88dbd9c` (post-remediation, with P0 idempotency/cron/UNIQUE/escrow hardening)
 **Production:** https://ethiopian-payroll-engine.onrender.com
 
 > This package is preparation for a real-accountant pilot. It is NOT validation. Validation happens when a real accountant processes a real payroll.

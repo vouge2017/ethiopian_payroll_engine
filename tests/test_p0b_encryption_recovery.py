@@ -149,16 +149,35 @@ def test_recovery_drill_backup_restore(app_a, key, tmp_path):
 
 
 def test_encryption_key_required_in_production(monkeypatch):
-    """P0-B: production must NOT start without a real encryption key."""
-    monkeypatch.setenv('FLASK_ENV', 'production')
-    monkeypatch.delenv('DB_ENCRYPTION_KEY', raising=False)
-    with pytest.raises(RuntimeError, match='DB_ENCRYPTION_KEY'):
-        # Re-import the models module to re-evaluate _ENCRYPTION_KEY
-        import importlib
-        import payroll_engine.models as m
-        importlib.reload(m)
-        # Restore
-        monkeypatch.setenv('DB_ENCRYPTION_KEY', 'restore-key-32-bytes-padded!')
-        importlib.reload(m)
-        from payroll_engine import create_app
-        create_app()  # should not raise
+    """P0-B: production must NOT start without a real encryption key.
+
+    Senior-level fix (2026-08-31): use a fresh subprocess, not
+    importlib.reload. The reload path shares the imported module state
+    and the production guard only fires once per process. We want the
+    real production check: a brand-new interpreter that imports
+    payroll_engine.models must exit non-zero.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        'FLASK_ENV': 'production',
+        'PATH': os.environ.get('PATH', ''),
+        'SYSTEMROOT': os.environ.get('SYSTEMROOT', ''),
+    }
+    # Drop DB_ENCRYPTION_KEY explicitly
+    result = subprocess.run(
+        [sys.executable, '-c', 'import payroll_engine.models'],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0, (
+        f'import payroll_engine.models in production without '
+        f'DB_ENCRYPTION_KEY must fail. stdout={result.stdout!r} '
+        f'stderr={result.stderr!r}'
+    )
+    assert 'DB_ENCRYPTION_KEY' in result.stderr, (
+        f'stderr must mention DB_ENCRYPTION_KEY, got: {result.stderr!r}'
+    )

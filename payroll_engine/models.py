@@ -965,7 +965,13 @@ class Payslip(db.Model):
     reason = db.Column(db.String(255), nullable=True)  # Reason for adjustment
     original_payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=True)
 
-    __table_args__ = (db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),)
+    __table_args__ = (
+        db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),
+        db.UniqueConstraint(
+            'payroll_run_id', 'employee_id', 'payslip_type',
+            name='uq_payslip_run_emp_type',
+        ),
+    )
 
     def __repr__(self):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
@@ -1056,9 +1062,11 @@ class PayrollDraft(db.Model):
 class PayrollPreview(db.Model):
     """Temporary storage for payroll preview data between upload and confirmation.
 
-    Replaces Flask session storage to prevent sensitive payroll data
-    (salaries, TIN, bank accounts) from being stored in client-side cookies.
+    Replaces Flask session storage which caused sensitive payroll data
+    (salaries, TIN, bank accounts) to be stored in client-side cookies.
     """
+
+    query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
     token = db.Column(db.String(64), unique=True, nullable=False, index=True)
@@ -1700,6 +1708,8 @@ class PayslipAcknowledgment(db.Model):
 class Notification(db.Model):
     """In-app notification for users."""
 
+    query_class = TenantQuery
+
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -1756,6 +1766,8 @@ class PayslipGenerationJob(db.Model):
     One row per payslip-in-batch, grouped by batch_id (UUID).
     RQ job id == this row's id (set after enqueue).
     """
+
+    query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True, index=True)
@@ -1895,6 +1907,8 @@ class FilingRecord(db.Model):
     Stores when a filing was made, who did it, and the confirmation number.
     Used to show filing history and prevent duplicate filings.
     """
+
+    query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)

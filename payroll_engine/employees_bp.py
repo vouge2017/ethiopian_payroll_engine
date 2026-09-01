@@ -1097,7 +1097,13 @@ def employee_leave_balance(emp_id):
         )
 
     # Get leave history
-    leaves = Leave.query.filter_by(employee_id=emp.id).order_by(Leave.applied_at.desc()).limit(20).all()
+    leaves = (
+        Leave.query
+        .filter_by(employee_id=emp.id, company_id=_company_id())
+        .order_by(Leave.applied_at.desc())
+        .limit(20)
+        .all()
+    )
 
     return render_template(
         'employee_leave.html', employee=emp, balances=balances, leaves=leaves, year=year, current_year=date.today().year

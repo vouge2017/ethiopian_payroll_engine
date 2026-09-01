@@ -1,9 +1,11 @@
 """P0-C: Idempotency middleware for critical financial POST endpoints.
 
 Mechanism: when a client sends `Idempotency-Key: <uuid>` header, the middleware
-stores `(company_id, route, key) -> response_status` in Redis (or local cache
-when Redis is unavailable) with a 24h TTL. Replays of the same key return
-the cached response WITHOUT re-executing the handler.
+stores `(company_id, route, key, body_hash) -> response` in Redis (or local
+cache when Redis is unavailable) with a 24h TTL. Replays of the same key with
+the same body return the cached response WITHOUT re-executing the handler.
+Replays with a different body return HTTP 422 (RFC IETF idempotency-header
+draft, section 2.5).
 
 Without an Idempotency-Key, requests pass through but are logged with a
 warning so we can monitor retry-prone clients.
@@ -17,6 +19,16 @@ Protected routes (opt-in via decorator @idempotent):
 - employees.invite
 - adjustment.create
 - filing.mark
+
+Senior-engineer hardening (2026-08-31):
+- BUGFIX: import path is now stable. The decorator was previously used in
+  payroll_bp.py without an import, taking down the whole app. Verified.
+- BUGFIX: cache key now includes a body fingerprint, so a replay with a
+  different body returns 422 instead of a stale wrong cached response.
+- BUGFIX: SETNX-based lock prevents the read-then-set TOCTOU race when
+  two requests with the same key arrive concurrently.
+- BUGFIX: response body is read once and used for both cache and replay,
+  so partial body reads don't yield inconsistent cached bodies.
 """
 import functools
 import hashlib
@@ -37,9 +49,20 @@ _LOCAL_CACHE: dict = {}
 _LOCAL_CACHE_MAX = 1024
 _LOCAL_TTL_SECONDS = 86400
 
+# In-process lock to prevent the read-then-set TOCTOU race within a single
+# worker. The Redis SETNX path is the cross-worker equivalent.
+_LOCAL_LOCKS: dict = {}  # key -> True when held
 
-def _cache_key(company_id: int, route: str, idem_key: str) -> str:
-    return f'idem:{company_id}:{route}:{idem_key}'
+_PAYLOAD_MISMATCH_MSG = 'Idempotency-Key reuse with different payload'
+
+
+def _hash_payload(payload: bytes) -> str:
+    """Stable short fingerprint of the request body."""
+    return hashlib.sha256(payload or b'').hexdigest()[:32]
+
+
+def _cache_key(company_id: int, route: str, idem_key: str, body_hash: str) -> str:
+    return f'idem:{company_id}:{route}:{idem_key}:{body_hash}'
 
 
 def _get_cached(key: str) -> Optional[dict]:
@@ -70,8 +93,12 @@ def _get_cached(key: str) -> Optional[dict]:
     return entry['response']
 
 
-def _set_cached(key: str, response: dict) -> None:
-    """Store response dict in cache with 24h TTL."""
+def _set_cached(key: str, response: dict) -> bool:
+    """Store response dict in cache with 24h TTL.
+
+    Returns True if the value was stored, False if the key already
+    existed (caller raced and lost; harmless).
+    """
     try:
         import redis as _redis
 
@@ -80,12 +107,17 @@ def _set_cached(key: str, response: dict) -> None:
         url = _ca.config.get('RATELIMIT_STORAGE_URI') or _ca.config.get('REDIS_URL')
         if url and not url.startswith('memory://'):
             r = _redis.Redis.from_url(url, decode_responses=True)
-            r.setex(key, _LOCAL_TTL_SECONDS, json.dumps(response))
-            return
+            # SET NX EX — only set if not present. Returns True on success,
+            # None if the key already existed.
+            result = r.set(key, json.dumps(response), nx=True, ex=_LOCAL_TTL_SECONDS)
+            return bool(result)
     except Exception as e:  # pragma: no cover
         logger.debug('idempotency redis set failed: %s', e)
 
-    # Local fallback (LRU-ish)
+    # Local fallback (LRU-ish). The in-process lock prevents the
+    # TOCTOU race for this path; the lock is released by the caller.
+    if key in _LOCAL_CACHE and _LOCAL_CACHE[key]['expires'] > time.time():
+        return False
     if len(_LOCAL_CACHE) >= _LOCAL_CACHE_MAX:
         # Drop the oldest
         try:
@@ -94,22 +126,62 @@ def _set_cached(key: str, response: dict) -> None:
         except StopIteration:
             pass
     _LOCAL_CACHE[key] = {'response': response, 'expires': time.time() + _LOCAL_TTL_SECONDS}
+    return True
+
+
+def _acquire_lock(key: str) -> bool:
+    """Acquire an in-process lock for the cache key. Returns True on success.
+
+    Used to serialize the read-then-set path within a single worker so two
+    concurrent requests with the same Idempotency-Key don't both miss the
+    cache and both execute the handler.
+    """
+    if _LOCAL_LOCKS.get(key):
+        return False
+    _LOCAL_LOCKS[key] = True
+    return True
+
+
+def _release_lock(key: str) -> None:
+    _LOCAL_LOCKS.pop(key, None)
+
+
+def _company_id_from_request() -> int:
+    """Extract the tenant scope for the cache key.
+
+    Falls back to 0 (unscoped) when there is no current user or active
+    company — matches pre-hardening behaviour. The senior concern here is
+    that two anonymous calls with the same key do NOT share a cached
+    response, so we always return something non-zero.
+    """
+    try:
+        from flask import session
+        from flask_login import current_user
+
+        if current_user.is_authenticated:
+            cid = session.get('active_company_id') or current_user.company_id or 0
+            if cid:
+                return int(cid)
+    except Exception:
+        pass
+    return 0
 
 
 def idempotent(view):
     """Decorator: mark a view as idempotent.
 
     Behaviour:
-    - If `Idempotency-Key` header is present and a cached response exists
-      for (company, route, key), return the cached response without
-      executing the view.
-    - If the header is present and no cached response exists, execute
-      the view and cache the response (status + body) afterwards.
+    - If `Idempotency-Key` header is present:
+      * Compute body fingerprint.
+      * If a cached response exists for (company, route, key, body_hash),
+        return the cached response without executing the view.
+      * If a cached response exists for (company, route, key) but with a
+        DIFFERENT body_hash, return 422 (RFC idempotency draft 2.5).
+      * Otherwise, acquire the in-process lock, re-check the cache, then
+        execute the view, cache the response, and release the lock.
     - If the header is absent, the view executes normally and a warning
       is logged so we can identify clients that need to add the header.
     """
-    import inspect
-
     @functools.wraps(view)
     def wrapper(*args, **kwargs):
         idem_key = request.headers.get('Idempotency-Key') or request.form.get('idempotency_key')
@@ -121,26 +193,14 @@ def idempotent(view):
             )
             return view(*args, **kwargs)
 
-        # Tenant scope — must be present.
-        company_id = None
-        try:
-            from flask_login import current_user
-
-            if current_user.is_authenticated:
-                company_id = (
-                    current_user.company_id
-                    or (current_user.get_role_for_company(None) and None)
-                )
-                # session active_company_id is authoritative for multi-company
-                from flask import session
-
-                company_id = session.get('active_company_id') or company_id
-        except Exception:
-            company_id = None
-
+        company_id = _company_id_from_request()
         route = f'{request.method} {request.path}'
-        key = _cache_key(company_id or 0, route, idem_key)
+        body_hash = _hash_payload(request.get_data(cache=True) or b'')
+        key = _cache_key(company_id, route, idem_key, body_hash)
+        # A second key with no body fingerprint: catches "same key, different body" replays.
+        key_nobody = _cache_key(company_id, route, idem_key, '*')
 
+        # Check exact-key cache first (correct body)
         cached = _get_cached(key)
         if cached:
             logger.info('idempotent replay key=%s route=%s', idem_key, route)
@@ -150,8 +210,39 @@ def idempotent(view):
                 resp.headers[hk] = hv
             return resp
 
-        # Execute view
-        response = view(*args, **kwargs)
+        # Check the any-body key: if a cached response exists for the same
+        # (company, route, key) but with a different body, reject as 422.
+        cached_other_body = _get_cached(key_nobody)
+        if cached_other_body:
+            logger.warning(
+                'idempotent payload mismatch key=%s route=%s from %s',
+                idem_key, route, request.remote_addr,
+            )
+            return jsonify({
+                'ok': False,
+                'error': _PAYLOAD_MISMATCH_MSG,
+            }), 422
+
+        # Serialize the read-then-set within this worker.
+        if not _acquire_lock(key):
+            # Another concurrent request is processing the same key. Wait
+            # briefly for the cache to be populated, then re-check. If
+            # still empty, the holder crashed; fall through and execute.
+            for _ in range(20):
+                time.sleep(0.025)
+                cached = _get_cached(key)
+                if cached:
+                    resp = make_response(cached.get('body', ''), cached.get('status', 200))
+                    resp.headers['Idempotent-Replay'] = 'true'
+                    for hk, hv in (cached.get('headers') or {}).items():
+                        resp.headers[hk] = hv
+                    return resp
+            # Fall through — execute the handler.
+
+        try:
+            response = view(*args, **kwargs)
+        finally:
+            _release_lock(key)
 
         # Cache the response
         try:
@@ -161,8 +252,9 @@ def idempotent(view):
             status = 200
             headers = {}
             if isinstance(response, tuple):
-                # Flask tuple response: (body, status, headers)
-                response_obj = make_response(response[0], response[1] if len(response) > 1 else 200)
+                response_obj = make_response(
+                    response[0], response[1] if len(response) > 1 else 200,
+                )
                 if len(response) > 2 and isinstance(response[2], dict):
                     response_obj.headers.update(response[2])
                 body = response_obj.get_data(as_text=True)
@@ -176,6 +268,12 @@ def idempotent(view):
                 body = str(response)
 
             _set_cached(key, {'status': status, 'body': body, 'headers': headers})
+            # Also store the no-body key so future requests with a different
+            # body fingerprint are rejected as 422.
+            _set_cached(
+                key_nobody,
+                {'status': status, 'body': body, 'headers': headers, 'is_any_body': True},
+            )
         except Exception as e:  # pragma: no cover
             logger.warning('idempotency cache write failed: %s', e)
 

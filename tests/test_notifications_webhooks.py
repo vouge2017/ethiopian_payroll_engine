@@ -135,7 +135,7 @@ class TestCreateInAppNotification:
             assert notif.id is not None
             # Rollback — the notification should disappear
             db.session.rollback()
-            found = Notification.query.filter_by(message='Flush test').first()
+            found = Notification.query.filter_by(message='Flush test', company_id=cid).first()
             assert found is None
 
 
@@ -146,7 +146,7 @@ class TestNotify:
         cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             notify(cid, owner_id, 'Dispatch test', notif_type='warning')
-            notif = Notification.query.filter_by(user_id=owner_id).first()
+            notif = Notification.query.filter_by(user_id=owner_id, company_id=cid).first()
             assert notif is not None
             assert notif.type == 'warning'
 
@@ -243,7 +243,7 @@ class TestNotifyPayrollApproved:
             employees_data = [{'name': 'Tigist', 'phone': '0911111111', 'net': 8000}]
             notify_payroll_approved(cid, employees_data, 'PR-2026-07-001')
 
-            notif = Notification.query.filter_by(user_id=owner_id).first()
+            notif = Notification.query.filter_by(user_id=owner_id, company_id=cid).first()
             assert notif is not None
             assert 'PR-2026-07-001' in notif.message
             assert notif.type == 'success'
@@ -291,7 +291,7 @@ class TestNotifyLeaveDecision:
 
             notify_leave_decision(leave, 'approved', manager_name='Admin')
 
-            notif = Notification.query.filter_by(user_id=emp_uid).first()
+            notif = Notification.query.filter_by(user_id=emp_uid, company_id=cid).first()
             assert notif is not None
             assert 'approved' in notif.message
             assert notif.type == 'success'
@@ -313,7 +313,7 @@ class TestNotifyLeaveDecision:
 
             notify_leave_decision(leave, 'rejected')
 
-            notif = Notification.query.filter_by(user_id=emp_uid).first()
+            notif = Notification.query.filter_by(user_id=emp_uid, company_id=cid).first()
             assert notif is not None
             assert 'rejected' in notif.message
             assert notif.type == 'warning'
@@ -367,7 +367,7 @@ class TestNotifyLeaveDecision:
             db.session.commit()
 
             notify_leave_decision(leave, 'approved')
-            notif = Notification.query.filter_by(user_id=emp_uid).first()
+            notif = Notification.query.filter_by(user_id=emp_uid, company_id=cid).first()
             assert notif is None
 
 
@@ -497,7 +497,7 @@ class TestNotificationInPayrollTransaction:
         cid, owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             create_in_app_notification(cid, owner_id, 'In-tx test')
-            found = Notification.query.filter_by(message='In-tx test').first()
+            found = Notification.query.filter_by(message='In-tx test', company_id=cid).first()
             assert found is not None
 
     def test_notification_rolled_back_on_rollback(self, app):
@@ -506,7 +506,7 @@ class TestNotificationInPayrollTransaction:
         with app.app_context():
             create_in_app_notification(cid, owner_id, 'Rollback test')
             db.session.rollback()
-            found = Notification.query.filter_by(message='Rollback test').first()
+            found = Notification.query.filter_by(message='Rollback test', company_id=cid).first()
             assert found is None
 
     def test_notification_committed_with_payroll(self, app):
@@ -516,5 +516,5 @@ class TestNotificationInPayrollTransaction:
             create_in_app_notification(cid, owner_id, 'Commit test')
             db.session.commit()
             db.session.expire_all()
-            found = Notification.query.filter_by(message='Commit test').first()
+            found = Notification.query.filter_by(message='Commit test', company_id=cid).first()
             assert found is not None

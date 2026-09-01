@@ -33,14 +33,20 @@ def run_test_file(filepath, verbose=False):
         cmd.append('-v')
 
     try:
+        env = os.environ.copy()
+        env['PYTHONIOENCODING'] = 'utf-8'
+        env['PYTHONUTF8'] = '1'
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=120,
             cwd=REPO_ROOT,
+            env=env,
+            encoding='utf-8',
+            errors='replace',
         )
-        output = result.stdout + result.stderr
+        output = (result.stdout or '') + (result.stderr or '')
 
         # Parse summary
         passed = failed = errors = skipped = 0

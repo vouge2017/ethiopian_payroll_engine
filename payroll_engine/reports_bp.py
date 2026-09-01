@@ -474,6 +474,7 @@ def analytics():
 
     approved_leaves = (
         Leave.query.filter(
+            Leave.company_id == cid,
             Leave.employee_id.in_(emp_ids),
             Leave.status == 'approved',
             db.extract('year', Leave.start_date) == year,
@@ -629,6 +630,7 @@ def export_analytics():
     emp_ids = [e.id for e in employees]
     if emp_ids:
         approved_leaves = Leave.query.filter(
+            Leave.company_id == cid,
             Leave.employee_id.in_(emp_ids),
             Leave.status == 'approved',
             db.extract('year', Leave.start_date) == year,

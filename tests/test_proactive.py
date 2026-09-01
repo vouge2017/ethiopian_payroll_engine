@@ -207,7 +207,7 @@ class TestPrepareMonthlyDraft:
         cid, uid = _setup(app)
         with app.app_context():
             prepare_monthly_draft(cid)
-            notifs = Notification.query.filter_by(user_id=uid).all()
+            notifs = Notification.query.filter_by(user_id=uid, company_id=cid).all()
             assert len(notifs) >= 1
             assert 'Draft payroll' in notifs[0].message
 
@@ -290,7 +290,7 @@ class TestSendComplianceNudges:
             db.session.commit()
 
             send_compliance_nudges(cid)
-            notifs = Notification.query.filter_by(user_id=uid).all()
+            notifs = Notification.query.filter_by(user_id=uid, company_id=cid).all()
             # Should have at least one notification
             assert len(notifs) >= 1
 

@@ -115,19 +115,48 @@ def test_status_and_headers_preserved(app):
 def test_cache_key_uses_company(app):
     """Cache keys are scoped per company to prevent cross-tenant collisions."""
     with app.app_context():
-        k1 = _cache_key(1, 'POST /a', 'key-1')
-        k2 = _cache_key(2, 'POST /a', 'key-1')
+        k1 = _cache_key(1, 'POST /a', 'key-1', 'bodymarker')
+        k2 = _cache_key(2, 'POST /a', 'key-1', 'bodymarker')
         assert k1 != k2
 
 
 def test_ttl_expiry(app):
     """Cached response expires after TTL."""
-    key = _cache_key(1, 'POST /x', 'expire-key')
+    key = _cache_key(1, 'POST /x', 'expire-key', 'bodymarker')
     _set_cached(key, {'status': 200, 'body': 'cached', 'headers': {}})
 
     # Manually expire it
     _LOCAL_CACHE[key]['expires'] = time.time() - 1
     assert _get_cached(key) is None
+
+
+def test_same_key_different_body_returns_422(app):
+    """RFC idempotency draft 2.5: same key + different body -> 422, not stale body."""
+    @app.route('/_test_idem6', methods=['POST'])
+    @idempotent
+    def view():
+        from flask import request as _req
+        return f'body={_req.get_data(as_text=True)}', 200
+
+    client = app.test_client()
+    # First call with body 'A'
+    r1 = client.post(
+        '/_test_idem6',
+        data='A',
+        headers={'Idempotency-Key': 'k-different', 'Content-Type': 'text/plain'},
+    )
+    assert r1.status_code == 200
+    assert r1.get_data(as_text=True) == 'body=A'
+
+    # Replay with same key but different body 'B' -> 422
+    r2 = client.post(
+        '/_test_idem6',
+        data='B',
+        headers={'Idempotency-Key': 'k-different', 'Content-Type': 'text/plain'},
+    )
+    assert r2.status_code == 422
+    body = r2.get_json()
+    assert body['error'] == 'Idempotency-Key reuse with different payload'
 
 
 def test_idempotency_decorator_does_not_break_redirect(app):

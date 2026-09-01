@@ -157,7 +157,9 @@ class TestAcknowledgePayslip:
         assert b'Acknowledged' in resp.data or b'acknowledged' in resp.data
 
         with app.app_context():
-            ack = PayslipAcknowledgment.query.filter_by(payslip_id=pid, employee_id=eid).first()
+            ack = PayslipAcknowledgment.query.filter_by(
+                payslip_id=pid, employee_id=eid, company_id=_cid,
+            ).first()
             assert ack is not None
 
     def test_acknowledge_shows_badge_on_payslip(self, app):
@@ -250,6 +252,6 @@ class TestPayslipReadyNotification:
             db.session.add(notif)
             db.session.commit()
 
-            found = Notification.query.filter_by(user_id=euid).first()
+            found = Notification.query.filter_by(user_id=euid, company_id=cid).first()
             assert found is not None
             assert 'payslip' in found.message.lower()

@@ -192,19 +192,32 @@ def enqueue_batch(run_id, company_id):
     return batch_id, enqueued
 
 
-def get_batch_status(batch_id):
+def get_batch_status(batch_id, company_id):
     """Get aggregate status for a batch of PDF generation jobs.
 
     Returns dict: {queued: N, running: N, generated: N, failed: N, total: N}
+
+    `company_id` is REQUIRED. Batch IDs are client-supplied and must never
+    be trusted alone — we always join through Payslip → PayrollRun →
+    company_id to scope the result. P0-A.
     """
     from sqlalchemy import func
 
     from payroll_engine import db
-    from payroll_engine.models import PayslipGenerationJob
+    from payroll_engine.models import (
+        PayrollRun,
+        Payslip,
+        PayslipGenerationJob,
+    )
 
     rows = (
         db.session.query(PayslipGenerationJob.status, func.count(PayslipGenerationJob.id))
-        .filter(PayslipGenerationJob.batch_id == batch_id)
+        .join(Payslip, PayslipGenerationJob.payslip_id == Payslip.id)
+        .join(PayrollRun, Payslip.payroll_run_id == PayrollRun.id)
+        .filter(
+            PayslipGenerationJob.batch_id == batch_id,
+            PayrollRun.company_id == company_id,
+        )
         .group_by(PayslipGenerationJob.status)
         .all()
     )

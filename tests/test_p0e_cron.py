@@ -41,6 +41,18 @@ def test_cron_daily_rejects_without_secret(app):
     assert r.get_json()['error'] == 'unauthorized'
 
 
+def test_cron_daily_rejects_get_method(app):
+    """P0-E senior: GET on a state-mutating endpoint must be 405, not 401.
+    Otherwise cache layers and link prefetchers could trigger retention
+    purges by following a URL.
+    """
+    client = app.test_client()
+    r = client.get('/internal/cron/daily', headers={'X-Cron-Secret': 'test-cron-secret-32-bytes-pad!'})
+    assert r.status_code == 405, (
+        f'GET on /internal/cron/daily must be 405 Method Not Allowed, got {r.status_code}'
+    )
+
+
 def test_cron_daily_rejects_wrong_secret(app):
     client = app.test_client()
     r = client.post(

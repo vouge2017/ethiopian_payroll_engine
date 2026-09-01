@@ -57,7 +57,7 @@ def test_save_subscription_creates_new(app):
         assert sub.subscription_json == sub_info
 
         # Verify in-app notification created
-        notif = Notification.query.filter_by(user_id=user.id).first()
+        notif = Notification.query.filter_by(user_id=user.id, company_id=cid).first()
         assert notif is not None
         assert 'Push notifications enabled' in notif.message
 

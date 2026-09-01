@@ -48,6 +48,7 @@ from payroll_engine.models import (
     Payslip,
     User,
 )
+from payroll_engine.idempotency import idempotent
 from payroll_engine.narrative import generate_narrative
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pdf import _ensure_pdf
@@ -171,7 +172,7 @@ def api_last_run():
     # Store server-side and issue a single-use token (same flow as file upload)
     now = datetime.now(UTC).replace(tzinfo=None)
     token = uuid.uuid4().hex
-    PayrollPreview.query.filter_by(user_id=current_user.id).delete()
+    PayrollPreview.query.filter_by(user_id=current_user.id, company_id=_company_id()).delete()
     db.session.add(
         PayrollPreview(
             token=token,
@@ -268,7 +269,7 @@ def api_preview():
         token = uuid.uuid4().hex
 
         # One active preview per user — drop stale ones
-        PayrollPreview.query.filter_by(user_id=current_user.id).delete()
+        PayrollPreview.query.filter_by(user_id=current_user.id, company_id=_company_id()).delete()
 
         db.session.add(
             PayrollPreview(
@@ -321,7 +322,7 @@ def api_validate():
     if not token:
         return jsonify({'ok': False, 'error': 'No preview data. Upload a file first.'}), 400
 
-    preview = PayrollPreview.query.filter_by(token=token).first()
+    preview = PayrollPreview.query.filter_by(token=token, company_id=_company_id()).first()
     if not preview or preview.company_id != _company_id() or preview.user_id != current_user.id:
         return jsonify({'ok': False, 'error': 'Invalid preview. Upload a file again.'}), 400
     if preview.expires_at < datetime.now(UTC).replace(tzinfo=None):
@@ -2469,7 +2470,7 @@ def batch_pdf_status(batch_id):
     """
     from payroll_engine.tasks import get_batch_jobs, get_batch_status
 
-    status = get_batch_status(batch_id)
+    status = get_batch_status(batch_id, company_id=_company_id())
     jobs = get_batch_jobs(batch_id, company_id=_company_id())
 
     run_id = request.args.get('run_id', type=int)
@@ -2546,7 +2547,7 @@ def batch_pdf_status_json(batch_id):
     """
     from payroll_engine.tasks import get_batch_status
 
-    status = get_batch_status(batch_id)
+    status = get_batch_status(batch_id, company_id=_company_id())
     status['all_done'] = status.get('queued', 0) == 0 and status.get('running', 0) == 0
     return jsonify(status)
 

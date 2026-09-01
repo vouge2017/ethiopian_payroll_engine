@@ -41,12 +41,17 @@ def _verify_cron_secret() -> bool:
     )
 
 
-@cron_bp.route('/daily', methods=['POST', 'GET'])
+@cron_bp.route('/daily', methods=['POST'])
 def daily():
     """Run all daily scheduled tasks.
 
     Idempotent — safe to call multiple times per day.
     Returns a JSON report of what was done.
+
+    POST only: this is a state-mutating endpoint (retention purge writes
+    the audit log, deadlines may notify). Accepting GET would (a) be
+    cacheable by intermediaries, (b) make CSRF trivial, (c) be a CSRF
+    surface. Render Cron Job uses POST.
     """
     if not _verify_cron_secret():
         logger.warning(

@@ -187,7 +187,9 @@ class TestEmployeeProfileEdit:
             assert emp.phone == '0911111111'
 
             # But a change request should exist
-            req = ProfileChangeRequest.query.filter_by(employee_id=emp_id, field_name='phone').first()
+            req = ProfileChangeRequest.query.filter_by(
+                employee_id=emp_id, field_name='phone', company_id=_company_id,
+            ).first()
             assert req is not None
             assert req.status == 'pending'
             assert req.new_value == '0922222222'
@@ -207,7 +209,9 @@ class TestEmployeeProfileEdit:
         assert resp.status_code == 200
 
         with app.app_context():
-            reqs = ProfileChangeRequest.query.filter_by(employee_id=emp_id, field_name='phone').all()
+            reqs = ProfileChangeRequest.query.filter_by(
+                employee_id=emp_id, field_name='phone', company_id=_company_id,
+            ).all()
             assert len(reqs) == 0
 
     def test_duplicate_pending_request_blocked(self, app):
@@ -221,7 +225,8 @@ class TestEmployeeProfileEdit:
 
         with app.app_context():
             pending = ProfileChangeRequest.query.filter_by(
-                employee_id=emp_id, field_name='phone', status='pending'
+                employee_id=emp_id, field_name='phone', status='pending',
+                company_id=_company_id,
             ).all()
             assert len(pending) == 1
             assert pending[0].new_value == '0922222222'
@@ -329,7 +334,7 @@ class TestAdminApproval:
         client.post(f'/profile-changes/{req_id}/approve')
 
         with app.app_context():
-            notif = Notification.query.filter_by(user_id=emp_user_id).first()
+            notif = Notification.query.filter_by(user_id=emp_user_id, company_id=company_id).first()
             assert notif is not None
             assert 'approved' in notif.message.lower()
             assert notif.type == 'success'
@@ -354,7 +359,7 @@ class TestAdminApproval:
         client.post(f'/profile-changes/{req_id}/reject', data={'reason': 'Use full name'})
 
         with app.app_context():
-            notif = Notification.query.filter_by(user_id=emp_user_id).first()
+            notif = Notification.query.filter_by(user_id=emp_user_id, company_id=company_id).first()
             assert notif is not None
             assert 'rejected' in notif.message.lower()
             assert notif.type == 'danger'

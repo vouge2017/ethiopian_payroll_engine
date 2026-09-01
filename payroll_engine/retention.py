@@ -139,10 +139,26 @@ def purge_expired_previews(app):
 
         from payroll_engine import db
         from payroll_engine.models import PayrollPreview
+        from payroll_engine.models import TenantQuery
 
         now = datetime.now(UTC).replace(tzinfo=None)
-        deleted = PayrollPreview.query.filter(PayrollPreview.expires_at < now).delete()
-        if deleted:
-            db.session.commit()
-            logger.info('Purged %d expired payroll previews', deleted)
-        return deleted
+        # Cross-tenant purge: each company's previews are deleted in their
+        # own tenant context to satisfy P0-A TenantQuery enforcement.
+        from payroll_engine.models import Company
+
+        companies = Company.query.all()
+        deleted_total = 0
+        for company in companies:
+            TenantQuery.set_tenant_context(company.id)
+            try:
+                deleted = PayrollPreview.query.filter(
+                    PayrollPreview.company_id == company.id,
+                    PayrollPreview.expires_at < now,
+                ).delete()
+                if deleted:
+                    db.session.commit()
+                    logger.info('Purged %d expired previews for company %d', deleted, company.id)
+                deleted_total += deleted
+            finally:
+                TenantQuery.clear_tenant_context()
+        return deleted_total

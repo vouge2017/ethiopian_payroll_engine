@@ -245,6 +245,37 @@ def create_app():
     # service-layer fns (exceptions/evidence/change_summary) thread company_id.
     TenantQuery.register_model(Payslip)
 
+    # Batch 4 (Phase 3b, P0-A, 2026-08-31): tenant-isolation registration.
+    #
+    # Each of these models was swept across every call site before
+    # registration. The audit log is in `docs/p0a_tenant_audit.md`. Adding
+    # a model here WITHOUT a prior sweep is a P0 — unfiltered terminal
+    # queries that previously returned empty are now loud RuntimeError
+    # failures, which is the desired behaviour (we want the test to fail,
+    # not silent cross-tenant reads).
+    from .models import (
+        EmployeeAllowance,
+        FilingRecord,
+        FinalSettlement,
+        Leave,
+        LeaveBalance,
+        Notification,
+        PayrollPreview,
+        PayslipAcknowledgment,
+        PayslipGenerationJob,
+        ProfileChangeRequest,
+    )
+    TenantQuery.register_model(EmployeeAllowance)
+    TenantQuery.register_model(FilingRecord)
+    TenantQuery.register_model(FinalSettlement)
+    TenantQuery.register_model(Leave)
+    TenantQuery.register_model(LeaveBalance)
+    TenantQuery.register_model(Notification)
+    TenantQuery.register_model(PayrollPreview)
+    TenantQuery.register_model(PayslipAcknowledgment)
+    TenantQuery.register_model(PayslipGenerationJob)
+    TenantQuery.register_model(ProfileChangeRequest)
+
     # CSP nonce — available in all templates as {{ csp_nonce }}
     @app.context_processor
     def inject_csp_nonce():
@@ -502,6 +533,13 @@ def create_app():
 
     app.register_blueprint(billing_bp)
     app.register_blueprint(platform_bp)
+
+    # P0-E: Internal cron blueprint (authenticated by X-Cron-Secret).
+    # Hit by Render Cron Job service on the schedule declared in
+    # render.yaml. POST only — see cron_bp.py:daily docstring.
+    from .cron_bp import cron_bp
+
+    app.register_blueprint(cron_bp)
 
     # Billing enforcement gate: derived state -> access control on every request.
     from .billing import enforce_billing_gate

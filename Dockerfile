@@ -28,14 +28,24 @@ RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FLASK_ENV=production \
-    FLASK_APP=wsgi:app
+    FLASK_APP=wsgi:app \
+    GUNICORN_TMPDIR=/tmp/gunicorn \
+    WORKER_TMP_DIR=/tmp/gunicorn-workers
+
+# Create the gunicorn tmp dirs owned by appuser BEFORE gunicorn starts.
+# Gunicorn's default fallback for the control socket is /nonexistent,
+# which triggers "Permission denied: '/nonexistent'" at boot when running
+# as a non-root user (appuser). Pre-creating the dirs silences the noise.
+USER root
+RUN mkdir -p /tmp/gunicorn /tmp/gunicorn-workers && \
+    chown -R appuser:appgroup /tmp/gunicorn /tmp/gunicorn-workers && \
+    chmod 700 /tmp/gunicorn /tmp/gunicorn-workers
+USER appuser
 
 EXPOSE 5000
-
-USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-5000}/healthz')" || exit 1
 
-CMD ["sh", "-c", "flask db upgrade 2>/dev/null || flask db stamp head; exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 wsgi:app"]
+CMD ["sh", "-c", "flask db upgrade 2>/dev/null || flask db stamp head; exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 --worker-tmp-dir /tmp/gunicorn-workers --tmp-dir /tmp/gunicorn wsgi:app"]

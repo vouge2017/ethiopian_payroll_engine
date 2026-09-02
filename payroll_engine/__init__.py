@@ -632,6 +632,23 @@ def create_app():
     def service_worker():
         return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}
 
+    @app.route('/favicon.ico')
+    def favicon():
+        """Serve the app icon as favicon.ico.
+
+        Browsers (and the Network tab) automatically request /favicon.ico.
+        We don't ship a .ico file — the project uses a 192px PNG instead.
+        Returning the PNG with a long cache avoids the 404 in the console
+        without shipping a new binary asset.
+        """
+        from flask import make_response
+        response = make_response(
+            app.send_static_file('icons/icon-192.png'),
+        )
+        response.headers['Content-Type'] = 'image/png'
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
+
     @app.route('/offline')
     def offline():
         return (

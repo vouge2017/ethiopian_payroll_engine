@@ -54,15 +54,14 @@
         <div class="onboarding-field">
             <label for="login_id">Phone or Email</label>
             <div class="onboarding-field-wrapper">
-                <div class="onboarding-phone-wrapper">
-                    <span class="onboarding-phone-prefix">+251</span>
-                    <input type="text" id="login_id" name="login_id"
-                           required autofocus
-                           placeholder="911 234 567 or email"
-                           inputmode="tel">
-                </div>
+                <input type="text" id="login_id" name="login_id"
+                       required autofocus
+                       placeholder="911 234 567 or email@example.com"
+                       inputmode="text"
+                       class="onboarding-input"
+                       autocomplete="username">
             </div>
-            <span class="field-hint">9 digits starting with 9 or 7, or your email address</span>
+            <span class="field-hint">Ethiopian mobile (9 digits), or your email address.</span>
         </div>
 
         <!-- Password -->

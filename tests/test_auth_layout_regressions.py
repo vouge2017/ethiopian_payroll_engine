@@ -11,6 +11,7 @@ relevant CSS rules in the design system. They are pure-HTML
 regressions — they don't exercise the full login flow.
 """
 import os
+import re
 
 import pytest
 
@@ -182,8 +183,9 @@ def test_phone_wrapper_css_handles_intl_tel(app):
 def test_static_251_prefix_is_removed_from_register(app):
     """The old hardcoded <span class="onboarding-phone-prefix">+251</span>
     has been removed from the register page — intl-tel-input provides the
-    prefix and country code dynamically. (Login still has it because
-    login_id is a phone-or-email field and the prefix is just a hint.)
+    prefix and country code dynamically. (Login and forgot_password also
+    have no +251 prefix because their `login_id` field is phone-or-email
+    and a hardcoded country code was misleading.)
     """
     client = app.test_client()
     r = client.get('/auth/register', follow_redirects=True)
@@ -192,3 +194,109 @@ def test_static_251_prefix_is_removed_from_register(app):
         'Register page still has the hardcoded +251 prefix span — '
         'intl-tel-input should be providing the country code now'
     )
+
+
+def test_login_has_no_static_251_prefix(app):
+    """Login's `login_id` is phone-or-email. A hardcoded +251 prefix was
+    misleading for email input. The field is now a clean .onboarding-input
+    with no prefix.
+    """
+    client = app.test_client()
+    r = client.get('/auth/login', follow_redirects=True)
+    html = r.get_data(as_text=True)
+    assert 'class="onboarding-phone-prefix">+251' not in html, (
+        'Login page still has a hardcoded +251 prefix — misleading for'
+        ' phone-or-email field; intl-tel-input is not used here'
+    )
+    # And the new clean input class is present
+    assert 'class="onboarding-input"' in html, (
+        'Login must use the new .onboarding-input class for the clean'
+        ' phone-or-email field'
+    )
+
+
+def test_forgot_password_has_no_static_251_prefix(app):
+    """Same as login — forgot_password's `login_id` is phone-or-email."""
+    client = app.test_client()
+    r = client.get('/auth/forgot-password', follow_redirects=True)
+    if r.status_code != 200:
+        pytest.skip(f'forgot-password returned {r.status_code}; skipping')
+    html = r.get_data(as_text=True)
+    assert 'class="onboarding-phone-prefix">+251' not in html, (
+        'forgot_password still has a hardcoded +251 prefix'
+    )
+
+
+def test_emergency_phone_uses_intl_tel(app):
+    """The employee-portal emergency_phone field must use intl-tel-input
+    so employees can register an international emergency contact."""
+    client = app.test_client()
+    r = client.get('/employee/profile/edit', follow_redirects=True)
+    if r.status_code != 200:
+        pytest.skip(f'employee/profile/edit returned {r.status_code}; auth needed')
+    html = r.get_data(as_text=True)
+    # emergency_phone must be one of the intl-tel inputs
+    m = re.search(r'<input[^>]+name="emergency_phone"[^>]*>', html)
+    assert m is not None, 'emergency_phone field must exist on employee profile edit'
+    assert 'data-intl-tel' in m.group(0), (
+        f'emergency_phone must use intl-tel-input, got: {m.group(0)}'
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────
+# CSS alignment for the country selector (intl-tel-input)
+# ──────────────────────────────────────────────────────────────────────
+
+def test_iti_country_container_height_matches_input(app):
+    """The flag dropdown (.iti__country-container) must be the same
+    height as the input (44px) so the field reads as one continuous
+    control.
+    """
+    css = app.test_client().get('/static/css/design-system.css').get_data(as_text=True)
+    # The height: 44px rule for the country container
+    cc_block = css.split('.iti__country-container {', 1)
+    assert len(cc_block) == 2, '.iti__country-container block not found'
+    body = cc_block[1][:200]
+    assert 'height: 44px' in body, (
+        f'.iti__country-container must be 44px tall to match the input, got: {body!r}'
+    )
+
+
+def test_iti_tel_input_height_matches(app):
+    """The intl-tel-input's inner .iti__tel-input must also be 44px tall."""
+    css = app.test_client().get('/static/css/design-system.css').get_data(as_text=True)
+    ti_block = css.split('.iti input.iti__tel-input,', 1)
+    assert len(ti_block) == 2, '.iti__tel-input block not found'
+    body = ti_block[1][:400]
+    assert 'height: 44px' in body
+
+
+def test_iti_focus_state_has_brand_color(app):
+    """The .iti__tel-input focus state must use the brand color so the
+    active state matches the rest of the design system."""
+    css = app.test_client().get('/static/css/design-system.css').get_data(as_text=True)
+    # Look for the focus block
+    focus_block = css.split('.iti input.iti__tel-input:focus', 1)
+    assert len(focus_block) == 2, '.iti__tel-input:focus block not found'
+    body = focus_block[1][:200]
+    assert 'var(--brand-primary)' in body, (
+        'Focused intl-tel-input must use --brand-primary for the border'
+    )
+
+
+def test_onboarding_input_class_exists(app):
+    """The .onboarding-input class (used on login + forgot_password for
+    the phone-or-email `login_id` field) must be defined and visually
+    consistent with the .onboarding-field input."""
+    css = app.test_client().get('/static/css/design-system.css').get_data(as_text=True)
+    assert '.onboarding-input {' in css, '.onboarding-input class must be defined'
+    # Take a generous slice — CSS may have line comments and CRLF endings
+    # that push the height rule beyond a 400-char window.
+    block = css.split('.onboarding-input {', 1)
+    body = block[1][:800]
+    for token in ('height: 44px', 'var(--bg-secondary)', 'var(--gray-300)', 'var(--radius-md)'):
+        # Allow either space or no space between key and colon
+        if token not in body:
+            alt = token.replace(': ', ':')
+            if alt not in body:
+                assert token in body, f'.onboarding-input must include {token!r}'

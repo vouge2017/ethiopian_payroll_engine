@@ -41,13 +41,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Emergency Contact Phone</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">+251</span>
-                                    <input type="text" name="emergency_phone" class="form-control"
-                                           value="{{ (employee.emergency_phone[1:] if employee.emergency_phone and employee.emergency_phone.startswith('0') else employee.emergency_phone) or '' }}"
-                                           placeholder="9XXXXXXXX" pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
-                                           title="Enter 9 digits starting with 9 or 7">
-                                </div>
+                                <input type="tel" name="emergency_phone" class="form-control"
+                                       data-intl-tel="et"
+                                       value="{{ (employee.emergency_phone[1:] if employee.emergency_phone and employee.emergency_phone.startswith('0') else employee.emergency_phone) or '' }}"
+                                       placeholder="9XXXXXXXX" inputmode="tel"
+                                       title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
+                                <div class="form-text">Pick a country from the flag, then enter the number.</div>
                             </div>
                         </div>
                     </div>

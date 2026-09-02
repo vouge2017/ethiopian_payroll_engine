@@ -2153,6 +2153,144 @@ kbd {
     display: none;
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+   intl-tel-input alignment + visual polish
+   Goal: the flag dropdown, dial-code, and national input all sit on
+   the same baseline with consistent height (matches the 44px onboarding
+   input), and the active state matches the rest of the design system.
+   ───────────────────────────────────────────────────────────────────── */
+.iti {
+    width: 100%;
+    display: block;
+}
+
+.iti__country-container {
+    /* Make the flag button match the input height. */
+    height: 44px;
+    padding: 0;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-300);
+    border-right: none;
+    transition: border-color var(--transition-fast);
+}
+
+.iti__selected-country {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-2) 0 var(--space-3);
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    background: transparent;
+}
+
+.iti__flag {
+    /* The plugin ships a 20x15 sprite, scale slightly for visual balance. */
+    height: 16px;
+    background-size: contain;
+    background-position: 0 0;
+    margin-right: var(--space-2);
+}
+
+.iti__selected-country-primary {
+    /* Dial code text (e.g., +251). Match the input font. */
+    font-family: var(--font-body);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+    color: var(--text-primary);
+}
+
+.iti__arrow {
+    margin-left: var(--space-2);
+    border-top-color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+.iti__country-list {
+    /* Country dropdown panel */
+    z-index: var(--z-modal, 1060);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-md);
+    font-family: var(--font-body);
+    font-size: 14px;
+    max-height: 280px;
+}
+
+.iti input.iti__tel-input,
+.iti__tel-input {
+    width: 100%;
+    height: 44px;
+    padding: var(--space-2) var(--space-4);
+    padding-left: 96px; /* room for the flag + dial code on the left */
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--text-primary);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.iti input.iti__tel-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.iti input.iti__tel-input:focus,
+.iti__tel-input:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    border-width: 2px;
+    padding-left: 95px; /* 96 - 1 to keep the cursor in the same place */
+    box-shadow: 0 0 0 3px rgba(0, 97, 255, 0.15);
+}
+
+/* Make the joined flag+input read as a single field. The plugin wraps
+   the input in a div.iti; both halves share the same border, so the
+   user perceives one input with a flag selector on the left. */
+.iti--allow-dropdown .iti__country-container:hover,
+.iti--allow-dropdown .iti__country-container:focus-within {
+    background: var(--bg-primary);
+}
+
+.iti--allow-dropdown input.iti__tel-input {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Auth-style input used in the login/forgot_password pages (no phone
+   selector; just a clean text input that accepts phone or email).
+   Re-uses the same height/border as the .onboarding-field input so
+   the visual rhythm matches the phone field on the register page. */
+.onboarding-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-secondary);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--text-primary);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    height: 44px;
+    box-sizing: border-box;
+}
+
+.onboarding-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.onboarding-input:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    border-width: 2px;
+    padding: calc(var(--space-2) - 1px) calc(var(--space-4) - 1px);
+    box-shadow: 0 0 0 3px rgba(0, 97, 255, 0.15);
+}
+
 /* Defensive: any phone input wrapped in a phone prefix wrapper, or any
    input-group that contains a +251 prefix, must not have its typed text
    overlap the prefix. Bootstrap's input-group puts the prefix beside

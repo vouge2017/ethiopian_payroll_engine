@@ -801,6 +801,31 @@ def create_app():
 
         return render_template('errors/404.html'), 404
 
+    @app.errorhandler(400)
+    def bad_request(e):
+        """400 is the Flask-WTF CSRF rejection status. Convert the cryptic
+        400 into a friendly message + a link to refresh the page (which
+        regenerates the CSRF token). This is the most common user-facing
+        400 on auth forms: a session expires, the cookie is gone, but the
+        page the user is filling in still has the old token."""
+        from flask import render_template, request, flash, redirect, url_for
+        # Only intervene on form posts; other 400s pass through.
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and 'csrf' in (e.description or '').lower():
+            flash('Your session expired while you were filling the form. Please refresh the page and try again.', 'warning')
+            # If we can guess the originating page, redirect there; otherwise home.
+            referer = request.headers.get('Referer', '')
+            if referer:
+                from urllib.parse import urlparse
+                path = urlparse(referer).path
+                if path and path != request.path:
+                    return redirect(path)
+            return redirect(url_for('main.index'))
+        # Default: render the 400 template if we have one, else pass through.
+        try:
+            return render_template('errors/400.html'), 400
+        except Exception:
+            return 'Bad Request', 400
+
     @app.errorhandler(500)
     def internal_error(e):
         from flask import render_template

@@ -127,67 +127,68 @@ def test_form_area_css_hardened_against_extension_injection(app):
 
 
 # ──────────────────────────────────────────────────────────────────────
-# Issue 2: phone input text overlap with +251 prefix
+# Issue 2: phone input — now uses intl-tel-input for country selection
 # ──────────────────────────────────────────────────────────────────────
 
-def test_login_phone_input_uses_prefix_wrapper(app):
-    """The login phone field must use the .onboarding-phone-wrapper so
-    the +251 prefix is absolutely positioned and the input has padding-left
-    to keep typed text away from the prefix.
+def test_login_phone_input_uses_intl_tel(app):
+    """The login field accepts phone-or-email (`login_id`). For now we
+    keep the static +251 hint because the field is dual-purpose; only
+    the dedicated phone fields (register, add_employee, etc.) get the
+    full intl-tel-input selector.
+
+    The login page MUST still load phone-input.js so that future changes
+    that turn login into a phone-only field are picked up automatically.
     """
     html, _ = _get_login_html(app)
-    assert 'onboarding-phone-wrapper' in html
-    assert 'onboarding-phone-prefix' in html
-    assert '+251' in html
+    assert 'static/js/phone-input.js' in html, (
+        'Login page must load phone-input.js'
+    )
 
 
-def test_register_phone_input_uses_prefix_wrapper(app):
-    """Same as login — register must use the prefix wrapper for phone."""
+def test_register_phone_input_uses_intl_tel(app):
+    """Same as login — register must use intl-tel-input for the phone."""
     html, _ = _get_register_html(app)
+    assert 'data-intl-tel' in html
     assert 'onboarding-phone-wrapper' in html
-    assert 'onboarding-phone-prefix' in html
-    assert '+251' in html
 
 
-def test_phone_input_css_has_padding_left(app):
-    """CSS rule must give the phone input enough left padding to clear
-    the +251 prefix label. 60px is the current value.
+def test_phone_input_js_is_loaded(app):
+    """All three base templates must include the phone-input.js script
+    so the country selector initializes on every page.
+    """
+    for path in ('/auth/login', '/auth/register'):
+        client = app.test_client()
+        r = client.get(path, follow_redirects=True)
+        html = r.get_data(as_text=True)
+        assert 'static/js/phone-input.js' in html, (
+            f'{path} must load phone-input.js so the country selector initializes'
+        )
+
+
+def test_phone_wrapper_css_handles_intl_tel(app):
+    """The .onboarding-phone-wrapper CSS must reset the input's
+    padding-left when the wrapper has the .iti class (added by the JS
+    after intl-tel-input initializes), so the static 60px rule does not
+    fight with the plugin's own layout.
     """
     css_resp = app.test_client().get('/static/css/design-system.css')
     css_text = css_resp.get_data(as_text=True)
-    # Find the rule that sets padding-left on .onboarding-phone-wrapper input
-    assert '.onboarding-phone-wrapper input' in css_text
-    # Look for padding-left in the immediate rule block
-    rule = css_text.split('.onboarding-phone-wrapper input', 1)
-    assert len(rule) == 2
-    # Within the next ~100 chars (rule body), padding-left must be set
-    rule_body = rule[1][:120]
-    assert 'padding-left' in rule_body, (
-        '.onboarding-phone-wrapper input must set padding-left to keep text'
-        ' from overlapping the +251 prefix'
-    )
-    # And it must be at least 56px to clear "+251" + spacing
-    import re
-    m = re.search(r'padding-left:\s*(\d+)px', rule_body)
-    assert m is not None, 'padding-left must use a numeric px value'
-    assert int(m.group(1)) >= 56, (
-        f'padding-left is {m.group(1)}px — must be at least 56px to clear the +251 prefix'
+    assert '.onboarding-phone-wrapper.iti input' in css_text, (
+        'CSS must include .onboarding-phone-wrapper.iti input rule to reset'
+        ' padding when intl-tel-input is active'
     )
 
 
-def test_phone_prefix_css_centered_vertically(app):
-    """The +251 prefix must be vertically centered over the input —
-    without top: 50% + transform: translateY(-50%), it sits at the top
-    of the input which looks broken.
+def test_static_251_prefix_is_removed_from_register(app):
+    """The old hardcoded <span class="onboarding-phone-prefix">+251</span>
+    has been removed from the register page — intl-tel-input provides the
+    prefix and country code dynamically. (Login still has it because
+    login_id is a phone-or-email field and the prefix is just a hint.)
     """
-    css_resp = app.test_client().get('/static/css/design-system.css')
-    css_text = css_resp.get_data(as_text=True)
-    rule = css_text.split('.onboarding-phone-prefix', 1)
-    # Take the second occurrence (first is the canonical definition we want)
-    body = rule[1][:400]
-    assert 'top: 50%' in body, (
-        '.onboarding-phone-prefix must be vertically centered (top: 50%)'
-    )
-    assert 'translateY(-50%)' in body, (
-        '.onboarding-phone-prefix must use translateY(-50%) to vertically center'
+    client = app.test_client()
+    r = client.get('/auth/register', follow_redirects=True)
+    html = r.get_data(as_text=True)
+    assert 'class="onboarding-phone-prefix">+251' not in html, (
+        'Register page still has the hardcoded +251 prefix span — '
+        'intl-tel-input should be providing the country code now'
     )

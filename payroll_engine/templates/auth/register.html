@@ -98,22 +98,13 @@
             <label for="phone">Phone Number <span style="color: var(--color-danger);">*</span></label>
             <div class="onboarding-field-wrapper">
                 <div class="onboarding-phone-wrapper">
-                    <span class="onboarding-phone-prefix">+251</span>
                     <input type="tel" id="phone" name="phone"
+                           data-intl-tel="et"
                            required placeholder="911 234 567"
-                           pattern="[79][0-9]{8}" maxlength="9" inputmode="numeric"
                            title="Enter 9 digits starting with 9 or 7">
                 </div>
             </div>
-            <span class="field-hint">Used for two-factor authentication.</span>
-            <script nonce="{{ csp_nonce }}">
-            document.getElementById('phone').addEventListener('input', function(e) {
-                let d = e.target.value.replace(/\D/g, '');
-                if (d.startsWith('251')) d = d.substring(3);
-                while (d.startsWith('0')) d = d.substring(1);
-                e.target.value = d.slice(0, 9);
-            });
-            </script>
+            <span class="field-hint">Used for two-factor authentication. Pick a country code from the flag dropdown.</span>
         </div>
 
         <!-- Email -->

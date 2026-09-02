@@ -32,6 +32,43 @@ def test_favicon_route_returns_png(app):
     assert len(body) > 100, 'favicon must have actual content'
 
 
+def test_csrf_400_shows_friendly_page(app):
+    """A POST to /auth/register without a CSRF token must NOT return the
+    raw 400 text. It should return our friendly 'Session Expired' page.
+    """
+    # Force-enable CSRF in the test environment. Without this the Flask
+    # test client bypasses CSRF and the route handler runs (and then dies
+    # on DB), so we cannot prove the error handler.
+    app.config['WTF_CSRF_ENABLED'] = True
+
+    client = app.test_client()
+    r = client.post('/auth/register', data={
+        'phone': '0911234567',
+        'password': 'TestPass#123',
+        'password2': 'TestPass#123',
+    })
+    # Either: friendly page rendered (200), or redirected back to /auth/register
+    # with a flash. In both cases the body must contain the friendly message
+    # text — never the raw 400.
+    assert r.status_code in (200, 302), (
+        f'CSRF 400 should be converted to 200 (page) or 302 (redirect), got {r.status_code}. '
+        f'Body: {r.get_data(as_text=True)[:300]!r}'
+    )
+    # If 302, follow it and check the body
+    if r.status_code == 302:
+        r = client.get(r.headers.get('Location', '/auth/register'), follow_redirects=True)
+        assert r.status_code == 200
+    body = r.get_data(as_text=True).lower()
+    # Must mention the friendly message OR a flash
+    assert (
+        'session expired' in body
+        or 'refresh' in body
+        or 'session_expired' in body
+    ), (
+        f'CSRF 400 must be converted to a friendly page. Got body: {body[:300]!r}'
+    )
+
+
 def test_login_html_has_favicon_link(app):
     """The login page must declare a <link rel='icon'> so browsers don't
     fall back to /favicon.ico and trigger a 404 in the console."""

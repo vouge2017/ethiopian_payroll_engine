@@ -49,22 +49,13 @@
             <label for="phone">Phone Number <span style="color: var(--color-danger);">*</span></label>
             <div class="onboarding-field-wrapper">
                 <div class="onboarding-phone-wrapper">
-                    <span class="onboarding-phone-prefix">+251</span>
                     <input type="tel" id="phone" name="phone"
+                           data-intl-tel="et"
                            required placeholder="911 234 567"
-                           pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
-                           title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+                           title="Enter 9 digits starting with 9 or 7">
                 </div>
             </div>
-            <span class="field-hint">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</span>
-            <script nonce="{{ csp_nonce }}">
-            document.getElementById('phone').addEventListener('input', function(e) {
-                let v = e.target.value.replace(/\D/g, '');
-                if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
-                    e.target.value = v.substring(1);
-                }
-            });
-            </script>
+            <span class="field-hint">9 digits starting with 9 or 7. Or pick another country code.</span>
         </div>
 
         <div class="onboarding-field">

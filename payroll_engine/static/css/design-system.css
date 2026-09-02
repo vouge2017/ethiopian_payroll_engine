@@ -2142,6 +2142,17 @@ kbd {
     padding-left: 60px;
 }
 
+/* When the wrapper has an intl-tel-input flag, the prefix is provided by
+   the plugin, not by .onboarding-phone-prefix. Reset the input's
+   padding-left so the plugin can manage the layout itself. */
+.onboarding-phone-wrapper.iti input {
+    padding-left: var(--space-3);
+}
+
+.onboarding-phone-wrapper.iti .onboarding-phone-prefix {
+    display: none;
+}
+
 /* Defensive: any phone input wrapped in a phone prefix wrapper, or any
    input-group that contains a +251 prefix, must not have its typed text
    overlap the prefix. Bootstrap's input-group puts the prefix beside

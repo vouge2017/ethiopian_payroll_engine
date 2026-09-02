@@ -427,6 +427,11 @@ if (typeof Chart !== 'undefined') {
     applyChartTheme();
 }
 </script>
+
+<!-- Phone input helper: turns any <input data-intl-tel> into a flag
+     dropdown + national-number field via intl-tel-input. Cache-busted. -->
+<script src="{{ url_for('static', filename='js/phone-input.js') }}?v={{ static_version }}"></script>
+
 {% block extra_js %}{% endblock %}
 
 <!-- Reusable Confirmation Modal -->

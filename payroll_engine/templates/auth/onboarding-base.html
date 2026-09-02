@@ -133,6 +133,10 @@ function initPasswordToggles() {
 }
 document.addEventListener('DOMContentLoaded', initPasswordToggles);
 </script>
+
+<!-- Phone input helper — see base.html for explanation. -->
+<script src="{{ url_for('static', filename='js/phone-input.js') }}?v={{ static_version }}"></script>
+
 {% block extra_js %}{% endblock %}
 </body>
 </html>

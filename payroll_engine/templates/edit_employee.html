@@ -54,14 +54,12 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">+251</span>
-                                    <input type="text" class="form-control" id="phone" name="phone"
-                                           value="{{ (employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
-                                           placeholder="9XXXXXXXX" pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
-                                           title="Enter 9 digits starting with 9 or 7">
-                                </div>
-                                <div class="form-text">9 digits starting with 9 or 7. Example: <code>911234567</code></div>
+                                <input type="tel" class="form-control" id="phone" name="phone"
+                                       value="{{ (employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
+                                       data-intl-tel="et"
+                                       placeholder="9XXXXXXXX" inputmode="tel"
+                                       title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
+                                <div class="form-text">Pick a country from the flag, then enter the number. For Ethiopia: 9 digits starting with 9 or 7.</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>

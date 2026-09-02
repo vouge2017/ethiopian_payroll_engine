@@ -55,12 +55,13 @@
 
 <!-- ========== MAIN CONTENT ========== -->
 <main class="onboarding-main" id="mainContent" role="main">
-    <div class="onboarding-layout">
-        {# Flash messages — auth pages previously rendered NO user feedback
-           for invalid credentials / lockouts (bugfix 2026-08). #}
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="container" style="max-width: 480px; margin-top: 1rem;">
+    {# Flash messages — full-width, ABOVE the form/sidebar row so a tall
+       alert never squeezes or shifts the form card. Wrapped in a flex
+       container that spans the full layout width. #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="onboarding-flash-bar" role="status" aria-live="polite">
+                <div class="onboarding-flash-inner">
                     {% for category, message in messages %}
                         <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show" role="alert">
                             {{ message }}
@@ -68,9 +69,11 @@
                         </div>
                     {% endfor %}
                 </div>
-            {% endif %}
-        {% endwith %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
+    <div class="onboarding-layout">
         {% block content %}{% endblock %}
     </div>
 </main>

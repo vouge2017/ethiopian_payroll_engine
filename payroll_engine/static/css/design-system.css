@@ -1823,6 +1823,36 @@ kbd {
     padding-left: var(--space-4);
     padding-right: var(--space-4);
     padding-bottom: var(--space-8);
+    min-width: 0; /* prevent flex overflow on small viewports */
+}
+
+/* Flash message bar — sits above the form/sidebar row, full layout width.
+   Prevents the form card from being squeezed sideways when a tall error
+   alert appears, and prevents password-manager extension injection from
+   growing the alert into a sibling flex column. */
+.onboarding-flash-bar {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 var(--space-4) 0;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.onboarding-flash-inner {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.onboarding-flash-bar .alert {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0.75rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 @media (min-width: 992px) {
@@ -1959,14 +1989,28 @@ kbd {
 
 /* Main Form Area */
 .onboarding-form-area {
-    flex: 1;
+    flex: 1 1 auto;
     min-width: 0;
+    max-width: 100%;
     background: var(--bg-primary);
     border-radius: var(--radius-xl);
     padding: var(--space-8);
     box-shadow: var(--shadow-md);
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+}
+
+.onboarding-form-area form,
+.onboarding-form-area .onboarding-field,
+.onboarding-form-area .onboarding-field-wrapper,
+.onboarding-form-area .onboarding-phone-wrapper,
+.onboarding-form-area .onboarding-field input,
+.onboarding-form-area .onboarding-field select,
+.onboarding-form-area .onboarding-field textarea {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 /* Tebeb pattern accent at top */
@@ -2076,20 +2120,40 @@ kbd {
     position: relative;
     display: flex;
     align-items: center;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .onboarding-phone-prefix {
     position: absolute;
     left: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
     font-size: 16px;
     line-height: 24px;
     color: var(--text-secondary);
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
+    user-select: none;
 }
 
 .onboarding-phone-wrapper input {
-    padding-left: 56px;
+    padding-left: 60px;
+}
+
+/* Defensive: any phone input wrapped in a phone prefix wrapper, or any
+   input-group that contains a +251 prefix, must not have its typed text
+   overlap the prefix. Bootstrap's input-group puts the prefix beside
+   the input, not on top, so this is mostly belt-and-braces. */
+input[type="tel"],
+input.phone-input,
+input[name="phone"],
+input[name="mobile"],
+input[name="phone_number"] {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Password wrapper */

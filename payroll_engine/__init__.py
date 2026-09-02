@@ -281,6 +281,23 @@ def create_app():
     def inject_csp_nonce():
         return {'csp_nonce': getattr(g, 'csp_nonce', '')}
 
+    # Static asset version — used to bust CDN/Cloudflare/browser caches after
+    # a deploy. Render sets GIT_COMMIT_SHA automatically on every build, so
+    # each deploy produces a new version string and the browser fetches
+    # fresh assets. Falls back to a startup-time timestamp if the env var
+    # is missing (e.g., local development).
+    import time as _time
+    _static_version = (
+        os.environ.get('GIT_COMMIT_SHA')
+        or os.environ.get('RENDER_GIT_COMMIT')
+        or str(int(_time.time()))
+    )[:12]
+    app.config['STATIC_ASSET_VERSION'] = _static_version
+
+    @app.context_processor
+    def inject_static_version():
+        return {'static_version': app.config['STATIC_ASSET_VERSION']}
+
     # Template filter: calculation flow for transparent payslips
     @app.template_filter('calculation_flow')
     def calculation_flow_filter(result):

@@ -309,7 +309,24 @@ def register():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('Failed to create user: %s', e)
-            flash('Account creation failed. Please try again or contact support.', 'danger')
+            # Log the form data for debugging (without password)
+            current_app.logger.error(
+                'Register failed: phone=%s email=%s company_name=%s role=%s',
+                normalized_phone, email, company_name, user.role,
+            )
+            # Try to give a more specific error if possible
+            err_msg = str(e).lower()
+            if 'unique' in err_msg or 'duplicate' in err_msg:
+                if 'phone' in err_msg:
+                    flash('This phone number is already registered. Try logging in instead.', 'danger')
+                elif 'email' in err_msg:
+                    flash('This email is already registered. Try logging in instead.', 'danger')
+                else:
+                    flash('This account already exists. Try logging in instead.', 'danger')
+            elif 'null' in err_msg or 'not-null' in err_msg:
+                flash('Some required information is missing. Please fill all fields.', 'danger')
+            else:
+                flash('Account creation failed. Please try again or contact support.', 'danger')
             return redirect(url_for('auth.register'))
         flash('Account created! Please log in and set up your company.', 'success')
         return redirect(url_for('auth.login'))

@@ -37,10 +37,11 @@
                             <div class="col-md-6">
                                 <label class="form-label">Phone</label>
                                 <input type="tel" class="form-control" name="phone"
-                                       value="{{ (company.phone[1:] if company.phone and company.phone.startswith('0') else company.phone) or '' }}"
-                                       data-intl-tel="et"
-                                       placeholder="9XXXXXXXX" inputmode="tel"
-                                       title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
+                                        value="{{ (company.phone[1:] if company.phone and company.phone.startswith('0') else company.phone) or '' }}"
+                                        data-intl-tel="et"
+                                        data-intl-tel-name="phone_full"
+                                        placeholder="9XXXXXXXX" inputmode="tel"
+                                        title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
                                 <div class="form-text">Pick a country from the flag, then enter the number.</div>
                             </div>
                             <div class="col-md-6">

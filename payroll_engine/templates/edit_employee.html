@@ -55,10 +55,11 @@
                             <div class="col-md-6">
                                 <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
                                 <input type="tel" class="form-control" id="phone" name="phone"
-                                       value="{{ (employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
-                                       data-intl-tel="et"
-                                       placeholder="9XXXXXXXX" inputmode="tel"
-                                       title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
+                                        value="{{ (employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
+                                        data-intl-tel="et"
+                                        data-intl-tel-name="phone_full"
+                                        placeholder="9XXXXXXXX" inputmode="tel"
+                                        title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
                                 <div class="form-text">Pick a country from the flag, then enter the number. For Ethiopia: 9 digits starting with 9 or 7.</div>
                             </div>
                             <div class="col-md-6">

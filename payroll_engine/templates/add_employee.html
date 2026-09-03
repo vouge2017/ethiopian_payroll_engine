@@ -51,20 +51,11 @@
                             <div class="col-md-6">
                                 <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
                                 <input type="tel" class="form-control form-control-lg" id="phone" name="phone"
-                                       data-intl-tel="et"
-                                       placeholder="9XXXXXXXX" inputmode="tel"
-                                       title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
+                                        data-intl-tel="et"
+                                        data-intl-tel-name="phone_full"
+                                        placeholder="9XXXXXXXX" inputmode="tel"
+                                        title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
                                 <div class="form-text">Pick a country from the flag, then enter the number. For Ethiopia: 9 digits starting with 9 or 7.</div>
-                            </div>
-                                <div class="form-text">9 digits starting with 9 or 7. You can also type <code>09XXXXXXXX</code>.</div>
-                                <script nonce="{{ csp_nonce }}">
-                                document.getElementById('phone').addEventListener('input', function(e) {
-                                    let v = e.target.value.replace(/\D/g, '');
-                                    if (v.length === 10 && v.startsWith('0') && (v[1] === '9' || v[1] === '7')) {
-                                        e.target.value = v.substring(1);
-                                    }
-                                });
-                                </script>
                             </div>
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>

@@ -43,6 +43,7 @@
                                 <label class="form-label">Emergency Contact Phone</label>
                                 <input type="tel" name="emergency_phone" class="form-control"
                                        data-intl-tel="et"
+                                       data-intl-tel-name="emergency_phone_full"
                                        value="{{ (employee.emergency_phone[1:] if employee.emergency_phone and employee.emergency_phone.startswith('0') else employee.emergency_phone) or '' }}"
                                        placeholder="9XXXXXXXX" inputmode="tel"
                                        title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
@@ -71,6 +72,7 @@
                                 <input type="tel" name="phone" class="form-control"
                                        value="{{ (employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
                                        data-intl-tel="et"
+                                       data-intl-tel-name="phone_full"
                                        placeholder="9XXXXXXXX" inputmode="tel"
                                        title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
                                 <div class="form-text">Current: {{ employee.phone or 'Not set' }}. Pick a country from the flag.</div>

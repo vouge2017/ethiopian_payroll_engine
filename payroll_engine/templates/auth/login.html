@@ -53,7 +53,7 @@
         <!-- Phone or Email -->
         <div class="onboarding-field" id="loginIdField">
             <label for="login_id">Phone or Email</label>
-            <div class="phone-input-tabs" data-phone-tabs data-phone-input="login_id" data-email-input="login_id">
+            <div class="phone-input-tabs" data-phone-tabs>
                 <button type="button" class="phone-input-tab active" data-phone-tab="phone">Phone</button>
                 <button type="button" class="phone-input-tab" data-phone-tab="email">Email</button>
             </div>
@@ -62,14 +62,17 @@
                     <span class="phone-prefix-box">+251</span>
                     <input type="tel" id="login_id" name="login_id"
                            required autofocus
+                           data-tel-placeholder="91 234 5678"
+                           data-email-placeholder="name@company.com"
                            placeholder="91 234 5678"
                            inputmode="tel"
                            maxlength="9"
                            autocomplete="username">
                 </div>
             </div>
-            <span class="field-hint">
-                Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).
+            <span class="field-hint" data-tab-hint>
+                <span data-hint-phone>Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</span>
+                <span data-hint-email style="display:none;">Email address (e.g., name@company.com).</span>
             </span>
         </div>
 

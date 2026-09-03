@@ -1,20 +1,27 @@
-/* EthioPayroll phone-input helper (simplified, no intl-tel-input).
+/* EthioPayroll phone-input helper (tab-based, no intl-tel-input).
  *
- * This script replaces the previous intl-tel-input integration with a
- * simpler tab-based UX: a fixed "+251" prefix box + text input for the
- * 9-digit national number, or an email-style input.
+ * Handles the phone-or-email tab switch on the login and forgot_password
+ * pages. The single <input id="login_id"> element is reused: in Phone
+ * mode it's type=tel with a 9-digit Ethiopian format enforced; in Email
+ * mode it's type=email with email validation.
  *
- * Activated by the presence of:
- *   <div class="phone-input-tabs" id="..." data-phone-input="phone">
- *     <tab ...>Phone</tab>  (shows prefix box + tel input)
- *     <tab ...>Email</tab>  (shows email input, hides prefix)
+ * Activated by:
+ *   <div class="phone-input-tabs" data-phone-tabs>
+ *     <button data-phone-tab="phone">Phone</button>
+ *     <button data-phone-tab="email">Email</button>
+ *   </div>
+ *   <div class="onboarding-phone-wrapper" id="loginPhoneWrapper">
+ *     <div class="phone-input-with-prefix">
+ *       <span class="phone-prefix-box">+251</span>
+ *       <input type="tel" id="login_id" name="login_id" ...>
+ *     </div>
  *   </div>
  *
- * The script enforces:
- *   - Max 9 digits in phone mode
- *   - First digit must be 7 or 9
- *   - Leading zeros are stripped automatically
- *   - On form submit, a hidden field "phone_full" gets the value
+ * On tab change:
+ *   - Phone tab: input becomes type=tel, +251 prefix box shown,
+ *     placeholder "91 234 5678", maxlength 9, 7/9 validation
+ *   - Email tab: input becomes type=email, +251 prefix box hidden,
+ *     placeholder "name@company.com", maxlength 254 (email standard)
  */
 (function() {
   var PREFIX = '+251';
@@ -23,119 +30,93 @@
     return (val || '').replace(/\D/g, '');
   }
 
-  function validateEthiopianPhone(digits) {
-    digits = digits.replace(/^0+/, '');
-    if (!digits) return true;
-    if (digits[0] !== '7' && digits[0] !== '9') return false;
-    return true;
-  }
-
-  function formatForSubmit(digits) {
+  function enforcePhoneInput(e) {
+    var input = e.target;
+    var digits = stripNonDigits(input.value);
     digits = digits.replace(/^0+/, '');
     if (digits.length > 9) digits = digits.substring(0, 9);
-    if (digits.length === 9) return PREFIX + ' ' + digits;
-    return PREFIX + ' ' + digits;
+    if (digits.length === 1 && digits[0] !== '7' && digits[0] !== '9') {
+      digits = '';
+    }
+    input.value = digits;
   }
 
-  function initPhoneTabs(container) {
-    var phoneInputId = container.getAttribute('data-phone-input');
-    var emailInputId = container.getAttribute('data-email-input');
+  function initTabs(container) {
     var tabButtons = container.querySelectorAll('[data-phone-tab]');
-    var phoneField = phoneInputId ? document.getElementById(phoneInputId) : null;
-    var emailField = emailInputId ? document.getElementById(emailInputId) : null;
-    var prefixBox = container.querySelector('.phone-prefix-box');
-
     if (!tabButtons.length) return;
 
-    function showTab(tab) {
-      var isPhone = tab.getAttribute('data-phone-tab') === 'phone';
+    // The phone field is the one inside the .phone-input-with-prefix
+    // wrapper that the tabs visually control. We find it by the closest
+    // form's `login_id` (login) or `phone` (other forms) field.
+    var wrapper = container.parentNode.querySelector('.onboarding-phone-wrapper');
+    if (!wrapper) return;
+    var input = wrapper.querySelector('input');
+    var prefixBox = wrapper.querySelector('.phone-prefix-box');
+    if (!input) return;
 
-      // Update active tab button state
+    // Snapshot the original tel-mode attributes so we can restore them
+    // when switching back to phone mode.
+    var telPlaceholder = input.getAttribute('data-tel-placeholder') || '91 234 5678';
+    var emailPlaceholder = input.getAttribute('data-email-placeholder') || 'name@company.com';
+
+    function showPhoneMode() {
       tabButtons.forEach(function(b) {
-        b.classList.toggle('active', b === tab);
+        b.classList.toggle('active', b.getAttribute('data-phone-tab') === 'phone');
       });
-
-      if (phoneField) phoneField.style.display = isPhone ? '' : 'none';
-      if (emailField) emailField.style.display = isPhone ? 'none' : '';
-      if (prefixBox) prefixBox.style.display = isPhone ? '' : 'none';
-
-      // Sync hidden field values
-      syncHiddenFields();
+      if (prefixBox) prefixBox.style.display = '';
+      input.type = 'tel';
+      input.inputMode = 'tel';
+      input.maxLength = 9;
+      input.placeholder = telPlaceholder;
+      input.autocomplete = 'username';
+      swapHint('phone');
     }
 
-    function enforcePhoneInput(e) {
-      var input = e.target;
-      var digits = stripNonDigits(input.value);
-      digits = digits.replace(/^0+/, '');
-      if (digits.length > 9) digits = digits.substring(0, 9);
-      if (!validateEthiopianPhone(digits) && digits.length === 1) {
-        digits = '';
-      }
-      input.value = digits;
-      syncHiddenFields();
+    function showEmailMode() {
+      tabButtons.forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-phone-tab') === 'email');
+      });
+      if (prefixBox) prefixBox.style.display = 'none';
+      input.type = 'email';
+      input.inputMode = 'email';
+      input.maxLength = 254;
+      input.placeholder = emailPlaceholder;
+      input.autocomplete = 'email';
+      // Strip any non-email-friendly content left over from phone mode.
+      input.value = input.value.replace(/[^\w@.\-+]/g, '');
+      swapHint('email');
     }
 
-    function syncHiddenFields() {
-      var form = container.closest('form');
-      if (!form) return;
-
-      // Update hidden phone_full field
-      if (phoneField) {
-        var hiddenPhone = form.querySelector('input[name="phone_full"], input[name="login_phone_full"]');
-        if (hiddenPhone) {
-          var digits = stripNonDigits(phoneField.value || '');
-          hiddenPhone.value = formatForSubmit(digits);
-        }
-      }
-
-      // If phone tab is hidden, clear the hidden phone field
-      if (emailField && emailField.style.display === 'none') {
-        var hiddenPhone = form.querySelector('input[name="phone_full"], input[name="login_phone_full"]');
-        if (hiddenPhone && phoneField && phoneField.style.display === 'none') {
-          hiddenPhone.value = '';
-        }
-      }
+    function swapHint(mode) {
+      var phoneHint = wrapper.parentNode.querySelector('[data-hint-phone]');
+      var emailHint = wrapper.parentNode.querySelector('[data-hint-email]');
+      if (phoneHint) phoneHint.style.display = mode === 'phone' ? '' : 'none';
+      if (emailHint) emailHint.style.display = mode === 'email' ? '' : 'none';
     }
 
-    // Tab click handlers
     tabButtons.forEach(function(btn) {
       btn.addEventListener('click', function() {
-        showTab(btn);
+        var mode = btn.getAttribute('data-phone-tab');
+        if (mode === 'phone') showPhoneMode();
+        else if (mode === 'email') showEmailMode();
       });
     });
 
-    // Input handlers for phone field
-    if (phoneField) {
-      phoneField.addEventListener('input', enforcePhoneInput);
-      phoneField.addEventListener('blur', enforcePhoneInput);
-    }
+    // Phone input validation (only fires when in tel mode)
+    input.addEventListener('input', function(e) {
+      if (input.type === 'tel') enforcePhoneInput(e);
+    });
 
-    // Form submit handler to sync final values
-    var form = container.closest('form');
-    if (form) {
-      form.addEventListener('submit', function() {
-        syncHiddenFields();
-      });
-    }
-
-    // Initialize: show phone tab by default
+    // Show phone tab by default
     var phoneTab = Array.prototype.find.call(tabButtons, function(b) {
       return b.getAttribute('data-phone-tab') === 'phone';
     });
-    if (phoneTab) showTab(phoneTab);
-
-    return {
-      showTab: showTab,
-      syncHiddenFields: syncHiddenFields
-    };
+    if (phoneTab) showPhoneMode();
   }
 
-  // Auto-init all phone-input-tabs containers
   function initAll() {
     var containers = document.querySelectorAll('[data-phone-tabs]');
-    containers.forEach(function(c) {
-      initPhoneTabs(c);
-    });
+    containers.forEach(initTabs);
   }
 
   if (document.readyState === 'loading') {

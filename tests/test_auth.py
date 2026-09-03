@@ -41,7 +41,7 @@ def test_register_creates_new_company(client, app):
     client.post(
         '/auth/register',
         data={
-            'phone': '0911234567',
+            'phone': '911234567',
             'email': 'alice@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
@@ -53,7 +53,7 @@ def test_register_creates_new_company(client, app):
     with app.app_context():
         company = Company.query.filter_by(name='New Company').first()
         assert company is not None
-        user = User.query.filter_by(phone='0911234567').first()
+        user = User.query.filter_by(phone='911234567').first()
         assert user is not None
         assert user.company_id == company.id
         assert user.role == 'owner'
@@ -71,7 +71,7 @@ def test_register_rejects_existing_company_name(client, app):
     client.post(
         '/auth/register',
         data={
-            'phone': '0922345678',
+            'phone': '922345678',
             'email': 'attacker@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
@@ -82,7 +82,7 @@ def test_register_rejects_existing_company_name(client, app):
 
     # Should be rejected — user not created
     with app.app_context():
-        user = User.query.filter_by(phone='0922345678').first()
+        user = User.query.filter_by(phone='922345678').first()
         assert user is None, 'SECURITY BUG: attacker was able to join existing company'
 
         # Only the original company should exist
@@ -100,7 +100,7 @@ def test_register_rejects_case_variation(client, app):
     client.post(
         '/auth/register',
         data={
-            'phone': '0933456789',
+            'phone': '933456789',
             'email': 'attacker@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
@@ -110,7 +110,7 @@ def test_register_rejects_case_variation(client, app):
     )
 
     with app.app_context():
-        User.query.filter_by(phone='0933456789').first()
+        User.query.filter_by(phone='933456789').first()
         # This should be rejected IF the fix does case-insensitive matching
         # Current fix uses exact match — this test documents the behavior
         # If it passes (user created), that's a minor gap to address later
@@ -121,7 +121,7 @@ def test_register_duplicate_email_rejected(client, app):
     client.post(
         '/auth/register',
         data={
-            'phone': '0911234567',
+            'phone': '911234567',
             'email': 'alice@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
@@ -132,7 +132,7 @@ def test_register_duplicate_email_rejected(client, app):
     client.post(
         '/auth/register',
         data={
-            'phone': '0922345678',
+            'phone': '922345678',
             'email': 'alice@test.com',
             'password': 'SecurePass456!',
             'password2': 'SecurePass456!',
@@ -151,7 +151,7 @@ def test_register_short_password_rejected(client, app):
     client.post(
         '/auth/register',
         data={
-            'phone': '0911234567',
+            'phone': '911234567',
             'email': 'alice@test.com',
             'password': 'Sh0!rt',
             'password2': 'Sh0!rt',
@@ -170,7 +170,7 @@ def test_register_password_mismatch_rejected(client, app):
     client.post(
         '/auth/register',
         data={
-            'phone': '0911234567',
+            'phone': '911234567',
             'email': 'alice@test.com',
             'password': 'SecurePass123!',
             'password2': 'DifferentPass456!',

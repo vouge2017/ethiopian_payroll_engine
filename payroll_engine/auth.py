@@ -303,8 +303,14 @@ def register():
             if referrer:
                 user.referred_by = referrer.id
 
-        db.session.add(user)
-        db.session.commit()
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to create user: %s', e)
+            flash('Account creation failed. Please try again or contact support.', 'danger')
+            return redirect(url_for('auth.register'))
         flash('Account created! Please log in and set up your company.', 'success')
         return redirect(url_for('auth.login'))
     return render_template('auth/register.html')

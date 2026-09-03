@@ -158,7 +158,8 @@ def test_employee_phone_stored_as_is(app):
     with app.app_context():
         eth = Employee.query.filter_by(employee_id='EMP001', company_id=company_id).first()
         assert eth is not None
-        assert eth.phone == '0911234567', f"Ethiopian phone: '{eth.phone}'"
+        # Strict rules: 9 digits, no leading 0, must start with 7 or 9.
+        assert eth.phone == '911234567', f"Ethiopian phone: '{eth.phone}'"
 
         ken = Employee.query.filter_by(employee_id='EMP002', company_id=company_id).first()
         assert ken is not None
@@ -167,12 +168,12 @@ def test_employee_phone_stored_as_is(app):
 
 def test_validate_ethiopian_phone_only_for_auth():
     """validate_ethiopian_phone correctly validates Ethiopian format (used for auth only)."""
-    # Valid Ethiopian
+    # Valid Ethiopian — normalized is the 9-digit form, no leading 0.
     is_valid, normalized, _ = validate_ethiopian_phone('+251911234567')
     assert is_valid
-    assert normalized == '0911234567'
+    assert normalized == '911234567'
 
     # Invalid (not Ethiopian) — this is what auth uses, NOT the employee field
     is_valid, _, error = validate_ethiopian_phone('+254712345678')
     assert not is_valid
-    assert 'Invalid' in error or 'Ethiopian' in error
+    assert 'Invalid' in error or 'Ethiopia' in error or '+251' in error

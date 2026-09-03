@@ -2339,6 +2339,99 @@ input[name="phone_number"] {
     padding-top: var(--space-4);
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+   Password strength checklist (live validation)
+   Used by password-strength.js. Each <li data-pw-rule> shows a dot
+   that flips from neutral (gray) to met (green check) as the user
+   types. The match-status line under the confirm field also updates
+   in real time.
+   ───────────────────────────────────────────────────────────────────── */
+.pw-rules {
+    list-style: none;
+    padding: var(--space-3) var(--space-4);
+    margin: var(--space-2) 0 0 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.pw-rule {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px 0;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+}
+
+.pw-rule [data-pw-dot] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: var(--gray-200);
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.pw-rule-met {
+    color: var(--text-primary);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-tertiary);
+}
+
+.pw-rule-met [data-pw-dot] {
+    background: var(--color-success);
+    color: white;
+}
+
+.pw-rule-unmet {
+    color: var(--text-primary);
+}
+
+.pw-strong {
+    display: none;
+    align-items: center;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-success);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.pw-match-ok {
+    color: var(--color-success);
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: var(--space-1);
+    display: block;
+}
+
+.pw-match-warn {
+    color: var(--color-warning);
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: var(--space-1);
+    display: block;
+}
+
+.pw-match-bad {
+    color: var(--color-danger);
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: var(--space-1);
+    display: block;
+}
+
 .onboarding-btn-back {
     font-size: 14px;
     font-weight: 600;

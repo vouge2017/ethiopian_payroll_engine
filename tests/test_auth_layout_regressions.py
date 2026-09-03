@@ -196,22 +196,24 @@ def test_static_251_prefix_is_removed_from_register(app):
     )
 
 
-def test_login_has_no_static_251_prefix(app):
-    """Login's `login_id` is phone-or-email. A hardcoded +251 prefix was
-    misleading for email input. The field is now a clean .onboarding-input
-    with no prefix.
+def test_login_has_intl_tel_for_phone_or_email(app):
+    """Login's `login_id` is phone-or-email. The country selector IS
+    present (intl-tel-input) and a small switcher script hides the
+    selector when the user types '@'. This test confirms the wrapper
+    is in place and the data-intl-tel attribute is set.
     """
     client = app.test_client()
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
-    assert 'class="onboarding-phone-prefix">+251' not in html, (
-        'Login page still has a hardcoded +251 prefix — misleading for'
-        ' phone-or-email field; intl-tel-input is not used here'
+    # The wrapper must be present
+    assert 'loginPhoneWrapper' in html, (
+        'Login must have the #loginPhoneWrapper so the switcher can toggle it'
     )
-    # And the new clean input class is present
-    assert 'class="onboarding-input"' in html, (
-        'Login must use the new .onboarding-input class for the clean'
-        ' phone-or-email field'
+    # The data-intl-tel attribute on login_id
+    m = re.search(r'<input[^>]+id="login_id"[^>]*>', html)
+    assert m is not None
+    assert 'data-intl-tel="et"' in m.group(0), (
+        f'login_id must use intl-tel-input by default, got: {m.group(0)}'
     )
 
 

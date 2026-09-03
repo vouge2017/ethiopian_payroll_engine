@@ -56,47 +56,74 @@ except ImportError:
 
 def validate_ethiopian_phone(phone: str) -> tuple:
     """
-    Validate Ethiopian phone number format.
+    Validate an Ethiopian phone number.
 
-    Accepted formats (Ethio Telecom 09X + Safaricom 07X):
-        +251911234567, 0911234567, 911234567, +251 911 234 567
-        +251711234567, 0711234567, 711234567, +251 711 234 567
+    Strict rules (2026-09 hardening):
+    - National format is EXACTLY 9 digits, starting with 7 or 9.
+      Examples: 911234567, 711234567
+    - International format is +251 followed by 9 digits (no leading 0).
+      Examples: +251911234567, +251711234567
+    - Leading 0 (e.g., 0911234567) is NOT accepted — type the 9-digit
+      form. The frontend's intl-tel-input already strips the leading 0.
+    - Reject anything with more or fewer than 9 national digits.
+    - Reject any prefix other than +251 (the selector handles other
+      countries; backend only validates the Ethiopia country case).
+    - Spaces and dashes are stripped before validation.
 
     Returns:
         (is_valid, normalized, error_message)
-        normalized is the number in 0XXXXXXXXX format (10 digits with leading 0),
+        normalized is the 9-digit national form (e.g. '911234567'),
         or None if invalid.
     """
     if not phone:
         return False, None, 'Phone number is required.'
 
-    # Strip all spaces
-    cleaned = phone.replace(' ', '')
+    # Strip whitespace, dashes, parentheses
+    cleaned = re.sub(r'[\s\-\(\)]', '', phone)
 
-    # Normalize to 10 digits with leading 0 (0XXXXXXXXX)
-    patterns = [
-        (r'^\+2510(9\d{8})$', '0{}'),  # +2510911234567 → 0911234567
-        (r'^\+2510(7\d{8})$', '0{}'),  # +2510711234567 → 0711234567
-        (r'^\+251(9\d{8})$', '0{}'),  # +251911234567 → 0911234567
-        (r'^\+251(7\d{8})$', '0{}'),  # +251711234567 → 0711234567
-        (r'^0(9\d{8})$', '0{}'),  # 0911234567 → 0911234567
-        (r'^0(7\d{8})$', '0{}'),  # 0711234567 → 0711234567
-        (r'^(9\d{8})$', '0{}'),  # 911234567 → 0911234567
-        (r'^(7\d{8})$', '0{}'),  # 711234567 → 0711234567
-    ]
+    # International format: +251 followed by exactly 9 digits, first 7 or 9
+    m = re.match(r'^\+251(7\d{8}|9\d{8})$', cleaned)
+    if m:
+        return True, m.group(1), None
 
-    for pattern, fmt in patterns:
-        m = re.match(pattern, cleaned)
-        if m:
-            normalized = fmt.format(m.group(1))
-            return True, normalized, None
+    # National format: exactly 9 digits, first must be 7 or 9
+    m = re.match(r'^(7\d{8}|9\d{8})$', cleaned)
+    if m:
+        return True, m.group(1), None
 
-    # Provide helpful error
+    # Helpful errors by failure mode
     if cleaned.startswith('+251'):
-        return False, None, 'Ethiopian mobile must start with +251 9XX or +251 7XX.'
-    if len(cleaned) < 9:
-        return False, None, 'Phone number too short. Enter 9 digits starting with 9 or 7.'
-    return False, None, 'Invalid Ethiopian phone format. Enter 9 digits starting with 9 or 7.'
+        return False, None, (
+            'After +251 the number must be exactly 9 digits starting with 7 or 9.'
+        )
+    if cleaned.startswith('0'):
+        return False, None, (
+            'Do not include the leading 0. Type the 9 digits that follow the '
+            'country code, e.g. 911234567 (not 0911234567).'
+        )
+    if cleaned.startswith('+'):
+        return False, None, (
+            'Only +251 is supported in Ethiopia. Select Ethiopia in the flag '
+            'dropdown or enter the 9-digit national number.'
+        )
+    if re.match(r'^\d+$', cleaned):
+        if len(cleaned) > 9:
+            return False, None, (
+                f'Too many digits: {len(cleaned)}. Enter exactly 9 digits '
+                f'starting with 7 or 9.'
+            )
+        if len(cleaned) < 9:
+            return False, None, (
+                f'Too few digits: {len(cleaned)}. Enter exactly 9 digits '
+                f'starting with 7 or 9.'
+            )
+        return False, None, (
+            'Ethiopian mobile numbers must start with 7 or 9.'
+        )
+    return False, None, (
+        'Invalid phone format. Enter 9 digits starting with 7 or 9, '
+        'or +251 followed by 9 digits.'
+    )
 
 
 def validate_fayda_fin(fin: str) -> tuple:

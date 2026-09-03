@@ -41,6 +41,7 @@
                 <div class="onboarding-phone-wrapper">
                     <input type="tel" id="phone" name="phone"
                            data-intl-tel="et"
+                           data-intl-tel-name="phone_full"
                            required placeholder="911 234 567"
                            title="Enter 9 digits starting with 9 or 7">
                 </div>
@@ -58,6 +59,16 @@
                 </button>
             </div>
             <span class="field-hint">Must be at least 8 characters with a number and symbol.</span>
+            <ul class="pw-rules" data-pw-rules data-pw-target="password" data-pw-confirm="password2" data-pw-strong="pwStrong">
+                <li class="pw-rule" data-pw-rule="length"><span data-pw-dot>&middot;</span> At least 8 characters</li>
+                <li class="pw-rule" data-pw-rule="upper"><span data-pw-dot>&middot;</span> One uppercase letter (A&ndash;Z)</li>
+                <li class="pw-rule" data-pw-rule="lower"><span data-pw-dot>&middot;</span> One lowercase letter (a&ndash;z)</li>
+                <li class="pw-rule" data-pw-rule="digit"><span data-pw-dot>&middot;</span> One number (0&ndash;9)</li>
+                <li class="pw-rule" data-pw-rule="symbol"><span data-pw-dot>&middot;</span> One symbol (@#$%!&amp;* etc.)</li>
+            </ul>
+            <div id="pwStrong" class="pw-strong">
+                <span class="material-symbols-outlined">verified</span> Strong password
+            </div>
         </div>
 
         <div class="onboarding-field">
@@ -69,11 +80,14 @@
                     <span class="material-symbols-outlined">visibility_off</span>
                 </button>
             </div>
+            <span data-pw-match></span>
         </div>
+
+        <script src="{{ url_for('static', filename='js/password-strength.js') }}?v={{ static_version }}"></script>
 
         <div class="onboarding-actions">
             <span></span>
-            <button type="submit" class="onboarding-btn-next">
+            <button type="submit" class="onboarding-btn-next" data-pw-submit>
                 Create Account
                 <span class="material-symbols-outlined">person_add</span>
             </button>

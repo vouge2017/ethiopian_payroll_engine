@@ -1,6 +1,6 @@
 /* EthioPayroll global phone-input helper.
  *
- * Loads intl-tel-input from CDN (no build step) and applies it to every
+ * Loads intl-tel-input from local static assets and applies it to every
  * <input data-intl-tel> on the page. Each input becomes a flag dropdown
  * + national-number field, and on form submit the full E.164 number
  * (e.g. +251911234567) is written into a hidden sibling so the backend
@@ -16,16 +16,38 @@
  * format error with a flash.
  */
 (function() {
+  // The plugin and its flag sprite are hosted locally under /static/ so the
+  // browser's CSP img-src 'self' data: rule does not block the flag sprite.
+  // Derive the static base path from the <script> tag that loaded this file.
+  // phone-input.js is loaded by the template as
+  //   <script src="{{ url_for('static', filename='js/phone-input.js') }}?v=...">
+  // so we can derive the local base path from the script's own src.
+  // We use a data attribute on the script tag for reliability, falling back
+  // to querying the DOM if the attribute is absent.
+  var _scriptEl = document.currentScript || document.querySelector('script[src*="phone-input.js"]');
+  function localBase() {
+    if (!_scriptEl) return '/static';
+    var src = _scriptEl.getAttribute('data-static-base');
+    if (!src) {
+      src = _scriptEl.getAttribute('src') || '';
+      src = src.replace(/phone-input\.js.*$/, '');
+    }
+    return src;
+  }
+
   function ensureITILoaded(cb) {
     if (window.intlTelInput) return cb();
     if (window.__itiLoading) return window.__itiLoading.then(cb);
+    var base = localBase();
     window.__itiLoading = new Promise(function(resolve) {
-      var css = document.createElement('link');
-      css.rel = 'stylesheet';
-      css.href = 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.0/build/css/intlTelInput.min.css';
-      document.head.appendChild(css);
+      // Load CSS from local path (CSP-safe)
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = base + 'css/intl-tel-input/intlTelInput.min.css';
+      document.head.appendChild(link);
+      // Load intl-tel-input JS from local path (CSP-safe)
       var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.0/build/js/intlTelInput.min.js';
+      s.src = base + 'js/intl-tel-input/intlTelInput.min.js';
       s.onload = function() { resolve(); };
       s.onerror = function() { resolve(); }; // graceful fallback
       document.head.appendChild(s);
@@ -42,13 +64,34 @@
     hidden.value = existingValue;
     input.parentNode.insertBefore(hidden, input.nextSibling);
 
+    var base = localBase();
     var iti = window.intlTelInput(input, {
       initialCountry: initialCountry,
       preferredCountries: ['et', 'ke', 'us', 'gb', 'sa', 'ae'],
       separateDialCode: true,
-      utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.0/build/js/utils.js',
+      // LOCAL assets (CSP-safe: served from /static/ under our origin)
+      utilsScript: base + 'js/intl-tel-input/utils.js',
+      // Override the plugin's default flag sprite URL by patching the
+      // <style> that the plugin injects. The plugin's _init() creates a
+      // stylesheet using its own default path; we replace that path with
+      // our local sprite. Done after init() below.
       nationalMode: true,
     });
+
+    // Override the plugin's flag sprite URL with the local one. The plugin
+    // sets a background-image on the .iti__flag class via a <style> it
+    // injects; we look for that style and replace the URL.
+    var style = Array.from(document.styleSheets).find(function(s) {
+      try { return Array.from(s.cssRules).some(function(r) { return /\.iti__flag/.test(r.cssText); }); }
+      catch (e) { return false; }
+    });
+    if (style) {
+      Array.from(style.cssRules).forEach(function(r) {
+        if (r.style && r.style.backgroundImage) {
+          r.style.backgroundImage = 'url("' + base + 'img/flags.png")';
+        }
+      });
+    }
 
     // Mark the wrapper so our defensive padding-left rule does not fight
     // with the plugin's own layout. See design-system.css.
@@ -57,11 +100,7 @@
 
     // If the input has a value, let intl-tel-input parse and format it
     if (existingValue) {
-      // Try parsing as full E.164 first
-      var parsed = window.intlTelInputGlobals && window.intlTelInputGlobals.utils
-        ? window.intlTelInputGlobals.utils.parsePhoneNumber(existingValue)
-        : null;
-      if (parsed) iti.setNumber(existingValue);
+      try { iti.setNumber(existingValue); } catch (e) { /* ignore */ }
     }
 
     function sync() {
@@ -87,3 +126,4 @@
     initAll();
   }
 })();
+

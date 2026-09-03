@@ -110,7 +110,9 @@
         <!-- Email -->
         <div class="onboarding-field">
             <label for="email">{{ _('email') }} <span style="font-weight: 400; color: var(--text-tertiary);">(optional)</span></label>
-            <input type="email" id="email" name="email" placeholder="name@company.com" inputmode="email">
+            <input type="email" id="email" name="email"
+                   placeholder="name@company.com" inputmode="email"
+                   autocomplete="email">
             <span class="field-hint">Enter your work email for corporate security and communication.</span>
         </div>
 
@@ -126,6 +128,16 @@
                 </button>
             </div>
             <span class="field-hint">Must be at least 8 characters with a number and symbol.</span>
+            <ul class="pw-rules" data-pw-rules data-pw-target="password" data-pw-confirm="password2" data-pw-strong="pwStrong">
+                <li class="pw-rule" data-pw-rule="length"><span data-pw-dot>&middot;</span> At least 8 characters</li>
+                <li class="pw-rule" data-pw-rule="upper"><span data-pw-dot>&middot;</span> One uppercase letter (A&ndash;Z)</li>
+                <li class="pw-rule" data-pw-rule="lower"><span data-pw-dot>&middot;</span> One lowercase letter (a&ndash;z)</li>
+                <li class="pw-rule" data-pw-rule="digit"><span data-pw-dot>&middot;</span> One number (0&ndash;9)</li>
+                <li class="pw-rule" data-pw-rule="symbol"><span data-pw-dot>&middot;</span> One symbol (@#$%!&amp;* etc.)</li>
+            </ul>
+            <div id="pwStrong" class="pw-strong">
+                <span class="material-symbols-outlined">verified</span> Strong password
+            </div>
         </div>
 
         <!-- Confirm Password -->
@@ -138,14 +150,17 @@
                     <span class="material-symbols-outlined">visibility_off</span>
                 </button>
             </div>
+            <span data-pw-match></span>
         </div>
+
+        <script src="{{ url_for('static', filename='js/password-strength.js') }}?v={{ static_version }}"></script>
 
         <!-- Actions -->
         <div class="onboarding-actions">
             <a href="{{ url_for('auth.login') }}" class="onboarding-btn-back">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
-            <button type="button" class="onboarding-btn-next" id="reviewBtn">
+            <button type="button" class="onboarding-btn-next" id="reviewBtn" data-pw-submit>
                 Continue
                 <span class="material-symbols-outlined">arrow_forward</span>
             </button>

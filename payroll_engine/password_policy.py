@@ -257,11 +257,12 @@ def check_password_strength(password: str) -> tuple:
     """
     Check password strength with comprehensive pattern detection.
 
-    Requirements:
+    Requirements (must match the live UI checklist in password-strength.js):
     - Minimum 8 characters
     - At least one uppercase letter
     - At least one lowercase letter
     - At least one digit
+    - At least one symbol (any non-alphanumeric character)
     - Not a common password
     - Not a keyboard pattern
     - Not dictionary word + year/number
@@ -289,6 +290,9 @@ def check_password_strength(password: str) -> tuple:
 
     if not any(c.isdigit() for c in password):
         return False, 'Password must contain at least one digit.'
+
+    if not any(not c.isalnum() for c in password):
+        return False, 'Password must contain at least one symbol (e.g. @#$%!&*).'
 
     lower = password.lower().strip()
 

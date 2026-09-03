@@ -51,17 +51,23 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Phone or Email -->
-        <div class="onboarding-field">
+        <div class="onboarding-field" id="loginIdField">
             <label for="login_id">Phone or Email</label>
             <div class="onboarding-field-wrapper">
-                <input type="text" id="login_id" name="login_id"
-                       required autofocus
-                       placeholder="911 234 567 or email@example.com"
-                       inputmode="text"
-                       class="onboarding-input"
-                       autocomplete="username">
+                <div class="onboarding-phone-wrapper" id="loginPhoneWrapper">
+                    <input type="tel" id="login_id" name="login_id"
+                           required autofocus
+                           data-intl-tel="et"
+                           data-intl-tel-name="login_phone_full"
+                           placeholder="911 234 567"
+                           inputmode="tel"
+                           autocomplete="username">
+                </div>
             </div>
-            <span class="field-hint">Ethiopian mobile (9 digits), or your email address.</span>
+            <span class="field-hint">
+                <span id="loginIdPhoneHint">Ethiopian mobile (9 digits). Tap the flag to pick another country, or type <code>@</code> to use email instead.</span>
+                <span id="loginIdEmailHint" style="display:none;">Email address.</span>
+            </span>
         </div>
 
         <!-- Password -->
@@ -146,4 +152,7 @@
         </a>
     </div>
 </aside>
+
+<!-- Phone-or-email input switcher (auto-hides flag when '@' is typed) -->
+<script src="{{ url_for('static', filename='js/login-id-switcher.js') }}?v={{ static_version }}"></script>
 {% endblock %}

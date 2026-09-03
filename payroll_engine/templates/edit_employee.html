@@ -54,13 +54,17 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
-                                <input type="tel" class="form-control" id="phone" name="phone"
-                                        value="{{ (employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
-                                        data-intl-tel="et"
-                                        data-intl-tel-name="phone_full"
-                                        placeholder="9XXXXXXXX" inputmode="tel"
-                                        title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
-                                <div class="form-text">Pick a country from the flag, then enter the number. For Ethiopia: 9 digits starting with 9 or 7.</div>
+                                <div class="onboarding-phone-wrapper">
+                                    <div class="phone-input-with-prefix">
+                                        <span class="phone-prefix-box">+251</span>
+                                        <input type="tel" class="form-control" id="phone" name="phone"
+                                               value="{{ (employee.phone[3:] if employee.phone and employee.phone.startswith('+251') else employee.phone[1:] if employee.phone and employee.phone.startswith('0') else employee.phone) or '' }}"
+                                               data-intl-tel-name="phone_full"
+                                               placeholder="91 234 5678" inputmode="tel" maxlength="9"
+                                               title="Enter 9 digits starting with 9 or 7">
+                                    </div>
+                                </div>
+                                <div class="form-text">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>

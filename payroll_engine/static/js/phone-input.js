@@ -1,146 +1,140 @@
-/* EthioPayroll global phone-input helper.
+/* EthioPayroll phone-input helper (simplified, no intl-tel-input).
  *
- * Loads intl-tel-input from local static assets and applies it to every
- * <input data-intl-tel> on the page. Each input becomes a flag dropdown
- * + national-number field, and on form submit the full E.164 number
- * (e.g. +251911234567) is written into a hidden sibling so the backend
- * can store it without extra parsing.
+ * This script replaces the previous intl-tel-input integration with a
+ * simpler tab-based UX: a fixed "+251" prefix box + text input for the
+ * 9-digit national number, or an email-style input.
  *
- * Initial country: data-intl-tel="et" (Ethiopia). Override per-input.
- * The static CSS + JS are loaded here as a one-time boot; subsequent
- * navigations hit the browser cache.
+ * Activated by the presence of:
+ *   <div class="phone-input-tabs" id="..." data-phone-input="phone">
+ *     <tab ...>Phone</tab>  (shows prefix box + tel input)
+ *     <tab ...>Email</tab>  (shows email input, hides prefix)
+ *   </div>
  *
- * Falls back gracefully if intl-tel-input fails to load (e.g., offline)
- * — the input still works as a plain tel field, the backend validation
- * in payroll_engine.models.validate_ethiopian_phone will catch the
- * format error with a flash.
+ * The script enforces:
+ *   - Max 9 digits in phone mode
+ *   - First digit must be 7 or 9
+ *   - Leading zeros are stripped automatically
+ *   - On form submit, a hidden field "phone_full" gets the value
  */
 (function() {
-  // The plugin and its flag sprite are hosted locally under /static/ so the
-  // browser's CSP img-src 'self' data: rule does not block the flag sprite.
-  // Derive the static base path from the <script> tag that loaded this file.
-  // phone-input.js is loaded by the template as
-  //   <script src="{{ url_for('static', filename='js/phone-input.js') }}?v=...">
-  // so we can derive the local base path from the script's own src.
-  // We use a data attribute on the script tag for reliability, falling back
-  // to querying the DOM if the attribute is absent.
-  var _scriptEl = document.currentScript || document.querySelector('script[src*="phone-input.js"]');
-  function localBase() {
-    if (!_scriptEl) return '/static';
-    var src = _scriptEl.getAttribute('data-static-base');
-    if (!src) {
-      src = _scriptEl.getAttribute('src') || '';
-      src = src.replace(/phone-input\.js.*$/, '');
+  var PREFIX = '+251';
+
+  function stripNonDigits(val) {
+    return (val || '').replace(/\D/g, '');
+  }
+
+  function validateEthiopianPhone(digits) {
+    digits = digits.replace(/^0+/, '');
+    if (!digits) return true;
+    if (digits[0] !== '7' && digits[0] !== '9') return false;
+    return true;
+  }
+
+  function formatForSubmit(digits) {
+    digits = digits.replace(/^0+/, '');
+    if (digits.length > 9) digits = digits.substring(0, 9);
+    if (digits.length === 9) return PREFIX + ' ' + digits;
+    return PREFIX + ' ' + digits;
+  }
+
+  function initPhoneTabs(container) {
+    var phoneInputId = container.getAttribute('data-phone-input');
+    var emailInputId = container.getAttribute('data-email-input');
+    var tabButtons = container.querySelectorAll('[data-phone-tab]');
+    var phoneField = phoneInputId ? document.getElementById(phoneInputId) : null;
+    var emailField = emailInputId ? document.getElementById(emailInputId) : null;
+    var prefixBox = container.querySelector('.phone-prefix-box');
+
+    if (!tabButtons.length) return;
+
+    function showTab(tab) {
+      var isPhone = tab.getAttribute('data-phone-tab') === 'phone';
+
+      // Update active tab button state
+      tabButtons.forEach(function(b) {
+        b.classList.toggle('active', b === tab);
+      });
+
+      if (phoneField) phoneField.style.display = isPhone ? '' : 'none';
+      if (emailField) emailField.style.display = isPhone ? 'none' : '';
+      if (prefixBox) prefixBox.style.display = isPhone ? '' : 'none';
+
+      // Sync hidden field values
+      syncHiddenFields();
     }
-    return src;
-  }
 
-  function ensureITILoaded(cb) {
-    if (window.intlTelInput) return cb();
-    if (window.__itiLoading) return window.__itiLoading.then(cb);
-    var base = localBase();
-    window.__itiLoading = new Promise(function(resolve) {
-      // Load CSS from local path (CSP-safe)
-      var link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = base + 'css/intl-tel-input/intlTelInput.min.css';
-      document.head.appendChild(link);
-      // Load intl-tel-input JS from local path (CSP-safe)
-      var s = document.createElement('script');
-      s.src = base + 'js/intl-tel-input/intlTelInput.min.js';
-      s.onload = function() { resolve(); };
-      s.onerror = function() { resolve(); }; // graceful fallback
-      document.head.appendChild(s);
-    }).then(cb);
-  }
+    function enforcePhoneInput(e) {
+      var input = e.target;
+      var digits = stripNonDigits(input.value);
+      digits = digits.replace(/^0+/, '');
+      if (digits.length > 9) digits = digits.substring(0, 9);
+      if (!validateEthiopianPhone(digits) && digits.length === 1) {
+        digits = '';
+      }
+      input.value = digits;
+      syncHiddenFields();
+    }
 
-  function initOne(input) {
-    var initialCountry = (input.getAttribute('data-intl-tel') || 'et').toLowerCase();
-    var hiddenName = input.getAttribute('data-intl-tel-name') || (input.name + '_full');
-    var existingValue = input.value || '';
-    var hidden = document.createElement('input');
-    hidden.type = 'hidden';
-    hidden.name = hiddenName;
-    hidden.value = existingValue;
-    input.parentNode.insertBefore(hidden, input.nextSibling);
+    function syncHiddenFields() {
+      var form = container.closest('form');
+      if (!form) return;
 
-    var base = localBase();
-    var iti = window.intlTelInput(input, {
-      initialCountry: initialCountry,
-      preferredCountries: ['et', 'ke', 'us', 'gb', 'sa', 'ae'],
-      separateDialCode: true,
-      // LOCAL assets (CSP-safe: served from /static/ under our origin)
-      utilsScript: base + 'js/intl-tel-input/utils.js',
-      // Override the plugin's default flag sprite URL by patching the
-      // <style> that the plugin injects. The plugin's _init() creates a
-      // stylesheet using its own default path; we replace that path with
-      // our local sprite. Done after init() below.
-      nationalMode: true,
-    });
-
-    // Override the plugin's flag sprite URL with the local one. The plugin
-    // sets a background-image on the .iti__flag class via a <style> it
-    // injects; we look for that style and replace the URL.
-    var style = Array.from(document.styleSheets).find(function(s) {
-      try { return Array.from(s.cssRules).some(function(r) { return /\.iti__flag/.test(r.cssText); }); }
-      catch (e) { return false; }
-    });
-    if (style) {
-      Array.from(style.cssRules).forEach(function(r) {
-        if (r.style && r.style.backgroundImage) {
-          r.style.backgroundImage = 'url("' + base + 'img/flags.png")';
+      // Update hidden phone_full field
+      if (phoneField) {
+        var hiddenPhone = form.querySelector('input[name="phone_full"], input[name="login_phone_full"]');
+        if (hiddenPhone) {
+          var digits = stripNonDigits(phoneField.value || '');
+          hiddenPhone.value = formatForSubmit(digits);
         }
+      }
+
+      // If phone tab is hidden, clear the hidden phone field
+      if (emailField && emailField.style.display === 'none') {
+        var hiddenPhone = form.querySelector('input[name="phone_full"], input[name="login_phone_full"]');
+        if (hiddenPhone && phoneField && phoneField.style.display === 'none') {
+          hiddenPhone.value = '';
+        }
+      }
+    }
+
+    // Tab click handlers
+    tabButtons.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        showTab(btn);
+      });
+    });
+
+    // Input handlers for phone field
+    if (phoneField) {
+      phoneField.addEventListener('input', enforcePhoneInput);
+      phoneField.addEventListener('blur', enforcePhoneInput);
+    }
+
+    // Form submit handler to sync final values
+    var form = container.closest('form');
+    if (form) {
+      form.addEventListener('submit', function() {
+        syncHiddenFields();
       });
     }
 
-    // Mark the wrapper so our defensive padding-left rule does not fight
-    // with the plugin's own layout. See design-system.css.
-    var wrapper = input.closest('.onboarding-phone-wrapper');
-    if (wrapper) wrapper.classList.add('iti');
+    // Initialize: show phone tab by default
+    var phoneTab = Array.prototype.find.call(tabButtons, function(b) {
+      return b.getAttribute('data-phone-tab') === 'phone';
+    });
+    if (phoneTab) showTab(phoneTab);
 
-    // If the input has a value, let intl-tel-input parse and format it
-    if (existingValue) {
-      try { iti.setNumber(existingValue); } catch (e) { /* ignore */ }
-    }
-
-    // Frontend validation: enforce 9-digit Ethiopian format
-    // - Strip leading 0 automatically
-    // - Limit to 9 digits max
-    // - Only allow 7 or 9 as first digit (Ethiopian mobile)
-    function enforceFormat(e) {
-      var digits = e.target.value.replace(/\D/g, '');
-      // Strip leading zeros
-      digits = digits.replace(/^0+/, '');
-      // Enforce first digit must be 7 or 9 for Ethiopia
-      if (digits.length > 0 && digits[0] !== '7' && digits[0] !== '9') {
-        if (digits.length === 1) {
-          digits = ''; // reject invalid first digit
-        }
-      }
-      // Max 9 digits
-      if (digits.length > 9) {
-        digits = digits.substring(0, 9);
-      }
-      e.target.value = digits;
-      sync();
-    }
-    input.addEventListener('input', enforceFormat);
-    input.addEventListener('blur', enforceFormat);
-
-    function sync() {
-      hidden.value = iti.getNumber();
-    }
-    input.addEventListener('blur', sync);
-    input.addEventListener('change', sync);
-    input.form && input.form.addEventListener('submit', sync);
+    return {
+      showTab: showTab,
+      syncHiddenFields: syncHiddenFields
+    };
   }
 
+  // Auto-init all phone-input-tabs containers
   function initAll() {
-    var inputs = document.querySelectorAll('input[data-intl-tel]');
-    if (!inputs.length) return;
-    ensureITILoaded(function() {
-      if (!window.intlTelInput) return; // offline, give up gracefully
-      inputs.forEach(initOne);
+    var containers = document.querySelectorAll('[data-phone-tabs]');
+    containers.forEach(function(c) {
+      initPhoneTabs(c);
     });
   }
 
@@ -150,4 +144,3 @@
     initAll();
   }
 })();
-

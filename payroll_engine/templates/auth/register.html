@@ -96,16 +96,18 @@
         <!-- Phone -->
         <div class="onboarding-field">
             <label for="phone">Phone Number <span style="color: var(--color-danger);">*</span></label>
-            <div class="onboarding-field-wrapper">
-                <div class="onboarding-phone-wrapper">
+            <div class="onboarding-phone-wrapper">
+                <div class="phone-input-with-prefix">
+                    <span class="phone-prefix-box">+251</span>
                     <input type="tel" id="phone" name="phone"
-                           data-intl-tel="et"
                            data-intl-tel-name="phone_full"
-                           required placeholder="911 234 567"
+                           required placeholder="91 234 5678"
+                           inputmode="tel"
+                           maxlength="9"
                            title="Enter 9 digits starting with 9 or 7">
                 </div>
             </div>
-            <span class="field-hint">Used for two-factor authentication. Pick a country code from the flag dropdown.</span>
+            <span class="field-hint">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</span>
         </div>
 
         <!-- Email -->
@@ -274,11 +276,10 @@ document.getElementById('reviewBtn').addEventListener('click', function() {
     const pw2 = document.getElementById('password2').value;
     if (pw !== pw2) { alert('Passwords do not match.'); return; }
     const phone = document.getElementById('phone').value.replace(/\D/g, '');
-    if (phone.length < 9 || !['7','9'].includes(phone[0])) {
+    if (phone.length !== 9 || !['7','9'].includes(phone[0])) {
         alert('Phone must be 9 digits starting with 7 or 9.'); return;
     }
-    const display = phone.length === 10 && phone.startsWith('0') ? phone.substring(1) : phone;
-    // Build name
+    const display = phone;
     const first = document.getElementById('firstName').value;
     const middle = document.getElementById('middleName').value;
     const last = document.getElementById('lastName').value;

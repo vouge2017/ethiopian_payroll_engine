@@ -2154,110 +2154,114 @@ kbd {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   intl-tel-input alignment + visual polish
-   Goal: the flag dropdown, dial-code, and national input all sit on
-   the same baseline with consistent height (matches the 44px onboarding
-   input), and the active state matches the rest of the design system.
+   Simplified phone input tabs (replaces intl-tel-input dropdown)
+   Uses a fixed +251 prefix box + tab switching for phone/email modes.
    ───────────────────────────────────────────────────────────────────── */
-.iti {
-    width: 100%;
-    display: block;
+
+/* Tab buttons above the phone input */
+.phone-input-tabs {
+    display: flex;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
 }
 
-.iti__country-container {
-    /* Make the flag button match the input height. */
-    height: 44px;
-    padding: 0;
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
+.phone-input-tab {
+    padding: var(--space-2) var(--space-4);
     background: var(--bg-secondary);
     border: 1px solid var(--gray-300);
-    border-right: none;
-    transition: border-color var(--transition-fast);
-}
-
-.iti__selected-country {
-    height: 100%;
-    display: flex;
-    align-items: center;
-    padding: 0 var(--space-2) 0 var(--space-3);
-    border-radius: var(--radius-md) 0 0 var(--radius-md);
-    background: transparent;
-}
-
-.iti__flag {
-    /* The plugin ships a 20x15 sprite, scale slightly for visual balance. */
-    height: 16px;
-    background-size: contain;
-    background-position: 0 0;
-    margin-right: var(--space-2);
-}
-
-.iti__selected-country-primary {
-    /* Dial code text (e.g., +251). Match the input font. */
-    font-family: var(--font-body);
-    font-size: 16px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    font-size: 14px;
     font-weight: 500;
-    line-height: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-bottom: none;
+}
+
+.phone-input-tab:hover {
+    background: var(--bg-tertiary);
     color: var(--text-primary);
 }
 
-.iti__arrow {
-    margin-left: var(--space-2);
-    border-top-color: var(--text-secondary);
-    opacity: 0.6;
+.phone-input-tab.active {
+    background: var(--bg-primary);
+    border-color: var(--gray-300);
+    border-bottom: 2px solid var(--bg-primary);
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: default;
 }
 
-.iti__country-list {
-    /* Country dropdown panel */
-    z-index: var(--z-modal, 1060);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-light);
-    box-shadow: var(--shadow-md);
-    font-family: var(--font-body);
-    font-size: 14px;
-    max-height: 280px;
+.phone-input-tab:not(.active) {
+    border-bottom: 2px solid transparent;
 }
 
-.iti input.iti__tel-input,
-.iti__tel-input {
-    width: 100%;
-    height: 44px;
-    padding: var(--space-2) var(--space-4);
-    padding-left: 96px; /* room for the flag + dial code on the left */
-    background: var(--bg-secondary);
+/* Fixed +251 prefix box + input container */
+.phone-input-with-prefix {
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.phone-prefix-box {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-3);
+    background: var(--bg-tertiary);
     border: 1px solid var(--gray-300);
-    border-radius: var(--radius-md);
+    border-right: none;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+}
+
+.phone-prefix-box input[type="tel"] + & {
+    display: inline-flex;
+}
+
+/* The actual input that sits next to the prefix box */
+.phone-input-with-prefix input[type="tel"],
+.phone-input-with-prefix input[type="email"] {
+    flex: 1;
+    width: 100%;
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-primary);
+    border: 1px solid var(--gray-300);
+    border-left: none;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
     font-family: var(--font-body);
     font-size: 16px;
     line-height: 24px;
     color: var(--text-primary);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    height: 44px;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
-.iti input.iti__tel-input::placeholder {
+.phone-input-with-prefix input[type="tel"]::placeholder,
+.phone-input-with-prefix input[type="email"]::placeholder {
     color: var(--text-tertiary);
 }
 
-.iti input.iti__tel-input:focus,
-.iti__tel-input:focus {
+.phone-input-with-prefix input[type="tel"]:focus,
+.phone-input-with-prefix input[type="email"]::focus {
     outline: none;
     border-color: var(--brand-primary);
     border-width: 2px;
-    padding-left: 95px; /* 96 - 1 to keep the cursor in the same place */
     box-shadow: 0 0 0 3px rgba(0, 97, 255, 0.15);
 }
 
-/* Make the joined flag+input read as a single field. The plugin wraps
-   the input in a div.iti; both halves share the same border, so the
-   user perceives one input with a flag selector on the left. */
-.iti--allow-dropdown .iti__country-container:hover,
-.iti--allow-dropdown .iti__country-container:focus-within {
-    background: var(--bg-primary);
-}
-
-.iti--allow-dropdown input.iti__tel-input {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
+/* Hide email input when phone tab is active, hide phone when email tab */
+.phone-input-with-prefix input[type="tel"][style*="display: none"],
+.phone-input-with-prefix input[type="email"][style*="display: none"] {
+    display: none !important;
 }
 
 /* Auth-style input used in the login/forgot_password pages (no phone

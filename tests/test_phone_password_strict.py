@@ -152,88 +152,70 @@ def app():
         yield app
 
 
-def test_login_has_country_selector(app):
-    """The login field must use intl-tel-input so users can pick a
-    country code. Phone-only by default; switches to email when '@' typed."""
+def test_login_has_phone_and_email_tabs(app):
+    """The login field must have tab switching (Phone / Email) so users
+    can choose to enter a phone number or an email address."""
     client = app.test_client()
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
-    # data-intl-tel on login_id
+    # Tab buttons present
+    assert 'phone-input-tabs' in html
+    assert 'data-phone-tab="phone"' in html
+    assert 'data-phone-tab="email"' in html
+    # Phone prefix box present
+    assert 'phone-prefix-box' in html
+    assert '+251' in html
+    # login_id field present
     m = re.search(r'<input[^>]+id="login_id"[^>]*>', html)
     assert m is not None
-    assert 'data-intl-tel="et"' in m.group(0), (
-        f'login_id must use intl-tel-input, got: {m.group(0)}'
-    )
-    # Country selector wrapper present
     assert 'loginPhoneWrapper' in html
 
 
-def test_login_has_phone_and_email_hints(app):
-    """Both hints must be in the HTML so the switcher can toggle them."""
+def test_login_helper_text_specifies_9_digits(app):
+    """Helper text must specify the 9-digit requirement and starting digit."""
     client = app.test_client()
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
-    assert 'loginIdPhoneHint' in html
-    assert 'loginIdEmailHint' in html
+    assert '9 digits' in html
+    assert ('starting with' in html or 'starting' in html)
 
 
-def test_login_loads_switcher_script(app):
-    """The login-id-switcher.js must be loaded so the @ toggle works."""
+def test_login_loads_phone_input_script(app):
+    """The phone-input.js must be loaded so the tab switching works."""
     client = app.test_client()
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
-    assert 'login-id-switcher.js' in html
+    assert 'static/js/phone-input.js' in html
 
 
-def test_forgot_password_also_has_country_selector(app):
+def test_forgot_password_also_has_phone_tabs(app):
     """Same pattern on the password-reset page."""
     client = app.test_client()
     r = client.get('/auth/forgot-password', follow_redirects=True)
     if r.status_code != 200:
         pytest.skip(f'forgot-password returned {r.status_code}')
     html = r.get_data(as_text=True)
-    m = re.search(r'<input[^>]+id="login_id"[^>]*>', html)
-    assert m is not None and 'data-intl-tel' in m.group(0)
+    assert 'phone-input-tabs' in html
+    assert 'phone-prefix-box' in html
 
 
 # ─────────────────────────────────────────────────────────────────────
-# 4. CSP-safe intl-tel-input (local assets)
+# 4. CSP-safe static assets
 # ─────────────────────────────────────────────────────────────────────
 
-def test_intl_tel_input_flag_sprite_is_local(app):
-    """The flag sprite must be served from /static/ to satisfy the
-    img-src 'self' data: CSP rule."""
-    r = app.test_client().get('/static/img/flags.png')
-    assert r.status_code == 200, 'flags.png must be served locally'
-    assert int(r.headers.get('Content-Length', '0')) > 10000
-    assert 'image/' in r.headers.get('Content-Type', '')
-
-
-def test_intl_tel_input_utils_is_local(app):
-    r = app.test_client().get('/static/js/intl-tel-input/utils.js')
-    assert r.status_code == 200
-    assert r.headers.get('Content-Type', '').startswith('application/javascript')
-
-
-def test_intl_tel_input_plugin_is_local(app):
-    """The intl-tel-input plugin JS + CSS must be served locally (CSP)."""
-    js_r = app.test_client().get('/static/js/intl-tel-input/intlTelInput.min.js')
-    assert js_r.status_code == 200
-    assert js_r.headers.get('Content-Type', '').startswith('application/javascript')
-
-    css_r = app.test_client().get('/static/css/intl-tel-input/intlTelInput.min.css')
-    assert css_r.status_code == 200
-    assert 'text/css' in css_r.headers.get('Content-Type', '')
-
-
-def test_phone_input_js_uses_local_paths(app):
-    """The phone-input.js script must reference the local utils path."""
+def test_phone_input_js_is_loaded_locally(app):
+    """The phone-input.js script must be served from /static/ (CSP)."""
     js = app.test_client().get('/static/js/phone-input.js').get_data(as_text=True)
-    assert 'js/intl-tel-input/utils.js' in js
-    # And must override the default flag sprite URL (which is the CDN one)
-    assert 'img/flags.png' in js
-    # Must NOT reference CDN for the plugin JS or CSS
-    assert 'cdn.jsdelivr.net/npm/intl-tel-input' not in js
+    # Must not reference CDN
+    assert 'cdn.jsdelivr.net' not in js
+    # Must handle phone input validation
+    assert 'PREFIX' in js or '+251' in js
+
+
+def test_phone_input_uses_local_assets_only(app):
+    """phone-input.js must not load any external CDN scripts."""
+    js = app.test_client().get('/static/js/phone-input.js').get_data(as_text=True)
+    assert 'cdn.jsdelivr.net' not in js
 
 
 # ─────────────────────────────────────────────────────────────────────

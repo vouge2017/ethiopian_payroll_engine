@@ -36,13 +36,17 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone</label>
-                                <input type="tel" class="form-control" name="phone"
-                                        value="{{ (company.phone[1:] if company.phone and company.phone.startswith('0') else company.phone) or '' }}"
-                                        data-intl-tel="et"
-                                        data-intl-tel-name="phone_full"
-                                        placeholder="9XXXXXXXX" inputmode="tel"
-                                        title="Enter 9 digits starting with 9 or 7 (or pick another country code)">
-                                <div class="form-text">Pick a country from the flag, then enter the number.</div>
+                                <div class="onboarding-phone-wrapper">
+                                    <div class="phone-input-with-prefix">
+                                        <span class="phone-prefix-box">+251</span>
+                                        <input type="tel" class="form-control" name="phone"
+                                               value="{{ (company.phone[3:] if company.phone and company.phone.startswith('+251') else company.phone[1:] if company.phone and company.phone.startswith('0') else company.phone) or '' }}"
+                                               data-intl-tel-name="phone_full"
+                                               placeholder="91 234 5678" inputmode="tel" maxlength="9"
+                                               title="Enter 9 digits starting with 9 or 7">
+                                    </div>
+                                </div>
+                                <div class="form-text">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Logo (PNG or JPG)</label>

@@ -47,16 +47,18 @@
 
         <div class="onboarding-field">
             <label for="phone">Phone Number <span style="color: var(--color-danger);">*</span></label>
-            <div class="onboarding-field-wrapper">
-                <div class="onboarding-phone-wrapper">
+            <div class="onboarding-phone-wrapper">
+                <div class="phone-input-with-prefix">
+                    <span class="phone-prefix-box">+251</span>
                     <input type="tel" id="phone" name="phone"
-                           data-intl-tel="et"
                            data-intl-tel-name="phone_full"
-                           required placeholder="911 234 567"
+                           required placeholder="91 234 5678"
+                           inputmode="tel"
+                           maxlength="9"
                            title="Enter 9 digits starting with 9 or 7">
                 </div>
             </div>
-            <span class="field-hint">9 digits starting with 9 or 7. Or pick another country code.</span>
+            <span class="field-hint">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</span>
         </div>
 
         <div class="onboarding-field">

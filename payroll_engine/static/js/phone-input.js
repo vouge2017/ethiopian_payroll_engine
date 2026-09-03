@@ -103,6 +103,30 @@
       try { iti.setNumber(existingValue); } catch (e) { /* ignore */ }
     }
 
+    // Frontend validation: enforce 9-digit Ethiopian format
+    // - Strip leading 0 automatically
+    // - Limit to 9 digits max
+    // - Only allow 7 or 9 as first digit (Ethiopian mobile)
+    function enforceFormat(e) {
+      var digits = e.target.value.replace(/\D/g, '');
+      // Strip leading zeros
+      digits = digits.replace(/^0+/, '');
+      // Enforce first digit must be 7 or 9 for Ethiopia
+      if (digits.length > 0 && digits[0] !== '7' && digits[0] !== '9') {
+        if (digits.length === 1) {
+          digits = ''; // reject invalid first digit
+        }
+      }
+      // Max 9 digits
+      if (digits.length > 9) {
+        digits = digits.substring(0, 9);
+      }
+      e.target.value = digits;
+      sync();
+    }
+    input.addEventListener('input', enforceFormat);
+    input.addEventListener('blur', enforceFormat);
+
     function sync() {
       hidden.value = iti.getNumber();
     }

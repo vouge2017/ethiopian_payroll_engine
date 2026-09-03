@@ -64,10 +64,9 @@ def validate_ethiopian_phone(phone: str) -> tuple:
     - International format is +251 followed by 9 digits (no leading 0).
       Examples: +251911234567, +251711234567
     - Leading 0 (e.g., 0911234567) is NOT accepted — type the 9-digit
-      form. The frontend's intl-tel-input already strips the leading 0.
+      form. The frontend's phone-input.js strips the leading 0.
     - Reject anything with more or fewer than 9 national digits.
-    - Reject any prefix other than +251 (the selector handles other
-      countries; backend only validates the Ethiopia country case).
+    - Reject any prefix other than +251.
     - Spaces and dashes are stripped before validation.
 
     Returns:

@@ -428,8 +428,7 @@ if (typeof Chart !== 'undefined') {
 }
 </script>
 
-<!-- Phone input helper: turns any <input data-intl-tel> into a flag
-     dropdown + national-number field via intl-tel-input. Cache-busted. -->
+<!-- Phone input helper: tab switching + +251 prefix enforcement. -->
 <script src="{{ url_for('static', filename='js/phone-input.js') }}?v={{ static_version }}" data-static-base="{{ url_for('static', filename='') }}"></script>
 
 {% block extra_js %}{% endblock %}

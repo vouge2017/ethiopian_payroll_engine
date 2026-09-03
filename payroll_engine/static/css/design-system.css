@@ -2142,17 +2142,6 @@ kbd {
     padding-left: 60px;
 }
 
-/* When the wrapper has an intl-tel-input flag, the prefix is provided by
-   the plugin, not by .onboarding-phone-prefix. Reset the input's
-   padding-left so the plugin can manage the layout itself. */
-.onboarding-phone-wrapper.iti input {
-    padding-left: var(--space-3);
-}
-
-.onboarding-phone-wrapper.iti .onboarding-phone-prefix {
-    display: none;
-}
-
 /* ─────────────────────────────────────────────────────────────────────
    Simplified phone input tabs (replaces intl-tel-input dropdown)
    Uses a fixed +251 prefix box + tab switching for phone/email modes.

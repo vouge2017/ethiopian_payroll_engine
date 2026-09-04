@@ -273,82 +273,82 @@ def register():
                 },
             ), 400
 
-    # Validate phone format
-    is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
-    if not is_valid:
-        flash(phone_error, 'danger')
-        return render_template(
-            'auth/register.html',
-            form_data={
-                'first_name': request.form.get('first_name', ''),
-                'middle_name': request.form.get('middle_name', ''),
-                'last_name': request.form.get('last_name', ''),
-                'phone': phone,
-                'email': request.form.get('email', ''),
-                'company_name': company_name or '',
-            },
-        ), 400
+        # Validate phone format
+        is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
+        if not is_valid:
+            flash(phone_error, 'danger')
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'first_name': request.form.get('first_name', ''),
+                    'middle_name': request.form.get('middle_name', ''),
+                    'last_name': request.form.get('last_name', ''),
+                    'phone': phone,
+                    'email': request.form.get('email', ''),
+                    'company_name': company_name or '',
+                },
+            ), 400
 
-    # Validate password
-    if password != password2:
-        flash('Passwords do not match.', 'danger')
-        return render_template(
-            'auth/register.html',
-            form_data={
-                'first_name': request.form.get('first_name', ''),
-                'middle_name': request.form.get('middle_name', ''),
-                'last_name': request.form.get('last_name', ''),
-                'phone': normalized_phone or phone,
-                'email': request.form.get('email', ''),
-                'company_name': company_name or '',
-            },
-        ), 400
-    from payroll_engine.password_policy import check_password_strength
+        # Validate password
+        if password != password2:
+            flash('Passwords do not match.', 'danger')
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'first_name': request.form.get('first_name', ''),
+                    'middle_name': request.form.get('middle_name', ''),
+                    'last_name': request.form.get('last_name', ''),
+                    'phone': normalized_phone or phone,
+                    'email': request.form.get('email', ''),
+                    'company_name': company_name or '',
+                },
+            ), 400
+        from payroll_engine.password_policy import check_password_strength
 
-    is_strong, pw_error = check_password_strength(password)
-    if not is_strong:
-        flash(pw_error, 'danger')
-        return render_template(
-            'auth/register.html',
-            form_data={
-                'first_name': request.form.get('first_name', ''),
-                'middle_name': request.form.get('middle_name', ''),
-                'last_name': request.form.get('last_name', ''),
-                'phone': normalized_phone or phone,
-                'email': request.form.get('email', ''),
-                'company_name': company_name or '',
-            },
-        ), 400
+        is_strong, pw_error = check_password_strength(password)
+        if not is_strong:
+            flash(pw_error, 'danger')
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'first_name': request.form.get('first_name', ''),
+                    'middle_name': request.form.get('middle_name', ''),
+                    'last_name': request.form.get('last_name', ''),
+                    'phone': normalized_phone or phone,
+                    'email': request.form.get('email', ''),
+                    'company_name': company_name or '',
+                },
+            ), 400
 
-    # Check duplicate phone
-    if User.query.filter_by(phone=normalized_phone).first():
-        flash('Phone number already registered.', 'danger')
-        return render_template(
-            'auth/register.html',
-            form_data={
-                'first_name': request.form.get('first_name', ''),
-                'middle_name': request.form.get('middle_name', ''),
-                'last_name': request.form.get('last_name', ''),
-                'phone': normalized_phone,
-                'email': request.form.get('email', ''),
-                'company_name': company_name or '',
-            },
-        ), 400
+        # Check duplicate phone
+        if User.query.filter_by(phone=normalized_phone).first():
+            flash('Phone number already registered.', 'danger')
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'first_name': request.form.get('first_name', ''),
+                    'middle_name': request.form.get('middle_name', ''),
+                    'last_name': request.form.get('last_name', ''),
+                    'phone': normalized_phone,
+                    'email': request.form.get('email', ''),
+                    'company_name': company_name or '',
+                },
+            ), 400
 
-    # Check duplicate email (if provided)
-    if email and User.query.filter_by(email=email).first():
-        flash('Email already registered.', 'danger')
-        return render_template(
-            'auth/register.html',
-            form_data={
-                'first_name': request.form.get('first_name', ''),
-                'middle_name': request.form.get('middle_name', ''),
-                'last_name': request.form.get('last_name', ''),
-                'phone': normalized_phone,
-                'email': request.form.get('email', ''),
-                'company_name': company_name or '',
-            },
-        ), 400
+        # Check duplicate email (if provided)
+        if email and User.query.filter_by(email=email).first():
+            flash('Email already registered.', 'danger')
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'first_name': request.form.get('first_name', ''),
+                    'middle_name': request.form.get('middle_name', ''),
+                    'last_name': request.form.get('last_name', ''),
+                    'phone': normalized_phone,
+                    'email': request.form.get('email', ''),
+                    'company_name': company_name or '',
+                },
+            ), 400
 
         # Create company if name provided (backward-compatible one-step flow)
         company = None

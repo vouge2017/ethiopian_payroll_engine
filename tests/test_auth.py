@@ -25,6 +25,7 @@ def app():
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     app.config['WTF_CSRF_ENABLED'] = False
+    app.config['RATELIMIT_ENABLED'] = False
     with app.app_context():
         db.create_all()
         yield app
@@ -38,7 +39,7 @@ def client(app):
 
 def test_register_creates_new_company(client, app):
     """Registering with a new company name should succeed."""
-    client.post(
+    r = client.post(
         '/auth/register',
         data={
             'phone': '911234567',
@@ -47,8 +48,19 @@ def test_register_creates_new_company(client, app):
             'password2': 'SecurePass123!',
             'company_name': 'New Company',
         },
-        follow_redirects=True,
+        follow_redirects=False,
     )
+    if r.status_code != 302:
+        body = r.get_data(as_text=True)
+        import re
+        flashes = re.findall(r'alert alert-(\w+)[^>]*>([^<]+)', body)
+        phone_field = 'name="phone"' in body
+        has_register_form = 'id="registerForm"' in body
+        pytest.fail(
+            f'Expected 302, got {r.status_code}. '
+            f'Flashes: {flashes[:3]}, phone_field: {phone_field}, has_register_form: {has_register_form}'
+        )
+    assert '/auth/login' in r.headers.get('Location', '')
 
     with app.app_context():
         company = Company.query.filter_by(name='New Company').first()
@@ -118,7 +130,7 @@ def test_register_rejects_case_variation(client, app):
 
 def test_register_duplicate_email_rejected(client, app):
     """Same email can't register twice."""
-    client.post(
+    r1 = client.post(
         '/auth/register',
         data={
             'phone': '911234567',
@@ -127,9 +139,11 @@ def test_register_duplicate_email_rejected(client, app):
             'password2': 'SecurePass123!',
             'company_name': 'Company A',
         },
+        follow_redirects=False,
     )
+    assert r1.status_code == 302, f'First registration failed: {r1.get_data(as_text=True)[:500]}'
 
-    client.post(
+    r2 = client.post(
         '/auth/register',
         data={
             'phone': '922345678',
@@ -138,8 +152,10 @@ def test_register_duplicate_email_rejected(client, app):
             'password2': 'SecurePass456!',
             'company_name': 'Company B',
         },
-        follow_redirects=True,
+        follow_redirects=False,
     )
+    # Second registration should be rejected (400 with form re-render)
+    assert r2.status_code == 400, f'Expected 400 for duplicate email, got {r2.status_code}'
 
     with app.app_context():
         users = User.query.filter_by(email='alice@test.com').all()

@@ -5,7 +5,7 @@
 <!-- Left Sidebar: Progress Stepper (Desktop) -->
 <aside class="onboarding-stepper" aria-label="Quick start steps">
     <div class="onboarding-stepper-card">
-        <h2 class="onboarding-stepper-title">Registration</h2>
+        <h2 class="onboarding-stepper-title">Get Started</h2>
         <ol class="onboarding-stepper-list">
             <li class="onboarding-step active">
                 <span class="onboarding-step-dot">
@@ -13,31 +13,23 @@
                     <span class="material-symbols-outlined step-check">check</span>
                 </span>
                 <h3 class="onboarding-step-label">Account</h3>
-                <p class="onboarding-step-desc">Basic credentials</p>
+                <p class="onboarding-step-desc">Phone + password</p>
             </li>
             <li class="onboarding-step">
                 <span class="onboarding-step-dot">
                     <span class="step-number">2</span>
                     <span class="material-symbols-outlined step-check">check</span>
                 </span>
-                <h3 class="onboarding-step-label">Business Details</h3>
-                <p class="onboarding-step-desc">Company info</p>
+                <h3 class="onboarding-step-label">Profile</h3>
+                <p class="onboarding-step-desc">Your name + company</p>
             </li>
             <li class="onboarding-step">
                 <span class="onboarding-step-dot">
                     <span class="step-number">3</span>
                     <span class="material-symbols-outlined step-check">check</span>
                 </span>
-                <h3 class="onboarding-step-label">Employee Setup</h3>
-                <p class="onboarding-step-desc">Initial batch</p>
-            </li>
-            <li class="onboarding-step">
-                <span class="onboarding-step-dot">
-                    <span class="step-number">4</span>
-                    <span class="material-symbols-outlined step-check">check</span>
-                </span>
-                <h3 class="onboarding-step-label">Verification</h3>
-                <p class="onboarding-step-desc">Final check</p>
+                <h3 class="onboarding-step-label">First Payroll</h3>
+                <p class="onboarding-step-desc">Add employees</p>
             </li>
         </ol>
     </div>
@@ -52,49 +44,22 @@
     <span class="onboarding-mobile-step-connector"></span>
     <div class="onboarding-mobile-step">
         <span class="onboarding-mobile-step-dot">2</span>
-        <span>Business</span>
+        <span>Profile</span>
     </div>
     <span class="onboarding-mobile-step-connector"></span>
     <div class="onboarding-mobile-step">
         <span class="onboarding-mobile-step-dot">3</span>
-        <span>Employees</span>
-    </div>
-    <span class="onboarding-mobile-step-connector"></span>
-    <div class="onboarding-mobile-step">
-        <span class="onboarding-mobile-step-dot">4</span>
-        <span>Verify</span>
+        <span>Payroll</span>
     </div>
 </div>
 
-<!-- Main Content: Registration Form -->
+<!-- Main Content: Registration Form (Step 1: minimum viable) -->
 <div class="onboarding-form-area">
     <h1 class="onboarding-form-title">Create Account</h1>
-    <p class="onboarding-form-subtitle">Enter your basic details to start setting up your payroll environment.</p>
+    <p class="onboarding-form-subtitle">Quick setup — just your phone and a password to get started. We&apos;ll collect the rest after.</p>
 
-    <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" style="max-width: 672px;">
+    <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" style="max-width: 480px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-        <!-- Name fields (3-column grid) — values preserved on error -->
-        <div class="onboarding-field-grid">
-            <div class="onboarding-field">
-                <label for="firstName">First Name</label>
-                <input type="text" id="firstName" name="first_name" placeholder="e.g. Abebe"
-                       value="{{ form_data.first_name if form_data else '' }}">
-                <span class="field-hint">Legal given name.</span>
-            </div>
-            <div class="onboarding-field">
-                <label for="middleName">Middle Name</label>
-                <input type="text" id="middleName" name="middle_name" placeholder="e.g. Bekele"
-                       value="{{ form_data.middle_name if form_data else '' }}">
-                <span class="field-hint">Father's name.</span>
-            </div>
-            <div class="onboarding-field">
-                <label for="lastName">Last Name</label>
-                <input type="text" id="lastName" name="last_name" placeholder="e.g. Kebede"
-                       value="{{ form_data.last_name if form_data else '' }}">
-                <span class="field-hint">Family name or Patronymic.</span>
-            </div>
-        </div>
 
         <!-- Phone -->
         <div class="onboarding-field">
@@ -114,14 +79,14 @@
             <span class="field-hint">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</span>
         </div>
 
-        <!-- Email -->
+        <!-- Email (optional) -->
         <div class="onboarding-field">
             <label for="email">{{ _('email') }} <span style="font-weight: 400; color: var(--text-tertiary);">(optional)</span></label>
             <input type="email" id="email" name="email"
                    placeholder="name@company.com" inputmode="email"
                    autocomplete="email"
                    value="{{ form_data.email if form_data else '' }}">
-            <span class="field-hint">Enter your work email for corporate security and communication.</span>
+            <span class="field-hint">For password recovery and security alerts.</span>
         </div>
 
         <!-- Password -->
@@ -168,8 +133,8 @@
             <a href="{{ url_for('auth.login') }}" class="onboarding-btn-back">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
-            <button type="button" class="onboarding-btn-next" id="reviewBtn" data-pw-submit>
-                Continue
+            <button type="submit" class="onboarding-btn-next" data-pw-submit>
+                Create Account
                 <span class="material-symbols-outlined">arrow_forward</span>
             </button>
         </div>
@@ -197,29 +162,29 @@
     <div class="onboarding-checklist">
         <div class="onboarding-checklist-header">
             <span class="material-symbols-outlined">verified_user</span>
-            <h2>Preparation</h2>
+            <h2>What you&apos;ll need later</h2>
         </div>
-        <p class="onboarding-checklist-desc">To ensure a smooth setup process in accordance with Ethiopian regulations, gather these details:</p>
+        <p class="onboarding-checklist-desc">Just your phone and a password to start. We&apos;ll ask for the rest in the next step:</p>
         <ul class="onboarding-checklist-items">
             <li class="onboarding-checklist-item">
-                <span class="material-symbols-outlined">info</span>
+                <span class="material-symbols-outlined">person</span>
                 <div>
-                    <span class="onboarding-checklist-item-label">TIN Number</span>
-                    <span class="onboarding-checklist-item-desc">Tax Identification Number</span>
+                    <span class="onboarding-checklist-item-label">Your Name</span>
+                    <span class="onboarding-checklist-item-desc">For your profile</span>
                 </div>
             </li>
             <li class="onboarding-checklist-item">
-                <span class="material-symbols-outlined">badge</span>
+                <span class="material-symbols-outlined">business</span>
                 <div>
-                    <span class="onboarding-checklist-item-label">Employee Details</span>
-                    <span class="onboarding-checklist-item-desc">Basic info &amp; salaries</span>
+                    <span class="onboarding-checklist-item-label">Company Name</span>
+                    <span class="onboarding-checklist-item-desc">For your business account</span>
                 </div>
             </li>
             <li class="onboarding-checklist-item">
-                <span class="material-symbols-outlined">account_balance</span>
+                <span class="material-symbols-outlined">group</span>
                 <div>
-                    <span class="onboarding-checklist-item-label">Bank Information</span>
-                    <span class="onboarding-checklist-item-desc">For direct deposits</span>
+                    <span class="onboarding-checklist-item-label">Employee List</span>
+                    <span class="onboarding-checklist-item-desc">Add after setup</span>
                 </div>
             </li>
         </ul>
@@ -236,70 +201,4 @@
         </a>
     </div>
 </aside>
-
-<!-- Confirmation Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Your Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3">Please verify your information before creating your account:</p>
-                <table class="table table-borderless">
-                    <tr>
-                        <td class="text-muted" style="width:40%">Name</td>
-                        <td><strong id="confirmName"></strong></td>
-                    </tr>
-                    <tr>
-                        <td class="text-muted">Phone</td>
-                        <td><strong id="confirmPhone"></strong></td>
-                    </tr>
-                    <tr id="confirmEmailRow" style="display:none">
-                        <td class="text-muted">Email</td>
-                        <td><strong id="confirmEmail"></strong></td>
-                    </tr>
-                </table>
-                <div class="auth-info">
-                    <i class="bi bi-info-circle"></i>
-                    <span>You'll use <strong>+251 <span id="confirmPhoneLogin"></span></strong> to log in.</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Edit</button>
-                <button type="button" class="btn btn-primary" id="confirmSubmit">Looks Correct — Create Account</button>
-            </div>
-        </div>
-    </div>
-</div>
-<script nonce="{{ csp_nonce }}">
-document.getElementById('reviewBtn').addEventListener('click', function() {
-    const form = document.getElementById('registerForm');
-    if (!form.checkValidity()) { form.reportValidity(); return; }
-    const pw = document.getElementById('password').value;
-    const pw2 = document.getElementById('password2').value;
-    if (pw !== pw2) { alert('Passwords do not match.'); return; }
-    const phone = document.getElementById('phone').value.replace(/\D/g, '');
-    if (phone.length !== 9 || !['7','9'].includes(phone[0])) {
-        alert('Phone must be 9 digits starting with 7 or 9.'); return;
-    }
-    const display = phone;
-    const first = document.getElementById('firstName').value;
-    const middle = document.getElementById('middleName').value;
-    const last = document.getElementById('lastName').value;
-    const fullName = [first, middle, last].filter(Boolean).join(' ') || '—';
-    document.getElementById('confirmName').textContent = fullName;
-    document.getElementById('confirmPhone').textContent = '+251 ' + display;
-    document.getElementById('confirmPhoneLogin').textContent = display;
-    const email = document.getElementById('email').value;
-    const emailRow = document.getElementById('confirmEmailRow');
-    if (email) { emailRow.style.display = ''; document.getElementById('confirmEmail').textContent = email; }
-    else { emailRow.style.display = 'none'; }
-    new bootstrap.Modal(document.getElementById('confirmModal')).show();
-});
-document.getElementById('confirmSubmit').addEventListener('click', function() {
-    document.getElementById('registerForm').submit();
-});
-</script>
 {% endblock %}

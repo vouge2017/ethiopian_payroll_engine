@@ -485,6 +485,14 @@ class User(UserMixin, db.Model):
         db.Integer, db.ForeignKey('company.id'), nullable=True
     )  # Null until user creates/joins a company
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
+    # Progressive profiling (2026-09): True after register until name/company
+    # are filled in on /auth/setup-profile. The setup_profile_required hook
+    # redirects to that page when True.
+    must_complete_profile = db.Column(db.Boolean, default=False, nullable=False)
+    # User's display name (collected in step 2 of progressive profiling)
+    first_name = db.Column(db.String(50), nullable=True)
+    middle_name = db.Column(db.String(50), nullable=True)
+    last_name = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Password reset tokens
     reset_token_hash = db.Column(db.String(64), nullable=True)

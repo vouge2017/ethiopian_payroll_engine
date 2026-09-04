@@ -38,7 +38,7 @@ def client(app):
 
 
 def test_register_creates_new_company(client, app):
-    """Registering with a new company name should succeed."""
+    """Registering creates a user. Progressive profiling: company is set in /setup-profile."""
     r = client.post(
         '/auth/register',
         data={
@@ -46,7 +46,6 @@ def test_register_creates_new_company(client, app):
             'email': 'alice@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
-            'company_name': 'New Company',
         },
         follow_redirects=False,
     )
@@ -54,78 +53,59 @@ def test_register_creates_new_company(client, app):
         body = r.get_data(as_text=True)
         import re
         flashes = re.findall(r'alert alert-(\w+)[^>]*>([^<]+)', body)
-        phone_field = 'name="phone"' in body
-        has_register_form = 'id="registerForm"' in body
-        pytest.fail(
-            f'Expected 302, got {r.status_code}. '
-            f'Flashes: {flashes[:3]}, phone_field: {phone_field}, has_register_form: {has_register_form}'
-        )
-    assert '/auth/login' in r.headers.get('Location', '')
+        pytest.fail(f'Expected 302, got {r.status_code}. Flashes: {flashes[:3]}')
+    # After register, user is auto-logged-in and redirected to /auth/setup-profile
+    assert '/auth/setup-profile' in r.headers.get('Location', '')
 
     with app.app_context():
-        company = Company.query.filter_by(name='New Company').first()
-        assert company is not None
         user = User.query.filter_by(phone='911234567').first()
         assert user is not None
-        assert user.company_id == company.id
+        # Progressive: must_complete_profile=True, company_id=None
+        assert user.must_complete_profile is True
+        assert user.company_id is None
         assert user.role == 'owner'
 
 
 def test_register_rejects_existing_company_name(client, app):
-    """Registering with an existing company name must be rejected."""
-    # Create first company
-    with app.app_context():
-        company = Company(name='Existing Company')
-        db.session.add(company)
-        db.session.commit()
-
-    # Try to register with the same company name
-    client.post(
+    """Outdated test: with progressive profiling, the company name is set in
+    /auth/setup-profile, not during register. This test now verifies that
+    a user with must_complete_profile=True can be created without a
+    duplicate-check failing on the company name (which doesn't exist yet)."""
+    r = client.post(
         '/auth/register',
         data={
             'phone': '922345678',
             'email': 'attacker@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
-            'company_name': 'Existing Company',
         },
-        follow_redirects=True,
+        follow_redirects=False,
     )
+    assert r.status_code == 302
 
-    # Should be rejected — user not created
     with app.app_context():
         user = User.query.filter_by(phone='922345678').first()
-        assert user is None, 'SECURITY BUG: attacker was able to join existing company'
-
-        # Only the original company should exist
-        companies = Company.query.filter_by(name='Existing Company').all()
-        assert len(companies) == 1
+        assert user is not None
+        assert user.company_id is None
 
 
 def test_register_rejects_case_variation(client, app):
-    """'Existing Company' and 'existing company' should be treated as same."""
-    with app.app_context():
-        company = Company(name='My Company')
-        db.session.add(company)
-        db.session.commit()
-
-    client.post(
+    """Outdated: progressive profiling no longer takes company_name at register.
+    This test now verifies that an unrelated user can register without errors."""
+    r = client.post(
         '/auth/register',
         data={
             'phone': '933456789',
             'email': 'attacker@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
-            'company_name': 'my company',  # different case
         },
-        follow_redirects=True,
+        follow_redirects=False,
     )
-
+    assert r.status_code == 302
     with app.app_context():
-        User.query.filter_by(phone='933456789').first()
-        # This should be rejected IF the fix does case-insensitive matching
-        # Current fix uses exact match — this test documents the behavior
-        # If it passes (user created), that's a minor gap to address later
+        user = User.query.filter_by(phone='933456789').first()
+        assert user is not None
 
 
 def test_register_duplicate_email_rejected(client, app):
@@ -137,11 +117,13 @@ def test_register_duplicate_email_rejected(client, app):
             'email': 'alice@test.com',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
-            'company_name': 'Company A',
         },
         follow_redirects=False,
     )
     assert r1.status_code == 302, f'First registration failed: {r1.get_data(as_text=True)[:500]}'
+
+    # Logout so the next register request isn't blocked by is_authenticated
+    client.get('/auth/logout')
 
     r2 = client.post(
         '/auth/register',
@@ -150,7 +132,6 @@ def test_register_duplicate_email_rejected(client, app):
             'email': 'alice@test.com',
             'password': 'SecurePass456!',
             'password2': 'SecurePass456!',
-            'company_name': 'Company B',
         },
         follow_redirects=False,
     )
@@ -164,36 +145,32 @@ def test_register_duplicate_email_rejected(client, app):
 
 def test_register_short_password_rejected(client, app):
     """Password shorter than 8 chars should be rejected."""
-    client.post(
+    r = client.post(
         '/auth/register',
         data={
             'phone': '911234567',
             'email': 'alice@test.com',
             'password': 'Sh0!rt',
             'password2': 'Sh0!rt',
-            'company_name': 'Company A',
         },
-        follow_redirects=True,
+        follow_redirects=False,
     )
-
-    with app.app_context():
-        user = User.query.filter_by(email='alice@test.com').first()
-        assert user is None
+    assert r.status_code == 400, f'Expected 400 for weak password, got {r.status_code}'
 
 
 def test_register_password_mismatch_rejected(client, app):
     """Password confirmation must match."""
-    client.post(
+    r = client.post(
         '/auth/register',
         data={
             'phone': '911234567',
             'email': 'alice@test.com',
             'password': 'SecurePass123!',
             'password2': 'DifferentPass456!',
-            'company_name': 'Company A',
         },
-        follow_redirects=True,
+        follow_redirects=False,
     )
+    assert r.status_code == 400, f'Expected 400 for password mismatch, got {r.status_code}'
 
     with app.app_context():
         user = User.query.filter_by(phone='0911234567').first()

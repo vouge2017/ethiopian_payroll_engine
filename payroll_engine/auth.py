@@ -169,11 +169,13 @@ def login():
 @auth.route('/logout')
 @login_required
 def logout():
-    # Audit: logout
-    from payroll_engine.shared import create_audit_log
+    # Audit: logout (skip if user has no company yet — e.g., just registered
+    # but hasn't completed progressive profiling)
+    if current_user.company_id is not None:
+        from payroll_engine.shared import create_audit_log
 
-    create_audit_log(company_id=current_user.company_id, user_id=current_user.id, action='logout')
-    db.session.commit()
+        create_audit_log(company_id=current_user.company_id, user_id=current_user.id, action='logout')
+        db.session.commit()
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
@@ -256,20 +258,15 @@ def register():
         email = request.form.get('email', '').strip().lower() or None
         password = request.form.get('password', '')
         password2 = request.form.get('password2', '')
-        company_name = request.form.get('company_name', '').strip() or None
 
-        # Validate required fields
+        # Validate required fields (progressive: only phone + password)
         if not phone or not password:
             flash('Phone and password are required.', 'danger')
             return render_template(
                 'auth/register.html',
                 form_data={
-                    'first_name': request.form.get('first_name', ''),
-                    'middle_name': request.form.get('middle_name', ''),
-                    'last_name': request.form.get('last_name', ''),
                     'phone': phone,
                     'email': request.form.get('email', ''),
-                    'company_name': company_name or '',
                 },
             ), 400
 
@@ -280,12 +277,8 @@ def register():
             return render_template(
                 'auth/register.html',
                 form_data={
-                    'first_name': request.form.get('first_name', ''),
-                    'middle_name': request.form.get('middle_name', ''),
-                    'last_name': request.form.get('last_name', ''),
                     'phone': phone,
                     'email': request.form.get('email', ''),
-                    'company_name': company_name or '',
                 },
             ), 400
 
@@ -295,12 +288,8 @@ def register():
             return render_template(
                 'auth/register.html',
                 form_data={
-                    'first_name': request.form.get('first_name', ''),
-                    'middle_name': request.form.get('middle_name', ''),
-                    'last_name': request.form.get('last_name', ''),
                     'phone': normalized_phone or phone,
                     'email': request.form.get('email', ''),
-                    'company_name': company_name or '',
                 },
             ), 400
         from payroll_engine.password_policy import check_password_strength
@@ -311,12 +300,8 @@ def register():
             return render_template(
                 'auth/register.html',
                 form_data={
-                    'first_name': request.form.get('first_name', ''),
-                    'middle_name': request.form.get('middle_name', ''),
-                    'last_name': request.form.get('last_name', ''),
                     'phone': normalized_phone or phone,
                     'email': request.form.get('email', ''),
-                    'company_name': company_name or '',
                 },
             ), 400
 
@@ -326,12 +311,8 @@ def register():
             return render_template(
                 'auth/register.html',
                 form_data={
-                    'first_name': request.form.get('first_name', ''),
-                    'middle_name': request.form.get('middle_name', ''),
-                    'last_name': request.form.get('last_name', ''),
                     'phone': normalized_phone,
                     'email': request.form.get('email', ''),
-                    'company_name': company_name or '',
                 },
             ), 400
 
@@ -341,42 +322,20 @@ def register():
             return render_template(
                 'auth/register.html',
                 form_data={
-                    'first_name': request.form.get('first_name', ''),
-                    'middle_name': request.form.get('middle_name', ''),
-                    'last_name': request.form.get('last_name', ''),
                     'phone': normalized_phone,
                     'email': request.form.get('email', ''),
-                    'company_name': company_name or '',
                 },
             ), 400
 
-        # Create company if name provided (backward-compatible one-step flow)
-        company = None
-        if company_name:
-            existing_company = Company.query.filter_by(name=company_name).first()
-            if existing_company:
-                flash('A company with that name already exists.', 'danger')
-                return render_template(
-                    'auth/register.html',
-                    form_data={
-                        'first_name': request.form.get('first_name', ''),
-                        'middle_name': request.form.get('middle_name', ''),
-                        'last_name': request.form.get('last_name', ''),
-                        'phone': normalized_phone,
-                        'email': request.form.get('email', ''),
-                        'company_name': company_name or '',
-                    },
-                ), 400
-            company = Company(name=company_name)
-            # 30-day trial for new signups (see payroll_engine/billing.py).
-            from payroll_engine.billing import TRIAL_DAYS
-
-            company.trial_ends_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=TRIAL_DAYS)
-            db.session.add(company)
-            db.session.flush()
-
-        # Create user
-        user = User(email=email, phone=normalized_phone, company_id=company.id if company else None, role='owner')
+        # Create user with progressive profiling flag
+        # (must_complete_profile=True until name + company are set)
+        user = User(
+            email=email,
+            phone=normalized_phone,
+            company_id=None,
+            role='owner',
+            must_complete_profile=True,
+        )
         user.set_password(password)
 
         # Apply referral code if present
@@ -393,9 +352,8 @@ def register():
             db.session.rollback()
             current_app.logger.exception('Failed to create user: %s', e)
             current_app.logger.error(
-                'Register failed: phone=%s email=%s company_name=%s role=%s company_id=%s',
-                normalized_phone, email, company_name, user.role,
-                user.company_id,
+                'Register failed: phone=%s email=%s',
+                normalized_phone, email,
             )
             err_msg = str(e).lower()
             if 'unique' in err_msg or 'duplicate' in err_msg:
@@ -406,7 +364,6 @@ def register():
                 else:
                     flash('This account already exists. Try logging in instead.', 'danger')
             elif 'null' in err_msg or 'not-null' in err_msg:
-                current_app.logger.error('NOT NULL violation during register: %s', e)
                 flash('Account creation failed. Please contact support. (ref: notnull)', 'danger')
             else:
                 err_type = type(e).__name__
@@ -414,17 +371,151 @@ def register():
             return render_template(
                 'auth/register.html',
                 form_data={
-                    'first_name': request.form.get('first_name', ''),
-                    'middle_name': request.form.get('middle_name', ''),
-                    'last_name': request.form.get('last_name', ''),
                     'phone': normalized_phone,
                     'email': request.form.get('email', ''),
-                    'company_name': company_name or '',
                 },
             ), 400
-        flash('Account created! Please log in and set up your company.', 'success')
-        return redirect(url_for('auth.login'))
+
+        # Auto-login the new user and route to profile setup
+        login_user(user)
+        from datetime import datetime
+
+        session['_login_time'] = datetime.now(UTC).timestamp()
+        session['_last_active'] = session['_login_time']
+        session.permanent = True
+
+        flash('Account created! Let&apos;s set up your profile.', 'success')
+        return redirect(url_for('auth.setup_profile'))
     return render_template('auth/register.html', form_data=None)
+
+
+@auth.route('/setup-profile', methods=['GET', 'POST'])
+@login_required
+def setup_profile():
+    """Step 2 of progressive profiling: collect name + company name.
+
+    The user has just registered (or hasn't completed their profile yet)
+    and is signed in but `must_complete_profile=True`. This route
+    collects the remaining fields and clears the flag.
+    """
+    if not current_user.must_complete_profile:
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        middle_name = request.form.get('middle_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        company_name = request.form.get('company_name', '').strip()
+
+        # Validate required fields
+        if not first_name or not last_name:
+            flash('First name and last name are required.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        if not company_name:
+            flash('Company name is required.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        # Check for duplicate company name
+        existing_company = Company.query.filter_by(name=company_name).first()
+        if existing_company:
+            flash('A company with that name already exists. Please choose a different name.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        # Create company and link to user
+        company = Company(name=company_name)
+        from payroll_engine.billing import TRIAL_DAYS
+
+        company.trial_ends_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=TRIAL_DAYS)
+        db.session.add(company)
+        db.session.flush()
+
+        current_user.first_name = first_name
+        current_user.middle_name = middle_name
+        current_user.last_name = last_name
+        current_user.company_id = company.id
+        current_user.must_complete_profile = False
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to setup profile: %s', e)
+            flash('Profile setup failed. Please try again.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        flash('Profile complete! Welcome to EthioPayroll.', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template('auth/setup_profile.html', form_data=None)
+
+
+@auth.route('/setup-profile/skip', methods=['GET', 'POST'])
+@login_required
+def setup_profile_skip():
+    """Skip profile setup for now — user can fill it in later from settings.
+
+    The `must_complete_profile` flag stays True so a banner can prompt
+    them later, but we don't force-redirect to this page anymore.
+    """
+    current_user.must_complete_profile = False
+    db.session.commit()
+    flash('You can complete your profile anytime from your account settings.', 'info')
+    return redirect(url_for('main.index'))
+
+
+@auth.before_request
+def setup_profile_required():
+    """Redirect users with `must_complete_profile=True` to /auth/setup-profile
+    unless they're already on that page or the skip endpoint.
+    """
+    if not current_user.is_authenticated:
+        return None
+    if not getattr(current_user, 'must_complete_profile', False):
+        return None
+    # Allow access to setup-profile, logout, and static assets
+    allowed = (
+        '/auth/setup-profile',
+        '/auth/logout',
+        '/static/',
+    )
+    from flask import request as _req
+    path = _req.path
+    if any(path.startswith(p) for p in allowed):
+        return None
+    return redirect(url_for('auth.setup_profile'))
 
 
 @auth.route('/google/login')

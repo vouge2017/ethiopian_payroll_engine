@@ -2442,6 +2442,63 @@ input[name="phone_number"] {
     background: var(--gray-100);
 }
 
+/* Identity chip — confirms to user that the system knows their identity
+   (no need to re-type phone/email on password reset/verify steps) */
+.identity-chip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    margin: var(--space-4) 0 var(--space-6) 0;
+    font-size: 14px;
+}
+
+.identity-chip .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--text-secondary);
+}
+
+.identity-chip-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    flex: 1;
+}
+
+.identity-chip-change {
+    font-size: 13px;
+    color: var(--brand-primary);
+    text-decoration: none;
+    font-weight: 500;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background var(--transition-fast);
+}
+
+.identity-chip-change:hover {
+    background: var(--brand-primary-soft);
+    text-decoration: none;
+}
+
+.identity-chip-status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: 13px;
+    color: var(--color-success);
+    font-weight: 600;
+    padding-left: var(--space-3);
+    border-left: 1px solid var(--border-light);
+}
+
+.identity-chip-status .material-symbols-outlined {
+    color: var(--color-success);
+    font-size: 18px;
+}
+
 .onboarding-btn-next {
     display: inline-flex;
     align-items: center;

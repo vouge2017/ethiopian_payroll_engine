@@ -183,36 +183,42 @@ def logout():
 @login_required
 @limiter.limit('10 per minute')
 def change_password():
-    """Force or allow password change (required for invited temporary passwords)."""
+    """Force or allow password change. User is already authenticated, so
+    we don't re-verify identity — only the new password is required."""
     if request.method == 'POST':
-        current = request.form.get('current_password', '')
         new_password = request.form.get('new_password', '')
         new_password2 = request.form.get('new_password2', '')
 
-        if not current_user.check_password(current):
-            flash('Current password is incorrect.', 'danger')
+        if not new_password:
+            flash('Please enter a new password.', 'danger')
             return redirect(url_for('auth.change_password'))
         if new_password != new_password2:
             flash('New passwords do not match.', 'danger')
             return redirect(url_for('auth.change_password'))
-        if len(new_password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
+
+        from payroll_engine.password_policy import check_password_strength
+
+        is_strong, pw_error = check_password_strength(new_password)
+        if not is_strong:
+            flash(pw_error, 'danger')
             return redirect(url_for('auth.change_password'))
+
         if current_user.check_password(new_password):
             flash('New password must be different from the current password.', 'danger')
             return redirect(url_for('auth.change_password'))
 
-        current_user.set_password(new_password)
-        current_user.must_change_password = False
-        db.session.commit()
+        try:
+            current_user.set_password(new_password)
+            current_user.must_change_password = False
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to change password: %s', e)
+            flash('Password change failed. Please try again.', 'danger')
+            return redirect(url_for('auth.change_password'))
 
-        # Invalidate current session and log out, forcing re-authentication
-        from flask_login import logout_user
-        logout_user()
-        session.clear()
-
-        flash('Password updated successfully. Please log in again with your new password.', 'success')
-        return redirect(url_for('auth.login'))
+        flash('Password updated successfully.', 'success')
+        return redirect(url_for('main.index'))
 
     return render_template(
         'auth/change_password.html',
@@ -463,13 +469,13 @@ def google_register():
     )
 
 
-# --- Password Reset ---
+# --- Password Reset (3-step flow: forgot → verify → new) ---
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])
-@limiter.limit('5 per minute')
+@limiter.limit('3 per minute')
 def forgot_password():
-    """Request a password reset token. Accepts phone or email."""
+    """Step 1 of password recovery: collect phone/email, store in session."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
@@ -479,9 +485,11 @@ def forgot_password():
             flash('Please enter your phone number or email.', 'danger')
             return redirect(url_for('auth.forgot_password'))
 
-        # Find user by phone or email
-        user = None
+        # Determine if phone or email
         cleaned = login_id.replace(' ', '')
+        identity_type = None
+        identity_value = None
+
         looks_like_phone = (
             cleaned.startswith('09')
             or cleaned.startswith('07')
@@ -491,68 +499,186 @@ def forgot_password():
         if looks_like_phone:
             is_valid, normalized, _ = validate_ethiopian_phone(login_id)
             if is_valid:
-                user = User.query.filter_by(phone=normalized).first()
-        if user is None:
-            user = User.query.filter_by(email=login_id.lower()).first()
+                identity_type = 'phone'
+                identity_value = normalized
+        if identity_type is None and '@' in login_id:
+            identity_type = 'email'
+            identity_value = login_id.lower()
 
-        # Always show the same message (don't reveal whether account exists)
+        if identity_type is None:
+            flash('Please enter a valid Ethiopian phone or email address.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+
+        # Find user
+        if identity_type == 'phone':
+            user = User.query.filter_by(phone=identity_value).first()
+        else:
+            user = User.query.filter_by(email=identity_value).first()
+
+        # Always show the same message (no account enumeration)
         if user:
             token = user.generate_reset_token()
             db.session.commit()
-            # In production, this would be sent via SMS/email
-            # In dev/test, log the token so developers can find it
             current_app.logger.debug(f'Password reset token for {login_id}: {token}')
 
-        # Same message and redirect whether user exists or not (no enumeration)
-        flash('If an account with that phone/email exists, a reset link has been sent.', 'info')
-        return redirect(url_for('auth.login'))
+        # Preserve identity in session — the KEY improvement
+        # No re-typing phone/email after this step!
+        session['reset_identity'] = {
+            'type': identity_type,
+            'value': identity_value,
+            'code_attempts': 0,
+        }
+        session.permanent = True
+        flash('If an account exists for that phone/email, a reset code has been sent.', 'info')
+        return redirect(url_for('auth.reset_password_verify'))
 
     return render_template('auth/forgot_password.html')
 
 
-@auth.route('/reset-password', methods=['GET', 'POST'])
+@auth.route('/reset-password/verify', methods=['GET', 'POST'])
 @limiter.limit('5 per minute')
-def reset_password():
-    """Reset password using a token pasted by the user."""
+def reset_password_verify():
+    """Step 2 of password recovery: enter the 6-digit code.
+    Identity is preserved in session — no re-typing needed."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+
+    identity = session.get('reset_identity')
+    if not identity:
+        flash('Please start the password reset from the beginning.', 'danger')
+        return redirect(url_for('auth.forgot_password'))
 
     if request.method == 'POST':
         token = request.form.get('token', '').strip()
         if not token:
-            flash('Please enter the reset code you received.', 'danger')
-            return redirect(url_for('auth.reset_password'))
+            flash('Please enter the 6-digit code we sent.', 'danger')
+            return redirect(url_for('auth.reset_password_verify'))
 
-        # Find user by token hash
+        # Brute-force protection
+        if identity.get('code_attempts', 0) >= 5:
+            session.pop('reset_identity', None)
+            flash('Too many attempts. Please start over.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-        user = User.query.filter_by(reset_token_hash=token_hash).first()
+        if identity['type'] == 'phone':
+            user = User.query.filter_by(phone=identity['value']).first()
+        else:
+            user = User.query.filter_by(email=identity['value']).first()
 
         if not user or not user.verify_reset_token(token):
-            flash('Invalid or expired reset code.', 'danger')
-            return redirect(url_for('auth.reset_password'))
+            identity['code_attempts'] = identity.get('code_attempts', 0) + 1
+            session['reset_identity'] = identity
+            flash('Invalid or expired code. Please try again.', 'danger')
+            return redirect(url_for('auth.reset_password_verify'))
 
+        # Code accepted — mark verified, proceed to password step
+        session['reset_identity']['verified'] = True
+        flash('Code verified. Now set your new password.', 'success')
+        return redirect(url_for('auth.reset_password_new'))
+
+    return render_template(
+        'auth/reset_password_verify.html',
+        identity_type=identity['type'],
+        masked_value=_mask_identity(identity['type'], identity['value']),
+    )
+
+
+@auth.route('/reset-password/new', methods=['GET', 'POST'])
+@limiter.limit('5 per minute')
+def reset_password_new():
+    """Step 3 of password recovery: set the new password.
+    Identity is already in session — only password fields are shown."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
+    identity = session.get('reset_identity')
+    if not identity or not identity.get('verified'):
+        flash('Please verify your identity first.', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
         password = request.form.get('password', '')
         password2 = request.form.get('password2', '')
 
+        if not password:
+            flash('Please enter a new password.', 'danger')
+            return redirect(url_for('auth.reset_password_new'))
+
         if password != password2:
             flash('Passwords do not match.', 'danger')
-            return redirect(url_for('auth.reset_password'))
+            return redirect(url_for('auth.reset_password_new'))
 
         from payroll_engine.password_policy import check_password_strength
 
         is_strong, pw_error = check_password_strength(password)
         if not is_strong:
             flash(pw_error, 'danger')
-            return redirect(url_for('auth.reset_password'))
+            return redirect(url_for('auth.reset_password_new'))
 
-        user.set_password(password)
-        user.clear_reset_token()
-        user.must_change_password = False
-        db.session.commit()
-        flash('Password reset successfully. Please log in.', 'success')
-        return redirect(url_for('auth.login'))
+        # Look up user by the preserved identity
+        if identity['type'] == 'phone':
+            user = User.query.filter_by(phone=identity['value']).first()
+        else:
+            user = User.query.filter_by(email=identity['value']).first()
 
-    return render_template('auth/reset_password.html')
+        if not user:
+            session.pop('reset_identity', None)
+            flash('Account not found. Please start over.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+
+        try:
+            user.set_password(password)
+            user.clear_reset_token()
+            user.must_change_password = False
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to reset password: %s', e)
+            flash('Password reset failed. Please try again.', 'danger')
+            return redirect(url_for('auth.reset_password_new'))
+
+        # Auto-login the user with the new password
+        login_user(user)
+        from datetime import datetime
+
+        session['_login_time'] = datetime.now(UTC).timestamp()
+        session['_last_active'] = session['_login_time']
+        session.permanent = True
+        session.pop('reset_identity', None)
+
+        flash('Password updated! You are now signed in.', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template(
+        'auth/reset_password_new.html',
+        identity_type=identity['type'],
+        masked_value=_mask_identity(identity['type'], identity['value']),
+    )
+
+
+def _mask_identity(identity_type: str, value: str) -> str:
+    """Mask an identity value for display (e.g., +251 91***567)."""
+    if identity_type == 'phone':
+        if len(value) >= 9:
+            return '+251 ' + value[:2] + '***' + value[-3:]
+        return '+251 ' + value
+    # email
+    if '@' in value:
+        local, domain = value.split('@', 1)
+        if len(local) <= 2:
+            masked_local = local[0] + '***'
+        else:
+            masked_local = local[:2] + '***' + local[-1:]
+        return f'{masked_local}@{domain}'
+    return value
+
+
+# Backward-compat: old /reset-password URL redirects to the new flow
+@auth.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    """Legacy single-step reset — redirects users to the new 3-step flow."""
+    return redirect(url_for('auth.forgot_password'))
 
 
 # --- MFA / TOTP Setup ---

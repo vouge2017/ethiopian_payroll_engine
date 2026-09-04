@@ -225,7 +225,7 @@ def test_phone_input_uses_local_assets_only(app):
 PASSWORD_FORMS = [
     ('/auth/register', 'password', 'password2'),
     ('/auth/accept-invite', 'password', 'password2'),
-    ('/auth/reset-password', 'password', 'password2'),
+    ('/auth/reset-password/new', 'password', 'password2'),
 ]
 
 
@@ -233,9 +233,23 @@ PASSWORD_FORMS = [
 def test_password_form_has_checklist_and_match(app, path, pw_field, confirm_field):
     """Each publicly accessible password form must render the live
     checklist (.pw-rules) and the match status line. change-password is
-    a separate test because it requires auth."""
+    a separate test because it requires auth.
+
+    /auth/reset-password/new requires an active reset session, so we
+    seed the session before requesting the page.
+    """
     client = app.test_client()
-    r = client.get(path, follow_redirects=True)
+    if path == '/auth/reset-password/new':
+        # Seed the session to simulate having completed the verify step
+        client.get('/auth/forgot-password')
+        with client.session_transaction() as sess:
+            sess['reset_identity'] = {
+                'type': 'phone',
+                'value': '911234567',
+                'code_attempts': 0,
+                'verified': True,
+            }
+    r = client.get(path, follow_redirects=False)
     if r.status_code != 200:
         pytest.skip(f'{path} returned {r.status_code}; skipping')
     html = r.get_data(as_text=True)

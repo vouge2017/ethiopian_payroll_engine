@@ -244,6 +244,13 @@ def set_language(lang):
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+
+    phone = ''
+    email = None
+    password = ''
+    password2 = ''
+    company_name = None
+
     if request.method == 'POST':
         phone = request.form.get('phone', '').strip()
         email = request.form.get('email', '').strip().lower() or None
@@ -254,34 +261,94 @@ def register():
         # Validate required fields
         if not phone or not password:
             flash('Phone and password are required.', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'first_name': request.form.get('first_name', ''),
+                    'middle_name': request.form.get('middle_name', ''),
+                    'last_name': request.form.get('last_name', ''),
+                    'phone': phone,
+                    'email': request.form.get('email', ''),
+                    'company_name': company_name or '',
+                },
+            ), 400
 
-        # Validate phone format
-        is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
-        if not is_valid:
-            flash(phone_error, 'danger')
-            return redirect(url_for('auth.register'))
+    # Validate phone format
+    is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
+    if not is_valid:
+        flash(phone_error, 'danger')
+        return render_template(
+            'auth/register.html',
+            form_data={
+                'first_name': request.form.get('first_name', ''),
+                'middle_name': request.form.get('middle_name', ''),
+                'last_name': request.form.get('last_name', ''),
+                'phone': phone,
+                'email': request.form.get('email', ''),
+                'company_name': company_name or '',
+            },
+        ), 400
 
-        # Validate password
-        if password != password2:
-            flash('Passwords do not match.', 'danger')
-            return redirect(url_for('auth.register'))
-        from payroll_engine.password_policy import check_password_strength
+    # Validate password
+    if password != password2:
+        flash('Passwords do not match.', 'danger')
+        return render_template(
+            'auth/register.html',
+            form_data={
+                'first_name': request.form.get('first_name', ''),
+                'middle_name': request.form.get('middle_name', ''),
+                'last_name': request.form.get('last_name', ''),
+                'phone': normalized_phone or phone,
+                'email': request.form.get('email', ''),
+                'company_name': company_name or '',
+            },
+        ), 400
+    from payroll_engine.password_policy import check_password_strength
 
-        is_strong, pw_error = check_password_strength(password)
-        if not is_strong:
-            flash(pw_error, 'danger')
-            return redirect(url_for('auth.register'))
+    is_strong, pw_error = check_password_strength(password)
+    if not is_strong:
+        flash(pw_error, 'danger')
+        return render_template(
+            'auth/register.html',
+            form_data={
+                'first_name': request.form.get('first_name', ''),
+                'middle_name': request.form.get('middle_name', ''),
+                'last_name': request.form.get('last_name', ''),
+                'phone': normalized_phone or phone,
+                'email': request.form.get('email', ''),
+                'company_name': company_name or '',
+            },
+        ), 400
 
-        # Check duplicate phone
-        if User.query.filter_by(phone=normalized_phone).first():
-            flash('Phone number already registered.', 'danger')
-            return redirect(url_for('auth.register'))
+    # Check duplicate phone
+    if User.query.filter_by(phone=normalized_phone).first():
+        flash('Phone number already registered.', 'danger')
+        return render_template(
+            'auth/register.html',
+            form_data={
+                'first_name': request.form.get('first_name', ''),
+                'middle_name': request.form.get('middle_name', ''),
+                'last_name': request.form.get('last_name', ''),
+                'phone': normalized_phone,
+                'email': request.form.get('email', ''),
+                'company_name': company_name or '',
+            },
+        ), 400
 
-        # Check duplicate email (if provided)
-        if email and User.query.filter_by(email=email).first():
-            flash('Email already registered.', 'danger')
-            return redirect(url_for('auth.register'))
+    # Check duplicate email (if provided)
+    if email and User.query.filter_by(email=email).first():
+        flash('Email already registered.', 'danger')
+        return render_template(
+            'auth/register.html',
+            form_data={
+                'first_name': request.form.get('first_name', ''),
+                'middle_name': request.form.get('middle_name', ''),
+                'last_name': request.form.get('last_name', ''),
+                'phone': normalized_phone,
+                'email': request.form.get('email', ''),
+                'company_name': company_name or '',
+            },
+        ), 400
 
         # Create company if name provided (backward-compatible one-step flow)
         company = None
@@ -289,7 +356,17 @@ def register():
             existing_company = Company.query.filter_by(name=company_name).first()
             if existing_company:
                 flash('A company with that name already exists.', 'danger')
-                return redirect(url_for('auth.register'))
+                return render_template(
+                    'auth/register.html',
+                    form_data={
+                        'first_name': request.form.get('first_name', ''),
+                        'middle_name': request.form.get('middle_name', ''),
+                        'last_name': request.form.get('last_name', ''),
+                        'phone': normalized_phone,
+                        'email': request.form.get('email', ''),
+                        'company_name': company_name or '',
+                    },
+                ), 400
             company = Company(name=company_name)
             # 30-day trial for new signups (see payroll_engine/billing.py).
             from payroll_engine.billing import TRIAL_DAYS
@@ -315,12 +392,11 @@ def register():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('Failed to create user: %s', e)
-            # Log the form data for debugging (without password)
             current_app.logger.error(
-                'Register failed: phone=%s email=%s company_name=%s role=%s',
+                'Register failed: phone=%s email=%s company_name=%s role=%s company_id=%s',
                 normalized_phone, email, company_name, user.role,
+                user.company_id,
             )
-            # Try to give a more specific error if possible
             err_msg = str(e).lower()
             if 'unique' in err_msg or 'duplicate' in err_msg:
                 if 'phone' in err_msg:
@@ -330,13 +406,25 @@ def register():
                 else:
                     flash('This account already exists. Try logging in instead.', 'danger')
             elif 'null' in err_msg or 'not-null' in err_msg:
-                flash('Some required information is missing. Please fill all fields.', 'danger')
+                current_app.logger.error('NOT NULL violation during register: %s', e)
+                flash('Account creation failed. Please contact support. (ref: notnull)', 'danger')
             else:
-                flash('Account creation failed. Please try again or contact support.', 'danger')
-            return redirect(url_for('auth.register'))
+                err_type = type(e).__name__
+                flash(f'Account creation failed ({err_type}). Please try again or contact support.', 'danger')
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'first_name': request.form.get('first_name', ''),
+                    'middle_name': request.form.get('middle_name', ''),
+                    'last_name': request.form.get('last_name', ''),
+                    'phone': normalized_phone,
+                    'email': request.form.get('email', ''),
+                    'company_name': company_name or '',
+                },
+            ), 400
         flash('Account created! Please log in and set up your company.', 'success')
         return redirect(url_for('auth.login'))
-    return render_template('auth/register.html')
+    return render_template('auth/register.html', form_data=None)
 
 
 @auth.route('/google/login')

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}System Health & Operations - Platform Admin Control Plane{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-activity me-2 text-success"></i>System Health & Operations</h1>
+            <p class="text-muted small mb-0">Live background worker health, queue status, and service indicators</p>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white py-3 fw-bold">
+                    <i class="bi bi-cpu me-2 text-primary"></i>Background Worker Status
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fw-semibold">Redis Queue Connection:</span>
+                        <span class="badge bg-{% if worker_status.get('connected') %}success{% else %}warning{% endif %} fs-6">
+                            {{ 'Connected' if worker_status.get('connected') else 'Fallback In-Memory' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

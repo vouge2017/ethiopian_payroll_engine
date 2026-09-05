@@ -2037,3 +2037,95 @@ class BillingPayment(db.Model):
 
     def __repr__(self):
         return f'<BillingPayment {self.company_id} {self.period_month} {self.status}>'
+
+
+# =============================================================================
+# PLATFORM ADMIN CONTROL PLANE & SUPPORT TICKET MODELS
+# =============================================================================
+
+class SupportTicket(db.Model):
+    """Support ticket raised by a tenant or created by platform admin for support tracking."""
+
+    __tablename__ = 'support_ticket'
+    __table_args__ = (
+        db.Index('ix_support_ticket_company_status', 'company_id', 'status'),
+        db.Index('ix_support_ticket_code', 'ticket_code'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_code = db.Column(db.String(32), unique=True, nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    subject = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(64), nullable=False, default='general')  # payroll, tax, banking, access, bug
+    priority = db.Column(db.String(32), nullable=False, default='medium')   # low, medium, high, critical
+    status = db.Column(db.String(32), nullable=False, default='open')        # open, in_progress, waiting_on_customer, resolved, closed
+
+    context_data = db.Column(db.JSON, nullable=True)  # route, payroll_run_id, error_trace, browser info
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
+
+    messages = db.relationship('SupportTicketMessage', backref='ticket', cascade='all, delete-orphan', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<SupportTicket {self.ticket_code} - {self.status}>'
+
+
+class SupportTicketMessage(db.Model):
+    """Messages and updates within a support ticket thread."""
+
+    __tablename__ = 'support_ticket_message'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey('support_ticket.id', ondelete='CASCADE'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='CASCADE'), nullable=False)
+    sender_user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    is_admin_reply = db.Column(db.Boolean, nullable=False, default=False)
+    is_internal_note = db.Column(db.Boolean, nullable=False, default=False)
+    message_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+
+    def __repr__(self):
+        return f'<SupportTicketMessage {self.id} for Ticket {self.ticket_id}>'
+
+
+class PlatformAuditLog(db.Model):
+    """Platform-wide audit log capturing operations performed by Super Admins."""
+
+    __tablename__ = 'platform_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(db.String(64), nullable=False)  # impersonate_start, impersonate_end, tenant_suspend, ticket_resolve, plan_override
+    target_company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    details = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+
+    def __repr__(self):
+        return f'<PlatformAuditLog {self.action} by Admin {self.admin_user_id}>'
+
+
+class ImpersonationSession(db.Model):
+    """Tracks active and past support assist (impersonation) sessions."""
+
+    __tablename__ = 'impersonation_session'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_token = db.Column(db.String(64), unique=True, nullable=False)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    target_company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+
+    reason = db.Column(db.Text, nullable=False)
+    started_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    ended_at = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    def __repr__(self):
+        return f'<ImpersonationSession Admin {self.admin_user_id} -> User {self.target_user_id}>'

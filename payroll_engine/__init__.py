@@ -835,4 +835,10 @@ def create_app():
         db.session.rollback()
         return render_template('errors/500.html'), 500
 
+    # P0: One-time migration fix (commit 8ef62d7 → 500 on register/login
+    # because production DB is missing columns added in f18b86a).
+    # This route will be removed once the migration runs successfully.
+    from scripts.fix_user_columns_route import register_fix_route
+    register_fix_route(app)
+
     return app

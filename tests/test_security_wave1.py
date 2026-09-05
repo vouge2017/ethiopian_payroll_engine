@@ -43,7 +43,7 @@ def client(app):
     return app.test_client()
 
 
-def _register(client, phone='0911234567', password='SecurePass123!', company='SecureCo'):
+def _register(client, phone='911234567', password='SecurePass123!', company='SecureCo'):
     return client.post(
         '/auth/register',
         data={
@@ -57,7 +57,7 @@ def _register(client, phone='0911234567', password='SecurePass123!', company='Se
     )
 
 
-def _login(client, phone='0911234567', password='SecurePass123!', next_url=None, follow=False):
+def _login(client, phone='911234567', password='SecurePass123!', next_url=None, follow=False):
     from urllib.parse import quote
 
     url = '/auth/login'
@@ -70,7 +70,7 @@ def _login(client, phone='0911234567', password='SecurePass123!', next_url=None,
     )
 
 
-def _register_and_login(client, phone='0911234567', password='SecurePass123!', company='SecureCo'):
+def _register_and_login(client, phone='911234567', password='SecurePass123!', company='SecureCo'):
     _register(client, phone=phone, password=password, company=company)
     return _login(client, phone=phone, password=password, follow=True)
 
@@ -141,7 +141,7 @@ def test_invite_uses_unpredictable_password_shown_once(client, app):
     resp = client.post(
         '/settings/team/invite',
         data={
-            'phone': '0944444444',
+            'phone': '944444444',
             'name': 'New Hire',
             'role': 'accountant',
         },
@@ -160,14 +160,14 @@ def test_invite_uses_unpredictable_password_shown_once(client, app):
     # Extract the shown password from <code>...</code>
     codes = re.findall(r'<code[^>]*>([^<]+)</code>', body)
     assert codes, 'Expected temporary password in response body'
-    temp_password = codes[0].strip()
+    temp_password = codes[-1].strip()
     assert len(temp_password) >= 16
     # token_urlsafe alphabet — not a phone suffix
     assert not temp_password.endswith('Temp1!')
-    assert '0944444444'[-6:] not in temp_password
+    assert '944444444'[-6:] not in temp_password
 
     with app.app_context():
-        invited = User.query.filter_by(phone='0944444444').first()
+        invited = User.query.filter_by(phone='944444444').first()
         assert invited is not None
         assert invited.must_change_password is True
         assert invited.check_password(temp_password)
@@ -186,18 +186,18 @@ def test_invited_user_must_change_password_before_app_use(client, app):
     resp = client.post(
         '/settings/team/invite',
         data={
-            'phone': '0955555555',
+            'phone': '955555555',
             'name': 'Forced Change',
             'role': 'accountant',
         },
     )
     body = resp.data.decode('utf-8', errors='replace')
     codes = re.findall(r'<code[^>]*>([^<]+)</code>', body)
-    temp_password = codes[0].strip()
+    temp_password = codes[-1].strip()
 
     client.get('/auth/logout', follow_redirects=True)
 
-    login_resp = _login(client, phone='0955555555', password=temp_password, follow=False)
+    login_resp = _login(client, phone='955555555', password=temp_password, follow=False)
     assert login_resp.status_code == 302
     assert '/auth/change-password' in login_resp.headers.get('Location', '')
 
@@ -212,8 +212,8 @@ def test_invited_user_must_change_password_before_app_use(client, app):
         '/auth/change-password',
         data={
             'current_password': temp_password,
-            'new_password': 'brandNewPass9',
-            'new_password2': 'brandNewPass9',
+            'new_password': 'brandNewPass9!',
+            'new_password2': 'brandNewPass9!',
         },
         follow_redirects=False,
     )
@@ -221,9 +221,9 @@ def test_invited_user_must_change_password_before_app_use(client, app):
     assert '/auth/change-password' not in change.headers.get('Location', '')
 
     with app.app_context():
-        invited = User.query.filter_by(phone='0955555555').first()
+        invited = User.query.filter_by(phone='955555555').first()
         assert invited.must_change_password is False
-        assert invited.check_password('brandNewPass9')
+        assert invited.check_password('brandNewPass9!')
         assert not invited.check_password(temp_password)
 
     # Now the app is usable

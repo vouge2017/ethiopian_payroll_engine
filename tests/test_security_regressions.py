@@ -49,7 +49,7 @@ def company_user(app):
         company = Company(name='RegressCo')
         db.session.add(company)
         db.session.commit()
-        user = User(phone='0911999999', company_id=company.id, role='owner')
+        user = User(phone='911999999', company_id=company.id, role='owner')
         user.set_password('Secure123!')
         db.session.add(user)
         db.session.commit()
@@ -57,7 +57,7 @@ def company_user(app):
 
 
 def _login(client):
-    client.post('/auth/login', data={'login_id': '0911999999', 'password': 'Secure123!'}, follow_redirects=True)
+    client.post('/auth/login', data={'login_id': '911999999', 'password': 'Secure123!'}, follow_redirects=True)
 
 
 # -----------------------------------------------------------------------
@@ -70,7 +70,7 @@ class TestOpenRedirect:
         client.get('/auth/logout', follow_redirects=True)
         resp = client.post(
             '/auth/login?next=https://evil.com/phish',
-            data={'login_id': '0911999999', 'password': 'Secure123!'},
+            data={'login_id': '911999999', 'password': 'Secure123!'},
             follow_redirects=False,
         )
         assert resp.status_code == 302
@@ -80,7 +80,7 @@ class TestOpenRedirect:
         client.get('/auth/logout', follow_redirects=True)
         resp = client.post(
             '/auth/login?next=//evil.com',
-            data={'login_id': '0911999999', 'password': 'Secure123!'},
+            data={'login_id': '911999999', 'password': 'Secure123!'},
             follow_redirects=False,
         )
         assert resp.status_code == 302
@@ -90,7 +90,7 @@ class TestOpenRedirect:
         client.get('/auth/logout', follow_redirects=True)
         resp = client.post(
             '/auth/login?next=/employees',
-            data={'login_id': '0911999999', 'password': 'Secure123!'},
+            data={'login_id': '911999999', 'password': 'Secure123!'},
             follow_redirects=False,
         )
         assert resp.status_code == 302
@@ -112,7 +112,7 @@ class TestTempCredentialLeakage:
         resp = client.post(
             '/settings/team/invite',
             data={
-                'phone': '0966666666',
+                'phone': '966666666',
                 'name': 'Regression Tester',
                 'role': 'accountant',
             },
@@ -127,7 +127,7 @@ class TestTempCredentialLeakage:
         resp = client.post(
             '/settings/team/invite',
             data={
-                'phone': '0977777777',
+                'phone': '977777777',
                 'name': 'Random Check',
                 'role': 'accountant',
             },
@@ -145,7 +145,7 @@ class TestTempCredentialLeakage:
         resp = client.post(
             '/settings/team/invite',
             data={
-                'phone': '0988888888',
+                'phone': '988888888',
                 'name': 'Not Phone Derived',
                 'role': 'accountant',
             },
@@ -165,7 +165,7 @@ class TestTempCredentialLeakage:
         resp = client.post(
             '/settings/team/invite',
             data={
-                'phone': '0999999999',
+                'phone': '999999999',
                 'name': 'Force Change',
                 'role': 'accountant',
             },
@@ -181,7 +181,7 @@ class TestTempCredentialLeakage:
         resp2 = client.post(
             '/auth/login',
             data={
-                'login_id': '0999999999',
+                'login_id': '999999999',
                 'password': temp_pw,
             },
             follow_redirects=False,
@@ -227,7 +227,7 @@ class TestFileUploadRestrictions:
             company = Company(name='SecTestCo1')
             db.session.add(company)
             db.session.commit()
-            user = User(phone='0911888811', company_id=company.id, role='owner')
+            user = User(phone='911888811', company_id=company.id, role='owner')
             user.set_password('Test1234!')
             db.session.add(user)
             db.session.commit()
@@ -237,7 +237,7 @@ class TestFileUploadRestrictions:
             db.session.add(emp)
             db.session.commit()
             emp_id = emp.id
-        client.post('/auth/login', data={'login_id': '0911888811', 'password': 'Test1234!'}, follow_redirects=True)
+        client.post('/auth/login', data={'login_id': '911888811', 'password': 'Test1234!'}, follow_redirects=True)
         resp = client.post(
             f'/employees/{emp_id}/deductions/add',
             data={
@@ -260,7 +260,7 @@ class TestFileUploadRestrictions:
             company = Company(name='SecTestCo2')
             db.session.add(company)
             db.session.commit()
-            user = User(phone='0911888822', company_id=company.id, role='owner')
+            user = User(phone='911888822', company_id=company.id, role='owner')
             user.set_password('Test1234!')
             db.session.add(user)
             db.session.commit()
@@ -270,7 +270,7 @@ class TestFileUploadRestrictions:
             db.session.add(emp)
             db.session.commit()
             emp_id = emp.id
-        client.post('/auth/login', data={'login_id': '0911888822', 'password': 'Test1234!'}, follow_redirects=True)
+        client.post('/auth/login', data={'login_id': '911888822', 'password': 'Test1234!'}, follow_redirects=True)
         resp = client.post(
             f'/employees/{emp_id}/deductions/add',
             data={

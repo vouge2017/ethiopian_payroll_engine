@@ -248,7 +248,7 @@ def register():
         phone = request.form.get('phone', '').strip()
         email = request.form.get('email', '').strip().lower() or None
         password = request.form.get('password', '')
-        password2 = request.form.get('password2', '')
+        password2 = request.form.get('password2', '') or request.form.get('confirm_password', '')
         company_name = request.form.get('company_name', '').strip() or None
 
         # Validate required fields
@@ -599,7 +599,7 @@ def reset_password_new():
 
     if request.method == 'POST':
         password = request.form.get('password', '')
-        password2 = request.form.get('password2', '')
+        password2 = request.form.get('password2', '') or request.form.get('confirm_password', '')
 
         if not password:
             flash('Please enter a new password.', 'danger')

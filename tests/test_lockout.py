@@ -32,7 +32,7 @@ def app():
         company = Company(name='LockoutTestCo')
         db.session.add(company)
         db.session.flush()
-        user = User(phone='0910000000', role='owner', company_id=company.id)
+        user = User(phone='910000000', role='owner', company_id=company.id)
         user.set_password('OwnerPass1!')
         db.session.add(user)
         db.session.commit()
@@ -51,15 +51,15 @@ class TestLoginAttemptModel:
     def test_record_failure(self, app):
         """Recording a failure creates a LoginAttempt row."""
         with app.app_context():
-            is_locked, _remaining = LoginAttempt.record_failure('0910000000')
+            is_locked, _remaining = LoginAttempt.record_failure('910000000')
             assert is_locked is False
-            assert LoginAttempt.query.filter_by(identifier='0910000000').count() == 1
+            assert LoginAttempt.query.filter_by(identifier='910000000').count() == 1
 
     def test_lockout_after_max_attempts(self, app):
         """Account locks after MAX_ATTEMPTS failures."""
         with app.app_context():
             for _i in range(LoginAttempt.MAX_ATTEMPTS):
-                is_locked, remaining = LoginAttempt.record_failure('0910000000')
+                is_locked, remaining = LoginAttempt.record_failure('910000000')
 
             assert is_locked is True
             assert remaining > 0
@@ -68,9 +68,9 @@ class TestLoginAttemptModel:
         """Remaining lockout time is positive and reasonable."""
         with app.app_context():
             for _i in range(LoginAttempt.MAX_ATTEMPTS):
-                LoginAttempt.record_failure('0910000000')
+                LoginAttempt.record_failure('910000000')
 
-            is_locked, remaining = LoginAttempt.is_locked_out('0910000000')
+            is_locked, remaining = LoginAttempt.is_locked_out('910000000')
             assert is_locked is True
             # Should be close to 30 minutes (1800 seconds)
             assert 1700 <= remaining <= 1800
@@ -79,21 +79,21 @@ class TestLoginAttemptModel:
         """Successful login clears recent failures."""
         with app.app_context():
             for _i in range(LoginAttempt.MAX_ATTEMPTS - 1):
-                LoginAttempt.record_failure('0910000000')
+                LoginAttempt.record_failure('910000000')
 
-            LoginAttempt.record_success('0910000000')
+            LoginAttempt.record_success('910000000')
 
-            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            is_locked, _ = LoginAttempt.is_locked_out('910000000')
             assert is_locked is False
 
     def test_different_identifiers_independent(self, app):
         """Lockout for one identifier doesn't affect another."""
         with app.app_context():
             for _i in range(LoginAttempt.MAX_ATTEMPTS):
-                LoginAttempt.record_failure('0910000000')
+                LoginAttempt.record_failure('910000000')
 
-            is_locked_1, _ = LoginAttempt.is_locked_out('0910000000')
-            is_locked_2, _ = LoginAttempt.is_locked_out('0910000001')
+            is_locked_1, _ = LoginAttempt.is_locked_out('910000000')
+            is_locked_2, _ = LoginAttempt.is_locked_out('910000001')
             assert is_locked_1 is True
             assert is_locked_2 is False
 
@@ -103,18 +103,18 @@ class TestLoginAttemptModel:
             # Create failures outside the window
             old_time = datetime.now(UTC) - timedelta(minutes=LoginAttempt.LOCKOUT_WINDOW_MINUTES + 1)
             for _i in range(LoginAttempt.MAX_ATTEMPTS):
-                attempt = LoginAttempt(identifier='0910000000', success=False, created_at=old_time)
+                attempt = LoginAttempt(identifier='910000000', success=False, created_at=old_time)
                 db.session.add(attempt)
             db.session.commit()
 
-            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            is_locked, _ = LoginAttempt.is_locked_out('910000000')
             assert is_locked is False
 
     def test_cleanup_old(self, app):
         """cleanup_old deletes attempts older than N days."""
         with app.app_context():
             old_time = datetime.now(UTC) - timedelta(days=8)
-            attempt = LoginAttempt(identifier='0910000000', success=False, created_at=old_time)
+            attempt = LoginAttempt(identifier='910000000', success=False, created_at=old_time)
             db.session.add(attempt)
             db.session.commit()
 
@@ -125,7 +125,7 @@ class TestLoginAttemptModel:
         """Different phone formats for the same number share lockout counter."""
         with app.app_context():
             # These are all the same phone number in different formats
-            formats = ['0910000000', '+251910000000', '910000000']
+            formats = ['910000000', '+251910000000', '910000000']
             for fmt in formats:
                 from payroll_engine.models import validate_ethiopian_phone
 
@@ -134,19 +134,19 @@ class TestLoginAttemptModel:
                     LoginAttempt.record_failure(normalized)
 
             # All should resolve to the same normalized phone
-            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            is_locked, _ = LoginAttempt.is_locked_out('910000000')
             assert is_locked is False  # 3 < 5
 
             # Two more to hit the limit
-            LoginAttempt.record_failure('0910000000')
-            LoginAttempt.record_failure('0910000000')
-            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            LoginAttempt.record_failure('910000000')
+            LoginAttempt.record_failure('910000000')
+            is_locked, _ = LoginAttempt.is_locked_out('910000000')
             assert is_locked is True  # 5 >= 5
 
     def test_is_locked_out_not_locked(self, app):
         """is_locked_out returns (False, 0) when not locked."""
         with app.app_context():
-            is_locked, remaining = LoginAttempt.is_locked_out('0910000000')
+            is_locked, remaining = LoginAttempt.is_locked_out('910000000')
             assert is_locked is False
             assert remaining == 0
 
@@ -159,7 +159,7 @@ class TestLoginLockoutIntegration:
         resp = client.post(
             '/auth/login',
             data={
-                'login_id': '0910000000',
+                'login_id': '910000000',
                 'password': 'OwnerPass1!',
             },
             follow_redirects=True,
@@ -172,7 +172,7 @@ class TestLoginLockoutIntegration:
         resp = client.post(
             '/auth/login',
             data={
-                'login_id': '0910000000',
+                'login_id': '910000000',
                 'password': 'wrongpassword',
             },
             follow_redirects=True,
@@ -185,7 +185,7 @@ class TestLoginLockoutIntegration:
             client.post(
                 '/auth/login',
                 data={
-                    'login_id': '0910000000',
+                    'login_id': '910000000',
                     'password': 'wrongpassword',
                 },
             )
@@ -193,7 +193,7 @@ class TestLoginLockoutIntegration:
         resp = client.post(
             '/auth/login',
             data={
-                'login_id': '0910000000',
+                'login_id': '910000000',
                 'password': 'wrongpassword',
             },
             follow_redirects=True,
@@ -206,7 +206,7 @@ class TestLoginLockoutIntegration:
             client.post(
                 '/auth/login',
                 data={
-                    'login_id': '0910000000',
+                    'login_id': '910000000',
                     'password': 'wrongpassword',
                 },
             )
@@ -214,7 +214,7 @@ class TestLoginLockoutIntegration:
         resp = client.post(
             '/auth/login',
             data={
-                'login_id': '0910000000',
+                'login_id': '910000000',
                 'password': 'OwnerPass1!',
             },
             follow_redirects=True,
@@ -229,7 +229,7 @@ class TestLoginLockoutIntegration:
             client.post(
                 '/auth/login',
                 data={
-                    'login_id': '0910000000',
+                    'login_id': '910000000',
                     'password': 'wrongpassword',
                 },
             )
@@ -238,7 +238,7 @@ class TestLoginLockoutIntegration:
         resp = client.post(
             '/auth/login',
             data={
-                'login_id': '0910000000',
+                'login_id': '910000000',
                 'password': 'OwnerPass1!',
             },
             follow_redirects=True,
@@ -247,14 +247,14 @@ class TestLoginLockoutIntegration:
 
         # Fail counter should be reset — can fail again without immediate lockout
         with app.app_context():
-            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            is_locked, _ = LoginAttempt.is_locked_out('910000000')
             assert is_locked is False
 
     def test_unknown_identifier_no_500(self, client):
         """Failed login with UNKNOWN account must flash, never 500 (bugfix)."""
         resp = client.post(
             '/auth/login',
-            data={'login_id': '0999999999', 'password': 'Whatever1!'},
+            data={'login_id': '999999999', 'password': 'Whatever1!'},
             follow_redirects=True,
         )
         assert resp.status_code == 200

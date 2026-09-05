@@ -107,7 +107,7 @@ def create_demo_data():
             AuditLog.query.filter_by(company_id=old.id).delete()
             Employee.query.filter_by(company_id=old.id).delete()
             User.query.filter_by(company_id=old.id).delete()
-        db.session.delete(old)
+            db.session.delete(old)
     db.session.commit()
 
     # 1. Check if demo company already exists

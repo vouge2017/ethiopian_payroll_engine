@@ -558,6 +558,10 @@ def create_app():
 
     app.register_blueprint(cron_bp)
 
+    from .admin_bp import admin_bp, support_bp
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(support_bp)
+
     # Billing enforcement gate: derived state -> access control on every request.
     from .billing import enforce_billing_gate
 

@@ -1,4 +1,5 @@
 import hashlib
+import re
 from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
@@ -351,9 +352,13 @@ def register():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('Failed to create user: %s', e)
+            # Log the user object state for debugging
             current_app.logger.error(
-                'Register failed: phone=%s email=%s',
-                normalized_phone, email,
+                'Register failed: phone=%s email=%s role=%s company_id=%s must_complete_profile=%s '
+                'pw_set=%s created_at=%s first_name=%s',
+                normalized_phone, email, user.role, user.company_id,
+                user.must_complete_profile, bool(user.password_hash),
+                user.created_at, user.first_name,
             )
             err_msg = str(e).lower()
             if 'unique' in err_msg or 'duplicate' in err_msg:
@@ -364,7 +369,11 @@ def register():
                 else:
                     flash('This account already exists. Try logging in instead.', 'danger')
             elif 'null' in err_msg or 'not-null' in err_msg:
-                flash('Account creation failed. Please contact support. (ref: notnull)', 'danger')
+                # Try to extract the column name from the error
+                column_match = re.search(r'column "([^"]+)"', str(e))
+                column_name = column_match.group(1) if column_match else 'unknown'
+                current_app.logger.error('NOT NULL violation on column: %s', column_name)
+                flash(f'Account creation failed. Please contact support. (ref: notnull-{column_name})', 'danger')
             else:
                 err_type = type(e).__name__
                 flash(f'Account creation failed ({err_type}). Please try again or contact support.', 'danger')

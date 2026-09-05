@@ -48,4 +48,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-5000}/healthz')" || exit 1
 
-CMD ["sh", "-c", "flask db upgrade 2>/dev/null || flask db stamp head; exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 --worker-tmp-dir /tmp/gunicorn-workers --tmp-dir /tmp/gunicorn wsgi:app"]
+CMD ["sh", "-c", "echo '[startup] Running database migrations...' && flask db upgrade 2>&1 | tail -20; status=${PIPESTATUS[0]}; if [ $status -ne 0 ]; then echo '[startup] FATAL: migrations failed with exit code $status'; exit $status; fi; echo '[startup] Migrations OK, starting gunicorn...'; exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 --worker-tmp-dir /tmp/gunicorn-workers --tmp-dir /tmp/gunicorn wsgi:app"]

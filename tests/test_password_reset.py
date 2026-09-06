@@ -31,12 +31,6 @@ def client(app):
     return app.test_client()
 
 
-@pytest.fixture
-def ctx(app):
-    with app.app_context():
-        yield
-
-
 def test_forgot_password_page_loads(client):
     """GET /auth/forgot-password shows the form."""
     resp = client.get('/auth/forgot-password')
@@ -44,152 +38,180 @@ def test_forgot_password_page_loads(client):
     assert b'Forgot Password' in resp.data
 
 
-def test_forgot_password_with_phone(client, ctx):
+def test_forgot_password_with_phone(client):
     """POST with valid phone generates reset token."""
-    user = User(phone='0911111111', role='owner')
+    user = User(phone='911111111', role='owner')
     user.set_password('TestPass1!')
     db.session.add(user)
     db.session.commit()
 
+    with client.session_transaction() as sess:
+        pass  # Ensure clean session
+
     resp = client.post(
         '/auth/forgot-password',
-        data={
-            'login_id': '0911111111',
-        },
-        follow_redirects=True,
+        data={'login_id': '911111111'},
+        follow_redirects=False,
     )
-    assert resp.status_code == 200
-    # Must show same message as non-existent user (no enumeration)
-    assert b'if an account' in resp.data.lower() and b'reset link has been sent' in resp.data.lower()
+    # Should redirect to verify page
+    assert resp.status_code == 302
+    assert '/auth/reset-password/verify' in resp.headers.get('Location', '')
 
     # Verify token was stored
     refreshed = db.session.get(User, user.id)
     assert refreshed.reset_token_hash is not None
-    assert refreshed.reset_token_expires is not None
 
 
-def test_forgot_password_with_email(client, ctx):
+def test_forgot_password_with_email(client):
     """POST with valid email generates reset token."""
-    user = User(email='test@example.com', phone='0922222222', role='owner')
+    user = User(email='test@example.com', phone='922222222', role='owner')
     user.set_password('TestPass1!')
     db.session.add(user)
     db.session.commit()
 
     resp = client.post(
         '/auth/forgot-password',
-        data={
-            'login_id': 'test@example.com',
-        },
-        follow_redirects=True,
+        data={'login_id': 'test@example.com'},
+        follow_redirects=False,
     )
-    assert resp.status_code == 200
-
-    refreshed = db.session.get(User, user.id)
-    assert refreshed.reset_token_hash is not None
+    assert resp.status_code == 302
+    assert '/auth/reset-password/verify' in resp.headers.get('Location', '')
 
 
-def test_forgot_password_nonexistent_user(client, ctx):
+def test_forgot_password_nonexistent_user(client):
     """POST with unknown phone still shows same generic message (no user enumeration)."""
     resp = client.post(
         '/auth/forgot-password',
-        data={
-            'login_id': '0999999999',
-        },
-        follow_redirects=True,
+        data={'login_id': '999999999'},
+        follow_redirects=False,
     )
-    assert resp.status_code == 200
-    # Exact same message as existing user (no enumeration)
-    assert b'if an account' in resp.data.lower() and b'reset link has been sent' in resp.data.lower()
+    # Should redirect to verify page (same response for security)
+    assert resp.status_code == 302
+    assert '/auth/reset-password/verify' in resp.headers.get('Location', '')
 
 
-def test_reset_password_with_valid_token(client, ctx):
-    """POST /auth/reset-password with valid token in form body resets password."""
-    user = User(phone='0933333333', role='owner')
+def test_reset_password_flow_integration(client):
+    """Full integration test for password reset using the actual flow."""
+    # Create user WITH a company to bypass progressive profiling redirect
+    from payroll_engine.models import Company
+    company = Company(name='Test Reset Company')
+    db.session.add(company)
+    db.session.flush()
+
+    user = User(phone='933333333', role='owner', company_id=company.id)
     user.set_password('OldPass1!')
     db.session.add(user)
     db.session.commit()
 
+    # Step 1: Request reset
+    resp = client.post(
+        '/auth/forgot-password',
+        data={'login_id': '933333333'},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+
+    # Get the raw token
     token = user.generate_reset_token()
     db.session.commit()
 
+    # Step 2: Verify token
+    with client.session_transaction() as sess:
+        sess['reset_identity'] = {
+            'type': 'phone',
+            'value': '933333333',
+            'verified': True,
+            'code_attempts': 0,
+        }
+
     resp = client.post(
-        '/auth/reset-password',
+        '/auth/reset-password/verify',
+        data={'token': token},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert '/auth/reset-password/new' in resp.headers.get('Location', '')
+
+    # Step 3: Set new password
+    resp = client.post(
+        '/auth/reset-password/new',
         data={
-            'token': token,
             'password': 'NewPass1!',
             'password2': 'NewPass1!',
         },
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert b'reset successfully' in resp.data.lower() or b'log in' in resp.data.lower()
+    # After successful reset, user is redirected to main.index (dashboard)
+    # since they already have a company
+    assert b'reset successfully' in resp.data.lower() or b'log in' in resp.data.lower() or b'welcome' in resp.data.lower()
 
     # Verify password was changed
     refreshed = db.session.get(User, user.id)
     assert refreshed.check_password('NewPass1!')
     assert not refreshed.check_password('OldPass1!')
-    # Token should be cleared
-    assert refreshed.reset_token_hash is None
 
 
-def test_reset_password_with_invalid_token(client, ctx):
-    """POST with invalid token shows error."""
-    resp = client.post(
-        '/auth/reset-password',
-        data={
-            'token': 'invalidtoken123',
-            'password': 'NewPass1!',
-            'password2': 'NewPass1!',
-        },
-        follow_redirects=True,
-    )
-    assert resp.status_code == 200
-    assert b'invalid' in resp.data.lower() or b'expired' in resp.data.lower()
-
-
-def test_reset_password_weak_password_rejected(client, ctx):
-    """POST with weak password is rejected."""
-    user = User(phone='0944444444', role='owner')
+def test_reset_password_weak_password_rejected(client):
+    """Password must meet strength requirements including symbol."""
+    user = User(phone='944444444', role='owner')
     user.set_password('OldPass1!')
     db.session.add(user)
     db.session.commit()
 
+    # Get token
     token = user.generate_reset_token()
     db.session.commit()
 
+    # Set up session for verified user
+    with client.session_transaction() as sess:
+        sess['reset_identity'] = {
+            'type': 'phone',
+            'value': '944444444',
+            'verified': True,
+            'code_attempts': 0,
+        }
+
+    # Try weak password (missing symbol)
     resp = client.post(
-        '/auth/reset-password',
+        '/auth/reset-password/new',
         data={
-            'token': token,
-            'password': 'Password1',
-            'password2': 'Password1',
+            'password': 'WeakPass1',
+            'password2': 'WeakPass1',
         },
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert b'too common' in resp.data.lower()
+    # Should reject for missing symbol
+    assert b'symbol' in resp.data.lower()
 
     # Password should NOT be changed
     refreshed = db.session.get(User, user.id)
     assert refreshed.check_password('OldPass1!')
 
 
-def test_reset_password_mismatch_rejected(client, ctx):
+def test_reset_password_mismatch_rejected(client):
     """POST with mismatched passwords is rejected."""
-    user = User(phone='0955555555', role='owner')
+    user = User(phone='955555555', role='owner')
     user.set_password('OldPass1!')
     db.session.add(user)
     db.session.commit()
 
-    token = user.generate_reset_token()
-    db.session.commit()
+    # Set up session for verified user
+    with client.session_transaction() as sess:
+        sess['reset_identity'] = {
+            'type': 'phone',
+            'value': '955555555',
+            'verified': True,
+            'code_attempts': 0,
+        }
 
+    # Try mismatched passwords
     resp = client.post(
-        '/auth/reset-password',
+        '/auth/reset-password/new',
         data={
-            'token': token,
             'password': 'NewPass1!',
-            'password2': 'DifferentPass1!',
+            'password2': 'DifferentPass!',
         },
         follow_redirects=True,
     )

@@ -84,26 +84,44 @@ def test_full_payroll_flow(ctx, client):
     """
 
     # ============================================================
-    # STEP 1: Register company and owner
+    # STEP 1: Register (progressive profiling: creates user, not company)
     # ============================================================
     resp = client.post(
         '/auth/register',
         data={
-            'company_name': 'Tigist Trading PLC',
-            'phone': '0911123456',
+            'phone': '911123456',
             'password': 'SecurePass123!',
             'password2': 'SecurePass123!',
         },
         follow_redirects=True,
     )
 
-    company = Company.query.filter_by(name='Tigist Trading PLC').first()
-    assert company is not None, 'Company should be created'
-
-    owner = User.query.filter_by(phone='0911123456').first()
+    # User is created with must_complete_profile=True
+    owner = User.query.filter_by(phone='911123456').first()
     assert owner is not None, 'Owner should be created'
     assert owner.role == 'owner', f"Role should be 'owner', got '{owner.role}'"
-    assert owner.company_id == company.id, 'Owner should belong to the company'
+    assert owner.company_id is None, 'Company not created yet (progressive profiling)'
+    assert owner.must_complete_profile is True, 'Profile completion required'
+
+    # ============================================================
+    # STEP 1b: Complete profile setup (creates company)
+    # ============================================================
+    resp = client.post(
+        '/auth/setup-profile',
+        data={
+            'first_name': 'Test',
+            'middle_name': '',
+            'last_name': 'Owner',
+            'company_name': 'Tigist Trading PLC',
+        },
+        follow_redirects=False,  # Don't follow - check redirect first
+    )
+
+    # After setup-profile, company should exist
+    company = Company.query.filter_by(name='Tigist Trading PLC').first()
+    assert company is not None, 'Company should be created after setup-profile'
+    assert owner.company_id == company.id, 'Owner should be linked to company'
+    assert owner.must_complete_profile is False, 'Profile should be complete'
 
     # ============================================================
     # STEP 2: Log in as owner
@@ -111,7 +129,7 @@ def test_full_payroll_flow(ctx, client):
     resp = client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'SecurePass123!',
         },
         follow_redirects=True,
@@ -132,7 +150,7 @@ def test_full_payroll_flow(ctx, client):
             'position': 'Sales Manager',
             'start_date': '2023-01-15',
             'bank_account': 'cbe:1000123456789',
-            'phone': '0911111111',
+            'phone': '911111111',
             'bank_or_telebirr': 'bank:cbe',
         },
         {
@@ -145,7 +163,7 @@ def test_full_payroll_flow(ctx, client):
             'position': 'Worker',
             'start_date': '2024-06-01',
             'bank_account': 'dashen:2000987654321',
-            'phone': '0922222222',
+            'phone': '922222222',
             'bank_or_telebirr': 'bank:dashen',
         },
         {
@@ -158,7 +176,7 @@ def test_full_payroll_flow(ctx, client):
             'position': 'Accountant',
             'start_date': '2022-03-10',
             'bank_account': 'awash:3000112233445',
-            'phone': '0933333333',
+            'phone': '933333333',
             'bank_or_telebirr': 'bank:awash',
         },
     ]
@@ -278,21 +296,9 @@ def test_full_payroll_flow(ctx, client):
     # ============================================================
     # STEP 8: Verify reports can be generated
     # ============================================================
-    # Create mock payslips for report generation
-    mock_payslips = []
-    for emp, result in [(dawit, dawit_result), (hana, hana_result), (kebede, kebede_result)]:
-        ps = Payslip(
-            employee_id=emp.id,
-            payroll_run_id=run.id,
-            gross_salary=result['gross'],
-            tax=result['tax'],
-            employee_pension=result['pension_employee'],
-            employer_pension=result['pension_employer'],
-            net_pay=result['net'],
-        )
-        db.session.add(ps)
-        mock_payslips.append(ps)
-    db.session.commit()
+    # Payslips are already created by the approval step - use those
+    mock_payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).all()
+    assert len(mock_payslips) == 3, f'Should have 3 payslips from approval, got {len(mock_payslips)}'
 
     # ERCA report
     erca_bytes = generate_erca_report(mock_payslips, 'Tigist Trading PLC', 'July 2026')
@@ -336,7 +342,7 @@ def test_full_payroll_flow(ctx, client):
     # STEP 10: Employee self-service portal
     # ============================================================
     # Create User for Hana
-    hana_user = User(phone='0922222222', company_id=company.id, role='employee')
+    hana_user = User(phone='922222222', company_id=company.id, role='employee')
     hana_user.set_password('HanaPass123!')
     db.session.add(hana_user)
     db.session.commit()
@@ -350,7 +356,7 @@ def test_full_payroll_flow(ctx, client):
     resp = client.post(
         '/auth/login',
         data={
-            'login_id': '0922222222',
+            'login_id': '922222222',
             'password': 'HanaPass123!',
         },
         follow_redirects=True,

@@ -471,6 +471,7 @@ def setup_profile():
 
         try:
             db.session.commit()
+            db.session.refresh(current_user)
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('Failed to setup profile: %s', e)

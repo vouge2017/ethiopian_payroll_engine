@@ -39,10 +39,7 @@ export default defineConfig({
     },
   ],
 
-  webServer: process.env.CI ? undefined : {
-    command: 'npm run start',
-    url: 'http://localhost:5000',
-    reuseExistingServer: true,
-    timeout: 120 * 1000,
-  },
+  // No local webServer - tests run against BASE_URL
+  // For local testing, run: flask run --debug
+  webServer: undefined,
 });

@@ -475,6 +475,14 @@ def setup_profile():
         except Exception as e:
             db.session.rollback()
             current_app.logger.exception('Failed to setup profile: %s', e)
+            # Capture in Sentry with onboarding context
+            try:
+                import sentry_sdk
+                sentry_sdk.capture_exception(e)
+                sentry_sdk.set_tag('onboarding_step', 'setup_profile')
+                sentry_sdk.set_tag('company_name_attempt', company_name)
+            except Exception:
+                pass
             flash('Profile setup failed. Please try again.', 'danger')
             return render_template(
                 'auth/setup_profile.html',

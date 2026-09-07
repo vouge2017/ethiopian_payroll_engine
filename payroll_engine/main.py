@@ -61,7 +61,21 @@ def setup_company():
             current_user.company_id = company.id
             current_user.role = 'owner'
             current_user.must_complete_profile = False
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.exception('Failed to setup company: %s', e)
+                # Capture in Sentry with onboarding context
+                try:
+                    import sentry_sdk
+                    sentry_sdk.capture_exception(e)
+                    sentry_sdk.set_tag('onboarding_step', 'setup_company')
+                    sentry_sdk.set_tag('company_name_attempt', company_name)
+                except Exception:
+                    pass
+                flash('Company setup failed. Please try again.', 'danger')
+                return redirect(url_for('main.setup_company'))
 
             flash(f'Company "{company_name}" created! Welcome to EthioPayroll.', 'success')
             return redirect(url_for('main.index'))

@@ -324,6 +324,19 @@ def create_app():
         # Skip for unauthenticated, static, and auth routes
         if not current_user.is_authenticated:
             return
+
+        # Set Sentry user context for error tracking
+        try:
+            import sentry_sdk
+            sentry_sdk.set_user({
+                'id': str(current_user.id),
+                'phone': current_user.phone or None,
+                'email': current_user.email or None,
+                'company_id': str(current_user.company_id) if current_user.company_id else None,
+                'role': current_user.role,
+            })
+        except Exception:
+            pass  # Sentry is optional, don't break if not configured
         endpoint = request.endpoint or ''
         if endpoint.startswith('static') or endpoint.startswith('auth.'):
             return
@@ -832,9 +845,18 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_error(e):
-        from flask import render_template
+        from flask import render_template, request
 
         from payroll_engine import db
+
+        # Capture additional context in Sentry
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(e)
+            sentry_sdk.set_tag('request_path', request.path)
+            sentry_sdk.set_tag('request_method', request.method)
+        except Exception:
+            pass  # Sentry is optional
 
         db.session.rollback()
         return render_template('errors/500.html'), 500

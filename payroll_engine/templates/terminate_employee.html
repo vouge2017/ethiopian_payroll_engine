@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Terminate Employee - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="p-4 p-md-5">
+<div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card">
+            <div class="card border-0 shadow-sm">
                 <div class="card-header bg-danger text-white">
                     <h5 class="mb-0"><i class="bi bi-person-dash me-2"></i>{{ _('terminate_employee') }}</h5>
                 </div>
@@ -36,7 +36,7 @@
                                     <td>{{ reason|replace('_', ' ')|title }}</td>
                                     <td>
                                         {% if previews[reason].eligible %}
-                                        <span class="badge badge-success">{{ _('yes') }}</span>
+                                        <span class="badge bg-success">{{ _('yes') }}</span>
                                         {% else %}
                                         <span class="badge bg-secondary">{{ _('no') }}</span>
                                         {% endif %}
@@ -62,7 +62,7 @@
                     <hr>
 
                     <!-- Termination Form -->
-                    <form method="POST" action="{{ url_for('employees.terminate_employee', emp_id=employee.id) }}"
+                    <form method="POST" action="{{ url_for('main.terminate_employee', emp_id=employee.id) }}"
                           onsubmit="return confirm('Are you sure you want to terminate {{ employee.name }}? This action will deactivate their account.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -85,15 +85,15 @@
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Confirm Password *</label>
-                            <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+                            <input type="password" class="form-control" id="password" name="password" required>
                             <div class="form-text">Re-enter your password to confirm termination.</div>
                         </div>
 
                         <div class="d-grid gap-2 d-md-flex">
-                            <button type="submit" class="btn btn-danger" data-confirm="Confirm termination? This action cannot be easily undone.">
+                            <button type="submit" class="btn btn-danger">
                                 <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
                             </button>
-                            <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
+                            <a href="{{ url_for('main.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
                         </div>
                     </form>
                 </div>

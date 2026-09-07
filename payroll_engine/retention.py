@@ -3,19 +3,17 @@
 Configurable purge windows for PDF payslips, draft payrolls,
 and uploaded files. Each purge is audit-logged.
 """
-
 import logging
 import os
-from datetime import UTC, datetime, timedelta
+import shutil
+from datetime import date, timedelta, datetime
 
 logger = logging.getLogger('payroll_engine.retention')
 
 
 # Default retention periods (in days)
 RETENTION_DAYS = {
-    'payslip_pdf': int(
-        os.environ.get('RETENTION_PAYSLIP_PDF_DAYS', '3650')
-    ),  # 10 years — Ethiopian tax record retention requirement
+    'payslip_pdf': int(os.environ.get('RETENTION_PAYSLIP_PDF_DAYS', '365')),
     'payroll_draft': int(os.environ.get('RETENTION_PAYROLL_DRAFT_DAYS', '90')),
     'uploaded_file': int(os.environ.get('RETENTION_UPLOAD_FILE_DAYS', '180')),
 }
@@ -23,18 +21,14 @@ RETENTION_DAYS = {
 
 def purge_expired_payslip_pdfs(app):
     """Delete PDF payslip files older than the retention window."""
-    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=RETENTION_DAYS['payslip_pdf'])
+    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS['payslip_pdf'])
     with app.app_context():
         from payroll_engine import db
-        from payroll_engine.models import AuditLog, Payslip, TenantQuery
-
-        # System-wide retention purge — sentinel id 0 satisfies the
-        # "context set" check (None means unset).
-        with TenantQuery.tenant_context(0):
-            expired = Payslip.query.filter(
-                Payslip.pdf_file_path.isnot(None),
-                Payslip.generated_at < cutoff,
-            ).all()
+        from payroll_engine.models import Payslip, AuditLog
+        expired = Payslip.query.filter(
+            Payslip.pdf_file_path.isnot(None),
+            Payslip.created_at < cutoff,
+        ).all()
         purged = 0
         for p in expired:
             if p.pdf_file_path and os.path.exists(p.pdf_file_path):
@@ -44,12 +38,10 @@ def purge_expired_payslip_pdfs(app):
                 except OSError as e:
                     logger.error('Failed to purge PDF %s: %s', p.pdf_file_path, e)
             p.pdf_file_path = None
-            p.pdf_status = 'not_generated'
         if purged:
             db.session.commit()
             log = AuditLog(
-                company_id=0,
-                user_id=None,
+                company_id=0, user_id=None,
                 action='retention_purge_pdfs',
                 details={'count': purged, 'cutoff': cutoff.isoformat()},
             )
@@ -61,25 +53,20 @@ def purge_expired_payslip_pdfs(app):
 
 def purge_expired_drafts(app):
     """Delete payroll drafts older than the retention window."""
-    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=RETENTION_DAYS['payroll_draft'])
+    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS['payroll_draft'])
     with app.app_context():
         from payroll_engine import db
-        from payroll_engine.models import AuditLog, PayrollDraft, TenantQuery
-
-        # System-wide retention purge — intentionally crosses tenants.
-        # Sentinel id 0 satisfies the "context set" check (None means unset).
-        with TenantQuery.tenant_context(0):
-            expired = PayrollDraft.query.filter(
-                PayrollDraft.created_at < cutoff,
-            ).all()
+        from payroll_engine.models import PayrollDraft, AuditLog
+        expired = PayrollDraft.query.filter(
+            PayrollDraft.created_at < cutoff,
+        ).all()
         count = len(expired)
         if count:
             for d in expired:
                 db.session.delete(d)
             db.session.commit()
             log = AuditLog(
-                company_id=0,
-                user_id=None,
+                company_id=0, user_id=None,
                 action='retention_purge_drafts',
                 details={'count': count, 'cutoff': cutoff.isoformat()},
             )
@@ -93,7 +80,7 @@ def purge_expired_uploads(app, upload_folder=None):
     """Delete uploaded files older than the retention window."""
     if upload_folder is None:
         upload_folder = app.config.get('UPLOAD_FOLDER', '/tmp/uploads')
-    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=RETENTION_DAYS['uploaded_file'])
+    cutoff = datetime.utcnow() - timedelta(days=RETENTION_DAYS['uploaded_file'])
     if not os.path.exists(upload_folder):
         return 0
     purged = 0
@@ -110,55 +97,3 @@ def purge_expired_uploads(app, upload_folder=None):
     if purged:
         logger.info('Purged %d expired uploaded files older than %s', purged, cutoff.date())
     return purged
-
-
-def purge_old_login_attempts(app, days=7):
-    """Delete login attempt records older than N days.
-
-    Called periodically to prevent unbounded table growth.
-    Default: 7 days (lockout window is 15 minutes, so 7 days is generous).
-    """
-    with app.app_context():
-        from payroll_engine.models import LoginAttempt
-
-        deleted = LoginAttempt.cleanup_old(days=days)
-        if deleted:
-            logger.info('Purged %d login attempt records older than %d days', deleted, days)
-        return deleted
-
-
-def purge_expired_previews(app):
-    """Delete PayrollPreview rows past their expiry (default TTL: 1 hour).
-
-    Previews hold full payroll payloads server-side; expired rows from users
-    who never complete the wizard must not accumulate. Single-use consumption
-    handles the normal path — this is the safety net.
-    """
-    with app.app_context():
-        from datetime import UTC
-
-        from payroll_engine import db
-        from payroll_engine.models import PayrollPreview
-        from payroll_engine.models import TenantQuery
-
-        now = datetime.now(UTC).replace(tzinfo=None)
-        # Cross-tenant purge: each company's previews are deleted in their
-        # own tenant context to satisfy P0-A TenantQuery enforcement.
-        from payroll_engine.models import Company
-
-        companies = Company.query.all()
-        deleted_total = 0
-        for company in companies:
-            TenantQuery.set_tenant_context(company.id)
-            try:
-                deleted = PayrollPreview.query.filter(
-                    PayrollPreview.company_id == company.id,
-                    PayrollPreview.expires_at < now,
-                ).delete()
-                if deleted:
-                    db.session.commit()
-                    logger.info('Purged %d expired previews for company %d', deleted, company.id)
-                deleted_total += deleted
-            finally:
-                TenantQuery.clear_tenant_context()
-        return deleted_total

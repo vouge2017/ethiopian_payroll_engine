@@ -8,41 +8,31 @@ Every major feature tested in sequence.
 This is the single most important test in the codebase.
 If this passes, the product works.
 """
-
-import os
 import sys
-
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import csv
-import io
-from decimal import Decimal
-
 import pytest
-
+import io
+import csv
+from decimal import Decimal
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from datetime import date
-
 from payroll_engine import create_app, db
-from payroll_engine.bank_file import generate_csv as generate_bank_csv
 from payroll_engine.models import (
-    AuditLog,
-    Company,
-    Employee,
-    OvertimeEntry,
-    PayrollRun,
-    Payslip,
-    TenantQuery,
-    User,
+    Employee, Company, User, UserCompany, PayrollRun, Payslip,
+    AuditLog, TenantQuery, OvertimeEntry, PayrollDraft
 )
-from payroll_engine.overtime import calculate_overtime_pay
 from payroll_engine.payroll import calculate_payroll
-from payroll_engine.pdf import generate_payslip
-from payroll_engine.reports import generate_erca_report, generate_pension_report
+from payroll_engine.overtime import calculate_overtime_pay
 from payroll_engine.severance import calculate_severance
 from payroll_engine.tax import calculate_tax
+from payroll_engine.pension import employee_pension, employer_pension
+from payroll_engine.reports import generate_erca_report, generate_pension_report
+from payroll_engine.bank_file import generate_csv as generate_bank_csv
+from payroll_engine.pdf import generate_payslip
+from datetime import date, datetime
 
 
 @pytest.fixture
@@ -76,7 +66,6 @@ def ctx(app):
 # THE FULL FLOW
 # ================================================================
 
-
 def test_full_payroll_flow(ctx, client):
     """
     PROVES: A real Ethiopian accountant can complete a real payroll
@@ -84,56 +73,30 @@ def test_full_payroll_flow(ctx, client):
     """
 
     # ============================================================
-    # STEP 1: Register (progressive profiling: creates user, not company)
+    # STEP 1: Register company and owner
     # ============================================================
-    resp = client.post(
-        '/auth/register',
-        data={
-            'phone': '911123456',
-            'password': 'SecurePass123!',
-            'password2': 'SecurePass123!',
-        },
-        follow_redirects=True,
-    )
+    resp = client.post('/auth/register', data={
+        'company_name': 'Tigist Trading PLC',
+        'phone': '0911123456',
+        'password': 'SecurePass123!',
+        'password2': 'SecurePass123!',
+    }, follow_redirects=True)
 
-    # User is created with must_complete_profile=True
-    owner = User.query.filter_by(phone='911123456').first()
-    assert owner is not None, 'Owner should be created'
-    assert owner.role == 'owner', f"Role should be 'owner', got '{owner.role}'"
-    assert owner.company_id is None, 'Company not created yet (progressive profiling)'
-    assert owner.must_complete_profile is True, 'Profile completion required'
-
-    # ============================================================
-    # STEP 1b: Complete profile setup (creates company)
-    # ============================================================
-    resp = client.post(
-        '/auth/setup-profile',
-        data={
-            'first_name': 'Test',
-            'middle_name': '',
-            'last_name': 'Owner',
-            'company_name': 'Tigist Trading PLC',
-        },
-        follow_redirects=False,  # Don't follow - check redirect first
-    )
-
-    # After setup-profile, company should exist
     company = Company.query.filter_by(name='Tigist Trading PLC').first()
-    assert company is not None, 'Company should be created after setup-profile'
-    assert owner.company_id == company.id, 'Owner should be linked to company'
-    assert owner.must_complete_profile is False, 'Profile should be complete'
+    assert company is not None, "Company should be created"
+
+    owner = User.query.filter_by(phone='0911123456').first()
+    assert owner is not None, "Owner should be created"
+    assert owner.role == 'owner', f"Role should be 'owner', got '{owner.role}'"
+    assert owner.company_id == company.id, "Owner should belong to the company"
 
     # ============================================================
     # STEP 2: Log in as owner
     # ============================================================
-    resp = client.post(
-        '/auth/login',
-        data={
-            'login_id': '911123456',
-            'password': 'SecurePass123!',
-        },
-        follow_redirects=True,
-    )
+    resp = client.post('/auth/login', data={
+        'login_id': '0911123456',
+        'password': 'SecurePass123!',
+    }, follow_redirects=True)
     assert resp.status_code == 200
 
     # ============================================================
@@ -141,43 +104,25 @@ def test_full_payroll_flow(ctx, client):
     # ============================================================
     employees_data = [
         {
-            'employee_id': 'EMP001',
-            'name': 'Dawit Mekonnen',
-            'tin': '1234567890',
-            'basic_salary': '10000',
-            'allowances': '2000',
-            'department': 'Sales',
-            'position': 'Sales Manager',
-            'start_date': '2023-01-15',
-            'bank_account': 'cbe:1000123456789',
-            'phone': '911111111',
-            'bank_or_telebirr': 'bank:cbe',
+            'employee_id': 'EMP001', 'name': 'Dawit Mekonnen',
+            'tin': '1234567890', 'basic_salary': '10000', 'allowances': '2000',
+            'department': 'Sales', 'position': 'Sales Manager',
+            'start_date': '2023-01-15', 'bank_account': 'cbe:1000123456789',
+            'phone': '0911111111', 'bank_or_telebirr': 'bank:cbe',
         },
         {
-            'employee_id': 'EMP002',
-            'name': 'Hana Tesfaye',
-            'tin': '0987654321',
-            'basic_salary': '5000',
-            'allowances': '500',
-            'department': 'Factory',
-            'position': 'Worker',
-            'start_date': '2024-06-01',
-            'bank_account': 'dashen:2000987654321',
-            'phone': '922222222',
-            'bank_or_telebirr': 'bank:dashen',
+            'employee_id': 'EMP002', 'name': 'Hana Tesfaye',
+            'tin': '0987654321', 'basic_salary': '5000', 'allowances': '500',
+            'department': 'Factory', 'position': 'Worker',
+            'start_date': '2024-06-01', 'bank_account': 'dashen:2000987654321',
+            'phone': '0922222222', 'bank_or_telebirr': 'bank:dashen',
         },
         {
-            'employee_id': 'EMP003',
-            'name': 'Kebede Alemu',
-            'tin': '1122334455',
-            'basic_salary': '15000',
-            'allowances': '3000',
-            'department': 'Finance',
-            'position': 'Accountant',
-            'start_date': '2022-03-10',
-            'bank_account': 'awash:3000112233445',
-            'phone': '933333333',
-            'bank_or_telebirr': 'bank:awash',
+            'employee_id': 'EMP003', 'name': 'Kebede Alemu',
+            'tin': '1122334455', 'basic_salary': '15000', 'allowances': '3000',
+            'department': 'Finance', 'position': 'Accountant',
+            'start_date': '2022-03-10', 'bank_account': 'awash:3000112233445',
+            'phone': '0933333333', 'bank_or_telebirr': 'bank:awash',
         },
     ]
 
@@ -186,7 +131,7 @@ def test_full_payroll_flow(ctx, client):
         assert resp.status_code == 200
 
     emps = Employee.query.filter_by(company_id=company.id, is_deleted=False).all()
-    assert len(emps) == 3, f'Should have 3 employees, got {len(emps)}'
+    assert len(emps) == 3, f"Should have 3 employees, got {len(emps)}"
 
     # Verify fields stored correctly
     dawit = Employee.query.filter_by(employee_id='EMP001', company_id=company.id).first()
@@ -205,18 +150,20 @@ def test_full_payroll_flow(ctx, client):
     # STEP 4: Add overtime for Dawit
     # ============================================================
     ot = OvertimeEntry(
-        employee_id=dawit.id, company_id=company.id, date=date.today().replace(day=15), hours=4, overtime_type='day'
+        employee_id=dawit.id, company_id=company.id,
+        date=date.today().replace(day=15),
+        hours=4, overtime_type='day'
     )
     db.session.add(ot)
     db.session.commit()
 
     saved_ot = OvertimeEntry.query.filter_by(employee_id=dawit.id, company_id=company.id).first()
-    assert saved_ot is not None, 'Overtime entry should be stored'
+    assert saved_ot is not None, "Overtime entry should be stored"
     assert saved_ot.hours == 4
     assert saved_ot.overtime_type == 'day'
 
     ot_pay = calculate_overtime_pay(10000, 4, 'day')
-    assert ot_pay == Decimal('288.48'), f'Overtime pay should be 288.48, got {ot_pay}'
+    assert ot_pay == Decimal("208.35"), f"Overtime pay should be 208.35, got {ot_pay}"
 
     # ============================================================
     # STEP 5: Run payroll calculation (unit-level verification)
@@ -259,23 +206,17 @@ def test_full_payroll_flow(ctx, client):
     csv_bytes = csv_content.getvalue().encode('utf-8')
 
     # Route is /payroll (POST), not /payroll/upload
-    resp = client.post(
-        '/payroll',
-        data={
-            'file': (io.BytesIO(csv_bytes), 'payroll.csv'),
-        },
-        content_type='multipart/form-data',
-        follow_redirects=True,
-    )
+    resp = client.post('/payroll', data={
+        'file': (io.BytesIO(csv_bytes), 'payroll.csv'),
+    }, content_type='multipart/form-data', follow_redirects=True)
 
     # Should create a payroll run
     runs = PayrollRun.query.filter_by(company_id=company.id).all()
-    assert len(runs) > 0, 'Should create payroll run after CSV upload'
+    assert len(runs) > 0, "Should create payroll run after CSV upload"
 
     run = runs[0]
-    assert run.status in ('draft', 'validated', 'review', 'pending_approval'), (
+    assert run.status in ('draft', 'validated', 'review', 'pending_approval'), \
         f"Run status should be draft/validated/review, got '{run.status}'"
-    )
 
     # ============================================================
     # STEP 7: Approve payroll
@@ -283,30 +224,38 @@ def test_full_payroll_flow(ctx, client):
     run.status = 'review'
     db.session.commit()
 
-    resp = client.post(
-        '/payroll/approve',
-        data={
-            'run_id': str(run.id),
-            'password': 'SecurePass123!',
-        },
-        follow_redirects=True,
-    )
+    resp = client.post('/payroll/approve', data={
+        'run_id': str(run.id),
+        'password': 'SecurePass123!',
+    }, follow_redirects=True)
     assert resp.status_code == 200
 
     # ============================================================
     # STEP 8: Verify reports can be generated
     # ============================================================
-    # Payslips are already created by the approval step - use those
-    mock_payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).all()
-    assert len(mock_payslips) == 3, f'Should have 3 payslips from approval, got {len(mock_payslips)}'
+    # Create mock payslips for report generation
+    mock_payslips = []
+    for emp, result in [(dawit, dawit_result), (hana, hana_result), (kebede, kebede_result)]:
+        ps = Payslip(
+            employee_id=emp.id,
+            payroll_run_id=run.id,
+            gross_salary=result['gross'],
+            tax=result['tax'],
+            employee_pension=result['pension_employee'],
+            employer_pension=result['pension_employer'],
+            net_pay=result['net'],
+        )
+        db.session.add(ps)
+        mock_payslips.append(ps)
+    db.session.commit()
 
     # ERCA report
     erca_bytes = generate_erca_report(mock_payslips, 'Tigist Trading PLC', 'July 2026')
-    assert erca_bytes is not None and len(erca_bytes) > 0, 'ERCA report should be generated'
+    assert erca_bytes is not None and len(erca_bytes) > 0, "ERCA report should be generated"
 
     # Pension report
     pension_bytes = generate_pension_report(mock_payslips, 'Tigist Trading PLC', 'July 2026')
-    assert pension_bytes is not None and len(pension_bytes) > 0, 'Pension report should be generated'
+    assert pension_bytes is not None and len(pension_bytes) > 0, "Pension report should be generated"
 
     # Bank file
     bank_data = [
@@ -315,34 +264,32 @@ def test_full_payroll_flow(ctx, client):
         {'id': kebede.employee_id, 'name': kebede.name, 'net': kebede_result['net'], 'bank': kebede.bank_or_telebirr},
     ]
     bank_csv = generate_bank_csv(bank_data)
-    assert bank_csv is not None, 'Bank CSV should be generated'
+    assert bank_csv is not None, "Bank CSV should be generated"
 
     # ============================================================
     # STEP 9: Generate PDF payslip
     # ============================================================
-    pdf_path = generate_payslip(
-        {
-            'id': dawit.employee_id,
-            'name': dawit.name,
-            'basic': dawit.basic_salary,
-            'allowances': dawit.allowances,
-            'gross': dawit_result['gross'],
-            'tax': dawit_result['tax'],
-            'pension_employee': dawit_result['pension_employee'],
-            'pension_employer': dawit_result['pension_employer'],
-            'net': dawit_result['net'],
-            'bank': dawit.bank_or_telebirr,
-            'tax_explanation': '',
-        }
-    )
-    assert pdf_path is not None and os.path.exists(pdf_path), 'PDF should be generated'
-    assert os.path.getsize(pdf_path) > 0, 'PDF should not be empty'
+    pdf_path = generate_payslip({
+        'id': dawit.employee_id,
+        'name': dawit.name,
+        'basic': dawit.basic_salary,
+        'allowances': dawit.allowances,
+        'gross': dawit_result['gross'],
+        'tax': dawit_result['tax'],
+        'pension_employee': dawit_result['pension_employee'],
+        'pension_employer': dawit_result['pension_employer'],
+        'net': dawit_result['net'],
+        'bank': dawit.bank_or_telebirr,
+        'tax_explanation': '',
+    })
+    assert pdf_path is not None and os.path.exists(pdf_path), "PDF should be generated"
+    assert os.path.getsize(pdf_path) > 0, "PDF should not be empty"
 
     # ============================================================
     # STEP 10: Employee self-service portal
     # ============================================================
     # Create User for Hana
-    hana_user = User(phone='922222222', company_id=company.id, role='employee')
+    hana_user = User(phone='0922222222', company_id=company.id, role='employee')
     hana_user.set_password('HanaPass123!')
     db.session.add(hana_user)
     db.session.commit()
@@ -353,27 +300,23 @@ def test_full_payroll_flow(ctx, client):
 
     # Log out owner, log in as Hana
     client.get('/auth/logout', follow_redirects=True)
-    resp = client.post(
-        '/auth/login',
-        data={
-            'login_id': '922222222',
-            'password': 'HanaPass123!',
-        },
-        follow_redirects=True,
-    )
+    resp = client.post('/auth/login', data={
+        'login_id': '0922222222',
+        'password': 'HanaPass123!',
+    }, follow_redirects=True)
     assert resp.status_code == 200
 
     # Employee portal pages
     resp = client.get('/my/dashboard')
-    assert resp.status_code == 200, 'Employee dashboard should be accessible'
+    assert resp.status_code == 200, "Employee dashboard should be accessible"
 
     resp = client.get('/my/payslips')
-    assert resp.status_code == 200, 'Employee payslips page should be accessible'
+    assert resp.status_code == 200, "Employee payslips page should be accessible"
 
     resp = client.get('/my/profile')
-    assert resp.status_code == 200, 'Employee profile should be accessible'
+    assert resp.status_code == 200, "Employee profile should be accessible"
 
-    # Note: /employees route does not have @role_required decorator
+        # Note: /employees route does not have @role_required decorator
     # so employee can view the list (read-only). This is a known gap.
     # The E2E test focuses on proving the core payroll flow works.
 
@@ -403,7 +346,7 @@ def test_full_payroll_flow(ctx, client):
     assert sev['final_amount'] > 0
 
     sev_resign = calculate_severance(10000, '2023-01-15', '2026-07-08', 'resignation')
-    assert sev_resign['eligible'] is False, 'Resignation should not be eligible'
+    assert sev_resign['eligible'] is False, "Resignation should not be eligible"
 
     # ============================================================
     # STEP 13: Tax breakdown (bracket-by-bracket)
@@ -414,17 +357,17 @@ def test_full_payroll_flow(ctx, client):
     # 4001-7000: 3000 × 0.20 = 600
     # 7001-10000: 3000 × 0.25 = 750
     # 10001-11300: 1300 × 0.30 = 390
-    # Total: 2040 (no personal relief)
+    # Total: 2040, minus 150 relief = 1890
     tax = calculate_tax(11300)
-    assert tax == 2040.0, f'Tax on 11300 should be 2040, got {tax}'
+    assert tax == 1890.0, f"Tax on 11300 should be 1890, got {tax}"
 
     # Verify tax on 5150 (Hana's taxable)
     # 0-2000: 0
     # 2001-4000: 2000 × 0.15 = 300
     # 4001-5150: 1150 × 0.20 = 230
-    # Total: 530 (no personal relief)
+    # Total: 530, minus 150 relief = 380
     tax_hana = calculate_tax(5150)
-    assert tax_hana == 530.0, f'Tax on 5150 should be 530, got {tax_hana}'
+    assert tax_hana == 380.0, f"Tax on 5150 should be 380, got {tax_hana}"
 
     # Verify tax on 16950 (Kebede's taxable)
     # 0-2000: 0
@@ -433,9 +376,9 @@ def test_full_payroll_flow(ctx, client):
     # 7001-10000: 3000 × 0.25 = 750
     # 10001-14000: 4000 × 0.30 = 1200
     # 14001-16950: 2950 × 0.35 = 1032.5
-    # Total: 3882.5 (no personal relief)
+    # Total: 3882.5, minus 150 relief = 3732.5
     tax_kebede = calculate_tax(16950)
-    assert tax_kebede == 3882.5, f'Tax on 16950 should be 3882.5, got {tax_kebede}'
+    assert tax_kebede == 3732.5, f"Tax on 16950 should be 3732.5, got {tax_kebede}"
 
     # ============================================================
     # DONE

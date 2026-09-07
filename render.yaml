@@ -1,5 +1,5 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
-# Deploys web service + worker + managed Postgres + Redis.
+# Deploys web service + managed Postgres.
 #
 # After deploying, set these in the Render dashboard → Environment:
 #   SECRET_KEY  — generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
@@ -12,8 +12,9 @@
 services:
   - type: web
     name: ethiopian-payroll-web
-    runtime: docker
-    dockerfilePath: ./Dockerfile
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: flask db upgrade && gunicorn --bind 0.0.0.0:$PORT wsgi:app
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -27,64 +28,10 @@ services:
         value: wsgi:app
       - key: DB_ENCRYPTION_KEY
         generateValue: true
-      - key: GOOGLE_CLIENT_ID
-        value: ""
-      - key: GOOGLE_CLIENT_SECRET
-        value: ""
-      - key: REDIS_URL
-        fromService:
-          name: ethiopian-payroll-redis
-          property: connectionString
-      - key: RATELIMIT_STORAGE_URI
-        fromService:
-          name: ethiopian-payroll-redis
-          property: connectionString
     autoDeploy: true
-
-  - type: worker
-    name: ethiopian-payroll-worker
-    runtime: docker
-    dockerfilePath: ./Dockerfile.worker
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: ethiopian-payroll-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: ethiopian-payroll-redis
-          property: connectionString
-      - key: FLASK_APP
-        value: wsgi:app
-      - key: DB_ENCRYPTION_KEY
-        generateValue: true
-    autoDeploy: true
-
-  # P0-E: Render Cron Job -- runs /internal/cron/daily once per day at 06:00 UTC.
-  - type: cron
-    name: ethiopian-payroll-cron
-    schedule: "0 6 * * *"
-    envVars:
-      - key: CRON_TARGET_URL
-        fromService:
-          name: ethiopian-payroll-web
-          property: host
-      - key: CRON_SECRET
-        fromService:
-          name: ethiopian-payroll-web
-          property: envVarKey
-      - key: DATABASE_URL
-        fromDatabase:
-          name: ethiopian-payroll-db
-          property: connectionString
 
 databases:
   - name: ethiopian-payroll-db
-    plan: standard      # managed PG w/ PITR backups (production requirement)
+    plan: starter       # free tier includes automated backups
     databaseName: ethiopayroll
-    ipAllowList: []     # only internal services
-
-redis:
-  - name: ethiopian-payroll-redis
-    plan: starter       # free tier: 25MB, shared CPU
     ipAllowList: []     # only internal services

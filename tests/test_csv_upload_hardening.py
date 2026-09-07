@@ -1,24 +1,21 @@
 """Tests for CSV upload hardening (#9), doc upload allowlist (#10), and CSV injection prevention (#11)."""
-
-import io
-import os
 import sys
-
+import os
+import io
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
-
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery, User
+from payroll_engine.models import Employee, Company, User, TenantQuery, OvertimeEntry, EmployeeDeduction
 from payroll_engine.security import prevent_csv_injection
+
 
 # ================================================================
 # Unit tests for prevent_csv_injection
 # ================================================================
-
 
 class TestPreventCsvInjection:
     def test_plain_text_passes(self):
@@ -58,7 +55,6 @@ class TestPreventCsvInjection:
 # Integration tests for payroll CSV upload
 # ================================================================
 
-
 @pytest.fixture
 def app():
     app = create_app()
@@ -74,7 +70,6 @@ def app():
         yield app
         db.drop_all()
     import shutil
-
     shutil.rmtree(app.config['UPLOAD_FOLDER'], ignore_errors=True)
 
 
@@ -102,7 +97,9 @@ def client(app):
 
 
 def login(client):
-    client.post('/auth/login', data={'login_id': '0911000001', 'password': 'Test1234!'}, follow_redirects=True)
+    client.post('/auth/login', data={
+        'login_id': '0911000001', 'password': 'Test1234!'
+    }, follow_redirects=True)
 
 
 _GOOD_CSV = (
@@ -124,7 +121,7 @@ def test_upload_non_csv_extension_rejected(ctx, client, company_user):
     data = {'file': (io.BytesIO(b'foo,bar\n1,2'), 'data.exe')}
     resp = client.post('/payroll', data=data, content_type='multipart/form-data', follow_redirects=True)
     assert resp.status_code == 200
-    assert b'Only CSV and Excel files are allowed' in resp.data
+    assert b'Only CSV files' in resp.data
 
 
 def test_upload_malformed_csv_shows_flash(ctx, client, company_user):
@@ -137,7 +134,10 @@ def test_upload_malformed_csv_shows_flash(ctx, client, company_user):
 
 def test_upload_invalid_numeric_data_shows_flash(ctx, client, company_user):
     login(client)
-    csv_content = 'employee_id,name,basic_salary,allowances\nEMP001,Dawit Mekonnen,not_a_number,twenty\n'
+    csv_content = (
+        'employee_id,name,basic_salary,allowances\n'
+        'EMP001,Dawit Mekonnen,not_a_number,twenty\n'
+    )
     data = {'file': (io.BytesIO(csv_content.encode('utf-8')), 'bad_data.csv')}
     resp = client.post('/payroll', data=data, content_type='multipart/form-data', follow_redirects=True)
     assert resp.status_code == 200
@@ -154,11 +154,10 @@ def test_upload_empty_file_shows_flash(ctx, client, company_user):
 # Tests for deduction document upload allowlist (#10)
 # ================================================================
 
-
 def test_deduction_doc_pdf_allowed(ctx, client, company_user):
     """A real PDF header should be accepted."""
     login(client)
-    company, _user = company_user
+    company, user = company_user
     emp = Employee(employee_id='E001', name='Test', basic_salary=5000, allowances=0, company_id=company.id)
     db.session.add(emp)
     db.session.commit()
@@ -181,7 +180,7 @@ def test_deduction_doc_pdf_allowed(ctx, client, company_user):
 def test_deduction_doc_exe_rejected(ctx, client, company_user):
     """An .exe file should be rejected."""
     login(client)
-    company, _user = company_user
+    company, user = company_user
     emp = Employee(employee_id='E002', name='Test2', basic_salary=5000, allowances=0, company_id=company.id)
     db.session.add(emp)
     db.session.commit()
@@ -203,7 +202,7 @@ def test_deduction_doc_exe_rejected(ctx, client, company_user):
 def test_deduction_doc_renamed_exe_rejected(ctx, client, company_user):
     """An .exe renamed to .pdf should be rejected by MIME sniffing."""
     login(client)
-    company, _user = company_user
+    company, user = company_user
     emp = Employee(employee_id='E003', name='Test3', basic_salary=5000, allowances=0, company_id=company.id)
     db.session.add(emp)
     db.session.commit()

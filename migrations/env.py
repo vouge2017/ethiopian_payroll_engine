@@ -1,9 +1,9 @@
 import logging
 from logging.config import fileConfig
 
-from alembic import context
 from flask import current_app
-from sqlalchemy.pool import NullPool
+
+from alembic import context
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -36,16 +36,8 @@ def get_engine_url():
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-
-# Defer current_app access to runtime (inside app context),
-# not module import time. This allows alembic to be invoked
-# both via 'flask db upgrade' and via 'alembic.command.upgrade()'.
-try:
-    config.set_main_option('sqlalchemy.url', get_engine_url())
-    target_db = current_app.extensions['migrate'].db
-except RuntimeError:
-    # No Flask app context — running via alembic CLI directly
-    target_db = None
+config.set_main_option('sqlalchemy.url', get_engine_url())
+target_db = current_app.extensions['migrate'].db
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -54,9 +46,6 @@ except RuntimeError:
 
 
 def get_metadata():
-    if target_db is None:
-        from sqlalchemy import MetaData
-        return MetaData()
     if hasattr(target_db, 'metadatas'):
         return target_db.metadatas[None]
     return target_db.metadata
@@ -101,22 +90,11 @@ def run_migrations_online():
                 directives[:] = []
                 logger.info('No changes in schema detected.')
 
-    if target_db is not None:
-        # Running via Flask-Migrate (flask db upgrade)
-        conf_args = current_app.extensions['migrate'].configure_args
-        if conf_args.get("process_revision_directives") is None:
-            conf_args["process_revision_directives"] = process_revision_directives
-        connectable = get_engine()
-    else:
-        # Running via alembic CLI directly — create engine from URL
-        from sqlalchemy import engine_from_config
-        url = config.get_main_option("sqlalchemy.url")
-        connectable = engine_from_config(
-            {"url": url},
-            prefix='',
-            poolclass=NullPool,
-        )
-        conf_args = {}
+    conf_args = current_app.extensions['migrate'].configure_args
+    if conf_args.get("process_revision_directives") is None:
+        conf_args["process_revision_directives"] = process_revision_directives
+
+    connectable = get_engine()
 
     with connectable.connect() as connection:
         context.configure(

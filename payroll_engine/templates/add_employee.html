@@ -1,65 +1,30 @@
 {% extends "base.html" %}
 {% block title %}{{ _('add_employee') }} - Ethiopian Payroll Engine{% endblock %}
-{% block breadcrumb %}
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb breadcrumb-sm mb-0">
-        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
-        {% block breadcrumb_items %}
-        <li class="breadcrumb-item"><a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none">Employees</a></li>
-        <li class="breadcrumb-item active">Add Employee</li>
-    {% endblock %}
-    </ol>
-</nav>
-{% endblock %}
 {% block content %}
-<div class="p-4 p-md-5">
+<div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-            <div class="card">
-                <div class="card-header bg-transparent">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>{{ _('add_employee') }}</h5>
                 </div>
                 <div class="card-body p-4">
-                    <form method="POST" action="{{ url_for('employees.add_employee') }}">
+                    <form method="POST" action="{{ url_for('main.add_employee') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <!-- Step 1: Required fields -->
-                        <!-- Ethiopian Name Structure: First + Father + Grandfather -->
                         <div class="mb-3">
-                            <label class="form-label fw-bold">ስም / Name *</label>
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <input type="text" class="form-control form-control-lg" id="first_name" name="first_name"
-                                           required placeholder="ስም / First Name" autofocus>
-                                    <div class="form-text">ስም / First Name</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <input type="text" class="form-control form-control-lg" id="father_name" name="father_name"
-                                   placeholder="የአባት ስም / Father's Name">
-                                    <div class="form-text">የአባት ስም / Father's Name</div>
-                                </div>
-                                <div class="col-md-4">
-                                    <input type="text" class="form-control form-control-lg" id="grandfather_name" name="grandfather_name"
-                                           placeholder="የአያት ስም / Grandfather's Name">
-                                    <div class="form-text">የአያት ስም / Grandfather's Name</div>
-                                </div>
-                            </div>
-                            <input type="hidden" id="name" name="name" value="">
+                            <label for="name" class="form-label fw-bold">{{ _('full_name') }} *</label>
+                            <input type="text" class="form-control form-control-lg" id="name" name="name"
+                                   required placeholder="Abebe Kebede" autofocus>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="phone" class="form-label fw-bold">{{ _('phone') }}</label>
-                                <div class="onboarding-phone-wrapper">
-                                    <div class="phone-input-with-prefix">
-                                        <span class="phone-prefix-box">+251</span>
-                                        <input type="tel" class="form-control form-control-lg" id="phone" name="phone"
-                                               data-intl-tel-name="phone_full"
-                                               placeholder="91 234 5678" inputmode="tel" maxlength="9"
-                                               title="Enter 9 digits starting with 9 or 7">
-                                    </div>
-                                </div>
-                                <div class="form-text">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</div>
+                                <input type="text" class="form-control form-control-lg" id="phone" name="phone"
+                                       placeholder="0911223344">
+                                <div class="form-text">Ethio Telecom (09X) or Safaricom (07X)</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>
@@ -97,17 +62,6 @@
 
                                 <div class="row mb-3">
                                     <div class="col-md-6">
-                                        <label for="fayda_fin" class="form-label">Fayda Digital ID (FIN)</label>
-                                        <input type="text" class="form-control" id="fayda_fin" name="fayda_fin"
-                                               placeholder="123456789012" maxlength="12"
-                                               pattern="\d{12}" title="Exactly 12 digits">
-                                        <div class="form-text">12-digit Fayda ID from <a href="https://id.gov.et" target="_blank">id.gov.et</a>. Validates TIN/FIN before ERCA filing.</div>
-                                    </div>
-                                    <div class="col-md-6"></div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
                                         <label for="department" class="form-label">{{ _('department') }}</label>
                                         <input type="text" class="form-control" id="department" name="department"
                                                placeholder="Sales, Factory, Finance...">
@@ -138,7 +92,7 @@
                             <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
                                 <i class="bi bi-save me-1"></i>{{ _('save_employee') }}
                             </button>
-                            <a href="{{ url_for('employees.list_employees') }}" class="btn btn-outline-secondary btn-lg">
+                            <a href="{{ url_for('main.list_employees') }}" class="btn btn-outline-secondary btn-lg">
                                 {{ _('cancel') }}
                             </a>
                         </div>
@@ -148,17 +102,4 @@
         </div>
     </div>
 </div>
-<script nonce="{{ csp_nonce }}">
-// Auto-populate hidden name field from structured Ethiopian name fields
-function updateNameField() {
-    const first = document.getElementById('first_name').value.trim();
-    const father = document.getElementById('father_name').value.trim();
-    const grand = document.getElementById('grandfather_name').value.trim();
-    const parts = [first, father, grand].filter(Boolean);
-    document.getElementById('name').value = parts.join(' ');
-}
-document.getElementById('first_name').addEventListener('input', updateNameField);
-document.getElementById('father_name').addEventListener('input', updateNameField);
-document.getElementById('grandfather_name').addEventListener('input', updateNameField);
-</script>
 {% endblock %}

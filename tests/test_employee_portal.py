@@ -8,21 +8,19 @@ Tests:
 - Payslip download works
 - Profile page shows masked bank
 """
-
-import os
 import sys
-
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
-
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from datetime import date
-
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, Payslip, TenantQuery, User
+from payroll_engine.models import (
+    Employee, Company, User, PayrollRun, Payslip, TenantQuery, OvertimeEntry
+)
+from datetime import date
 
 
 @pytest.fixture
@@ -64,12 +62,9 @@ def company_with_data(ctx):
 
     # Employee record
     emp = Employee(
-        employee_id='E001',
-        name='Abebe',
-        basic_salary=10000,
-        allowances=2000,
-        bank_or_telebirr='telebirr:0922222222',
-        company_id=company.id,
+        employee_id='E001', name='Abebe', basic_salary=10000,
+        allowances=2000, bank_or_telebirr='telebirr:0922222222',
+        company_id=company.id
     )
     db.session.add(emp)
     db.session.commit()
@@ -80,14 +75,9 @@ def company_with_data(ctx):
     db.session.commit()
 
     payslip = Payslip(
-        payroll_run_id=run.id,
-        employee_id=emp.id,
-        company_id=company.id,
-        gross_salary=12000,
-        tax=2000,
-        employee_pension=700,
-        employer_pension=1100,
-        net_pay=9300,
+        payroll_run_id=run.id, employee_id=emp.id,
+        gross_salary=12000, tax=2000, employee_pension=700,
+        employer_pension=1100, net_pay=9300
     )
     db.session.add(payslip)
     db.session.commit()
@@ -99,26 +89,25 @@ def company_with_data(ctx):
 # EMPLOYEE PORTAL TESTS
 # ---------------------------------------------------------------
 
-
 def test_employee_can_view_own_payslip(company_with_data):
     """Employee should be able to view their own payslip."""
-    _company, _owner, _emp_user, emp, _payslip = company_with_data
+    company, owner, emp_user, emp, payslip = company_with_data
     app = create_app()
-    app.test_client()
+    client = app.test_client()
 
     # Login as employee
     with app.test_request_context():
         pass
 
     # Test model access
-    found = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).first()
+    found = Payslip.query.filter_by(employee_id=emp.id).first()
     assert found is not None
     assert found.net_pay == 9300
 
 
 def test_employee_payslip_has_correct_data(company_with_data):
     """Payslip data should match what was calculated."""
-    _, _, _, _emp, payslip = company_with_data
+    _, _, _, emp, payslip = company_with_data
     assert payslip.gross_salary == 12000
     assert payslip.tax == 2000
     assert payslip.employee_pension == 700
@@ -156,19 +145,15 @@ def test_multiple_payslips_ordered(company_with_data):
     db.session.commit()
 
     payslip2 = Payslip(
-        payroll_run_id=run2.id,
-        employee_id=emp.id,
-        company_id=company.id,
-        gross_salary=12000,
-        tax=2000,
-        employee_pension=700,
-        employer_pension=1100,
-        net_pay=9300,
+        payroll_run_id=run2.id, employee_id=emp.id,
+        gross_salary=12000, tax=2000, employee_pension=700,
+        employer_pension=1100, net_pay=9300
     )
     db.session.add(payslip2)
     db.session.commit()
 
-    payslips = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).order_by(Payslip.generated_at.desc()).all()
+    payslips = Payslip.query.filter_by(employee_id=emp.id) \
+        .order_by(Payslip.generated_at.desc()).all()
     assert len(payslips) == 2
     assert payslips[0].generated_at > payslips[1].generated_at
 
@@ -183,9 +168,7 @@ def test_employee_not_linked(company_with_data):
     db.session.commit()
 
     # Try to find employee by phone in bank_or_telebirr
-    emp = (
-        Employee.query.filter_by(company_id=company.id, is_deleted=False)
-        .filter(Employee.bank_or_telebirr.like('%0999999999%'))
-        .first()
-    )
+    emp = Employee.query.filter_by(
+        company_id=company.id, is_deleted=False
+    ).filter(Employee.bank_or_telebirr.like('%0999999999%')).first()
     assert emp is None  # No linked employee

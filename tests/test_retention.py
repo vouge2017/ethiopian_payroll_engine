@@ -1,10 +1,8 @@
 """Tests for retention policy hooks."""
-
-import os
 import sys
+import os
 import tempfile
 from datetime import datetime, timedelta
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
@@ -12,10 +10,10 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from datetime import UTC, date
+from datetime import date, datetime, timedelta
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollDraft, TenantQuery
+from payroll_engine.models import Employee, Company, User, TenantQuery, OvertimeEntry, PayrollDraft
 
 
 @pytest.fixture
@@ -43,7 +41,6 @@ def ctx(app):
 def test_purge_expired_uploads(app):
     """Purge uploads older than retention window."""
     from payroll_engine.retention import purge_expired_uploads
-
     folder = app.config['UPLOAD_FOLDER']
     old_path = os.path.join(folder, 'old_file.csv')
     new_path = os.path.join(folder, 'new_file.csv')
@@ -61,9 +58,8 @@ def test_purge_expired_uploads(app):
 
 def test_purge_expired_drafts(app, ctx):
     """Purge payroll drafts older than retention window."""
-    from payroll_engine.models import PayrollRun
     from payroll_engine.retention import purge_expired_drafts
-
+    from payroll_engine.models import PayrollRun
     c = Company(name='RetentionCo')
     db.session.add(c)
     db.session.commit()
@@ -71,19 +67,15 @@ def test_purge_expired_drafts(app, ctx):
     db.session.add(run)
     db.session.commit()
     draft_old = PayrollDraft(
-        payroll_run_id=run.id,
-        company_id=c.id,
-        employee_data='{}',
-        created_at=datetime.now(UTC) - timedelta(days=200),
+        payroll_run_id=run.id, employee_data='{}',
+        created_at=datetime.utcnow() - timedelta(days=200),
     )
     draft_new = PayrollDraft(
-        payroll_run_id=run.id,
-        company_id=c.id,
-        employee_data='{}',
+        payroll_run_id=run.id, employee_data='{}',
     )
     db.session.add(draft_old)
     db.session.add(draft_new)
     db.session.commit()
     purged = purge_expired_drafts(app)
     assert purged >= 1
-    assert db.session.get(PayrollDraft, draft_new.id) is not None
+    assert PayrollDraft.query.get(draft_new.id) is not None

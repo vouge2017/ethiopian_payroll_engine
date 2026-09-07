@@ -10,22 +10,21 @@ Tests:
 - Only owner can unlock
 - Non-owner gets 403 on unlock attempt
 """
-
-import os
 import sys
-
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
-
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from datetime import UTC, date, datetime
-
 from payroll_engine import create_app, db
+from payroll_engine.models import (
+    Employee, Company, User, PayrollRun, Payslip,
+    AuditLog, TenantQuery, OvertimeEntry
+)
 from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
-from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, TenantQuery, User
+from datetime import date, datetime
 
 
 @pytest.fixture
@@ -73,10 +72,9 @@ def accountant_user(ctx, company_user):
 
 # --- Period auto-set ---
 
-
 def test_period_auto_set_from_run_date(ctx, company_user):
     """Period should be auto-set from run_date using Ethiopian calendar."""
-    company, _user = company_user
+    company, user = company_user
     run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='draft')
     run.generate_period()
     assert run.period is not None
@@ -87,7 +85,7 @@ def test_period_auto_set_from_run_date(ctx, company_user):
 
 def test_period_format_ethiopian(ctx, company_user):
     """Period should use Ethiopian calendar, not Gregorian."""
-    company, _user = company_user
+    company, user = company_user
     # Sep 11, 2025 = Meskerem 1, 2018 in Ethiopian calendar
     run = PayrollRun(company_id=company.id, run_date=date(2025, 9, 11), status='draft')
     run.generate_period()
@@ -97,7 +95,7 @@ def test_period_format_ethiopian(ctx, company_user):
 
 def test_period_set_on_commit(ctx, company_user):
     """Period should be set before commit in upload route."""
-    company, _user = company_user
+    company, user = company_user
     run = PayrollRun(company_id=company.id, run_date=date.today(), status='review')
     run.generate_period()
     db.session.add(run)
@@ -108,10 +106,9 @@ def test_period_set_on_commit(ctx, company_user):
 
 # --- Duplicate period rejection ---
 
-
 def test_duplicate_period_rejected(ctx, company_user):
     """Second active run for same period should be prevented by unique index."""
-    company, _user = company_user
+    company, user = company_user
     run1 = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='completed')
     run1.generate_period()
     db.session.add(run1)
@@ -125,15 +122,14 @@ def test_duplicate_period_rejected(ctx, company_user):
     # Should raise IntegrityError due to partial unique index
     # (SQLite doesn't support partial indexes, so we test the application-level check)
     from sqlalchemy.exc import IntegrityError
-
     try:
         db.session.commit()
         # If SQLite doesn't enforce partial indexes, verify the app-level check works
-        existing = (
-            PayrollRun.query.filter_by(company_id=company.id, period=run1.period)
-            .filter(PayrollRun.status.notin_(['failed', 'rejected']))
-            .first()
-        )
+        existing = PayrollRun.query.filter_by(
+            company_id=company.id, period=run1.period
+        ).filter(
+            PayrollRun.status.notin_(['failed', 'rejected'])
+        ).first()
         assert existing is not None
         assert existing.id == run1.id
     except IntegrityError:
@@ -144,18 +140,18 @@ def test_duplicate_period_rejected(ctx, company_user):
 
 def test_failed_run_allows_retry(ctx, company_user):
     """After a failed run, a new run for the same period should be allowed."""
-    company, _user = company_user
+    company, user = company_user
     run1 = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='failed')
     run1.generate_period()
     db.session.add(run1)
     db.session.commit()
 
     # Check that no active run exists for this period
-    existing = (
-        PayrollRun.query.filter_by(company_id=company.id, period=run1.period)
-        .filter(PayrollRun.status.notin_(['failed', 'rejected']))
-        .first()
-    )
+    existing = PayrollRun.query.filter_by(
+        company_id=company.id, period=run1.period
+    ).filter(
+        PayrollRun.status.notin_(['failed', 'rejected'])
+    ).first()
     assert existing is None
 
     # New run should be allowed
@@ -168,22 +164,21 @@ def test_failed_run_allows_retry(ctx, company_user):
 
 def test_rejected_run_allows_retry(ctx, company_user):
     """After a rejected run, a new run for the same period should be allowed."""
-    company, _user = company_user
+    company, user = company_user
     run1 = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='rejected')
     run1.generate_period()
     db.session.add(run1)
     db.session.commit()
 
-    existing = (
-        PayrollRun.query.filter_by(company_id=company.id, period=run1.period)
-        .filter(PayrollRun.status.notin_(['failed', 'rejected']))
-        .first()
-    )
+    existing = PayrollRun.query.filter_by(
+        company_id=company.id, period=run1.period
+    ).filter(
+        PayrollRun.status.notin_(['failed', 'rejected'])
+    ).first()
     assert existing is None
 
 
 # --- Locked state ---
-
 
 def test_completed_run_can_be_locked(ctx, company_user):
     """A completed run should be lockable."""
@@ -194,11 +189,11 @@ def test_completed_run_can_be_locked(ctx, company_user):
     db.session.commit()
 
     run.status = 'locked'
-    run.locked_at = datetime.now(UTC)
+    run.locked_at = datetime.utcnow()
     run.locked_by = user.id
     db.session.commit()
 
-    refreshed = db.session.get(PayrollRun, run.id)
+    refreshed = PayrollRun.query.get(run.id)
     assert refreshed.status == 'locked'
     assert refreshed.locked_at is not None
     assert refreshed.locked_by == user.id
@@ -207,23 +202,18 @@ def test_completed_run_can_be_locked(ctx, company_user):
 def test_locked_run_prevents_new_run(ctx, company_user):
     """A locked run should block new runs for the same period."""
     company, user = company_user
-    run = PayrollRun(
-        company_id=company.id,
-        run_date=date(2026, 7, 10),
-        status='locked',
-        locked_at=datetime.now(UTC),
-        locked_by=user.id,
-    )
+    run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='locked',
+                     locked_at=datetime.utcnow(), locked_by=user.id)
     run.generate_period()
     db.session.add(run)
     db.session.commit()
 
     # Check application-level guard
-    existing = (
-        PayrollRun.query.filter_by(company_id=company.id, period=run.period)
-        .filter(PayrollRun.status.notin_(['failed', 'rejected']))
-        .first()
-    )
+    existing = PayrollRun.query.filter_by(
+        company_id=company.id, period=run.period
+    ).filter(
+        PayrollRun.status.notin_(['failed', 'rejected'])
+    ).first()
     assert existing is not None
     assert existing.status == 'locked'
 
@@ -231,13 +221,8 @@ def test_locked_run_prevents_new_run(ctx, company_user):
 def test_unlock_restores_to_completed(ctx, company_user):
     """Unlocking a run should restore it to completed status."""
     company, user = company_user
-    run = PayrollRun(
-        company_id=company.id,
-        run_date=date(2026, 7, 10),
-        status='locked',
-        locked_at=datetime.now(UTC),
-        locked_by=user.id,
-    )
+    run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='locked',
+                     locked_at=datetime.utcnow(), locked_by=user.id)
     run.generate_period()
     db.session.add(run)
     db.session.commit()
@@ -247,14 +232,14 @@ def test_unlock_restores_to_completed(ctx, company_user):
     run.locked_by = None
     db.session.commit()
 
-    refreshed = db.session.get(PayrollRun, run.id)
+    refreshed = PayrollRun.query.get(run.id)
     assert refreshed.status == 'completed'
     assert refreshed.locked_at is None
 
 
 def test_locked_fields_default_null(ctx, company_user):
     """locked_at and locked_by should default to NULL."""
-    company, _user = company_user
+    company, user = company_user
     run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='draft')
     db.session.add(run)
     db.session.commit()
@@ -264,10 +249,9 @@ def test_locked_fields_default_null(ctx, company_user):
 
 # --- Reference uses period ---
 
-
 def test_reference_uses_period(ctx, company_user):
     """Reference should use period format: PR-YYYY-MM-NNN."""
-    company, _user = company_user
+    company, user = company_user
     run = PayrollRun(company_id=company.id, run_date=date(2026, 7, 10), status='draft')
     run.generate_period()
     db.session.add(run)

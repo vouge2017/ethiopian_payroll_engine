@@ -1,22 +1,15 @@
-# docker-compose.yml — Local development environment
-# Starts: Postgres, Redis, Flask app, RQ worker
-#
-# Usage:
-#   cp .env.example .env   # edit with your values
-#   docker-compose up
-#   → http://localhost:5000
-
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:15
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-payroll}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-ethiopayroll}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payroll}"]
       interval: 5s
@@ -25,6 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
@@ -35,37 +29,51 @@ services:
 
   web:
     build: .
+    restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-payroll}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-ethiopayroll}
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:-dev-encryption-key-change-in-production}
-      FLASK_ENV: development
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ethiopayroll}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      UPLOAD_FOLDER: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./uploads:/app/uploads
-      - .:/app  # live reload in development
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
+    build: .
+    restart: unless-stopped
+    command: celery -A celery_worker.celery worker --loglevel=info --concurrency=2
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-payroll}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-ethiopayroll}
-      REDIS_URL: redis://redis:6379/0
-      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:-dev-encryption-key-change-in-production}
-      FLASK_APP: wsgi:app
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ethiopayroll}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      UPLOAD_FOLDER: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A celery_worker.celery inspect ping || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
-  pgdata:
+  postgres_data:
+  uploads_data:

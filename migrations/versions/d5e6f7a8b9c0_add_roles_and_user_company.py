@@ -4,8 +4,8 @@ Revision ID: d5e6f7a8b9c0
 Revises: c4d5e6f7a8b9
 Create Date: 2026-07-08
 """
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
 
 revision = 'd5e6f7a8b9c0'
 down_revision = 'c4d5e6f7a8b9'
@@ -27,11 +27,11 @@ def upgrade():
     op.add_column('user', sa.Column('must_change_password', sa.Boolean(), nullable=False, server_default='0'))
 
     # Migrate existing roles: admin → owner, hr → accountant
-    op.execute('UPDATE "user" SET role = \'owner\' WHERE role = \'admin\'')
-    op.execute('UPDATE "user" SET role = \'accountant\' WHERE role = \'hr\'')
+    op.execute("UPDATE user SET role = 'owner' WHERE role = 'admin'")
+    op.execute("UPDATE user SET role = 'accountant' WHERE role = 'hr'")
 
 def downgrade():
     op.drop_column('user', 'must_change_password')
     op.drop_table('user_company')
-    op.execute('UPDATE "user" SET role = \'admin\' WHERE role = \'owner\'')
-    op.execute('UPDATE "user" SET role = \'hr\' WHERE role = \'accountant\'')
+    op.execute("UPDATE user SET role = 'admin' WHERE role = 'owner'")
+    op.execute("UPDATE user SET role = 'hr' WHERE role = 'accountant'")

@@ -1,30 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Audit Log - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
-<div class="p-4 p-md-5">
+<div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">
-            <a href="{{ url_for('reports.reports') }}" class="text-decoration-none text-muted me-2 no-print"><i class="bi bi-arrow-left"></i></a>
+            <a href="{{ url_for('main.reports') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
             <i class="bi bi-shield-lock me-2"></i>Audit Log
         </h3>
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-secondary fs-6">{{ logs|length }} entries</span>
-            <a href="{{ url_for('reports.export_audit_log') }}" class="btn btn-ghost btn-sm no-print">
-                <i class="bi bi-download me-1"></i>CSV
-            </a>
-            <button onclick="window.print()" class="btn btn-ghost btn-sm no-print">
-                <i class="bi bi-printer me-1"></i>Print
-            </button>
-        </div>
+        <span class="badge bg-secondary fs-6">{{ logs|length }} entries</span>
     </div>
 
-    <p class="text-muted mb-4 no-print">All changes to employees, payroll, and settings are recorded here. This log is append-only and cannot be edited or deleted.</p>
+    <p class="text-muted mb-4">All changes to employees, payroll, and settings are recorded here. This log is append-only and cannot be edited or deleted.</p>
 
     {% if logs %}
-    <div class="card">
+    <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-sticky mb-0 sortable filterable responsive-card audit-log-table">
+                <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>When</th>
@@ -36,32 +28,32 @@
                     <tbody>
                         {% for log in logs %}
                         <tr>
-                            <td data-label="When">
-                                <small class="text-muted">{{ eth_date(log.timestamp) }} {{ log.timestamp.strftime('%H:%M') }}</small>
+                            <td>
+                                <small class="text-muted">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
                             </td>
-                            <td data-label="Action">
+                            <td>
                                 {% if 'salary' in log.action %}
                                 <span class="badge bg-warning text-dark">{{ log.action.replace('_', ' ') }}</span>
                                 {% elif 'bank' in log.action %}
-                                <span class="badge badge-info">{{ log.action.replace('_', ' ') }}</span>
+                                <span class="badge bg-info">{{ log.action.replace('_', ' ') }}</span>
                                 {% elif 'employee' in log.action %}
                                 <span class="badge bg-primary">{{ log.action.replace('_', ' ') }}</span>
                                 {% elif 'payroll' in log.action %}
-                                <span class="badge badge-success">{{ log.action.replace('_', ' ') }}</span>
+                                <span class="badge bg-success">{{ log.action.replace('_', ' ') }}</span>
                                 {% elif 'permission' in log.action %}
-                                <span class="badge badge-danger">{{ log.action.replace('_', ' ') }}</span>
+                                <span class="badge bg-danger">{{ log.action.replace('_', ' ') }}</span>
                                 {% else %}
                                 <span class="badge bg-secondary">{{ log.action.replace('_', ' ') }}</span>
                                 {% endif %}
                             </td>
-                            <td data-label="Who">
+                            <td>
                                 {% if log.user %}
-                                {% if log.user.phone %}+251 {{ log.user.phone }}{% elif log.user.email %}{{ log.user.email }}{% else %}User #{{ log.user_id }}{% endif %}
+                                {{ log.user.phone or log.user.email or 'User #' ~ log.user_id }}
                                 {% else %}
                                 <span class="text-muted">System</span>
                                 {% endif %}
                             </td>
-                            <td data-label="Details">
+                            <td>
                                 {% if log.details %}
                                 <small class="text-muted">
                                     {% for key, val in log.details.items() %}
@@ -80,13 +72,10 @@
         </div>
     </div>
     {% else %}
-    <div class="empty-state">
-        <div class="empty-icon"><i class="bi bi-shield-check"></i></div>
-        <h4>No audit entries yet</h4>
-        <p>Activity logs will appear here as you and your team make changes — employee edits, payroll approvals, leave decisions, and more.</p>
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-shield-lock" style="font-size: 3rem;"></i>
+        <p class="mt-2">No audit entries yet. Changes will appear here as they happen.</p>
     </div>
     {% endif %}
-    {% from "_pagination.html" import render_pagination %}
-    {{ render_pagination(pagination, 'reports.audit_log') }}
 </div>
 {% endblock %}

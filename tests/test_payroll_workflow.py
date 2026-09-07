@@ -1,5 +1,4 @@
 """Direct unit tests for payroll_workflow service functions."""
-
 import csv
 import os
 import sys
@@ -9,13 +8,13 @@ from datetime import date
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
-
 from payroll_engine import create_app, db
+from payroll_engine.models import Company, User
 from payroll_engine.services.payroll_workflow import (
-    build_period_string,
-    check_csv_row_limit,
-    check_duplicate_period,
     parse_and_calculate_payroll,
+    check_csv_row_limit,
+    build_period_string,
+    check_duplicate_period,
 )
 
 
@@ -65,7 +64,7 @@ def test_parse_valid_csv(app):
 
 
 def test_parse_csv_empty_file(app):
-    """Empty CSV (no headers) raises ValueError."""
+    """ Empty CSV (no headers) raises ValueError."""
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
         fname = f.name
     try:
@@ -76,7 +75,7 @@ def test_parse_csv_empty_file(app):
 
 
 def test_parse_csv_missing_columns(app):
-    """CSV missing required columns raises ValueError."""
+    """ CSV missing required columns raises ValueError."""
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
         f.write('name,phone\n')
         f.write('test,123\n')
@@ -89,7 +88,7 @@ def test_parse_csv_missing_columns(app):
 
 
 def test_parse_csv_invalid_numeric(app):
-    """Rows with invalid numbers are collected as row_errors, not dropped silently."""
+    """ Rows with invalid numbers are collected as row_errors, not dropped silently."""
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
         f.write('employee_id,name,basic_salary,allowances\n')
         f.write('E001,Good,5000,1000\n')

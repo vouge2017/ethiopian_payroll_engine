@@ -1,5 +1,6 @@
 """Entry point for the Ethiopian Payroll Engine."""
 from payroll_engine import create_app
+from payroll_engine import db
 
 app = create_app()
 

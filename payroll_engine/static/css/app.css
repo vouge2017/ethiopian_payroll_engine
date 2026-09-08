@@ -1,0 +1,643 @@
+/* Ethiopian Payroll Engine — Redesigned Mobile-First UI */
+/* Based on design tokens from design_tokens.py */
+
+/* ============================================
+   CSS CUSTOM PROPERTIES
+   ============================================ */
+:root {
+  /* Colors */
+  --c-primary: #1a5276;
+  --c-primary-dark: #154360;
+  --c-primary-light: #eaf2f8;
+  --c-success: #059669;
+  --c-success-light: #d1fae5;
+  --c-warning: #d97706;
+  --c-warning-light: #fef3c7;
+  --c-error: #dc2626;
+  --c-error-light: #fee2e2;
+  --c-ethiopian: #0d9488;
+  
+  /* Neutrals */
+  --c-bg: #f4f6f9;
+  --c-surface: #ffffff;
+  --c-border: #e5e7eb;
+  --c-text: #1f2937;
+  --c-text-muted: #6b7280;
+  
+  /* Spacing */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-12: 48px;
+  
+  /* Touch */
+  --touch-min: 44px;
+  --touch-comfortable: 48px;
+  --touch-spacious: 56px;
+  
+  /* Typography */
+  --font-sans: 'Noto Sans', 'Noto Sans Ethiopic', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Source Code Pro', 'Courier New', monospace;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  
+  /* Radius */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  
+  /* Tab bar */
+  --tab-height: 64px;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #111827;
+    --c-surface: #1f2937;
+    --c-border: #374151;
+    --c-text: #f9fafb;
+    --c-text-muted: #9ca3af;
+    --c-primary-light: #1e3a5f;
+  }
+}
+
+/* ============================================
+   BASE
+   ============================================ */
+* { box-sizing: border-box; }
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--c-bg);
+  color: var(--c-text);
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  background: var(--c-primary);
+  color: #fff;
+  padding: var(--s-3) var(--s-4);
+  z-index: 10000;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 0 0 var(--r-md) 0;
+}
+.skip-link:focus { top: 0; }
+
+*:focus-visible {
+  outline: 3px solid var(--c-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   BOTTOM TAB BAR (Mobile)
+   ============================================ */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--tab-height);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-bar a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  color: var(--c-text-muted);
+  text-decoration: none;
+  font-size: 0.7rem;
+  padding: var(--s-1);
+  transition: all 0.2s;
+  min-height: var(--touch-min);
+  position: relative;
+}
+
+.tab-bar a:active,
+.tab-bar a.active {
+  color: var(--c-primary);
+}
+
+.tab-bar a.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  background: var(--c-primary);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+}
+
+.tab-bar a i {
+  font-size: 1.5rem;
+  margin-bottom: 2px;
+}
+
+.tab-bar a .badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 18px);
+  background: var(--c-error);
+  color: #fff;
+  font-size: 0.65rem;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* ============================================
+   MAIN CONTENT
+   ============================================ */
+.main-content {
+  padding-bottom: calc(var(--tab-height) + var(--s-4));
+  min-height: 100vh;
+}
+
+/* ============================================
+   HEADER (Mobile)
+   ============================================ */
+.app-header {
+  background: var(--c-primary);
+  color: #fff;
+  padding: var(--s-4);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.app-header .eth-date {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  margin-top: var(--s-1);
+}
+
+/* ============================================
+   STAT CARDS (Dashboard)
+   ============================================ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.stat-card {
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.stat-card:active {
+  transform: scale(0.98);
+}
+
+.stat-card .stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--s-2);
+  font-size: 1.25rem;
+}
+
+.stat-card .stat-icon.primary { background: var(--c-primary-light); color: var(--c-primary); }
+.stat-card .stat-icon.success { background: var(--c-success-light); color: var(--c-success); }
+.stat-card .stat-icon.warning { background: var(--c-warning-light); color: var(--c-warning); }
+.stat-card .stat-icon.error { background: var(--c-error-light); color: var(--c-error); }
+
+.stat-card .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--c-text);
+  font-family: var(--font-mono);
+}
+
+.stat-card .stat-label {
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  margin-top: var(--s-1);
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.card {
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--s-4);
+  overflow: hidden;
+}
+
+.card-header {
+  background: var(--c-primary);
+  color: #fff;
+  padding: var(--s-4);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-header .badge {
+  background: rgba(255,255,255,0.2);
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-sm);
+  font-size: 0.75rem;
+}
+
+.card-body {
+  padding: var(--s-4);
+}
+
+/* Employee card (list item) */
+.employee-card {
+  background: var(--c-surface);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  margin-bottom: var(--s-3);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  transition: transform 0.2s;
+}
+
+.employee-card:active {
+  transform: scale(0.98);
+}
+
+.employee-card .avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--c-primary-light);
+  color: var(--c-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.employee-card .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.employee-card .name {
+  font-weight: 600;
+  margin-bottom: var(--s-1);
+}
+
+.employee-card .meta {
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+}
+
+.employee-card .amount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--c-success);
+  text-align: right;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: var(--touch-min);
+  font-size: 1rem;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--c-primary);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--c-primary-dark); }
+
+.btn-success {
+  background: var(--c-success);
+  color: #fff;
+}
+
+.btn-danger {
+  background: var(--c-error);
+  color: #fff;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--c-primary);
+  color: var(--c-primary);
+}
+
+.btn-block { width: 100%; }
+
+.btn-lg {
+  min-height: var(--touch-spacious);
+  padding: var(--s-4) var(--s-6);
+  font-size: 1.1rem;
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  bottom: calc(var(--tab-height) + var(--s-4));
+  right: var(--s-4);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--c-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  transition: transform 0.2s;
+}
+
+.fab:active {
+  transform: scale(0.9);
+}
+
+/* ============================================
+   FORMS
+   ============================================ */
+.form-group {
+  margin-bottom: var(--s-4);
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: var(--s-2);
+  color: var(--c-text);
+}
+
+.form-control {
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  font-size: 1rem;
+  min-height: var(--touch-min);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+.form-control:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(26, 82, 118, 0.1);
+}
+
+.form-error {
+  color: var(--c-error);
+  font-size: 0.85rem;
+  margin-top: var(--s-1);
+}
+
+/* ============================================
+   TRUST BADGES
+   ============================================ */
+.trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-4) 0;
+}
+
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-1) var(--s-3);
+  background: var(--c-success-light);
+  color: var(--c-success);
+  border-radius: var(--r-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.trust-badge i {
+  font-size: 0.9rem;
+}
+
+/* ============================================
+   EMPTY STATES
+   ============================================ */
+.empty-state {
+  text-align: center;
+  padding: var(--s-8) var(--s-4);
+}
+
+.empty-state .icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--c-primary-light);
+  color: var(--c-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--s-4);
+  font-size: 2.5rem;
+}
+
+.empty-state h3 {
+  margin-bottom: var(--s-2);
+}
+
+.empty-state p {
+  color: var(--c-text-muted);
+  margin-bottom: var(--s-6);
+}
+
+/* ============================================
+   LOADING SKELETONS
+   ============================================ */
+.skeleton {
+  background: linear-gradient(90deg, var(--c-border) 25%, var(--c-bg) 50%, var(--c-border) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: var(--r-sm);
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-card {
+  height: 100px;
+  margin-bottom: var(--s-3);
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: var(--s-2);
+}
+
+.skeleton-text:last-child {
+  width: 60%;
+}
+
+/* ============================================
+   ALERTS
+   ============================================ */
+.alert {
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-3);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+.alert-success {
+  background: var(--c-success-light);
+  color: var(--c-success);
+}
+
+.alert-warning {
+  background: var(--c-warning-light);
+  color: var(--c-warning);
+}
+
+.alert-error {
+  background: var(--c-error-light);
+  color: var(--c-error);
+}
+
+.alert-info {
+  background: var(--c-primary-light);
+  color: var(--c-primary);
+}
+
+/* ============================================
+   TABLET & DESKTOP
+   ============================================ */
+@media (min-width: 768px) {
+  .tab-bar { display: none; }
+  
+  .fab {
+    bottom: var(--s-6);
+  }
+  
+  .main-content {
+    padding: var(--s-6);
+    margin-left: 240px;
+    padding-bottom: var(--s-6);
+  }
+  
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    background: var(--c-primary);
+    z-index: 100;
+    overflow-y: auto;
+  }
+  
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .app-header {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .stat-card .stat-value {
+    font-size: 2rem;
+  }
+}
+
+/* ============================================
+   PRINT
+   ============================================ */
+@media print {
+  .tab-bar, .sidebar, .fab, .btn, .no-print {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .card {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+}

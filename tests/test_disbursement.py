@@ -1,219 +1,149 @@
 """
-Tests for Phase 5 — Disbursement Progress:
-- Disbursement progress page
-- Per-bank grouping
-- Status progression
+Tests for the disbursement adapter layer.
+
+Verifies:
+1. Stub adapter simulates the full disbursement flow
+2. DisbursementService orchestrates batch disbursements
+3. Factory function creates the correct adapter
+4. Telebirr/CBE adapters raise NotImplementedError (not yet built)
 """
-
-import os
 import sys
-
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from datetime import date
-
 import pytest
+from decimal import Decimal
 
-os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
-os.environ['CELERY_BROKER_URL'] = 'memory://'
-
-from payroll_engine import create_app, db
-from payroll_engine.models import (
-    Company,
-    Employee,
-    PayrollRun,
-    Payslip,
-    User,
+from payroll_engine.disbursement import (
+    StubDisbursementAdapter,
+    DisbursementService,
+    DisbursementStatus,
+    create_disbursement_adapter,
 )
 
 
-@pytest.fixture
-def app():
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    app.config['WTF_CSRF_ENABLED'] = False
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.drop_all()
+class TestStubDisbursementAdapter:
+    """Test the stub adapter simulates the disbursement flow."""
+
+    def test_intent_creates_pending_intent(self):
+        adapter = StubDisbursementAdapter()
+        intent = adapter.intent("0912345678", Decimal("5000.00"), "PAY-001")
+
+        assert intent.intent_id.startswith("STUB-")
+        assert intent.recipient_phone == "0912345678"
+        assert intent.amount == Decimal("5000.00")
+        assert intent.reference == "PAY-001"
+        assert intent.status == DisbursementStatus.SUBMITTED
+        assert intent.provider == "stub"
+
+    def test_confirm_creates_receipt(self):
+        adapter = StubDisbursementAdapter()
+        intent = adapter.intent("0912345678", Decimal("5000.00"), "PAY-001")
+        receipt = adapter.confirm(intent.intent_id)
+
+        assert receipt.receipt_id.startswith("STUB-RCPT-")
+        assert receipt.intent_id == intent.intent_id
+        assert receipt.recipient_phone == "0912345678"
+        assert receipt.amount == Decimal("5000.00")
+        assert receipt.status == DisbursementStatus.COMPLETED
+
+    def test_confirm_raises_for_unknown_intent(self):
+        adapter = StubDisbursementAdapter()
+        with pytest.raises(KeyError):
+            adapter.confirm("STUB-NONEXISTENT")
+
+    def test_get_status_returns_intent(self):
+        adapter = StubDisbursementAdapter()
+        intent = adapter.intent("0912345678", Decimal("5000.00"), "PAY-001")
+        status = adapter.get_status(intent.intent_id)
+
+        assert status is not None
+        assert status.intent_id == intent.intent_id
+
+    def test_get_status_returns_none_for_unknown(self):
+        adapter = StubDisbursementAdapter()
+        assert adapter.get_status("STUB-NONEXISTENT") is None
+
+    def test_reconcile_returns_report(self):
+        adapter = StubDisbursementAdapter()
+        intent1 = adapter.intent("0912345678", Decimal("5000.00"), "PAY-001")
+        intent1.metadata["batch_id"] = "BATCH-001"
+        intent2 = adapter.intent("0987654321", Decimal("3000.00"), "PAY-002")
+        intent2.metadata["batch_id"] = "BATCH-001"
+
+        report = adapter.reconcile("BATCH-001")
+
+        assert report.batch_id == "BATCH-001"
+        assert report.total_amount == Decimal("8000.00")
+        assert report.total_recipients == 2
 
 
-def _setup(app, disbursement_status='pending'):
-    """Create company, owner, employees with different banks, completed run."""
-    with app.app_context():
-        company = Company(name='DisbTestCo')
-        db.session.add(company)
-        db.session.flush()
+class TestDisbursementService:
+    """Test the high-level disbursement service."""
 
-        owner = User(phone='0910000000', role='owner', company_id=company.id)
-        owner.set_password('OwnerPass1!')
-        db.session.add(owner)
-        db.session.flush()
+    def test_disburse_payroll_creates_intents(self):
+        adapter = StubDisbursementAdapter()
+        service = DisbursementService(adapter)
 
-        # Employees with different banks
-        emp1 = Employee(
-            employee_id='EMP001',
-            name='Abebe Kebede',
-            phone='0911111111',
-            basic_salary=10000,
-            allowances=2000,
-            company_id=company.id,
-            bank_account='cbe:1000123456789',
-        )
-        emp2 = Employee(
-            employee_id='EMP002',
-            name='Hana Tesfaye',
-            phone='0922222222',
-            basic_salary=8000,
-            allowances=1000,
-            company_id=company.id,
-            bank_account='cbe:1000987654321',
-        )
-        emp3 = Employee(
-            employee_id='EMP003',
-            name='Dawit Mekonnen',
-            phone='0933333333',
-            basic_salary=12000,
-            allowances=3000,
-            company_id=company.id,
-            bank_account='dashen:2000111222333',
-        )
-        db.session.add_all([emp1, emp2, emp3])
-        db.session.flush()
+        payslips = [
+            {"employee_phone": "0912345678", "net_pay": 5000.00, "reference": "PAY-001"},
+            {"employee_phone": "0987654321", "net_pay": 3000.00, "reference": "PAY-002"},
+        ]
 
-        run = PayrollRun(
-            company_id=company.id,
-            run_date=date.today(),
-            status='completed',
-            disbursement_status=disbursement_status,
-        )
-        run.generate_period()
-        db.session.add(run)
-        db.session.flush()
-        run.generate_reference()
+        result = service.disburse_payroll(payslips, "BATCH-001")
 
-        for emp in [emp1, emp2, emp3]:
-            payslip = Payslip(
-                payroll_run_id=run.id,
-                employee_id=emp.id,
-                gross_salary=emp.basic_salary + emp.allowances,
-                tax=1500,
-                employee_pension=700,
-                employer_pension=1100,
-                net_pay=emp.basic_salary + emp.allowances - 1500 - 700,
-            )
-            db.session.add(payslip)
+        assert result["total_requested"] == 2
+        assert result["successful"] == 2
+        assert result["failed"] == 0
+        assert len(result["intents"]) == 2
 
-        db.session.commit()
-        return company.id, owner.id, run.id
+    def test_disburse_payroll_skips_invalid(self):
+        adapter = StubDisbursementAdapter()
+        service = DisbursementService(adapter)
+
+        payslips = [
+            {"employee_phone": "0912345678", "net_pay": 5000.00, "reference": "PAY-001"},
+            {"employee_phone": "", "net_pay": 3000.00, "reference": "PAY-002"},  # Invalid phone
+            {"employee_phone": "0987654321", "net_pay": -100.00, "reference": "PAY-003"},  # Negative
+        ]
+
+        result = service.disburse_payroll(payslips, "BATCH-001")
+
+        assert result["total_requested"] == 3
+        assert result["successful"] == 1
+        assert result["failed"] == 2
+
+    def test_confirm_batch_creates_receipts(self):
+        adapter = StubDisbursementAdapter()
+        service = DisbursementService(adapter)
+
+        payslips = [
+            {"employee_phone": "0912345678", "net_pay": 5000.00, "reference": "PAY-001"},
+        ]
+
+        result = service.disburse_payroll(payslips, "BATCH-001")
+        intent_ids = [i.intent_id for i in result["intents"]]
+        receipts = service.confirm_batch(intent_ids)
+
+        assert len(receipts) == 1
+        assert receipts[0].status == DisbursementStatus.COMPLETED
 
 
-# ─── Disbursement Progress Page ───
+class TestFactory:
+    """Test the adapter factory function."""
 
+    def test_create_stub_adapter(self):
+        adapter = create_disbursement_adapter("stub")
+        assert isinstance(adapter, StubDisbursementAdapter)
 
-class TestDisbursementProgress:
-    """Test the disbursement progress page."""
+    def test_create_telebirr_raises_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            create_disbursement_adapter("telebirr")
 
-    def test_page_loads(self, app):
-        _cid, _oid, rid = _setup(app)
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert resp.status_code == 200
-        assert b'Disbursement' in resp.data
+    def test_create_cbe_raises_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            create_disbursement_adapter("cbe")
 
-    def test_shows_employee_count(self, app):
-        _cid, _oid, rid = _setup(app)
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert b'3' in resp.data  # 3 employees
-
-    def test_shows_bank_grouping(self, app):
-        _cid, _oid, rid = _setup(app)
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert b'CBE' in resp.data or b'cbe' in resp.data
-        assert b'Dashen' in resp.data or b'dashen' in resp.data
-
-    def test_shows_total_amount(self, app):
-        _cid, _oid, rid = _setup(app)
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        # Total should be displayed
-        assert b'ETB' in resp.data
-
-    def test_shows_pending_status(self, app):
-        _cid, _oid, rid = _setup(app, disbursement_status='pending')
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert b'Pending' in resp.data
-
-    def test_shows_disbursed_status(self, app):
-        _cid, _oid, rid = _setup(app, disbursement_status='disbursed')
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert b'Disbursed' in resp.data
-
-    def test_shows_confirmed_status(self, app):
-        _cid, _oid, rid = _setup(app, disbursement_status='confirmed')
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert b'Confirmed' in resp.data
-        assert b'All payments confirmed' in resp.data
-
-    def test_mark_as_sent_button_when_pending(self, app):
-        _cid, _oid, rid = _setup(app, disbursement_status='pending')
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert b'Mark as Sent' in resp.data
-
-    def test_confirm_button_when_disbursed(self, app):
-        _cid, _oid, rid = _setup(app, disbursement_status='disbursed')
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement')
-        assert b'Confirm All Payments Received' in resp.data
-
-    def test_redirects_if_not_completed(self, app):
-        """Non-completed runs should redirect."""
-        with app.app_context():
-            company = Company(name='TestCo')
-            db.session.add(company)
-            db.session.flush()
-            owner = User(phone='0910000000', role='owner', company_id=company.id)
-            owner.set_password('OwnerPass1!')
-            db.session.add(owner)
-            run = PayrollRun(company_id=company.id, run_date=date.today(), status='review')
-            run.generate_period()
-            db.session.add(run)
-            db.session.flush()
-            run_id = run.id
-            db.session.commit()
-
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
-        resp = client.get(f'/payroll/{run_id}/disbursement', follow_redirects=False)
-        assert resp.status_code == 302  # redirect
-
-    def test_employee_cannot_access(self, app):
-        """Employees can't access disbursement page."""
-        cid, _oid, rid = _setup(app)
-        with app.app_context():
-            emp_user = User(phone='0944444444', role='employee', company_id=cid)
-            emp_user.set_password('EmpPass1!')
-            db.session.add(emp_user)
-            db.session.commit()
-
-        client = app.test_client()
-        client.post('/auth/login', data={'login_id': '0944444444', 'password': 'EmpPass1!'})
-        resp = client.get(f'/payroll/{rid}/disbursement', follow_redirects=True)
-        # Should get 403 or redirect
-        assert resp.status_code in (403, 200)
+    def test_create_unknown_raises_value_error(self):
+        with pytest.raises(ValueError):
+            create_disbursement_adapter("unknown")

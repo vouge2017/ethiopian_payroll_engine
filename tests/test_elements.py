@@ -46,7 +46,7 @@ class TestElementEngineEthiopia:
         # Employee pension: 7% of 8000 = 560
         # Taxable: 10000 - 560 = 9440
         assert result['taxable_income'] == Decimal('9440.00')
-        # Tax: 0 + 300 + 600 + 610 - 150 = 1360
+        # Tax: 0 + 300 + 600 + 610 = 1510 (no personal relief per Proclamation 1395/2025)
         # Net: 10000 - 560 - 1510 = 7930
         assert result['net_pay'] == Decimal('7930.00')
         # Employer pension: 11% of 8000 = 880
@@ -67,7 +67,7 @@ class TestElementEngineEthiopia:
         assert result['gross'] == Decimal('4000.00')
         # Employee pension: 7% of 3500 = 245
         # Taxable: 4000 - 245 = 3755
-        # Tax: 0 + (1755 * 0.15) - 150 = 263.25 - 150 = 113.25
+        # Tax: 0 + (1755 * 0.15) = 263.25 (no personal relief)
         # Net: 4000 - 245 - 263.25 = 3491.75
         assert result['net_pay'] == Decimal('3491.75')
 
@@ -86,8 +86,7 @@ class TestElementEngineEthiopia:
         assert result['gross'] == Decimal('30000.00')
         # Employee pension: 7% of 25000 = 1750
         # Taxable: 30000 - 1750 = 28250
-        # Tax: 0 + 300 + 600 + 750 + 1200 + (14250 * 0.35) - 150
-        #     = 2850 + 4987.50 - 150 = 7687.50
+        # Tax: 0 + 300 + 600 + 750 + 1200 + (14250 * 0.35) = 2850 + 4987.50 = 7837.50 (no relief)
         # Net: 30000 - 1750 - 7837.50 = 20412.50
         assert result['net_pay'] == Decimal('20412.50')
 

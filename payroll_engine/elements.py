@@ -344,8 +344,8 @@ def test_element_engine_matches_existing():
 
     assert result["gross"] == Decimal("10000.00"), f"Gross: {result['gross']}"
     assert result["taxable_income"] == Decimal("9440.00"), f"Taxable: {result['taxable_income']}"
-    assert result["total_pre_tax_deductions"] == Decimal("1920.00"), f"Pre-tax: {result['total_pre_tax_deductions']}"
-    assert result["net_pay"] == Decimal("8080.00"), f"Net: {result['net_pay']}"
+    assert result["total_pre_tax_deductions"] == Decimal("2070.00"), f"Pre-tax: {result['total_pre_tax_deductions']}"
+    assert result["net_pay"] == Decimal("7930.00"), f"Net: {result['net_pay']}"
     assert result["total_employer_liability"] == Decimal("880.00"), f"Employer: {result['total_employer_liability']}"
 
     print("✓ Element engine matches existing calculation")

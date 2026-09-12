@@ -2,6 +2,7 @@
 
 import csv
 import io
+import math
 import os
 import uuid
 import zipfile
@@ -433,6 +434,61 @@ def add_cache_headers(response):
         response.headers['Cache-Control'] = 'no-cache'
 
     return response
+
+
+@payroll_bp.route('/payroll/api/element-calculation', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def api_element_calculation():
+    """Calculate a single employee's payroll using the element engine.
+
+    Accepts JSON: { basic_salary, allowances, overtime_pay, other_deduction }
+    Returns: JSON with gross, taxable, tax, pension_employee, pension_employer, net
+    """
+    from payroll_engine.elements import calculate_payroll_with_elements, ETHIOPIA_ELEMENTS
+
+    data = request.get_json(silent=True) or {}
+    try:
+        basic = float(data.get('basic_salary', 0))
+        allowances = float(data.get('allowances', 0))
+        overtime = float(data.get('overtime_pay', 0))
+        other_deduction = float(data.get('other_deduction', 0))
+        for val in [basic, allowances, overtime, other_deduction]:
+            if val < 0 or not math.isfinite(val):
+                raise ValueError
+    except (ValueError, TypeError):
+        return jsonify({'ok': False, 'error': 'Invalid numeric value. All fields must be non-negative numbers.'}), 400
+
+    employee_values = {
+        "basic_salary": basic,
+        "allowance": allowances,
+        "overtime_pay": overtime,
+        "other_deduction": other_deduction,
+    }
+    result = calculate_payroll_with_elements(ETHIOPIA_ELEMENTS, employee_values)
+
+    # Extract employee pension from breakdown
+    pension_employee = 0
+    for item in result.get("breakdown", []):
+        if item["name"] == "employee_pension":
+            pension_employee = float(item["amount"])
+            break
+
+    return jsonify({
+        'ok': True,
+        'calculation': {
+            'gross': float(result["gross"]),
+            'taxable': float(result["taxable_income"]),
+            'tax': float(result["total_tax"]),
+            'pension_employee': pension_employee,
+            'pension_employer': float(result["total_employer_liability"]),
+            'net': float(result["net_pay"]),
+        },
+        'breakdown': [
+            {'name': i['name'], 'classification': i['classification'], 'amount': float(i['amount'])}
+            for i in result.get("breakdown", [])
+        ],
+    })
 
 
 @payroll_bp.route('/payroll/template')

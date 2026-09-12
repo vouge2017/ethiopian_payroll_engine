@@ -6,15 +6,7 @@ Routes in main.py delegate to this module so they stay thin.
 import math
 import os
 from datetime import date
-
-"""Payroll workflow service — orchestrates CSV parsing, validation, and draft creation.
-
-Routes in main.py delegate to this module so they stay thin.
-"""
-
-import math
-import os
-from datetime import date
+from decimal import Decimal
 
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.tax import calculate_tax_breakdown
@@ -110,7 +102,12 @@ def parse_and_calculate_payroll(
                     ETHIOPIA_ELEMENTS, employee_values
                 )
                 tax_bd = calculate_tax_breakdown(result["taxable_income"])
-
+                # Extract employee pension from breakdown (pre_tax_deductions = pension + tax)
+                pension_employee = Decimal("0")
+                for item in result.get("breakdown", []):
+                    if item["name"] == "employee_pension":
+                        pension_employee = item["amount"]
+                        break
                 employees_data.append(
                     {
                         "id": str(row.get("employee_id", "")).strip(),
@@ -123,9 +120,9 @@ def parse_and_calculate_payroll(
                         "allowances": allow,
                         "gross": result["gross"],
                         "taxable": result["taxable_income"],
-                        "tax": result["tax"],
-                        "pension_employee": result["pension"],
-                        "pension_employer": result["employer_pension"],
+                        "tax": result["total_tax"],
+                        "pension_employee": pension_employee,
+                        "pension_employer": result["total_employer_liability"],
                         "net": result["net_pay"],
                         "bank_account": str(row.get("bank_account", "")).strip(),
                         "bank": str(row.get("bank_or_telebirr", "")).strip(),

@@ -261,6 +261,7 @@ def calculate_payroll_with_elements(
     pension_base = _D(employee_values.get("basic_salary", 0))
     pre_tax_total = Decimal("0")
     pension_total = Decimal("0")
+    tax_total = Decimal("0")
 
     for element in elements:
         if element.get("classification") == ElementClassification.PRE_TAX_DEDUCTION.value:
@@ -274,6 +275,7 @@ def calculate_payroll_with_elements(
                 taxable_for_tax = result["gross"] - pension_total
                 temp_values = {**employee_values, "taxable_income": taxable_for_tax}
                 value = calculate_element(element, temp_values)
+                tax_total += value
 
             pre_tax_total += value
             result["breakdown"].append({
@@ -283,6 +285,7 @@ def calculate_payroll_with_elements(
             })
 
     result["total_pre_tax_deductions"] = pre_tax_total
+    result["total_tax"] = tax_total
     # Taxable income = gross - pension (the amount tax is calculated on)
     result["taxable_income"] = result["gross"] - pension_total
 

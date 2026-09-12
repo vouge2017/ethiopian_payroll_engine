@@ -438,6 +438,14 @@ class Company(db.Model):
     # }
     compliance_deadlines = db.Column(db.JSON, nullable=True)
 
+    # Configurable approval workflow (2026-09): comma-separated list of roles
+    # allowed to approve payroll. Default: 'owner' (backward compatible).
+    # Can be set to e.g. 'owner,accountant' for dual-approval workflows.
+    approver_roles = db.Column(db.String(200), nullable=False, server_default='owner', default='owner')
+    # Solo operator auto-approval: when True, companies with a single active user
+    # can approve their own payroll without MFA/password re-authentication.
+    solo_approve_without_mfa = db.Column(db.Boolean, default=True, nullable=False)
+
     # Relationships
     users = db.relationship('User', backref='company', lazy=True)
     employees = db.relationship('Employee', backref='company', lazy=True)

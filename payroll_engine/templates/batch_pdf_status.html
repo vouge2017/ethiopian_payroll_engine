@@ -40,7 +40,7 @@
 
                     <!-- Progress bar -->
                     {% set pct = ((status.generated|default(0) + status.failed|default(0)) / status.total * 100)|int if status.total > 0 else 0 %}
-                    <div class="progress mt-3" style="height: 8px;">
+                    <div class="progress mt-3" >
                         <div class="progress-bar bg-success" style="width: {{ pct }}%"></div>
                     </div>
                     <small class="text-muted mt-1 d-block">{{ pct }}% complete</small>

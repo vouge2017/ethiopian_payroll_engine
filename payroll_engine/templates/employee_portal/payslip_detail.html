@@ -118,7 +118,7 @@
                                 <td data-label="Deduction">
                                     {{ _('employee_pension') }} <span class="text-muted small">(7% {{ _('of') }} {{ _('basic_salary') }})</span> <span data-bs-toggle="tooltip" title="7% of basic salary. Proclamation No. 1268/2022. Employer pays 11% separately."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
                                     <details class="mt-1">
-                                        <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
+                                        <summary class="text-muted small cursor-pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small text-muted">
                                             7% × ETB {{ '%.2f'|format(employee.basic_salary) }} = ETB {{ '%.2f'|format(payslip.employee_pension) }}
                                         </div>
@@ -132,7 +132,7 @@
                                 <td>
                                     {{ _('income_tax') }} <span class="text-muted small">({{ _('per') }} Proclamation 1395/2025)</span> <span data-bs-toggle="tooltip" title="PAYE tax on taxable income (gross minus pension). Brackets: 0%, 15%, 20%, 25%, 30%, 35%."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
                                     <details class="mt-1">
-                                        <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
+                                        <summary class="text-muted small cursor-pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small">
                                             <table class="table table-sm table-borderless mb-1" style="font-size: 0.85em;">
                                                 {% for b in tax_breakdown.brackets %}
@@ -172,7 +172,7 @@
                                 <td>
                                     {{ _('overtime') }}
                                     <details class="mt-1">
-                                        <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
+                                        <summary class="text-muted small cursor-pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small">
                                             {% for ot in overtime_details %}
                                             <div class="text-muted">

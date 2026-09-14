@@ -14,7 +14,7 @@
         <span class="fw-semibold small">Progress</span>
         <span class="text-muted small">{{ completed }}/{{ total }} verified</span>
       </div>
-      <div class="progress" style="height: 8px;">
+      <div class="progress" >
         <div class="progress-bar bg-success" style="width: {{ (completed / total * 100) | round }}%"></div>
       </div>
       {% if completed == total %}

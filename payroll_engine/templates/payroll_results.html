@@ -177,7 +177,7 @@
                     <tbody>
                         {% for p in run.payslips %}
                         {% if p.payslip_type == 'regular' %}
-                        <tr class="payslip-row" data-payslip-id="{{ p.id }}" style="cursor:pointer" onclick="toggleCalcFlow({{ p.id }})">
+                        <tr class="payslip-row cursor-pointer" data-payslip-id="{{ p.id }}"  onclick="toggleCalcFlow({{ p.id }})">
                             <td data-label="#">{{ loop.index }}</td>
                             <td data-label="Name">{{ p.employee.name }} <small class="text-muted">({{ p.employee.employee_id }})</small></td>
                             <td data-label="Department">{{ p.employee.department or '-' }}</td>

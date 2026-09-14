@@ -36,7 +36,7 @@
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- STEP 1: UPLOAD                                                 -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<div id="step-upload" class="wizard-panel">
+<div id="step-upload" class="wizard-panel active">
     <div class="p-4 p-md-5">
         <div class="row justify-content-center">
             <div class="col-md-7 col-lg-6">
@@ -95,7 +95,7 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
                         <form id="uploadForm" enctype="multipart/form-data">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                            <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3" style="border: 2px dashed var(--border-medium); cursor: pointer; transition: all var(--transition-fast); background: var(--bg-secondary);">
+                            <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3 cursor-pointer bg-secondary" style="transition: all var(--transition-fast);">
                                 <div class="mb-3">
                                     <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--text-tertiary);"></i>
                                 </div>

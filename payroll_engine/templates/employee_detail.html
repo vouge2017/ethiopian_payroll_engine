@@ -27,7 +27,7 @@
             <a href="{{ url_for('employees.terminate_employee', emp_id=employee.id) }}" class="btn btn-sm btn-outline-danger me-1" data-confirm="Terminate this employee?">
                 <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
             </a>
-            <form method="POST" action="{{ url_for('employees.deactivate_employee', emp_id=employee.id) }}" style="display:inline"
+            <form method="POST" action="{{ url_for('employees.deactivate_employee', emp_id=employee.id) }}" class="d-inline"
                   onsubmit="return confirm('Deactivate {{ employee.name }}? Their payroll history will be preserved.')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-warning">
@@ -471,7 +471,7 @@
             <!-- Inactive Deductions -->
             {% if inactive_deductions %}
             <details class="mt-2">
-                <summary class="text-muted" style="cursor:pointer">Stopped/Exhausted ({{ inactive_deductions|length }})</summary>
+                <summary class="text-muted cursor-pointer">Stopped/Exhausted ({{ inactive_deductions|length }})</summary>
                 <div class="table-responsive mt-2">
                     <table class="table table-sm table-hover mb-0 responsive-card">
                         <thead class="table-light">

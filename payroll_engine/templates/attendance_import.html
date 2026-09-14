@@ -51,7 +51,7 @@
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('attendance.attendance_import') }}" enctype="multipart/form-data" id="uploadForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3" style="border: 2px dashed var(--border-medium); cursor: pointer; background: var(--bg-secondary);">
+                        <div id="dropZone" class="border-2 border-dashed rounded-3 p-5 text-center mb-3 cursor-pointer bg-secondary">
                             <div class="mb-3">
                                 <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: var(--text-tertiary);"></i>
                             </div>

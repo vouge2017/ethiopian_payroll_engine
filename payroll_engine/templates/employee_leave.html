@@ -33,7 +33,7 @@
                                 <h6 class="text-primary mb-0">Annual Leave</h6>
                                 <span class="badge bg-primary">{{ balances.annual.remaining }} days</span>
                             </div>
-                            <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress mb-2" >
                                 {% set annual_pct = (balances.annual.taken / balances.annual.entitled * 100) if balances.annual.entitled > 0 else 0 %}
                                 <div class="progress-bar bg-primary" style="width: {{ annual_pct }}%"></div>
                             </div>
@@ -56,7 +56,7 @@
                                 <h6 class="text-warning mb-0">Sick Leave</h6>
                                 <span class="badge bg-warning text-dark">{{ balances.sick.remaining }} days</span>
                             </div>
-                            <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress mb-2" >
                                 {% set sick_pct = (balances.sick.taken / balances.sick.entitled * 100) if balances.sick.entitled > 0 else 0 %}
                                 <div class="progress-bar bg-warning" style="width: {{ sick_pct }}%"></div>
                             </div>
@@ -79,7 +79,7 @@
                                 <h6 class="text-success mb-0">Maternity</h6>
                                 <span class="badge badge-success">{{ balances.maternity.remaining }} days</span>
                             </div>
-                            <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress mb-2" >
                                 {% set mat_pct = (balances.maternity.taken / balances.maternity.entitled * 100) if balances.maternity.entitled > 0 else 0 %}
                                 <div class="progress-bar bg-success" style="width: {{ mat_pct }}%"></div>
                             </div>
@@ -212,7 +212,7 @@
                                     <td data-label="Applied">{{ eth_date(leave.applied_at) }}</td>
                                     <td data-label="Action">
                                         {% if leave.status == 'pending' %}
-                                        <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" style="display:inline">
+                                        <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" class="d-inline">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <button type="submit" class="btn btn-sm btn-outline-success" title="Approve">
                                                 <i class="bi bi-check"></i>

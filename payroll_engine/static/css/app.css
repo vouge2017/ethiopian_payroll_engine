@@ -582,6 +582,211 @@ body {
 }
 
 /* ============================================
+   RESPONSIVE TABLES (mobile card view)
+   ============================================ */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .table-mobile-cards thead { display: none; }
+
+  .table-mobile-cards tbody tr {
+    display: block;
+    background: var(--c-surface);
+    border-radius: var(--r-md);
+    margin-bottom: var(--s-3);
+    padding: var(--s-4);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table-mobile-cards tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--s-2) 0;
+    border-bottom: 1px solid var(--c-border);
+  }
+
+  .table-mobile-cards tbody td:last-child { border-bottom: none; }
+
+  .table-mobile-cards tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--c-text-muted);
+  }
+}
+
+/* ============================================
+   EXTERNAL CLASS ADDITIONS (for base.html templates
+   that need design-system.css / responsive.css classes)
+   ============================================ */
+
+/* --- Ghost button (from design-system.css) --- */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--c-border);
+  color: var(--c-text-muted);
+}
+.btn-ghost:hover {
+  background: var(--c-bg);
+  border-color: var(--c-border);
+  color: var(--c-text);
+}
+
+/* --- User avatar (from design-system.css) --- */
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--c-primary-light);
+  color: var(--c-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* --- Empty state icon variant (from design-system.css) --- */
+.empty-state .empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--r-lg);
+  background: var(--c-primary-light);
+  color: var(--c-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto var(--s-4);
+}
+
+/* --- Sticky table header (from design-system.css) --- */
+.table-sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--c-surface);
+  box-shadow: 0 1px 0 var(--c-border);
+}
+
+/* --- Breadcrumb small (from design-system.css) --- */
+.breadcrumb-sm {
+  font-size: 0.75rem;
+}
+
+/* --- Text sizes (from design-system.css) --- */
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+
+/* --- Input group text (Bootstrap-compatible) --- */
+.input-group-text {
+  display: flex;
+  align-items: center;
+  padding: var(--s-3) var(--s-4);
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  color: var(--c-text);
+  font-size: 1rem;
+}
+
+/* --- Pagination (Bootstrap-compatible overrides) --- */
+.page-link {
+  color: var(--c-primary);
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-border);
+  padding: var(--s-2) var(--s-3);
+  margin: 0 2px;
+  border-radius: var(--r-sm);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+.page-link:hover {
+  background-color: var(--c-bg);
+  border-color: var(--c-border);
+  color: var(--c-primary-dark);
+}
+.page-item.active .page-link {
+  background-color: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+.page-item.disabled .page-link {
+  color: var(--c-text-muted);
+  background-color: var(--c-surface);
+  border-color: var(--c-border);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* --- Searchable / sortable table (mobile card view on small screens) --- */
+@media (max-width: 767px) {
+  table.sortable thead,
+  table.filterable thead {
+    display: none;
+  }
+
+  table.sortable tbody tr,
+  table.filterable tbody tr {
+    display: block;
+    margin-bottom: var(--s-3);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    padding: var(--s-3);
+    background: var(--c-surface);
+  }
+
+  table.sortable tbody td,
+  table.filterable tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--s-2) 0;
+    border: none;
+  }
+
+  table.sortable tbody td:last-child,
+  table.filterable tbody td:last-child {
+    border-bottom: none;
+  }
+}
+
+/* --- Responsive card table (from responsive.css) --- */
+@media (max-width: 600px) {
+  table.responsive-card thead {
+    display: none;
+  }
+
+  table.responsive-card tbody tr {
+    display: block;
+    margin-bottom: var(--s-3);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    padding: var(--s-3);
+    background: var(--c-surface);
+  }
+
+  table.responsive-card tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--s-2) 0;
+    border: none;
+  }
+
+  table.responsive-card tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--c-text-muted);
+    margin-right: var(--s-4);
+    flex-shrink: 0;
+    font-size: 0.875rem;
+  }
+}
+
+/* ============================================
    TABLET & DESKTOP
    ============================================ */
 @media (min-width: 768px) {
@@ -621,6 +826,462 @@ body {
   .stat-card .stat-value {
     font-size: 2rem;
   }
+}
+
+/* ============================================
+   CUSTOM TEMPLATE CLASSES
+   Classes used by templates that don't exist in
+   design-system.css, responsive.css, or Bootstrap CDN
+   ============================================ */
+
+/* --- Wizard stepper layout (flex row, not column) --- */
+.wizard-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+.wizard-panel {
+  display: none;
+}
+.wizard-panel.active {
+  display: block;
+}
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  position: relative;
+}
+.wizard-step.active {
+  border-color: var(--c-primary);
+  background: var(--c-primary-light);
+}
+.wizard-step.completed {
+  border-color: var(--c-success);
+  background: var(--c-success-light);
+}
+.wizard-step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--c-border);
+  color: var(--c-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+.wizard-step.active .wizard-step-number {
+  background: var(--c-primary);
+  color: #fff;
+}
+.wizard-step.completed .wizard-step-number {
+  background: var(--c-success);
+  color: #fff;
+}
+.wizard-step-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+.wizard-step.active .wizard-step-label {
+  color: var(--c-primary);
+  font-weight: 600;
+}
+.wizard-step.completed .wizard-step-label {
+  color: var(--c-success);
+}
+.wizard-step-connector {
+  width: 24px;
+  height: 2px;
+  background: var(--c-border);
+  flex-shrink: 0;
+}
+.wizard-step-connector.completed {
+  background: var(--c-success);
+}
+
+/* --- Calculation flow row (payroll results) --- */
+.calc-flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--c-border);
+  font-size: 0.9rem;
+}
+.calc-flow-row:last-child {
+  border-bottom: none;
+}
+.calc-flow-row .label {
+  color: var(--c-text-muted);
+  font-weight: 500;
+}
+.calc-flow-row .amount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* --- Payslip row (earnings/deductions) --- */
+.payslip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-2) var(--s-4);
+  border-bottom: 1px solid var(--c-border);
+  font-size: 0.85rem;
+}
+.payslip-row:last-child {
+  border-bottom: none;
+}
+.payslip-row .label {
+  color: var(--c-text-muted);
+}
+.payslip-row .amount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.payslip-row .amount.positive { color: var(--c-success); }
+.payslip-row .amount.negative { color: var(--c-error); }
+
+/* --- Completed state --- */
+.completed {
+  color: var(--c-success);
+}
+
+/* --- Quick actions bar --- */
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+  margin-bottom: var(--s-4);
+}
+
+/* text-gray-800 — dark gray text for emphasis */
+.text-gray-800 {
+  color: #1f2937;
+}
+
+/* ============================================
+   UTILITY CLASSES — high-frequency inline styles
+   found across 73 templates
+   ============================================ */
+
+/* Background colors from design tokens (used 25+ times inline) */
+.bg-tertiary { background: var(--c-bg) !important; }
+.bg-success-light { background: var(--c-success-light) !important; }
+.bg-danger-light { background: var(--c-error-light) !important; }
+.bg-warning-light { background: var(--c-warning-light) !important; }
+.bg-info-light { background: var(--c-primary-light) !important; }
+.bg-purple-light { background: #f3e8ff !important; }
+
+/* Text colors */
+.text-purple { color: #8b5cf6 !important; }
+
+/* Cursor utilities (used 15+ times inline) */
+.cursor-pointer { cursor: pointer; }
+.cursor-help { cursor: help; }
+
+/* Layout utilities (used in error pages, verification, etc.) */
+.min-vh-60 { min-height: 60vh; }
+.container-narrow { max-width: 480px; margin: 0 auto; }
+.container-medium { max-width: 800px; margin: 0 auto; }
+.pre-wrap { white-space: pre-wrap; }
+
+/* Help icon (tooltip trigger, used inline) */
+.help-icon { font-size: 0.7em; cursor: help; }
+
+/* Large approve button variant */
+.btn-approve-lg {
+  font-size: 1.1rem;
+  padding: var(--s-3) var(--s-6);
+  font-weight: 700;
+}
+
+/* close-step-icon — small X icon for closing wizard steps */
+.close-step-icon {
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--c-error-light);
+  color: var(--c-error);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  border: none;
+  transition: background var(--transition-fast, 0.15s);
+}
+.close-step-icon:hover {
+  background: var(--c-error);
+  color: #fff;
+}
+
+/* ot-input — overtime input field with distinctive styling */
+.ot-input {
+  border: 2px solid var(--c-warning);
+  background: var(--c-warning-light);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.ot-input:focus {
+  border-color: var(--c-warning);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+/* calculated — auto-computed field styling (read-only look) */
+.calculated {
+  background: var(--c-bg);
+  color: var(--c-text-muted);
+  font-style: italic;
+  cursor: not-allowed;
+}
+
+/* status — inline status indicator dot/text */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-text-muted);
+}
+.status.active::before { background: var(--c-success); }
+.status.pending::before { background: var(--c-warning); }
+.status.error::before { background: var(--c-error); }
+
+/* status_filter — filter chip for status values */
+.status_filter {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--s-2);
+  border-radius: var(--r-full, 9999px);
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--c-bg);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition-fast, 0.15s);
+}
+.status_filter:hover {
+  border-color: var(--c-border);
+}
+.status_filter.active {
+  background: var(--c-primary);
+  color: #fff;
+}
+
+/* ============================================
+   MONTH-END CLOSE TIMELINE
+   Externalized from payroll/month_close.html
+   ============================================ */
+.close-timeline {
+  padding: var(--s-6);
+}
+.close-step {
+  display: flex;
+  gap: var(--s-4);
+  position: relative;
+}
+.close-step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 40px;
+}
+.close-step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+.close-step-icon-done {
+  background: var(--c-success-light);
+  color: var(--c-success);
+}
+.close-step-icon-progress {
+  background: var(--c-primary-light);
+  color: var(--c-primary);
+  animation: pulse 2s infinite;
+}
+.close-step-icon-ready {
+  background: var(--c-warning-light);
+  color: var(--c-warning);
+  border: 2px solid var(--c-warning);
+}
+.close-step-icon-blocked {
+  background: var(--c-error-light);
+  color: var(--c-error);
+}
+.close-step-icon-pending {
+  background: var(--c-bg);
+  color: var(--c-text-muted);
+}
+.close-step-line {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: var(--c-border);
+  margin: var(--s-1) 0;
+}
+.close-step-line-done {
+  background: var(--c-success);
+}
+.close-step-content {
+  flex: 1;
+  padding-bottom: var(--s-6);
+}
+.close-step-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-bottom: var(--s-1);
+}
+.close-step-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.close-step-name-am {
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+}
+.close-step-description {
+  font-size: 0.875rem;
+  color: var(--c-text-muted);
+  margin-bottom: var(--s-2);
+}
+.close-step-detail {
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  margin-bottom: var(--s-2);
+}
+.close-step-blocking {
+  font-size: 0.8rem;
+  color: var(--c-warning);
+  background: var(--c-warning-light);
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-sm);
+  margin-bottom: var(--s-2);
+}
+.close-step-completed {
+  font-size: 0.8rem;
+  color: var(--c-success);
+  margin-bottom: var(--s-2);
+}
+.close-step-actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin-top: var(--s-2);
+}
+.close-step-current .close-step-content {
+  background: var(--c-primary-light);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
+  margin: calc(var(--s-2) * -1);
+  border: 1px solid var(--c-border);
+}
+
+/* ============================================
+   PAYROLL REGISTER
+   Externalized from payroll_register.html
+   ============================================ */
+.register-table {
+  font-size: 0.8rem;
+}
+.register-table th {
+  background: var(--c-primary);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: var(--s-1) var(--s-2);
+}
+.register-table td {
+  padding: var(--s-1) var(--s-2);
+  vertical-align: middle;
+}
+.register-table tfoot td {
+  background: var(--c-primary-light);
+  border-top: 2px solid var(--c-primary);
+}
+.sig-line {
+  margin-top: var(--s-8);
+  font-size: 0.85rem;
+}
+.sig-label {
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+}
+.register-page {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 10mm;
+  background: #fff;
+}
+
+/* ============================================
+   PAYROLL SPREADSHEET
+   Externalized from payroll_spreadsheet.html
+   ============================================ */
+.sticky-col {
+  position: sticky;
+  left: 0;
+  background: var(--c-surface);
+  z-index: 5;
+}
+#payroll-table input {
+  border: 1px solid transparent;
+  background: transparent;
+  padding: var(--s-1);
+  border-radius: var(--r-sm);
+}
+#payroll-table input:hover {
+  border-color: var(--c-border);
+}
+#payroll-table input:focus {
+  border-color: var(--c-primary);
+  background: var(--c-surface);
+  outline: none;
+  box-shadow: var(--shadow-glow, 0 0 0 3px rgba(0,97,255,0.15));
+}
+#payroll-table .calculated {
+  background: var(--c-bg);
+  font-family: var(--font-mono);
+  color: var(--c-text-muted);
+  cursor: not-allowed;
+}
+.table-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
 /* ============================================

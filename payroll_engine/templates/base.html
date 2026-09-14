@@ -21,6 +21,9 @@
     
     <!-- App CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+    <!-- Design System (shared with auth templates) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     
     {% block extra_css %}{% endblock %}
 </head>
@@ -32,43 +35,44 @@
 <aside class="sidebar d-none d-md-block" role="navigation" aria-label="{{ _('main_navigation') }}">
     <div class="p-3 text-white border-bottom border-secondary">
         <h5 class="mb-0"><i class="bi bi-bank me-2"></i>{{ _('app_name') }}</h5>
-        <small class="text-muted">{{ current_user.company.name }}</small>
+        <small class="text-muted" data-company-name>{{ current_user.company.name }}</small>
     </div>
     <nav class="flex-column p-2" role="menu">
         {% if current_user.role == 'employee' %}
-        <a href="{{ url_for('main.employee_dashboard') }}" class="nav-link {% if request.endpoint == 'main.employee_dashboard' %}active{% endif %}">
+        <a href="{{ url_for('portal.employee_dashboard') }}" class="nav-link {% if (request.endpoint|default('')) == 'portal.employee_dashboard' %}active{% endif %}">
             <i class="bi bi-speedometer2"></i>{{ _('my_dashboard') }}
         </a>
-        <a href="{{ url_for('main.my_payslips') }}" class="nav-link {% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}">
+        <a href="{{ url_for('portal.my_payslips') }}" class="nav-link {% if 'payslip' in (request.endpoint|default('')) and 'my' in (request.endpoint|default('')) %}active{% endif %}">
             <i class="bi bi-receipt"></i>{{ _('my_payslips') }}
         </a>
-        <a href="{{ url_for('main.my_profile') }}" class="nav-link {% if request.endpoint == 'main.my_profile' %}active{% endif %}">
+        <a href="{{ url_for('portal.my_profile') }}" class="nav-link {% if (request.endpoint|default('')) == 'portal.my_profile' %}active{% endif %}">
             <i class="bi bi-person"></i>{{ _('my_profile') }}
         </a>
         {% else %}
-        <a href="{{ url_for('main.index') }}" class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}">
+        <a href="{{ url_for('main.index') }}" class="nav-link {% if (request.endpoint|default('')) == 'main.index' %}active{% endif %}">
             <i class="bi bi-speedometer2"></i>{{ _('dashboard') }}
         </a>
-        <a href="{{ url_for('main.list_employees') }}" class="nav-link {% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}">
+        <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if request.endpoint and 'employee' in (request.endpoint|default('')) and 'my' not in (request.endpoint|default('')) %}active{% endif %}">
             <i class="bi bi-people"></i>{{ _('employees') }}
         </a>
-        <a href="{{ url_for('main.payroll_upload') }}" class="nav-link {% if 'payroll' in request.endpoint %}active{% endif %}">
+        <a href="{{ url_for('payroll.payroll_upload') }}" class="nav-link {% if 'payroll' in (request.endpoint|default('')) %}active{% endif %}">
             <i class="bi bi-cloud-upload"></i>{{ _('run_payroll') }}
         </a>
-        <a href="{{ url_for('main.payroll_runs') }}" class="nav-link {% if 'payroll_runs' in request.endpoint %}active{% endif %}">
+        <a href="{{ url_for('payroll.payroll_runs') }}" class="nav-link {% if 'payroll_runs' in (request.endpoint|default('')) %}active{% endif %}">
             <i class="bi bi-clock-history"></i>{{ _('payroll_runs') }}
         </a>
-        <a href="{{ url_for('main.reports') }}" class="nav-link {% if 'report' in request.endpoint %}active{% endif %}">
+        <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'report' in (request.endpoint|default('')) %}active{% endif %}">
             <i class="bi bi-bar-chart"></i>{{ _('reports') }}
         </a>
         {% if current_user.role == 'owner' %}
-        <a href="{{ url_for('main.team_settings') }}" class="nav-link {% if 'team' in request.endpoint %}active{% endif %}">
+        <a href="{{ url_for('settings.team_settings') }}" class="nav-link" aria-label="{{ _('settings') }}">
             <i class="bi bi-gear"></i>{{ _('team') }}
+            <span class="visually-hidden">{{ _('settings') }}</span>
         </a>
         {% endif %}
         {% endif %}
     </nav>
-    <div class="mt-auto p-3 text-white small border-top border-secondary">
+    <div class="mt-auto p-3 text-white small border-top border-secondary user-menu">
         <div class="mb-2 d-flex gap-2">
             <a href="{{ url_for('auth.set_language', lang='en') }}" class="btn btn-sm btn-outline-light {% if current_language == 'en' %}active{% endif %}">EN</a>
             <a href="{{ url_for('auth.set_language', lang='am') }}" class="btn btn-sm btn-outline-light {% if current_language == 'am' %}active{% endif %}">አማ</a>
@@ -81,9 +85,9 @@
                 <small class="text-muted">{{ current_user.role|upper }}</small>
             </div>
         </div>
-        <a href="{{ url_for('auth.logout') }}" class="text-white-50">
+        <button type="button" class="text-white-50 border-0 bg-transparent" onclick="window.location.href='{{ url_for('auth.logout') }}'">
             <i class="bi bi-box-arrow-right me-1"></i>{{ _('logout') }}
-        </a>
+        </button>
     </div>
 </aside>
 
@@ -94,8 +98,8 @@
     <header class="app-header d-md-none">
         <div class="d-flex justify-content-between align-items-center">
             <div>
-                <h1>{{ _('app_name') }}</h1>
-                <div class="eth-date">{{ eth_today }}</div>
+                <h1>{% block mobile_header_title %}{{ _('app_name') }}{% endblock %}</h1>
+                <div class="eth-date">{% block mobile_header_subtitle %}{{ eth_today }}{% endblock %}</div>
             </div>
             <div class="dropdown">
                 <button class="btn btn-outline-light btn-sm" data-bs-toggle="dropdown">
@@ -153,44 +157,46 @@
 </div>
 
 <!-- Bottom Tab Bar (Mobile) -->
+{% block mobile_tabs %}
 <nav class="tab-bar d-md-none" role="navigation" aria-label="{{ _('mobile_navigation') }}">
     {% if current_user.role == 'employee' %}
-    <a href="{{ url_for('main.employee_dashboard') }}" class="{% if request.endpoint == 'main.employee_dashboard' %}active{% endif %}">
+    <a href="{{ url_for('portal.employee_dashboard') }}" class="{% if (request.endpoint|default('')) == 'portal.employee_dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i>
         <span>{{ _('my_dashboard') }}</span>
     </a>
-    <a href="{{ url_for('main.my_payslips') }}" class="{% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}">
+    <a href="{{ url_for('portal.my_payslips') }}" class="{% if 'payslip' in (request.endpoint|default('')) and 'my' in (request.endpoint|default('')) %}active{% endif %}">
         <i class="bi bi-receipt"></i>
         <span>{{ _('my_payslips') }}</span>
     </a>
-    <a href="{{ url_for('main.my_profile') }}" class="{% if request.endpoint == 'main.my_profile' %}active{% endif %}">
+    <a href="{{ url_for('portal.my_profile') }}" class="{% if (request.endpoint|default('')) == 'portal.my_profile' %}active{% endif %}">
         <i class="bi bi-person"></i>
         <span>{{ _('my_profile') }}</span>
     </a>
     {% else %}
-    <a href="{{ url_for('main.index') }}" class="{% if request.endpoint == 'main.index' %}active{% endif %}">
+    <a href="{{ url_for('main.index') }}" class="{% if (request.endpoint|default('')) == 'main.index' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i>
         <span>{{ _('dashboard') }}</span>
     </a>
-    <a href="{{ url_for('main.list_employees') }}" class="{% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}">
+    <a href="{{ url_for('employees.list_employees') }}" class="{% if 'employee' in (request.endpoint|default('')) and 'my' not in (request.endpoint|default('')) %}active{% endif %}">
         <i class="bi bi-people"></i>
         <span>{{ _('employees') }}</span>
     </a>
-    <a href="{{ url_for('main.payroll_upload') }}" class="{% if 'payroll' in request.endpoint %}active{% endif %}">
+    <a href="{{ url_for('payroll.payroll_upload') }}" class="{% if 'payroll' in (request.endpoint|default('')) %}active{% endif %}">
         <i class="bi bi-cloud-upload"></i>
         <span>{{ _('run_payroll') }}</span>
     </a>
-    <a href="{{ url_for('main.reports') }}" class="{% if 'report' in request.endpoint %}active{% endif %}">
+    <a href="{{ url_for('reports.reports') }}" class="{% if 'report' in (request.endpoint|default('')) %}active{% endif %}">
         <i class="bi bi-bar-chart"></i>
         <span>{{ _('reports') }}</span>
     </a>
     {% endif %}
 </nav>
+{% endblock %}
 
 <!-- FAB (for primary action) -->
 {% block fab %}
 {% if current_user.role != 'employee' %}
-<a href="{{ url_for('main.payroll_upload') }}" class="fab d-md-none" title="{{ _('run_payroll') }}">
+<a href="{{ url_for('payroll.payroll_upload') }}" class="fab d-md-none" title="{{ _('run_payroll') }}">
     <i class="bi bi-plus-lg"></i>
 </a>
 {% endif %}

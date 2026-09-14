@@ -1,5 +1,6 @@
 import logging
 import os
+import tempfile
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
@@ -110,8 +111,7 @@ def create_app():
         if errors:
             raise RuntimeError('Insecure staging configuration: ' + '; '.join(errors))
         from config import StagingConfig
-
-        app.config.from_object(StagingConfig())
+        app.config.from_object(StagingConfig())  # __init__ guards also fire as second line of defense
     elif env == 'testing':
         from config import TestingConfig
         app.config.from_object(TestingConfig())
@@ -126,7 +126,7 @@ def create_app():
         )
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')
+    app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER') or os.path.join(tempfile.gettempdir(), 'ethiopayroll-uploads')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
     app.config['LOG_LEVEL'] = os.environ.get('LOG_LEVEL', 'INFO').upper()
 
@@ -264,6 +264,9 @@ def create_app():
         PayslipAcknowledgment,
         PayslipGenerationJob,
         ProfileChangeRequest,
+        BillingPayment,
+        SupportTicket,
+        SupportTicketMessage,
     )
     TenantQuery.register_model(EmployeeAllowance)
     TenantQuery.register_model(FilingRecord)
@@ -275,6 +278,12 @@ def create_app():
     TenantQuery.register_model(PayslipAcknowledgment)
     TenantQuery.register_model(PayslipGenerationJob)
     TenantQuery.register_model(ProfileChangeRequest)
+    # CRITICAL: These models have company_id and must be tenant-isolated.
+    # Previously unregistered — any query without explicit company_id filter
+    # could leak data across tenants (billing payments, support tickets).
+    TenantQuery.register_model(BillingPayment)
+    TenantQuery.register_model(SupportTicket)
+    TenantQuery.register_model(SupportTicketMessage)
 
     # CSP nonce — available in all templates as {{ csp_nonce }}
     @app.context_processor

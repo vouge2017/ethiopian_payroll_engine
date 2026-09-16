@@ -96,6 +96,7 @@ def _setup(app, disbursement_status='pending'):
         for emp in [emp1, emp2, emp3]:
             payslip = Payslip(
                 payroll_run_id=run.id,
+                    company_id=run.company_id,
                 employee_id=emp.id,
                 gross_salary=emp.basic_salary + emp.allowances,
                 tax=1500,

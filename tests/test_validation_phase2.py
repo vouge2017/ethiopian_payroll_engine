@@ -91,6 +91,7 @@ def _create_completed_run(app, company_id, employees_data):
             if emp_obj:
                 payslip = Payslip(
                     payroll_run_id=run.id,
+                        company_id=run.company_id,
                     employee_id=emp_obj.id,
                     gross_salary=emp_data.get('gross', 12000),
                     tax=emp_data.get('tax', 1500),

@@ -81,6 +81,7 @@ def _setup(app):
 
         payslip = Payslip(
             payroll_run_id=run.id,
+                company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=12000,
             tax=1500,

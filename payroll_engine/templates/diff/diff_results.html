@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EthioPayroll — Diff Check Results</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Diff Check Results</h1>
+
+        <div class="card">
+            <h3>Summary for {{ result.company.name }}</h3>
+            <table class="table table-bordered">
+                <tbody>
+                    <tr>
+                        <td><strong>Total rows compared:</strong></td>
+                        <td>{{ result.summary.total }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Matched to employees:</strong></td>
+                        <td>{{ result.summary.matched }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Unmatched rows (no employee found):</strong></td>
+                        <td>{{ result.summary.unmatched }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Rows where numbers match exactly:</strong></td>
+                        <td>{{ result.summary.identical }}</td>
+                    </tr>
+                    <tr>
+                        <td class="{% if result.summary.differ > 0 %}text-danger{% endif %}">
+                            <strong>Rows with differences:</strong>
+                        </td>
+                        <td class="{% if result.summary.differ > 0 %}text-danger font-weight-bold{% endif %}">
+                            {{ result.summary.differ }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        {% if result.summary.differ > 0 %}
+        <div class="alert alert-warning">
+            <strong>{{ result.summary.differ }} row(s) have differences.</strong>
+            The highlighted rows below show exactly where our calculation differs from your spreadsheet.
+            Every difference includes the reason — no accounting degree required.
+        </div>
+        {% endif %}
+
+        {% if result.summary.unmatched > 0 %}
+        <div class="alert alert-info">
+            <strong>{{ result.summary.unmatched }} row(s) could not be matched</strong>
+            to an employee in your system. These rows were still calculated, but we could not link
+            them to a specific employee. Check the Employee ID or phone/TIN columns — they may be missing
+            or formatted differently.
+        </div>
+        {% endif %}
+
+        {% if result.summary.engine_error_count > 0 %}
+        <div class="alert alert-danger">
+            <strong>{{ result.summary.engine_error_count }} row(s) had engine errors.</strong>
+            The engine could not calculate for these rows. Check if basic salary is missing or if
+            there are invalid values.
+        </div>
+        {% endif %}
+
+        <table class="table table-bordered table-striped diff-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>ID</th>
+                    <th>Phone</th>
+                    <th>TIN</th>
+                    <th>Matched</th>
+                    <th class="text-right">Your Gross</th>
+                    <th class="text-right">Our Gross</th>
+                    <th class="text-right">Δ Gross</th>
+                    <th class="text-right">Your Tax</th>
+                    <th class="text-right">Our Tax</th>
+                    <th class="text-right">Δ Tax</th>
+                    <th class="text-right">Your Pension</th>
+                    <th class="text-right">Our Pension</th>
+                    <th class="text-right">Δ Pension</th>
+                    <th class="text-right">Your Net</th>
+                    <th class="text-right">Our Net</th>
+                    <th class="text-right">Δ Net</th>
+                    <th>What's different & why</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in result.rows %}
+                <tr class="{% if row.has_diff %}diff-row{% endif %} {% if not row.matched %}unmatched-row{% endif %}">
+                    <td>{{ row.row_number }}</td>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.employee_id }}</td>
+                    <td>{{ row.phone }}</td>
+                    <td>{{ row.tin }}</td>
+                    <td>
+                        {% if row.matched %}
+                        <span class="badge badge-success">Yes</span>
+                        {% else %}
+                        <span class="badge badge-warning">No</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-right">{% if row.their_gross %}ETB {{ row.their_gross }}{% else %}—{% endif %}</td>
+                    <td class="text-right">{% if row.engine_gross %}ETB {{ row.engine_gross }}{% else %}—{% endif %}</td>
+                    <td class="text-right {% if row.their_gross and row.engine_gross and row.their_gross != row.engine_gross %}text-danger{% endif %}">
+                        {% if row.their_gross and row.engine_gross %}
+                        ETB {{ row.engine_gross - row.their_gross }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-right">{% if row.their_tax %}ETB {{ row.their_tax }}{% else %}—{% endif %}</td>
+                    <td class="text-right">{% if row.engine_tax %}ETB {{ row.engine_tax }}{% else %}—{% endif %}</td>
+                    <td class="text-right {% if row.their_tax and row.engine_tax and row.their_tax != row.engine_tax %}text-danger{% endif %}">
+                        {% if row.their_tax and row.engine_tax %}
+                        ETB {{ row.engine_tax - row.their_tax }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-right">{% if row.their_pension_emp %}ETB {{ row.their_pension_emp }}{% else %}—{% endif %}</td>
+                    <td class="text-right">{% if row.engine_pension_emp %}ETB {{ row.engine_pension_emp }}{% else %}—{% endif %}</td>
+                    <td class="text-right {% if row.their_pension_emp and row.engine_pension_emp and row.their_pension_emp != row.engine_pension_emp %}text-danger{% endif %}">
+                        {% if row.their_pension_emp and row.engine_pension_emp %}
+                        ETB {{ row.engine_pension_emp - row.their_pension_emp }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-right">{% if row.their_net %}ETB {{ row.their_net }}{% else %}—{% endif %}</td>
+                    <td class="text-right">{% if row.engine_net %}ETB {{ row.engine_net }}{% else %}—{% endif %}</td>
+                    <td class="text-right {% if row.their_net and row.engine_net and row.their_net != row.engine_net %}text-danger{% endif %}">
+                        {% if row.their_net and row.engine_net %}
+                        ETB {{ row.engine_net - row.their_net }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="diff-reason">
+                        {% if row.engine_error %}
+                        <span class="text-danger font-weight-bold">Engine error:</span>
+                        {{ row.engine_error }}
+                        {% elif row.differences %}
+                        {% for d in row.differences %}
+                        <div class="diff-item">
+                            <span class="font-weight-bold">{{ d.field }}:</span>
+                            Yours: ETB {{ d.theirs }} | Ours: ETB {{ d.ours }}
+                            <span class="text-danger">Difference: ETB {{ d.diff }}</span><br>
+                            <span class="diff-reason-text">{{ d.reason }}</span>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <span class="text-success">✓ Numbers match</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="card">
+            <a href="/diff/report/{{ session_id }}"
+               class="btn btn-success">
+                <span class="fas fa-download"></span>
+                Download full comparison as Excel
+            </a>
+            <a href="/diff" class="btn btn-secondary">
+                ← Upload a different file
+            </a>
+        </div>
+    </div>
+</body>
+</html>

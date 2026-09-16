@@ -84,6 +84,7 @@ def _seed_payroll(company_id, employees, period='2018-10'):
         net = gross - tax - pension
         ps = Payslip(
             payroll_run_id=run.id,
+                company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=gross,
             tax=tax,

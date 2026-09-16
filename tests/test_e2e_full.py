@@ -284,6 +284,7 @@ def test_full_payroll_flow(ctx, client):
         ps = Payslip(
             employee_id=emp.id,
             payroll_run_id=run.id,
+                company_id=run.company_id,
             gross_salary=result['gross'],
             tax=result['tax'],
             employee_pension=result['pension_employee'],

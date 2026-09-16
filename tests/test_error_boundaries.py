@@ -89,6 +89,7 @@ def seed_data(app, client):
 
         ps = Payslip(
             payroll_run_id=run.id,
+            company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=Decimal('15000'),
             tax=Decimal('2250'),

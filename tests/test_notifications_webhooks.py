@@ -481,10 +481,12 @@ class TestWebhookDelivery:
         call_args = mock_post.call_args
         assert 'X-Webhook-Signature' not in call_args[1]['headers']
 
+    @patch('payroll_engine.webhooks.time')
     @patch('requests.post')
-    def test_deliver_handles_network_error(self, mock_post):
+    def test_deliver_handles_network_error(self, mock_post, mock_time):
         """Network errors should be caught, not raised."""
         mock_post.side_effect = Exception('Connection refused')
+        mock_time.sleep = lambda *a, **kw: None  # Don't actually wait
         payload = {'event': 'test', 'timestamp': '', 'data': {}}
         # Should not raise
         _deliver('https://example.com/hook', payload, 'secret')

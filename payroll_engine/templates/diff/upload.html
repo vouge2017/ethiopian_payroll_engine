@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EthioPayroll — Excel Diff Check</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Excel Diff Check</h1>
+        <p class="lead">
+            Upload your old payroll spreadsheet. We'll compare our engine's calculation
+            against every row and show you exactly where the numbers differ.
+        </p>
+
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <div class="card">
+            <h3>Upload your payroll spreadsheet</h3>
+            <p class="text-muted">
+                We accept .xlsx, .xls, or .csv files. Your file is read-only —
+                we never save it or change your data.
+            </p>
+            <form action="/diff/compare" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="file">Payroll spreadsheet:</label>
+                    <input type="file" name="file" id="file"
+                           accept=".xlsx,.xls,.csv" required>
+                </div>
+                <div class="form-group">
+                    <label for="match_mode">Matching level:</label>
+                    <select name="match_mode" id="match_mode" class="form-control">
+                        <option value="auto">Auto (best match)</option>
+                        <option value="strict">Strict (ID or name+contact required)</option>
+                        <option value="name">By name only</option>
+                        <option value="loose">Loose (contact match or name substring)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    Compare with EthioPayroll engine
+                </button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>What happens</h3>
+            <ol>
+                <li>We read your spreadsheet and detect the columns automatically.</li>
+                <li>For each row, we match it to an employee in your system (by name, phone, or TIN).</li>
+                <li>We run the EthioPayroll engine on your inputs (basic salary, allowances, overtime).</li>
+                <li>We display a side-by-side comparison: your numbers vs ours, with the reason for every difference.</li>
+                <li>You can download the full comparison as an Excel file to share with your accountant.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h3>What we compare</h3>
+            <table class="table table-bordered">
+                <thead>
+                    <tr><th>Field</th><th>Where the difference usually comes from</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Gross salary</strong></td>
+                        <td>Your sheet may include overtime, bonuses, or other additions
+                            that our engine calculates separately. We use your basic + allowances
+                            as inputs — if your gross is higher, check if overtime is baked in.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tax (PAYE)</strong></td>
+                        <td>The most common difference. Our engine deducts 7% employee pension
+                            from gross before calculating tax (Proclamation 1395/2025, Article 11
+                            + Proclamation 1268/2022, Article 12). If your sheet does not deduct
+                            pension first, taxable income is higher and you are over-taxed.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Employee pension</strong></td>
+                        <td>Fixed at 7% of basic salary (Proclamation 1268/2022, Article 12).
+                            If your sheet applies pension to gross instead of basic, or applies
+                            a ceiling that does not exist in law, the number will differ.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Net pay</strong></td>
+                        <td>The result of gross − pension − tax. If your net differs, the cause
+                            is in one of the above fields. We show the exact cause for each row.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>Example: what a difference looks like</h3>
+            <p>
+                If your spreadsheet shows a <strong>net pay of ETB 8,420.00</strong> for Dawit
+                and our engine calculates <strong>ETB 8,145.00</strong>, the diff check will show:
+            </p>
+            <div class="alert alert-warning">
+                <strong>Row 3 — Dawit Mekonnen (matched)</strong><br>
+                <strong>Gross salary:</strong> Yours ETB 15,000.00 vs Ours ETB 15,000.00 (match)<br>
+                <strong>Tax (PAYE):</strong> Yours ETB 2,580.00 vs Ours ETB 2,955.00 (difference: -ETB 375.00)<br>
+                <span class="text-muted">Our engine deducts pension (ETB 700.00, 7% of basic) before calculating tax,
+                saving ETB 105.00 in tax. Check if your sheet deducts pension before tax.</span><br>
+                <strong>Employee pension (7%):</strong> Yours ETB 0.00 vs Ours ETB 700.00 (difference: -ETB 700.00)<br>
+                <span class="text-muted">Your sheet shows zero pension. Proclamation 1268/2022, Article 12
+                requires 7% of basic salary with no ceiling. Pension should be deducted.</span><br>
+                <strong>Net pay:</strong> Yours ETB 8,420.00 vs Ours ETB 8,145.00 (difference: -ETB 275.00)<br>
+                <span class="text-muted">Your net is higher because you missed the pension deduction.</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

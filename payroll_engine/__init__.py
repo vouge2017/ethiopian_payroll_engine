@@ -502,6 +502,10 @@ def create_app():
     app.register_blueprint(billing_bp)
     app.register_blueprint(platform_bp)
 
+    # Diff Check: upload old spreadsheet, auto-highlight where our math differs from their manual numbers
+    from .diff_check import diff_bp
+    app.register_blueprint(diff_bp)
+
     # Billing enforcement gate: derived state -> access control on every request.
     from .billing import enforce_billing_gate
 

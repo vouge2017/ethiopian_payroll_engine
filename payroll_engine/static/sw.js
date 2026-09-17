@@ -1,47 +1,61 @@
 // EthioPayroll service worker — offline shell + push notifications.
+const CACHE_NAME = 'ethiopayroll-assets-v4';
 
-const CACHE_NAME = 'ethiopayroll-shell-v2';
-
-const SHELL_ASSETS = [
-  '/',
+const STATIC_ASSETS = [
   '/static/css/design-system.css',
   '/static/css/responsive.css',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
 ];
 
-// Install
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-// Activate
 self.addEventListener('activate', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
-  self.clients.claim();
+  return self.clients.claim();
 });
 
-// Fetch — cache-first for static, network-first for everything else
+// Fetch — only cache static assets. Never cache HTML, API, auth, or font requests.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
   
-  // Skip service worker intercept for HTML navigation requests to let standard browser handle login redirects cleanly
+  // Never cache HTML pages — always get fresh from network
   if (request.mode === 'navigate') return;
-
+  
+  // Never cache API, auth, or dynamic endpoints
   if (request.url.includes('/api/') || request.url.includes('/auth/')) return;
+  if (request.url.includes('/diff/') || request.url.includes('/demo')) return;
+  if (request.url.includes('/favicon')) return;
+  
+  // Only cache known static assets and CDN resources
+  const isStatic = request.url.includes('/static/') ||
+                   request.url.includes('cdn.jsdelivr.net') ||
+                   request.url.includes('fonts.googleapis.com') ||
+                   request.url.includes('fonts.gstatic.com');
+  
+  if (!isStatic) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(request).catch(() => caches.match('/offline'));
+      return fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      }).catch(() => caches.match('/offline'));
     })
   );
 });
@@ -85,13 +99,11 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Focus existing window if open
       for (const client of windowClients) {
         if (client.url.includes(url) && 'focus' in client) {
           return client.focus();
         }
       }
-      // Otherwise open new window
       return clients.openWindow(url);
     })
   );

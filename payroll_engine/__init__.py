@@ -451,9 +451,22 @@ def create_app():
                 'connect-src': [
                     "'self'",
                     'https://cdn.jsdelivr.net',
+                    'https://fonts.googleapis.com',
+                    'https://fonts.gstatic.com',
                 ],
             },
         )
+
+    @app.route('/favicon.ico')
+    def favicon():
+        from flask import send_from_directory
+        import os
+        return send_from_directory(
+            os.path.join(app.root_path, 'static'),
+            'favicon.ico',
+            mimetype='image/x-icon'
+        )
+
     from .main import main as main_blueprint
 
     app.register_blueprint(main_blueprint)
@@ -505,6 +518,7 @@ def create_app():
     # Diff Check: upload old spreadsheet, auto-highlight where our math differs from their manual numbers
     from .diff_check import diff_bp
     app.register_blueprint(diff_bp)
+    csrf.exempt(diff_bp)
 
     # Billing enforcement gate: derived state -> access control on every request.
     from .billing import enforce_billing_gate

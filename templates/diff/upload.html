@@ -25,6 +25,7 @@
                 we never save it or change your data.
             </p>
             <form action="/diff/compare" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="file">Payroll spreadsheet:</label>
                     <input type="file" name="file" id="file"

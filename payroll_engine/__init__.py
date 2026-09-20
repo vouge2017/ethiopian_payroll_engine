@@ -517,7 +517,7 @@ def create_app():
 
     # Diff Check: upload old spreadsheet, auto-highlight where our math differs from their manual numbers
     from .diff_check import diff_bp
-    app.register_blueprint(diff_bp)
+    app.register_blueprint(diff_bp, url_prefix='/diff')
     csrf.exempt(diff_bp)
 
     # Billing enforcement gate: derived state -> access control on every request.

@@ -145,11 +145,12 @@ def _parse_tin(v: Any) -> str | None:
     s = str(v).strip()
     if not s:
         return None
+    s = re.sub(r'[\s\-\.]', '', s)  # strip spaces, dashes, dots
     s = re.sub(r'^0+', '', s)
     s = re.sub(r'^\+251', '', s)
     if len(s) >= 9 and s.isdigit():
         return s[-10:] if len(s) == 11 else s
-    return s if s else None
+    return None
 
 
 def _parse_phone(v: Any) -> str | None:
@@ -160,11 +161,9 @@ def _parse_phone(v: Any) -> str | None:
         s = s[4:]
     if s.startswith('0'):
         s = s[1:]
-    if len(s) == 9 and s.isdigit() and s[0] in '079':
+    if len(s) == 9 and s.isdigit() and s[0] in '79':
         return s
-    if len(s) == 8 and s.isdigit():
-        return '0' + s
-    return s if s else None
+    return None
 
 
 def match_employee(
@@ -664,12 +663,12 @@ def generate_report_xlsx(result: dict[str, Any]) -> bytes:
 
 
 
-@diff_bp.route('/diff', methods=['GET'])
+@diff_bp.route('/', methods=['GET'])
 def upload_form():
     return render_template('diff/upload.html')
 
 
-@diff_bp.route('/diff/compare', methods=['POST'])
+@diff_bp.route('/compare', methods=['POST'])
 def compare():
     f = request.files.get('file')
     col_mapping = {}
@@ -727,7 +726,7 @@ def compare():
     return render_template('diff/results.html', result=result, result_id=rid)
 
 
-@diff_bp.route('/diff/download/<result_id>', methods=['GET'])
+@diff_bp.route('/download/<result_id>', methods=['GET'])
 def download(result_id: str):
     storage = getattr(current_app, 'diff_results', {})
     entry = storage.get(result_id)

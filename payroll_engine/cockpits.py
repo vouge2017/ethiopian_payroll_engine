@@ -581,6 +581,7 @@ def _build_employee_view(user, company_id, db, models):
     latest_payslip = (
         Payslip.query.join(models.PayrollRun)
         .filter(
+            Payslip.company_id == company_id,
             Payslip.employee_id == emp.id,
             models.PayrollRun.company_id == company_id,
             models.PayrollRun.status.in_(['completed', 'locked']),

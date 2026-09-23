@@ -116,6 +116,7 @@ def _is_first_payroll(Payslip, PayrollRun, employee_id, company_id, current_run_
         count = (
             Payslip.query.join(PayrollRun)
             .filter(
+                Payslip.company_id == company_id,
                 Payslip.employee_id == employee_id,
                 PayrollRun.company_id == company_id,
                 PayrollRun.id < current_run_id,

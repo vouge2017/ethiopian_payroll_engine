@@ -453,6 +453,7 @@ def _employee_metrics(user, company_id, db, models):
     latest_payslip = (
         Payslip.query.join(PayrollRun)
         .filter(
+            Payslip.company_id == company_id,
             Payslip.employee_id == emp.id,
             PayrollRun.company_id == company_id,
             PayrollRun.status.in_(['completed', 'locked']),

@@ -91,7 +91,7 @@ def api_last_run():
     if not last_run:
         return jsonify({'ok': False, 'error': 'No previous payroll run found.'}), 404
 
-    draft = PayrollDraft.query.filter_by(payroll_run_id=last_run.id).first()
+    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=last_run.id).first()
     if not draft or not draft.employee_data:
         # Fallback: build from payslips
         employees_data = []
@@ -827,7 +827,7 @@ def payroll_confirm(run_id):
     if run.status != 'review':
         flash('This payroll run is not in review status.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
     employees_data = draft.employee_data if draft else []
     total_gross = sum(e.get('gross', 0) for e in employees_data)
     total_tax = sum(e.get('tax', 0) for e in employees_data)
@@ -1066,7 +1066,7 @@ def undo_approval(run_id):
         db.session.delete(ps)
 
     # Delete draft
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id).first()
+    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
     if draft:
         db.session.delete(draft)
 
@@ -1329,7 +1329,7 @@ def historical_import():
             for buf in rows_buffer:
                 if buf['existing']:
                     existing_payslip = Payslip.query.filter_by(
-                        payroll_run_id=buf['existing'].id, employee_id=buf['emp'].id
+                        company_id=_company_id(), payroll_run_id=buf['existing'].id, employee_id=buf['emp'].id
                     ).first()
                     if existing_payslip:
                         existing_payslip.gross_salary = buf['gross']
@@ -1990,7 +1990,7 @@ def retry_pdf(run_id, payslip_id):
         flash('Can only retry PDFs for completed runs.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    payslip = Payslip.query.filter_by(id=payslip_id, payroll_run_id=run.id).first_or_404()
+    payslip = Payslip.query.filter_by(company_id=_company_id(), id=payslip_id, payroll_run_id=run.id).first_or_404()
 
     if payslip.pdf_status == 'generated' and payslip.pdf_file_path and os.path.exists(payslip.pdf_file_path):
         flash('This payslip already has a PDF. No need to retry.', 'info')

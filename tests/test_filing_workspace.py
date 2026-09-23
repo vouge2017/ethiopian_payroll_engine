@@ -60,6 +60,17 @@ def _setup(run, company, filing_records=None, deadline_days=None):
 
     mock_db.session.get.side_effect = session_get
 
+    # PayrollRun query (for build_filing_workspace)
+    def payrollrun_filter_by(**kwargs):
+        mock = MagicMock()
+        if kwargs.get('id') == run.id and kwargs.get('company_id') == run.company_id:
+            mock.first.return_value = run
+        else:
+            mock.first.return_value = None
+        return mock
+
+    mock_models.PayrollRun.query.filter_by.side_effect = payrollrun_filter_by
+
     # Filing records
     records = filing_records or {}
 
@@ -297,6 +308,7 @@ class TestEdgeCases:
         mock_db = MagicMock()
         mock_models = MagicMock()
         mock_db.session.get.return_value = None
+        mock_models.PayrollRun.query.filter_by.return_value.first.return_value = None
 
         result = build_filing_workspace(999, 1, mock_db, mock_models)
         assert result is None
@@ -306,6 +318,8 @@ class TestEdgeCases:
         mock_db = MagicMock()
         mock_models = MagicMock()
         mock_db.session.get.return_value = run
+        # PayrollRun query returns None because company_id doesn't match
+        mock_models.PayrollRun.query.filter_by.return_value.first.return_value = None
 
         result = build_filing_workspace(1, 1, mock_db, mock_models)
         assert result is None

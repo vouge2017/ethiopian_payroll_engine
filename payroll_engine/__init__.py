@@ -614,6 +614,14 @@ def create_app():
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
     from payroll_engine.i18n import get_string
 
+    # Register Python built-ins that templates use (Jinja2 doesn't expose them by default)
+    app.jinja_env.globals['abs'] = abs
+    app.jinja_env.globals['max'] = max
+    app.jinja_env.globals['min'] = min
+    app.jinja_env.globals['round'] = round
+    app.jinja_env.globals['int'] = int
+    app.jinja_env.globals['float'] = float
+
     @app.context_processor
     def inject_ethiopian_calendar():
         # Get language from session or default to English

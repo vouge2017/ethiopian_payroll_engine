@@ -1133,7 +1133,7 @@ def create_adjustment(run_id):
     emp = Employee.query.filter_by(id=int(emp_id), company_id=_company_id(), is_deleted=False).first_or_404()
 
     # Find original payslip for this employee in this run
-    original = Payslip.query.filter_by(payroll_run_id=run.id, employee_id=emp.id, payslip_type='regular').first()
+    original = Payslip.query.filter_by(company_id=_company_id(), payroll_run_id=run.id, employee_id=emp.id, payslip_type='regular').first()
 
     # Calculate adjustment (simplified: treat amount as gross, compute tax)
     result = calculate_payroll(basic_salary=amount, allowances=Decimal('0'))

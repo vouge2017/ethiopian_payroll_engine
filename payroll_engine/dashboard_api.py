@@ -359,7 +359,7 @@ def _hr_metrics(current_run, recent_runs, company_id, db, models):
     # New hires / departures
     if len(recent_runs) >= 2:
         current_payslips = Payslip.query.filter_by(payroll_run_id=current_run.id, company_id=current_run.company_id).all()
-        prev_payslips = Payslip.query.filter_by(payroll_run_id=recent_runs[1].id).all()
+        prev_payslips = Payslip.query.filter_by(payroll_run_id=recent_runs[1].id, company_id=current_run.company_id).all()
         current_ids = {ps.employee_id for ps in current_payslips}
         prev_ids = {ps.employee_id for ps in prev_payslips}
 

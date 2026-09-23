@@ -197,17 +197,18 @@ class TestGenerateJournalEntries:
 
         assert result is None
 
+    @patch('payroll_engine.accounting_bp.tenant_get')
     @patch('payroll_engine.accounting_bp.Company')
     @patch('payroll_engine.accounting_bp.Employee')
     @patch('payroll_engine.accounting_bp.Payslip')
     @patch('payroll_engine.accounting_bp.PayrollRun')
-    def test_employee_detail_entries(self, MockRun, MockPayslip, MockEmp, MockCompany):
+    def test_employee_detail_entries(self, MockRun, MockPayslip, MockEmp, MockCompany, MockTenantGet):
         func = self._import_func()
 
         MockRun.query.filter_by.return_value.first_or_404.return_value = _make_run()
         MockCompany.query.get.return_value = _make_company()
         MockPayslip.query.filter_by.return_value.all.return_value = [_make_payslip()]
-        MockEmp.query.get.return_value = _make_employee(emp_id=1, name='Dawit Kebede')
+        MockTenantGet.return_value = _make_employee(emp_id=1, name='Dawit Kebede')
 
         journal = func(1, 1)
 

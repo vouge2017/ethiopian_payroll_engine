@@ -81,14 +81,14 @@ def test_demo_creates_payroll_run(ctx):
     company, _user, _employees, run = create_demo_data()
     assert run.status == 'completed'
     assert run.company_id == company.id
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).all()
     assert len(payslips) == 5
 
 
 def test_demo_payslips_have_correct_amounts(ctx):
     """Demo payslips have non-zero amounts."""
     _company, _user, _employees, run = create_demo_data()
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=_company.id).all()
     for ps in payslips:
         assert ps.gross_salary > 0
         assert ps.tax >= 0

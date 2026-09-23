@@ -81,6 +81,7 @@ def _setup_approval_data(app):
 
         draft = PayrollDraft(
             payroll_run_id=run.id,
+            company_id=company.id,
             employee_data=[
                 {
                     'id': 'EMP001',

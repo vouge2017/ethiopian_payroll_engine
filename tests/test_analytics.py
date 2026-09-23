@@ -102,6 +102,7 @@ def _setup(app, num_employees=3, departments=None):
 
         draft = PayrollDraft(
             payroll_run_id=run.id,
+            company_id=company.id,
             employee_data=employees_data,
         )
         db.session.add(draft)

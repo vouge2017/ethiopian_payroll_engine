@@ -80,6 +80,11 @@ def _setup_db(current_run, payslips, employees, previous_payslip_count=1):
     mock_models.Payslip.query.filter_by.return_value.all.return_value = payslips
     mock_models.PayrollRun = MagicMock()
 
+    # Employee lookup (for classify_exceptions)
+    mock_models.Employee.query.filter_by.side_effect = lambda **kwargs: (
+        MagicMock(first=lambda: emp_map.get(kwargs.get('id')))
+    )
+
     # Previous payslip count (for new employee detection)
     mock_models.Payslip.query.join.return_value.filter.return_value.count.return_value = previous_payslip_count
 

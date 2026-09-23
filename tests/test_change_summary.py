@@ -43,6 +43,13 @@ def _make_payslip(emp_id, gross, tax=0, pension_emp=0, pension_empr=0, net=None,
     return ps
 
 
+def _mock_employee_query(mock_models, emp_map):
+    """Set up Employee.query.filter_by mock for change_summary tests."""
+    mock_models.Employee.query.filter_by.side_effect = lambda **kwargs: (
+        MagicMock(first=lambda: emp_map.get(kwargs.get('id')))
+    )
+
+
 def _make_run(run_id, period, company_id=1):
     run = MagicMock()
     run.id = run_id
@@ -101,6 +108,7 @@ def _setup_mocks(
         return emp_map.get(id)
 
     mock_db.session.get.side_effect = session_get
+    _mock_employee_query(mock_models, emp_map)
 
     return mock_db, mock_models, previous_run
 
@@ -125,6 +133,9 @@ class TestFirstPayroll:
 
         emp_map = {1: emp1, 2: emp2}
         mock_db.session.get.side_effect = lambda model, id: emp_map.get(id)
+        mock_models.Employee.query.filter_by.side_effect = lambda **kwargs: (
+            MagicMock(first=lambda: emp_map.get(kwargs.get('id')))
+        )
 
         result = _build_summary(current_run, None, [ps1, ps2], 1, mock_db, mock_models)
 
@@ -145,6 +156,7 @@ class TestFirstPayroll:
 
         emp_map = {1: emp1}
         mock_db.session.get.side_effect = lambda model, id: emp_map.get(id)
+        _mock_employee_query(mock_models, emp_map)
 
         result = _build_summary(current_run, None, [ps1], 1, mock_db, mock_models)
 
@@ -582,6 +594,7 @@ class TestEdgeCases:
 
         emp_map = {1: emp1}
         mock_db.session.get.side_effect = lambda model, id: emp_map.get(id)
+        _mock_employee_query(mock_models, emp_map)
 
         result = _build_summary(_make_run(1, '2018-10'), None, [ps1], 1, mock_db, mock_models)
 
@@ -626,6 +639,7 @@ class TestEdgeCases:
 
         emp_map = {1: emp1, 2: emp2, 3: emp3}
         mock_db.session.get.side_effect = lambda model, id: emp_map.get(id)
+        _mock_employee_query(mock_models, emp_map)
 
         result = _build_summary(
             _make_run(2, '2018-10'), _make_run(1, '2018-09'), curr_payslips, 1, mock_db, mock_models

@@ -972,6 +972,12 @@ class Payslip(db.Model):
     sick_leave_reduction = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     unpaid_leave_reduction = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     deduction_details = db.Column(db.JSON, nullable=True)  # List of {type, label, amount}
+    # Tax transparency. Without these the payslip shows gross 23,500 and tax
+    # 4,915, which does not reconcile: the missing 2,200 of transport exemption
+    # is invisible. taxable_income = gross - pension - pre-tax deductions -
+    # exempt_allowances, and tax = brackets(taxable_income).
+    exempt_allowances = db.Column(db.Numeric(12, 2), nullable=True)
+    taxable_income = db.Column(db.Numeric(12, 2), nullable=True)
     # Earnings/deduction lines exactly as the engine computed them at approval.
     # The payslip PDF is generated LAZILY, well after the run is approved, so
     # it cannot recompute -- it must render what was actually paid. JSON (not

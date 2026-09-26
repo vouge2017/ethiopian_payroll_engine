@@ -294,6 +294,67 @@ def _source_checksum(allowances, deductions):
     return total
 
 
+def find_mixed_state(company_id):
+    """Employees that already have assignments AND unconverted legacy rows.
+
+    Converting those is unsafe: the engine would read the hand-created
+    assignments while the bridge still reads the legacy rows, so the same
+    money could be counted twice. The backfill refuses rather than guess.
+
+    Returns a list of {'id', 'name', 'assignments', 'legacy_rows'}.
+    """
+    from payroll_engine.models import Employee, EmployeeAllowance, EmployeeDeduction
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+
+    allowances = EmployeeAllowance.query.filter_by(company_id=company_id).all()
+    deductions = EmployeeDeduction.query.filter_by(company_id=company_id).all()
+
+    legacy_by_emp = {}
+    for row in list(allowances) + list(deductions):
+        legacy_by_emp.setdefault(row.employee_id, []).append(row)
+
+    out = []
+    for emp in Employee.query.filter_by(company_id=company_id, is_deleted=False).all():
+        legacy_rows = legacy_by_emp.get(emp.id, [])
+        if not legacy_rows:
+            continue
+
+        # Only rows the backfill has not already converted still count.
+        unconverted = [
+            r for r in legacy_rows
+            if not _tag(
+                DEDUCTION_TAG if hasattr(r, 'deduction_type') else ALLOWANCE_TAG, r.id
+            ) == _existing_tag(r, company_id)
+        ]
+        if not unconverted:
+            continue
+
+        manual = [
+            a for a in PayrollItemAssignment.query.filter_by(
+                company_id=company_id, employee_id=emp.id, is_active=True
+            ).all()
+            if a.legacy_source is None
+        ]
+        if manual:
+            out.append({
+                'id': emp.id,
+                'name': emp.name,
+                'assignments': len(manual),
+                'legacy_rows': len(unconverted),
+            })
+    return out
+
+
+def _existing_tag(row, company_id):
+    """The legacy_source tag for `row` if the backfill already made it."""
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+
+    kind = DEDUCTION_TAG if hasattr(row, 'deduction_type') else ALLOWANCE_TAG
+    return _tag(kind, row.id) if PayrollItemAssignment.query.filter_by(
+        company_id=company_id, legacy_source=_tag(kind, row.id)
+    ).first() else None
+
+
 def backfill_company(company_id, dry_run=False):
     """Backfill one company atomically. Returns a counts dict."""
     from payroll_engine import db
@@ -336,6 +397,27 @@ def backfill_company(company_id, dry_run=False):
     rows_by_emp = {}
     for row in list(allowances) + list(deductions):
         rows_by_emp.setdefault(row.employee_id, []).append(row)
+
+    # Pre-flight: refuse a company that is half-migrated. Converting it would
+    # let the engine read hand-created assignments while the bridge still reads
+    # the legacy rows -- the same money counted twice. Abort before writing
+    # anything, so atomicity holds.
+    mixed = find_mixed_state(company_id)
+    if mixed:
+        names = ', '.join(
+            f"{m['name']} (id {m['id']}: {m['assignments']} assignment(s), "
+            f"{m['legacy_rows']} unconverted legacy row(s))"
+            for m in mixed
+        )
+        counts['error'] = (
+            'MIXED STATE - refusing to backfill. These employees already have '
+            f'payroll_item_assignment rows but still have unconverted legacy '
+            f'rows: {names}. Resolve them first, then re-run.'
+        )
+        counts['mixed_state'] = mixed
+        if not dry_run:
+            db.session.rollback()
+        return counts
 
     for emp in employees:
         emp_rows = rows_by_emp.get(emp.id, [])

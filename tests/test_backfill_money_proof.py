@@ -189,7 +189,9 @@ def _run(co, user, emps, period, label):
         assert ps is not None, f'{label}: no payslip for {e.employee_id}'
         out[e.employee_id] = {
             'gross': Decimal(str(ps.gross_salary)),
-            'taxable': Decimal(str(ps.gross_salary)) - Decimal(str(ps.employee_pension)),
+            'taxable': Decimal(str(ps.taxable_income)) if ps.taxable_income is not None
+                       else Decimal(str(ps.gross_salary)) - Decimal(str(ps.employee_pension)),
+            'exempt': Decimal(str(ps.exempt_allowances or 0)),
             'tax': Decimal(str(ps.tax)),
             'pension': Decimal(str(ps.employee_pension)),
             'deductions': sum(
@@ -256,7 +258,24 @@ def test_money_proof_before_vs_after(ctx, proof_company):
         'net must not jump once the exemptions are applied correctly'
     )
 
-    # 4. EMP002 -- no capped allowance -- matches on all six figures exactly.
+    # 4b. Tax transparency: the exemption must be visible on the payslip and
+    #     taxable/tax must tie:
+    #       taxable = gross - pension - exempt_allowances
+    #       tax    = public brackets applied to that taxable
+    # EMP001 carries the 2,200 transport exemption, so it must reconcile.
+    assert after['EMP001']['exempt'] == Decimal('2200.00'), (
+        f'the exemption must be visible, got {after["EMP001"]["exempt"]}'
+    )
+    assert after['EMP001']['taxable'] == Decimal('19900.00'), (
+        f'gross 23500 - pension 1400 - exempt 2200 = 19900, got '
+        f'{after["EMP001"]["taxable"]}'
+    )
+    from payroll_engine.tax import calculate_tax
+    assert calculate_tax(after['EMP001']['taxable']) == after['EMP001']['tax'], (
+        'tax must equal the public brackets applied to the reported taxable'
+    )
+
+    # 5. EMP002 -- no capped allowance -- matches on all six figures exactly.
     assert before['EMP002'] == after['EMP002'], (
         f'EMP002 has no capped allowance and must match exactly: '
         f'{before["EMP002"]} vs {after["EMP002"]}'
@@ -272,6 +291,52 @@ def test_money_proof_before_vs_after(ctx, proof_company):
     assert after['EMP001']['tax'] < before['EMP001']['tax'], (
         'the exemption correction must reduce tax'
     )
+
+
+def test_legacy_itemized_path_agrees_with_engine(ctx, proof_company):
+    """Item 4a: was the CSV bare-number path the SOLE defect?
+
+    Runs the legacy calculation WITH allowance_records -- the itemized path
+    that understands per-allowance tax treatment -- and compares its tax to the
+    engine's. If they match, production's numbers were only ever wrong because
+    payroll_workflow.py:77 passed a bare number with no records.
+    """
+    from payroll_engine.payroll import calculate_payroll
+
+    co, _u, emps = proof_company
+    emp = emps[0]  # EMP001, holds the capped transport allowance
+
+    active = EmployeeAllowance.query.filter_by(
+        company_id=co.id, employee_id=emp.id, is_active=True
+    ).all()
+    total = sum((Decimal(str(a.amount or 0)) for a in active), Decimal('0'))
+
+    bare = calculate_payroll(Decimal(str(emp.basic_salary)), total)
+    itemized = calculate_payroll(
+        Decimal(str(emp.basic_salary)), total, allowance_records=active
+    )
+
+    backfill_company(co.id)
+    from payroll_engine.payroll_elements import calculate_payroll_from_assignments
+
+    engine = calculate_payroll_from_assignments(emp, co.id, date(2026, 9, 1))
+
+    print(f'\n  gross   bare={bare["gross"]}  itemized={itemized["gross"]}  '
+          f'engine={engine["gross"]}')
+    print(f'  tax     bare={bare["tax"]}  itemized={itemized["tax"]}  '
+          f'engine={engine["tax"]}')
+    print(f'  exempt  itemized={itemized.get("exempt_allowances")}  '
+          f'engine={engine.get("exempt_allowances")}')
+
+    assert engine['gross'] == bare['gross'] == itemized['gross']
+    assert engine['tax'] == itemized['tax'], (
+        'engine tax must equal the legacy ITEMIZED tax; if this holds the CSV '
+        'bare-number path was the only defect'
+    )
+    assert engine['tax'] < bare['tax'], (
+        'the bare path must be the one that overstates tax'
+    )
+    assert engine.get('exempt_allowances') == itemized.get('exempt_allowances')
 
 
 def test_reconciliation_legacy_rows_in_assignments_out(ctx, proof_company):

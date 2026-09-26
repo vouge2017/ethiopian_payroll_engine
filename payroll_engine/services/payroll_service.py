@@ -485,6 +485,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 pension_employee = calc['pension_employee']
                 pension_employer = calc['pension_employer']
                 line_items = calc.get('line_items')
+                exempt_allowances = calc.get('exempt_allowances')
+                taxable_income = calc.get('taxable')
             else:
                 # Legacy path, unchanged: pre-computed draft figures, with the
                 # hand-rolled deduction loop that pre-dates the engine.
@@ -519,6 +521,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 pension_employee = Decimal(str(emp_data['pension_employee']))
                 pension_employer = Decimal(str(emp_data['pension_employer']))
                 line_items = None  # legacy path has no engine breakdown
+                exempt_allowances = None
+                taxable_income = None
 
             payslip = Payslip(
                 payroll_run_id=run.id,
@@ -534,6 +538,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 unpaid_leave_reduction=unpaid_red,
                 deduction_details=deduction_details,
                 line_items=line_items,
+                exempt_allowances=exempt_allowances,
+                taxable_income=taxable_income,
             )
             db.session.add(payslip)
 

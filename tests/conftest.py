@@ -38,9 +38,25 @@ def _configure_test_db():
 
 
 @pytest.fixture(autouse=True)
-def _tenant_context_cleanup():
-    """Clear TenantQuery thread-local context after each test."""
+def _db_session_cleanup():
+    """Tear down per-test DB and tenant state.
+
+    BOTH cleanups are required:
+      * db.session.remove() returns the session's connection to the pool and
+        drops the identity map. Without it, ORM objects from a previous test
+        stay identity-mapped and stale connections accumulate, which surfaces
+        as cross-test contamination (stale objects, leaked connections).
+      * TenantQuery context is thread-local, so it must be cleared or it
+        leaks into the next test.
+    """
     yield
+    try:
+        from payroll_engine import db
+
+        db.session.rollback()
+        db.session.remove()
+    except Exception:
+        pass
     try:
         from payroll_engine.models import TenantQuery
 

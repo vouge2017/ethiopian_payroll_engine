@@ -1,0 +1,166 @@
+# STATUS.md — Live, Command-Verified State
+
+**Last updated:** 2026-09-15 14:30 UTC  
+**Rule:** Any claim about test counts, verification status, or floor state below must cite a line in this file with a timestamp — or the claim is "not yet checked."
+
+---
+
+## Test Count — Machine Fact
+
+Command run: `cd ethiopian_payroll_engine && python -m pytest --co -q 2>&1 | tail -1`
+
+**Result (2026-09-15 14:30 UTC):** 1127 tests collected in 14.97s
+
+Full command output (last 3 lines):
+```
+C:\Users\25191\payroll_audit\ethiopian_payroll_engine\tests\test_performance_large_csv.py:69: PytestUnknownMarkWarning: Unknown pytest.mark.benchmark - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.benchmark
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/mark.html
+1127 tests collected in 14.97s
+```
+
+**Note:** This is *collected*, not *passed*. The pass/fail state is NOT recorded here until a full pytest run completes and the summary line is captured verbatim.
+
+---
+
+## Current Branch — Machine Fact
+
+Command run: `git branch --show-current && echo "---" && git log --oneline -5`
+
+**Result (2026-09-15 14:30 UTC):**
+```
+prod-hardening-2026-08
+---
+4cd799c EMERGENCY VALVE: env-gated CSRF exemption for auth routes behind broken prod proxy pairing
+12bef26 P0: failed login for unknown account crashed 500 (NULL audit company_id); skip tenant audit for unknown identifiers + regression test
+a788ee0 Fix register phone mask: force 9 digits starting 9/7 (strips 251/0 prefixes, caps length) - unblocks registration
+73dd152 Fix register phone input: accept 09.. / +2519.. / 9.. formats (mask was truncating valid numbers, silently blocking registration)
+552745d render.yaml: managed Postgres (standard) with PITR for production
+```
+
+**Branch:** `prod-hardening-2026-08` (verified, not assumed)
+
+---
+
+## Known State (to be re-verified each session)
+
+These entries are **claims with timestamps** — re-run the cited command to verify, or treat as "not yet checked" if the timestamp is old.
+
+### Phone validation fix — claimed resolved
+
+- **Claim:** Phone numbers in test fixtures fixed from `0911000001` (10-digit, invalid) to `911000001` (9-digit, valid).
+- **Claimed scope:** 10 test files, ~47 tests blocked.
+- **Timestamp:** Not yet re-verified on this session. Run `grep -r "0911000001" tests/` to check.
+- **Status:** NOT YET CHECKED — session start.
+
+### CI/CD pipeline — claimed on roadmap
+
+- **Source:** `ROADMAP.md` line 309-314 — CI/CD is listed as Floor 9 in the roadmap narrative (not explicitly in the scored table).
+- **Status:** NOT YET CHECKED — no `.github/workflows/` directory confirmed present.
+- **Action needed:** Create minimal GitHub Actions workflow that runs `pytest --co` on push. This makes test count a machine fact, not a Hermes recollection.
+
+### Floor 4 closed — claimed
+
+- **Source:** User directive, captured in `PROJECT_RULES.md` line 23-30.
+- **Status:** Verified by file existence — `PROJECT_RULES.md` line 23 states "Floor 4 is closed."
+- **Meaning:** Calculator math definition locked. New bugs = new issues, not re-litigation.
+
+---
+
+## What Must Be Verified Before Any Work Claim
+
+Before claiming any of the following, re-run the cited command and update the timestamp + result:
+
+| Claim | Verification Command | Last Verified |
+|-------|---------------------|---------------|
+| Total test count | `pytest --co -q \| tail -1` | 2026-09-15 14:30 UTC (1127 collected) |
+| Pass/fail state | Full `pytest` run + summary line | NOT YET RUN THIS SESSION |
+| Current branch | `git branch --show-current` | 2026-09-15 14:30 UTC (prod-hardening-2026-08) |
+| Recent commits | `git log --oneline -5` | 2026-09-15 14:30 UTC |
+| Phone fixture validity | `grep -r "09110000" tests/ \| wc -l` | NOT YET CHECKED |
+| CI workflow exists | `ls -la .github/workflows/ 2>/dev/null \| head` | NOT YET CHECKED |
+
+---
+
+## The Test-Count Drift Problem — Structural Fix
+
+The root cause of test-count drift is that test counts come from Hermes recollection, not from a machine source.
+
+**The fix is Floor 9 — CI/CD pipeline.** Even a minimal GitHub Actions workflow that runs on every push and records:
+- `pytest --co -q` output (test count)
+- Full `pytest` summary (pass/fail)
+
+...makes "current test count" a machine fact stored in the CI logs, not a number Hermes remembers.
+
+**Until CI exists:** Every session re-runs `pytest --co -q` and updates this file with the verbatim result and timestamp.
+
+---
+
+## Phase 2 Regression Triage — 2026-09-26 (command-verified)
+
+Baseline established on a git worktree at merge-base `7e87ebb` (detached), running
+the 16 failing test IDs: **13 failed, 3 passed**. The 13 are genuinely pre-existing.
+The 3 that pass on merge-base but fail on this branch were the regression set:
+
+| Test | merge-base | branch | Status |
+|---|---|---|---|
+| `test_employee_phone.py::test_employee_accepts_non_ethiopian_phone` | PASS | PASS | **RESOLVED — 4/4 green, TypeError gone** |
+| `test_dashboard_api.py::…::test_accountant_gets_trust_metrics` | PASS | FAIL | **OPEN** — `TypeError: '<=' not supported between 'int' and 'MagicMock'` |
+| `test_evidence.py::…::test_invalid_run_returns_empty` | PASS | FAIL | **DIAGNOSED, not fixed — stale test, NOT a money bug** |
+
+### test_evidence — root cause (stale expectation, not a money bug)
+
+`collect_evidence` changed its read seam from `db.session.get(PayrollRun, id)` to
+`PayrollRun.query.filter_by(id=..., company_id=...).first()` (tenant isolation).
+The test still mocks the OLD seam (`mock_db.session.get.return_value = None`), which
+is now dead code, so `not current_run` is False against a MagicMock, the guard is
+bypassed, and the full check suite runs against mock data — returning 8 instead of 0.
+
+`collect_evidence` performs **no writes** (no `.add(`/`.commit(`/`.delete(` in
+`evidence.py`). It is a read-only report builder and never calls `process_payroll`.
+Nothing creates payslips or financial records for a rejected run. The production
+change is correct and strictly more secure; only the test's mock seam is stale.
+
+### test_dashboard_api — OPEN, root cause not isolated
+
+Trace: `dashboard_api.py:648` → `filing_workspace.py:120` → `compliance.py:114` →
+`calendar.py:170`. A MagicMock reaches compliance date math (`min(day, max_day)` /
+`calendar.monthrange`) and is compared against an int. NOT the Free-plan
+5-employee cap (that cap is in `test_employee_phone.py:42`, which is green).
+The specific mock leaking into the date path was not isolated.
+
+### conftest cleanup restored (did NOT fix either failure)
+
+`tests/conftest.py` autouse fixture had lost `db.session.rollback()` +
+`db.session.remove()` when tenant-context clearing was added. Both are restored —
+correct on their own merits, since the identity map otherwise leaks across tests.
+**This was a wrong hypothesis: restoring it did not fix either failure.** The fix is
+retained; the cause lies elsewhere.
+
+### Interim full suite (chunked, 8 slices)
+
+`passed=1137 failed=16 errors=14 skipped=2 TOTAL=1169`. The 14 errors are
+`psycopg2.OperationalError: connection refused localhost:5432` and do not reproduce
+when the four PG-referencing files run alone (24/24 pass) — cross-test config leak,
+still unexplained. Note the suite cannot run as one process here; it is killed at
+~36-75%, so chunked slices are the only way to get a complete number.
+
+---
+
+## Not Yet Checked (session start)
+
+The following are NOT verified in this session. Do not cite them as fact until re-checked:
+
+- Actual pass/fail state of all tests (last complete number: 1169, chunked)
+- Whether the phone fixture fix is actually in place across all 10 files
+- Whether `.github/workflows/` exists
+- Whether VERIFICATION_PACKAGE.md has been sent to the accountant
+- Excel Diff Check status
+- Root cause of the test_dashboard_api MagicMock leak
+- `cookies.txt` was a LOCAL DEV session (`domain=localhost`, `_user_id=2`) — not a
+  production credential. Now gitignored; never committed or pushed.
+
+---
+
+*Update this file every session. Timestamp every claim. When in doubt, run the command.*

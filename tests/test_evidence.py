@@ -376,9 +376,16 @@ class TestReportStructure:
 
 class TestEdgeCases:
     def test_invalid_run_returns_empty(self):
+        # CHANGED under the tenant-isolation work: collect_evidence resolves the
+        # run with PayrollRun.query.filter_by(id=..., company_id=...).first()
+        # instead of db.session.get(PayrollRun, id). Mocking the old seam left
+        # the guard bypassed (the query returned a MagicMock, which is truthy),
+        # so the full check suite ran against mock data and reported 8 instead
+        # of 0. Mock the seam the code actually calls.
         mock_db = MagicMock()
         mock_models = MagicMock()
         mock_db.session.get.return_value = None
+        mock_models.PayrollRun.query.filter_by.return_value.first.return_value = None
 
         report = collect_evidence(999, 1, mock_db, mock_models)
 

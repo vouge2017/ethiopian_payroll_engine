@@ -702,7 +702,14 @@ def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions
                 item_type if item_type else _make_placeholder('unknown'),
                 amount,
                 PayItemClassification.DEDUCTION, False,
-                custom_label=assignment.label or (item_type.name_en if item_type else 'Unknown'),
+                # Pass ONLY the employee's real custom label. Falling back to
+                # name_en here made _line_item_dict set label_am to the
+                # English string, overwriting the catalog's Amharic name_am --
+                # so every itemised DEDUCTION rendered with no Amharic label
+                # and the payslip showed a blank/Latin line. With custom_label
+                # None, _line_item_dict falls through to the catalog's
+                # name_en / name_am, matching the earning path.
+                custom_label=assignment.custom_label,
                 is_legacy=False,
             ))
 

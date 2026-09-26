@@ -326,6 +326,14 @@ def update_employee(emp_id):
     errors = _validate_employee_data(data, partial=True)
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 422
+    # Capture old values for audit trail before any mutation
+    old_values = {}
+    if 'basic_salary' in data and data['basic_salary'] != emp.basic_salary:
+        old_values['basic_salary'] = str(emp.basic_salary)
+    if 'allowances' in data and data['allowances'] != emp.allowances:
+        old_values['allowances'] = str(emp.allowances)
+    if 'bank_or_telebirr' in data and data['bank_or_telebirr'] != emp.bank_or_telebirr:
+        old_values['bank_or_telebirr'] = emp.bank_or_telebirr
     if 'name' in data:
         emp.name = data['name']
     if 'basic_salary' in data:
@@ -348,6 +356,23 @@ def update_employee(emp_id):
         else:
             emp.fayda_fin = None
     db.session.commit()
+    # Audit log: salary/allowance/bank changes with old vs new values
+    if old_values:
+        from payroll_engine.shared import create_audit_log
+        create_audit_log(
+            company_id=_get_company_id(),
+            user_id=_get_current_user().id,
+            action='employee_salary_changed',
+            details={
+                'employee_id': emp.employee_id,
+                'employee_name': emp.name,
+                'old_values': old_values,
+                'new_values': {
+                    k: str(data[k]) for k in old_values if k in data
+                },
+            },
+        )
+        db.session.commit()
     from payroll_engine import trust_cache
 
     trust_cache.invalidate_trust_cache(_get_company_id())

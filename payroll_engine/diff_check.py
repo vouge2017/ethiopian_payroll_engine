@@ -50,8 +50,10 @@ _ALIASES: dict[str, str] = {
     'your_gross': 'gross', 'their_gross': 'gross', 'old_gross': 'gross',
     'tax': 'tax', 'tax_paid': 'tax', 'taxes': 'tax',
     'withholding_tax': 'tax', 'income_tax': 'tax',
-    'paye': 'tax', 'tax_(paye)': 'tax',
-    'tax_': 'tax',
+    'paye': 'tax', 'tax_': 'tax',
+    'tax_paye': 'tax',  # read_xlsx strips parentheses: "Tax (PAYE)" -> "tax_paye"
+    'gross_etb': 'gross',  # read_xlsx strips parentheses: "Gross (ETB)" -> "gross_etb"
+    'net_etb': 'net', 'net_pay_etb': 'net',
     'your_tax': 'tax', 'their_tax': 'tax', 'old_tax': 'tax',
     'pension': 'pension', 'pension_employee': 'pension',
     'employee_pension': 'pension', 'employee_pension_7': 'pension',
@@ -85,7 +87,10 @@ _ALIASES: dict[str, str] = {
 def _col_map(headers: list[str]) -> dict[str, str]:
     out: dict[str, str] = {}
     for h in headers:
-        raw = str(h).strip().lower().replace(' ', '_').replace('-', '_')
+        # Match read_xlsx normalization: strip ALL non-alphanumeric chars
+        raw = str(h).strip().lower()
+        raw = re.sub(r'[^a-z0-9_]', '_', raw)
+        raw = re.sub(r'_+', '_', raw).strip('_')
         out[h] = _ALIASES.get(raw)
     return out
 

@@ -117,6 +117,18 @@ def test_col_map():
     assert result["Unknown"] is None
 
 
+def test_col_map_parentheses_stripped():
+    """Headers with parentheses get stripped by read_xlsx and must still map."""
+    # read_xlsx normalizes "Tax (PAYE)" -> "tax_paye", "Gross (ETB)" -> "gross_etb"
+    result = _col_map(["Tax (PAYE)", "Gross (ETB)", "Net (ETB)",
+                       "Employee Pension (7%)", "Net Pay"])
+    assert result["Tax (PAYE)"] == "tax"
+    assert result["Gross (ETB)"] == "gross"
+    assert result["Net (ETB)"] == "net"
+    assert result["Employee Pension (7%)"] == "pension"
+    assert result["Net Pay"] == "net"
+
+
 def test_parse_phone():
     """Phone parser strips prefixes and validates 9-digit format."""
     assert _parse_phone("0912345678") == "912345678"

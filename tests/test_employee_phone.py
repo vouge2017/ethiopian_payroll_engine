@@ -39,6 +39,7 @@ def _login(client, app):
     """Login as owner."""
     with app.app_context():
         company = Company(name='TestCo')
+        company.plan_code = 'pro'  # Avoid Free-tier 5-employee cap in tests
         db.session.add(company)
         db.session.flush()
         user = User(email='owner@test.com', role='owner', company_id=company.id)

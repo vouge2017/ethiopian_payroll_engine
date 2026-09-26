@@ -345,9 +345,26 @@ def test_payroll_deduction_details(ctx, company_user_employee):
 
 
 def test_add_deduction_route(ctx, client, company_user_employee):
-    """POST to add_deduction creates a deduction."""
+    """POST to add_deduction creates a payroll_item_assignment.
+
+    CHANGED under the elements architecture: the route no longer writes
+    EmployeeDeduction. It writes a PayrollItemAssignment against the
+    per-company PayItemType, so the old "did an EmployeeDeduction appear?"
+    assertion is obsolete. The negative assertion below is deliberate and
+    permanent -- it is the guard that the route never regresses to writing
+    the legacy table.
+    """
     company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
+
+    # Seed the company catalog BEFORE the request: the route validates
+    # deduction_type against the company-scoped PayItemType rows, and a real
+    # company is always seeded first (flask seed-system-items /
+    # migrate-pay-items).
+    from payroll_engine.catalog import seed_company_templates
+
+    seed_company_templates(company.id)
+    db.session.commit()
 
     resp = client.post(
         f'/employees/{emp.id}/deductions/add',
@@ -364,11 +381,32 @@ def test_add_deduction_route(ctx, client, company_user_employee):
     )
     assert resp.status_code == 200
 
-    ded = EmployeeDeduction.query.filter_by(company_id=company.id, employee_id=emp.id).first()
-    assert ded is not None
-    assert ded.label == 'MoE Batch 2024-07'
-    assert ded.amount == Decimal('500')
-    assert ded.remaining_balance == Decimal('6000')
+    from payroll_engine.models_payroll_elements import (
+        PayItemType,
+        PayrollItemAssignment,
+    )
+
+    item = PayItemType.query.filter_by(
+        company_id=company.id, key='cost_sharing'
+    ).first()
+    assert item is not None, 'route should resolve the type via PayItemType'
+
+    a = PayrollItemAssignment.query.filter_by(
+        company_id=company.id,
+        employee_id=emp.id,
+        pay_item_type_id=item.id,
+    ).first()
+    assert a is not None
+    assert a.fixed_amount == Decimal('500')
+    assert a.tracking_mode == 'declining'
+    assert a.remaining_balance == Decimal('6000')
+    assert a.custom_label == 'MoE Batch 2024-07'
+
+    # Permanent guard: the legacy table is never written by new code.
+    legacy = EmployeeDeduction.query.filter_by(
+        company_id=company.id, employee_id=emp.id
+    ).first()
+    assert legacy is None, 'add_deduction must not write EmployeeDeduction'
 
 
 def test_stop_deduction_route(ctx, client, company_user_employee):

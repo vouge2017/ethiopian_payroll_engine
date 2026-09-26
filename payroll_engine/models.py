@@ -25,15 +25,9 @@ _IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production'
 # Hard-fail ONLY in production; warn loudly everywhere else so CI, tests,
 # and local development are never blocked by missing local env vars.
 if not _ENCRYPTION_KEY:
-    if _IS_PRODUCTION:
-        raise RuntimeError(
-            'DB_ENCRYPTION_KEY environment variable is required in production. '
-            'Set it to a 32-byte hex or base64 string.'
-        )
-    _ENCRYPTION_KEY = 'dev-encryption-key-not-for-production-use-only-32b'
-    _logging.getLogger('payroll_engine').warning(
-        'DB_ENCRYPTION_KEY not set — using INSECURE development key. '
-        'Never run with real data in this mode.'
+    raise RuntimeError(
+        'DB_ENCRYPTION_KEY environment variable is required in all environments. '
+        'Set it to a 32-byte hex or base64 string.'
     )
 
 try:
@@ -429,8 +423,8 @@ class UserCompany(db.Model):
     - TenantQuery enforces company_id filter on all queries
     """
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='employee')  # owner, accountant, employee
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
@@ -453,7 +447,7 @@ class User(UserMixin, db.Model):
     # (payment reconciliation across tenants). Never set from public signup.
     is_platform_admin = db.Column(db.Boolean, nullable=False, server_default='0', default=False)
     company_id = db.Column(
-        db.Integer, db.ForeignKey('company.id'), nullable=True
+        db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True
     )  # Null until user creates/joins a company
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
@@ -465,7 +459,7 @@ class User(UserMixin, db.Model):
     mfa_enabled = db.Column(db.Boolean, default=False, nullable=False)
     # Referral program
     referral_code = db.Column(db.String(20), unique=True, nullable=True)
-    referred_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    referred_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -587,8 +581,8 @@ class ApiKey(db.Model):
     __tablename__ = 'api_key'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False, index=True)
     token_hash = db.Column(db.String(64), unique=True, nullable=False, index=True)
     name = db.Column(db.String(100), nullable=True)  # e.g. 'CI pipeline', 'Mobile app'
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -673,13 +667,13 @@ class Employee(db.Model):
         tin = db.Column(db.String(20), nullable=True)
         fayda_fin = db.Column(db.String(20), nullable=True)  # Fayda Digital ID — 12 digits
     bank_or_telebirr = db.Column(db.String(100))  # Legacy: 'telebirr:0912345678' or 'bank:cbe'
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Link to User account
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)  # Link to User account
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Soft delete — employee is deactivated, not removed
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
-    deleted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    deleted_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     invite_token = db.Column(db.String(64), nullable=True, unique=True)
     invite_expires = db.Column(db.DateTime, nullable=True)
     # Employee-editable personal info
@@ -809,8 +803,8 @@ class EmployeeAllowance(db.Model):
     ]
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
 
     # What type
     allowance_type = db.Column(db.String(30), nullable=False)  # One of ALLOWANCE_TYPES keys
@@ -880,28 +874,40 @@ class PayrollRun(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     reference = db.Column(db.String(20), nullable=True)  # e.g., PR-2026-07-001
     period = db.Column(db.String(7), nullable=True)  # Ethiopian period e.g. '2018-10' (Sene 2018)
     run_date = db.Column(db.Date, nullable=False, default=lambda: datetime.now(UTC))
     # Lifecycle: draft → review → pending_approval → processing → completed → locked / failed
     status = db.Column(db.String(20), nullable=False, default='draft')
     source = db.Column(db.String(20), nullable=False, default='upload')  # 'upload', 'spreadsheet', 'import', 'api'
-    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     approved_at = db.Column(db.DateTime, nullable=True)
     approval_ip = db.Column(db.String(45), nullable=True)
     locked_at = db.Column(db.DateTime, nullable=True)
-    locked_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    locked_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     disbursement_status = db.Column(
         db.String(20), nullable=False, default='pending'
     )  # pending, file_downloaded, disbursed, confirmed, failed
     disbursed_at = db.Column(db.DateTime, nullable=True)
-    disbursed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    disbursed_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     disbursement_notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     version_id = db.Column(db.Integer, nullable=False, default=1)  # Optimistic concurrency lock
 
-    __table_args__ = (db.Index('ix_payrollrun_company_status', 'company_id', 'status'),)
+    __table_args__ = (
+        db.Index('ix_payrollrun_company_status', 'company_id', 'status'),
+        # One active run per company+period. Failed/rejected are excluded so a
+        # period can legitimately be re-run after a failure.
+        db.Index(
+            'ix_payrollrun_company_period_unique',
+            'company_id',
+            'period',
+            unique=True,
+            sqlite_where=db.text("status NOT IN ('failed', 'rejected')"),
+            postgresql_where=db.text("status NOT IN ('failed', 'rejected')"),
+        ),
+    )
     __mapper_args__ = {'version_id_col': version_id}
 
     # Relationships
@@ -942,8 +948,8 @@ class Payslip(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     pdf_file_path = db.Column(db.String(255))  # Path to the generated PDF
     # Lazy PDF generation: not_generated → generating → generated / failed
     pdf_status = db.Column(db.String(20), nullable=False, default='not_generated')
@@ -961,6 +967,16 @@ class Payslip(db.Model):
     payslip_type = db.Column(db.String(20), nullable=False, default='regular')  # regular, adjustment
     reason = db.Column(db.String(255), nullable=True)  # Reason for adjustment
     original_payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=True)
+
+    # Absence and deduction breakdown (stored for payslip transparency)
+    sick_leave_reduction = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    unpaid_leave_reduction = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    deduction_details = db.Column(db.JSON, nullable=True)  # List of {type, label, amount}
+    # Earnings/deduction lines exactly as the engine computed them at approval.
+    # The payslip PDF is generated LAZILY, well after the run is approved, so
+    # it cannot recompute -- it must render what was actually paid. JSON (not
+    # relational) because line_items is a read-only snapshot, never queried.
+    line_items = db.Column(db.JSON, nullable=True)
 
     __table_args__ = (db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),)
 
@@ -981,8 +997,8 @@ class FinalSettlement(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
 
     # Termination details
     termination_reason = db.Column(db.String(30), nullable=False)
@@ -1010,13 +1026,13 @@ class FinalSettlement(db.Model):
     payment_method = db.Column(db.String(50), nullable=True)  # bank_transfer, cash, telebirr
     payment_reference = db.Column(db.String(100), nullable=True)  # Bank ref, confirmation #
     paid_at = db.Column(db.DateTime, nullable=True)
-    paid_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    paid_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
 
     # Documents
     pdf_file_path = db.Column(db.String(255), nullable=True)  # Settlement PDF
 
     # Audit
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     # Relationships
@@ -1039,7 +1055,7 @@ class PayrollDraft(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     employee_data = db.Column(db.JSON, nullable=False)  # JSONB on Postgres
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
@@ -1059,8 +1075,8 @@ class PayrollPreview(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     token = db.Column(db.String(64), unique=True, nullable=False, index=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
     employee_data = db.Column(db.JSON, nullable=False)  # JSONB on Postgres
     filename = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
@@ -1074,10 +1090,10 @@ class Attendance(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     date = db.Column(db.Date, nullable=False)
-    hours_worked = db.Column(db.Float, nullable=False, default=0.0)
+    hours_worked = db.Column(db.Numeric(8, 2), nullable=False, default=Decimal('0.00'))
 
     def __repr__(self):
         return f'<Attendance {self.employee_id} on {self.date}>'
@@ -1087,15 +1103,15 @@ class Leave(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
     leave_type = db.Column(db.String(50), nullable=False)  # annual, sick, maternity, paternity, special, unpaid, custom
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     days_requested = db.Column(db.Integer, nullable=False)  # Calculated from dates
     status = db.Column(db.String(20), nullable=False, default='pending')  # pending, approved, rejected, cancelled
     reason = db.Column(db.Text, nullable=True)
-    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     approved_at = db.Column(db.DateTime, nullable=True)
     rejection_reason = db.Column(db.Text, nullable=True)
     medical_certificate = db.Column(db.String(255), nullable=True)  # Path to uploaded document
@@ -1122,8 +1138,8 @@ class LeaveBalance(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
     leave_type = db.Column(db.String(50), nullable=False)
     year = db.Column(db.Integer, nullable=False)  # Calendar year for annual; employment year for sick
 
@@ -1170,10 +1186,10 @@ class OvertimeEntry(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
     date = db.Column(db.Date, nullable=False)
-    hours = db.Column(db.Float, nullable=False)
+    hours = db.Column(db.Numeric(8, 2), nullable=False)
     overtime_type = db.Column(db.String(20), nullable=False, default='day')  # day, night, holiday, rest_day_holiday
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
@@ -1201,12 +1217,14 @@ class EmployeeDeduction(db.Model):
     TYPE_COURT_ORDER = 'court_order'
     TYPE_PENALTY = 'penalty'
     TYPE_LOAN = 'loan'
+    TYPE_ADVANCE = 'advance'
     TYPE_OTHER = 'other'
     DEDUCTION_TYPES = [
         (TYPE_COST_SHARING, 'Graduate Cost-Sharing'),
         (TYPE_COURT_ORDER, 'Court Order / Garnishment'),
         (TYPE_PENALTY, 'Regulatory Penalty'),
         (TYPE_LOAN, 'Company Loan'),
+        (TYPE_ADVANCE, 'Salary Advance'),
         (TYPE_OTHER, 'Other'),
     ]
 
@@ -1221,8 +1239,8 @@ class EmployeeDeduction(db.Model):
     TRACKING_MODES = [TRACK_DECLINING, TRACK_DATE_BOUNDED]
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
 
     # What
     deduction_type = db.Column(db.String(30), nullable=False)  # One of DEDUCTION_TYPES keys
@@ -1250,7 +1268,7 @@ class EmployeeDeduction(db.Model):
     stopped_reason = db.Column(db.String(200), nullable=True)  # Why was it stopped?
 
     # Audit
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
@@ -1338,7 +1356,7 @@ class EmployeeDeduction(db.Model):
         db.CheckConstraint("amount_mode IN ('fixed', 'percentage')", name='ck_deduction_amount_mode'),
         db.CheckConstraint("tracking_mode IN ('declining', 'date_bounded')", name='ck_deduction_tracking_mode'),
         db.CheckConstraint(
-            "deduction_type IN ('cost_sharing', 'court_order', 'penalty', 'loan', 'other')", name='ck_deduction_type'
+            "deduction_type IN ('cost_sharing', 'court_order', 'penalty', 'loan', 'advance', 'other')", name='ck_deduction_type'
         ),
     )
 
@@ -1350,8 +1368,8 @@ class AuditLog(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Null if system action
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)  # Null if system action
     action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     details = db.Column(db.JSON)
@@ -1442,7 +1460,7 @@ class TaxRule(db.Model):
     country = db.Column(db.String(2), nullable=False, server_default='ET', default='ET')
     rules_json = db.Column(db.JSON, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='draft')  # draft / active / archived
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     notes = db.Column(db.Text, nullable=True)
 
@@ -1559,12 +1577,12 @@ class PayrollValidationResult(db.Model):
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id'), nullable=False)
     rule_code = db.Column(db.String(50), nullable=False)
     severity = db.Column(db.String(10), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='SET NULL'), nullable=True)
     message = db.Column(db.Text, nullable=False)
     details_json = db.Column(db.JSON, nullable=True)
     overridden = db.Column(db.Boolean, default=False)
     override_reason = db.Column(db.Text, nullable=True)
-    overridden_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    overridden_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     def __repr__(self):
@@ -1605,8 +1623,8 @@ class ProfileChangeRequest(db.Model):
     SENSITIVE_FIELDS = ['phone', 'bank_account', 'tin', 'fayda_fin', 'name']
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
 
     field_name = db.Column(db.String(50), nullable=False)
     old_value = db.Column(db.Text, nullable=True)
@@ -1616,8 +1634,8 @@ class ProfileChangeRequest(db.Model):
     rejection_reason = db.Column(db.Text, nullable=True)
 
     # Who requested / who decided
-    requested_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    requested_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
@@ -1654,9 +1672,9 @@ class PayslipAcknowledgment(db.Model):
     query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
     acknowledged_at = db.Column(db.DateTime, nullable=False)
     ip_address = db.Column(db.String(45), nullable=True)
 
@@ -1673,8 +1691,8 @@ class Notification(db.Model):
     """In-app notification for users."""
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     type = db.Column(db.String(20), nullable=False, default='info')  # info, success, warning, danger
     link = db.Column(db.String(500), nullable=True)  # Optional URL to navigate to
@@ -1730,7 +1748,7 @@ class PayslipGenerationJob(db.Model):
     """
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True, index=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True, index=True)
     payslip_id = db.Column(db.Integer, db.ForeignKey('payslip.id'), nullable=False, index=True)
     batch_id = db.Column(db.String(36), nullable=False, index=True)  # UUID
     status = db.Column(db.String(20), nullable=False, default='queued')  # queued/running/generated/failed
@@ -1869,11 +1887,11 @@ class FilingRecord(db.Model):
     """
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     filing_type = db.Column(db.String(30), nullable=False)  # 'erca', 'pension', 'pssa'
     period = db.Column(db.String(20), nullable=False)  # '2026-07' format
     filed_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
-    filed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    filed_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     confirmation_number = db.Column(db.String(100), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
@@ -1894,7 +1912,7 @@ class Holiday(db.Model):
     __tablename__ = 'holiday'
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)  # None = national
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True)  # None = national
     name = db.Column(db.String(100), nullable=False)
     name_am = db.Column(db.String(200), nullable=True)  # Amharic name
     holiday_date = db.Column(db.Date, nullable=False)
@@ -1917,7 +1935,7 @@ class PushSubscription(db.Model):
     __tablename__ = 'push_subscription'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False, index=True)
     # The unique endpoint prevents duplicate subscriptions for the same browser session
     endpoint = db.Column(db.String(500), nullable=False, unique=True, index=True)
     subscription_json = db.Column(db.JSON, nullable=False)
@@ -1943,7 +1961,7 @@ class BillingPayment(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     # Optional upgrade request: plan the tenant wants activated on confirmation.
     plan_code = db.Column(db.String(20), nullable=True)  # free / standard / pro
     amount_etb = db.Column(db.Numeric(12, 2), nullable=False)
@@ -1953,11 +1971,28 @@ class BillingPayment(db.Model):
     note = db.Column(db.Text, nullable=True)
 
     status = db.Column(db.String(20), nullable=False, default='pending')  # pending/confirmed/rejected
-    submitted_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    submitted_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     submitted_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
-    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
     review_note = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return f'<BillingPayment {self.company_id} {self.period_month} {self.status}>'
+
+
+# ===========================================================================
+# Elements architecture — per-company pay item type registry
+# Phase 1 models defined in models_payroll_elements.py; re-exported here so
+# that `from payroll_engine.models import PayItemType` resolves to the canonical
+# Phase 1 definition (the one with lock-in compliance fields).
+# ===========================================================================
+
+from payroll_engine.models_payroll_elements import (  # noqa: E402,F811
+    PayItemCalcMethod,
+    PayItemClassification,
+    PayItemTaxTreatment,
+    PayItemType,
+    PayrollItemAssignment,
+)
+

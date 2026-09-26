@@ -1,5 +1,6 @@
 """Employee portal blueprint."""
 
+from decimal import Decimal
 from datetime import UTC, date, datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -90,7 +91,7 @@ def my_payslip_detail(payslip_id):
     overtime_details = []
     for entry in ot_entries:
         hourly = calculate_hourly_rate(emp.basic_salary)
-        multiplier = OVERTIME_RATES.get(entry.overtime_type, 1.0)
+        multiplier = OVERTIME_RATES.get(entry.overtime_type, Decimal('1'))
         pay = round(hourly * entry.hours * multiplier, 2)
         overtime_details.append(
             {

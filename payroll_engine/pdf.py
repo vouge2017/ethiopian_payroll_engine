@@ -26,6 +26,21 @@ _FONT_PATH = os.path.join(_FONT_DIR, 'NotoSansEthiopic-Regular.ttf')
 _FONT_REGISTERED = False
 
 
+def _item_label(line_item):
+    """Bilingual display label for one engine line item.
+
+    Labels come from PayItemType.name_en / name_am via the engine's line item,
+    never from a hardcoded string in this module. A per-employee custom_label
+    wins over the type name, and if only one language is available we show just
+    that rather than a half-empty "Label /".
+    """
+    en = (line_item.get('item_label') or '').strip()
+    am = (line_item.get('item_label_am') or '').strip()
+    if en and am:
+        return f'{en} / {am}'
+    return en or am or (line_item.get('item_key') or '').strip()
+
+
 def _ensure_font():
     global _FONT_REGISTERED
     if _FONT_REGISTERED:
@@ -306,12 +321,35 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     elements.append(Paragraph('Earnings / ገቢዎች', section_style))
     earnings_data = [
         ['Description', 'Amount (ETB)'],
-        ['Basic Salary', f'{emp["basic"]:,.2f}'],
     ]
-    if emp.get('allowances', 0) > 0:
-        earnings_data.append(['Allowances', f'{emp["allowances"]:,.2f}'])
-    if emp.get('ot_pay', 0) > 0:
-        earnings_data.append(['Overtime', f'{emp["ot_pay"]:,.2f}'])
+
+    # line_items is the elements engine's own breakdown, snapshotted onto the
+    # payslip at approval time. It is authoritative when present: the PDF is
+    # generated lazily, so recomputing here could diverge from what was paid.
+    # Bilingual labels come from PayItemType.name_en / name_am.
+    line_items = emp.get('line_items') or []
+    earning_lines = [
+        li for li in line_items if li.get('classification') == 'earning'
+    ]
+    deduction_lines = [
+        li for li in line_items if li.get('classification') == 'deduction'
+    ]
+
+    if earning_lines:
+        for li in earning_lines:
+            label = _item_label(li)
+            if label:
+                earnings_data.append(
+                    [label, f'{li.get("earned_amount", 0):,.2f}']
+                )
+    else:
+        # Legacy payslip with no engine breakdown (not yet backfilled).
+        earnings_data.append(['Basic Salary', f'{emp["basic"]:,.2f}'])
+        if emp.get('allowances', 0) > 0:
+            earnings_data.append(['Allowances', f'{emp["allowances"]:,.2f}'])
+        if emp.get('ot_pay', 0) > 0:
+            earnings_data.append(['Overtime', f'{emp["ot_pay"]:,.2f}'])
+
     earnings_data.append(['Gross Salary', f'{emp["gross"]:,.2f}'])
 
     earnings_table = Table(earnings_data, colWidths=[110 * mm, 60 * mm])
@@ -339,23 +377,36 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
         ['Description', 'Amount (ETB)'],
     ]
 
-    # Pension
-    deductions_data.append(['Employee Pension (7%)', f'{emp["pension_employee"]:,.2f}'])
-
-    # Tax with bracket breakdown
-    tax_breakdown = emp.get('tax_breakdown')
-    if tax_breakdown and tax_breakdown.get('brackets'):
-        deductions_data.append(['Income Tax', f'{emp["tax"]:,.2f}'])
-        for b in tax_breakdown['brackets']:
-            if b['rate_pct'] == 0:
-                label = f'  {b["rate_pct"]}% on first {b["upper"]:,.0f}'
-            elif b['upper'] is None:
-                label = f'  {b["rate_pct"]}% on remaining {b["taxable_amount"]:,.0f}'
-            else:
-                label = f'  {b["rate_pct"]}% on next {b["taxable_amount"]:,.0f}'
-            deductions_data.append([label, f'{b["bracket_tax"]:,.2f}'])
+    # Pension and income tax are engine-managed SYSTEM items. They are always
+    # present on the payslip, but when the engine supplied a breakdown we use
+    # its labels so a company that renamed them is honoured.
+    if deduction_lines:
+        for li in deduction_lines:
+            label = _item_label(li)
+            if label:
+                deductions_data.append(
+                    [label, f'{li.get("earned_amount", 0):,.2f}']
+                )
     else:
-        deductions_data.append(['Income Tax', f'{emp["tax"]:,.2f}'])
+        # Pension
+        deductions_data.append(
+            ['Employee Pension (7%)', f'{emp["pension_employee"]:,.2f}']
+        )
+
+        # Tax with bracket breakdown
+        tax_breakdown = emp.get('tax_breakdown')
+        if tax_breakdown and tax_breakdown.get('brackets'):
+            deductions_data.append(['Income Tax', f'{emp["tax"]:,.2f}'])
+            for b in tax_breakdown['brackets']:
+                if b['rate_pct'] == 0:
+                    label = f'  {b["rate_pct"]}% on first {b["upper"]:,.0f}'
+                elif b['upper'] is None:
+                    label = f'  {b["rate_pct"]}% on remaining {b["taxable_amount"]:,.0f}'
+                else:
+                    label = f'  {b["rate_pct"]}% on next {b["taxable_amount"]:,.0f}'
+                deductions_data.append([label, f'{b["bracket_tax"]:,.2f}'])
+        else:
+            deductions_data.append(['Income Tax', f'{emp["tax"]:,.2f}'])
 
     total_deductions = emp['tax'] + emp['pension_employee']
     deductions_data.append(['Total Deductions', f'{total_deductions:,.2f}'])

@@ -173,7 +173,7 @@ class TestLazyPdfGeneration:
                 request_ip='127.0.0.1',
             )
 
-            payslips = Payslip.query.filter_by(payroll_run_id=rid).all()
+            payslips = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).all()
             assert len(payslips) == 2
             for ps in payslips:
                 assert ps.pdf_file_path is None
@@ -222,7 +222,7 @@ class TestRetryPdf:
                 request_ip='127.0.0.1',
             )
 
-            payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
+            payslip = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).first()
             assert payslip.pdf_status == 'not_generated'
             payslip_id = payslip.id
 
@@ -258,7 +258,7 @@ class TestRetryPdf:
             )
 
             # Simulate a previously generated PDF (file must exist on disk)
-            payslip = Payslip.query.filter_by(payroll_run_id=rid).first()
+            payslip = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).first()
             tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
             tmp.write(b'%PDF-1.4 test')
             tmp.close()

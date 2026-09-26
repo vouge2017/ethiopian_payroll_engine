@@ -1422,6 +1422,94 @@ def historical_import():
 # --- Spreadsheet-Style Payroll Editor ---
 
 
+def _current_advance(employee_id, company_id, period_start):
+    """Current active advance amount for an employee in a period (Decimal 0 if none).
+
+    Read before set_advance_assignment so the audit entry can record the
+    before/after pair. Looks at the assignment the helper is about to retire.
+    """
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+
+    item = PayItemType.query.filter_by(company_id=company_id, key='advance').first()
+    if item is None:
+        return Decimal('0')
+    row = PayrollItemAssignment.query.filter(
+        PayrollItemAssignment.employee_id == employee_id,
+        PayrollItemAssignment.company_id == company_id,
+        PayrollItemAssignment.pay_item_type_id == item.id,
+        PayrollItemAssignment.is_active.is_(True),
+        PayrollItemAssignment.effective_date >= period_start,
+    ).first()
+    if row is None or row.fixed_amount is None:
+        return Decimal('0')
+    return Decimal(str(row.fixed_amount))
+
+
+def set_advance_assignment(employee_id, company_id, advance, period_start, today, created_by=None):
+    """Record a payroll advance as a PayrollItemAssignment.
+
+    Replaces the old hardcoded `EmployeeDeduction(deduction_type='advance')`
+    write. The item itself is resolved by key from the company catalog, so a
+    company can rename or re-tax an advance without a code change; if the
+    company has no 'advance' row yet we create one from the standard template
+    so the spreadsheet keeps working for a freshly migrated company.
+
+    An advance is a one-per-period deduction: any active assignment for this
+    employee/item dated on or after period_start is deactivated first, then
+    re-created only if the new amount is positive. Deactivating (rather than
+    deleting) keeps the audit trail.
+    """
+    from payroll_engine.catalog import COMPANY_TEMPLATE_ITEMS, _norm
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+
+    item = PayItemType.query.filter_by(company_id=company_id, key='advance').first()
+    if item is None:
+        tmpl = next(
+            (t for t in COMPANY_TEMPLATE_ITEMS if _norm(t.get('key')) == 'advance'),
+            None,
+        )
+        if tmpl is None:
+            # No standard advance template -- nothing sensible to invent here.
+            return None
+        item = PayItemType(
+            company_id=company_id,
+            key='advance',
+            name_en=tmpl.get('name_en'),
+            name_am=tmpl.get('name_am'),
+            classification=tmpl.get('classification', 'deduction'),
+            calculation_method=tmpl.get('calculation_method', 'fixed'),
+            tax_treatment=tmpl.get('tax_treatment', 'taxable'),
+            is_system=False,
+        )
+        db.session.add(item)
+        db.session.flush()
+
+    # Retire this period's previous advance (soft delete -- keeps the trail).
+    PayrollItemAssignment.query.filter(
+        PayrollItemAssignment.employee_id == employee_id,
+        PayrollItemAssignment.company_id == company_id,
+        PayrollItemAssignment.pay_item_type_id == item.id,
+        PayrollItemAssignment.is_active.is_(True),
+        PayrollItemAssignment.effective_date >= period_start,
+    ).update({'is_active': False}, synchronize_session=False)
+
+    if advance is None or advance <= 0:
+        return None
+
+    a = PayrollItemAssignment(
+        company_id=company_id,
+        employee_id=employee_id,
+        pay_item_type_id=item.id,
+        fixed_amount=advance,
+        tracking_mode='date_bounded',
+        effective_date=today,
+        is_active=True,
+        created_by=created_by,
+    )
+    db.session.add(a)
+    return a
+
+
 @payroll_bp.route('/payroll/spreadsheet', methods=['GET', 'POST'])
 @login_required
 @role_required('owner', 'accountant')
@@ -1496,33 +1584,29 @@ def payroll_spreadsheet():
                     )
                     db.session.add(ot)
 
-            # Save advance as a one-time deduction (delete existing this month first)
+            # Save advance as a one-per-period payroll_item_assignment.
             try:
                 advance = Decimal(change['advance'])
             except (InvalidOperation, ValueError):
                 advance = Decimal('0')
 
-            EmployeeDeduction.query.filter(
-                EmployeeDeduction.employee_id == emp.id,
-                EmployeeDeduction.company_id == _company_id(),
-                EmployeeDeduction.deduction_type == 'advance',
-                EmployeeDeduction.start_date >= month_start,
-            ).delete()
-
-            if advance > 0:
-                ded = EmployeeDeduction(
-                    company_id=_company_id(),
-                    employee_id=emp.id,
-                    deduction_type='advance',
-                    label=f'Advance {today.strftime("%B %Y")}',
-                    amount_mode='fixed',
-                    amount=advance,
-                    tracking_mode='date_bounded',
-                    start_date=today,
-                    is_active=True,
-                    created_by=current_user.id,
-                )
-                db.session.add(ded)
+            prev_advance = _current_advance(emp.id, _company_id(), month_start)
+            set_advance_assignment(
+                emp.id, _company_id(), advance, month_start, today,
+                created_by=current_user.id,
+            )
+            create_audit_log(
+                company_id=_company_id(),
+                user_id=current_user.id,
+                action='payroll.advance_saved',
+                details={
+                    'employee_id': emp.id,
+                    'employee_name': emp.name,
+                    'previous': str(prev_advance),
+                    'new': str(advance),
+                    'period_start': month_start.isoformat(),
+                },
+            )
 
         db.session.commit()
         trust_cache.invalidate_trust_cache(_company_id())
@@ -1613,7 +1697,7 @@ def payroll_spreadsheet():
         emp_ot = ot_by_emp.get(emp.id, [])
         ot_by_type = {'day': 0, 'night': 0, 'holiday': 0, 'rest_day_holiday': 0}
         for ot in emp_ot:
-            ot_by_type[ot.overtime_type] = float(ot.hours)
+            ot_by_type[ot.overtime_type] = float(ot.hours) if ot.hours is not None else 0.0
 
         ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
 
@@ -1723,35 +1807,30 @@ def payroll_spreadsheet_autosave():
                 )
                 db.session.add(ot)
 
-        # --- Advance: delete existing this month, re-create if amount > 0 ---
+        # --- Advance: retire this period's, re-create if amount > 0 ---
         advance_val = request.form.get(f'{prefix}advance', '0').strip() or '0'
         try:
             advance = Decimal(advance_val)
         except (InvalidOperation, ValueError):
             advance = Decimal('0')
 
-        # Delete existing advance deductions for this employee this month
-        EmployeeDeduction.query.filter(
-            EmployeeDeduction.employee_id == emp.id,
-            EmployeeDeduction.company_id == _company_id(),
-            EmployeeDeduction.deduction_type == 'advance',
-            EmployeeDeduction.start_date >= month_start,
-        ).delete()
-
-        if advance > 0:
-            ded = EmployeeDeduction(
-                company_id=_company_id(),
-                employee_id=emp.id,
-                deduction_type='advance',
-                label=f'Advance {today.strftime("%B %Y")}',
-                amount_mode='fixed',
-                amount=advance,
-                tracking_mode='date_bounded',
-                start_date=today,
-                is_active=True,
-                created_by=current_user.id,
-            )
-            db.session.add(ded)
+        prev_advance = _current_advance(emp.id, _company_id(), month_start)
+        set_advance_assignment(
+            emp.id, _company_id(), advance, month_start, today,
+            created_by=current_user.id,
+        )
+        create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='payroll.advance_autosaved',
+            details={
+                'employee_id': emp.id,
+                'employee_name': emp.name,
+                'previous': str(prev_advance),
+                'new': str(advance),
+                'period_start': month_start.isoformat(),
+            },
+        )
 
         saved += 1
 

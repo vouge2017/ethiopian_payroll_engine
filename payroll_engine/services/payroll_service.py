@@ -4,7 +4,8 @@ Extracted from payroll_bp.py to separate business logic from HTTP handling.
 The route handler handles auth/flash/redirects; this service handles the data.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from payroll_engine import db
 from payroll_engine.compliance import compute_compliance_score
@@ -15,6 +16,7 @@ from payroll_engine.models import (
     PayrollValidationResult,
     Payslip,
 )
+from payroll_engine.models_payroll_elements import PayrollItemAssignment
 from payroll_engine.shared import create_audit_log, create_notification, tenant_get
 
 
@@ -28,6 +30,91 @@ class ApprovalResult:
         self.employee_count = employee_count
         self.compliance_score = compliance_score
         self.redirect_to = redirect_to  # 'detail', 'runs', or 'upload'
+
+
+def _build_units_input(emp_data):
+    """Collect per-period units for rate_x_units pay items from a draft row.
+
+    The engine resolves a key in this order (lock-in 4):
+      1. assignment.units_field
+      2. the pay item key itself
+    So we pass through every unit-ish field the draft carries, keyed both by
+    the raw field name and by a normalized alias, and let the engine match.
+
+    Draft rows may supply:
+      - 'units': {name: qty}                  explicit map (preferred)
+      - 'overtime_hours' / 'ot_hours'        shorthand for the common case
+    """
+    units = {}
+
+    explicit = emp_data.get('units')
+    if isinstance(explicit, dict):
+        for k, v in explicit.items():
+            if v is None or v == '':
+                continue
+            units[str(k)] = v
+
+    for field in ('overtime_hours', 'ot_hours'):
+        if emp_data.get(field) not in (None, ''):
+            units.setdefault(field, emp_data[field])
+            units.setdefault('overtime', emp_data[field])
+
+    return units or None
+
+
+def _decline_balances(employee_id, company_id, deduction_details):
+    """Decrement remaining_balance on declining deductions after a run.
+
+    The engine returns deduction_details without the ledger id for new
+    assignment rows, so this walks the employee's declining deductions and
+    applies the matched amount. Idempotent within a run: a deduction whose
+    balance is already zero is skipped.
+    """
+    from decimal import Decimal
+
+    from payroll_engine.models import EmployeeDeduction
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+
+    # New-model rows: match on the item key we recorded in the detail dict.
+    for detail in deduction_details or []:
+        item_key = detail.get('item_key')
+        if not item_key:
+            continue
+        amount = Decimal(str(detail.get('amount') or 0))
+        if amount <= 0:
+            continue
+        rows = PayrollItemAssignment.query.filter_by(
+            company_id=company_id,
+            employee_id=employee_id,
+            tracking_mode='declining',
+            is_active=True,
+        ).all()
+        for a in rows:
+            if a.item_type and a.item_type.key == item_key and a.remaining_balance is not None:
+                a.remaining_balance = max(Decimal('0'), a.remaining_balance - amount)
+                if a.remaining_balance <= 0:
+                    a.is_active = False
+                break
+
+    # Legacy bridge rows carry their id in the detail dict.
+    by_id = {d.get('id'): d for d in (deduction_details or []) if d.get('id')}
+    if not by_id:
+        return
+    legacy = EmployeeDeduction.query.filter(
+        EmployeeDeduction.employee_id == employee_id,
+        EmployeeDeduction.company_id == company_id,
+        EmployeeDeduction.tracking_mode == 'declining',
+    ).all()
+    for ded in legacy:
+        detail = by_id.get(ded.id)
+        if not detail or ded.remaining_balance is None:
+            continue
+        amount = Decimal(str(detail.get('amount') or 0))
+        if amount <= 0:
+            continue
+        ded.remaining_balance = max(Decimal('0'), ded.remaining_balance - amount)
+        if ded.remaining_balance <= 0:
+            ded.is_active = False
 
 
 def apply_flag_overrides(run_id, form_data):
@@ -102,8 +189,88 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         ).all()
         emp_by_eid = {e.employee_id: e for e in existing_emps}
 
+        # --- BUG FIX: Compute leave reductions from actual Leave records ---
+        # The draft has stale values; we need real leave data at approval time.
+        from payroll_engine.models import Leave, EmployeeDeduction
+        from payroll_engine.leave import LeaveType, DEFAULT_SICK_TIER_1_DAYS
+        from decimal import Decimal
+
+        today = date.today() if 'date' not in dir() else date.today()
+        month_start = today.replace(day=1)
+
+        # Pre-compute leave reductions per employee
+        leave_reductions = {}  # emp_id -> (sick_reduction, unpaid_reduction)
+        for emp in existing_emps:
+            sick_reduction = Decimal('0')
+            unpaid_reduction = Decimal('0')
+
+            # Fetch approved leave for this employee in current month
+            emp_leave = Leave.query.filter(
+                Leave.employee_id == emp.id,
+                Leave.company_id == company_id,
+                Leave.status == 'approved',
+                Leave.start_date <= today,
+                Leave.end_date >= month_start,
+            ).all()
+
+            for lv in emp_leave:
+                overlap_start = max(lv.start_date, month_start)
+                overlap_end = min(lv.end_date, today)
+                if overlap_start > overlap_end:
+                    continue
+                overlap_days = (overlap_end - overlap_start).days + 1
+                daily_rate = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
+
+                if lv.leave_type == LeaveType.UNPAID:
+                    unpaid_reduction += daily_rate * Decimal(str(overlap_days))
+                elif lv.leave_type == LeaveType.SICK:
+                    # Tiered: first SICK_TIER_1_DAYS at 100%, next at 50%, rest unpaid
+                    # We need cumulative sick days in the 12-month period
+                    year_ago = today.replace(year=today.year - 1)
+                    sick_history = Leave.query.filter(
+                        Leave.employee_id == emp.id,
+                        Leave.company_id == company_id,
+                        Leave.leave_type == LeaveType.SICK,
+                        Leave.status == 'approved',
+                        Leave.start_date >= year_ago,
+                    ).all()
+                    cumulative_sick = sum(lv2.days_requested for lv2 in sick_history)
+                    tier1 = DEFAULT_SICK_TIER_1_DAYS
+
+                    # Days in this leave that fall into each tier
+                    days_at_100 = min(max(0, tier1 - (cumulative_sick - lv.days_requested)), overlap_days)
+                    days_at_50 = min(max(0, overlap_days - days_at_100), max(0, (tier1 * 2) - (cumulative_sick - lv.days_requested) - days_at_100))
+                    # Remaining are unpaid (100% reduction)
+                    days_unpaid = overlap_days - days_at_100 - days_at_50
+
+                    sick_reduction += daily_rate * Decimal(str(days_at_50)) * Decimal('0.5')
+                    sick_reduction += daily_rate * Decimal(str(days_unpaid))  # unpaid portion
+
+            leave_reductions[emp.id] = (sick_reduction.quantize(Decimal('0.01')), unpaid_reduction.quantize(Decimal('0.01')))
+
+        # Pre-compute active deductions (advances, loans, etc.) per employee
+        active_deductions = {}  # emp_id -> list of deduction dicts
+        for emp in existing_emps:
+            deductions = EmployeeDeduction.query.filter(
+                EmployeeDeduction.employee_id == emp.id,
+                EmployeeDeduction.company_id == company_id,
+                EmployeeDeduction.is_active == True,
+            ).all()
+            emp_deds = []
+            for ded in deductions:
+                # For date-bounded, check if within range
+                if ded.tracking_mode == 'date_bounded' and ded.end_date and ded.end_date < today:
+                    continue
+                # For declining, check exhausted
+                if ded.tracking_mode == 'declining' and ded.remaining_balance is not None and ded.remaining_balance <= 0:
+                    continue
+                emp_deds.append(ded)
+            active_deductions[emp.id] = emp_deds
+
         # Create/update employees and payslips
         # PDFs are generated lazily on download (not at approval time)
+        from payroll_engine.payroll_elements import calculate_payroll_from_assignments
+
         for emp_data in employees_data:
             emp = emp_by_eid.get(emp_data['id'])
             if not emp:
@@ -127,18 +294,112 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     emp.tin = emp_data['tin']
                 db.session.flush()
 
+            # --- BUG FIX: Apply leave reductions and deductions ---
+            sick_red, unpaid_red = leave_reductions.get(emp.id, (Decimal('0'), Decimal('0')))
+
+            # ---- The bridge (spec: "new assignments if present, else old records")
+            #
+            # An employee with no pay-item assignments at all has not been
+            # backfilled yet. The elements engine can only assemble gross FROM
+            # assignments, so calling it blind returns gross=0 / net=0 and
+            # silently pays the employee nothing. In that case keep the legacy
+            # path (the draft's pre-computed figures) until the backfill
+            # migration runs. Once the employee has any active assignment the
+            # engine is authoritative.
+            has_assignments = PayrollItemAssignment.query.filter_by(
+                company_id=company_id, employee_id=emp.id, is_active=True
+            ).first() is not None
+
+            if has_assignments:
+                # Units for rate_x_units pay items (lock-in 4). The draft carries
+                # whatever the upload/autosave collected; keys are matched against
+                # assignment.units_field first, then the item key itself.
+                units_input = _build_units_input(emp_data)
+
+                # Overtime entries still come from their own module (spec 2d).
+                ot_entries = [
+                    {'hours': e.get('hours', 0), 'type': e.get('type', 'day')}
+                    for e in (emp_data.get('overtime') or [])
+                ]
+
+                # Elements engine: reads the employee's active
+                # PayrollItemAssignment rows for the run period. `deductions` is
+                # the legacy bridge -- EmployeeDeduction rows are still honoured
+                # until the backfill migration moves them, but they are no longer
+                # computed by hand here. The engine merges bridge rows with new
+                # assignment rows and returns the merged deduction_details.
+                calc = calculate_payroll_from_assignments(
+                    emp,
+                    company_id,
+                    today,
+                    units_input=units_input,
+                    overtime_entries=ot_entries or None,
+                    deductions=active_deductions.get(emp.id, []) or None,
+                    sick_leave_reduction=sick_red + unpaid_red,
+                )
+
+                deduction_details = calc['deduction_details']
+                final_net = calc['net']
+                gross = calc['gross']
+                tax = calc['tax']
+                pension_employee = calc['pension_employee']
+                pension_employer = calc['pension_employer']
+                line_items = calc.get('line_items')
+            else:
+                # Legacy path, unchanged: pre-computed draft figures, with the
+                # hand-rolled deduction loop that pre-dates the engine.
+                net_before_deductions = Decimal(str(emp_data['net'])) - sick_red - unpaid_red
+                deduction_details = []
+                total_deductions = Decimal('0')
+                for ded in active_deductions.get(emp.id, []):
+                    if ded.amount_mode == 'percentage':
+                        ded_amount = (net_before_deductions * ded.amount / Decimal('100')).quantize(Decimal('0.01'))
+                    else:
+                        ded_amount = ded.amount
+                    if ded.tracking_mode == 'declining' and ded.remaining_balance is not None:
+                        ded_amount = min(ded_amount, ded.remaining_balance)
+                    ded_amount = min(ded_amount, net_before_deductions - total_deductions)
+                    if ded_amount > 0:
+                        total_deductions += ded_amount
+                        deduction_details.append({
+                            'id': ded.id,
+                            'type': ded.deduction_type,
+                            'type_label': ded.type_label,
+                            'label': ded.label,
+                            'amount': float(ded_amount),
+                            'remaining_balance': float(ded.remaining_balance) if ded.remaining_balance else None,
+                        })
+                        if ded.tracking_mode == 'declining' and ded.remaining_balance is not None:
+                            ded.remaining_balance = max(Decimal('0'), ded.remaining_balance - ded_amount)
+                            if ded.remaining_balance <= 0:
+                                ded.is_active = False
+                final_net = net_before_deductions - total_deductions
+                gross = Decimal(str(emp_data['gross']))
+                tax = Decimal(str(emp_data['tax']))
+                pension_employee = Decimal(str(emp_data['pension_employee']))
+                pension_employer = Decimal(str(emp_data['pension_employer']))
+                line_items = None  # legacy path has no engine breakdown
+
             payslip = Payslip(
                 payroll_run_id=run.id,
                 employee_id=emp.id,
                 company_id=company_id,
                 pdf_status='not_generated',  # Lazy: generated on first download
-                gross_salary=emp_data['gross'],
-                tax=emp_data['tax'],
-                employee_pension=emp_data['pension_employee'],
-                employer_pension=emp_data['pension_employer'],
-                net_pay=emp_data['net'],
+                gross_salary=gross,
+                tax=tax,
+                employee_pension=pension_employee,
+                employer_pension=pension_employer,
+                net_pay=final_net.quantize(Decimal('0.01')),
+                sick_leave_reduction=sick_red,
+                unpaid_leave_reduction=unpaid_red,
+                deduction_details=deduction_details,
+                line_items=line_items,
             )
             db.session.add(payslip)
+
+            # Decrement declining-balance balances from the engine's result so
+            # the ledger stays in step with what was actually deducted.
+            _decline_balances(emp.id, company_id, deduction_details)
 
         run.status = 'completed'
 

@@ -118,6 +118,10 @@ def generate_payslip_pdf(job_id):
                 'position': emp.position or '',
                 'period': run.period or (run.run_date.strftime('%B %Y') if run.run_date else ''),
                 'tax_explanation': '',
+                # Earnings/deduction lines snapshotted by the elements engine
+                # at approval time. The PDF renders these rather than
+                # recomputing, so it always shows what was actually paid.
+                'line_items': payslip.line_items,
             }
             emp_data['calc_flow'] = generate_calculation_flow(emp_data)
 

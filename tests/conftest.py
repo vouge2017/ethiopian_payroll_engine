@@ -38,13 +38,12 @@ def _configure_test_db():
 
 
 @pytest.fixture(autouse=True)
-def _db_session_cleanup():
-    """Clean up database session after each test to prevent deadlocks."""
+def _tenant_context_cleanup():
+    """Clear TenantQuery thread-local context after each test."""
     yield
     try:
-        from payroll_engine import db
+        from payroll_engine.models import TenantQuery
 
-        db.session.rollback()
-        db.session.remove()
+        TenantQuery.clear_tenant_context()
     except Exception:
         pass

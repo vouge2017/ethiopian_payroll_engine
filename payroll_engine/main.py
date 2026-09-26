@@ -217,7 +217,7 @@ def index():
     ot_by_employee = {}
     for entry in ot_entries:
         if entry.employee_id not in ot_by_employee:
-            ot_by_employee[entry.employee_id] = {'name': entry.employee.name if entry.employee else '?', 'hours': 0}
+            ot_by_employee[entry.employee_id] = {'name': entry.employee.name if entry.employee else '?', 'hours': Decimal('0')}
         ot_by_employee[entry.employee_id]['hours'] += entry.hours
     ot_total_hours = sum(v['hours'] for v in ot_by_employee.values())
     ot_employee_count = len(ot_by_employee)

@@ -23,6 +23,7 @@ sys.path.insert(0, '.')
 
 def seed():
     from payroll_engine import create_app, db
+    from payroll_engine.catalog import seed_company_templates, seed_system_items
     from payroll_engine.models import (
         AuditLog,
         Company,
@@ -199,6 +200,11 @@ def seed():
             )
             db.session.add(emp)
             employees2.append(emp)
+
+        # Seed the pay-item catalog: system items + company templates.
+        seed_system_items()
+        for company in [company1, company2]:
+            seed_company_templates(company.id)
 
         # ── Sample Leave Requests ─────────────────────────────────
         leave_types = ['annual', 'sick', 'maternity', 'paternity', 'special']

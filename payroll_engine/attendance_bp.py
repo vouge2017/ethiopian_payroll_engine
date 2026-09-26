@@ -12,7 +12,7 @@ Usage:
 
 import csv
 import io
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -317,6 +317,68 @@ def attendance_delete(att_id):
     db.session.commit()
     flash('Attendance record deleted.', 'success')
     return redirect(url_for('attendance.attendance_list'))
+
+
+@attendance_bp.route('/attendance/mark-absent', methods=['GET', 'POST'])
+@login_required
+@role_required('owner', 'accountant')
+def mark_absent():
+    """Mark an employee absent for one or more days (creates unpaid leave record)."""
+    from payroll_engine.models import Leave
+    from payroll_engine.leave import LeaveType
+
+    company_id = current_user.company_id
+
+    if request.method == 'GET':
+        employees = Employee.query.filter_by(company_id=company_id, is_deleted=False).all()
+        return render_template('mark_absent.html', employees=employees)
+
+    # POST
+    employee_id = request.form.get('employee_id')
+    start_date_str = request.form.get('start_date')
+    end_date_str = request.form.get('end_date')
+    reason = request.form.get('reason', 'Unpaid absence')
+
+    if not employee_id or not start_date_str or not end_date_str:
+        flash('Employee, start date, and end date are required.', 'danger')
+        return redirect(url_for('attendance.mark_absent'))
+
+    try:
+        start_date = date.fromisoformat(start_date_str)
+        end_date = date.fromisoformat(end_date_str)
+    except ValueError:
+        flash('Invalid date format. Use YYYY-MM-DD.', 'danger')
+        return redirect(url_for('attendance.mark_absent'))
+
+    if end_date < start_date:
+        flash('End date must be on or after start date.', 'danger')
+        return redirect(url_for('attendance.mark_absent'))
+
+    emp = Employee.query.filter_by(id=employee_id, company_id=company_id, is_deleted=False).first()
+    if not emp:
+        flash('Employee not found.', 'danger')
+        return redirect(url_for('attendance.mark_absent'))
+
+    days = (end_date - start_date).days + 1
+
+    # Create an unpaid leave record (approved immediately since it's employer-initiated)
+    leave = Leave(
+        company_id=company_id,
+        employee_id=emp.id,
+        leave_type=LeaveType.UNPAID,
+        start_date=start_date,
+        end_date=end_date,
+        days_requested=days,
+        reason=reason,
+        status='approved',
+        approved_by=current_user.id,
+        approved_at=datetime.now(UTC),
+    )
+    db.session.add(leave)
+    db.session.commit()
+
+    flash(f'Marked {emp.name} absent for {days} day(s) ({start_date} to {end_date}). Pay will be reduced in the next payroll run.', 'success')
+    return redirect(url_for('attendance.mark_absent'))
 
 
 @attendance_bp.route('/attendance/download-template')

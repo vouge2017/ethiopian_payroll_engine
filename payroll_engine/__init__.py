@@ -224,12 +224,17 @@ def create_app():
     # FinalSettlement, etc.) must be added ONLY after a per-model sweep of
     # every call site (Phase 2), never in bulk.
     from .models import (
+        ApiKey,
         Attendance,
         AuditLog,
         Employee,
         EmployeeDeduction,
+        FinalSettlement,
+        Leave,
         OvertimeEntry,
         PayrollDraft,
+        PayrollItemAssignment,
+        PayItemType,
         PayrollRun,
         Payslip,
         TenantQuery,
@@ -250,6 +255,14 @@ def create_app():
     # run/emp context; retention + demo cleanup use tenant_context(0);
     # service-layer fns (exceptions/evidence/change_summary) thread company_id.
     TenantQuery.register_model(Payslip)
+    # Batch 4 (Phase 4): ApiKey, Leave, FinalSettlement — all query sites
+    # verified to filter by company_id or use token-scoped lookup.
+    TenantQuery.register_model(ApiKey)
+    TenantQuery.register_model(Leave)
+    TenantQuery.register_model(FinalSettlement)
+    # Elements architecture (Phase 2): pay item type registry + assignments
+    TenantQuery.register_model(PayItemType)
+    TenantQuery.register_model(PayrollItemAssignment)
 
     # Template filter: calculation flow for transparent payslips
     @app.template_filter('calculation_flow')
@@ -526,12 +539,41 @@ def create_app():
     app.before_request(enforce_billing_gate)
 
     @app.cli.command('seed-holidays')
-    def seed_holidays_cmd():
+    def seed_holidays_cmd() -> None:
         """Seed Ethiopian national holidays."""
         from payroll_engine.holidays import seed_holidays
 
         added = seed_holidays()
         print(f'Seeded {added} holidays.')
+
+    @app.cli.command('seed-system-items')
+    def seed_system_items_cmd() -> None:
+        """Seed the system pay-item catalog (company_id IS NULL, shared across all companies).
+
+        Idempotent — safe to re-run. Creates the 4 system items (basic_salary,
+        employee_pension, employer_pension, income_tax) if they don't already exist.
+        """
+        from payroll_engine.catalog import seed_system_items
+
+        counts = seed_system_items()
+        print(f'System items — created: {counts["created"]}, skipped: {counts["skipped"]}')
+
+    @app.cli.command('migrate-pay-items')
+    def migrate_pay_items_cmd() -> None:
+        """Backfill the per-company pay-item catalog for all existing companies.
+
+        Idempotent — safe to re-run. Skips companies and items already present.
+        Does NOT touch system catalog items (company_id IS NULL); run
+        'flask seed-system-items' separately for those.
+        """
+        from payroll_engine.catalog import migrate_pay_items
+
+        counts = migrate_pay_items()
+        print(
+            f'Migrated {counts["companies"]} companies: '
+            f'{counts["items_created"]} items created, '
+            f'{counts["items_skipped"]} items skipped (already present).'
+        )
 
     # Push notification endpoints
     @app.route('/api/vapid-key')

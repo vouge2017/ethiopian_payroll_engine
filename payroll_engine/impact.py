@@ -11,6 +11,7 @@ Simple, clear, actionable. No jargon. Just numbers.
 """
 
 from decimal import Decimal, InvalidOperation
+from datetime import date
 
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pension import employee_pension
@@ -28,6 +29,79 @@ def _D(value) -> Decimal:
         return Decimal(str(value))
     except (InvalidOperation, ValueError):
         return Decimal('0')
+
+
+def resolve_pay_item(company_id, key):
+    """Look up a PayItemType by key for a company, falling back to the system row.
+
+    What-if previews resolve their hypothetical items from the company's catalog
+    instead of fabricating an EmployeeAllowance with a hardcoded
+    allowance_type/tax_treatment. A company that has customised or renamed an
+    item gets that behaviour in the preview, which is the whole point.
+    """
+    from payroll_engine.models_payroll_elements import PayItemType
+
+    item = PayItemType.query.filter_by(company_id=company_id, key=key).first()
+    if item is None:
+        item = PayItemType.query.filter_by(company_id=None, key=key).first()
+    return item
+
+
+def virtual_assignment(company_id, key, amount, classification=None,
+                       tax_treatment=None, calc_method=None, for_date=None):
+    """Build a transient PayrollItemAssignment for a what-if simulation.
+
+    Never added to the session and never written. `item_type` is populated so
+    the engine applies the catalog's own tax treatment, calculation method and
+    regulatory caps exactly as it would for a persisted row.
+
+    Returns None if the item is not in the catalog — callers fall back to the
+    legacy bare-number calculation rather than inventing a rule.
+    """
+    from datetime import date as _date
+
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+
+    item = resolve_pay_item(company_id, key)
+    if item is None:
+        return None
+
+    a = PayrollItemAssignment()
+    a.item_type = item
+    a.fixed_amount = _D(amount)
+    a.is_active = True
+    a.tracking_mode = None
+    a.custom_label = None
+    a.effective_date = for_date or _date.today()
+    a.end_date = None
+    if classification:
+        a._override_classification = classification
+    if tax_treatment:
+        a._override_tax_treatment = tax_treatment
+    if calc_method:
+        a._override_calc_method = calc_method
+    return a
+
+
+def _what_if_employee(basic_salary, company_id, employee_id=None, hire_date=None):
+    """A transient Employee for the engine. Never added to the session.
+
+    The engine queries the employee's persisted assignments, so a transient row
+    with no id simply contributes none; hypothetical items arrive via
+    extra_items instead.
+    """
+    from datetime import date as _date
+
+    from payroll_engine.models import Employee
+
+    emp = Employee()
+    emp.basic_salary = _D(basic_salary)
+    emp.allowances = Decimal('0')
+    emp.company_id = company_id
+    emp.employee_id = employee_id or 'WHATIF'
+    emp.name = 'What-If'
+    emp.hire_date = hire_date or _date.today()
+    return emp
 
 
 def preview_salary_raise(
@@ -84,7 +158,8 @@ def preview_salary_raise(
 
 
 def preview_new_hire(
-    basic_salary, allowances, transport_allowance: Decimal = Decimal('0'), employee_name: str = 'New Employee'
+    basic_salary, allowances, transport_allowance: Decimal = Decimal('0'),
+    employee_name: str = 'New Employee', company_id=None, item_key: str = 'transport',
 ) -> dict:
     """Show management what a new hire costs.
 
@@ -98,29 +173,74 @@ def preview_new_hire(
     allowances = _D(allowances)
     transport_allowance = _D(transport_allowance)
 
-    # If transport is specified, calculate with exemption
-    allowance_records = None
-    if transport_allowance > 0:
-        from payroll_engine.models import EmployeeAllowance
+    # Preferred path: resolve the item from the company's catalog and evaluate
+    # it as a transient assignment. No EmployeeAllowance is fabricated, so a
+    # company that renamed or re-taxed its transport item gets that behaviour
+    # in the preview.
+    extra_items = []
+    if company_id:
+        # Gross is assembled from assignments, so the hypothetical basic salary
+        # must be supplied as one too -- employee.basic_salary alone only feeds
+        # pension and tax, it never appears in gross.
+        basic_item = virtual_assignment(company_id, 'basic_salary', basic_salary)
+        if basic_item is not None:
+            extra_items.append(basic_item)
+        if transport_allowance > 0:
+            va = virtual_assignment(company_id, item_key, transport_allowance)
+            if va is not None:
+                extra_items.append(va)
 
-        cap = calculate_transport_exempt_amount(basic_salary, transport_allowance)
-        record = EmployeeAllowance(
-            allowance_type='transport',
-            amount=transport_allowance,
-            tax_treatment='partial',
-            exempt_cap_amount=cap,
-            is_active=True,
+        # A bare `allowances` number needs an item to live on, or the engine
+        # would silently drop it. Map it to the company's General Allowance
+        # item; if that item does not exist, fall back to the legacy
+        # calculation rather than under-reporting gross.
+        if allowances > 0:
+            gen = virtual_assignment(
+                company_id, 'general_allowance', allowances
+            )
+            if gen is None:
+                extra_items = []
+            else:
+                extra_items.append(gen)
+
+    if extra_items:
+        from payroll_engine.payroll_elements import calculate_payroll_from_assignments
+
+        emp = _what_if_employee(basic_salary, company_id)
+        result = calculate_payroll_from_assignments(
+            emp, company_id, date.today(), extra_items=extra_items,
         )
-        allowance_records = [record]
         total_allowances = allowances + transport_allowance
+        exempt_allowances = result.get('exempt_allowances', Decimal('0'))
     else:
-        total_allowances = allowances
+        # Legacy path: bare numbers. Kept for callers with no company context
+        # (and for catalogs that do not define the item) so existing behaviour
+        # is unchanged until the company is migrated.
+        total_allowances = (
+            allowances + transport_allowance if transport_allowance > 0 else allowances
+        )
+        if transport_allowance > 0:
+            cap = calculate_transport_exempt_amount(basic_salary, transport_allowance)
+            from payroll_engine.models import EmployeeAllowance
 
-    result = calculate_payroll(
-        basic_salary=basic_salary,
-        allowances=total_allowances if not allowance_records else allowances,
-        allowance_records=allowance_records,
-    )
+            allowance_records = [
+                EmployeeAllowance(
+                    allowance_type='transport',
+                    amount=transport_allowance,
+                    tax_treatment='partial',
+                    exempt_cap_amount=cap,
+                    is_active=True,
+                )
+            ]
+        else:
+            allowance_records = None
+
+        result = calculate_payroll(
+            basic_salary=basic_salary,
+            allowances=total_allowances if not allowance_records else allowances,
+            allowance_records=allowance_records,
+        )
+        exempt_allowances = result.get('exempt_allowances', Decimal('0'))
 
     employer_cost = result['gross'] + result['pension_employer']
 
@@ -199,7 +319,9 @@ def preview_termination(
     }
 
 
-def preview_allowance_change(current_amount, new_amount, basic_salary, allowance_type: str = 'transport') -> dict:
+def preview_allowance_change(current_amount, new_amount, basic_salary,
+                              allowance_type: str = 'transport',
+                              company_id=None) -> dict:
     """Show management what changing an allowance costs.
 
     Returns:
@@ -211,7 +333,51 @@ def preview_allowance_change(current_amount, new_amount, basic_salary, allowance
     new_amount = _D(new_amount)
     basic_salary = _D(basic_salary)
 
-    # Current tax calculation
+    # Catalog-driven path: build transient assignments for the OLD and NEW
+    # amounts and let the elements engine apply the item's own tax treatment and
+    # exempt cap. This replaces the `if allowance_type == 'transport'` hardcode
+    # below, which assumed exactly one regulatory rule.
+    if company_id:
+        cur_item = virtual_assignment(company_id, allowance_type, current_amount)
+        new_item = virtual_assignment(company_id, allowance_type, new_amount)
+        if cur_item is not None and new_item is not None:
+            from payroll_engine.payroll_elements import calculate_payroll_from_assignments
+
+            emp = _what_if_employee(basic_salary, company_id)
+            cur_item_basic = virtual_assignment(
+                company_id, 'basic_salary', basic_salary,
+            )
+            new_item_basic = virtual_assignment(
+                company_id, 'basic_salary', basic_salary,
+            )
+            cur = calculate_payroll_from_assignments(
+                emp, company_id, date.today(),
+                extra_items=[cur_item_basic, cur_item],
+            )
+            new = calculate_payroll_from_assignments(
+                emp, company_id, date.today(),
+                extra_items=[new_item_basic, new_item],
+            )
+            tax_change = new['tax'] - cur['tax']
+            net_change = (new['net'] - cur['net'])
+            return {
+                'type': 'allowance_change',
+                'allowance_type': allowance_type,
+                'current_amount': current_amount,
+                'new_amount': new_amount,
+                'exempt_current': cur.get('exempt_allowances', Decimal('0')),
+                'exempt_new': new.get('exempt_allowances', Decimal('0')),
+                'impact': {
+                    'amount_change': (new_amount - current_amount).quantize(Q),
+                    'tax_change': tax_change.quantize(Q),
+                    'net_monthly_change': net_change.quantize(Q),
+                    'net_annual_change': (net_change * 12).quantize(Q),
+                },
+                'current': cur,
+                'new': new,
+            }
+
+    # Legacy path: no company catalog context, or the item is not defined.
     if allowance_type == 'transport':
         current_exempt = calculate_transport_exempt_amount(basic_salary, current_amount)
         new_exempt = calculate_transport_exempt_amount(basic_salary, new_amount)

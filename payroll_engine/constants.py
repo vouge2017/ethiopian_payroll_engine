@@ -32,6 +32,10 @@ class CompanyTemplateItemKey(enum.Enum):
     Company admins can customise these per company.
     """
     # Allowances
+    # Landing spot for the legacy single `allowances` column in the CSV import
+    # format (basic_salary, allowances). One undifferentiated allowance number
+    # per imported employee; can be split into real items later.
+    GENERAL_ALLOWANCE = 'general_allowance'
     TRANSPORT = 'transport'
     HARDSHIP = 'hardship'
     HOUSING = 'housing'

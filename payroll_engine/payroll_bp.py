@@ -711,6 +711,46 @@ def api_cockpit_dismiss():
     return jsonify({'dismissed': item_key})
 
 
+def _annotate_general_allowance(company_id, employees_data):
+    """Mark each CSV row's undifferentiated `allowances` for assignment creation.
+
+    The legacy CSV has a single `allowances` column with no item breakdown. The
+    engine assembles gross from assignments, so that bare number would vanish.
+    We stamp it onto the draft row under 'general_allowance'; process_payroll
+    then creates one PayrollItemAssignment per employee against the company's
+    General Allowance item, which is created from the catalog on demand.
+
+    Returns the number of rows annotated. Pure in-memory: nothing is written
+    here, so a rejected upload leaves no trace.
+    """
+    from payroll_engine.catalog import seed_company_templates
+    from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS
+    from payroll_engine.models_payroll_elements import PayItemType
+
+    target_key = COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value
+    count = 0
+    for row in employees_data:
+        amount = row.get('allowances') or 0
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            amount = 0.0
+        if amount > 0:
+            row['general_allowance'] = amount
+            count += 1
+        else:
+            row['general_allowance'] = None
+
+    if count:
+        # Make sure the company has the item before any row is processed.
+        existing = PayItemType.query.filter_by(
+            company_id=company_id, key=target_key
+        ).first()
+        if existing is None:
+            seed_company_templates(company_id)
+    return count
+
+
 @payroll_bp.route('/payroll', methods=['GET', 'POST'])
 @login_required
 @role_required('owner', 'accountant')
@@ -771,6 +811,13 @@ def payroll_upload():
 
             if not employees_data:
                 raise ValueError('No valid data rows in CSV')
+
+            # Legacy CSV format is (basic_salary, allowances) -- one
+            # undifferentiated allowance column. Under the elements model that
+            # number has to live on an assignment, so record it on the draft row
+            # and let process_payroll materialise a General Allowance
+            # assignment. No itemised CSV columns in this phase.
+            _annotate_general_allowance(_company_id(), employees_data)
 
             previous_payslips = get_previous_payslips(_company_id())
 

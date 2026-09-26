@@ -79,6 +79,7 @@ def calculate_payroll_from_assignments(
     units_input=None,
     overtime_entries=None,
     deductions=None,
+    extra_items=None,
     sick_leave_reduction=0,
 ) -> dict:
     """Calculate payroll from the per-company elements model.
@@ -97,6 +98,12 @@ def calculate_payroll_from_assignments(
             deductions (legacy bridge; kept for bare-deduction callers during
             transition). New code should express deductions as PayrollItemAssignment
             rows with tracking_mode='declining'.
+        extra_items: optional list of IN-MEMORY PayrollItemAssignment objects to
+            evaluate IN ADDITION to the employee's persisted rows. Used by
+            what-if simulations, which must not write to the database. Each must
+            have its `item_type` relationship populated (so the catalog's
+            tax_treatment / calc method / caps apply exactly as they would for a
+            real row). Rows here are never added to the session.
         sick_leave_reduction: Decimal or numeric — amount to deduct for sick-leave
             tier-1 reduction (same semantics as calculate_payroll).
 
@@ -121,6 +128,24 @@ def calculate_payroll_from_assignments(
     # ------------------------------------------------------------------
     system_items = _load_system_items(company_id, for_date)
     employee_items = _load_employee_items(employee.id, company_id, for_date)
+
+    # What-if simulations pass hypothetical rows in memory. They are bucketed
+    # with the same classification mapping as persisted rows, so a hypothetical
+    # item is taxed/capped identically to a real one.
+    for extra in extra_items or []:
+        item_type = getattr(extra, 'item_type', None)
+        if item_type is None:
+            continue
+        if not getattr(item_type, 'is_active', True):
+            continue
+        extra_bucket = {
+            PayItemClassification.EARNING: employee_items['earnings'],
+            PayItemClassification.DEDUCTION: employee_items['deductions'],
+            PayItemClassification.EMPLOYER_CHARGE: employee_items['employer_charges'],
+            PayItemClassification.TAX: employee_items['tax'],
+            PayItemClassification.INFORMATIONAL: employee_items['tax'],
+        }.get(item_type.classification, employee_items['earnings'])
+        extra_bucket.append(extra)
 
     # ------------------------------------------------------------------
     # 2. Accumulation.

@@ -17,6 +17,7 @@ from payroll_engine.models import (
     Payslip,
 )
 from payroll_engine.models_payroll_elements import PayrollItemAssignment
+from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS, SYSTEM_ITEM_KEYS
 from payroll_engine.shared import create_audit_log, create_notification, tenant_get
 
 
@@ -30,6 +31,102 @@ class ApprovalResult:
         self.employee_count = employee_count
         self.compliance_score = compliance_score
         self.redirect_to = redirect_to  # 'detail', 'runs', or 'upload'
+
+
+def _ensure_basic_assignment(employee, company_id, basic_amount):
+    """Guarantee the employee has an active basic_salary assignment.
+
+    Gross is assembled ENTIRELY from assignments, so an employee that reaches
+    the engine path with any assignment but no basic_salary row is paid their
+    allowances and nothing else. Creating the employee (CSV import) or the
+    backfill migration both produce that state, so this is enforced here
+    rather than trusted to the caller.
+
+    Idempotent; returns None when the company has no basic_salary item at all
+    (the catalog is incomplete), in which case the engine simply omits it.
+    """
+    from decimal import Decimal
+
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+
+    amount = Decimal(str(basic_amount or 0))
+    if amount <= 0:
+        return None
+
+    item = PayItemType.query.filter_by(
+        company_id=company_id, key=SYSTEM_ITEM_KEYS.BASIC_SALARY.value
+    ).first()
+    if item is None:
+        item = PayItemType.query.filter_by(
+            company_id=None, key=SYSTEM_ITEM_KEYS.BASIC_SALARY.value
+        ).first()
+    if item is None:
+        return None
+
+    existing = PayrollItemAssignment.query.filter_by(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        is_active=True,
+    ).first()
+    if existing is not None:
+        return existing
+
+    a = PayrollItemAssignment(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        fixed_amount=amount,
+        is_active=True,
+    )
+    db.session.add(a)
+    db.session.flush()
+    return a
+
+
+def _ensure_general_allowance(employee, company_id, amount):
+    """Create a General Allowance assignment for a legacy CSV import row.
+
+    The CSV carries one undifferentiated `allowances` number. Under the elements
+    model gross is assembled from assignments, so that number would silently
+    vanish from the payslip. This materialises it as a single assignment against
+    the company's General Allowance item (created from the catalog if missing).
+
+    Idempotent: an existing active assignment for that item is left alone.
+    """
+    from decimal import Decimal
+
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+
+    amount = Decimal(str(amount or 0))
+    if amount <= 0:
+        return None
+
+    item = PayItemType.query.filter_by(
+        company_id=company_id, key=COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value
+    ).first()
+    if item is None:
+        return None
+
+    existing = PayrollItemAssignment.query.filter_by(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        is_active=True,
+    ).first()
+    if existing is not None:
+        return existing
+
+    a = PayrollItemAssignment(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        fixed_amount=amount,
+        is_active=True,
+    )
+    db.session.add(a)
+    db.session.flush()
+    return a
 
 
 def _build_units_input(emp_data):
@@ -310,7 +407,22 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 company_id=company_id, employee_id=emp.id, is_active=True
             ).first() is not None
 
+            # Legacy CSV import: the draft row's `allowances` column was
+            # annotated by the upload path. Materialise it as an assignment
+            # BEFORE the bridge check, so an imported employee is not silently
+            # treated as un-backfilled and dropped to the legacy path.
+            if emp_data.get('general_allowance'):
+                _ensure_general_allowance(
+                    emp, company_id, emp_data.get('general_allowance')
+                )
+                has_assignments = True
+
             if has_assignments:
+                # Basic salary must be represented as an assignment for gross to
+                # include it. Without this an employee carrying only a General
+                # Allowance row is paid 2,500 instead of 12,500.
+                _ensure_basic_assignment(emp, company_id, emp_data.get('basic'))
+
                 # Units for rate_x_units pay items (lock-in 4). The draft carries
                 # whatever the upload/autosave collected; keys are matched against
                 # assignment.units_field first, then the item key itself.

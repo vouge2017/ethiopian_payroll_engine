@@ -125,6 +125,30 @@ SYSTEM_ITEMS: list[dict] = [
 # ---------------------------------------------------------------------------
 
 COMPANY_TEMPLATE_ITEMS: list[dict] = [
+    # --- General Allowance ---
+    #
+    # The landing spot for the legacy single `allowances` number. The CSV
+    # import format is `basic_salary, allowances` -- one undifferentiated
+    # allowance column. Rather than force an itemised CSV (out of scope for
+    # this phase), each imported employee gets ONE assignment against this item
+    # so the legacy format keeps working under the elements model and can be
+    # split into real items later.
+    {
+        'key': COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value,
+        'name_en': 'General Allowance',
+        'name_am': 'አጠቃላይ ክፍያ',
+        'classification': PayItemClassification.EARNING,
+        'calculation_method': PayItemCalcMethod.FIXED,
+        'sort_order': 100,
+        'tax_treatment': PayItemTaxTreatment.TAXABLE,
+        'rate': Decimal('0'),
+        'percent_of_item_key': None,
+        'exempt_cap_amount': None,
+        'exempt_cap_percent': None,
+        'exempt_cap_basis': None,
+        'regulation_reference': None,
+        'max_percent_of_net': None,
+    },
     # --- Allowances (standard set) ---
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.TRANSPORT.value,

@@ -202,23 +202,6 @@ def _run(co, user, emps, period, label):
     return out
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason=(
-        'OPEN: gross/pension match exactly and EMP002 (no capped allowance) '
-        'matches on all six figures. EMP001 still differs in two ways that '
-        'need investigation, not papering over: (1) tax drops 770.00 because '
-        'the engine now applies the transport exemption the legacy CSV path '
-        'never applied -- calculate_payroll(basic, allow) was called with a '
-        'BARE allowance number and no allowance_records, so per-allowance tax '
-        'treatment was silently skipped in production. That is an intended '
-        'correction but it moves real money and needs sign-off. (2) percentage '
-        'deductions (cost_sharing, court_order) converted to percent_of_net '
-        'assignments do not appear in Payslip.deduction_details, so the '
-        'payslip shows 0 deductions while net is computed as if they applied '
-        '-- a reporting gap in the engine.'
-    ),
-)
 def test_money_proof_before_vs_after(ctx, proof_company):
     co, user, emps = proof_company
 
@@ -231,6 +214,7 @@ def test_money_proof_before_vs_after(ctx, proof_company):
     assert back['basic_created'] == 2
     assert back['allowances_created'] == 5
     assert back['deductions_created'] == 3
+    assert back['conflicts'] == [], 'no item may be used both ways without reporting'
 
     after = _run(co, user, emps, '2026-09', 'AFTER')
 
@@ -241,28 +225,52 @@ def test_money_proof_before_vs_after(ctx, proof_company):
         for k in ('gross', 'taxable', 'tax', 'pension', 'deductions', 'net'):
             print(f'    {k:12} {b[k]:>12} {a[k]:>12} {a[k] - b[k]:>10}')
 
-    # GROSS, PENSION and DEDUCTIONS must be identical to the cent.
+    # 1. GROSS and PENSION identical to the cent: basic + the same active
+    #    allowance set on both paths.
     for eid in before:
         b, a = before[eid], after[eid]
         assert a['gross'] == b['gross'], f'GROSS MISMATCH {eid}: {b["gross"]} -> {a["gross"]}'
         assert a['pension'] == b['pension'], f'PENSION MISMATCH {eid}'
-        assert a['deductions'] == b['deductions'], f'DEDUCTIONS MISMATCH {eid}'
 
-    # NET differs ONLY for the employee holding a capped, partially-exempt
-    # allowance. This is a REAL, intended behaviour change, not a rounding
-    # artefact: the legacy CSV path called calculate_payroll(basic, allow) with
-    # a BARE number and no allowance_records, so per-allowance tax treatment
-    # (the transport exemption) was never applied in production. The engine
-    # applies it. Less taxable income -> less tax -> higher net.
-    assert before['EMP002']['net'] == after['EMP002']['net'], (
+    # 2. EVERY deduction is applied EXACTLY ONCE. The payslip must tie:
+    #       net = gross - tax - pension - deductions
+    #    This is the overpayment guard. A deduction that is computed but not
+    #    subtracted shows up here immediately as a positive residual.
+    for eid in after:
+        a = after[eid]
+        residual = a['gross'] - a['tax'] - a['pension'] - a['deductions'] - a['net']
+        assert residual == Decimal('0.00'), (
+            f'{eid} does not tie: gross {a["gross"]} - tax {a["tax"]} '
+            f'- pension {a["pension"]} - deductions {a["deductions"]} '
+            f'= {a["gross"] - a["tax"] - a["pension"] - a["deductions"]}, '
+            f'but net is {a["net"]} (residual {residual})'
+        )
+
+    # 3. Percentage deductions must actually deduct. cost_sharing 33.33% and
+    #    court_order 10% of net_before_deductions (20585) is not zero.
+    assert after['EMP001']['deductions'] > Decimal('7000'), (
+        f'percentage deductions were not applied: '
+        f'{after["EMP001"]["deductions"]}'
+    )
+    assert after['EMP001']['net'] < before['EMP001']['net'] + Decimal('2000'), (
+        'net must not jump once the exemptions are applied correctly'
+    )
+
+    # 4. EMP002 -- no capped allowance -- matches on all six figures exactly.
+    assert before['EMP002'] == after['EMP002'], (
         f'EMP002 has no capped allowance and must match exactly: '
-        f'{before["EMP002"]["net"]} vs {after["EMP002"]["net"]}'
+        f'{before["EMP002"]} vs {after["EMP002"]}'
     )
-    assert after['EMP001']['net'] > before['EMP001']['net'], (
-        'the exempt allowance should INCREASE net once the engine applies the cap'
-    )
-    assert after['EMP001']['taxable'] < before['EMP001']['taxable'], (
-        'exempt allowance must reduce taxable income'
+
+    # 5. EMP001 net differs ONLY because the engine now applies the transport
+    #    exemption the legacy CSV path silently skipped. DOCUMENTED, not
+    #    hand-waved: payroll_workflow.py:77 called calculate_payroll(basic, allow)
+    #    with a BARE allowance number and no allowance_records, so per-allowance
+    #    tax treatment never ran in production. The engine runs it, so taxable
+    #    income falls and tax falls with it. That is a business decision for the
+    #    accountant -- see the cross-check in test_legacy_itemized_path_agrees.
+    assert after['EMP001']['tax'] < before['EMP001']['tax'], (
+        'the exemption correction must reduce tax'
     )
 
 

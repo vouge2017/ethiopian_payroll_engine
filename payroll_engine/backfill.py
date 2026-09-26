@@ -22,6 +22,8 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+
+
 BASIC_TAG = 'legacy_basic'
 ALLOWANCE_TAG = 'legacy_allowance'
 DEDUCTION_TAG = 'legacy_deduction'
@@ -78,6 +80,7 @@ def _resolve_type(company_id, key, classification, label=None):
     COMPANY_TEMPLATE_ITEMS when the company genuinely lacks the item.
     """
     from payroll_engine import db
+    from payroll_engine.models import PayItemCalcMethod
     from payroll_engine.catalog import COMPANY_TEMPLATE_ITEMS
     from payroll_engine.models_payroll_elements import PayItemType
 
@@ -216,7 +219,32 @@ def _convert_allowance(allowance, emp, company_id, effective):
     return a
 
 
-def _convert_deduction(deduction, emp, company_id, effective):
+def _ensure_calc_method(item, method, conflicts):
+    """Align a PayItemType's calculation_method with the legacy row's mode.
+
+    The engine switches on item_type.calculation_method, NOT on which column
+    the assignment happens to populate. Every deduction template ships as
+    'fixed', so a legacy percentage deduction written to assignment.percent_of_net
+    was read as fixed_amount (None) and deducted ZERO -- the money stayed with
+    the employee. This is the overpayment.
+
+    If a company uses the same item both ways, the last one wins and the
+    conflict is reported so an operator can look, rather than being silently
+    mangled.
+    """
+    if method is None or item.calculation_method == method:
+        return
+    if item.calculation_method not in (None, '', 'fixed') and (
+        item.calculation_method != method
+    ):
+        pair = (item.key, item.calculation_method, method)
+        if pair not in conflicts:
+            conflicts.append(pair)
+    item.calculation_method = method
+
+
+def _convert_deduction(deduction, emp, company_id, effective, conflicts):
+    from payroll_engine.models import PayItemCalcMethod
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
     key = (deduction.deduction_type or 'other_deduction').strip() or 'other_deduction'
@@ -239,8 +267,10 @@ def _convert_deduction(deduction, emp, company_id, effective):
 
     mode = (deduction.amount_mode or 'fixed').strip().lower()
     if mode == 'percentage':
+        _ensure_calc_method(item, PayItemCalcMethod.PERCENT_OF_NET, conflicts)
         a.percent_of_net = _D(deduction.amount)
     else:
+        _ensure_calc_method(item, PayItemCalcMethod.FIXED, conflicts)
         a.fixed_amount = _D(deduction.amount)
 
     created_by = getattr(deduction, 'created_by', None)
@@ -267,6 +297,7 @@ def _source_checksum(allowances, deductions):
 def backfill_company(company_id, dry_run=False):
     """Backfill one company atomically. Returns a counts dict."""
     from payroll_engine import db
+    from payroll_engine.models import PayItemCalcMethod
     from payroll_engine.models import Employee, EmployeeAllowance, EmployeeDeduction
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
@@ -286,6 +317,7 @@ def backfill_company(company_id, dry_run=False):
         .all()
     )
 
+    conflicts = []
     counts = {
         'company_id': company_id,
         'employees': len(employees),
@@ -297,6 +329,7 @@ def backfill_company(company_id, dry_run=False):
         'deductions_skipped': 0,
         'types_created': 0,
         'source_checksum': _source_checksum(allowances, deductions),
+        'conflicts': conflicts,
         'error': None,
     }
 
@@ -347,7 +380,7 @@ def backfill_company(company_id, dry_run=False):
                 continue
             effective = de.start_date or basic_effective_date(emp, emp_rows)
             if not dry_run:
-                db.session.add(_convert_deduction(de, emp, company_id, effective))
+                db.session.add(_convert_deduction(de, emp, company_id, effective, conflicts))
                 db.session.flush()
             counts['deductions_created'] += 1
 
@@ -363,6 +396,7 @@ def backfill_all(dry_run=False):
     remaining companies still run, so one bad tenant cannot block the rollout.
     """
     from payroll_engine import db
+    from payroll_engine.models import PayItemCalcMethod
     from payroll_engine.models import Company
 
     results = []

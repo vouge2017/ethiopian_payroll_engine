@@ -18,16 +18,24 @@ depends_on = None
 
 
 def upgrade():
+    # SQLite batch mode recreates the table on add_column, so the index must be
+    # created AFTER the batch block, with columns passed as a list. Doing both
+    # inside one batch_op block mis-binds the index arguments and raised
+    # DuplicateColumnError ("a column with name 'c' is already present").
     with op.batch_alter_table('payroll_item_assignment', schema=None) as batch_op:
         batch_op.add_column(sa.Column('legacy_source', sa.String(length=60), nullable=True))
-        batch_op.create_index(
-            'ix_payroll_item_assignment_legacy_source',
-            'legacy_source',
-            unique=False,
-        )
+    op.create_index(
+        'ix_payroll_item_assignment_legacy_source',
+        'payroll_item_assignment',
+        ['legacy_source'],
+        unique=False,
+    )
 
 
 def downgrade():
+    op.drop_index(
+        'ix_payroll_item_assignment_legacy_source',
+        table_name='payroll_item_assignment',
+    )
     with op.batch_alter_table('payroll_item_assignment', schema=None) as batch_op:
-        batch_op.drop_index('ix_payroll_item_assignment_legacy_source')
         batch_op.drop_column('legacy_source')

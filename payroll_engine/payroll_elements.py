@@ -434,6 +434,52 @@ def _effective_query(for_date):
     )
 
 
+def _effective_method(assignment, item_type):
+    """Which calculation method to actually use for this assignment.
+
+    The type's calculation_method is a DEFAULT, not a guarantee. A
+    percent_of_net value written onto a 'fixed' type used to be read by the
+    fixed branch as fixed_amount (None) and silently evaluated to ZERO -- the
+    overpayment this guards against. Rather than trusting the type, derive the
+    method from the column the assignment actually populates, and raise when
+    that is genuinely ambiguous.
+
+    This is engine-side on purpose: it closes every writer at once (backfill,
+    UI, CSV, API) instead of relying on each one validating.
+    """
+    has_fixed = getattr(assignment, 'fixed_amount', None) is not None
+    has_pct_net = getattr(assignment, 'percent_of_net', None) is not None
+    has_pct_basic = getattr(assignment, 'percent_of_basic', None) is not None
+
+    populated = [
+        m for m, has in (
+            (PayItemCalcMethod.FIXED, has_fixed),
+            (PayItemCalcMethod.PERCENT_OF_NET, has_pct_net),
+            (PayItemCalcMethod.PERCENT_OF_BASIC, has_pct_basic),
+        ) if has
+    ]
+
+    if len(populated) > 1:
+        key = item_type.key if item_type else 'unknown'
+        raise ValueError(
+            f'PayrollItemAssignment {getattr(assignment, "id", None)} for item '
+            f'"{key}" populates {len(populated)} value columns '
+            f'({[str(m) for m in populated]}). Exactly one is allowed; the '
+            f'engine cannot know which was intended.'
+        )
+
+    if populated:
+        # Never override a method the engine deliberately defers -- a
+        # percent_of_item type must keep raising NotImplementedError rather
+        # than silently evaluating from whatever column happens to be set.
+        declared = item_type.calculation_method if item_type else None
+        if declared == PayItemCalcMethod.PERCENT_OF_ITEM:
+            return declared
+        return populated[0]
+
+    return item_type.calculation_method if item_type else PayItemCalcMethod.FIXED
+
+
 def _calculate_item_amount(item, employee, for_date, units_input, running_total):
     """Calculate the monetary amount for one pay item.
 
@@ -441,7 +487,10 @@ def _calculate_item_amount(item, employee, for_date, units_input, running_total)
     """
     if isinstance(item, PayrollItemAssignment):
         item_type = item.item_type
-        method = item_type.calculation_method if item_type else PayItemCalcMethod.FIXED
+        # Derive from the populated column, not the type's default -- see
+        # _effective_method. Falling back to item_type.calculation_method here
+        # is what let a percent_of_net value on a 'fixed' type evaluate to 0.
+        method = _effective_method(item, item_type)
         fixed = item.fixed_amount
         rate = item.rate_per_unit
         pct_basic = item.percent_of_basic

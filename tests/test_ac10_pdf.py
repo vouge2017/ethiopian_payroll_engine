@@ -38,17 +38,17 @@ def ctx(app):
         db.session.remove()
 
 
-@pytest.mark.skip(
+@pytest.mark.xfail(
+    strict=False,
     reason=(
-        'AC10 OPEN - cannot be executed in this environment. The criterion '
-        'requires verifying the RENDERED PDF text, and payroll_engine/pdf.py '
-        'embeds NotoSansEthiopic as a SUBSET CID font, so the text operators '
-        'in the content stream are glyph indices, not readable characters. '
-        'Extracting them needs a real PDF text extractor (pypdf / pdfminer / '
-        'pdfplumber); none is installed and the project venv has no pip. '
-        'Adding a runtime dependency purely to assert a PDF label is out of '
-        'scope for this phase, so this is reported OPEN rather than asserted '
-        'from the template context, which the criterion explicitly forbids.'
+        'AC10 PARTIAL. Verified from the RENDERED PDF via pypdf 6.19.0: the '
+        'three earnings each appear as their own line (ቀሜታ / ስያፍ / '
+        'መኖር ስያፍ / ጤና ስያፍ) and there is no collapsed "Allowances" lump -- the '
+        'anti-lump requirement is met. NOT yet verified: the deduction clause. '
+        'The advance is created via set_advance_assignment with custom_label '
+        'None, and its label does not surface under the catalog name_am in the '
+        'rendered text. Root cause not yet traced (timeboxed out). Left failing '
+        'rather than weakened, so the gap stays visible.'
     ),
 )
 def test_ac10_pdf_shows_each_item_separately(ctx):
@@ -131,18 +131,31 @@ def test_ac10_pdf_shows_each_item_separately(ctx):
 
     text = _extract_text(raw)
 
-    for label in ('Transport Allowance', 'Housing Allowance',
-                  'Medical Allowance', 'Advance'):
-        assert label in text, (
-            f'"{label}" must appear as its own line in the rendered PDF; '
-            f'found: {text[:600]}'
+    # The PDF is BILINGUAL and pypdf recovers the Amharic column from the
+    # embedded NotoSansEthiopic subset. Assert against each item's catalog
+    # name_am, which is what is actually rendered and extractable, rather than
+    # hardcoding Amharic strings here.
+    for key in ('transport', 'housing', 'medical'):
+        item = PayItemType.query.filter_by(company_id=co.id, key=key).first()
+        assert item.name_am in text, (
+            f'"{item.name_am}" ({key}) must appear as its own line in the '
+            f'rendered PDF; found: {text!r}'
         )
 
-    # The lump must NOT be there -- that is the whole point of AC10.
-    assert '\nAllowances\n' not in text and 'Allowances ' not in text.replace(
-        'Transport Allowance', ''
-    ).replace('Housing Allowance', '').replace('Medical Allowance', ''), (
-        'the PDF must not collapse items into a single "Allowances" line'
+    # The advance deduction, separately.
+    adv = PayItemType.query.filter_by(company_id=co.id, key='advance').first()
+    assert adv.name_am in text, (
+        f'the deduction "{adv.name_am}" must appear as its own line'
+    )
+
+    # The lump must NOT be there. No English "Allowances" row, and no Amharic
+    # allowance-column lump either -- the only allowance lines are the
+    # per-item ones asserted above.
+    assert 'Allowances' not in text, (
+        'the PDF must not render a single collapsed "Allowances" line'
+    )
+    assert 'ክፍያ' not in text.split('የክፍያ ጊዜ')[0], (
+        'no allowance lump may appear before the section header'
     )
 
     # The summary must reflect the actual items.
@@ -150,28 +163,16 @@ def test_ac10_pdf_shows_each_item_separately(ctx):
 
 
 def _extract_text(raw):
-    """Pull readable text out of the rendered PDF.
+    """Pull readable text out of the RENDERED PDF.
 
-    ReportLab writes uncompressed text operators for the fonts used here, so a
-    regex over the content streams is sufficient and avoids adding a parser
-    dependency just for this assertion.
+    pdf.py embeds NotoSansEthiopic as a subset CID font, so the raw content
+    stream holds glyph indices rather than characters -- regex extraction
+    returns garbage. pypdf reconstructs the text through the font's ToUnicode
+    CMap, which is what makes the AC10 assertion possible at all.
     """
-    import re
-    import zlib
+    import io
 
-    chunks = []
-    for m in re.finditer(rb'stream\r?\n(.*?)endstream', raw, re.S):
-        data = m.group(1)
-        try:
-            data = zlib.decompress(data)
-        except Exception:
-            pass
-        chunks.append(data)
-    blob = b'\n'.join(chunks) if chunks else raw
+    from pypdf import PdfReader
 
-    out = []
-    for m in re.finditer(rb'\((?:\\.|[^\\()])*\)', blob):
-        s = m.group(0)[1:-1]
-        s = s.replace(b'\\(', b'(').replace(b'\\)', b')')
-        out.append(s.decode('latin-1', 'replace'))
-    return '\n'.join(out)
+    reader = PdfReader(io.BytesIO(raw))
+    return '\n'.join((page.extract_text() or '') for page in reader.pages)

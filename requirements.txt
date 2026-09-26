@@ -25,3 +25,9 @@ sentry-sdk[flask]>=2.0.0
 rq>=1.16.0
 redis>=5.0.0
 Flask-CORS>=4.0.0
+
+# Test-only: AC10 verifies the RENDERED payslip PDF text. pdf.py embeds
+# NotoSansEthiopic as a subset CID font, so text extraction needs a real PDF
+# reader (pypdf reconstructs via the ToUnicode CMap). Not imported by
+# production code.
+pypdf==6.19.0

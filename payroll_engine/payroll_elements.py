@@ -33,6 +33,34 @@ from payroll_engine.tax import explain_tax_amharic as _explain_tax_amharic
 Q = Decimal('0.01')
 
 
+class AC5Error(ValueError):
+    """Raised when a caller tries to assign an engine-managed system item.
+
+    AC5: pension and income tax are derived by the engine every period. They
+    are not user-assignable, at the route layer OR here. The route layer in
+    employees_bp rejects with a flash; this is the engine-level backstop so a
+    hand-built ORM row cannot smuggle a system item into a calculation.
+    """
+
+
+def assert_not_system_item(item_type):
+    """Raise AC5Error if `item_type` is engine-managed."""
+    if item_type is None:
+        return item_type
+    from payroll_engine.employees_bp import SYSTEM_MANAGED_KEYS
+
+    # Key set only -- NOT `is_system`. basic_salary IS a system row
+    # (company_id IS NULL, is_system=True) yet the backfill and the CSV
+    # consumer must both be able to assign it; what AC5 protects is the three
+    # items the engine derives every period.
+    if getattr(item_type, 'key', None) in SYSTEM_MANAGED_KEYS:
+        raise AC5Error(
+            f'"{getattr(item_type, "key", "?")}" is calculated by the engine each '
+            f'period and cannot be assigned to an employee (AC5).'
+        )
+    return item_type
+
+
 def _item_sort_key(item):
     """Return sort_order for a PayItemType or PayrollItemAssignment.
 
@@ -229,6 +257,24 @@ def calculate_payroll_from_assignments(
     # Tax (calculated by the existing tax module)
     tax = _calculate_tax(taxable, for_date)
 
+    # AC5: pension and income tax are engine-managed system items and must
+    # still be VISIBLE in line_items with their amounts -- users may not assign
+    # them, but a payslip that does not show them is unauditable. They are
+    # appended after the assignment loop because they are derived from basic
+    # salary, not from any assignment.
+    for _key, _label, _amount, _class in (
+        ('employee_pension', 'Employee Pension', emp_pen,
+         PayItemClassification.DEDUCTION),
+        ('employer_pension', 'Employer Pension', empr_pen,
+         PayItemClassification.EMPLOYER_CHARGE),
+        ('income_tax', 'Income Tax', tax, PayItemClassification.TAX),
+    ):
+        if _amount and _amount > 0:
+            line_items.append(_line_item_dict(
+                _make_placeholder(_key), _amount, _class, True,
+                custom_label=_label, is_legacy=False,
+            ))
+
     net_before_deductions = gross - tax - emp_pen
 
     # Post-tax deductions — from the legacy `deductions` list or from new
@@ -337,7 +383,9 @@ def _load_system_items(company_id, for_date):
     from payroll_engine import db
     from datetime import date as _date
 
-    effective = _effective_query(for_date)
+    # System items are PayItemType rows with no assignment, so only the
+    # type-level window applies there.
+    type_effective, _assignment_effective = _effective_query(for_date)
 
     earnings = []
     deductions = []
@@ -347,7 +395,7 @@ def _load_system_items(company_id, for_date):
     rows = db.session.query(PayItemType).filter(
         PayItemType.company_id.is_(None),
         PayItemType.is_active == True,
-    ).filter(effective).order_by(PayItemType.sort_order).all()
+    ).filter(type_effective).order_by(PayItemType.sort_order).all()
 
     for row in rows:
         bucket = {
@@ -376,7 +424,7 @@ def _load_employee_items(employee_id, company_id, for_date):
     from payroll_engine import db
     from datetime import date as _date
 
-    effective = _effective_query(for_date)
+    type_effective, assignment_effective = _effective_query(for_date)
 
     query = db.session.query(PayrollItemAssignment).join(
         PayItemType,
@@ -386,7 +434,9 @@ def _load_employee_items(employee_id, company_id, for_date):
         PayrollItemAssignment.company_id == company_id,
         PayrollItemAssignment.is_active == True,
         PayItemType.is_active == True,
-    ).filter(effective).order_by(PayItemType.sort_order, PayrollItemAssignment.id)
+    ).filter(type_effective, assignment_effective).order_by(
+        PayItemType.sort_order, PayrollItemAssignment.id
+    )
 
     rows = query.all()
 
@@ -396,6 +446,10 @@ def _load_employee_items(employee_id, company_id, for_date):
     tax_items = []
 
     for row in rows:
+        # AC5 backstop: an employee must never hold an assignment to an
+        # engine-managed system item. The route layer rejects it, but a
+        # hand-built ORM row could still exist; refuse to evaluate it.
+        assert_not_system_item(row.item_type)
         bucket = {
             PayItemClassification.EARNING: earnings,
             PayItemClassification.DEDUCTION: deductions,
@@ -414,11 +468,21 @@ def _load_employee_items(employee_id, company_id, for_date):
 
 
 def _effective_query(for_date):
-    """Return a SQLAlchemy filter criterion for effective-date gating.
+    """Return (type_filter, assignment_filter) gating items to a period.
 
-    An item is effective for `for_date` when:
-      - effective_date IS NULL OR effective_date <= for_date
-      - AND end_date IS NULL OR end_date >= for_date
+    An item is effective for `for_date` when the date window on BOTH the
+    PayrollItemType and the PayrollItemAssignment allows it:
+      effective_date IS NULL OR effective_date <= for_date
+      AND end_date IS NULL OR end_date >= for_date
+
+    THE ASSIGNMENT FILTER IS THE AUTHORITATIVE ONE. This used to gate only on
+    PayItemType, but PayItemType.effective_date/end_date are never populated
+    by any writer in the codebase -- both are always NULL, so the whole
+    criterion collapsed to "no filtering at all". Effective dating is a
+    per-employee concern: it is the ASSIGNMENT (a contract starting next
+    month, a loan that has run out) that starts and stops. The type-level
+    columns are kept because they exist on the model and are the right home
+    for a future catalog-level version window, but they are not relied on.
     """
     from sqlalchemy import or_, and_
     from datetime import date as _date
@@ -428,9 +492,15 @@ def _effective_query(for_date):
     else:
         d = _normalize_date(for_date)
 
-    return and_(
-        or_(PayItemType.effective_date.is_(None), PayItemType.effective_date <= d),
-        or_(PayItemType.end_date.is_(None), PayItemType.end_date >= d),
+    def window(start_col, end_col):
+        return and_(
+            or_(start_col.is_(None), start_col <= d),
+            or_(end_col.is_(None), end_col >= d),
+        )
+
+    return (
+        window(PayItemType.effective_date, PayItemType.end_date),
+        window(PayrollItemAssignment.effective_date, PayrollItemAssignment.end_date),
     )
 
 
@@ -752,10 +822,19 @@ def _make_legacy_deduction_placeholder(ded):
 
 
 def _make_placeholder(key):
-    """Generic placeholder for unknown items."""
+    """Generic placeholder for unknown items.
+
+    NOTE: the class attribute must not be `key = key` -- in a class body the
+    RHS resolves to the class-local (still unbound) name, raising NameError.
+    Alias the parameter first. `id` must exist because _line_item_dict's
+    `hasattr(item, 'key')` branch reads item.id.
+    """
+    _key = key
+
     class _Placeholder:
-        key = key
-        name_en = key
+        id = None
+        key = _key
+        name_en = _key
         name_am = ''
         classification = PayItemClassification.EARNING
         calculation_method = PayItemCalcMethod.FIXED

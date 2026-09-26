@@ -1512,7 +1512,7 @@ def set_advance_assignment(employee_id, company_id, advance, period_start, today
     item = PayItemType.query.filter_by(company_id=company_id, key='advance').first()
     if item is None:
         tmpl = next(
-            (t for t in COMPANY_TEMPLATE_ITEMS if _norm(t.get('key')) == 'advance'),
+            (t for t in COMPANY_TEMPLATE_ITEMS if str(t.get('key')).strip().lower() == 'advance'),
             None,
         )
         if tmpl is None:

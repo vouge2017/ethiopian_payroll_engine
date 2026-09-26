@@ -33,6 +33,24 @@ class ApprovalResult:
         self.redirect_to = redirect_to  # 'detail', 'runs', or 'upload'
 
 
+def _deduction_is_backfilled(employee_id, company_id, deduction):
+    """True if this legacy deduction already has a backfilled assignment.
+
+    The backfill never deletes legacy rows, so after it runs the same money
+    exists twice: once as the EmployeeDeduction the bridge reads, once as the
+    PayrollItemAssignment the engine reads. Applying both double-deducts the
+    employee, so the bridge must skip any row the backfill has converted.
+    """
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+
+    tag = f'legacy_deduction:{getattr(deduction, "id", None)}'
+    return (
+        PayrollItemAssignment.query.filter_by(
+            company_id=company_id, legacy_source=tag
+        ).first() is not None
+    )
+
+
 def _ensure_basic_assignment(employee, company_id, basic_amount):
     """Guarantee the employee has an active basic_salary assignment.
 
@@ -423,6 +441,16 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 # Allowance row is paid 2,500 instead of 12,500.
                 _ensure_basic_assignment(emp, company_id, emp_data.get('basic'))
 
+                # Legacy bridge: EmployeeDeduction rows are still honoured. But a
+                # row the BACKFILL already converted is now represented by a
+                # PayrollItemAssignment, and the engine would apply BOTH -- double
+                # deducting the employee. Skip any legacy row whose type already
+                # has a backfilled assignment for this employee.
+                legacy_deductions = [
+                    d for d in active_deductions.get(emp.id, [])
+                    if not _deduction_is_backfilled(emp.id, company_id, d)
+                ]
+
                 # Units for rate_x_units pay items (lock-in 4). The draft carries
                 # whatever the upload/autosave collected; keys are matched against
                 # assignment.units_field first, then the item key itself.
@@ -446,7 +474,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     today,
                     units_input=units_input,
                     overtime_entries=ot_entries or None,
-                    deductions=active_deductions.get(emp.id, []) or None,
+                    deductions=legacy_deductions or None,
                     sick_leave_reduction=sick_red + unpaid_red,
                 )
 

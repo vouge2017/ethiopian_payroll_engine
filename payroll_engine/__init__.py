@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+import click
 from datetime import UTC, date, datetime, timedelta
 
 logger = logging.getLogger('payroll_engine')
@@ -559,21 +560,86 @@ def create_app():
         print(f'System items — created: {counts["created"]}, skipped: {counts["skipped"]}')
 
     @app.cli.command('migrate-pay-items')
-    def migrate_pay_items_cmd() -> None:
-        """Backfill the per-company pay-item catalog for all existing companies.
+    @click.option(
+        '--dry-run', is_flag=True, default=False,
+        help='Report what would be created per company without writing.',
+    )
+    @click.option(
+        '--catalog-only', is_flag=True, default=False,
+        help='Only seed the per-company PayItemType catalog; do not backfill rows.',
+    )
+    def migrate_pay_items_cmd(dry_run: bool, catalog_only: bool) -> None:
+        """Backfill pay items for all existing companies.
 
-        Idempotent — safe to re-run. Skips companies and items already present.
-        Does NOT touch system catalog items (company_id IS NULL); run
-        'flask seed-system-items' separately for those.
+        Two phases, both idempotent and safe to re-run:
+
+          1. Catalog  -- seed the per-company PayItemType rows a company lacks.
+          2. Data     -- convert EmployeeAllowance / EmployeeDeduction rows into
+                         PayrollItemAssignment rows, and give every active
+                         employee a basic_salary assignment.
+
+        Data backfill runs one transaction per company: a company either
+        converts completely or is rolled back whole and reported as failed.
+        Legacy rows are never deleted.
+
+        --dry-run prints per-company counts and writes nothing.
         """
         from payroll_engine.catalog import migrate_pay_items
+        from payroll_engine.backfill import backfill_all, verify_basic_present
 
         counts = migrate_pay_items()
         print(
-            f'Migrated {counts["companies"]} companies: '
+            f'Catalog: {counts["companies"]} companies, '
             f'{counts["items_created"]} items created, '
             f'{counts["items_skipped"]} items skipped (already present).'
         )
+
+        if catalog_only:
+            print('--catalog-only: skipping data backfill.')
+            return
+
+        results = backfill_all(dry_run=dry_run)
+        prefix = 'Would create' if dry_run else 'Created'
+        tot_basic = tot_allow = tot_ded = 0
+        for r in results:
+            if r.get('error'):
+                print(
+                    f'  company {r.get("company_id")}: ROLLED BACK - {r["error"]}'
+                )
+                continue
+            print(
+                f'  company {r["company_id"]}: {r["employees"]} employees | '
+                f'{prefix} {r["basic_created"]} basic, '
+                f'{r["allowances_created"]} allowances, '
+                f'{r["deductions_created"]} deductions '
+                f'(skipped {r["basic_skipped"]}/{r["allowances_skipped"]}/'
+                f'{r["deductions_skipped"]}) | '
+                f'source checksum {r["source_checksum"]}'
+            )
+            tot_basic += r['basic_created']
+            tot_allow += r['allowances_created']
+            tot_ded += r['deductions_created']
+
+        print(
+            f'{"Would create" if dry_run else "Created"} total: '
+            f'{tot_basic} basic, {tot_allow} allowances, {tot_ded} deductions.'
+        )
+
+        if not dry_run:
+            # The invariant this whole exercise exists to guarantee.
+            offenders = []
+            for r in results:
+                if r.get('error'):
+                    continue
+                bad = verify_basic_present(r['company_id'])
+                if bad:
+                    offenders.append((r['company_id'], bad))
+            if offenders:
+                print('INVARIANT VIOLATED - employees with assignments but no basic:')
+                for cid, bad in offenders:
+                    print(f'  company {cid}: employee ids {bad}')
+            else:
+                print('Invariant OK: every employee with assignments has a basic_salary row.')
 
     # Push notification endpoints
     @app.route('/api/vapid-key')

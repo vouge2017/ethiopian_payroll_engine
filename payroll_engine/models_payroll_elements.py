@@ -180,6 +180,11 @@ class PayrollItemAssignment(db.Model):
     # dropped (data loss). Mirrors the legacy field semantics.
     reference_number = db.Column(db.String(100), nullable=True)
     document_path = db.Column(db.String(255), nullable=True)
+    # Provenance marker for the data backfill, e.g. 'legacy_allowance:412'.
+    # The idempotency tag lives here rather than in reference_number because
+    # reference_number carries real business data (court case numbers, MoE
+    # batch codes) that must survive the migration verbatim.
+    legacy_source = db.Column(db.String(60), nullable=True, index=True)
 
     # Effective dates
     effective_date = db.Column(db.Date, nullable=True)

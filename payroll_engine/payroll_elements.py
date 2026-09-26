@@ -631,7 +631,7 @@ def _line_item_dict(item, amount, classification, is_system, **kwargs):
         'calculation_method': calc_method,
         'earned_amount': _D(amount).quantize(Q, rounding=ROUND_HALF_UP) if amount is not None else Decimal('0'),
         'is_deduction': classification in (PayItemClassification.DEDUCTION, PayItemClassification.EMPLOYER_CHARGE, PayItemClassification.TAX),
-        'effective_date': effective_date,
+        'effective_date': effective_date.isoformat() if hasattr(effective_date, 'isoformat') else effective_date,
         'is_system': is_system or getattr(item, 'is_system', False),
         'is_legacy': is_legacy,
         'item_id': item_id,
@@ -682,6 +682,12 @@ def _make_overtime_placeholder():
 def _make_legacy_deduction_placeholder(ded):
     """Placeholder for legacy EmployeeDeduction line items."""
     class _Placeholder:
+        # Must expose `id`: _line_item_dict's `hasattr(item, 'key')` branch
+        # treats this like a PayItemType and reads item.id. Without it, any
+        # legacy deduction rendered into line_items raises AttributeError --
+        # which is exactly what happens once the backfill has run and the
+        # bridge is carrying BOTH legacy rows and new assignments.
+        id = None
         key = ded.deduction_type or 'unknown'
         name_en = ded.type_label or 'Deduction'
         name_am = ''

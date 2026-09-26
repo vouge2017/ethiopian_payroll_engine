@@ -48,7 +48,8 @@ def resolve_pay_item(company_id, key):
 
 
 def virtual_assignment(company_id, key, amount, classification=None,
-                       tax_treatment=None, calc_method=None, for_date=None):
+                       tax_treatment=None, calc_method=None, for_date=None,
+                       units_field=None):
     """Build a transient PayrollItemAssignment for a what-if simulation.
 
     Never added to the session and never written. `item_type` is populated so
@@ -60,7 +61,9 @@ def virtual_assignment(company_id, key, amount, classification=None,
     """
     from datetime import date as _date
 
-    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+    from payroll_engine.models_payroll_elements import (
+        PayrollItemAssignment, PayItemCalcMethod,
+    )
 
     item = resolve_pay_item(company_id, key)
     if item is None:
@@ -68,12 +71,24 @@ def virtual_assignment(company_id, key, amount, classification=None,
 
     a = PayrollItemAssignment()
     a.item_type = item
-    a.fixed_amount = _D(amount)
+    # Lock-in 4: the amount parameter's meaning depends on the
+    # item's calculation_method.  For rate_x_units it is the
+    # RATE_PER_UNIT (the engine multiplies by units_input);
+    # for percent_of_basic it is the PERCENT_BASIC value;
+    # otherwise it is the fixed_amount.
+    calc_method = calc_method or item.calculation_method
+    if calc_method == PayItemCalcMethod.RATE_X_UNITS:
+        a.rate_per_unit = _D(amount)
+    elif calc_method == PayItemCalcMethod.PERCENT_OF_BASIC:
+        a.percent_of_basic = _D(amount)
+    else:
+        a.fixed_amount = _D(amount)
     a.is_active = True
     a.tracking_mode = None
     a.custom_label = None
     a.effective_date = for_date or _date.today()
     a.end_date = None
+    a.units_field = units_field
     if classification:
         a._override_classification = classification
     if tax_treatment:
@@ -207,8 +222,21 @@ def preview_new_hire(
         from payroll_engine.payroll_elements import calculate_payroll_from_assignments
 
         emp = _what_if_employee(basic_salary, company_id)
+
+        # Build the units_input dict that the engine reads for
+        # rate_x_units items. Lock-in 4: assignment.units_field is
+        # the primary key, falling back to item_type.key.
+        units_input = {}
+        for item in extra_items:
+            uf = getattr(item, 'units_field', None)
+            if uf and item.fixed_amount and uf not in units_input:
+                # For what-if previews the amount IS the unit count
+                # when units_field is set on a rate_x_units item.
+                units_input[uf] = int(item.fixed_amount)
+
         result = calculate_payroll_from_assignments(
-            emp, company_id, date.today(), extra_items=extra_items,
+            emp, company_id, date.today(),
+            extra_items=extra_items, units_input=units_input,
         )
         total_allowances = allowances + transport_allowance
         exempt_allowances = result.get('exempt_allowances', Decimal('0'))

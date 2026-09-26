@@ -174,6 +174,15 @@ def basic_effective_date(employee, legacy_rows):
 
 
 def _assign_common(a, emp, item, company_id, tag, effective, legacy_is_active, label=None):
+    from payroll_engine.payroll_elements import assert_not_system_item
+
+    # AC5 backstop: a hand-built ORM row (or a mis-mapped legacy
+    # deduction) must never create an assignment to an engine-managed
+    # system item.  The engine raises at payroll time as a second
+    # line of defence, but we refuse at write-time here so the bad
+    # row never persists.
+    assert_not_system_item(item)
+
     a.company_id = company_id
     a.employee_id = emp.id
     a.pay_item_type_id = item.id

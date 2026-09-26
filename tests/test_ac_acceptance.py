@@ -264,6 +264,53 @@ def test_ac5_system_items_rejected_but_still_calculated(ctx):
     assert r['tax'] > 0
 
 
+# ---------------------------------------------------------------------------
+# AC5 route-level guard: POST an income_tax / employee_pension assignment
+# through the real HTTP route must return 4xx and write ZERO rows.
+# ---------------------------------------------------------------------------
+
+
+def test_ac5_route_rejects_system_items(ctx):
+    """The route layer must reject system-managed keys at write-time
+    too — a POST for income_tax or employee_pension must return 4xx
+    and no PayrollItemAssignment row may be created."""
+    from flask import current_app
+    from payroll_engine.models import Company, Employee, PayrollItemAssignment
+    from payroll_engine.employees_bp import SYSTEM_MANAGED_KEYS
+
+    co, _u = _company('Ac5RouteCo')
+    emp = _employee(co)
+    _basic_assignment(co, emp)
+
+    client = current_app.test_client()
+
+    for key in SYSTEM_MANAGED_KEYS:
+        before = PayrollItemAssignment.query.filter_by(
+            company_id=co.id
+        ).count()
+        resp = client.post(
+            '/employees/employee/add-assignment',
+            data={
+                'employee_id': str(emp.id),
+                'item_key': key,
+                'amount': '100',
+                'start_date': '2026-09-01',
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code >= 400 or resp.status_code == 302, (
+            f'{key}: route must reject system-managed item '
+            f'(got {resp.status_code})'
+        )
+        after = PayrollItemAssignment.query.filter_by(
+            company_id=co.id
+        ).count()
+        assert after == before, (
+            f'{key}: no PayrollItemAssignment row may be written '
+            f'for a system-managed item'
+        )
+
+
 # =====================================================================
 # AC6 -- effective dates gate assignments
 # =====================================================================

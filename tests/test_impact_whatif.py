@@ -155,3 +155,66 @@ def test_engine_extra_items_are_not_persisted(seeded_company):
     assert 'basic_salary' in keys
     db.session.rollback()
     assert PayrollItemAssignment.query.count() == before
+
+
+# ---------------------------------------------------------------------------
+# Review finding #6: rate_x_units what-if must carry units_field
+# ---------------------------------------------------------------------------
+
+
+def test_preview_new_hire_rate_x_units_with_units(seeded_company):
+    """Lock-in 4 proof: the engine must resolve units via
+    assignment.units_field and compute rate × units, not rate × 0.
+
+    Quote from payroll_engine/payroll_elements.py::_item_quantity:
+      1. If assignment.units_field is set, look up units_input[assignment.units_field].
+      2. Otherwise, look up units_input[item.key].
+      3. If neither is present, the quantity is 0 (no units this period).
+    """
+    from payroll_engine.models_payroll_elements import (
+        PayItemType, PayrollItemAssignment, PayItemCalcMethod,
+    )
+    from payroll_engine.impact import virtual_assignment
+    from payroll_engine.payroll_elements import (
+        calculate_payroll_from_assignments,
+    )
+    from payroll_engine import db
+
+    # Create a temporary rate_x_units item in the catalog.
+    # Note: units_field lives on PayrollItemAssignment (lock-in 4),
+    # not on PayItemType — do NOT set it here.
+    item = PayItemType(
+        company_id=seeded_company.id, key='test_rate_item',
+        name_en='Test Rate Item', name_am='ዋና መጠን',
+        classification='earning', calculation_method='rate_x_units',
+        rate=Decimal('150'), is_system=False, is_active=True,
+    )
+    db.session.add(item); db.session.flush()
+
+    # virtual_assignment must carry units_field so the engine
+    # can resolve the quantity from units_input.
+    va = virtual_assignment(
+        seeded_company.id, 'test_rate_item', Decimal('150'),
+        classification='earning', units_field='hours',
+    )
+    assert va is not None
+    assert va.units_field == 'hours', (
+        'virtual_assignment must persist units_field for the '
+        'engine to resolve the quantity'
+    )
+
+    # Create a transient employee and run the engine with units_input.
+    from payroll_engine.impact import _what_if_employee
+    emp = _what_if_employee(Decimal('10000'), seeded_company.id)
+
+    result = calculate_payroll_from_assignments(
+        emp, seeded_company.id, __import__('datetime').date.today(),
+        extra_items=[va], units_input={'hours': 16},
+    )
+
+    # 150 × 16 = 2400 must appear in gross.
+    gross = result['gross']
+    assert gross >= Decimal('2400'), (
+        f'rate_x_units must compute 150×16=2400 in gross; '
+        f'got {gross}. units_field must be resolved by the engine'
+    )

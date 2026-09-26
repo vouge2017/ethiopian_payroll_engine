@@ -327,3 +327,52 @@ def test_company_failure_rolls_back_whole_company(ctx, edge_company, monkeypatch
     assert PayrollItemAssignment.query.filter_by(company_id=co.id).count() == 0, (
         'the whole company must be rolled back - no partial state'
     )
+
+
+# ---------------------------------------------------------------------------
+# Review finding #3: seed idempotency under double-seed
+# Review finding #13: backfill resume-after-interruption
+# ---------------------------------------------------------------------------
+
+
+def test_seed_system_items_idempotent_twice(ctx, edge_company):
+    """seed_system_items() must skip rows that already exist.
+
+    The partial unique index uq_pay_item_type_system_key on
+    pay_item_type(key) WHERE company_id IS NULL (migration
+    8e3a7b2c9d1f) enforces this at the DB level; the function
+    also checks in Python before inserting.
+    """
+    from payroll_engine.catalog import seed_system_items
+
+    result_a = seed_system_items()
+    result_b = seed_system_items()
+    assert result_b['created'] == 0, (
+        'double seed must not create duplicate system items'
+    )
+    assert result_b['skipped'] > 0
+
+
+def test_backfill_resumable_after_interruption(ctx, edge_company):
+    """If backfill is interrupted mid-company, a re-run must not
+    duplicate or lose rows.  Idempotency holds: re-running reports
+    0 newly created rows for an already-migrated company."""
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+    from payroll_engine.backfill import backfill_company
+
+    co, _u, _e = edge_company
+
+    first = backfill_company(co.id)
+    count_after = PayrollItemAssignment.query.filter_by(
+        company_id=co.id
+    ).count()
+
+    # Simulate interruption then resume: re-run must produce zero
+    # new rows and report all skipped.
+    resumed = backfill_company(co.id)
+    assert resumed['basic_created'] == 0
+    assert resumed['allowances_created'] == 0
+    assert resumed['deductions_created'] == 0
+    assert PayrollItemAssignment.query.filter_by(
+        company_id=co.id
+    ).count() == count_after

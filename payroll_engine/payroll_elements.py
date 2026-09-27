@@ -276,6 +276,13 @@ def calculate_payroll_from_assignments(
             ))
 
     net_before_deductions = gross - tax - emp_pen
+    # percent_of_net base (line 589-607 of payroll_elements.py):
+    #   base = gross - income_tax - employee_pension_contribution
+    # This is "net before discretionary deductions" — after the two
+    # mandatory first-order deductions (income tax and employee pension),
+    # but before voluntary deductions (cost_sharing, advance repayment,
+    # court orders). percent_of_net items are applied against this base.
+    # Applied at line 606: base * pct / 100, capped by item_type.max_percent_of_net.
 
     # Post-tax deductions — from the legacy `deductions` list or from new
     # declining-balance assignment rows
@@ -587,8 +594,13 @@ def _calculate_item_amount(item, employee, for_date, units_input, running_total)
         pct = _D(pct_basic or (item.rate if hasattr(item, 'rate') else 0))
         return (basic * pct / Decimal('100')).quantize(Q, rounding=ROUND_HALF_UP)
     elif method == PayItemCalcMethod.PERCENT_OF_NET:
-        # percent_of_net — deduction-only per spec. Applied against net_before_deductions.
-        # running_total param is net_before_deductions when called for deductions.
+        # percent_of_net — deduction-only per spec. Applied against
+        # net_before_deductions (= gross − income_tax − employee_pension).
+        # The base is net BEFORE discretionary deductions (cost_sharing,
+        # advance repayment, court orders), but AFTER the two mandatory
+        # first-order deductions (income tax and employee pension).
+        # running_total param is net_before_deductions when called for
+        # deductions (line 278 of payroll_elements.py).
         pct = _D(pct_net or 0)
 
         # Legal ceiling (e.g. court_order capped at 50% of net). Read from the

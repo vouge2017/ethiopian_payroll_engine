@@ -59,8 +59,15 @@ def company_user_employee(ctx):
     return company, user, emp
 
 
-def _assign(company, emp, key, name, amount, classification, am_label=None):
-    """Create a company PayItemType + PayrollItemAssignment (fixed amount)."""
+def _assign(company, emp, key, name, amount, classification, am_label=None,
+            calc_method='fixed', percent_of_net=None, percent_of_basic=None,
+            rate_per_unit=None, max_percent_of_net=None):
+    """Create a company PayItemType + PayrollItemAssignment.
+
+    For percent_of_net/percent_of_basic items, `amount` is the
+    percentage value (e.g. 10.0 for 10%) and the corresponding
+    percent column is populated on the assignment.
+    """
     from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
 
     item = PayItemType(
@@ -69,9 +76,10 @@ def _assign(company, emp, key, name, amount, classification, am_label=None):
         name_en=name,
         name_am=am_label,
         classification=classification,
-        calculation_method='fixed',
-        tax_treatment='taxable',
+        calculation_method=calc_method,
+        tax_treatment='taxable' if classification == 'earning' else 'non-taxable',
         is_system=False,
+        max_percent_of_net=max_percent_of_net,
     )
     db.session.add(item)
     db.session.flush()
@@ -79,7 +87,10 @@ def _assign(company, emp, key, name, amount, classification, am_label=None):
         company_id=company.id,
         employee_id=emp.id,
         pay_item_type_id=item.id,
-        fixed_amount=amount,
+        fixed_amount=amount if calc_method == 'fixed' else None,
+        percent_of_net=percent_of_net,
+        percent_of_basic=percent_of_basic,
+        rate_per_unit=rate_per_unit,
         is_active=True,
     )
     db.session.add(a)
@@ -323,4 +334,102 @@ def test_total_deductions_equals_sum_of_deduction_lines(ctx, company_user_employ
         f'deduction_details total ({detail_total}) must match '
         f'non-system deduction line items ({sum_lines}); '
         f'found {len(user_deduction_lines)} user deduction lines'
+    )
+
+
+# ---------------------------------------------------------------------------
+# percent_of_net base verification
+# ---------------------------------------------------------------------------
+# Base definition: net_before_deductions = gross − income_tax − emp_pen
+# (see payroll_elements.py line 278). percent_of_net items are computed as
+# base * pct / 100, applied against the SAME base regardless of how many
+# percent_of_net deductions exist (each is computed independently against
+# net_before_deductions, not sequentially).
+# ---------------------------------------------------------------------------
+
+
+def test_two_percent_of_net_deductions_lock_base(ctx, company_user_employee):
+    """Two percent_of_net deductions on one employee must each be
+    computed against the SAME base (= gross − income_tax − emp_pen).
+    Total deductions must equal the SUM of the individual amounts."""
+    from payroll_engine.services.payroll_service import process_payroll
+
+    company, user, emp = company_user_employee
+    emp.basic_salary = Decimal('10000')
+    emp.allowances = Decimal('2000')
+    db.session.commit()
+
+    # basic_salary must be an assignment so the engine assembles gross
+    _assign(company, emp, 'basic_salary', 'Basic Salary',
+            Decimal('10000'), 'earning', am_label='መሠሪያ ደምም')
+
+    # Two percent_of_net deductions: 10% and 5% of net_before_deductions
+    _, a10 = _assign(company, emp, 'court_order_10', 'Court Order 10%',
+                     Decimal('10'), 'deduction', am_label='የውሳኔ ትዕዛዝ 10%',
+                     calc_method='percent_of_net', percent_of_net=Decimal('10'),
+                     max_percent_of_net=Decimal('50'))
+    _, a5 = _assign(company, emp, 'loan_repayment_5', 'Loan Repayment 5%',
+                    Decimal('5'), 'deduction', am_label='የልቤ እቀሻ 5%',
+                    calc_method='percent_of_net', percent_of_net=Decimal('5'),
+                    max_percent_of_net=Decimal('50'))
+
+    run = PayrollRun(
+        company_id=company.id,
+        period='2026-09',
+        approved_by=user.id,
+        status='approved',
+    )
+    db.session.add(run)
+    db.session.commit()
+
+    # process_payroll requires a PayrollDraft to exist.
+    from payroll_engine.models import PayrollDraft
+    # The draft's gross/tax/pension define net_before_deductions,
+    # which is the percent_of_net base (= gross − income_tax − emp_pen).
+    # Use non-zero values so the base is non-trivial.
+    draft = PayrollDraft(
+        payroll_run_id=run.id, company_id=company.id,
+        employee_data=[{
+            'id': emp.employee_id, 'name': emp.name,
+            'basic': float(emp.basic_salary), 'allowances': float(emp.allowances),
+            'gross': 15000.0, 'tax': 1500.0, 'pension_employee': 700.0,
+            'pension_employer': 1100.0, 'net': 11700.0,
+        }],
+    )
+    db.session.add(draft)
+    db.session.commit()
+
+    process_payroll(run=run, company_id=company.id, user_id=user.id,
+                    user_email=user.email or 'owner@test.com',
+                    request_ip='127.0.0.1')
+
+    # Reload to get fresh data from the DB
+    db.session.refresh(payslip := run.payslips[0])
+    deduction_details = payslip.deduction_details or []
+    detail_total = sum(
+        Decimal(str(d.get('amount', 0)))
+        for d in deduction_details if isinstance(d, dict)
+    )
+
+    # Each percent_of_net deduction is computed against the same base.
+    # If base = B, then: deduction1 = B * 10/100, deduction2 = B * 5/100
+    # total = B * 15/100 = deduction1 + deduction2
+    assert len(deduction_details) >= 2, (
+        f'Expected at least 2 percent_of_net deductions, got {len(deduction_details)}'
+    )
+
+    # Verify the amounts are proportional to their percentages
+    amounts = sorted(
+        Decimal(str(d.get('amount', 0)))
+        for d in deduction_details if isinstance(d, dict)
+    )
+    # The smaller deduction should be exactly 1/2 the larger
+    # (since 5% is half of 10%)
+    assert abs(amounts[0] * 2 - amounts[1]) < Decimal('0.01'), (
+        f'5% deduction ({amounts[0]}) must be half of 10% deduction ({amounts[1]})'
+    )
+    # Total must equal the sum
+    assert abs(detail_total - (amounts[0] + amounts[1])) < Decimal('0.01'), (
+        f'Total deductions ({detail_total}) must equal sum of individual '
+        f'deductions ({amounts[0] + amounts[1]})'
     )

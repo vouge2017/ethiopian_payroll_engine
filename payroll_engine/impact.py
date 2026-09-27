@@ -406,6 +406,14 @@ def preview_allowance_change(current_amount, new_amount, basic_salary,
             }
 
     # Legacy path: no company catalog context, or the item is not defined.
+    # The 'transport' hardcode here is INTENTIONAL — Ethiopian transport
+    # allowance has a specific statutory exempt-amount formula
+    # (calculate_transport_exempt_amount) that only applies to the transport
+    # allowance key. Other allowance types have no exempt component, so
+    # exempt is zero. The catalog-driven path above (company_id present)
+    # resolves any key via virtual_assignment and applies the item's own
+    # tax treatment; this legacy path is the fallback for when no catalog
+    # is available.
     if allowance_type == 'transport':
         current_exempt = calculate_transport_exempt_amount(basic_salary, current_amount)
         new_exempt = calculate_transport_exempt_amount(basic_salary, new_amount)

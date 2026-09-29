@@ -64,6 +64,18 @@ def _employee(co, eid='EMP001', basic=Decimal('10000'), start=date(2020, 1, 1)):
 def _item(co, key, name_en, classification, method, tax_treatment, **kw):
     from payroll_engine.models import PayItemType
 
+    existing = PayItemType.query.filter_by(company_id=co.id, key=key).first()
+    if existing:
+        existing.name_en = name_en
+        existing.classification = classification
+        existing.calculation_method = method
+        existing.tax_treatment = tax_treatment
+        existing.is_system = False
+        for k, v in kw.items():
+            setattr(existing, k, v)
+        db.session.flush()
+        return existing
+
     it = PayItemType(
         company_id=co.id, key=key, name_en=name_en, classification=classification,
         calculation_method=method, tax_treatment=tax_treatment, is_system=False, **kw

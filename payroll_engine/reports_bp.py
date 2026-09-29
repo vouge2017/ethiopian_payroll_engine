@@ -474,6 +474,7 @@ def analytics():
 
     approved_leaves = (
         Leave.query.filter(
+            Leave.company_id == cid,
             Leave.employee_id.in_(emp_ids),
             Leave.status == 'approved',
             db.extract('year', Leave.start_date) == year,
@@ -516,7 +517,7 @@ def analytics():
                 headcount_by_month[month_key] = headcount_by_month.get(month_key, 0) + 1
 
     # ── Year options ──
-    years = db.session.query(db.func.distinct(db.extract('year', PayrollRun.run_date))).filter_by(company_id=cid).all()
+    years = db.session.query(db.func.distinct(db.extract('year', PayrollRun.run_date))).filter(PayrollRun.company_id == cid).all()
     available_years = sorted([int(y[0]) for y in years if y[0]], reverse=True)
     if not available_years:
         available_years = [date.today().year]
@@ -629,6 +630,7 @@ def export_analytics():
     emp_ids = [e.id for e in employees]
     if emp_ids:
         approved_leaves = Leave.query.filter(
+            Leave.company_id == cid,
             Leave.employee_id.in_(emp_ids),
             Leave.status == 'approved',
             db.extract('year', Leave.start_date) == year,

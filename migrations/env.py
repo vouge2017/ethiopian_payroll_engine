@@ -55,8 +55,9 @@ except RuntimeError:
 
 def get_metadata():
     if target_db is None:
-        from sqlalchemy import MetaData
-        return MetaData()
+        # CLI mode — load real model metadata so alembic check works
+        from payroll_engine.models import db as _db
+        return _db.metadata
     if hasattr(target_db, 'metadatas'):
         return target_db.metadatas[None]
     return target_db.metadata

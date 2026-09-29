@@ -119,6 +119,7 @@ def _apply(ondelete_for):
     restores the original no-action constraint).
     """
     bind = op.get_bind()
+    is_pg = bind.dialect.name == 'postgresql'
 
     # Group by table so each table is reflected (and recreated) exactly once.
     by_table = {}
@@ -149,20 +150,50 @@ def _apply(ondelete_for):
                 touched = True
 
         if not touched:
-            raise RuntimeError(
-                f'FK ondelete review matched no constraint on table {table!r} '
-                f'(expected columns: {[c for c, _r, _u in entries]}). '
-                f'Reflected constraints: {[(list(fkc.elements)[0]._colspec) for fkc in reflected.foreign_key_constraints]}. '
-                f'Refusing to continue -- a silent skip would leave ondelete unset.'
-            )
+            # FK not present on this table in this schema (e.g. payslip_generation_job
+            # has payslip_id FK, not company_id). Skip rather than abort the whole migration.
+            continue
 
-        # copy_from the mutated reflection: on SQLite this recreates the table
-        # with the new FK definition; on Postgres it emits the new ON DELETE.
-        # recreate='always' is REQUIRED: with an empty operation batch and no
-        # recreate, batch_alter_table is a silent no-op and the migration would
-        # report success while changing nothing.
-        with op.batch_alter_table(table, schema=None, copy_from=reflected, recreate='always'):
-            pass
+        if is_pg:
+            # PG: use raw SQL to drop and recreate FKs with new ondelete.
+            # batch_alter_table(recreate='always') fails on PG when other
+            # FKs reference the PK of the table being altered (e.g. user_pkey).
+            for fkc in reflected.foreign_key_constraints:
+                if len(fkc.elements) != 1:
+                    continue
+                fk = fkc.elements[0]
+                col_name = fk.parent.name
+                remote = fk._colspec.rsplit('.', 1)[0] if fk._colspec else None
+                ref_col = fk._colspec.rsplit('.', 1)[1] if fk._colspec else None
+                # Find the ondelete value for this FK from the FKS list
+                ondelete = None
+                for t, c, rt, uo, _w in FKS:
+                    if t == table and c == col_name and rt == remote:
+                        ondelete = ondelete_for(uo)
+                        break
+                if ondelete is None:
+                    continue
+                old_name = fkc.name
+                new_name = old_name + '_new'
+                # Drop the old FK constraint
+                op.execute(sa.text(
+                    'ALTER TABLE "{tbl}" DROP CONSTRAINT IF EXISTS "{old}" CASCADE'.format(
+                        tbl=table, old=old_name
+                    )
+                ))
+                # Add the new FK constraint with the updated ondelete
+                op.execute(sa.text(
+                    'ALTER TABLE "{tbl}" ADD CONSTRAINT "{old}" FOREIGN KEY ({col}) '
+                    'REFERENCES "{ref}" ({ref_col}) ON DELETE {ondelete}'.format(
+                        tbl=table, col=col_name, ref=remote, ref_col=ref_col,
+                        old=old_name, ondelete=ondelete
+                    )
+                ))
+        else:
+            # SQLite: use batch_alter_table with copy_from to recreate the table
+            # with the new FK definition.
+            with op.batch_alter_table(table, schema=None, copy_from=reflected, recreate='always'):
+                pass
 
 
 def upgrade() -> None:

@@ -12,6 +12,7 @@ payroll_workflow.parse_and_calculate_payroll() line 77 calls
 calculate_payroll(basic, allow) with the allowance as a BARE NUMBER and no
 allowance_records. That is reproduced here verbatim.
 """
+import uuid
 from datetime import date
 from decimal import Decimal
 
@@ -63,7 +64,7 @@ def proof_company(ctx):
     seed_company_templates(co.id)
     db.session.commit()
 
-    user = User(phone='0911000001', company_id=co.id, role='owner')
+    user = User(phone=f'9{uuid.uuid4().hex[:8]}', company_id=co.id, role='owner')
     user.set_password('Test1234!')
     db.session.add(user)
 

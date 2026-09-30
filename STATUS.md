@@ -1,6 +1,6 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 11:51 UTC
+**Last updated:** 2026-09-30 13:02 UTC
 
 ## Current evidence — 2026-09-30
 
@@ -50,6 +50,47 @@ policy or schema changed. SQLite fixture setup is not migration evidence.
 Raw output and exact commands:
 [regression-net-2026-09-30.json](docs/evidence/regression-net-2026-09-30.json).
 Public `/readyz` was checked again and returned HTTP 503, database down.
+
+## Complete baseline and fail-fast startup — 2026-09-30 13:02 UTC
+
+Regression repair `44c6810` is committed and pushed. For the first completed
+single-process run at that exact revision:
+`4 failed, 1231 passed, 16 skipped, 20 warnings in 1656.48s (0:27:36)`, exit 1.
+All four failures are `test_benchmark.py` evidence/combined report performance
+at 200/500 employees. There are no collection or fixture errors. The previous
+600-second timeout is superseded by this count, not a green claim. The 16 skips
+are the native PostgreSQL migration, catalog and money cases, tested separately.
+
+Container startup now upgrades visibly and starts Gunicorn only on success;
+there is no stamp fallback. `sqlalchemy.url` is blank in the committed INI.
+Flask-Migrate uses the application URL; standalone Alembic requires an explicit
+Config URL or DATABASE_URL, normalizes postgres://, and gives the Config override
+precedence. Required rollback failures no longer turn into CI success. Native
+CI explicitly supplies TEST_DATABASE_URL and runs independently of the general
+suite; branch pushes now trigger CI. Synthetic CI encryption keys are explicit.
+
+- Startup/target probes before: `4 failed, 2 passed, 3 warnings in 4.87s`.
+- After: `6 passed, 3 warnings in 2.40s`.
+- Native CI selection on disposable migrated PostgreSQL 16:
+  `24 passed, 39 warnings in 22.30s`. All 16 required PG cases executed.
+- Real Alembic upgrade -> downgrade base -> upgrade and downgrade -1 -> upgrade
+  passed on `payroll_slice_20260930`, loopback port 55432; head `f4a5b6c7d8ee`.
+- Changed files lint/format and CI YAML/configuration checks passed. Whole-repo
+  lint remains red with 135 errors; GitHub-hosted execution and Docker build are
+  unverified. No create_all or stamping was used as migration proof.
+
+Deployment remains blocked: a normal employee TIN insert failed on migrated
+PostgreSQL (encrypted payload exceeds VARCHAR(20)); bank/Fayda ORM reads also
+failed. Five targeted before-cases are red, contradicting drift rows 18-20.
+The next schema slice must preserve existing ciphertext and reject unsafe
+rollback or unreadable legacy values. Render's replacement `ethiopian-payroll-db`
+is Available, Oregon, same workspace, and its DATABASE_URL was saved only, per
+the user. No dashboard access or deployed migration was verified. The last
+public readyz check returned 503, database down. Tigist's chosen first task is
+preparing/checking her payroll spreadsheet; employee count remains unknown.
+
+Raw outputs and exact commands:
+[startup-gate-2026-09-30.json](docs/evidence/startup-gate-2026-09-30.json).
 
 ## PostgreSQL catalog compatibility slice — 2026-09-30 09:11 UTC
 

@@ -1,6 +1,32 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 19:09 UTC
+**Last updated:** 2026-09-30 19:51 UTC
+
+## Product checkpoint and confirmed hosted baseline - 2026-09-30 19:51 UTC
+
+Feature source 8c42ce1 is pushed. Latest hosted run 36764061946 completed:
+Python 3.11 and 3.12 each `TOTAL: 1242 passed, 0 failed, 0 errors, 26 skipped`
+(311.2s / 287.9s). The Python 3.12 coverage execution also completed
+`1242 passed, 26 skipped, 20 warnings in 247.99s (0:04:07)`.
+Both strict security selections passed. Separate native PostgreSQL job:
+`34 passed, 101 warnings in 8.56s`; real migrations and rollback passed.
+Whole CI is still red: lint reports `Found 134 errors.` and format was skipped.
+This supersedes the pending hosted PDF results above; one PDF case now passes
+and one runner diagnostic case was added, yielding 1242 general passes.
+
+Live public readiness reports database/self up. Isolated Edge browser review
+viewed login on desktop and phone; /diff/ returned 404. Last user-confirmed live
+SHA remains aa2e657, not independently refreshed. No signed-in/live payroll
+workflow or feature deployment occurred. Application code is unchanged.
+
+The next product task is saved-advance preservation in the spreadsheet, then
+truthful edits/totals and one complete accountant journey. Source review found
+zero-initialized advances submitted by whole-form autosave, unused submitted
+absence/bonus values, and no direct spreadsheet-to-approval action. These are
+source findings requiring real PG before/after evidence, not live reproductions.
+Detailed priority, value, effort limits and acceptance cases:
+[product-checkpoint-2026-09-30.md](docs/product-checkpoint-2026-09-30.md).
+Raw hosted logs remain under D:/payroll-work-2026-09-30/hosted-current-*.log.
 
 ## Hosted baseline and PDF test environment — 2026-09-30 19:09 UTC
 

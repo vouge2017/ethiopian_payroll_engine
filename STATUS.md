@@ -1,4 +1,69 @@
-# STATUS.md — Live, Command-Verified State
+# STATUS.md — Command-Verified State
+
+**Last updated:** 2026-09-30 09:11 UTC
+
+## Current evidence — 2026-09-30
+
+Branch: `feature/elements-architecture`. Test-runner/collection repair `2c05019`
+is committed and pushed. The following complete baseline is at that exact revision:
+
+- Collection without a shell-supplied encryption key: `1235 tests collected in 13.42s`, exit 0.
+- All 104 files executed sequentially through the repaired `run_tests.py` functions:
+  **1225 passed, 8 failed, 0 errors, 2 skipped**, exit 1; no file timeouts.
+- The single-process full suite timed out after 600 seconds. Its final failure
+  count is unknown. No whole-suite green claim is made.
+
+Per-file summaries, failures, revision and controlled configuration are retained
+in [baseline-2026-09-30.json](docs/evidence/baseline-2026-09-30.json).
+Raw local outputs: `D:/payroll-work-2026-09-30/baseline-<filename>.log`.
+The capture command was `python D:/payroll-work-2026-09-30/file_baseline.py`;
+each child ran `python -m pytest <file> --tb=line -q` with the recorded options.
+
+Known failures remain open: document upload coverage (3), filing deadlines (2),
+webhook flag assumptions (2), and quick-start visibility (1). The webhook test
+group separately returned `5 passed, 3 warnings in 6.63s` when enabled, with
+thread/HTTP delivery mocked. This supplemental result does not rewrite the baseline.
+
+## PostgreSQL catalog compatibility slice — 2026-09-30 09:11 UTC
+
+Three model String columns did not match migration-owned native enum columns.
+An actual bulk ORM insert failed with PostgreSQL `DatatypeMismatch`. Model
+variants now bind the existing native types; no schema migration was added.
+
+Commands used the explicitly identified disposable PostgreSQL 16 database
+`payroll_slice_20260930` on loopback port 55432, never the live Render database:
+
+- `python -m pytest tests/test_pg_catalog_types.py -q --tb=short`
+  before: `1 failed, 5 warnings in 4.20s`; after:
+  `1 passed, 5 warnings in 3.08s`. The test commits and reads the rows through
+  an independent connection against a real Alembic-upgraded schema.
+- Affected SQLite engine, consumer and backfill files:
+  `43 passed, 3 warnings in 57.32s`, exit 0.
+- Real Alembic `upgrade head -> downgrade base -> upgrade head` succeeded on
+  the disposable empty schema; independently inspected revision
+  `f4a5b6c7d8ee` and 33 public tables. No stamping or `create_all()` was used
+  as migration proof. Data-bearing rollback/backfill safety remains unverified.
+
+Raw outputs: `D:/payroll-work-2026-09-30/money-pg-catalog-before.log`,
+`money-pg-catalog-after.log`, `enum-sqlite-verified.log`, `pg-upgrade.log`,
+and `pg-downgrade.log` in the same directory.
+
+## Live incident and remaining gates
+
+Public endpoint check at 2026-09-30 04:07 UTC: `/healthz` 200 and `/readyz`
+503 with database down. User-provided deployed SHA is `aa2e657`; it has not
+been independently matched to Render. The configured short internal hostname
+matches the DNS failure in supplied logs. Actual database status/region/workspace
+are still unknown. No production database connection or configuration change occurred.
+
+Release is blocked. Money persistence/retry/concurrency repairs are separate
+next slices; the catalog test does not establish those invariants. Deployment
+stamp fallback, hardcoded Alembic URL, swallowed CI rollback failure, and remaining
+source review findings still need bounded repairs. Source preflight is a limited
+source check, not a production security verdict.
+
+## Historical records (superseded where current evidence above differs)
+
 
 **Last updated:** 2026-09-15 14:30 UTC  
 **Rule:** Any claim about test counts, verification status, or floor state below must cite a line in this file with a timestamp — or the claim is "not yet checked."

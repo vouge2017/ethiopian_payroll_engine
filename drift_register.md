@@ -31,9 +31,9 @@
 | 18 | employee | bank_account | type | false-positive | EncryptedType renders as VARCHAR(100); DDL matches |
 | 19 | employee | tin | type | false-positive | EncryptedType renders as VARCHAR(20); DDL matches |
 | 20 | employee | fayda_fin | type | false-positive | EncryptedType renders as VARCHAR(100); DDL matches |
-| 21 | pay_item_type | classification | type | false-positive | DB ENUM vs model String(20); CHECK renders same |
-| 22 | pay_item_type | calculation_method | type | false-positive | DB ENUM vs model String(20); CHECK renders same |
-| 23 | pay_item_type | tax_treatment | type | false-positive | DB ENUM vs model String(20); CHECK renders same |
+| 21 | pay_item_type | classification | type | model-fixed | PG variant matches native `payitem_classification`; ORM bulk write verified on migrated PG schema |
+| 22 | pay_item_type | calculation_method | type | model-fixed | PG variant matches native `payitem_calc_method`; ORM bulk write verified on migrated PG schema |
+| 23 | pay_item_type | tax_treatment | type | model-fixed | PG variant matches native `payitem_tax_treatment`; ORM bulk write verified on migrated PG schema |
 | 24 | filing_record | filing_type | type | deferred | DB VARCHAR(50) wider than model String(30) — not a narrowing |
 | 25 | system_setting | key | type | deferred | DB VARCHAR(200) wider than model String(100) — not a narrowing |
 | 26 | api_key | token_hash | constraint | deferred | DB has unique; model removed — check writers |

@@ -17,7 +17,8 @@ Design doc: Phase 1 proposal + Phase 2 corrections (per-period units_input; depr
 """
 
 from datetime import UTC, datetime
-from decimal import Decimal
+
+from sqlalchemy.dialects.postgresql import ENUM
 
 from payroll_engine import db
 
@@ -87,11 +88,32 @@ class PayItemType(db.Model):
     key = db.Column(db.String(30), nullable=False)
     name_en = db.Column(db.String(100), nullable=False)
     name_am = db.Column(db.String(100), nullable=True)
-    classification = db.Column(db.String(20), nullable=False)
-    calculation_method = db.Column(db.String(20), nullable=False, default=PayItemCalcMethod.FIXED)
+    # PostgreSQL uses migration-owned native enums. String bind casts in
+    # ORM bulk inserts are incompatible with those columns; SQLite keeps
+    # its existing String representation for unit fixtures.
+    classification = db.Column(
+        db.String(20).with_variant(
+            ENUM(*PayItemClassification.ALL, name='payitem_classification', create_type=False),
+            'postgresql',
+        ),
+        nullable=False,
+    )
+    calculation_method = db.Column(
+        db.String(20).with_variant(
+            ENUM(*PayItemCalcMethod.ALL, name='payitem_calc_method', create_type=False),
+            'postgresql',
+        ),
+        nullable=False, default=PayItemCalcMethod.FIXED,
+    )
     percent_of_item_key = db.Column(db.String(30), nullable=True)
     rate = db.Column(db.Numeric(10, 4), nullable=True)
-    tax_treatment = db.Column(db.String(20), nullable=False, default=PayItemTaxTreatment.TAXABLE)
+    tax_treatment = db.Column(
+        db.String(20).with_variant(
+            ENUM(*PayItemTaxTreatment.ALL, name='payitem_tax_treatment', create_type=False),
+            'postgresql',
+        ),
+        nullable=False, default=PayItemTaxTreatment.TAXABLE,
+    )
     exempt_cap_amount = db.Column(db.Numeric(12, 2), nullable=True)
     exempt_cap_percent = db.Column(db.Numeric(5, 2), nullable=True)
     exempt_cap_basis = db.Column(db.String(20), nullable=True)

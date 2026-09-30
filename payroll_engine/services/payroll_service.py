@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from payroll_engine import db
 from payroll_engine.compliance import compute_compliance_score
+from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS, SYSTEM_ITEM_KEYS
 from payroll_engine.models import (
     Employee,
     PayrollDraft,
@@ -17,7 +18,6 @@ from payroll_engine.models import (
     Payslip,
 )
 from payroll_engine.models_payroll_elements import PayrollItemAssignment
-from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS, SYSTEM_ITEM_KEYS
 from payroll_engine.shared import create_audit_log, create_notification, tenant_get
 
 
@@ -41,7 +41,7 @@ def _deduction_is_backfilled(employee_id, company_id, deduction):
     PayrollItemAssignment the engine reads. Applying both double-deducts the
     employee, so the bridge must skip any row the backfill has converted.
     """
-    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
     tag = f'legacy_deduction:{getattr(deduction, "id", None)}'
     return (
@@ -63,7 +63,6 @@ def _ensure_basic_assignment(employee, company_id, basic_amount):
     Idempotent; returns None when the company has no basic_salary item at all
     (the catalog is incomplete), in which case the engine simply omits it.
     """
-    from decimal import Decimal
 
     from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
 
@@ -112,7 +111,6 @@ def _ensure_general_allowance(employee, company_id, amount):
 
     Idempotent: an existing active assignment for that item is left alone.
     """
-    from decimal import Decimal
 
     from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
 
@@ -180,12 +178,11 @@ def _build_units_input(emp_data):
 def _decline_balances(employee_id, company_id, deduction_details):
     """Decrement remaining_balance on declining deductions after a run.
 
-    The engine returns deduction_details without the ledger id for new
-    assignment rows, so this walks the employee's declining deductions and
-    applies the matched amount. Idempotent within a run: a deduction whose
-    balance is already zero is skipped.
+    Legacy deduction IDs and assignment IDs belong to separate ledgers;
+    an assignment detail must never consume a legacy row with the same ID.
+    The caller owns the approval guard, row lock and transaction. This helper
+    is not independently idempotent.
     """
-    from decimal import Decimal
 
     from payroll_engine.models import EmployeeDeduction
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
@@ -212,7 +209,13 @@ def _decline_balances(employee_id, company_id, deduction_details):
                 break
 
     # Legacy bridge rows carry their id in the detail dict.
-    by_id = {d.get('id'): d for d in (deduction_details or []) if d.get('id')}
+    # Older legacy payloads lack a discriminator; preserve that contract,
+    # but exclude both explicit assignment flags and assignment identities.
+    by_id = {
+        d['id']: d
+        for d in (deduction_details or [])
+        if d.get('id') and d.get('legacy', True) and not d.get('assignment_id')
+    }
     if not by_id:
         return
     legacy = EmployeeDeduction.query.filter(
@@ -306,11 +309,12 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # --- BUG FIX: Compute leave reductions from actual Leave records ---
         # The draft has stale values; we need real leave data at approval time.
-        from payroll_engine.models import Leave, EmployeeDeduction
-        from payroll_engine.leave import LeaveType, DEFAULT_SICK_TIER_1_DAYS
         from decimal import Decimal
 
-        today = date.today() if 'date' not in dir() else date.today()
+        from payroll_engine.leave import DEFAULT_SICK_TIER_1_DAYS, LeaveType
+        from payroll_engine.models import EmployeeDeduction, Leave
+
+        today = date.today()
         month_start = today.replace(day=1)
 
         # Pre-compute leave reductions per employee

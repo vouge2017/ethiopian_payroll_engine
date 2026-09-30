@@ -1,6 +1,6 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 09:11 UTC
+**Last updated:** 2026-09-30 09:52 UTC
 
 ## Current evidence — 2026-09-30
 
@@ -48,16 +48,51 @@ Raw outputs: `D:/payroll-work-2026-09-30/money-pg-catalog-before.log`,
 `money-pg-catalog-after.log`, `enum-sqlite-verified.log`, `pg-upgrade.log`,
 and `pg-downgrade.log` in the same directory.
 
+## Deduction identity repair (F05) — 2026-09-30 09:52 UTC
+
+Catalog prerequisite `1949d12` is committed and pushed. The next slice keeps
+legacy deduction row IDs separate from new assignment IDs and retains support
+for older legacy payloads without identity flags. Mechanical import/date-expression
+lint cleanup does not change payroll policy.
+
+Same-tenant ID collision on migrated PostgreSQL before the repair: a legacy
+balance of 500 became 400 instead of 480, despite its own deduction being 20.
+The new assignment's separate balance correctly became 900 after recovering 100.
+
+- Before, eight money cases: `4 failed, 4 passed, 19 warnings in 11.97s`.
+- After, those eight plus the catalog regression: `9 passed, 21 warnings in 11.30s`.
+- Affected SQLite service/backfill/transaction/period checks:
+  `52 passed, 3 warnings in 51.85s`.
+- Final collection, without a shell-supplied encryption key:
+  `1244 tests collected in 3.45s`, exit 0. Collection is not execution.
+- Changed service/test lint passed; the new test's formatter check passed.
+
+The database cases prove committed balances, repeated approval, two competing
+locked same-run approvals, pre-commit rollback, two foreign scope cases, an
+assignment identity without the legacy flag, and older legacy payload compatibility.
+Completion audit and payslip counts are checked through a separate connection.
+HTTP authorization, undo reconciliation, all concurrency patterns and post-commit
+delivery recovery remain outside this proof. Only external PDF enqueue/webhook
+delivery are stubbed. No production data was used.
+
+Raw before/after output and exact commands:
+[deduction-identity-2026-09-30.json](docs/evidence/deduction-identity-2026-09-30.json).
+The complete baseline above remains the unchanged record at `2c05019`, not a
+claim that the current whole suite is green.
+
 ## Live incident and remaining gates
 
 Public endpoint check at 2026-09-30 04:07 UTC: `/healthz` 200 and `/readyz`
 503 with database down. User-provided deployed SHA is `aa2e657`; it has not
 been independently matched to Render. The configured short internal hostname
-matches the DNS failure in supplied logs. Actual database status/region/workspace
-are still unknown. No production database connection or configuration change occurred.
+matches the DNS failure in supplied logs. The user reports no PostgreSQL database listed in the dashboard and confirms
++only demo/test data was stored. Database removal/expiry versus a different
++workspace is not independently resolved. Demo recovery can use a new disposable
++database; a new URL does not recover the old data. No production database connection or configuration change occurred.
 
-Release is blocked. Money persistence/retry/concurrency repairs are separate
-next slices; the catalog test does not establish those invariants. Deployment
+Release is blocked. The F05 collision has the bounded PostgreSQL evidence above. Legacy fallback
++double decrement (F06), settlement dates (F08), preview/undo balance ownership,
++post-commit delivery, and the remaining test failures are still open. Deployment
 stamp fallback, hardcoded Alembic URL, swallowed CI rollback failure, and remaining
 source review findings still need bounded repairs. Source preflight is a limited
 source check, not a production security verdict.

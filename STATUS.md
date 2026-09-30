@@ -1,6 +1,6 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 09:52 UTC
+**Last updated:** 2026-09-30 10:04 UTC
 
 ## Current evidence — 2026-09-30
 
@@ -80,21 +80,45 @@ Raw before/after output and exact commands:
 The complete baseline above remains the unchanged record at `2c05019`, not a
 claim that the current whole suite is green.
 
+## Legacy single recovery repair (F06) — 2026-09-30 10:04 UTC
+
+Identity repair `5c71fe1` is committed and pushed. A migrated PostgreSQL
+fallback approval recovered 20 from net pay but consumed 40 from the legacy
+balance: 500 became 460. The legacy loop now computes recovery only; the
+tenant/employee-scoped helper consumes that amount once within the transaction.
+
+- Five new cases before: `3 failed, 2 passed, 8 deselected, 13 warnings in 8.29s`.
+- All 13 money cases plus catalog after: `14 passed, 31 warnings in 16.89s`.
+- Relevant SQLite checks: `52 passed, 3 warnings in 51.31s`.
+- Collection: `1249 tests collected in 4.51s`, exit 0; not a whole-suite pass.
+- Changed-file lint and test formatting checks passed.
+
+The five additional PostgreSQL cases cover persisted debt/net reconciliation,
+retry, competing locked approvals, rollback before commit, and capped final
+recovery/deactivation. Separate connections inspect the committed ledger,
+payslip net amount and completion audit count. No ORM persistence or transaction
+is mocked. F05's foreign-scope and identity cases remain green alongside them.
+
+Exact commands and raw outputs:
+[legacy-recovery-2026-09-30.json](docs/evidence/legacy-recovery-2026-09-30.json).
+The historical file-isolated baseline and single-process timeout remain the
+whole-suite state; these bounded green slices do not erase the eight failures.
+
 ## Live incident and remaining gates
 
 Public endpoint check at 2026-09-30 04:07 UTC: `/healthz` 200 and `/readyz`
 503 with database down. User-provided deployed SHA is `aa2e657`; it has not
 been independently matched to Render. The configured short internal hostname
 matches the DNS failure in supplied logs. The user reports no PostgreSQL database listed in the dashboard and confirms
-+only demo/test data was stored. Database removal/expiry versus a different
-+workspace is not independently resolved. Demo recovery can use a new disposable
-+database; a new URL does not recover the old data. No production database connection or configuration change occurred.
+only demo/test data was stored. Database removal/expiry versus a different
+workspace is not independently resolved. Demo recovery can use a new disposable
+database; a new URL does not recover the old data. No production database connection or configuration change occurred.
 
-Release is blocked. The F05 collision has the bounded PostgreSQL evidence above. Legacy fallback
-+double decrement (F06), settlement dates (F08), preview/undo balance ownership,
-+post-commit delivery, and the remaining test failures are still open. Deployment
-stamp fallback, hardcoded Alembic URL, swallowed CI rollback failure, and remaining
-source review findings still need bounded repairs. Source preflight is a limited
+Release is blocked. F05 and F06 have the bounded PostgreSQL evidence above.
+Settlement dates (F08), preview/undo balance ownership, post-commit delivery,
+and remaining test failures are still open. Deployment stamp fallback,
+hardcoded Alembic URL, swallowed CI rollback failure, and remaining source
+review findings still need bounded repairs. Source preflight is a limited
 source check, not a production security verdict.
 
 ## Historical records (superseded where current evidence above differs)

@@ -283,3 +283,81 @@ def test_legacy_balance_cannot_be_reached_with_foreign_scope(dataset, foreign_sc
         payroll_service._decline_balances(employee, company, [{'id': ids['legacy'], 'legacy': True, 'amount': 100}])
         db.session.commit()
     assert persisted(engine, ids)['legacy'] == Decimal('500')
+
+
+@pytest.fixture
+def legacy_dataset(dataset):
+    app, ids, engine = dataset
+    with app.app_context():
+        assignment = db.session.get(PayrollItemAssignment, ids['assignment'])
+        assignment.is_active = False
+        db.session.commit()
+    return app, ids, engine
+
+
+def assert_legacy_approved_once(engine, ids, balance=Decimal('480')):
+    assert persisted(engine, ids) == dict(assignment=Decimal('1000'), legacy=balance, slips=1, audits=1)
+
+
+def test_legacy_fallback_recovers_its_amount_once(legacy_dataset):
+    app, ids, engine = legacy_dataset
+    assert approve(app, ids).success
+    assert_legacy_approved_once(engine, ids)
+    with engine.connect() as conn:
+        net = conn.execute(
+            text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': ids['run']}
+        ).scalar_one()
+        assert net == Decimal('9980')
+
+
+def test_legacy_fallback_repeat_approval_cannot_consume_again(legacy_dataset):
+    app, ids, engine = legacy_dataset
+    assert approve(app, ids).success
+    assert not approve(app, ids).success
+    assert_legacy_approved_once(engine, ids)
+
+
+def test_legacy_fallback_competing_locked_approvals_commit_one_recovery(legacy_dataset):
+    app, ids, engine = legacy_dataset
+    barrier = Barrier(2)
+
+    def competing():
+        barrier.wait(timeout=10)
+        return approve(app, ids).success
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(competing) for _ in range(2)]
+        outcomes = [future.result(timeout=30) for future in futures]
+    assert sorted(outcomes) == [False, True]
+    assert_legacy_approved_once(engine, ids)
+
+
+def test_legacy_fallback_failure_before_commit_restores_balance(legacy_dataset, monkeypatch):
+    app, ids, engine = legacy_dataset
+
+    def fail(*args, **kwargs):
+        raise RuntimeError('synthetic legacy failure before commit')
+
+    monkeypatch.setattr(payroll_service, 'compute_compliance_score', fail)
+    assert not approve(app, ids).success
+    assert persisted(engine, ids) == dict(assignment=Decimal('1000'), legacy=Decimal('500'), slips=0, audits=0)
+
+
+def test_legacy_fallback_final_recovery_is_capped_and_deactivates_debt(legacy_dataset):
+    app, ids, engine = legacy_dataset
+    with app.app_context():
+        legacy = db.session.get(EmployeeDeduction, ids['legacy'])
+        legacy.remaining_balance = Decimal('15')
+        db.session.commit()
+    assert approve(app, ids).success
+    assert_legacy_approved_once(engine, ids, Decimal('0'))
+    with engine.connect() as conn:
+        assert (
+            conn.execute(
+                text('SELECT is_active FROM employee_deduction WHERE id=:id'), {'id': ids['legacy']}
+            ).scalar_one()
+            is False
+        )
+        assert conn.execute(
+            text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': ids['run']}
+        ).scalar_one() == Decimal('9985')

@@ -492,7 +492,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 exempt_allowances = calc.get('exempt_allowances')
                 taxable_income = calc.get('taxable')
             else:
-                # Legacy path, unchanged: pre-computed draft figures, with the
+                # Legacy path: pre-computed draft figures, with the
                 # hand-rolled deduction loop that pre-dates the engine.
                 net_before_deductions = Decimal(str(emp_data['net'])) - sick_red - unpaid_red
                 deduction_details = []
@@ -515,10 +515,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                             'amount': float(ded_amount),
                             'remaining_balance': float(ded.remaining_balance) if ded.remaining_balance else None,
                         })
-                        if ded.tracking_mode == 'declining' and ded.remaining_balance is not None:
-                            ded.remaining_balance = max(Decimal('0'), ded.remaining_balance - ded_amount)
-                            if ded.remaining_balance <= 0:
-                                ded.is_active = False
+                        # Balance mutation belongs to _decline_balances below,
+                        # once for both the legacy fallback and bridge paths.
                 final_net = net_before_deductions - total_deductions
                 gross = Decimal(str(emp_data['gross']))
                 tax = Decimal(str(emp_data['tax']))

@@ -1,6 +1,6 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 13:02 UTC
+**Last updated:** 2026-09-30 13:20 UTC
 
 ## Current evidence — 2026-09-30
 
@@ -91,6 +91,41 @@ preparing/checking her payroll spreadsheet; employee count remains unknown.
 
 Raw outputs and exact commands:
 [startup-gate-2026-09-30.json](docs/evidence/startup-gate-2026-09-30.json).
+
+## Employee encryption/schema compatibility — 2026-09-30 13:20 UTC
+
+Startup repair `eb5b4d9` is committed and pushed. A migrated PostgreSQL TIN
+write failed with StringDataRightTruncation, and bank/Fayda reads failed because
+the driver returned VARCHAR strings to an EncryptedType that expects bytes.
+Drift rows 18-20 were incorrectly called false positives. Migration
+`f4a5b6c7d8ef` now uses BYTEA for all three columns and preserves ciphertext.
+
+- Seven regressions before: `7 failed, 43 warnings in 7.73s`.
+- After: `7 passed, 53 warnings in 8.40s`.
+- Combined migration/catalog/money/encryption/startup selection:
+  `37 passed, 89 warnings in 27.04s`. This includes 23 required native PostgreSQL
+  cases and 14 structural/unit checks, with no required skips.
+- Real empty PostgreSQL upgrade -> downgrade base -> upgrade and one-revision
+  rollback/forward passed at the new head. Existing bank ciphertext also passed
+  a data-bearing rollback/forward round-trip at the preceding head.
+- Wrong keys and legacy plaintext are rejected before DDL. Oversized ciphertext
+  rejects rollback before any column changes; the revision and values survive.
+  This guarded refusal is expected behavior, not permission to force rollback.
+- New migration/test lint and formatter checks passed. Global lint and the last
+  complete suite remain red; no new whole-suite green claim is made.
+
+The migration takes a PostgreSQL table lock to make preflight/type changes
+atomic. It does not change encryption keys or payroll policy. Earlier historical
+data-bearing migrations, backups/restore and live Render initialization remain
+unverified. CI explicitly includes these seven native regression cases.
+Raw commands and results:
+[employee-encryption-2026-09-30.json](docs/evidence/employee-encryption-2026-09-30.json).
+
+While profiling synthetic committed rows on this migrated PG schema, evidence
+collection took 2.276s/806 SELECTs at 200 employees and 6.100s/2006 SELECTs at
+500; employee SELECTs were 601/1501. This confirms repeated per-payslip reads
+in evidence/exception reports. No performance thresholds have been relaxed.
+That report query path and the existing four benchmark failures remain next.
 
 ## PostgreSQL catalog compatibility slice — 2026-09-30 09:11 UTC
 

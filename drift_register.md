@@ -28,9 +28,9 @@
 | 15 | notification | notif_type | db-only | deferred | DB: VARCHAR(50) NOT NULL; Model: absent |
 | 16 | notification | read_at | db-only | deferred | DB: TIMESTAMP; Model: absent |
 | 17 | payslip_acknowledgment | user_agent | db-only | deferred | DB: VARCHAR(500); Model: absent |
-| 18 | employee | bank_account | type | false-positive | EncryptedType renders as VARCHAR(100); DDL matches |
-| 19 | employee | tin | type | false-positive | EncryptedType renders as VARCHAR(20); DDL matches |
-| 20 | employee | fayda_fin | type | false-positive | EncryptedType renders as VARCHAR(100); DDL matches |
+| 18 | employee | bank_account | type | migrated | `f4a5b6c7d8ef` uses BYTEA for EncryptedType bytes; migrated PG write/read and existing ciphertext round-trip verified |
+| 19 | employee | tin | type | migrated | `f4a5b6c7d8ef` uses BYTEA for EncryptedType bytes; migrated PG write/read and existing ciphertext round-trip verified |
+| 20 | employee | fayda_fin | type | migrated | `f4a5b6c7d8ef` uses BYTEA for EncryptedType bytes; migrated PG write/read and existing ciphertext round-trip verified |
 | 21 | pay_item_type | classification | type | model-fixed | PG variant matches native `payitem_classification`; ORM bulk write verified on migrated PG schema |
 | 22 | pay_item_type | calculation_method | type | model-fixed | PG variant matches native `payitem_calc_method`; ORM bulk write verified on migrated PG schema |
 | 23 | pay_item_type | tax_treatment | type | model-fixed | PG variant matches native `payitem_tax_treatment`; ORM bulk write verified on migrated PG schema |

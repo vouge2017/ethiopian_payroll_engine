@@ -32,12 +32,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+          cache-dependency-path: requirements-lock.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest-cov
+          pip install -r requirements-lock.txt
 
       - name: Strict security & tenancy gate (fail-hard, no --continue)
         env:
@@ -103,11 +103,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: requirements-lock.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-lock.txt
 
       - name: Run migrations against PostgreSQL
         env:
@@ -148,7 +149,7 @@ jobs:
           app = create_app()
           with app.app_context():
               from flask_migrate import downgrade, upgrade
-              downgrade('-1')
+              downgrade(revision='-1')
               upgrade()
               print('Migration rollback/rollforward verified')
           "

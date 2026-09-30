@@ -1,6 +1,45 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 18:02 UTC
+**Last updated:** 2026-09-30 18:27 UTC
+
+## CI/runtime dependency repair — 2026-09-30 18:27 UTC
+
+Report repair `d227939` is committed and pushed. Application code is unchanged
+in this slice; the complete green local baseline in the preceding section stands.
+Hosted CI at `35f2852` failed before its main tests: unpinned installation selected
+dependencies that could not import SQLAlchemy-Utils and requested an uninstalled
+PostgreSQL driver. Both CI jobs now install the existing Docker runtime lock and
+key pip caches to that file. No test, lint or failure gate was disabled.
+
+The actual Flask-Migrate rollback call also had an independent API bug:
+`downgrade('-1')` treats `-1` as a directory. It reproduced exit 1 with
+`Error: Path doesn't exist: -1. Please use the 'init' command to create a new scripts folder.`
+CI now calls `downgrade(revision='-1')`. This was not proven by earlier Alembic
+command-level cycles; the new full-application wrapper check closes that gap.
+
+- Fresh isolated install of all direct pins: SQLAlchemy 2.0.51,
+  SQLAlchemy-Utils 0.42.1, psycopg2-binary 2.9.12, Python 3.12.13.
+- Actual create_app and Flask-Migrate downgrade base -> upgrade head ->
+  downgrade one -> upgrade head passed on disposable PostgreSQL 16; final
+  revision f4a5b6c7d8ef, 33 public tables. No create_all or stamping proof.
+- Exact strict security/tenancy selection:
+  `103 passed, 2 skipped, 10 warnings in 241.07s (0:04:01)`.
+  The two native migration skips were executed in the separate PG selection.
+- Locked native PG and startup selection:
+  `40 passed, 101 warnings in 54.51s`; all 26 required PG cases executed.
+- CI YAML/install/cache/rollback configuration checks and diff check passed.
+
+The complete suite was not repeated under the lock; its recorded green run uses
+SQLAlchemy 2.0.54. Python 3.11 and the repaired hosted workflow need remote results.
+Whole-repo lint remains red. Source preflight now has two DIFF_AUTH_REVIEW points
+(compare/download public isolation), down from three after removing the embedded
+Git remote credential; it remains BLOCKED, not a security certification.
+Schema-aware readiness, recoverable post-commit jobs, settlement zero balances,
+historical employee warnings, shared worker keys and restore proof remain open.
+Render's new DATABASE_URL was saved only; no deployed recovery is proven.
+
+Raw summaries, commands, dependency versions and the full-app migration record:
+[ci-runtime-2026-09-30.json](docs/evidence/ci-runtime-2026-09-30.json).
 
 ## Green local baseline and bounded report reads — 2026-09-30 18:02 UTC
 

@@ -1,6 +1,40 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 18:27 UTC
+**Last updated:** 2026-09-30 19:09 UTC
+
+## Hosted baseline and PDF test environment — 2026-09-30 19:09 UTC
+
+CI/runtime repair `669849d` is committed and pushed. Hosted PostgreSQL CI is now
+green, including application migrations, explicit native tests and real rollback.
+Both Python strict security selections passed. The Python 3.12 isolated suite
+completed `TOTAL: 1240 passed, 1 failed, 0 errors, 26 skipped` in 295.2s; the only
+failed file is test_ac10_pdf.py. Python 3.11's full run was cancelled by matrix
+fail-fast. Lint remains red. This remote record supplements the earlier green
+local single-process baseline; it does not overwrite either result.
+
+The PDF case reproduced in a clean runtime-lock install:
+`1 failed, 3 warnings in 57.29s`, ModuleNotFoundError for pypdf. The local baseline
+had pypdf 6.19.0 installed outside the declared dependencies. requirements-test.txt
+now pins that same reader; general CI and README install it alongside the existing
+runtime lock. Docker/runtime dependencies and application code are unchanged.
+
+Normal runner output also suppressed the failed child's reason. A before probe
+returned `1 failed in 0.48s`; the runner now prints failed child diagnostics even
+without --verbose and keeps the child's failure exit code. The existing runner
+suite plus the real rendered-PDF case returned:
+`21 passed, 3 warnings in 7.98s`. A new runner case increases collection by one;
+do not report the prior complete count as a newly executed suite. Changed Python
+lint/format, YAML/install/cache/rollback checks and diff checks passed.
+
+Public readyz now returns HTTP 200 with database/self up. The user confirmed
+Render Events still shows aa2e657, Deploy succeeded / Live. Connectivity recovered
+on that old release; feature repairs have not been deployed. Current live schema,
+payroll workflow, workers and restore are unverified. The repaired hosted full
+suites need results after this push. PDF label extraction passes; numeric PDF
+amounts and visual/font appearance remain outside this test's proof.
+
+Raw summaries, before/after diagnostics and remote/live evidence limits:
+[pdf-test-environment-2026-09-30.json](docs/evidence/pdf-test-environment-2026-09-30.json).
 
 ## CI/runtime dependency repair — 2026-09-30 18:27 UTC
 

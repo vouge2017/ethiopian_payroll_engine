@@ -9,6 +9,7 @@ Usage:
     python3 run_tests.py --continue   # run all, report all failures
     python3 run_tests.py --verbose    # show each test name
 """
+
 import glob
 import os
 import re
@@ -57,6 +58,7 @@ def run_test_file(filepath, verbose=False):
         return passed, failed, errors, skipped, output, result.returncode
 
     except subprocess.TimeoutExpired as exc:
+
         def diagnostic(value):
             return value.decode('utf-8', errors='replace') if isinstance(value, bytes) else (value or '')
 
@@ -72,7 +74,7 @@ def main():
     if not test_files:
         print('ERROR: no test files selected', file=sys.stderr)
         sys.exit(5)
-    print(f"Running {len(test_files)} test files in separate processes...\n")
+    print(f'Running {len(test_files)} test files in separate processes...\n')
 
     total_passed = 0
     total_failed = 0
@@ -83,7 +85,7 @@ def main():
 
     for i, filepath in enumerate(test_files):
         filename = os.path.basename(filepath)
-        sys.stdout.write(f"[{i+1}/{len(test_files)}] {filename:45s} ")
+        sys.stdout.write(f'[{i + 1}/{len(test_files)}] {filename:45s} ')
         sys.stdout.flush()
 
         passed, failed, errors, skipped, output, returncode = run_test_file(filepath, verbose)
@@ -94,25 +96,23 @@ def main():
         total_skipped += skipped
 
         if returncode == 0:
-            print(f"✅ {passed} passed" + (f", {skipped} skipped" if skipped else ""))
+            print(f'✅ {passed} passed' + (f', {skipped} skipped' if skipped else ''))
         else:
             failed_files.append(filename)
-            print(f"❌ {passed} passed, {failed} failed, {errors} errors")
-            if verbose:
-                for line in output.split('\n'):
-                    if 'FAILED' in line or 'ERROR' in line:
-                        print(f"   {line.strip()}")
+            print(f'❌ {passed} passed, {failed} failed, {errors} errors')
+            # Ordinary CI runs need the failed child's reason, not only counts.
+            print(output.rstrip() or f'Child exited with code {returncode} without output.')
             if not continue_on_failure:
-                print("\nStopping on first failure. Use --continue to run all.")
+                print('\nStopping on first failure. Use --continue to run all.')
                 break
 
     elapsed = time.time() - start_time
-    print(f"\n{'='*60}")
-    print(f"TOTAL: {total_passed} passed, {total_failed} failed, {total_errors} errors, {total_skipped} skipped")
-    print(f"TIME: {elapsed:.1f}s")
+    print(f'\n{"=" * 60}')
+    print(f'TOTAL: {total_passed} passed, {total_failed} failed, {total_errors} errors, {total_skipped} skipped')
+    print(f'TIME: {elapsed:.1f}s')
     if failed_files:
-        print(f"FAILED FILES: {', '.join(failed_files)}")
-    print(f"{'='*60}")
+        print(f'FAILED FILES: {", ".join(failed_files)}')
+    print(f'{"=" * 60}')
 
     sys.exit(1 if failed_files else 0)
 

@@ -167,19 +167,24 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                 draft = None
         if draft and isinstance(draft.employee_data, list):
             from types import SimpleNamespace
+
             payslips = []
             for emp_data in draft.employee_data:
                 # Find employee
-                emp = Employee.query.filter_by(employee_id=emp_data['id'], company_id=company_id, is_deleted=False).first()
+                emp = Employee.query.filter_by(
+                    employee_id=emp_data['id'], company_id=company_id, is_deleted=False
+                ).first()
                 emp_id = emp.id if emp else None
-                payslips.append(SimpleNamespace(
-                    employee_id=emp_id,
-                    gross_salary=emp_data.get('gross'),
-                    tax=emp_data.get('tax'),
-                    employee_pension=emp_data.get('pension_employee'),
-                    employer_pension=emp_data.get('pension_employer'),
-                    net_pay=emp_data.get('net'),
-                ))
+                payslips.append(
+                    SimpleNamespace(
+                        employee_id=emp_id,
+                        gross_salary=emp_data.get('gross'),
+                        tax=emp_data.get('tax'),
+                        employee_pension=emp_data.get('pension_employee'),
+                        employer_pension=emp_data.get('pension_employer'),
+                        net_pay=emp_data.get('net'),
+                    )
+                )
         else:
             report.issues.append(
                 Issue(
@@ -198,9 +203,14 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
             )
             return report
 
+    # Both issue passes share one tenant-scoped employee read.
+    employee_ids = {ps.employee_id for ps in payslips if ps.employee_id is not None}
+    employees = Employee.query.filter_by(company_id=company_id).filter(Employee.id.in_(employee_ids)).all()
+    employee_by_id = {employee.id: employee for employee in employees}
+
     # Check each payslip for issues
     for ps in payslips:
-        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
+        emp = employee_by_id.get(ps.employee_id)
         if not emp:
             continue
 
@@ -381,7 +391,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
 
     # MEDIUM: Cash limit (ETB 50,000)
     for ps in payslips:
-        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
+        emp = employee_by_id.get(ps.employee_id)
         if emp and ps.net_pay and ps.net_pay > 50000:
             report.issues.append(
                 Issue(

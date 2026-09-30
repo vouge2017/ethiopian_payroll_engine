@@ -69,8 +69,16 @@ def _setup(employees, payslips, run, duplicate_count=0):
     # Current payslips
     mock_models.Payslip.query.filter_by.return_value.all.return_value = payslips
 
-    # All active employees
-    mock_models.Employee.query.filter_by.return_value.all.return_value = [e for e in employees if not e.is_deleted]
+    # Employee query results match the model's tenant and soft-delete scope.
+    def employee_query(**kwargs):
+        scoped = [e for e in employees if e.company_id == kwargs.get('company_id') and not e.is_deleted]
+        query = MagicMock()
+        query.all.return_value = scoped
+        query.filter.return_value.all.return_value = scoped
+        query.first.return_value = next((e for e in scoped if e.id == kwargs.get('id')), None)
+        return query
+
+    mock_models.Employee.query.filter_by.side_effect = employee_query
 
     # Duplicate run count
     mock_models.PayrollRun.query.filter.return_value.count.return_value = duplicate_count

@@ -1,6 +1,46 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 13:20 UTC
+**Last updated:** 2026-09-30 18:02 UTC
+
+## Green local baseline and bounded report reads — 2026-09-30 18:02 UTC
+
+Encryption repair `35f2852` is committed and pushed. After the bounded report-read
+repair, the frozen worktree at that parent plus the recorded source diff completed:
+`1241 passed, 26 skipped, 20 warnings in 13769.11s (3:49:29)`, exit 0.
+This supersedes the red `44c6810` baseline: its four benchmark failures now pass;
+six startup/target cases add six passes, and seven encryption plus three report
+PostgreSQL cases add ten skips in the SQLite run. Total is 1267, up from 1251.
+Every one of the 26 native PG skips executed separately in the combined check:
+`40 passed, 101 warnings in 33.05s` (26 native plus 14 structural/unit cases).
+This is a green local regression baseline, not a green hosted CI or release claim.
+
+- Query regressions before: `2 failed, 1 passed, 15 warnings in 2.30s`.
+- After: `3 passed, 15 warnings in 3.73s`.
+- Report/exception/dashboard/unchanged benchmark checks:
+  `70 passed, 3 warnings in 38.33s`.
+- Real migrated PostgreSQL, 500 committed synthetic employees: report time
+  6.100s -> 0.883s; employee SELECTs 1501 -> 2; total SELECTs 2006 -> 507.
+  At 50/200 employees the employee SELECT count is also 2. No benchmark limits
+  were relaxed. Tenant checks still exclude foreign names and foreign runs;
+  a report must perform no writes. Changed lint/format and diff checks passed.
+
+Evidence and exception passes now reuse tenant-scoped bulk employee reads.
+Active-list and soft-delete behavior are preserved. PostgreSQL separately showed
+that deactivated employees' negative-pay warnings are skipped today; repair that
+as a money-safety slice, rather than hiding the behavior in a speed change.
+Draft employee lookup and first-payroll COUNT growth remain. These one-run local
+measurements do not establish production capacity.
+
+Hosted CI at `35f2852` is red: PostgreSQL startup requests an uninstalled psycopg
+driver; SQLAlchemy-Utils fails collection on ScalarAttributeImpl; lint is also
+red. CI installs unpinned requirements.txt while Docker uses the existing lock.
+The next CI slice must verify and use that lock; no gates should be disabled.
+Render DATABASE_URL is saved only per the user; no deployment/recovery is proven.
+The exposed GitHub token must be revoked. Its embedded remote URL credential was
+removed in favor of Credential Manager; no token is stored in this evidence.
+
+Raw summaries, commands, source hashes and PostgreSQL measurements:
+[report-performance-2026-09-30.json](docs/evidence/report-performance-2026-09-30.json).
 
 ## Current evidence — 2026-09-30
 

@@ -133,7 +133,7 @@ jobs:
           FLASK_ENV: "testing"
           DB_ENCRYPTION_KEY: "test-encryption-key-for-ci-only-32b!"
         run: |
-          python -m pytest tests/test_migration_chain.py tests/test_pg_catalog_types.py tests/test_pg_deduction_identity.py tests/test_pg_encrypted_employee.py -q
+          python -m pytest tests/test_migration_chain.py tests/test_pg_catalog_types.py tests/test_pg_deduction_identity.py tests/test_pg_encrypted_employee.py tests/test_pg_report_queries.py -q
 
       - name: Verify migration rollback
         if: always()

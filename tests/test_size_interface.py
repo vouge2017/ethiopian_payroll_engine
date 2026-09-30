@@ -6,6 +6,7 @@ Tests for Phase 6 — Size-Appropriate Interface:
 """
 
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -139,8 +140,12 @@ class TestQuickStartPrimary:
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
-        assert b'Quick Start' in resp.data
-        assert b'Paste' in resp.data or b'paste' in resp.data
+        assert resp.status_code == 200
+        primary_link = re.search(
+            rb'<a[^>]*href="/quick-start"[^>]*class="[^"]*btn-primary[^"]*"[^>]*>(.*?)</a>', resp.data, re.DOTALL
+        )
+        assert primary_link is not None
+        assert b'Quick Start' in primary_link.group(1)
 
     def test_quick_start_link_works(self, app):
         """Quick Start page should load."""

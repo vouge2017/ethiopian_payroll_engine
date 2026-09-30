@@ -1,6 +1,6 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 10:04 UTC
+**Last updated:** 2026-09-30 11:51 UTC
 
 ## Current evidence — 2026-09-30
 
@@ -23,6 +23,33 @@ Known failures remain open: document upload coverage (3), filing deadlines (2),
 webhook flag assumptions (2), and quick-start visibility (1). The webhook test
 group separately returned `5 passed, 3 warnings in 6.63s` when enabled, with
 thread/HTTP delivery mocked. This supplemental result does not rewrite the baseline.
+
+## Regression net repair — 2026-09-30 11:51 UTC
+
+At source revision `f63f636`, the prior eight failing cases reproduced:
+`8 failed, 84 passed, 3 warnings in 219.34s (0:03:39)`, exit 1.
+After this test-only slice, the same five files plus environment guards and two
+deadline boundary cases returned `98 passed, 3 warnings in 212.57s (0:03:32)`, exit 0.
+Those eight known failures are now resolved in the focused checks. The older
+file-isolated baseline remains a historical record; the current complete suite
+has not yet been run to completion.
+
+The production guard probe no longer reloads or first imports shared config under
+temporary PostgreSQL settings. An independent identity probe failed before and
+passed after without contacting a database. Deduction upload fixtures now seed
+the company catalog; accepted documents must persist their exact bytes and an
+assignment-linked audit, while rejected files must leave neither records nor
+files. Filing tests control the clock and cover due-day/overdue boundaries.
+Webhook unit tests set and restore their flag with delivery threads mocked.
+Quick Start checks the actual primary link and separately checks its paste page.
+The ineffective `db.engine_options` assignment and unsupported hang claim were
+removed; the fixtures retain per-test database/tenant cleanup.
+
+Changed test lint and formatter checks passed. No production behavior, payroll
+policy or schema changed. SQLite fixture setup is not migration evidence.
+Raw output and exact commands:
+[regression-net-2026-09-30.json](docs/evidence/regression-net-2026-09-30.json).
+Public `/readyz` was checked again and returned HTTP 503, database down.
 
 ## PostgreSQL catalog compatibility slice — 2026-09-30 09:11 UTC
 

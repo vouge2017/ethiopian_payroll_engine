@@ -9,6 +9,7 @@ Each test deliberately attacks the previous failure mode.
 import io
 import os
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -18,18 +19,22 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery, User
+from payroll_engine.catalog import seed_company_templates
+from payroll_engine.models import AuditLog, Company, Employee, OvertimeEntry, TenantQuery, User
+from payroll_engine.models_payroll_elements import PayrollItemAssignment
 from payroll_engine.security import prevent_csv_injection, safe_redirect_target
 
 
 @pytest.fixture
-def app():
+def app(tmp_path):
     app = create_app()
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     app.config['WTF_CSRF_ENABLED'] = False
     app.config['RATELIMIT_ENABLED'] = False
     app.config['ENABLE_DEMO_MODE'] = True
+    app.config['UPLOAD_FOLDER'] = str(tmp_path / 'uploads')
+    Path(app.config['UPLOAD_FOLDER']).mkdir()
     with app.app_context():
         db.create_all()
         TenantQuery.register_model(Employee)
@@ -227,6 +232,8 @@ class TestFileUploadRestrictions:
             company = Company(name='SecTestCo1')
             db.session.add(company)
             db.session.commit()
+            seed_company_templates(company.id)
+            company_id = company.id
             user = User(phone='0911888811', company_id=company.id, role='owner')
             user.set_password('Test1234!')
             db.session.add(user)
@@ -254,12 +261,18 @@ class TestFileUploadRestrictions:
         )
         assert resp.status_code == 200
         assert b'not allowed' in resp.data
+        with app.app_context():
+            assert PayrollItemAssignment.query.filter_by(company_id=company_id, employee_id=emp_id).count() == 0
+            assert AuditLog.query.filter_by(company_id=company_id, action='deduction_created').count() == 0
+        assert not list(Path(app.config['UPLOAD_FOLDER']).rglob('*.*'))
 
     def test_accept_legitimate_pdf(self, client, app):
         with app.app_context():
             company = Company(name='SecTestCo2')
             db.session.add(company)
             db.session.commit()
+            seed_company_templates(company.id)
+            company_id = company.id
             user = User(phone='0911888822', company_id=company.id, role='owner')
             user.set_password('Test1234!')
             db.session.add(user)
@@ -286,7 +299,12 @@ class TestFileUploadRestrictions:
             follow_redirects=True,
         )
         assert resp.status_code == 200
-        assert b'File type not allowed' not in resp.data
+        with app.app_context():
+            assignment = PayrollItemAssignment.query.filter_by(company_id=company_id, employee_id=emp_id).one()
+            assert assignment.fixed_amount == 300
+            assert Path(assignment.document_path).read_bytes() == b'%PDF-1.4 fake pdf'
+            audit = AuditLog.query.filter_by(company_id=company_id, action='deduction_created').one()
+            assert audit.details['assignment_id'] == assignment.id
 
     def test_csv_rejects_empty_file(self, client, app, company_user):
         _login(client)

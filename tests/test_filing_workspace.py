@@ -15,12 +15,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from unittest.mock import patch
 
+import pytest
+
 from payroll_engine.filing_workspace import (
     FILED,
     NOT_READY,
+    OVERDUE,
     READY,
     build_filing_workspace,
 )
+
+
+@pytest.fixture(autouse=True)
+def filing_clock(monkeypatch):
+    class FilingDate(date):
+        current = date(2026, 9, 20)
+
+        @classmethod
+        def today(cls):
+            return cls.current
+
+    monkeypatch.setattr('payroll_engine.filing_workspace.date', FilingDate)
+    return FilingDate
+
 
 # ─────────────────────────────────────────────
 # Helpers
@@ -337,3 +354,17 @@ class TestEdgeCases:
         for step in workspace.steps:
             assert step.name_am != ''
             assert step.name_am != step.name  # Should be different from English
+
+
+@pytest.mark.parametrize('today, expected, days', [(date(2026, 9, 25), READY, 0), (date(2026, 9, 26), OVERDUE, -1)])
+@patch('payroll_engine.filing_workspace.get_deadline_for_type')
+def test_filing_deadline_boundary(mock_deadline, filing_clock, today, expected, days):
+    filing_clock.current = today
+    mock_deadline.return_value = date(2026, 9, 25)
+    mock_db, mock_models = _setup(_make_run(), _make_company())
+    workspace = build_filing_workspace(1, 1, mock_db, mock_models)
+    for name in ('ERCA Tax Filing', 'Pension Remittance'):
+        step = next(step for step in workspace.steps if step.name == name)
+        assert step.status == expected
+        assert step.days_remaining == days
+    assert workspace.has_overdue is (expected == OVERDUE)

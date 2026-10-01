@@ -684,6 +684,7 @@ class Employee(db.Model):
     # employee_id is unique PER TENANT, not globally
     __table_args__ = (
         db.UniqueConstraint('company_id', 'employee_id', name='uq_employee_company_empid'),
+        db.UniqueConstraint('id', 'company_id', name='uq_employee_id_company'),
         db.Index('ix_employee_company_deleted', 'company_id', 'is_deleted'),
     )
 
@@ -2002,3 +2003,27 @@ from payroll_engine.models_payroll_elements import (  # noqa: E402,F811
     PayrollItemAssignment,
 )
 
+
+
+class SpreadsheetInput(db.Model):
+    """One saved monthly worksheet input per tenant and employee; no approval effect."""
+
+    query_class = TenantQuery
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), primary_key=True)
+    employee_id = db.Column(db.Integer, primary_key=True)
+    period_start = db.Column(db.Date, primary_key=True)
+    bonus = db.Column(db.Numeric(12, 2), nullable=False, default=0, server_default='0')
+    absence_days = db.Column(db.Integer, nullable=False, default=0, server_default='0')
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['employee_id', 'company_id'],
+            ['employee.id', 'employee.company_id'],
+            name='fk_spreadsheet_employee_company',
+            ondelete='RESTRICT',
+        ),
+        db.CheckConstraint('bonus >= 0 AND bonus <= 9999999999.99', name='ck_spreadsheet_bonus'),
+        db.CheckConstraint('absence_days >= 0 AND absence_days <= 30', name='ck_spreadsheet_absence_days'),
+        db.CheckConstraint('EXTRACT(DAY FROM period_start) = 1', name='ck_spreadsheet_period_start').ddl_if(
+            dialect='postgresql'
+        ),
+    )

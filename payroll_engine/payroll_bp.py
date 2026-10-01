@@ -1568,39 +1568,28 @@ def payroll_spreadsheet():
     """
     from decimal import Decimal, InvalidOperation
 
-    from payroll_engine.models import EmployeeDeduction
+    from payroll_engine.models import SpreadsheetInput
     from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
     from payroll_engine.payroll import calculate_payroll
+    from payroll_engine.services.worksheet import parse_changes, save_inputs
 
     if request.method == 'POST':
         action = request.form.get('action', 'save')
 
-        # Collect all employee changes from the form
-        emp_ids = request.form.getlist('emp_id')
-        changes = []
-        for eid in emp_ids:
-            prefix = f'emp_{eid}_'
-            changes.append(
-                {
-                    'emp_id': int(eid),
-                    'ot_day': request.form.get(f'{prefix}ot_day', '0').strip() or '0',
-                    'ot_night': request.form.get(f'{prefix}ot_night', '0').strip() or '0',
-                    'ot_holiday': request.form.get(f'{prefix}ot_holiday', '0').strip() or '0',
-                    'ot_rest': request.form.get(f'{prefix}ot_rest', '0').strip() or '0',
-                    'absences': request.form.get(f'{prefix}absences', '0').strip() or '0',
-                    'advance': request.form.get(f'{prefix}advance', '0').strip() or '0',
-                    'bonus': request.form.get(f'{prefix}bonus', '0').strip() or '0',
-                }
-            )
-
-        # Save overtime entries
+        try:
+            month_start, changes = parse_changes(request.form, _company_id())
+        except ValueError as error:
+            db.session.rollback()
+            flash(str(error), 'danger')
+            return render_template('worksheet_error.html'), 400
         today = date.today()
-        month_start = today.replace(day=1)
 
         for change in changes:
             emp = Employee.query.filter_by(id=change['emp_id'], company_id=_company_id(), is_deleted=False).first()
             if not emp:
-                continue
+                abort(404)
+
+            save_inputs(_company_id(), current_user.id, month_start, change)
 
             # Save overtime entries for this month (delete existing first to avoid duplicates)
             for ot_type, ot_key in [
@@ -1735,6 +1724,10 @@ def payroll_spreadsheet():
         else:
             sick_reductions[emp.id] = Decimal('0')
 
+    saved_inputs = {
+        row.employee_id: row
+        for row in SpreadsheetInput.query.filter_by(company_id=_company_id(), period_start=month_start).all()
+    }
     rows = []
     total_gross = Decimal('0')
     total_tax = Decimal('0')
@@ -1748,7 +1741,17 @@ def payroll_spreadsheet():
 
         ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
 
-        total_reduction = unpaid_deductions.get(emp.id, Decimal('0')) + sick_reductions.get(emp.id, Decimal('0'))
+        saved = saved_inputs.get(emp.id)
+        bonus = saved.bonus if saved else Decimal('0')
+        absence_days = saved.absence_days if saved else 0
+        absence_reduction = (
+            (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30') * absence_days
+        ).quantize(Decimal('0.01'))
+        total_reduction = (
+            absence_reduction
+            + unpaid_deductions.get(emp.id, Decimal('0'))
+            + sick_reductions.get(emp.id, Decimal('0'))
+        )
 
         # Calculate payroll based on employee type
         if emp.employee_type == 'daily' and emp.daily_rate:
@@ -1758,7 +1761,7 @@ def payroll_spreadsheet():
         else:
             result = calculate_payroll(
                 emp.basic_salary,
-                emp.allowances,
+                Decimal(str(emp.allowances)) + bonus,
                 overtime_entries=ot_list if ot_list else None,
                 sick_leave_reduction=total_reduction,
             )
@@ -1770,6 +1773,9 @@ def payroll_spreadsheet():
         rows.append(
             {
                 'emp': emp,
+                'bonus': bonus,
+                'absence_days': absence_days,
+                'advance': _current_advance(emp.id, _company_id(), month_start),
                 'ot_day': ot_by_type.get('day', 0),
                 'ot_night': ot_by_type.get('night', 0),
                 'ot_holiday': ot_by_type.get('holiday', 0),
@@ -1788,6 +1794,7 @@ def payroll_spreadsheet():
     return render_template(
         'payroll_spreadsheet.html',
         rows=rows,
+        period_start=month_start,
         total_gross=total_gross,
         total_tax=total_tax,
         total_net=total_net,
@@ -1807,22 +1814,18 @@ def payroll_spreadsheet_autosave():
     """
     from decimal import Decimal, InvalidOperation
 
-    from payroll_engine.models import EmployeeDeduction
+    from payroll_engine.services.worksheet import parse_changes
 
-    emp_ids = request.form.getlist('emp_id')
-    if not emp_ids:
-        return jsonify({'status': 'empty', 'message': 'No data'}), 400
-
+    try:
+        month_start, changes = parse_changes(request.form, _company_id())
+    except ValueError as error:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(error)}), 400
     today = date.today()
-    month_start = today.replace(day=1)
     saved = 0
 
-    for eid in emp_ids:
-        emp = Employee.query.filter_by(id=int(eid), company_id=_company_id(), is_deleted=False).first()
-        if not emp:
-            continue
-
-        prefix = f'emp_{eid}_'
+    for change in changes:
+        emp = change['employee']
 
         # --- Overtime: delete existing, re-create if hours > 0 ---
         for ot_type, ot_key in [
@@ -1831,7 +1834,7 @@ def payroll_spreadsheet_autosave():
             ('holiday', 'ot_holiday'),
             ('rest_day_holiday', 'ot_rest'),
         ]:
-            val = request.form.get(f'{prefix}{ot_key}', '0').strip() or '0'
+            val = change[ot_key]
             try:
                 hours = Decimal(val)
             except (InvalidOperation, ValueError):
@@ -1855,7 +1858,7 @@ def payroll_spreadsheet_autosave():
                 db.session.add(ot)
 
         # --- Advance: retire this period's, re-create if amount > 0 ---
-        advance_val = request.form.get(f'{prefix}advance', '0').strip() or '0'
+        advance_val = change['advance']
         try:
             advance = Decimal(advance_val)
         except (InvalidOperation, ValueError):

@@ -2,34 +2,11 @@
 {% block title %}Payroll Spreadsheet — Ethiopian Payroll Engine{% endblock %}
 {% block content %}
 
-<!-- Payroll Wizard Stepper -->
-<div class="wizard-stepper">
-    <div class="wizard-step completed">
-        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
-        <span class="wizard-step-label">Upload</span>
-    </div>
-    <div class="wizard-step-connector completed"></div>
-    <div class="wizard-step active">
-        <div class="wizard-step-number">2</div>
-        <span class="wizard-step-label">Review</span>
-    </div>
-    <div class="wizard-step-connector"></div>
-    <div class="wizard-step">
-        <div class="wizard-step-number">3</div>
-        <span class="wizard-step-label">Confirm</span>
-    </div>
-    <div class="wizard-step-connector"></div>
-    <div class="wizard-step">
-        <div class="wizard-step-number">4</div>
-        <span class="wizard-step-label">Done</span>
-    </div>
-</div>
-
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0"><i class="bi bi-table"></i> Payroll Spreadsheet</h4>
-            <small class="text-muted">Edit overtime, absences, advances, and bonus inline — like Excel.</small>
+            <small class="text-muted">Monthly worksheet for {{ period_start.strftime("%B %Y") }} (Gregorian). Save edits to update the estimate.</small>
         </div>
         <div>
             <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary btn-sm">
@@ -38,9 +15,15 @@
         </div>
     </div>
 
+    <div class="alert alert-info small">
+        Additional unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30.
+        Bonus is taxable and applies only to the month shown. Estimates exclude advances and other payroll deductions. This worksheet does not approve payroll.
+    </div>
     {% if rows %}
     <form method="POST" action="{{ url_for('payroll.payroll_spreadsheet') }}" id="spreadsheet-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
+        <p class="small text-muted mb-2">Swipe or scroll sideways to see all inputs and totals.</p>
         <div class="table-responsive">
             <table class="table table-bordered table-sm table-hover" id="payroll-table">
                 <thead class="table-dark">
@@ -52,13 +35,13 @@
                         <th class="text-center bg-warning text-dark" style="min-width:70px" title="Night OT (1.5x)">OT Night</th>
                         <th class="text-center bg-warning text-dark" style="min-width:70px" title="Holiday OT (2x)">OT Hol.</th>
                         <th class="text-center bg-warning text-dark" style="min-width:70px" title="Rest+Holiday OT (2.5x)">OT Rest</th>
-                        <th class="text-center bg-info text-dark" style="min-width:70px">Absences</th>
+                        <th class="text-center bg-info text-dark" style="min-width:70px">Extra unpaid days</th>
                         <th class="text-center bg-success text-dark" style="min-width:90px">Advance</th>
                         <th class="text-center bg-success text-dark" style="min-width:80px">Bonus</th>
                         <th class="text-end" style="min-width:100px">Gross</th>
                         <th class="text-end" style="min-width:80px">Pension 7%</th>
                         <th class="text-end" style="min-width:80px">Tax</th>
-                        <th class="text-end bg-light" style="min-width:100px"><strong>Net Pay</strong></th>
+                        <th class="text-end bg-light" style="min-width:100px"><strong>Estimated Net</strong></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -101,14 +84,16 @@
                         <!-- Editable: Absences -->
                         <td class="text-center">
                             <input type="number" name="emp_{{ row.emp.id }}_absences"
-                                   value="0" min="0" max="31" step="1"
+                                   aria-label="Additional unpaid days for {{ row.emp.name }}"
+                                   value="{{ row.absence_days }}" min="0" max="30" step="1"
+                                   {% if row.emp.employee_type == "daily" %}readonly title="Monthly employees only"{% endif %}
                                    class="form-control form-control-sm text-center">
                         </td>
 
                         <!-- Editable: Advance -->
                         <td class="text-center">
                             <input type="number" name="emp_{{ row.emp.id }}_advance"
-                                   value="0" min="0" step="100"
+                                   value="{{ row.advance }}" min="0" step="100"
                                    class="form-control form-control-sm text-center advance-input"
                                    data-emp="{{ row.emp.id }}">
                         </td>
@@ -116,7 +101,9 @@
                         <!-- Editable: Bonus -->
                         <td class="text-center">
                             <input type="number" name="emp_{{ row.emp.id }}_bonus"
-                                   value="0" min="0" step="100"
+                                   aria-label="Bonus for {{ row.emp.name }}"
+                                   value="{{ row.bonus }}" min="0" step="0.01"
+                                   {% if row.emp.employee_type == "daily" %}readonly title="Monthly employees only"{% endif %}
                                    class="form-control form-control-sm text-center">
                         </td>
 
@@ -180,6 +167,7 @@
 }
 .table-dark .sticky-col {
     background: #212529;
+    color: #fff;
 }
 #payroll-table input[type="number"] {
     width: 70px;
@@ -251,7 +239,7 @@ async function doAutoSave() {
         if (data.status === 'ok') {
             showAutoSaveStatus('saved', '✅ OT & advances saved');
         } else {
-            showAutoSaveStatus('error', '❌ Save failed');
+            showAutoSaveStatus('error', data.message || '❌ Save failed');
         }
     } catch (e) {
         showAutoSaveStatus('error', '❌ Connection lost — draft not saved');

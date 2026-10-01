@@ -1,6 +1,50 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 19:51 UTC
+**Last updated:** 2026-09-30 20:44 UTC
+
+## Monthly worksheet absence/bonus repair - 2026-09-30 20:44 UTC
+
+At parent e10c369, actual worksheet HTTP cases on migrated PostgreSQL reproduced:
+`8 failed, 19 warnings in 21.31s`. After persistence/validation repair:
+`8 passed, 19 warnings in 19.71s`. Extended native migration/money selection:
+`47 passed, 132 warnings in 74.54s (0:01:14)`.
+Final worksheet selection (three additional autosave/role cases):
+`16 passed, 41 warnings in 24.55s`. Relevant existing calculator/elements/draft/
+payroll-flow checks: `39 passed, 4 warnings in 11.33s`.
+These are overlapping focused runs, not a new complete-suite count.
+
+The user confirmed the business meaning: additional unpaid days exclude recorded
+approved leave and use (basic + allowances)/30; bonus is taxable for this month.
+New spreadsheet_input stores employee/month values with a composite tenant FK
+and primary key. Save applies them to the estimate, rejects invalid/foreign rows
+before any writes, and commits input and change audit together. PG verifies retry,
+competing saves, rollback, database ownership and actual autosave preservation.
+Saved advances now reopen with their value. Daily-worker adjustments are rejected
+explicitly; stale-month forms must reload. Native CI now includes this file.
+
+Alembic head f4a5b6c7d8f0, 71 revisions. Real base->head and affected downgrade/
+upgrade ran on disposable PG; employee rows survive. Downgrade refuses while
+saved inputs exist and retains the money/head. It locks the table during its
+preservation check. No create_all or stamping was migration proof.
+
+Actual local Edge login/entry/save/reload verified 2 days and a 900.50 bonus:
+gross 12,900.50, tax 2,310.15, estimated net 9,090.35. Desktop/390px captures are
+on D:. Final label/scroll hint/contrast edits followed the captures. Phone editing,
+screen-reader behavior and an actual Tigist trial are not proven. The local demo
+tenant was deleted and server/browser stopped; no live data was changed.
+
+This fixes the monthly worksheet estimate, NOT its connection to payroll review,
+approval or exports. Estimated net excludes advances/other deductions and the UI
+now states that limit. This is work order 1; work order 2 connects saved inputs to
+one consistent review/approval outcome. [WORK_ORDERS.md](docs/WORK_ORDERS.md)
+contains a reusable instruction, acceptance discipline and the ordered work.
+
+New Python lint/format and diff checks pass. Source preflight remains BLOCKED on
+the same two Diff authorization review points; graph has one head/no problems.
+Global lint/release gates remain open. No deployment or whole-suite green claim
+for this patch; hosted results after pushing must be checked.
+Raw before/after commands, outputs and source hashes:
+[worksheet-inputs-2026-09-30.json](docs/evidence/worksheet-inputs-2026-09-30.json).
 
 ## Product checkpoint and confirmed hosted baseline - 2026-09-30 19:51 UTC
 

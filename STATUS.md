@@ -1,6 +1,29 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-09-30 20:44 UTC
+**Last updated:** 2026-10-01 04:09 UTC
+
+
+## Absence month-boundary regression - 2026-10-01 04:09 UTC
+
+Latest a86f67d hosted run 36811249208: PostgreSQL job passed; Python 3.11
+`TOTAL: 1241 passed, 1 failed, 0 errors, 42 skipped`; Python 3.12 cancelled;
+lint `Found 133 errors.` This supersedes the pending hosted result for that
+commit, not the earlier 8c42ce1 green test baseline. The one absence failure
+reproduced locally: `1 failed, 5 passed, 3 warnings in 40.08s`.
+
+On October 1 the case created September 29-30 leave but expected an October
+deduction. That assertion was wrong for the run month. Explicit fixed dates
+now cover October 1/2/3 and September 15, expecting 0/1/2/2 overlapping days.
+After repair: `9 passed, 3 warnings in 24.85s`. Independently committed,
+Alembic-migrated PostgreSQL cases plus retry: `4 passed, 11 warnings in 14.60s`.
+These are focused runs, not a complete-suite result. No calculator/service
+change, deployment, or claim that historic-period approval is repaired.
+
+Work order 2 remains active: approval still reads click-day values; saved
+worksheet bonus/absence is not yet connected to review and final outputs.
+Raw output and current hosted baseline:
+[absence-calendar-2026-10-01.json](docs/evidence/absence-calendar-2026-10-01.json).
+
 
 ## Monthly worksheet absence/bonus repair - 2026-09-30 20:44 UTC
 

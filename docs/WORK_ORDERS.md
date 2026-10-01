@@ -14,7 +14,7 @@ calling a real-money pilot ready. No completion percentage is justified today.
 | Order | Work order | State / acceptance |
 |---|---|---|
 | 1 | Save and apply worksheet absence and bonus values without losing other edits. | Verified locally: saved monthly inputs, audited transaction, validation and recalculated estimate; 16 worksheet PG cases pass; not deployed |
-| 2 | Connect the saved worksheet to a payroll review with matching amounts. | Next: snapshot the selected month and inputs; review, approval and output agree on PG; repeated approval has one effect |
+| 2 | Connect the saved worksheet to a payroll review with matching amounts. | In progress: absence test stabilized with PG month-boundary/retry evidence; snapshot the selected month and inputs; review, approval and output agree on PG; repeated approval has one effect |
 | 3 | Observe Tigist preparing and checking one synthetic monthly payroll. | Pending: desktop/phone browser journey; record completion, confusing steps and her three largest obstacles |
 | 4 | Keep committed payroll correct when PDF or queue delivery fails. | Pending: PG commit/failure/retry evidence and recoverable delivery |
 | 5 | Close release blockers and deploy an identified demo build. | Pending: current CI/lint, route ownership, schema readiness, shared worker key, durable artifacts and restore drill; record exact deployed SHA |

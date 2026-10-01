@@ -201,18 +201,31 @@ class TestBug2AbsenceMarking:
             assert leave.status == 'approved'
             assert leave.days_requested == 1
 
-    def test_unpaid_absence_reduces_pay_in_approval_flow(self, app, company_user, employee):
-        """Mark 2 unpaid days absent → full approval flow → net pay reduced by exactly 2/30ths."""
+    @pytest.mark.parametrize(
+        'approval_day,expected_days',
+        [(date(2026, 10, 1), 0), (date(2026, 10, 2), 1),
+         (date(2026, 10, 3), 2), (date(2026, 9, 15), 2)],
+    )
+    def test_unpaid_absence_reduces_pay_in_approval_flow(
+        self, app, company_user, employee, monkeypatch, approval_day, expected_days
+    ):
+        """Only the absence days overlapping the payroll month reduce pay."""
+        class ApprovalDate(date):
+            @classmethod
+            def today(cls):
+                return approval_day
+
+        monkeypatch.setattr('payroll_engine.services.payroll_service.date', ApprovalDate)
         cid, uid = company_user
         with app.app_context():
             emp = db.session.get(Employee, employee)
             basic = Decimal(str(emp.basic_salary))
             allowances = Decimal(str(emp.allowances))
             daily_rate = (basic + allowances) / Decimal('30')
-            expected_reduction = daily_rate * Decimal('2')
+            expected_reduction = daily_rate * expected_days
 
-            # Create 2 unpaid absence days (both in the past so they are fully deducted)
-            today = date.today()
+            # Include the month boundary rather than assuming both days belong to this month.
+            today = approval_day
             two_days_ago = today - timedelta(days=1)
             three_days_ago = today - timedelta(days=2)
             leave = Leave(
@@ -259,7 +272,7 @@ class TestBug2AbsenceMarking:
                                      user_email='test@test.com', request_ip='127.0.0.1')
             assert result.success is True
 
-            # Verify: net pay reduced by exactly 2 days' pay
+            # Verify: only overlapping days reduce this month's pay
             payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=cid).first()
             expected_net = Decimal(str(calc['net'])) - expected_reduction
             assert payslip.net_pay == expected_net.quantize(Decimal('0.01')), \

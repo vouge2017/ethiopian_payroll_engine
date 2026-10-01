@@ -162,14 +162,18 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
         draft = None
         if PayrollDraft:
             try:
-                draft = db.session.query(PayrollDraft).filter_by(payroll_run_id=current_run_id).first()
+                draft = db.session.query(PayrollDraft).filter_by(payroll_run_id=current_run_id, company_id=company_id).first()
             except Exception:
                 draft = None
         if draft and isinstance(draft.employee_data, list):
             from types import SimpleNamespace
 
             payslips = []
-            for emp_data in draft.employee_data:
+            draft_rows = draft.employee_data
+            if current_run.source == 'spreadsheet':
+                from payroll_engine.services.worksheet_review import display_rows
+                draft_rows = display_rows(draft_rows)
+            for emp_data in draft_rows:
                 # Find employee
                 emp = Employee.query.filter_by(
                     employee_id=emp_data['id'], company_id=company_id, is_deleted=False

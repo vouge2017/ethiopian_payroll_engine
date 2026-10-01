@@ -67,3 +67,41 @@ def test_absence_month_boundary_persists_once(dataset, monkeypatch, approval_day
     finally:
         with engine.begin() as conn:
             conn.execute(text('DELETE FROM leave WHERE company_id=:id'), {'id': ids['company']})
+
+
+def test_old_period_approval_uses_run_date_instead_of_click_date(dataset, monkeypatch):
+    app, ids, engine = dataset
+    with app.app_context():
+        EmployeeDeduction.query.filter_by(company_id=ids['company']).delete()
+        PayrollItemAssignment.query.filter_by(company_id=ids['company']).delete()
+        db.session.execute(
+            text('UPDATE payroll_run SET run_date=:day WHERE id=:id'), {'day': date(2026, 9, 15), 'id': ids['run']}
+        )
+        db.session.add(
+            Leave(
+                company_id=ids['company'],
+                employee_id=ids['employee'],
+                leave_type='unpaid',
+                status='approved',
+                days_requested=2,
+                start_date=date(2026, 9, 13),
+                end_date=date(2026, 9, 14),
+            )
+        )
+        db.session.commit()
+
+    class LaterDate(date):
+        @classmethod
+        def today(cls):
+            return date(2027, 1, 15)
+
+    monkeypatch.setattr('payroll_engine.services.payroll_service.date', LaterDate)
+    try:
+        assert approve(app, ids).success
+        with engine.connect() as conn:
+            assert conn.execute(
+                text('SELECT unpaid_leave_reduction FROM payslip WHERE payroll_run_id=:id'), {'id': ids['run']}
+            ).scalar_one() == Decimal('666.67')
+    finally:
+        with engine.begin() as conn:
+            conn.execute(text('DELETE FROM leave WHERE company_id=:id'), {'id': ids['company']})

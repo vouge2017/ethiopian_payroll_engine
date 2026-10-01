@@ -200,11 +200,13 @@ def download_bank_file(run_id):
     employees_data = []
     for p in run.payslips:
         emp = p.employee
+        from payroll_engine.services.worksheet_review import published_row
+        snapshot = published_row(p)
         employees_data.append(
             {
-                'id': emp.employee_id,
-                'name': emp.name,
-                'bank': emp.bank_or_telebirr or '',
+                'id': snapshot['id'] if snapshot else emp.employee_id,
+                'name': snapshot['name'] if snapshot else emp.name,
+                'bank': snapshot['bank'] if snapshot else (emp.bank_or_telebirr or ''),
                 'net': p.net_pay,
             }
         )

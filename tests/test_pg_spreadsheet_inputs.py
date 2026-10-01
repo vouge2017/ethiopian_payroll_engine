@@ -60,7 +60,13 @@ def worksheet(monkeypatch, tmp_path):
         owner = User(company_id=company.id, email=uuid4().hex + '@example.invalid', role='owner')
         owner.set_password('Synthetic1!')
         employee = Employee(
-            company_id=company.id, employee_id='SHEET1', name='Synthetic monthly', basic_salary=10000, allowances=2000
+            company_id=company.id,
+            employee_id='SHEET1',
+            name='Synthetic monthly',
+            basic_salary=10000,
+            allowances=2000,
+            bank_or_telebirr='cbe:1000123456789',
+            tin='1234567890',
         )
         other = Employee(
             company_id=foreign.id, employee_id='FOREIGN', name='Foreign private name', basic_salary=10000, allowances=0
@@ -83,6 +89,12 @@ def worksheet(monkeypatch, tmp_path):
             with engine.begin() as conn:
                 # Delete only these two newly-created synthetic tenants.
                 tables = [
+                    'payslip_generation_job',
+                    'payroll_draft',
+                    'payroll_validation_result',
+                    'payslip',
+                    'payroll_run',
+                    'employee_deduction',
                     'spreadsheet_input',
                     'overtime_entry',
                     'leave',
@@ -95,6 +107,14 @@ def worksheet(monkeypatch, tmp_path):
                     'user',
                 ]
                 for table in tables:
+                    if table == 'payroll_validation_result':
+                        conn.execute(
+                            text(
+                                'DELETE FROM payroll_validation_result WHERE payroll_run_id IN (SELECT id FROM payroll_run WHERE company_id IN (:a, :b))'
+                            ),
+                            {'a': ids['company'], 'b': ids['foreign']},
+                        )
+                        continue
                     if conn.execute(text('SELECT to_regclass(:table)'), {'table': table}).scalar():
                         conn.execute(
                             text('DELETE FROM "' + table + '" WHERE company_id IN (:a, :b)'),

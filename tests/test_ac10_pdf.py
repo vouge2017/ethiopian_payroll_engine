@@ -157,12 +157,12 @@ def test_ac10_pdf_shows_each_item_separately(ctx):
     # The summary must reflect the actual items: both section headers and the
     # per-item lines are present.
     #
-    # NOTE on amounts: the PDF embeds NotoSansEthiopic as a subset font, and
-    # the Latin digit glyphs are NOT in its ToUnicode CMap, so pypdf recovers
-    # the Amharic labels but returns NULs for numerals. Amount extraction is
-    # therefore not verifiable here; the itemisation the criterion asks about
-    # -- which items appear, as separate labelled lines -- is fully verified.
-    for header in ('ገቢዎች', 'ታ'):  # Earnings, Deductions
+    # Latin numbers use Helvetica and Ethiopic runs use the embedded font.
+    # Read the actual approved amounts back from the generated PDF.
+    for amount in (ps.gross_salary, ps.tax, ps.net_pay):
+        assert f'{amount:,.2f}' in text, f'approved amount {amount} must be readable'
+
+    for header in ('ገቢዎች', 'ተቀናሾች'):  # Earnings, Deductions
         assert header in text, f'the "{header}" section must be present'
 
     # Every item the employee actually has must be named on the payslip.

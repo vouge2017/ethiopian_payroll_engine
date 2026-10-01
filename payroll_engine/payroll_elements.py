@@ -109,10 +109,12 @@ def calculate_payroll_from_assignments(
     deductions=None,
     extra_items=None,
     sick_leave_reduction=0,
+    consume_balances=True,
 ) -> dict:
     """Calculate payroll from the per-company elements model.
 
     Args:
+        consume_balances: False for worksheet previews; approval applies frozen balance movements once.
         employee: Employee ORM instance (provides basic_salary, hire_date).
         company_id: int — scopes PayItemType lookups to the company's catalog.
         for_date: date — the pay period date; used for rule versioning and
@@ -289,7 +291,7 @@ def calculate_payroll_from_assignments(
     total_post_tax_deductions = _merge_post_tax_deductions(
         deductions, employee_items['deductions'],
         net_before_deductions, tax, deduction_details,
-        line_items, Decimal('0'), for_date
+        line_items, Decimal('0'), for_date, consume_balances=consume_balances
     )
 
     sick_leave_reduction = _D(sick_leave_reduction)
@@ -643,7 +645,7 @@ def _apply_exempt_cap(item, amount, basic_salary):
 
 
 def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions,
-                                tax, deduction_details, line_items, total, for_date):
+                                tax, deduction_details, line_items, total, for_date, *, consume_balances=True):
     """Merge legacy EmployeeDeduction list and new PayrollItemAssignment deductions.
 
     New deduction assignments with tracking_mode='declining' decrement their
@@ -692,8 +694,9 @@ def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions
         if assignment.tracking_mode == 'declining' and assignment.remaining_balance is not None:
             recoverable = min(amount, _D(assignment.remaining_balance))
             amount = recoverable
-            assignment.remaining_balance = (_D(assignment.remaining_balance) - amount).quantize(Q, rounding=ROUND_HALF_UP)
-            db.session.add(assignment)
+            if consume_balances:
+                assignment.remaining_balance = (_D(assignment.remaining_balance) - amount).quantize(Q, rounding=ROUND_HALF_UP)
+                db.session.add(assignment)
 
         if amount > 0:
             total += amount

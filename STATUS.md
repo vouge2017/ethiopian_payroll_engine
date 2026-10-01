@@ -1,6 +1,53 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-10-01 04:09 UTC
+**Last updated:** 2026-10-01 14:30 UTC
+
+
+
+## Saved worksheet review and approval - 2026-10-01 14:30 UTC
+
+Monthly worksheet amounts now freeze into a tenant-owned review. The accountant
+can submit it; the owner confirms with a password. Approval persists those exact
+amounts, consumes declining balances once and commits the audit with the money.
+Later employee/worksheet edits cannot rewrite the retained snapshot. PDF worker,
+on-demand PDF, bank export and history CSV reuse the approved facts. The sample
+is gross 12,900.50, deductions 4,310.15 and net 8,590.35 ETB.
+
+Preview no longer consumes balances on this path. Monthly advances end in their
+month; saving this month preserves future overtime. Historic legacy approval uses
+run date instead of click date. PDF amounts and bilingual labels are readable.
+Browser inspection also corrected zero-value draft evidence, missing confirmation
+deductions and the unsupported undo promise on the confirmation page.
+
+Verbatim focused results (overlap; not a full-suite total):
+- Before handoff: `6 failed, 15 warnings in 32.54s` (review endpoint absent).
+- Combined PG money/absence/worksheet selection: `46 passed, 101 warnings in 106.55s (0:01:46)`.
+- Relevant existing regressions: `54 passed, 3 warnings in 64.76s (0:01:04)`.
+- Existing PDF/output regressions: `16 passed, 3 warnings in 60.51s (0:01:00)`.
+- Final PG journey including confirmation: `14 passed, 31 warnings in 48.96s`.
+- Whole local isolated suite: `TIMEOUT after 600s; full suite outcome unknown`;
+  42 of 113 files completed before timeout, so no whole-suite green claim.
+
+Real Alembic-upgraded PostgreSQL verifies persisted outputs, competing approvals,
+tenant/role rejection, audit rollback, stale balances and queue failure recovery.
+No schema migration was added in this slice. No create_all migration claim.
+The parent bb39cde hosted Python 3.11/3.12 and PG jobs passed; lint failed.
+Hosted CI for this patch must be checked after pushing.
+
+Actual local browser login/save/review/password approval succeeded with synthetic
+data, CSRF enabled; desktop/phone review and PDF visual captures are on D:.
+The local demo is open in a separate Chrome tab. No live payroll was changed.
+Work order 2 is not yet closed: results still hide the individual PDF until it
+exists, still offer unsupported worksheet Undo, and the completed review badge
+says Ready for Approval. Final browser download click and founder feedback remain.
+These are the next bounded customer-facing fixes; avoid broader feature work.
+
+Daily-worker attendance, unit-based items, historic worksheet selection and linked
+corrections remain outside this monthly slice. General delivery durability,
+release lint/security gates, shared worker keys, storage and restore proof remain
+open. Not deployed; last user-confirmed live code is aa2e657 (not refreshed here).
+[Raw evidence](docs/evidence/worksheet-review-2026-10-01.json) and
+[founder trial](docs/FOUNDER_TRIAL.md) distinguish this slice from production readiness.
 
 
 ## Absence month-boundary regression - 2026-10-01 04:09 UTC

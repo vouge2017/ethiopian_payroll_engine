@@ -273,7 +273,10 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
     Returns:
         ApprovalResult
     """
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).first()
+    if run.company_id != company_id:
+        db.session.rollback()
+        return ApprovalResult(success=False, message='Payroll run not found.', redirect_to='runs')
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=company_id).first()
     if not draft:
         db.session.rollback()
         return ApprovalResult(
@@ -292,6 +295,42 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
     employees_data = draft.employee_data
 
+    if run.source == 'spreadsheet':
+        from payroll_engine.services.worksheet_review import apply_approved_rows
+
+        try:
+            apply_approved_rows(run, company_id, employees_data)
+            run.status = 'completed'
+            run.approved_by = user_id
+            run.approved_at = datetime.now(UTC).replace(tzinfo=None)
+            run.approval_ip = request_ip
+            create_audit_log(company_id, user_id, 'payroll_run_completed', {
+                'run_id': run.id, 'employee_count': len(employees_data), 'approved_by': user_email,
+                'approval_ip': request_ip, 'source': 'spreadsheet',
+                'total_net': str(sum(Decimal(row['net']) for row in employees_data)),
+            })
+            create_notification(company_id=company_id, user_id=user_id,
+                                message=f'Payroll approved for {len(employees_data)} employees. Payment is still pending.',
+                                type='success', link=f'/payroll/runs/{run.id}')
+            # Retain the reviewed facts for lazy PDFs, workers and exports.
+            db.session.commit()
+        except ValueError as error:
+            db.session.rollback()
+            return ApprovalResult(success=False, message=str(error), redirect_to='detail')
+        except Exception as error:
+            db.session.rollback()
+            return ApprovalResult(success=False, error=str(error), redirect_to='detail')
+        # Delivery is outside the money transaction. On-demand download can recover.
+        try:
+            from payroll_engine.tasks import enqueue_batch
+            enqueue_batch(run.id, company_id)
+        except Exception:
+            db.session.rollback()
+            import logging
+            logging.getLogger('payroll_engine').exception('PDF delivery pending for approved run %s', run.id)
+        return ApprovalResult(success=True, message='Payroll approved. Payslips and bank files are ready to generate; payment is still pending.',
+                              employee_count=len(employees_data), redirect_to='detail')
+
     try:
         run.status = 'processing'
         run.approved_by = user_id
@@ -309,12 +348,11 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # --- BUG FIX: Compute leave reductions from actual Leave records ---
         # The draft has stale values; we need real leave data at approval time.
-        from decimal import Decimal
-
         from payroll_engine.leave import DEFAULT_SICK_TIER_1_DAYS, LeaveType
         from payroll_engine.models import EmployeeDeduction, Leave
 
-        today = date.today()
+        # A delayed approval must use the selected run date, not the click date.
+        today = run.run_date or date.today()
         month_start = today.replace(day=1)
 
         # Pre-compute leave reductions per employee
@@ -345,7 +383,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 elif lv.leave_type == LeaveType.SICK:
                     # Tiered: first SICK_TIER_1_DAYS at 100%, next at 50%, rest unpaid
                     # We need cumulative sick days in the 12-month period
-                    year_ago = today.replace(year=today.year - 1)
+                    import calendar
+                    year_ago = today.replace(year=today.year - 1, day=min(today.day, calendar.monthrange(today.year - 1, today.month)[1]))
                     sick_history = Leave.query.filter(
                         Leave.employee_id == emp.id,
                         Leave.company_id == company_id,

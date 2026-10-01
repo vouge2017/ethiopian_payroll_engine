@@ -17,8 +17,9 @@
 
     <div class="alert alert-info small">
         Additional unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30.
-        Bonus is taxable and applies only to the month shown. Estimates exclude advances and other payroll deductions. This worksheet does not approve payroll.
+        Bonus is taxable and applies only to the month shown. Saved estimates include payroll deductions. Review freezes these figures; approval still requires the owner. No payment is sent.
     </div>
+    {% if review_error %}<div class="alert alert-warning" role="alert">{{ review_error }}</div>{% endif %}
     {% if rows %}
     <form method="POST" action="{{ url_for('payroll.payroll_spreadsheet') }}" id="spreadsheet-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -144,11 +145,17 @@
             </div>
         </div>
     </form>
+    <form method="POST" action="{{ url_for('payroll.worksheet_review') }}" class="border rounded p-3 mb-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
+        <p class="small mb-2">Next: save your changes above, then review the saved payroll. Unsaved edits are not included. An existing review opens with its preserved amounts.</p>
+        <button type="submit" class="btn btn-success">Review saved payroll</button>
+    </form>
 
     {% else %}
     <div class="text-center py-5">
         <i class="bi bi-people" style="font-size:3rem;color:#ccc"></i>
-        <h5 class="mt-3 text-muted">No employees yet</h5>
+        <h5 class="mt-3 text-muted">{{ "Worksheet review unavailable" if review_error else "No employees yet" }}</h5>
         <p class="text-muted">Add employees first, then use this spreadsheet to process payroll.</p>
         <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
             <i class="bi bi-person-plus"></i> Add First Employee

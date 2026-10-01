@@ -5,11 +5,13 @@ Uses ReportLab to generate professional payslips in PDF format.
 Output: A4-sized PDF with company header, employee details, earnings,
 deductions, and net pay summary.
 
-Font: NotoSansEthiopic for full Amharic + Latin rendering.
+Fonts: Helvetica for Latin and digits; embedded NotoSansEthiopic for Amharic.
 """
 
 import os
+import re
 from datetime import date
+from xml.sax.saxutils import escape
 
 from reportlab.lib.colors import HexColor, white
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -18,7 +20,9 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, SimpleDocTemplate, Spacer, TableStyle
+from reportlab.platypus import Paragraph as _Paragraph
+from reportlab.platypus import Table as _Table
 
 # Register NotoSansEthiopic font
 _FONT_DIR = os.path.join(os.path.dirname(__file__), 'fonts')
@@ -36,7 +40,7 @@ def _item_label(line_item):
     """
     en = (line_item.get('item_label') or '').strip()
     am = (line_item.get('item_label_am') or '').strip()
-    if en and am:
+    if en and am and en != am:
         return f'{en} / {am}'
     return en or am or (line_item.get('item_key') or '').strip()
 
@@ -113,6 +117,11 @@ def _ensure_pdf(payslip, emp, company_info=None):
             'period': '',
             'tax_explanation': '',
         }
+        from payroll_engine.services.worksheet_review import published_row
+        snapshot = published_row(payslip)
+        if snapshot:
+            emp_data.update(snapshot)
+            emp_data['period'] = date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
         emp_data['calc_flow'] = generate_calculation_flow(emp_data)
 
         # Get period from the payroll run
@@ -121,7 +130,7 @@ def _ensure_pdf(payslip, emp, company_info=None):
         run = PayrollRun.query.filter_by(
             id=payslip.payroll_run_id, company_id=payslip.company_id
         ).first()
-        if run:
+        if run and not snapshot:
             emp_data['period'] = run.period or (run.run_date.strftime('%B %Y') if run.run_date else '')
 
         if company_info is None:
@@ -138,7 +147,9 @@ def _ensure_pdf(payslip, emp, company_info=None):
                 else '',
             }
 
-        pdf_path = generate_payslip(emp_data, company=company_info)
+        from flask import current_app
+        output_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'payslips', str(payslip.company_id), str(payslip.payroll_run_id))
+        pdf_path = generate_payslip(emp_data, company=company_info, output_dir=output_dir, file_key=str(payslip.id))
         payslip.pdf_file_path = pdf_path
         payslip.pdf_status = 'generated'
         db.session.flush()
@@ -150,7 +161,7 @@ def _ensure_pdf(payslip, emp, company_info=None):
         raise
 
 
-FONT = 'NotoSansEthiopic'
+FONT = 'Helvetica'
 # Updated2026 design system colors
 PRIMARY = HexColor('#2563eb')
 ACCENT = HexColor('#1d4ed8')
@@ -164,7 +175,27 @@ WARNING = HexColor('#f59e0b')
 DANGER = HexColor('#ef4444')
 
 
-def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | None = None) -> str:
+
+def _bilingual_markup(text):
+    # NotoSansEthiopic contains Ethiopic glyphs but lacks Latin letters/digits.
+    # Keep Latin in Helvetica and explicitly select the embedded Ethiopic font.
+    return re.sub(r'([\u1200-\u139f\u2d80-\u2ddf\uab00-\uab2f]+)',
+                  r'<font name="NotoSansEthiopic">\1</font>', text)
+
+
+def _paragraph(text, *args, **kwargs):
+    return _Paragraph(_bilingual_markup(text), *args, **kwargs)
+
+
+def _table(data, *args, **kwargs):
+    style = ParagraphStyle('BilingualCell', fontName=FONT, fontSize=8, leading=11)
+    rows = [[_paragraph(escape(cell), style) if isinstance(cell, str) and
+             re.search(r'[\u1200-\u139f\u2d80-\u2ddf\uab00-\uab2f]', cell) else cell
+             for cell in row] for row in data]
+    return _Table(rows, *args, **kwargs)
+
+
+def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | None = None, file_key: str | None = None) -> str:
     """
     Generate a PDF payslip for a single employee.
 
@@ -184,7 +215,9 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
         output_dir = os.getcwd()
     os.makedirs(output_dir, exist_ok=True)
 
-    filename = f'payslip_{emp["id"]}_{date.today().strftime("%Y%m%d")}.pdf'
+    from werkzeug.utils import secure_filename
+    filename_id = secure_filename(file_key or str(emp['id'])) or 'employee'
+    filename = f'payslip_{filename_id}_{date.today().strftime("%Y%m%d")}.pdf'
     filepath = os.path.join(output_dir, filename)
 
     # Company defaults
@@ -240,10 +273,10 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
             logo_img = Image(logo_path, height=18 * mm, width=18 * mm)
             logo_img.hAlign = 'LEFT'
         except Exception:
-            logo_img = Paragraph(f'<b>{company_name[0]}</b>', title_style)
+            logo_img = _paragraph(f'<b>{company_name[0]}</b>', title_style)
     else:
         # First letter circle as placeholder
-        logo_img = Paragraph(
+        logo_img = _paragraph(
             f'<font size="20" color="#1a5276"><b>{company_name[0].upper()}</b></font>',
             ParagraphStyle('LogoLetter', alignment=TA_CENTER, fontName=FONT),
         )
@@ -256,18 +289,18 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
         company_lines.append(f'TIN: {company_tin}')
     if company_phone:
         company_lines.append(f'Tel: {company_phone}')
-    company_info = Paragraph(
+    company_info = _paragraph(
         '<br/>'.join(company_lines), ParagraphStyle('CompanyInfo', fontName=FONT, fontSize=9, alignment=TA_LEFT)
     )
 
     # Period column
-    period_info = Paragraph(
+    period_info = _paragraph(
         f'<b>Payslip</b><br/>{period}',
         ParagraphStyle('Period', fontName=FONT, fontSize=9, alignment=TA_RIGHT, textColor=PRIMARY),
     )
 
     header_data.append([logo_img, company_info, period_info])
-    header_table = Table(header_data, colWidths=[22 * mm, 100 * mm, 48 * mm])
+    header_table = _table(header_data, colWidths=[22 * mm, 100 * mm, 48 * mm])
     header_table.setStyle(
         TableStyle(
             [
@@ -281,7 +314,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     elements.append(header_table)
 
     # Divider line
-    divider = Table([['']], colWidths=[170 * mm], rowHeights=[1])
+    divider = _table([['']], colWidths=[170 * mm], rowHeights=[1])
     divider.setStyle(
         TableStyle(
             [
@@ -298,7 +331,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
         ['Department / ክፍል:', department or '—', 'Position / ሹም:', position or '—'],
         ['Pay Period / የክፍያ ጊዜ:', period, 'Payment / የክፍያ ዘዴ:', emp.get('bank', '—')],
     ]
-    info_table = Table(info_data, colWidths=[35 * mm, 48 * mm, 35 * mm, 52 * mm])
+    info_table = _table(info_data, colWidths=[35 * mm, 48 * mm, 35 * mm, 52 * mm])
     info_table.setStyle(
         TableStyle(
             [
@@ -318,7 +351,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     elements.append(Spacer(1, 8))
 
     # ── EARNINGS ──
-    elements.append(Paragraph('Earnings / ገቢዎች', section_style))
+    elements.append(_paragraph('Earnings / ገቢዎች', section_style))
     earnings_data = [
         ['Description', 'Amount (ETB)'],
     ]
@@ -329,10 +362,10 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     # Bilingual labels come from PayItemType.name_en / name_am.
     line_items = emp.get('line_items') or []
     earning_lines = [
-        li for li in line_items if li.get('classification') == 'earning'
+        li for li in line_items if li.get('classification') == 'earning' and li.get('earned_amount')
     ]
     deduction_lines = [
-        li for li in line_items if li.get('classification') == 'deduction'
+        li for li in line_items if li.get('classification') in ('deduction', 'tax')
     ]
 
     if earning_lines:
@@ -352,7 +385,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
 
     earnings_data.append(['Gross Salary', f'{emp["gross"]:,.2f}'])
 
-    earnings_table = Table(earnings_data, colWidths=[110 * mm, 60 * mm])
+    earnings_table = _table(earnings_data, colWidths=[110 * mm, 60 * mm])
     earnings_table.setStyle(
         TableStyle(
             [
@@ -372,7 +405,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     elements.append(Spacer(1, 6))
 
     # ── DEDUCTIONS ──
-    elements.append(Paragraph('Deductions / ታ semiclass', section_style))
+    elements.append(_paragraph('Deductions / ተቀናሾች', section_style))
     deductions_data = [
         ['Description', 'Amount (ETB)'],
     ]
@@ -408,9 +441,9 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
         else:
             deductions_data.append(['Income Tax', f'{emp["tax"]:,.2f}'])
 
-    total_deductions = emp['tax'] + emp['pension_employee']
+    total_deductions = emp['gross'] - emp['net']
     deductions_data.append(['Total Deductions', f'{total_deductions:,.2f}'])
-    deductions_table = Table(deductions_data, colWidths=[110 * mm, 60 * mm])
+    deductions_table = _table(deductions_data, colWidths=[110 * mm, 60 * mm])
     deductions_table.setStyle(
         TableStyle(
             [
@@ -432,16 +465,12 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     # ── CALCULATION FLOW SUMMARY ──
     flow_data = emp.get('calc_flow')
     if flow_data and flow_data.get('steps'):
-        flow_parts = []
-        for step in flow_data['steps']:
-            if step.get('is_deduction'):
-                flow_parts.append(f'-{"{:,}".format(int(step["amount"]))}')
-            else:
-                flow_parts.append(f'{"{:,}".format(int(step["amount"]))}')
-        flow_line = ' → '.join(flow_parts)
-        flow_summary = f'Calculation: {flow_line} (Effective rate: {flow_data.get("effective_tax_rate", "?")}%)'
+        flow_summary = (
+            f"Gross {emp['gross']:,.2f} - total deductions {total_deductions:,.2f} "
+            f"= net {emp['net']:,.2f} (ETB)"
+        )
         elements.append(
-            Paragraph(
+            _paragraph(
                 flow_summary,
                 ParagraphStyle(
                     'FlowSummary',
@@ -458,7 +487,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
 
     # ── NET PAY ──
     net_data = [['NET PAY / የተቀረ ክፍያ (ETB)', f'{emp["net"]:,.2f}']]
-    net_table = Table(net_data, colWidths=[110 * mm, 60 * mm])
+    net_table = _table(net_data, colWidths=[110 * mm, 60 * mm])
     net_table.setStyle(
         TableStyle(
             [
@@ -480,9 +509,9 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     footer_style = ParagraphStyle(
         'Footer', parent=styles['Normal'], fontName=FONT, fontSize=7, textColor=HexColor('#888888'), alignment=TA_CENTER
     )
-    elements.append(Paragraph('This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።', footer_style))
+    elements.append(_paragraph('This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።', footer_style))
     if company_tin:
-        elements.append(Paragraph(f'{company_name} — TIN: {company_tin}', footer_style))
+        elements.append(_paragraph(f'{company_name} — TIN: {company_tin}', footer_style))
 
     doc.build(elements)
     return filepath

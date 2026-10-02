@@ -13,19 +13,20 @@ from __future__ import annotations
 import io
 import re
 import uuid
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date, datetime
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from functools import wraps
 from typing import Any
 
 import openpyxl
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
 
 from payroll_engine import db
-from payroll_engine.excel_import import read_file, parse_salary
+from payroll_engine.excel_import import parse_salary, read_file
 from payroll_engine.models import Company, Employee, validate_ethiopian_phone
 from payroll_engine.payroll import calculate_payroll
+from payroll_engine.shared import _company_id, role_required
 
 diff_bp = Blueprint('diff', __name__)
 
@@ -674,6 +675,8 @@ def upload_form():
 
 
 @diff_bp.route('/compare', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
 def compare():
     f = request.files.get('file')
     col_mapping = {}
@@ -684,14 +687,7 @@ def compare():
             if val:
                 col_mapping[idx] = val
 
-    # For public (no-login) access, use the demo/sample company.
-    company_id = 1
-    if hasattr(current_user, 'company_id') and current_user.company_id:
-        company_id = current_user.company_id
-    else:
-        sample = Company.query.filter(Company.name.like('%Sample%')).first()
-        if sample:
-            company_id = sample.id
+    company_id = _company_id()
 
     if not f or not f.filename:
         return render_template('diff/upload.html',
@@ -725,6 +721,7 @@ def compare():
     current_app.diff_results[rid] = {
         'result': result,
         'company_id': company_id,
+        'user_id': current_user.id,
         'at': datetime.now(),
     }
 
@@ -732,10 +729,12 @@ def compare():
 
 
 @diff_bp.route('/download/<result_id>', methods=['GET'])
+@login_required
+@role_required('owner', 'accountant')
 def download(result_id: str):
     storage = getattr(current_app, 'diff_results', {})
     entry = storage.get(result_id)
-    if not entry:
+    if not entry or entry.get('company_id') != _company_id() or entry.get('user_id') != current_user.id:
         return 'Report not found', 404
 
     try:

@@ -1,5 +1,24 @@
 # STATUS.md — Command-Verified State
 
+## Private Diff authorization slice - 2026-10-02
+
+Comparisons and downloads require a signed-in owner/accountant, use the authorized
+active company and bind cached results to the requesting user and company. Anonymous
+company lookup is removed. The public landing page remains available. Old cache entries
+without ownership are rejected, including same-company entries belonging to another user.
+
+Before: `6 failed, 1 passed` on actual PostgreSQL-backed HTTP requests. After: `25
+passed, 17 warnings in 39.05s` for Diff access plus role/isolation checks. Existing
+mocked comparison/XLSX tests: `8 passed, 3 warnings in 5.40s`. Native PG checks added
+to CI. Source preflight has zero findings and one migration head; this is a limited
+static gate, not proof of production safety. Existing unrelated Diff lint remains open.
+GitHub API still reports no push permission; no fixes from this checkout are deployed.
+
+Next: statutory exports must freeze identity, salary and tax classifications; invalid
+Excel money must fail visibly; correction/undo accounting and previous-period validation
+must be safe. Browser/founder trial, practitioner policy/chart sign-off, full CI/lint,
+worker/storage/key configuration and backup/restore evidence remain release requirements.
+
 ## Legacy delivery slice - 2026-10-02
 
 A reproduced PDF queue exception previously returned failure after money committed.

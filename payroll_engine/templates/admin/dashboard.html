@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Platform Admin Control Plane - EthioPayroll{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-shield-lock-fill text-primary me-2"></i>Platform Admin Control Plane</h1>
+            <p class="text-muted small mb-0">System owner operations, tenant management, and support queuing</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.tenants') }}" class="btn btn-outline-primary me-2"><i class="bi bi-building me-1"></i> Tenants</a>
+            <a href="{{ url_for('admin.tickets') }}" class="btn btn-primary"><i class="bi bi-ticket-perforated me-1"></i> Support Tickets</a>
+        </div>
+    </div>
+
+    <!-- Overview Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-primary-subtle text-primary p-3 rounded-circle me-3">
+                            <i class="bi bi-building fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Total Companies</div>
+                            <div class="fs-3 fw-bold">{{ total_companies }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success-subtle text-success p-3 rounded-circle me-3">
+                            <i class="bi bi-people fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Total Platform Users</div>
+                            <div class="fs-3 fw-bold">{{ total_users }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-warning-subtle text-warning p-3 rounded-circle me-3">
+                            <i class="bi bi-ticket-detailed fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Open Tickets</div>
+                            <div class="fs-3 fw-bold">{{ open_tickets }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-info-subtle text-info p-3 rounded-circle me-3">
+                            <i class="bi bi-person-bounding-box fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted small">Active Assist Sessions</div>
+                            <div class="fs-3 fw-bold">{{ active_impersonations }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Tickets -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fs-6 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Support Tickets</h5>
+                    <a href="{{ url_for('admin.tickets') }}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Subject</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ticket in recent_tickets %}
+                                <tr>
+                                    <td><a href="{{ url_for('admin.ticket_detail', ticket_id=ticket.id) }}" class="fw-semibold text-decoration-none">{{ ticket.ticket_code }}</a></td>
+                                    <td>{{ ticket.subject | truncate(30) }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if ticket.priority == 'critical' %}danger{% elif ticket.priority == 'high' %}warning{% else %}secondary{% endif %}">
+                                            {{ ticket.priority }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{% if ticket.status == 'open' %}primary{% elif ticket.status == 'resolved' %}success{% else %}info{% endif %}">
+                                            {{ ticket.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No recent support tickets.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fs-6 fw-bold"><i class="bi bi-journal-text me-2 text-secondary"></i>Platform Audit Trail</h5>
+                    <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-sm btn-link text-decoration-none">Full Audit Log</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Admin ID</th>
+                                    <th>Target Company</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td><span class="badge bg-dark">{{ log.action }}</span></td>
+                                    <td>Admin #{{ log.admin_user_id }}</td>
+                                    <td>Company #{{ log.target_company_id or 'N/A' }}</td>
+                                    <td class="small text-muted">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No audit log records yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

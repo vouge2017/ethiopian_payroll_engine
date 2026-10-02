@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Adjustments — {{ run.reference or 'Payroll Run' }}{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">Adjustment Payslips</h4>
+            <p class="text-muted mb-0">{{ run.reference or 'Run #' ~ run.id }} · {{ run.period or '' }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Back to Run
+            </a>
+            {% if summary.total_adjustments > 0 %}
+            <a href="{{ url_for('payroll.adjustment_bank_file', run_id=run.id) }}" class="btn btn-outline-primary btn-sm ms-2">
+                <i class="bi bi-bank me-1"></i>Download Bank File
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Total Adjustments</div>
+                    <div class="fs-4 fw-bold">{{ summary.total_adjustments }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Employees Affected</div>
+                    <div class="fs-4 fw-bold">{{ summary.employees_affected }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Positive (to pay)</div>
+                    <div class="fs-4 fw-bold text-success">ETB {{ '{:,.2f}'.format(summary.total_positive_net) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-muted small">Negative (to deduct)</div>
+                    <div class="fs-4 fw-bold text-danger">ETB {{ '{:,.2f}'.format(summary.total_negative_net) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create New Adjustment -->
+    {% if run.status in ('completed', 'locked') %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Adjustment</h6>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('payroll.create_adjustment', run_id=run.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Employee</label>
+                        <select name="employee_id" class="form-select" required>
+                            <option value="">Select employee...</option>
+                            {% for emp in employees %}
+                            <option value="{{ emp.id }}">{{ emp.display_name }} ({{ emp.employee_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Type</label>
+                        <select name="adjustment_type" class="form-select">
+                            <option value="addition">Addition (gross)</option>
+                            <option value="deduction">Deduction (gross)</option>
+                            <option value="net_override">Net Override</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Amount (ETB)</label>
+                        <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Reason</label>
+                        <input type="text" name="reason" class="form-control" placeholder="e.g. Overtime correction for Sene" required>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-plus me-1"></i>Create
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Adjustment List -->
+    {% if summary.adjustments %}
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Adjustments ({{ summary.total_adjustments }})</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th class="text-end">Gross</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Pension</th>
+                            <th class="text-end">Net</th>
+                            <th class="text-end">Original Net</th>
+                            <th class="text-end">New Total</th>
+                            <th>Reason</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for adj in summary.adjustments %}
+                        <tr>
+                            <td>
+                                <strong>{{ adj.employee_name }}</strong>
+                                <br><small class="text-muted">{{ adj.employee_id }}</small>
+                            </td>
+                            <td>
+                                {% if adj.type == 'addition' %}
+                                <span class="badge bg-success">Addition</span>
+                                {% else %}
+                                <span class="badge bg-danger">Deduction</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ '{:,.2f}'.format(adj.gross) }}</td>
+                            <td class="text-end">{{ '{:,.2f}'.format(adj.tax) }}</td>
+                            <td class="text-end">{{ '{:,.2f}'.format(adj.pension) }}</td>
+                            <td class="text-end fw-bold {% if adj.net >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ '{:,.2f}'.format(adj.net) }}
+                            </td>
+                            <td class="text-end text-muted">{{ '{:,.2f}'.format(adj.original_net) }}</td>
+                            <td class="text-end fw-bold">{{ '{:,.2f}'.format(adj.new_total) }}</td>
+                            <td><small>{{ adj.reason }}</small></td>
+                            <td><small class="text-muted">{{ adj.created_at[:10] if adj.created_at else '' }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="5" class="text-end fw-bold">Net Adjustment:</td>
+                            <td class="text-end fw-bold {% if summary.net_adjustment >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ '{:,.2f}'.format(summary.net_adjustment) }}
+                            </td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+            <p class="mt-2 text-muted">No adjustments for this payroll run.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

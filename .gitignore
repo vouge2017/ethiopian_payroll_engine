@@ -31,3 +31,18 @@ celerybeat.pid
 # Generated PDFs
 payslip_*.pdf
 *.pdf
+-e 
+# Internal planning docs (contain security gap analysis — not for public repo)
+.mimo/
+
+# Migration artifacts (2026-08-31)
+ethiopian_payroll_engine_BACKUP_*/
+/ethiopian_payroll_engine/
+docs/migration-2026-08-31/
+
+# Recovered private data and generated evidence remain local.
+/reference_data/real_erca_filing_sene.csv
+/scripts/e2e_screenshots/
+/p1_push.txt
+/local-evidence/
+

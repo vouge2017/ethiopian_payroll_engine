@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}New Support Ticket - EthioPayroll{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 800px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-plus-circle me-2 text-primary"></i>Create Support Ticket</h1>
+            <p class="text-muted small mb-0">Our platform technical team will review and respond promptly</p>
+        </div>
+        <a href="{{ url_for('support.my_tickets') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Tickets</a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4">
+            <form method="POST" action="{{ url_for('support.create_ticket') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Subject</label>
+                    <input type="text" name="subject" class="form-control" placeholder="Brief summary of the issue" required>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Category</label>
+                        <select name="category" class="form-select">
+                            <option value="payroll">Payroll Calculations</option>
+                            <option value="tax">ERCA Tax / Pension Filings</option>
+                            <option value="banking">Bank File / Disbursement</option>
+                            <option value="access">Account / Permissions</option>
+                            <option value="bug">Technical Bug / Exception</option>
+                            <option value="general" selected>General Inquiry</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Priority</label>
+                        <select name="priority" class="form-select">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical (Blocking Payroll Approval)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea name="message_text" class="form-control" rows="6" placeholder="Describe your issue..." required></textarea>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-send me-1"></i> Submit Support Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

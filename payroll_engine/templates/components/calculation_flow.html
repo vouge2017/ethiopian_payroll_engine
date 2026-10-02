@@ -1,0 +1,285 @@
+<!-- Calculation Flow Panel — Shows step-by-step payroll math for one employee -->
+<!-- Included in payroll review page when user clicks an employee -->
+
+{% macro calculation_flow_panel(employee_flow) %}
+{% if employee_flow %}
+<div class="calculation-flow-panel" id="calc-flow-{{ employee_flow.employee_id }}">
+  <div class="flow-header">
+    <h3>{{ employee_flow.employee_name }} — Calculation Flow</h3>
+    <div class="flow-summary">
+      <span class="flow-badge flow-badge-gross">Gross: ETB {{ "%.2f"|format(employee_flow.gross) }}</span>
+      <span class="flow-badge flow-badge-deduction">Tax: ETB {{ "%.2f"|format(employee_flow.tax) }}</span>
+      <span class="flow-badge flow-badge-deduction">Pension: ETB {{ "%.2f"|format(employee_flow.pension) }}</span>
+      <span class="flow-badge flow-badge-net">Net: ETB {{ "%.2f"|format(employee_flow.net) }}</span>
+    </div>
+  </div>
+
+  <div class="flow-steps">
+    {% for step in employee_flow.steps %}
+    <div class="flow-step {% if step.is_deduction %}flow-step-deduction{% endif %} {% if step.is_highlight %}flow-step-highlight{% endif %} {% if step.is_final %}flow-step-final{% endif %}">
+      <div class="flow-step-number">{{ step.step_number }}</div>
+      <div class="flow-step-content">
+        <div class="flow-step-label">{{ step.label }}</div>
+        <div class="flow-step-formula">{{ step.formula }}</div>
+        {% if step.inputs %}
+        <div class="flow-step-inputs">
+          {% for key, value in step.inputs.items() %}
+          <span class="flow-input">{{ key }}: {{ value }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if step.note %}
+        <div class="flow-step-note">{{ step.note }}</div>
+        {% endif %}
+        {% if step.legal_reference %}
+        <div class="flow-step-reference">📜 {{ step.legal_reference }}</div>
+        {% endif %}
+      </div>
+      <div class="flow-step-amount {% if step.is_deduction %}flow-amount-deduction{% endif %}">
+        {% if step.is_deduction %}−{% endif %}ETB {{ "%.2f"|format(step.result) }}
+      </div>
+    </div>
+    {% if not loop.last %}
+    <div class="flow-arrow">↓</div>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {% if employee_flow.pension_tax_savings > 0 %}
+  <div class="flow-savings">
+    💡 Pension saves you ETB {{ "%.2f"|format(employee_flow.pension_tax_savings) }}/month in tax
+    (pension is deducted before tax calculation)
+  </div>
+  {% endif %}
+
+  {% if employee_flow.tax_explanation %}
+  <details class="flow-tax-details">
+    <summary>Tax Bracket Breakdown</summary>
+    <pre class="flow-tax-explanation">{{ employee_flow.tax_explanation }}</pre>
+  </details>
+  {% endif %}
+
+  {% if employee_flow.effective_tax_rate %}
+  <div class="flow-rate">
+    Effective tax rate: {{ employee_flow.effective_tax_rate }}%
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro calculation_flow_styles() %}
+<style>
+.calculation-flow-panel {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.flow-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.flow-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #1a1a2e;
+}
+
+.flow-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.flow-badge {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.flow-badge-gross {
+  background: #e8f4fd;
+  color: #1565c0;
+}
+
+.flow-badge-deduction {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+.flow-badge-net {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.flow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.flow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fafafa;
+  transition: background 0.2s;
+}
+
+.flow-step:hover {
+  background: #f0f4ff;
+}
+
+.flow-step-deduction {
+  background: #fff8f8;
+}
+
+.flow-step-highlight {
+  background: #f0f7ff;
+  border-left: 3px solid #1565c0;
+}
+
+.flow-step-final {
+  background: #f0fff0;
+  border-left: 3px solid #2e7d32;
+  font-weight: 600;
+}
+
+.flow-step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.flow-step-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.flow-step-label {
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.flow-step-formula {
+  font-size: 13px;
+  color: #666;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.flow-step-inputs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.flow-input {
+  font-size: 12px;
+  background: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #555;
+}
+
+.flow-step-note {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.flow-step-reference {
+  font-size: 11px;
+  color: #1565c0;
+  margin-top: 4px;
+}
+
+.flow-step-amount {
+  font-weight: 700;
+  font-size: 15px;
+  color: #1a1a2e;
+  white-space: nowrap;
+  min-width: 120px;
+  text-align: right;
+}
+
+.flow-amount-deduction {
+  color: #c62828;
+}
+
+.flow-arrow {
+  text-align: center;
+  color: #ccc;
+  font-size: 18px;
+  padding: 4px 0;
+}
+
+.flow-savings {
+  background: #fffde7;
+  border: 1px solid #fff9c4;
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #f57f17;
+}
+
+.flow-tax-details {
+  margin-top: 16px;
+}
+
+.flow-tax-details summary {
+  cursor: pointer;
+  color: #1565c0;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.flow-tax-explanation {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.flow-rate {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .flow-summary {
+    flex-direction: column;
+  }
+  .flow-step {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .flow-step-amount {
+    text-align: left;
+  }
+}
+</style>
+{% endmacro %}

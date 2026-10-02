@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Leave Calendar — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Leave Calendar</h2>
+            <p class="text-muted mb-0">{{ employees|length }} employees · {{ working_days }} working days this month</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('employees.leave_management') }}" class="btn btn-ghost">
+                <i class="bi bi-list me-1"></i>Leave Requests
+            </a>
+        </div>
+    </div>
+
+    <!-- Month Navigation -->
+    <div class="card mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('calendar.leave_calendar', year=prev_year, month=prev_month) }}" class="btn btn-ghost">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <div class="text-center">
+                <h3 class="fw-bold mb-0">
+                    {% set month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+                    {{ month_names[month] }} {{ year }}
+                </h3>
+                <small class="text-muted">{{ working_days }} working days · {{ holidays|length }} holidays</small>
+            </div>
+            <a href="{{ url_for('calendar.leave_calendar', year=next_year, month=next_month) }}" class="btn btn-ghost">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="d-flex flex-wrap gap-3 mb-3">
+        <span class="d-flex align-items-center gap-1 small">
+            <span style="width:12px;height:12px;border-radius:3px;background:var(--color-danger-light);border:1px solid var(--color-danger);"></span>
+            Public Holiday
+        </span>
+        <span class="d-flex align-items-center gap-1 small">
+            <span style="width:12px;height:12px;border-radius:3px;background:var(--brand-primary-light);border:1px solid var(--brand-primary);"></span>
+            On Leave
+        </span>
+        <span class="d-flex align-items-center gap-1 small">
+            <span style="width:12px;height:12px;border-radius:3px;background:var(--gray-100);border:1px solid var(--gray-300);"></span>
+            Sunday (Rest Day)
+        </span>
+        <span class="d-flex align-items-center gap-1 small">
+            <span style="width:12px;height:12px;border-radius:3px;background:var(--color-success-light);border:1px solid var(--color-success);"></span>
+            Today
+        </span>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0" style="table-layout: fixed;">
+                    <thead>
+                        <tr>
+                            <th class="text-center py-2" style="background:var(--bg-tertiary);">Mon</th>
+                            <th class="text-center py-2" style="background:var(--bg-tertiary);">Tue</th>
+                            <th class="text-center py-2" style="background:var(--bg-tertiary);">Wed</th>
+                            <th class="text-center py-2" style="background:var(--bg-tertiary);">Thu</th>
+                            <th class="text-center py-2" style="background:var(--bg-tertiary);">Fri</th>
+                            <th class="text-center py-2" style="background:var(--bg-tertiary);">Sat</th>
+                            <th class="text-center py-2" style="background:var(--bg-tertiary);color:var(--color-danger);">Sun</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in calendar_data %}
+                        <tr>
+                            {% for day in week %}
+                            {% if day is none %}
+                            <td style="background:var(--bg-secondary);"></td>
+                            {% else %}
+                            <td class="p-1" style="min-height:80px;vertical-align:top;{% if day.is_today %}background:var(--color-success-light);{% elif day.is_holiday %}background:var(--color-danger-light);{% elif day.is_sunday %}background:var(--gray-50);{% endif %}">
+                                <!-- Day Number -->
+                                <div class="d-flex justify-content-between align-items-start px-1">
+                                    <span class="fw-bold {% if day.is_today %}text-success{% elif day.is_holiday %}text-danger{% elif day.is_sunday %}text-muted{% endif %}" style="font-size:0.9rem;">
+                                        {{ day.day }}
+                                    </span>
+                                    {% if day.is_holiday %}
+                                    <i class="bi bi-star-fill text-danger" style="font-size:0.6rem;"></i>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Holiday Name -->
+                                {% if day.is_holiday %}
+                                <div class="px-1 mt-0">
+                                    <small class="text-danger fw-semibold" style="font-size:0.65rem;line-height:1.2;">{{ day.holiday_name }}</small>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- On Leave -->
+                                {% if day.on_leave %}
+                                <div class="px-1 mt-1">
+                                    {% for entry in day.on_leave[:3] %}
+                                    <div class="badge badge-info mb-0" style="font-size:0.6rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;text-align:left;">
+                                        {{ entry.employee }}
+                                    </div>
+                                    {% endfor %}
+                                    {% if day.on_leave|length > 3 %}
+                                    <small class="text-muted">+{{ day.on_leave|length - 3 }} more</small>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    {% if leave_summary %}
+    <div class="card mt-4">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">Leave Summary — {{ month_names[month] }} {{ year }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                {% for leave_type, count in leave_summary.items() %}
+                <div class="col-md-3 col-6">
+                    <div class="p-3 rounded-3 text-center" style="background:var(--bg-tertiary);">
+                        <div class="fw-bold fs-4">{{ count }}</div>
+                        <small class="text-muted">{{ leave_type|capitalize }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Who's Off Today -->
+    {% if calendar_data %}
+    {% set today_data = none %}
+    {% for week in calendar_data %}
+        {% for day in week %}
+            {% if day and day.is_today %}
+                {% set today_data = day %}
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+    {% if today_data and today_data.on_leave %}
+    <div class="card mt-4">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">Who's Off Today</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+                {% for entry in today_data.on_leave %}
+                <div class="badge badge-info" style="font-size:0.85rem;padding:0.5em 1em;">
+                    {{ entry.employee }} ({{ entry.type }})
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

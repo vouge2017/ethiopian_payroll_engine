@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Account Suspended — EthioPayroll{% endblock %}
+{% block content %}
+<div class="container-xxl py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="display-1 text-danger mb-3">⏸</div>
+            <h1 class="h3 mb-3">Your account is suspended</h1>
+            <p class="text-muted mb-4">
+                {% if company and company.paid_until %}
+                The subscription for <strong>{{ company.name }}</strong> expired on {{ company.paid_until }}.
+                {% else %}
+                The subscription for your company has been suspended.
+                {% endif %}
+                Pay the outstanding invoice to restore access — your payroll
+                data, employees, and history are safe and untouched.
+            </p>
+            <a class="btn btn-primary btn-lg" href="{{ url_for('billing.view') }}">Go to Billing</a>
+            <p class="small text-muted mt-3">Need help? Contact support — we usually reply within one business day.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Access Denied — EthioPayroll{% endblock %}
+{% block content %}
+<div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
+    <div class="text-center" style="max-width: 480px;">
+        <!-- Illustration -->
+        <div class="mb-4">
+            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="56" stroke="var(--color-warning)" stroke-width="2" stroke-dasharray="8 4" opacity="0.2"/>
+                <circle cx="60" cy="60" r="40" fill="var(--color-warning)" opacity="0.05"/>
+                <!-- Lock icon -->
+                <rect x="48" y="58" width="24" height="18" rx="3" fill="var(--color-warning)" opacity="0.3"/>
+                <path d="M52 58V52C52 47.58 55.58 44 60 44C64.42 44 68 47.58 68 52V58" stroke="var(--color-warning)" stroke-width="2.5" fill="none" opacity="0.4"/>
+                <circle cx="60" cy="67" r="3" fill="var(--color-warning)" opacity="0.5"/>
+            </svg>
+        </div>
+
+        <h2 class="fw-bold mb-2">Access Denied</h2>
+        <h5 class="text-muted fw-normal mb-1" style="font-size: 1rem;">መዳረሻ ተከልክሏል</h5>
+        <p class="text-muted mb-4">
+            You don't have permission to access this page. This might be because:
+        </p>
+
+        <!-- Reasons -->
+        <div class="card border-0 bg-light mb-4 text-start" style="max-width: 400px; margin: 0 auto;">
+            <div class="card-body py-3">
+                <ul class="text-muted small mb-0">
+                    <li class="mb-1">Your role doesn't include this access</li>
+                    <li class="mb-1">You're trying to access another company's data</li>
+                    <li class="mb-1">Your session may have expired</li>
+                    <li>The resource requires owner or accountant permissions</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mb-4">
+            <a href="{{ url_for('main.companies_dashboard') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-house me-2"></i>Go to Dashboard
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Log In Again
+            </a>
+        </div>
+
+        <!-- Help -->
+        <p class="text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            If you believe this is an error, contact your company owner or administrator.
+        </p>
+    </div>
+</div>
+{% endblock %}

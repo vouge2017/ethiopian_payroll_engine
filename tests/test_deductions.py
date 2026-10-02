@@ -11,22 +11,30 @@ Tests:
 - Court order cap validation in validation engine
 - Deduction appears in payroll calculation
 """
-import sys
+
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from datetime import date, timedelta
+from decimal import Decimal
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    Employee, Company, User, PayrollRun, Payslip,
-    AuditLog, TenantQuery, OvertimeEntry, EmployeeDeduction
+    Company,
+    Employee,
+    EmployeeDeduction,
+    OvertimeEntry,
+    TenantQuery,
+    User,
 )
 from payroll_engine.payroll import calculate_payroll
-from decimal import Decimal
-from datetime import date, datetime, timedelta
 
 
 @pytest.fixture
@@ -60,9 +68,7 @@ def company_user_employee(ctx):
     db.session.add(user)
     db.session.commit()
     emp = Employee(
-        employee_id='EMP001', name='Dawit Mekonnen',
-        basic_salary=10000, allowances=2000,
-        company_id=company.id
+        employee_id='EMP001', name='Dawit Mekonnen', basic_salary=10000, allowances=2000, company_id=company.id
     )
     db.session.add(emp)
     db.session.commit()
@@ -75,12 +81,11 @@ def client(app):
 
 
 def login(client, phone, password):
-    return client.post('/auth/login', data={
-        'login_id': phone, 'password': password
-    }, follow_redirects=True)
+    return client.post('/auth/login', data={'login_id': phone, 'password': password}, follow_redirects=True)
 
 
 # --- Model tests ---
+
 
 def test_create_fixed_declining_deduction(ctx, company_user_employee):
     """Create a fixed ETB deduction with declining balance."""
@@ -133,13 +138,17 @@ def test_create_percentage_date_bounded(ctx, company_user_employee):
 
 def test_calculate_deduction_fixed(ctx, company_user_employee):
     """Fixed deduction returns the fixed amount."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='loan', label='Company Loan',
-        amount_mode='fixed', amount=Decimal('1000'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='loan',
+        label='Company Loan',
+        amount_mode='fixed',
+        amount=Decimal('1000'),
         tracking_mode='date_bounded',
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -148,13 +157,17 @@ def test_calculate_deduction_fixed(ctx, company_user_employee):
 
 def test_calculate_deduction_percentage(ctx, company_user_employee):
     """Percentage deduction calculates correctly."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='court_order', label='Court Order',
-        amount_mode='percentage', amount=Decimal('33.33'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='court_order',
+        label='Court Order',
+        amount_mode='percentage',
+        amount=Decimal('33.33'),
         tracking_mode='date_bounded',
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -165,15 +178,19 @@ def test_calculate_deduction_percentage(ctx, company_user_employee):
 
 def test_calculate_deduction_capped_at_balance(ctx, company_user_employee):
     """Declining balance deduction is capped at remaining balance."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='cost_sharing', label='Cost Sharing',
-        amount_mode='fixed', amount=Decimal('5000'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='cost_sharing',
+        label='Cost Sharing',
+        amount_mode='fixed',
+        amount=Decimal('5000'),
         tracking_mode='declining',
         total_to_recover=Decimal('3000'),
         remaining_balance=Decimal('3000'),
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -183,15 +200,19 @@ def test_calculate_deduction_capped_at_balance(ctx, company_user_employee):
 
 def test_apply_deduction_decrements_balance(ctx, company_user_employee):
     """Applying a deduction decrements the remaining balance."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='cost_sharing', label='Cost Sharing',
-        amount_mode='fixed', amount=Decimal('500'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='cost_sharing',
+        label='Cost Sharing',
+        amount_mode='fixed',
+        amount=Decimal('500'),
         tracking_mode='declining',
         total_to_recover=Decimal('6000'),
         remaining_balance=Decimal('6000'),
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -202,15 +223,19 @@ def test_apply_deduction_decrements_balance(ctx, company_user_employee):
 
 def test_apply_deduction_auto_stops_at_zero(ctx, company_user_employee):
     """Deduction auto-stops when balance reaches zero."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='cost_sharing', label='Cost Sharing',
-        amount_mode='fixed', amount=Decimal('500'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='cost_sharing',
+        label='Cost Sharing',
+        amount_mode='fixed',
+        amount=Decimal('500'),
         tracking_mode='declining',
         total_to_recover=Decimal('500'),
         remaining_balance=Decimal('500'),
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -222,11 +247,14 @@ def test_apply_deduction_auto_stops_at_zero(ctx, company_user_employee):
 
 def test_expired_date_bounded_returns_zero(ctx, company_user_employee):
     """Expired date-bounded deduction returns zero."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='penalty', label='ERCA Penalty',
-        amount_mode='fixed', amount=Decimal('1000'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='penalty',
+        label='ERCA Penalty',
+        amount_mode='fixed',
+        amount=Decimal('1000'),
         tracking_mode='date_bounded',
         start_date=date.today() - timedelta(days=60),
         end_date=date.today() - timedelta(days=1),
@@ -240,13 +268,17 @@ def test_expired_date_bounded_returns_zero(ctx, company_user_employee):
 
 def test_inactive_deduction_returns_zero(ctx, company_user_employee):
     """Inactive deduction returns zero."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='loan', label='Old Loan',
-        amount_mode='fixed', amount=Decimal('1000'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='loan',
+        label='Old Loan',
+        amount_mode='fixed',
+        amount=Decimal('1000'),
         tracking_mode='date_bounded',
-        start_date=date.today(), is_active=False,
+        start_date=date.today(),
+        is_active=False,
     )
     db.session.add(ded)
     db.session.commit()
@@ -255,17 +287,22 @@ def test_inactive_deduction_returns_zero(ctx, company_user_employee):
 
 # --- Payroll integration tests ---
 
+
 def test_payroll_with_deduction(ctx, company_user_employee):
     """Payroll calculation applies post-tax deductions."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='cost_sharing', label='Cost Sharing',
-        amount_mode='fixed', amount=Decimal('500'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='cost_sharing',
+        label='Cost Sharing',
+        amount_mode='fixed',
+        amount=Decimal('500'),
         tracking_mode='declining',
         total_to_recover=Decimal('6000'),
         remaining_balance=Decimal('6000'),
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -281,15 +318,19 @@ def test_payroll_with_deduction(ctx, company_user_employee):
 
 def test_payroll_deduction_details(ctx, company_user_employee):
     """Payroll result includes deduction details."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='court_order', label='Court Order',
-        amount_mode='fixed', amount=Decimal('1000'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='court_order',
+        label='Court Order',
+        amount_mode='fixed',
+        amount=Decimal('1000'),
         tracking_mode='declining',
         total_to_recover=Decimal('5000'),
         remaining_balance=Decimal('5000'),
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -302,20 +343,25 @@ def test_payroll_deduction_details(ctx, company_user_employee):
 
 # --- Route tests ---
 
+
 def test_add_deduction_route(ctx, client, company_user_employee):
     """POST to add_deduction creates a deduction."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
 
-    resp = client.post(f'/employees/{emp.id}/deductions/add', data={
-        'deduction_type': 'cost_sharing',
-        'label': 'MoE Batch 2024-07',
-        'amount_mode': 'fixed',
-        'amount': '500',
-        'tracking_mode': 'declining',
-        'total_to_recover': '6000',
-        'start_date': '2026-07-01',
-    }, follow_redirects=True)
+    resp = client.post(
+        f'/employees/{emp.id}/deductions/add',
+        data={
+            'deduction_type': 'cost_sharing',
+            'label': 'MoE Batch 2024-07',
+            'amount_mode': 'fixed',
+            'amount': '500',
+            'tracking_mode': 'declining',
+            'total_to_recover': '6000',
+            'start_date': '2026-07-01',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
 
     ded = EmployeeDeduction.query.filter_by(company_id=company.id, employee_id=emp.id).first()
@@ -327,40 +373,52 @@ def test_add_deduction_route(ctx, client, company_user_employee):
 
 def test_stop_deduction_route(ctx, client, company_user_employee):
     """POST to stop_deduction deactivates it."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
 
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='loan', label='Loan',
-        amount_mode='fixed', amount=Decimal('500'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='loan',
+        label='Loan',
+        amount_mode='fixed',
+        amount=Decimal('500'),
         tracking_mode='date_bounded',
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
 
-    resp = client.post(f'/deductions/{ded.id}/stop', data={
-        'reason': 'Paid in full',
-    }, follow_redirects=True)
+    resp = client.post(
+        f'/deductions/{ded.id}/stop',
+        data={
+            'reason': 'Paid in full',
+        },
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
 
-    refreshed = EmployeeDeduction.query.get(ded.id)
+    refreshed = db.session.get(EmployeeDeduction, ded.id)
     assert not refreshed.is_active
     assert refreshed.stopped_reason == 'Paid in full'
 
 
 def test_delete_deduction_route(ctx, client, company_user_employee):
     """POST to delete_deduction removes it (owner only)."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
 
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='other', label='Test',
-        amount_mode='fixed', amount=Decimal('100'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='other',
+        label='Test',
+        amount_mode='fixed',
+        amount=Decimal('100'),
         tracking_mode='date_bounded',
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -368,22 +426,27 @@ def test_delete_deduction_route(ctx, client, company_user_employee):
 
     resp = client.post(f'/deductions/{ded_id}/delete', follow_redirects=True)
     assert resp.status_code == 200
-    assert EmployeeDeduction.query.get(ded_id) is None
+    assert db.session.get(EmployeeDeduction, ded_id) is None
 
 
 # --- Property tests ---
 
+
 def test_warning_message_low_balance(ctx, company_user_employee):
     """Warning message when balance is less than one monthly deduction."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     ded = EmployeeDeduction(
-        company_id=company.id, employee_id=emp.id,
-        deduction_type='cost_sharing', label='Cost Sharing',
-        amount_mode='fixed', amount=Decimal('500'),
+        company_id=company.id,
+        employee_id=emp.id,
+        deduction_type='cost_sharing',
+        label='Cost Sharing',
+        amount_mode='fixed',
+        amount=Decimal('500'),
         tracking_mode='declining',
         total_to_recover=Decimal('6000'),
         remaining_balance=Decimal('300'),  # Less than monthly amount
-        start_date=date.today(), is_active=True,
+        start_date=date.today(),
+        is_active=True,
     )
     db.session.add(ded)
     db.session.commit()
@@ -394,14 +457,18 @@ def test_warning_message_low_balance(ctx, company_user_employee):
 
 def test_type_labels(ctx, company_user_employee):
     """Type labels map correctly."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     for type_key, expected_label in EmployeeDeduction.DEDUCTION_TYPES:
         ded = EmployeeDeduction(
-            company_id=company.id, employee_id=emp.id,
-            deduction_type=type_key, label='Test',
-            amount_mode='fixed', amount=Decimal('100'),
+            company_id=company.id,
+            employee_id=emp.id,
+            deduction_type=type_key,
+            label='Test',
+            amount_mode='fixed',
+            amount=Decimal('100'),
             tracking_mode='date_bounded',
-            start_date=date.today(), is_active=True,
+            start_date=date.today(),
+            is_active=True,
         )
         db.session.add(ded)
         db.session.commit()

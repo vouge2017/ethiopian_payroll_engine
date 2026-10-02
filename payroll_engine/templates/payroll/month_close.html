@@ -1,0 +1,280 @@
+<!-- Month-End Close Workflow — Guided sequence for accountants -->
+{% extends "base.html" %}
+
+{% block title %}Month-End Close — {{ close.period }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Month-End Close</h1>
+      <p class="text-muted mb-0">{{ close.company_name }} — {{ close.period }}</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <div class="progress" style="width: 200px; height: 8px;">
+        <div class="progress-bar {% if close.is_closed %}bg-success{% else %}bg-primary{% endif %}"
+             style="width: {{ close.progress_pct }}%"></div>
+      </div>
+      <span class="badge {% if close.is_closed %}bg-success{% else %}bg-secondary{% endif %}">
+        {{ close.progress_pct }}%
+      </span>
+    </div>
+  </div>
+
+  {% if close.is_closed %}
+  <!-- Period Closed Banner -->
+  <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-lock-fill me-2"></i>
+    <div>
+      <strong>Period {{ close.period }} is closed.</strong>
+      {% if close.closed_at %}
+      Closed on {{ close.closed_at }}.
+      {% endif %}
+      To make corrections, an owner must unlock this period first.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Steps Timeline -->
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <div class="close-timeline">
+        {% for step in close.steps %}
+        <div class="close-step close-step-{{ step.status }} {% if step.is_current %}close-step-current{% endif %}">
+          <!-- Step indicator -->
+          <div class="close-step-indicator">
+            {% if step.status == 'completed' %}
+            <div class="close-step-icon close-step-icon-done">
+              <i class="bi bi-check-lg"></i>
+            </div>
+            {% elif step.status == 'in_progress' %}
+            <div class="close-step-icon close-step-icon-progress">
+              <i class="bi bi-arrow-right"></i>
+            </div>
+            {% elif step.status == 'ready' %}
+            <div class="close-step-icon close-step-icon-ready">
+              {{ step.step_number }}
+            </div>
+            {% elif step.status == 'blocked' %}
+            <div class="close-step-icon close-step-icon-blocked">
+              <i class="bi bi-x-lg"></i>
+            </div>
+            {% else %}
+            <div class="close-step-icon close-step-icon-pending">
+              {{ step.step_number }}
+            </div>
+            {% endif %}
+
+            {% if not loop.last %}
+            <div class="close-step-line {% if step.status == 'completed' %}close-step-line-done{% endif %}"></div>
+            {% endif %}
+          </div>
+
+          <!-- Step content -->
+          <div class="close-step-content">
+            <div class="close-step-header">
+              <h5 class="close-step-title">{{ step.name }}</h5>
+              <span class="close-step-name-am">{{ step.name_am }}</span>
+            </div>
+
+            <p class="close-step-description">{{ step.description }}</p>
+
+            {% if step.detail %}
+            <div class="close-step-detail">
+              <i class="bi bi-info-circle me-1"></i>{{ step.detail }}
+            </div>
+            {% endif %}
+
+            {% if step.blocking_reason %}
+            <div class="close-step-blocking">
+              <i class="bi bi-exclamation-triangle me-1"></i>{{ step.blocking_reason }}
+            </div>
+            {% endif %}
+
+            {% if step.completed_at %}
+            <div class="close-step-completed">
+              <i class="bi bi-check-circle me-1"></i>
+              Completed {{ step.completed_at }}
+            </div>
+            {% endif %}
+
+            {% if step.actions and not close.is_closed %}
+            <div class="close-step-actions">
+              {% for action in step.actions %}
+              {% if action.method == 'POST' %}
+              <form method="POST" action="{{ action.url }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-primary">
+                  {{ action.label }}
+                </button>
+              </form>
+              {% else %}
+              <a href="{{ action.url }}" class="btn btn-sm btn-outline-primary">
+                {{ action.label }}
+              </a>
+              {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if close.blocking_items %}
+  <div class="alert alert-warning mt-4" role="alert">
+    <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Cannot close yet</h6>
+    <p class="mb-1">Complete these steps first:</p>
+    <ul class="mb-0">
+      {% for item in close.blocking_items %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.close-timeline {
+  padding: 24px;
+}
+
+.close-step {
+  display: flex;
+  gap: 16px;
+  position: relative;
+}
+
+.close-step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 40px;
+}
+
+.close-step-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.close-step-icon-done {
+  background: #d4edda;
+  color: #155724;
+}
+
+.close-step-icon-progress {
+  background: #cce5ff;
+  color: #004085;
+  animation: pulse 2s infinite;
+}
+
+.close-step-icon-ready {
+  background: #fff3cd;
+  color: #856404;
+  border: 2px solid #ffc107;
+}
+
+.close-step-icon-blocked {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.close-step-icon-pending {
+  background: #e9ecef;
+  color: #6c757d;
+}
+
+.close-step-line {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: #e9ecef;
+  margin: 4px 0;
+}
+
+.close-step-line-done {
+  background: #28a745;
+}
+
+.close-step-content {
+  flex: 1;
+  padding-bottom: 24px;
+}
+
+.close-step-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.close-step-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-step-name-am {
+  font-size: 13px;
+  color: #888;
+}
+
+.close-step-description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.close-step-detail {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.close-step-blocking {
+  font-size: 13px;
+  color: #856404;
+  background: #fff3cd;
+  padding: 6px 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.close-step-completed {
+  font-size: 13px;
+  color: #155724;
+  margin-bottom: 8px;
+}
+
+.close-step-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.close-step-current .close-step-content {
+  background: #f8f9ff;
+  border-radius: 8px;
+  padding: 16px;
+  margin: -8px;
+  border: 1px solid #e0e8ff;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+</style>
+{% endblock %}

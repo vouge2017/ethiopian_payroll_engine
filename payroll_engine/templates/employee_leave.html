@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}Leave Management - {{ employee.name }}{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="text-decoration-none text-muted me-2">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                Leave Management — {{ employee.name }}
+            </h4>
+            <p class="text-muted mb-0">{{ employee.employee_id }} · {{ employee.department or 'No department' }}</p>
+        </div>
+        <div>
+            <select class="form-select form-select-sm d-inline-block w-auto" onchange="location.href='?year='+this.value">
+                {% for y in range(current_year - 2, current_year + 2) %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Leave Balance Cards -->
+        <div class="col-md-8">
+            <div class="row g-3 mb-4">
+                <!-- Annual Leave -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="text-primary mb-0">Annual Leave</h6>
+                                <span class="badge bg-primary">{{ balances.annual.remaining }} days</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 8px;">
+                                {% set annual_pct = (balances.annual.taken / balances.annual.entitled * 100) if balances.annual.entitled > 0 else 0 %}
+                                <div class="progress-bar bg-primary" style="width: {{ annual_pct }}%"></div>
+                            </div>
+                            <small class="text-muted">
+                                Entitled: {{ balances.annual.entitled }} days
+                                {% if balances.annual.years_of_service is defined %}
+                                ({{ balances.annual.years_of_service }} years of service)
+                                {% endif %}
+                                <br>Taken: {{ balances.annual.taken }} · Remaining: {{ balances.annual.remaining }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sick Leave -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="text-warning mb-0">Sick Leave</h6>
+                                <span class="badge bg-warning text-dark">{{ balances.sick.remaining }} days</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 8px;">
+                                {% set sick_pct = (balances.sick.taken / balances.sick.entitled * 100) if balances.sick.entitled > 0 else 0 %}
+                                <div class="progress-bar bg-warning" style="width: {{ sick_pct }}%"></div>
+                            </div>
+                            <small class="text-muted">
+                                Max: {{ balances.sick.entitled }} days (6 months)
+                                <br>Taken: {{ balances.sick.taken }} · Remaining: {{ balances.sick.remaining }}
+                                {% if balances.sick.taken > 30 %}
+                                <br><span class="text-danger">⚠️ Pay tier: {% if balances.sick.taken <= 90 %}50%{% else %}0%{% endif %}</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maternity/Paternity -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="text-success mb-0">Maternity</h6>
+                                <span class="badge badge-success">{{ balances.maternity.remaining }} days</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 8px;">
+                                {% set mat_pct = (balances.maternity.taken / balances.maternity.entitled * 100) if balances.maternity.entitled > 0 else 0 %}
+                                <div class="progress-bar bg-success" style="width: {{ mat_pct }}%"></div>
+                            </div>
+                            <small class="text-muted">
+                                Entitled: {{ balances.maternity.entitled }} days
+                                <br>Taken: {{ balances.maternity.taken }} · Remaining: {{ balances.maternity.remaining }}
+                            </small>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h6 class="text-info mb-0">Paternity</h6>
+                                <span class="badge badge-info">{{ balances.paternity.remaining }} days</span>
+                            </div>
+                            <small class="text-muted">Entitled: {{ balances.paternity.entitled }} days</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sick Leave Tier Explanation -->
+            {% if balances.sick.taken > 0 %}
+            <div class="alert alert-info mb-4">
+                <h6 class="mb-2"><i class="bi bi-info-circle me-2"></i>Sick Leave Pay Tiers</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Days 1-30:</strong> 100% pay
+                        {% if balances.sick.taken <= 30 %}
+                        <span class="badge badge-success">Current</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Days 31-90:</strong> 50% pay
+                        {% if balances.sick.taken > 30 and balances.sick.taken <= 90 %}
+                        <span class="badge bg-warning text-dark">Current</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Days 91-180:</strong> 0% pay
+                        {% if balances.sick.taken > 90 %}
+                        <span class="badge badge-danger">Current</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-2">
+                    Per Labor Proclamation 1156/2019. Sick leave resets on employment anniversary.
+                </small>
+            </div>
+            {% endif %}
+
+            <!-- Request Leave Form -->
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="mb-0"><i class="bi bi-calendar-plus me-2"></i>Request Leave</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('employees.request_leave', emp_id=employee.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Leave Type *</label>
+                                <select class="form-select" name="leave_type" required>
+                                    <option value="">Select type...</option>
+                                    <option value="annual">Annual Leave</option>
+                                    <option value="sick">Sick Leave</option>
+                                    <option value="maternity">Maternity Leave</option>
+                                    <option value="paternity">Paternity Leave</option>
+                                    <option value="special">Special Leave</option>
+                                    <option value="unpaid">Unpaid Leave</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" name="start_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">End Date *</label>
+                                <input type="date" class="form-control" name="end_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Reason</label>
+                                <input type="text" class="form-control" name="reason" placeholder="Optional">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i>Submit Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Leave History -->
+            <div class="card">
+                <div class="card-header bg-transparent">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Leave History</h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if leaves %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 responsive-card">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Period</th>
+                                    <th>Days</th>
+                                    <th>Status</th>
+                                    <th>Applied</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in leaves %}
+                                <tr>
+                                    <td data-label="Type">
+                                        <span class="badge bg-{% if leave.leave_type == 'annual' %}primary{% elif leave.leave_type == 'sick' %}warning{% elif leave.leave_type == 'maternity' %}success{% else %}secondary{% endif %}">
+                                            {{ leave.leave_type|title }}
+                                        </span>
+                                    </td>
+                                    <td data-label="Period">{{ eth_date(leave.start_date) }} - {{ eth_date(leave.end_date) }}</td>
+                                    <td data-label="Days">{{ leave.days_requested }}</td>
+                                    <td data-label="Status">
+                                        {% if leave.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif leave.status == 'approved' %}
+                                        <span class="badge badge-success">Approved</span>
+                                        {% elif leave.status == 'rejected' %}
+                                        <span class="badge badge-danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td data-label="Applied">{{ eth_date(leave.applied_at) }}</td>
+                                    <td data-label="Action">
+                                        {% if leave.status == 'pending' %}
+                                        <form method="POST" action="{{ url_for('employees.approve_leave', leave_id=leave.id) }}" style="display:inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Approve">
+                                                <i class="bi bi-check"></i>
+                                            </button>
+                                        </form>
+                                        <button class="btn btn-sm btn-outline-danger" title="Reject"
+                                                onclick="document.getElementById('reject-{{ leave.id }}').style.display='block'">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                        <form method="POST" action="{{ url_for('employees.reject_leave', leave_id=leave.id) }}" style="display:none" id="reject-{{ leave.id }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="text" name="reason" placeholder="Reason for rejection" required class="form-control form-control-sm d-inline-block w-auto">
+                                            <button type="submit" class="btn btn-sm btn-danger" data-confirm="Reject this leave request?">Reject</button>
+                                        </form>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
+                        No leave requests yet.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Legal Reference -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-transparent">
+                    <h6 class="mb-0"><i class="bi bi-book me-2"></i>Legal Reference</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Annual Leave</h6>
+                    <ul class="small text-muted mb-3">
+                        <li>14 days for first year</li>
+                        <li>+1 day per additional year</li>
+                        <li>Maximum: 30 days</li>
+                    </ul>
+
+                    <h6 class="text-warning">Sick Leave</h6>
+                    <ul class="small text-muted mb-3">
+                        <li>Max 6 months in 12-month period</li>
+                        <li>Days 1-30: 100% pay</li>
+                        <li>Days 31-90: 50% pay</li>
+                        <li>Days 91-180: 0% pay</li>
+                    </ul>
+
+                    <h6 class="text-success">Maternity Leave</h6>
+                    <ul class="small text-muted mb-3">
+                        <li>120 days total</li>
+                        <li>30 days prenatal</li>
+                        <li>90 days postnatal</li>
+                        <li>100% pay</li>
+                    </ul>
+
+                    <h6 class="text-info">Paternity Leave</h6>
+                    <ul class="small text-muted mb-3">
+                        <li>3 working days</li>
+                        <li>100% pay</li>
+                    </ul>
+
+                    <h6 class="text-secondary">Special Leave</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>3 days for marriage</li>
+                        <li>3 days for death of spouse/child</li>
+                        <li>100% pay</li>
+                    </ul>
+
+                    <hr>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Per Labor Proclamation No. 1156/2019
+                    </small>
+                </div>
+            </div>
+
+            <!-- Company Policy Override -->
+            <div class="card">
+                <div class="card-header bg-transparent">
+                    <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Company Policy</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        Companies can offer <strong>more</strong> than statutory minimums but cannot offer less.
+                    </p>
+                    <p class="text-muted small mb-0">
+                        To set company-specific leave policies, contact your system administrator.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

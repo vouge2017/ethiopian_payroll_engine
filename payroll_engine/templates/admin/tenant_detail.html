@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Manage {{ company.name }} - Platform Admin Control Plane{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800"><i class="bi bi-building me-2 text-primary"></i>{{ company.name }}</h1>
+            <p class="text-muted small mb-0">TIN: {{ company.tin or 'N/A' }} | Company ID: #{{ company.id }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.tenants') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left me-1"></i> Back to Tenants</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Company Metadata & Controls -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white py-3 fw-bold">
+                    <i class="bi bi-info-circle me-2 text-primary"></i>Company Account Status
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="text-muted small d-block">Billing Status</label>
+                        <span class="badge bg-{% if company.billing_status == 'active' %}success{% elif company.billing_status == 'suspended' %}danger{% else %}warning{% endif %} fs-6">
+                            {{ company.billing_status or 'active' }}
+                        </span>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('admin.toggle_tenant_status', company_id=company.id) }}" class="mb-4">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <label class="form-label small fw-semibold">Change Account Status</label>
+                        <div class="input-group">
+                            <select name="status" class="form-select">
+                                <option value="active" {% if company.billing_status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="suspended" {% if company.billing_status == 'suspended' %}selected{% endif %}>Suspended</option>
+                                <option value="trial" {% if company.billing_status == 'trial' %}selected{% endif %}>Trial</option>
+                            </select>
+                            <button type="submit" class="btn btn-warning">Update</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Associated Users & Impersonation Trigger -->
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white py-3 fw-bold">
+                    <i class="bi bi-people me-2 text-primary"></i>Associated Users
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for link in user_links %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <div class="fw-semibold">{{ link.user.email }}</div>
+                                <div class="small text-muted">Role: <span class="badge bg-secondary">{{ link.role }}</span></div>
+                            </div>
+                            <form method="POST" action="{{ url_for('admin.impersonate_start') }}" onsubmit="return confirm('Start Support Assist mode as this user?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="target_user_id" value="{{ link.user_id }}">
+                                <input type="hidden" name="target_company_id" value="{{ company.id }}">
+                                <input type="hidden" name="reason" value="Platform Admin support investigation for Company #{{ company.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-person-bounding-box me-1"></i> Assist
+                                </button>
+                            </form>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-center py-3 text-muted">No associated users.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white py-3 fw-bold">
+                    <i class="bi bi-calculator me-2 text-success"></i>Recent Payroll Runs
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Status</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for run in payroll_runs %}
+                                <tr>
+                                    <td class="fw-semibold">{{ run.period }}</td>
+                                    <td><span class="badge bg-primary">{{ run.status }}</span></td>
+                                    <td class="small text-muted">{{ run.created_at.strftime('%Y-%m-%d %H:%M') if run.created_at else 'N/A' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">No payroll runs recorded for this company.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

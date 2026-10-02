@@ -1,0 +1,291 @@
+<!-- Payroll Review Workspace — Trust Architecture -->
+<!-- Combines: Story → Evidence → Issues → Resolution → Approval -->
+
+{% extends "base.html" %}
+{% block title %}Payroll Review — {{ run.period or run.run_date }}{% endblock %}
+
+{% block content %}
+<div class="p-4 p-md-5">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="fw-bold mb-1">Payroll Review</h2>
+      <p class="text-muted mb-0">{{ run.period or run.run_date }} · {{ run.reference or 'Run #' + run.id|string }}</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      {% if can_approve %}
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+          <i class="bi bi-check-circle me-1"></i> Ready for Approval
+        </span>
+      {% else %}
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
+          <i class="bi bi-x-circle me-1"></i> Issues Must Be Resolved
+        </span>
+      {% endif %}
+      <a href="/payroll/runs/{{ run.id }}" class="btn btn-sm btn-ghost">View Details <i class="bi bi-arrow-right"></i></a>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 1: STORY — What happened? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  {% if component_errors and component_errors.change_summary %}
+    {% set component_name = 'Change Summary' %}
+    {% set error_message = component_errors.change_summary %}
+    {% include '_component_error.html' with context %}
+  {% else %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>What Happened</h5>
+      <p class="text-body">{{ narrative }}</p>
+
+      {% if change_summary and change_summary.changes %}
+      <div class="row g-3 mt-2">
+        {% if change_summary.new_hires %}
+        <div class="col-6 col-md">
+          <div class="text-center p-3 rounded-3" style="background: var(--color-success-light);">
+            <div class="fs-3 fw-bold text-success">+{{ change_summary.new_hires|length }}</div>
+            <small class="text-success">New Hires</small>
+          </div>
+        </div>
+        {% endif %}
+        {% if change_summary.departures %}
+        <div class="col-6 col-md">
+          <div class="text-center p-3 rounded-3" style="background: var(--color-danger-light);">
+            <div class="fs-3 fw-bold text-danger">-{{ change_summary.departures|length }}</div>
+            <small class="text-danger">Departures</small>
+          </div>
+        </div>
+        {% endif %}
+        {% if change_summary.salary_changes %}
+        <div class="col-6 col-md">
+          <div class="text-center p-3 rounded-3" style="background: var(--color-warning-light);">
+            <div class="fs-3 fw-bold text-warning">{{ change_summary.salary_changes|length }}</div>
+            <small class="text-warning">Salary Changes</small>
+          </div>
+        </div>
+        {% endif %}
+        {% if change_summary.overtime_entries %}
+        <div class="col-6 col-md">
+          <div class="text-center p-3 rounded-3" style="background: var(--color-info-light);">
+            <div class="fs-3 fw-bold text-primary">{{ change_summary.overtime_entries|length }}</div>
+            <small class="text-primary">Overtime</small>
+          </div>
+        </div>
+        {% endif %}
+        {% if change_summary.adjustments %}
+        <div class="col-6 col-md">
+          <div class="text-center p-3 rounded-3" style="background: #f3e8ff;">
+            <div class="fs-3 fw-bold" style="color: #8b5cf6;">{{ change_summary.adjustments|length }}</div>
+            <small style="color: #8b5cf6;">Adjustments</small>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 2: EVIDENCE — Why should I trust this? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  {% if component_errors and component_errors.evidence %}
+    {% set component_name = 'Trust Evidence' %}
+    {% set error_message = component_errors.evidence %}
+    {% include '_component_error.html' with context %}
+  {% elif evidence %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="fw-semibold mb-3">
+        <i class="bi bi-shield-check text-success me-2"></i>Trust Evidence
+        <small class="text-muted fw-normal">({{ evidence.passed|length }}/{{ evidence.total }} passed)</small>
+      </h5>
+
+      <div class="d-flex flex-column gap-1">
+        {% for signal in evidence.signals %}
+        <div class="d-flex align-items-start gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+          {% if signal.status == 'pass' %}
+            <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
+          {% elif signal.status == 'fail' %}
+            <i class="bi bi-x-circle-fill text-danger mt-1 flex-shrink-0"></i>
+          {% else %}
+            <i class="bi bi-exclamation-triangle-fill text-warning mt-1 flex-shrink-0"></i>
+          {% endif %}
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold small">{{ signal.name }}</div>
+            <div class="text-muted small">{{ signal.explanation }}</div>
+            {% if signal.detail %}
+              <div class="text-muted small opacity-75">{{ signal.detail }}</div>
+            {% endif %}
+            {% if signal.source %}
+              <div class="text-primary small">Source: {{ signal.source }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 3: ISSUES — Anything wrong? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  {% if component_errors and component_errors.exceptions %}
+    {% set component_name = 'Issues & Exceptions' %}
+    {% set error_message = component_errors.exceptions %}
+    {% include '_component_error.html' with context %}
+  {% elif sorted_issues %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="fw-semibold mb-3">
+        <i class="bi bi-exclamation-triangle text-danger me-2"></i>Issues
+        <small class="text-muted fw-normal">
+          ({{ exceptions.critical|length }} critical, {{ exceptions.high|length }} high, {{ exceptions.medium|length }} medium, {{ exceptions.low|length }} low)
+        </small>
+      </h5>
+
+      <div class="d-flex flex-column gap-3">
+        {% for issue in sorted_issues %}
+        <div class="card border
+          {% if issue.severity == 'critical' %}border-danger
+          {% elif issue.severity == 'high' %}border-warning
+          {% elif issue.severity == 'medium' %}border-warning-subtle
+          {% else %}border-secondary-subtle{% endif %}">
+          <div class="card-body p-3">
+
+            <!-- Header -->
+            <div class="d-flex align-items-start justify-content-between">
+              <div>
+                <span class="badge
+                  {% if issue.severity == 'critical' %}bg-danger
+                  {% elif issue.severity == 'high' %}bg-warning text-dark
+                  {% elif issue.severity == 'medium' %}bg-warning-subtle text-dark
+                  {% else %}bg-secondary{% endif %}">
+                  {{ issue.severity|upper }}
+                </span>
+                <span class="fw-semibold ms-2">{{ issue.title }}</span>
+                {% if issue.employee_name %}
+                  <span class="text-muted ms-2">— {{ issue.employee_name }}</span>
+                {% endif %}
+              </div>
+              {% if issue.estimated_time %}
+                <small class="text-muted flex-shrink-0"><i class="bi bi-clock me-1"></i>{{ issue.estimated_time }}</small>
+              {% endif %}
+            </div>
+
+            <!-- Description -->
+            <p class="text-muted small mt-2 mb-0">{{ issue.description }}</p>
+
+            <!-- Resolution -->
+            {% if issue.impact or issue.cause or issue.recommendation %}
+            <div class="mt-2 small">
+              {% if issue.impact %}
+              <div class="d-flex gap-2 mb-1">
+                <span class="text-muted fw-semibold" style="width:60px">Impact</span>
+                <span>{{ issue.impact }}</span>
+              </div>
+              {% endif %}
+              {% if issue.cause %}
+              <div class="d-flex gap-2 mb-1">
+                <span class="text-muted fw-semibold" style="width:60px">Cause</span>
+                <span>{{ issue.cause }}</span>
+              </div>
+              {% endif %}
+              {% if issue.recommendation %}
+              <div class="d-flex gap-2 mb-1">
+                <span class="text-muted fw-semibold" style="width:60px">Fix</span>
+                <span>{{ issue.recommendation }}</span>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Action button -->
+            {% if issue.action_url %}
+            <div class="mt-2">
+              <a href="{{ issue.action_url }}" class="btn btn-sm
+                {% if issue.severity == 'critical' %}btn-danger
+                {% elif issue.severity == 'high' %}btn-warning
+                {% else %}btn-secondary{% endif %}">
+                Fix This <i class="bi bi-arrow-right"></i>
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card mb-4 border-success">
+    <div class="card-body text-center py-4">
+      <i class="bi bi-check-circle-fill text-success fs-3"></i>
+      <p class="fw-semibold text-success mt-2 mb-0">No issues detected</p>
+      <p class="text-muted small">All checks passed. Ready for approval.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 4: APPROVAL — Ready? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  {% if component_errors and component_errors.exceptions %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-purple me-2"></i>Approval</h5>
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="text-warning fw-semibold small mb-1">Cannot verify payroll safety — exception checks failed.</p>
+          <p class="text-muted small mb-0">Review payroll manually before approving.</p>
+        </div>
+        <button disabled class="btn btn-secondary btn-lg" disabled>Approve Payroll</button>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-primary me-2"></i>Approval</h5>
+
+      {% if can_approve %}
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="small mb-1">All checks passed. This payroll is ready for approval.</p>
+          <p class="text-muted small mb-0">Once approved, payslips will be finalized and the bank file can be generated.</p>
+        </div>
+        <form method="POST" action="/payroll/runs/{{ run.id }}/approve">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-success btn-lg">
+            <i class="bi bi-check-circle me-1"></i> Approve Payroll
+          </button>
+        </form>
+      </div>
+      {% else %}
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <p class="text-danger fw-semibold small mb-1">Cannot approve — {{ exceptions.blocking_issues|length }} blocking issue(s).</p>
+          <p class="text-muted small mb-0">Resolve the critical issues above before approving.</p>
+        </div>
+        <button disabled class="btn btn-secondary btn-lg" disabled>Approve Payroll</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Navigation -->
+  <div class="d-flex justify-content-between text-muted small">
+    <a href="/payroll/runs" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>All Payroll Runs</a>
+    <a href="/payroll/runs/{{ run.id }}" class="text-decoration-none">View Details <i class="bi bi-arrow-right"></i></a>
+  </div>
+
+</div>
+{% endblock %}

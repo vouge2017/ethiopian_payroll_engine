@@ -11,13 +11,12 @@ Usage:
     python3 verify_status.py --fix-tracker # auto-update PROGRESS_TRACKER.md
 """
 
-import os
+import json
 import re
 import subprocess
 import sys
-import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent
 ENGINE_DIR = REPO_ROOT / "payroll_engine"
@@ -47,20 +46,38 @@ def run_pytest():
         )
         output = result.stdout + result.stderr
 
-        # Parse summary line: "X passed, Y failed, Z errors"
-        summary_match = re.search(
-            r'(\d+) passed.*?(\d+) failed.*?(\d+)',
-            output
-        )
-        passed_match = re.search(r'(\d+) passed', output)
-        failed_match = re.search(r'(\d+) failed', output)
-        error_match = re.search(r'(\d+) error', output)
-        collected_match = re.search(r'collected (\d+) items', output)
+        # Parse the FINAL summary line.
+        # pytest -q can produce intermediate summary lines, so find the last
+        # line matching 'X passed ... in Ns' and extract counts from it.
+        summary_lines = [line for line in output.split('\n') if re.search(r'in \d+\.\d+s', line)]
+        last_line = summary_lines[-1] if summary_lines else ''
 
-        passed = int(passed_match.group(1)) if passed_match else 0
-        failed = int(failed_match.group(1)) if failed_match else 0
-        errors = int(error_match.group(1)) if error_match else 0
-        collected = int(collected_match.group(1)) if collected_match else 0
+        if last_line:
+            passed_m = re.search(r'(\d+) passed', last_line)
+            failed_m = re.search(r'(\d+) failed', last_line)
+            errors_m = re.search(r'(\d+) error(?:s)?', last_line)
+            skipped_m = re.search(r'(\d+) skipped', last_line)
+            passed = int(passed_m.group(1)) if passed_m else 0
+            failed = int(failed_m.group(1)) if failed_m else 0
+            errors = int(errors_m.group(1)) if errors_m else 0
+            skipped = int(skipped_m.group(1)) if skipped_m else 0
+        else:
+            # Fallback: last occurrence of each count
+            all_passed = re.findall(r'(\d+) passed', output)
+            all_failed = re.findall(r'(\d+) failed', output)
+            all_errors = re.findall(r'(\d+) error(?:s)?', output)
+            all_skipped = re.findall(r'(\d+) skipped', output)
+            passed = int(all_passed[-1]) if all_passed else 0
+            failed = int(all_failed[-1]) if all_failed else 0
+            errors = int(all_errors[-1]) if all_errors else 0
+            skipped = int(all_skipped[-1]) if all_skipped else 0
+
+        collected_match = re.search(r'collected (\d+) items', output)
+        collected = int(collected_match.group(1)) if collected_match else (passed + failed + errors + skipped)
+
+        # If collected is 0 but we have results, fix it
+        if collected == 0 and (passed + failed + errors + skipped) > 0:
+            collected = passed + failed + errors + skipped
 
         # Get failed test names
         failed_tests = []
@@ -75,6 +92,7 @@ def run_pytest():
             'passed': passed,
             'failed': failed,
             'errors': errors,
+            'skipped': skipped,
             'total': collected,
             'failed_tests': failed_tests,
             'raw_output': output[-2000:],  # last 2000 chars
@@ -234,7 +252,7 @@ def run_all_checks():
     # Payroll reference number
     models_content = (REPO_ROOT / 'payroll_engine' / 'models.py').read_text(encoding='utf-8')
     report['features']['payroll_reference'] = {
-        'exists': 'reference' in models_content.lower() and 'PR-' in models_content or 'generate_reference' in models_content,
+        'exists': ('reference' in models_content.lower() and 'PR-' in models_content) or 'generate_reference' in models_content,
         'detail': 'PayrollRun has human-readable reference (PR-YYYY-MM-NNN)'
     }
 
@@ -261,7 +279,7 @@ def print_report(report):
 
     # File counts
     f = report['files']
-    print(f"\n📁 FILES")
+    print("\n📁 FILES")
     print(f"   Engine .py files:  {f['engine_py_count']}")
     print(f"   Test files:        {f['test_file_count']} ({f['test_total_lines']} lines)")
 
@@ -277,12 +295,12 @@ def print_report(report):
         print(f"   Failed:    {p.get('failed', '?')}")
         print(f"   Errors:    {p.get('errors', '?')}")
         if p.get('failed_tests'):
-            print(f"\n   Failed tests:")
+            print("\n   Failed tests:")
             for t in p['failed_tests']:
                 print(f"   ❌ {t}")
 
     # Features
-    print(f"\n🔍 FEATURE VERIFICATION")
+    print("\n🔍 FEATURE VERIFICATION")
     features = report.get('features', {})
     for name, data in features.items():
         if isinstance(data, list):
@@ -305,7 +323,7 @@ def print_report(report):
             icon = "✅" if exists else "❌"
             detail = data.get('detail', '')
             extra = ""
-            if 'files' in data and data['files']:
+            if data.get('files'):
                 extra = f" [{', '.join(data['files'])}]"
             elif 'missing_patterns' in data:
                 extra = f" (missing: {', '.join(data['missing_patterns'])})"
@@ -316,7 +334,7 @@ def print_report(report):
     if t.get('exists'):
         print(f"\n📄 PROGRESS_TRACKER.md: exists ({t['lines']} lines)")
     else:
-        print(f"\n📄 PROGRESS_TRACKER.md: MISSING")
+        print("\n📄 PROGRESS_TRACKER.md: MISSING")
 
     print("\n" + "=" * 70)
 

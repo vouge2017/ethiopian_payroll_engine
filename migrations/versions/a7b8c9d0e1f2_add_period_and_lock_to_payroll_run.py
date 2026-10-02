@@ -11,8 +11,8 @@ Changes:
 - Add partial unique index: one active run per company+period
 - Add locked_at and locked_by columns for terminal lock state
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'a7b8c9d0e1f2'
 down_revision = 'f6a7b8c9d0e1'
@@ -27,9 +27,9 @@ def upgrade():
 
     # Step 2: Backfill existing runs using Ethiopian calendar
     # We need to do this in Python because the conversion is complex
-    import sys, os
+    import os
+    import sys
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-    from datetime import date
     from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
 
     conn = op.get_bind()

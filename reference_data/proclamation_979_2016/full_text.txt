@@ -1,0 +1,4189 @@
+Table of Contents  
+PART ONE GENERAL 
+13  
+1. Short Title 
+13  
+2. Definitions 
+13  
+3. Categories of Taxpaver 
+18  
+4. Permanent Establishment 
+19  
+5. Residence 
+20  
+6. Source of Income 
+22  
+7. Scope of Application 
+23  
+8. Schedules of Income 
+24  
+9. Obligation to Pav Income Tax 
+24  
+PART TWO SCHEDULE 'A' - INCOME FROM EMPLOYMENT 
+24  
+10. Imposition of Employment Income Tax 
+24  
+11. Employment Income Tax Rates 
+25  
+12. Employment Income 
+25  
+PART THREE SCHEDULE 'B' INCOME FROM RENTAL OF BUILDINGS 
+26  
+13. Imposition of Rental Income Tax 
+26  
+14. Renta. Income Tax Rates 
+27  
+15. Taxable Rental Income 
+27  
+16. Sub-leases 
+29  
+17. New Rental Building Notification 
+29  
+PART FOUR SCHEDULE 'C' INCOME FROM BUSINESS 
+30  
+CHAPTER ONE IMPOSITION OF BUSINESSES INCOME TAX 
+30  
+18. Imposition of Business Income Tax 
+30  
+19. Business Income Tax Rates 
+30  
+20. Taxable Business Income 
+31  
+21. Business Income 
+32  
+22. Deductible Expenditures 
+32  
+23. Interest Expenditure 
+33  
+24. Charitable Donations 
+34  
+25. Depreciation of Depreciable Assets and Business Intangibles 
+35  
+26, Loss carry forward 
+37  
+27. Non-deductible Expenditures and Losses 
+38  
+CHAPTER TWO TAX ACCOUNTING 
+39  
+28. Accounting Year 
+39  
+29. Change in Tax Accounting Method 
+40  
+30. Bad Debts 
+41  
+31. Financial Institutions and Insurance Companies 
+41  
+32. Long-term Contracts 
+42  
+33. Simplified Tax System for Category 'H' Taxpayers 
+43  
+CHAPTER THREE BODIES 
+43  
+34. Change in Control of a Bodv 
+43  
+35. Corporate Reorganizalions 
+44  
+CHAPTER FOUR MINING AND PETROLEUM OPERATIONS 
+45  
+36. Chanter Four Definitions 
+45  
+37. Taxation of Licensees and Contractors 
+48  
+38. Limitation of Deductions Relating to Mining or PetroleumOperations 
+49  
+39. Exploration Expenditure 
+50  
+40. Development Expenditure 
+50  
+41. Rehabilitation Expenditure 
+52  
+42, Deduction allowed for reinvestment 
+53  
+43. Farm-ouls 
+53  
+44. Indirect Transfers of Mining or Petroleum Rigbts 
+54  
+CHAPTER FIVE INTERNATlONAL TAX 
+55  
+45. Foreign Tax Credit for Foreign Business Income 
+55  
+46. Foreign Business Losses 
+57  
+47. Thin Capitalization 
+58  
+48. Tax Treaties 
+60  
+CHAPTER SIX PRESUMPTIVE BUSINESS TAXES 
+61  
+49. Taxation of Categorv 'e' Taxpayers 
+61  
+50. Taxation of Inlernational Air Transporlation Business ofNon-residents 
+62  
+PART FIVE SCHEDULE 'D' OTHER INCOME 
+62  
+51. Income of Non-residents 
+62  
+52. Taxation of Recharged Technical Fees and Rovalties 
+63  
+53. Taxation of Non-resident Entertainers 
+64  
+54. Rovallies 
+64  
+55. Dividends 
+64  
+56. Ipterest 
+65  
+57. Income from Games of Chance 
+65  
+58. Income from Casual Rentals 
+66  
+59. Gains on Disposal of Certain Investment Asset 
+66  
+60. Windfall Profil 
+67  
+61. Undistributed profit 
+68  
+62. Repatriated Profit 
+68  
+63. Other Income 
+68  
+64. General Provisions Relating to Schedule 'D' Income 
+68  
+PART SIX SCHEDULE 'E' - EXEMPT INCOME 
+69  
+65. Exempt Income 
+69  
+PART SEVEN COMMON PROVISIONS 
+72  
+CHAPTER ONE ASSETS 
+72  
+66. ACquisition of an Asset 
+72  
+67. Disposal of an Asset 
+72  
+68. Cost of an Asset 
+73  
+69. Net Book Value of a BlL'iiness Asset 
+75  
+70. Consideration for the Disposal of an Asset 
+75  
+71. Deferral of Recognition of Gain or Loss 
+76  
+72. Registration of Transferred Assets 
+78  
+CHAPTER TWO OTHER COMMON RULES 
+78  
+73. Recovered Expenditure 
+78  
+74. Cessation of Income Earning Activitv 
+78  
+75. Amounts in Kind 
+79  
+76. Apportionment of Expenditures 
+79  
+77. Currency Translalion 
+80  
+PART EIGHT ANTI-TAX AVOIDANCE 
+80  
+78. Income Splilting 
+80  
+79. Transfer Pricing 
+81  
+80. Tax A voidance Schemes 
+82  
+PART NINE ADMINISTRATIVE AND PROCEDURAL RULES 
+83  
+81. Application of Tax Administration Proclamation 
+83  
+82. Record-keeping 
+83  
+83. Tax Declarations 
+86  
+84. Payment of Tax 
+87  
+85. Advance Pavment of Tax in Relation to Imports 
+87  
+86. Installment of Tax 
+88  
+87. Collection of International Air Transportation Income Tax 
+89  
+PART TEN WITHHOLDING TAX 
+89  
+88. Wilhholding of Tax from Emplovment Income 
+89  
+89. Wilhholding of Tax from Payment.;; to Non-residents 
+90  
+90. Wilhholding of Tax from Dividends. Undistributed profit.repatriated profit, 
+91
+Interest, and Rovalties 
+91. Wilhholding of Tax from Games of Chance Income 
+91  
+92. Wilhholding of Tax from Domestic Payments 
+91  
+93. Self-withholding 
+92  
+94. No Withholding from Exempt Income 
+93  
+95. Time of Pavment of Withholding Income 
+93  
+96. Withholding Tax Receipt 
+93  
+97. Payment of Withholding Tax 
+94  
+98. Credit for Withholding Tax 
+94  
+PART ELEVEN MISCELLANEOUS PROVISIONS 
+95  
+99. Power to Issue Regulations and Directives 
+95  
+100. Repealed and Inapplicable Laws 
+95  
+101. Transitional Provisions 
+96  
+102. Effective Date 
+97  
+FEDERAL INCOME TAX  
+PROCLAMA TION  
+2016 
+FEDERAL NEGARIT GAZETTE EXTRA  
+ORDINARY ISSUE  
+Proclamation No. 979/2016.  
+4..
+lrlA  ;J	 ;JtLllJ 
+FEDERAL NEGARIT GAZETTE 
+or THE FEDERAL DEMOCR,.\TIC REPUBLIC OF ETIllOPlA 
+2200 Year No. 104 
+ADDIS ABABA lSlh August, 2016 
+tlh..'l-i"A,'.r ãf.t·I\(C .I;.'r1ht·n.rl! 6T·ntl.h 
+(,,),,'-0 '/'(0111":-'" 
+Content 
+Proclamation No. 97912016 
+1. 
+1 
+Categories of Taxpayer ..... 
+Pemlanent Establishment .. 
+.. 6 
+. . 7 
+. . 9
+Residence ............ . 
+Source of lncome ..... . 
+Scope of Application ............... . 
+10 
+. ......... 12 
+Contents 
+Page No. 
+FEDERAL INCOME TAX PROCLAMA nON  
+PART ONE  
+GENERAL  
+Short Title 
+..............................................................................  
+2. 
+Definitions .................. .  
+3. 
+4. 
+S. 
+6. 
+7. 
+8. 
+Schedules of Income ..... 
+. ......... 12  
+9. 
+Obligation to Pay Income Tax ................ . 
+. .................. .. 12  
+PART TWO 
+SCHEDULE 'A' INCOME FROM EMPLOYMENT 
+10. Imposition of Employment Income Tax 
+12
+.............................  
+11. Employment Income Tax Rates 
+13
+...........................................  
+12. Employntcnt Income 
+14
+............ H ...............................................  
+PART THREE 
+SCHEDULE 'B' - INCOME FROM RENTAL OF 
+BUILDINGS 
+13. Imposition of Rental Income Tax 
+14
+........................................  
+14. Rental Income Tax Rates .... H ............................................... 15  
+15. Taxable Rcntallncomc 
+......................................................... 15  
+16. Sub-leases.... .......................... H .... ............................ .... ........... 17  
+17. New Rental Building Notification 
+18
+........................................  
+PART FOUR 
+SCHEDULE 'C' -INCOME FROM BUSINESS 
+CHAPTER ONE 
+IMPOSITION OF BUSINESS INCOME TAX 
+18. Imposition of Business Income Tax 
+..................................... 18  
+19. Business Income Tax Ratcs.H ............................................... 18  
+20. Taxable business Income 
+19
+......................................................  
+21. Business lnconlc 
+20
+....................................................................  
+22. Deductible Expenditures 
+21
+......................................................  
+23. Interest Expenditure 
+21
+.............................................................  
+24. Charitable Donations 
+22
+............................................................  
+25. Depreciation of Depreciable Assets and Business 
+Intangibles 
+23
+.............................................................................  
+26. Loss carry forward ............................................................... 25  
+27. Non-deductible Expenditures and Losses 
+26
+...........................  
+CHAPTER TWO 
+TAX ACCOUNTING 
+28. Accounting Year .................. M ............................................... 28  
+29. Change in Tax Accounting Method 
+..................................... 29  
+30. Bad Debts ..............................•............................................... 29  
+31. Financial Institutions and Insurance Companies 
+30
+..............  
+32. Long-tenn Contracts 
+30
+............................................................  
+33. Simplified Tax System for Category 'B' Taxpayers 
+31
+..........  
+CHAPTER THREE 
+BODIES 
+34. Change in Control of a Body 
+................................................ 32  
+35. Corporate Reorganisations .M ............
+32 
+...................................  
+CHAPTER FOUR 
+MINING AND PETROLEUM OPERA nONS 
+36. Chapter Four Definitions .... M ............................................... 34  
+37. Taxation of Licensces and Contractors 
+............................... 37  
+38. Limitation of Deductions Relating to Mining or 
+Pctrolcum Operations 
+........................................................... 37  
+39. Exploration Expenditurc 
+...................................................... 38  
+40. Developmcnt Expenditure 
+38
+.................................................... 
+41. Rehabilitation Expcnditure 
+.................................................. 40  
+42. Deduction allowed for reinvestmcnt.................................... 41  
+43. Farm·outs .............................................................................. 42  
+44. Indirect Transfers of Mining or Pctrolcum Rights 
+43
+............ 
+CHAPTER FIVE 
+INTERNATIONAL TAX 
+45. Foreign Tax Credit for Forcign Business Income 
+.............. 43  
+46. Foreign Busincss Losses ....................................................... 45  
+47. Thin Capitalisation 
+46
+............................................................... 
+48. Tax Treaties 
+49
+.................................................................... ....... 
+CHAPTER SIX 
+PRESUMPTIVE BUSINESS TAXES 
+49. Taxation of Catcgory 'c' Taxpayers................................... 50  
+50. Taxation of International Air Transportation 
+Business of Non·residents 
+..................................................... 50  
+PART FIVE 
+SCHEDULE 'D' -OTHER INCOME 
+51. Income of Non·residcnts 
+51
+....................................................... 
+52. Taxation of Recharged Technical Fees and Royalties ....... 51  
+53. Taxation of Non·resident Entcrtaincrs 
+52
+............................... 
+54. Royalties................................................................................. 53  
+55. Dividends .............................. M ............................................... 53  
+56. Interest 
+53
+................................................................................... 
+57. Income from Games of Chance ........................................... 54  
+58. Income from Casual Rentals 
+................................................ 54  
+59. Gains on Disposal of Certain Investment Asset 
+54
+.................  
+60. Windfall Profit  
+56
+....... ................................ ...............................  
+61. Undistributed protit 
+...... 
+56
+....... H ...............................................  
+62. Repatriated Protit 
+................ _  
+56 
+...............................................  
+63. Other Income  
+57
+.........................................................................  
+64. General Provisions Relating to Schedule '0' Income 
+57
+........  
+PART SIX 
+SCHEDULE 'E' - EXEMPT INCOME 
+65. Exempt Income . 
+58 
+....................................................................  
+PART SEVEN 
+COMMON PROVISIONS 
+CHAPTER ONE 
+ASSETS 
+66. Acquisition of an Asset  
+61 
+.........................................................  
+67. Disposal of an Asset  
+61 
+..............................................................  
+68. Cost of an Asset  
+61 
+...... ................................ ...............................  
+69. Net Book Value of a Business Asset..  
+63 
+...................................  
+70. Consideration for the Disposal of an Asset. ........................ 64  
+71. Deferral of Recognition of Gain or Loss ............................. 65  
+72.  Registration of Transferred Assets ...................................... 67  
+CHAPTER TWO  
+OTHER COMMON RULES 
+73. Recovered Expenditure  
+67 
+........................................................  
+74. Cessation of Income Earning Activity 
+................................. 67  
+75. Amounts in Kind .................. _ ............................................... 68  
+76. Apportionment of Expenditures  
+68
+..........................................  
+77. Currency Translation  
+. 68 
+.......................................................... 
+PART EIGHT 
+ANTI-TAX AVOIDANCE 
+78.  Income Splitting 
+69
+....................................................................  
+79.  Transfer Pricing .................................................................... 70  
+80.  Tax Avoidance Schemes ....................................................... 71  
+PART NINE 
+ADMINISTRATIVE AND PROCEDURAL RULES 
+81.  Application of Tax Administration Proclamation 
+72
+.............  
+82.  Record-keeping 
+72
+.....................................................................  
+83.  Tax Declarations ................................................................... 74  
+84.  PayoleDt of Tax ..
+.
+75
+................................ ...............................
+...  
+85.  Advance Payment of Tax in Relation to Imports 
+76
+...............  
+86.  Instalment of Tax 
+76
+................. H ...............................................  
+87.  Collection of International Air Transportation Income 
+Tax  
+77
+..........................................................................................  
+PART TEN 
+WITHHOLDING TAX 
+88. Withholding of Tax from Employment Income ................. 78  
+89.  Withholding of Tax from Payments to Non-residents 
+79
+.......  
+90.  Withholding of Tax from Dividends, Undistributed profit, 
+......................... 
+repatriated profit, Interest, and Royalties 
+79 
+91.  Withholding of Tax from Games of Chance Income 
+80
+.........  
+92.  Withholding of Tax from Domestic Payments 
+80
+...................  
+93.  Self-withholding ..................... ... .............................. .. ............ 81  
+94.  No Withholding from Exempt Income 
+82
+................................  
+95.  Time of Payment of Withholding Income 
+82
+.... .......................  
+96.  Withholding Tax Receipt ...." ............................................... 82  
+97.  Payment of Withholding Tax 
+82
+...............................................  
+98.  Credit for Withholding Tax 
+83
+.................................................  
+PART ELEVEN 
+MISCELLANEOUS PROVISIONS 
+99. Power to Issue Regulations and Directives 
+84 
+.........................  
+100. Repealed and Inapplicable Laws 
+84 
+.........................................  
+101. Transitional Provisions 
+........" ............................................... 84  
+102. Effective Date ........................................................................ 85  
+Proclamation No.979120 16 
+FEDERAL INCOME TAX PROCLAMA nON 
+WHEREAS, it has become necessary to introduce modern and 
+efficient tax system that suppons the economic development and 
+which is in accord with the level of economic development achieved 
+so far; 
+WHEREAS, it is found essemial to make the tax system fair and bring 
+income that are so far not subject to tax into the tax net; 
+NOW, THEREFORE, in accordance with Article 55(1) and (II) of the 
+Constitution of the Federal Democratic Republic of Ethiopia, it is 
+hereby proclaimed as follows: 
+PART ONE 
+the  "Federal Income Tax 
+1. 
+Short Title 
+GENERAL 
+This Proclamation may be cited as 
+Proclamation No. 97912016". 
+2. 
+Definitions 
+A term used in this Proclamation that is defined in the Tax 
+Administration Proclamation shall have the meaning in the Tax 
+Administration Proclamation unless defined otherwise in this 
+Proclamation. In addition, for the purpose of this proclamation:­
+11  
+"Amount" includes an amount-in-kind; 
+21  ·'Business" means 
+a)  any industrial, commercial, professional, or vocational 
+activity conducted for profit and whether conducted 
+continuously or short-term, but does not include the 
+rendering of services as an employee or the rental of 
+buildings; 
+https://ethiodata.et/
+b)  any other activity recognised as a trade under the 
+Commercial Code; or 
+c)  
+any activity, other than the rental of buildings, of a 
+share company or private Hmited company whatever the 
+objects of the company: 
+31  "Business asset'· means an asset held or used in the conduct 
+of a business wholly or partly to derive business income; 
+41  
+"Business income" has the meaning in Article 21 of this 
+Proclamation; 
+51  
+;'Derive" means: 
+a)  
+for the business and rental income tax: 
+(I)  for a taxpayer accounting for tax on an accruals 
+basis, the arising of the right to receive; or 
+(2)  for a taxpayer accounting for tax on a cash basis, 
+received; or 
+b) 
+for any other tax imposed under this Proclamation, 
+received; 
+61 
+"Dividend·' means a distribution of profits by a body to a 
+member and includes the following: 
+a)  
+an amount returned by a body to a member in respect of 
+a membership interest on a partial reduction in the 
+capital of the body to the extent that the amount 
+returned exceeds the amount by which the nominal 
+value of the membership interest was reduced; 
+b)  an amount returned by a body to a member on 
+redemption or cancellation of a membership interest, 
+including on liquidation of a company or termination of 
+https://ethiodata.et/
+a partnership, to the extent that the amount returned 
+exceeds the nominal value of the membership interest; 
+c)  
+the amount of any loan, payment for an asset or 
+services, value of any asset or services provided, or any 
+debt obligation released, by a body to, or in favour of, a 
+member or a related person of a member to the extent 
+that the transaction is, in substance, a distribution of 
+profits; 
+71  "Employee" means an individual engaged, whether on a 
+permanent or temporary basis, to perform services under the 
+direction and control of another person, other than as an 
+independent contractor, and includes a director or other 
+holder of an office in the management of a body, and 
+government appointees and elected persons holding public 
+offices: 
+81  "Employer" means a person who engages or remunerates an 
+employee; 
+91 
+;'Employment income" has the meaning in Article 12 of this 
+Proclamation; 
+101 "Exempt income" means income exempt from tax under 
+Schedule 'E' of this Proclamation; 
+I II  "Financial 
+reporting 
+standards" 
+means 
+the 
+financial 
+reporting standards stipulated under the Financial Reporting 
+Proclamation; 
+12/  "Gross income", in relation to a person, means the total 
+income taxable under Schedules 'B' or 'C' derived by the 
+person without deduction of expenditures; 
+https://ethiodata.et/
+b) 
+c) 
+131  " Immovable asset " includes a mining or petroleum right, or 
+mining or petroleum information, as defined in Article 36 of 
+this Proclamation; 
+141  "Income" means every foml of economic benefit, including 
+non-recurring gains, in cash or kind from whatever source 
+derived and in whatever form paid. credited, or received: 
+151  "Independent contractor" means an individual engaged to 
+perform services under an 
+agreement by which the 
+individual retains substantial authority to direct and control 
+the manner in which the services are to be perfonned; 
+161  "Interest" means a periodic or lump sum amount, however 
+described as consideration for the use of money or being 
+given time to pay, and includes a discount, premium, or 
+other functionally equivalent amount; 
+17/  "Management fee" means an amount as consideration for the 
+rendering of any managerial or administrative service, but 
+does not include employment income; 
+181  ;'Ministry" or "Minister" means the Ministry of Finance and 
+Economic Cooperation Dr The Minister of Finance and 
+Economic Cooperation respectively; 
+19/"'Received", includes: 
+a) 
+applied on behalf of the Taxpayer either at the request 
+of the Taxpayer or under any law; 
+reinvested. accumulated, or capitalised for the benefit of 
+the Tax Payer; 
+credited to an account or carried to a reserve for the 
+benefit of the Taxpayer; or 
+d) 
+otherwise made available to the Taxpayer; 
+https://ethiodata.et/
+b) 
+201  "Royalty" means a periodic or lump sum amount as 
+consideration for any of the following: 
+a)  the use of, or the right to use any copyright of literary, 
+artistic, or scientific work, including cinematography 
+fdms, and films and tapes for radio, television, or 
+internet broadcasting; 
+the  receipt of, or right to receive, visual images or 
+sounds. or both, transmitted by satellite, cable, optic 
+fibre. 
+or 
+similar technology 
+in 
+connection 
+with 
+television, radio, or internet broadcasting; 
+c)  
+the use of, or the right to use any patent, invention, 
+trademark, design or model, plan, secret formula or 
+process, or other like asset or right; 
+d)  the use of, or the right to use any industrial, 
+commercial, or scientific equipment: 
+e)  
+the use of, or the right to use any information 
+concerning 
+industrial, 
+commercial, 
+or 
+scientific 
+experience; 
+f)  
+the supply of assistance that is ancillary and subsidiary 
+to, and is furnished as a means of enabling the 
+application or enjoyment of asset or a right referred to 
+in paragraphs (a) - (e) of this sub-article; 
+211  "Tax year" means: 
+a)  
+for an individual, the one-year period from I" Hamle to 
+30!h Sene, unless the Authority has granted permission, 
+by notice in writing and subject to such conditions as 
+may be specified by the Authority in the notice, for the 
+individual to use its accounting year as the individual's 
+tax year: 
+b)  for a body, the accounting year of the body; or 
+https://ethiodata.et/
+Categories 
+Taxpaver 
+c) 
+a transitional accounting year as 
+determined under 
+Article 28 of this Proclamation: 
+221 "Taxpayer" 
+means 
+a person 
+liable 
+for 
+tax 
+under this 
+Proclamation; 
+231 "Technical fee" means a fee for technical, professional, or 
+consultancy services, including a fee for the provision of 
+services of technical or other personnel; 
+24/ "Trading stock" includes: 
+a) 
+anything 
+produced. 
+manufactured, 
+purchased, 
+or 
+otherwise acquired for manufacture, sale, or exchange; 
+b) 
+any raw materials or consumables used in a production 
+or manufacturing process; or 
+c) 
+livestock, but not including animals used as beasts of 
+burden or working beasts; 
+25/ "Underlying ownership", in relation to a body, means a 
+membership interest in the body held directly, or indirectly 
+through an interposed body or bodies, by an individual or by 
+an entity not ultimately owned by individuals; 
+26/ "Withholding agent" means a person liable to withhold tax 
+under Part Ten of this Proclamation from a payment made 
+by the person and includes a person required to self-withhold 
+tax under Article 93 of this Proclamation from an amount 
+received by the person; and 
+271 "Withholding income" 
+means income from which tax is 
+required to be withheld under Part Ten of this Proclamation. 
+3. 
+of 
+II 
+For the purposes of this Proclamation there shall be the 
+following categories of taxpayers: 
+a) 
+category "A" taxpayer being 
+II 
+a body ; or 
+https://ethiodata.et/
+2! 
+any other person having an annual gross income of 
+Birr 1,000.000 or more; 
+b) 
+category 'B' taxpayer being a person, other than a 
+body , having an annual gross income of Birr 500.000 
+or more but less than 1.000.000; 
+c) 
+category 'c' taxpayer being a person other than a body, 
+having an 
+annual gross income of less than Birr 
+500,000 
+21 
+The Authority may. on the basis of tax declarations filed by 
+a taxpayer or any other infomlation 
+available to 
+the 
+Authority, determine whether the taxpayer's category has 
+changed for a tax year. 
+31 
+The Minister shall, after ascertaining by economic analysis, 
+change at least within five years the annual gross income 
+thresholds 
+in 
+sub-Article (I) of 
+this 
+Article 
+for 
+the 
+classification of a taxpayer as a category 'A' 
+taxpayer 
+category "B" taxpayer or category "C" taxpayer. 
+4, 
+Permanent Establishment 
+II 
+Subject to the provisions of sub-articles (2),(3),(4) and (5) of 
+this Article, a pemmnent establishment is a fixed place of 
+business through which the business of a person is wholly or 
+partly conducted. 
+2J 
+The following are specifically treated as a permanent 
+establishment: 
+a) 
+a 
+place 
+of 
+management, 
+branch, 
+office, 
+factory, 
+warehouse, or workshop, but does not include an office 
+that has representation of the person's business as its 
+sole activity; 
+b) 
+a mine site, oil or gas well, quany, or other place of 
+exploration for, or extraction of, natural resources; 
+https://ethiodata.et/
+(a) 
+c)  
+the 
+furnishing 
+of 
+services, 
+including 
+consultancy 
+services, by a person, including through employees or 
+other 
+personnel 
+engaged 
+by 
+the person 
+for 
+such 
+purpose, but only when activities of that nature continue 
+for the same or a connected project for a period or 
+periods aggregating more than one hundred eighty three 
+days in any one-year period. 
+31  
+A building site, or a construction, assembly, or installation 
+project. or supervisory activities connected with such site or 
+project shall be a pennanent establishment only when the 
+site, project, or activities continue for more than one hundred 
+eighty three days. 
+41  
+Despite sub-articles (I) and (2) of this Article. when a 
+person, other than an agent of independent status acting in 
+the ordinary course of business, acts on behalf of another 
+person (referred to as the "principal"), the first-mentioned 
+person shall be a pennanent establishment of the principal if 
+the person: 
+regularly negotiates contracts on behalf of the principal; 
+or 
+(b)  maintains a stock of goods from which the person 
+regularly delivers goods on behalf of the principal. 
+5/  
+In this Article, "agent of independent status" means a broker, 
+general 
+commission 
+agent, 
+or 
+other 
+agent 
+acting 
+independently of the person that they represent, but does nOl 
+include a person who aCIS solely or principally for another 
+person if their commercial and financial relations differ from 
+those that would have been made between independent 
+person. 
+5.  
+Residence 
+11  
+The following are residents of Etltiopia: 
+https://ethiodata.et/
+b) 
+a)  
+a resident individual; 
+b)  
+a resident body; 
+c)  
+the Government of the Federal Democratic Republic of 
+Ethiopia, and any Regional State or City Government in 
+Ethiopia. 
+2J  
+Subject to sub-Articles (3) and (4) of this Article, a resident 
+individual is an individual who: 
+a)  
+has a domicile in Etlliopia; 
+b)  
+is a citizen of Ethiopia who is a consular, diplomatic, or 
+similar official posted abroad; 
+c)  
+is present in Ethiopia, continuously or intermittently, 
+for more than 183 days in a one-year period. 
+31  An individual who is a resident individual under sub-article 
+(2) of this Article for a tax year (referred to as the "current 
+tax year"), but who was not a resident individual for the 
+preceding tax year shall be treated as a resident individual in 
+the current tax year only for the period commencing on the 
+day on which the individual was first present in Ethiopia. 
+41  
+An individual who is a resident individual under sub-article 
+(2) of this Article for the current tax year but who is not a 
+resident individual for the following tax year shall be treated 
+as a resident individual in the current tax year only for the 
+period ending on the last day on which the individual was 
+present in Ethiopia. 
+51  
+A resident body is a body that: 
+a)  
+is incorporated or formed in Ethiopia; or 
+has its place of effective management in Ethiopia. 
+61  
+A resident company is a company that is a resident body. 
+71  
+A non-resident is any person who is not a resident of 
+Ethiopia. 
+https://ethiodata.et/
+a) 
+6.  
+Source of Income 
+11  
+Employment income derived by an employee shall be 
+Ethiopian source income: 
+a)  
+to the extent that it is derived in respect of employment 
+exercised in Ethiopia, wherever paid; or 
+b)  if it is paid to the employee by, or on behalf of, the 
+Government of the Federal Democratic Republic of 
+Ethiopia, wherever the employment is exercised. 
+2/  Business income derived by a resident of Ethiopia shall be 
+Ethiopian source income except to the extent that it is 
+attributable to a business conducted by the resident through a 
+permanent establishment outside Ethiopia. 
+3/  Business income derived by a non-resident shall be 
+Ethiopian source income to the extent that it is attributable 
+to: 
+a)  a business conducted by the non-resident through a 
+permanent establishment in Ethiopia; 
+b)  
+disposals in Ethiopia by the non-resident of goods or 
+merchandise of the same or similar kind as those 
+disposed by the non-resident through a permanent 
+establishment in Ethiopia; or 
+c)  
+any other business activity conducted by the non­
+resident in Ethiopia of the same or similar kind as that 
+conducted by the non-resident through a permanent 
+establishment in Ethiopia. 
+4/ 
+Despite sub-articles (I), (2), and (3) of this Article, income 
+deri ved by a person shall be Ethiopian source income if it is: 
+a di vidend paid to the person by a resident body: 
+b) 
+rental income from the lease of: 
+(I) immovable asset located in Ethiopia; or 
+https://ethiodata.et/
+Scope 
+Application 
+(2) movable asset located in Ethiopia subject to tax 
+under Article 58 of this Proclamation: 
+c) 
+a gain arising from the disposal of the following: 
+(I) immovable asset located in Ethiopia; 
+(2) a membership interest in a body, if more than 50% 
+of the value of the interest is derived, directly or 
+indirectly through one or more interposed bodies, 
+from immovable asset located in Ethiopia; 
+(3) shares in, or bonds issued by, a resident company; 
+d) 
+an insurance premium relating to the insurance of a risk 
+in Ethiopia; 
+e) 
+income from a performance or sporting event taking 
+place in Ethiopia; 
+f) 
+winnings from a game of chance held in Ethiopia; 
+g) 
+interest, a royalty, management fee, technical fee, or 
+other income subject to tax under this Proclamation: 
+I) 
+paid to the person by a resident of Ethiopia, other 
+than as an expenditure of a business conducted by 
+the resident through a permanent establishment 
+outside Ethiopia; or 
+2) 
+paid to the person by a non-resident as an 
+expenditure of a business conducted by the non­
+resident through a permanent establishment in 
+Ethiopia. 
+5/ 
+Foreign income is any income that is not Ethiopian source 
+income. 
+7. 
+of 
+11 
+This Proclamation shall apply to residents of Ethiopia with 
+respect to their worldwide income. 
+https://ethiodata.et/
+Obligation 
+Imposition 
+Employment 
+2/ 
+This Proclamation shall apply to non-residents with respect 
+to their Ethiopian source income. 
+8. 
+Schedules of Income 
+11 
+The Proclamation provides for the taxation of income in 
+accordance with the following schedules: 
+a) 
+Schedule' A' , income from employment; 
+b) 
+Schedule 'B', income from rental of buildings; 
+c) 
+Schedule 'C', income from business; 
+d) 
+Schedule 'D' , other income; 
+e) 
+Schedule 'E't exempt income. 
+21 
+Subject to Article 64(2) of this Proclamation, a taxpayer that 
+derives income from different sources subject to tax under 
+the same Schedule for a tax year shall be taxable under the 
+Schedule on the total income for the year. 
+9. 
+to Pav Income Tax 
+Every person deriving income shall pay income tax in accordance 
+with this Proclamation and the Tax Administration Proclamation. 
+PART TWO 
+SCHEDULE 'A' -INCOME FROM EMPLOYMENT 
+10. 
+of 
+Income Tax 
+II 
+Without prejudice to Article 84 01" this Proclamation, 
+Employment income tax shall be imposed for each calendar 
+month or part thereof at the rate or rates specified in Article 
+II of this Proclamation on an employee who receives 
+employment income during the month or part thereof. 
+2/ 
+The employment income tax imposed on an employee under 
+sub-article (I) of this Article for a month shall be calculated 
+by applying the rate or rates of tax applicable to the 
+employee under Article II of this Proclamation to the total 
+https://ethiodata.et/
+Employment 
+Employment 
+employment income received by the employee for the 
+month. 
+3/ 
+An employee shall not be allowed a deduction for any 
+expenditure incurred in deriving employment income. 
+4/ 
+For the purposes of this Schedule and Article 88 of this 
+Proclamation, the employment income attributable to the 
+months of Nehassie and Pagumen shall be aggregated and 
+treated as the employment income of a single calendar 
+month. 
+5/ 
+If Article 83(1) applies to an employee, the employment 
+income tax payable by the employee shall be a final tax on 
+the employment income of the employee and the tax shall be 
+discharged if the employer has withheld tax from the income 
+in accordance with Article 88 of this Proclamation. 
+11. 
+Income Tax Rates 
+The rates of employment income tax are· 
+Employment Income 
+Employment Income 
+(per month) Birr 
+Tax Rate 
+0-600 
+0% 
+601- 1,650 
+10% 
+1,651-3,200 
+15% 
+3,201-5,250 
+20% 
+5,251-7,800 
+25% 
+7,801-10,900 
+30% 
+Over 10,900 
+35% 
+12. 
+Income 
+II 
+Subject to 
+sub-articles (2) and (3) of 
+this Article, 
+employment income means the following: 
+https://ethiodata.et/
+Imposition 
+a) 
+salary, wages, 
+an allowance, bonus, commission, 
+gratuity, 
+or other remuneration 
+received 
+by 
+an 
+employee in respect of a past, current, or future 
+employment: 
+b) 
+the value of fringe benefits received by an employee in 
+respect of a past, current, or future employment; 
+c) 
+an amount received by an employee on termination of 
+employment, 
+whether 
+paid voluntarily, 
+under an 
+agreement, or as a result of legal proceedings. including 
+any 
+compensation 
+for 
+redundancy 
+or 
+loss 
+of 
+employment, or a golden handshake payment. 
+21 
+Employment income shall not include exempt income. 
+31 
+If an employer pays the employment income tax payable by 
+an employee, in whole or part, without withholding tax from 
+the employment income of the employee. the amount of tax 
+paid by the employer shall be included in the employment 
+income of the employee. 
+41 
+The Council of Ministers shaU make Regulations for 
+detemlining the value and taxation of fringe benefits. 
+PART THREE 
+SCHEDULE 'B' INCOME FROM RENTAL OF BUILDINGS 
+13. 
+of Rental Income Tax 
+11 
+Rental income tax shall be imposed for each tax year at the 
+rate or rates specified in Article 14 of this Proclamation on a 
+person renting out a building or buildings who has taxable 
+rental income for the year. 
+21 
+Subject to sub-article (3) of this Article, the rental income 
+tax payable by a taxpayer for a tax year shall be calcuJated 
+by applying the rate or rates of tax applicable to the taxpayer 
+https://ethiodata.et/
+under Article 1 4 of this Proclamation to the taxable rental 
+income of the taxpayer for the year. 
+31  This Schedule shall not apply to rental income subject to tax 
+under Article 58. 
+14.  Renta. Income Tax Rates 
+II  
+The rate of rental income tax applicable to a body is 30%. 
+2/  
+The rates of rental income tax applicable to an individual 
+are: 
+Taxable Rental 
+Income (per year) 
+Birr 
+Rental Income 
+Tax Rate 
+0 -7,200 
+0% 
+7,201-19,800 
+10% 
+19,801-38,400 
+15% 
+38,401-63,000 
+20% 
+63.00 1-93,600 
+25% 
+93,601-130,800 
+30% 
+Over 1 30,800 
+35% 
+15. Taxable Rental Income 
+1/ 
+The taxable rental income of a taxpayer for a tax year is the 
+gro.. .. . amollnt of income derived hy the taxpayer from the 
+rental of a building for the year reduced by the total amount 
+of deductions aUowed to the taxpayer for the year. 
+2/ 
+Subject to sub-articles (3) and (4) of this Article, the gross 
+amount of income derived by a taxpayer from the rental of a 
+building for a tax year shall include the following: 
+a)  
+all amounts derived by the taxpayer during the year 
+under the lease agreement, including any lease premium 
+or similar amount: 
+https://ethiodata.et/
+b)  
+all payments made by the lessee during the year on 
+behalf of the less or according to the lease agreement; 
+c)  
+the amount of any bond. security, or similar amount 
+that, during the year, the taxpayer is entitled to retain as 
+a result of damage to the building and that has not been 
+used by the taxpayer in repairing the damage to the 
+building; 
+d)  
+the value of any renovation or improvement made 
+under the lease agreement to the building when the cost 
+was borne by the lessee in addition to the rent payable 
+to the taxpayer. 
+3/  
+If a taxpayer leases a furnished building, the gross amount of 
+income derived by the taxpayer from the lease of the 
+building shall include any amount attributable to the lease of 
+the furniture or equipment. 
+41  
+The gross amount of income derived by a taxpayer from the 
+lease of a building shall not include exempt income. 
+5/  
+In computing the taxable rental income for a tax year of a 
+taxpayer who does not maintain books of account, a 
+deduction shall be allowed for the following amounts: 
+a)  
+any fees and charges, but not tax, levied by a State or 
+City Administration in respect of the land or building 
+leased and paid by the taxpayer during the year; 
+b)  
+an amount equal to fifty 
+percent (50%) of the gross 
+rental income derived by the taxpayer for the year as an 
+allowance for the repair. maintenance, and depreciation 
+of the building. furniture, and equipment. 
+61 
+The provisions of sub-article 5 of this Article shall not be 
+applicable for taxpayers who are required to maintain books 
+https://ethiodata.et/
+Building 
+of account under this Proclamation. for any reason what so 
+ever. 
+71 
+In computing the taxable rental income for a tax year of a 
+taxpayer who maintains books of account, a deduction shall 
+be alJowed for any expenditures to the extent necessarily 
+incurred by the taxpayer in deriving rental income and paid 
+during the year including: 
+a) 
+the cost of the lease of land on which the building is 
+situated; 
+b) 
+repairs and maintenance; 
+c) 
+depreciation of the building, Furniture and equipment; 
+d) 
+interest and insurance premiums; and 
+e) 
+fees and charges, but not tax, levied by a State or City 
+Administration in respect of the land or building leased. 
+16. Sub-leases 
+1/ 
+The taxable rental income of a sub-lesser of a building for a 
+tax year shall be the difference between the total rental 
+income received by the sub-lesser during the year and the 
+lotal rental income paid to the lesser of the building plus 
+other expenses to the extent necessarily incurred by the sub 
+lesser to generate the income. 
+21 
+The owner of a building who allows a lessee to sub-lease the 
+building shall be liable for the rental income tax payable by 
+the lessee if the lessee fails to pay the tax. 
+17. New Rental 
+Notification 
+11 
+At the earlier of the time construction of a rental building is 
+completed or when the building is rented. the owner of the 
+https://ethiodata.et/
+Imposition 
+2J The rates of business income tax applicable to an individual 
+are: 
+building 
+and 
+the 
+builder 
+shaH 
+notify 
+the 
+kebele 
+administration or local administration in which the building 
+is located about the completion and the name, address, and 
+TIN of the person liable for rental income tax with respect to 
+the building. 
+2J 
+The Kebele Administration or Local Administration shall 
+communicate the information contained in the notification to 
+the Authority. 
+PART FOUR 
+SCHEDULE 'C' INCOME FROM BUSINESS 
+CHAPTER ONE 
+IMPOSITION OF BUSINESSES INCOME TAX 
+18. 
+of Business Income Tax 
+1/ 
+Subject to provisions of this Part, business income tax shall 
+be imposed for each tax year at the rate or rates specified in 
+Article 19 of this Proclamation on a person conducting 
+business that has taxable income for the year. 
+21 
+The business income tax payable by a taxpayer for a tax year 
+shaU be calculated by applying the rate or rates of tax 
+applicable to the taxpayer 
+under 
+Article 
+19 of this 
+Proclamation to the taxable income of the taxpayer for the 
+year. 
+19. Business Income Tax Rates 
+II The rate of business income tax applicable to a body is l30% J. 
+https://ethiodata.et/
+Taxable Business 
+Business Income 
+Income (per year) 
+Tax Rate 
+Birr 
+0 - 7,200 
+0% 
+7,201-19,800 
+10% 
+19,801-38,400 
+15% 
+38,401-63,000 
+20% 
+63,00 1-93,600 
+25% 
+93,601-130,800 
+30% 
+Over 130,800 
+35% 
+31 
+Notwithstanding sub-article (I) of this Article Micro 
+Enterprises shall pay income tax in accordance with rates 
+prescribed under sub-article (2) of this Article. 
+41 
+For the purpose of this Article "Micro Enterprises" shall 
+have the meaning provided under the Federal Urban Job 
+Creation and Food Security Agency Establishment Council 
+of Ministers Regulations No. 374n0 16. 
+20. Taxable Business Income 
+11 
+The taxable business income of a taxpayer for a tax year 
+shall be the total business income of the taxpayer for the 
+year redueed by the total deductions allowed to the taxpayer 
+for the year. 
+21 
+The taxable business income of a taxpayer for a tax year 
+shall be determined in accordance with the profit and loss, or 
+income statement, of the taxpayer for the year prepared in 
+accordance with the financial reporting standards, subject to 
+other provisions of this Proclamation, Regulations issued by 
+the Council of Ministers, and Directives issued by the 
+Minister. 
+https://ethiodata.et/
+Expenditures 
+21. Business Income 
+11 
+Subject 10 other provisions of this Proclamation, the business 
+income of a taxpayer for a tax year shall include the 
+following: 
+a) 
+the gross amounts derived by the taxpayer during the 
+year from the conduct of a business, including the gross 
+proceeds from the dispos.'ll of trading stock and the 
+gross fees for the provision of services (other than 
+employment income); 
+b) 
+a gain on disposal of a business asset (other than trading 
+slock) made by the taxpayer during the tax year; 
+c) 
+any other amount included in business income of the 
+taxpayer for the tax year under this Proclamation. 
+2/ 
+Business income shall nOI include an amount Ihal is exempt 
+income. 
+3/ 
+Subject to sub-article (4) of Ihis Article, the gain on disposal 
+of a business asset included in business income under sub­
+article (I)(b) of Ihis Anicle is the amount by which the 
+consideration for the disposal of the asset exceeds the net 
+book value of the asset at the time of disposal. 
+4/ 
+If a business asset is a taxable asset under Article 59 of this 
+Proclamation: 
+a) 
+the gain on disposal of the asset included in business 
+income under sub-article (I)(b) of this Anicle is the 
+amount (if any) by which the cost of the asset exceeds 
+the net book value of the asset at the time of disposal; 
+and 
+b) 
+any gain above cost is taxable under Article 59. 
+22. Deductible 
+1/ 
+Subject to provisions of this Proclamation, in determining 
+the taxable income of a taxpayer for a tax year, the 
+deductions allowed to a taxpayer shall include the following: 
+https://ethiodata.et/
+Expenditure 
+a)  
+any expenditure to the extent necessarily incurred by 
+the taxpayer during the year in deriving, securing, and 
+maintaining amounts included in business income; 
+b)  
+the cost of trading stock disposed of by the taxpayer 
+during the year as detennined in accordance with the 
+financial reporting standards; 
+c)  
+the total amount by which the depreciable assets and 
+business intangibles of the taxpayer have declined in 
+value during the year from use in deriving business 
+income as determined under Article 25 of this 
+Proclamation; 
+d) 
+a loss on disposal of a business asset (other than trading 
+stock) disposed of by the taxpayer during the year; 
+e) 
+any other amount allowed as a deduction to the 
+taxpayer under this Proclamation for the year. 
+21  
+Article 59 of this Proclamation and not sub-article (l)(d) of 
+this Article shall apply to a loss on disposal of a taxable 
+asset except when the taxable asset is a depreciable asset. 
+31  
+For the purposes of sub-article (Iled) of this Article, a loss 
+on disposal of a business asset is the amount by which the 
+net book value of the asset at the time of disposal exceeds 
+the consideration for the disposal. 
+23. Interest 
+11  Subject to sub-article (2) of this Article and Article 47 of this 
+Proclamation. in determining the taxable income of a 
+taxpayer for a tax year, the taxpayer shall be allowed 
+a deduction for any interest incurred by the taxpayer in a tax 
+year to the extent that the taxpayer has used the proceeds or 
+benefit of the debt or other instrument or agreement that 
+gives rise to the interest to derive business income. 
+https://ethiodata.et/
+a) 
+21 
+No deduction shall be allowed for the folJowing: 
+a) 
+interest paid or payable by a taxpayer in excess of the 
+rate used between the National Bank of Ethiopia and 
+commercial banks increased by 2 percentage points; 
+unless the interest is paid or payable to: 
+(I)  a linancial institution recognised by the National 
+Bank of Ethiopia; or 
+(2)  a foreign bank permitted to lend to persons in 
+Ethiopia; 
+b)  
+interest paid or payable by a taxpayer to a related 
+person who is a resident of Ethiopia except when the 
+interest is included in the schedule 'D' of the related 
+person. 
+24.  Charitable Donations 
+1/  In determining the taxable income of a taxpayer for a tax 
+year, the taxpayer shall be allowed a deduction for the 
+amount of a donation when the donation is made: 
+to Ethiopian Charities and Ethiopian Societies delined 
+in sub-article (3) of this Article 
+b)  
+in response to a call for development or an emergency 
+call 
+issued 
+by 
+the 
+Government 
+lO 
+defend 
+the 
+sovereignty and integrity of the country, 10 prevent or 
+provide relief in relation to man-made or nalUral 
+disasters or an epidemic, or for any other similar cause; 
+21  The total deduction allowed to a taxpayer under sub-article 
+(I) of this Article for a tax year shall not exceed 10% of the 
+taxable income of the taxpayer for the year. 
+31  
+For the purpose of this Proclamation, Ethiopian Charities 
+and Ethiopian Societies shall have the meaning provided for 
+https://ethiodata.et/
+Depreciation 
+Depreciable 
+Intangibles 
+under the Charities and Societies 
+Proclamation No. 
+621/2009. 
+25. 
+of 
+Assets and Business 
+II 
+In determining the taxable income of a taxpayer for a tax 
+year, tbe taxpayer shall be allowed a deduction for the 
+amount by which tbe depreciable assets and business 
+intangibles of the taxpayer declined in value during the year 
+through use in deriving business income. 
+2! 
+Subject to this Proclamation, the amount by wbicb the 
+depreciable assets or business intangibles of a taxpayer 
+decline in value during a tax year shall be computed in 
+accordance with the Regulations to be issued by the Council 
+of Ministers. 
+31 
+If a taxpayer does not use a depreciable asset or business 
+intangible for the whole of a tax year in deriving business 
+income, the amount allowed as a deduction under this 
+Article shall be the amount computed in accordance with 
+sub-article (2) of this Article reduced by the proportion of 
+the year that the asset was not so used. 
+41 
+If a taxpayer uses a depreciable asset or business intangible 
+during a tax year partly to derive business income and partly 
+for another use, the amount allowed as a deduction under 
+this Article shall be the proportion of the amount computed 
+under sub-article (2) of this Article (after taking account of 
+any adjustment under sub-article (3) of this Article) that 
+relates to the deri vation of business income. 
+51 if a taxpayer has used a depreciable asset or business 
+intangible partly in deriving business income and partly for 
+another use and the taxpayer disposes of the asset or 
+intangible during a tax year, the amount of the gain or loss 
+on disposal to which Article 22(1 )(c) or 22(1 )(d) of this 
+https://ethiodata.et/
+Proclamation applies shall be the fair proportional part of the 
+gain or loss that relates to the derivation of business income. 
+6/  The depreciation 
+of a depreciable asset or business 
+intangible shall commence when the asset or intangible is 
+ready and available for use in deriving business income, but, 
+in the case of a building constructed by a taxpayer, not 
+before the regulatory authority has issued the taxpayer with a 
+certificate of completion for the building. 
+7/ 
+In this Article: 
+a) 
+"business intangible" means any of the following when 
+used wholJy or panly to derive business income: 
+(I)  a copyright. patent, design or model. plan, secret 
+fonnula or process, trademark, or other like asset 
+or right that has a Hmited useful Life; 
+(2)  a customer list. distribution channel, or unique 
+name, symbol or picture, or other marketing 
+intangible that has a limited useful life: 
+(3)  contractual rights (including arising as a result of a 
+prepayment of an expenditure) with a benefit for a 
+limited period, but which exceeds one year; 
+(4)  an expenditure that provides an advantage or 
+benefit for a period of more than one year, but not 
+including expenditure incurred to acquire any 
+tangible movable or immovable asset; 
+b)  "depreciable asset" means tangible movable asset or a 
+structural improvement to immovable asset that: 
+(I)  has a useful Ufe exceeding one year; 
+https://ethiodata.et/
+carry 
+(2) is likely to lose value as a result of nonnal 
+wear and tear, or obsolescence; and 
+(3) is used wholly or partly to derive business income; 
+and 
+c) 
+"structural improvement" , means a building or any 
+other addition or alteration to immovable asset that 
+becomes part of, or is permanently affixed to, the 
+immovable asset induding a road, driveway, car park, 
+fence, or wall. 
+26, Loss 
+forward 
+II 
+If the total amount of deductions allowed to a taxpayer for a 
+tax year (other than a deduction allowed under this Article) 
+exceeds the total business income of the taxpayer for the 
+year, the amount of the excess shall be the taxpayer's loss 
+for the year. 
+21 
+Subject to sub-article (4) of this Article, if a taxpayer has a 
+loss for a tax year, the taxpayer shall carry the amount of the 
+loss forward to the next following tax year and the loss shall 
+be allowed as a deduction in computing the taxpayer's 
+taxable income for that folJowing year. 
+31 
+If a taxpayer is not able to wholJy deduct a loss under sub­
+article (2) of this Article, the taxpayer shall carry the amount 
+not deducted forward to the next following tax year and 
+apply the amount as specified in sub-article (2) of this 
+Article in that year, and so on until the loss is fully deducted, 
+but a taxpayer shalJ not carry a loss forward for more than 5 
+tax years after the end of year in which the loss was 
+incurred, 
+41 
+If there has been two tax years in which a taxpayer has 
+incurred a loss under sub-article (I) of this Article and each 
+of those losses has been camed forward under sub-article (2) 
+https://ethiodata.et/
+Expenditures 
+of this Article. the taxpayer shall not be permitted to carry 
+forward any further losses under sub-article (2) of this 
+Article. 
+51 
+A taxpayer shall carry forward a loss under sub-articles (2) 
+and (3) of this Article in accordance with the Regulations. 
+27. Non-deductible 
+and Losses 
+11 
+Except as provided for in this Proclamation, no deduction is 
+allowed for the following: 
+a) 
+an expenditure of a capital nature except to the extent 
+provided 
+for 
+under 
+Article 
+22(I )(c) 
+of 
+this 
+Proclamation: 
+b) 
+an increase in the share capital of a company or the 
+basic capital of a registered partnership; 
+c) 
+voluntary pension or provident fund contributions in 
+respect of an employee in excess of 15% of the monthly 
+employment income of the employee; 
+d) 
+dividends and paid-out profit shares; 
+e) 
+an expenditure or loss to the extent recovered or 
+recoverable under a policy of insurance, or a contract of 
+indemnity, guarantee, or surety; 
+f) 
+a fine or penalty imposed, or punitive damages 
+awarded, for violation of any law, regulation, or 
+contract; 
+g) 
+an amount that a person has transferred, in ils financial 
+accounts, 10 a reserve or provision for expenditures or 
+losses not yet incurred but expected to be incurred in a 
+future lax year; 
+h) 
+income tax paid under this Proclamation or under a 
+foreign tax law, or recoverable value added lax; 
+https://ethiodata.et/
+Accounting 
+;) 
+representat;on expend;tures of an employee ;n excess of 
+10% of the employment income of the employee; 
+j) 
+expend;ture ;ncurred ;n the prov;s;on of entena;nmen., 
+except: 
+(I) when the person's business involves the provision 
+of entertainment; or 
+(2) to the extent that the expenditure is aUowed as a 
+deduction under a Directive issued by the Minister 
+relating to food provided for free to employees by 
+an employer conducting a mining, manufacturing, 
+or agricultural business; 
+k) 
+a donation or gift except as provided for in Article 24 of 
+this Proclamation: 
+I) 
+personal consumption expenditure; 
+m) a loss on the disposal of a business asset by a taxpayer 
+to a related person: 
+0) 
+expenditure to the extent disalJowed under Regulations 
+to be issued by the Council of Ministers. 
+21 
+In this Article, "entertainment"' means the provision to any 
+person 
+of food, 
+beverages, 
+tobacco, 
+accommodation, 
+amusement, recreation, or hospitality of any kind. 
+28. 
+Year 
+CHAPTER TWO 
+TAX ACCOUNTING 
+11 
+This Anicle shall apply to the following taxpayers: 
+a) 
+an individual who has been granted permission to use 
+the individual's accounting year as their tax year under 
+https://ethiodata.et/
+Change 
+Accounting 
+the definition of "tax year" in Article 2(21)(a) of this 
+Proclamation: 
+b) 
+a body_ 
+21 
+The accounting year of a taxpayer to whom this Article 
+applies is the period of 12 months ending on the date of the 
+annual balance of the financial accounts of the taxpayer. 
+31 
+A taxpayer shall not change its accounting year for tax 
+purposes unless it obtains prior approval, in writing. from 
+the Authority and complie..<; with any conditions that may be 
+attached to the approval. 
+41 
+The Authority may, by notice in writing, revoke an approval 
+under sub-article (3) of this Article if the taxpayer fails to 
+comply with any of the conditions attached to the approval. 
+51 
+When the accounting year of a taxpayer changes as a result 
+of sub-article (3) or (4) of this Article, the period between 
+the last full accounting year prior to the change and the date 
+on which the new accounting year commences shaU be 
+treated as a separate accounting year referred to as a 
+"transitional accounting year". 
+61 
+When the accounting year of a taxpayer does not coincide 
+with the fiscal year, the law applicable for the accounting 
+year shall be the law applicable for the fiscal year that ends 
+during the accounting year. 
+29. 
+in Tax 
+Method 
+II 
+A taxpayer may apply to the Authority, in writing, for a 
+change in the taxpayer's methcx1 of accounting and the 
+Authority may, by notice in writing. approve the application 
+but only when satisfied that the change is necessary to 
+properly compute the taxable income of the taxpayer. 
+21 
+If a taxpayer's method of accounting changes under sub­
+article (I) of this Article including when there is a change in 
+https://ethiodata.et/
+Companies 
+the Category of the taxpayer, the taxpayer shall make 
+adjustments in the tax year of change to items of income, 
+deduction, and credit, and to any other items affected by the 
+change, so that no item is omitted and no item is taken into 
+account more than once. 
+30. Bad Debts 
+11 
+In determining the taxable income of a taxpayer for a tax 
+year, the taxpayer shall be alJowed a deduction for a bad 
+debt when the following conditions are satisfied: 
+a) 
+the amount of the debt has previously been included in 
+the business income of the taxpayer; 
+b) 
+the debt or part of the debt is written off in the 
+taxpayer's financial accounts for the tax year in 
+accordance with the fmancial accounting standards; 
+c) 
+legal action has been taken to collect the debt but the 
+debt is irrecoverable. 
+2J 
+The amount of the deduction allowed to a taxpayer under 
+this Article for a tax year shall not exceed the amount of the 
+debt written off in the taxpayer's financial accounts for that 
+year. 
+31 
+This Article shall not apply to a financial institution to which 
+Article 31 of this Proclamation applies. 
+31. Financial Institutions and Insurance 
+The Regulations may provide rules for the following: 
+a) 
+the deduction of the loss reserve of financial institutions; 
+b) 
+the deduction of the reserve for unexpired risks of insurance 
+companies (other than life insurance companies); 
+c) 
+the calculation of the 
+taxable income of life insurance 
+companies. 
+https://ethiodata.et/
+Long-term 
+a) 
+32. 
+Contracts 
+11  A taxpayer accounting for business income tax on an accrual 
+basis shall include amounts in business income and claim 
+deductions for expenditures arising under a long-term 
+contract for a tax year based on the percentage of the 
+contract completed during the year. 
+2!  The percentage of a long-tenn contract completed by a 
+taxpayer during a tax year shall be determined by comparing 
+the total costs incurred by the taxpayer during year allocated 
+to the contract with the total estimated contract coStS, 
+including any variations or fluctuations. 
+31  
+When, at the end of the final tax year of a long term contract, 
+a taxpayer has a final year loss in relation to the contract that 
+the taxpayer is permitted to carry forward under Article 26 
+but is unable to do so for the reason that the taxpayer ceases 
+to carry on business in Ethiopia at the end of the contract, 
+the taxpayer may carry the loss back to the preceding tax 
+year and the loss shalJ be alJowed as a deduction in thal year. 
+41  
+If a taxpayer is not able to wholly deduct a loss carried back 
+under sub-article (3) of this Article, the amount not deducted 
+may be carried back to the next preceding tax year and 
+applied as specified in sub-article (3) of this Article in that 
+year. 
+5/ 
+A taxpayer has a final year loss under a long-term contract if 
+both the following conditions are satisfied: 
+the taxable income estimated to be made under the 
+contract for the 
+purposes 
+of the 
+percentage 
+of 
+completion method exceeds the actual taxable income, 
+if any, under the contract; and 
+b) 
+the amount of the excess under paragraph (a) of this 
+sub-article exceeds the difference between the business 
+income and deductible expenditures computed under 
+https://ethiodata.et/
+Simplified 
+System 
+Category 
+Taxpayers 
+Change 
+Bodv 
+sub-article (I) of this Article for the tax year in which 
+the contract was completed; 
+and the amount of the excess under paragraph (b) of this 
+sub-article is the amount of the final year loss. 
+61 
+In this Article, "Iong-tenn contract" means a contract for 
+manufacture, installation or construction, or, in relation to 
+each, the performance of related services, that is not 
+completed within the tax year in which work under the 
+contract commenced, other than a contract estimated to be 
+completed within 12 months of the date on which work 
+under the contract commenced. 
+33. 
+Tax 
+for 
+'H' 
+The taxable income for a tax year of a Category '8' taxpayer 
+shall be computed in accordance with this Proclamation subject 
+to the following modifications· 
+11 
+the taxpayer shall account for business income and 
+deductible expenditures on a cash basis; 
+21 
+the rate of depreciation applicable to the depreciable assets 
+and business intangibles of the taxpayer for the purposes of 
+Article 25 of this Proclamation shall be 100%: 
+3/ 
+a deduction is allowed for the cost of trading stock acquired 
+during the year; 
+4/ 
+the period for the retention of documents under Article 17(2) 
+of the Tax Administration Proclamation and the period for 
+the amendment of tax assessments under Article 28(2)(b) of 
+the Tax Administration Proclamation shall be 3 years. 
+CHAPTER THREE 
+BODIES 
+34. 
+in Control of a 
+II 
+Subject to sub-article (2) of this Article, a body shall carry a 
+loss forward for a tax year (referred to as the "loss year") 
+https://ethiodata.et/
+35. Corporate Reorganizalions 
+under Article 26 or 46 of this Proclamation 10 a subsequent 
+tax year (referred 10 as the " carry forward year") only when 
+the same person holds more than 50% of the underlying 
+ownership of the body in the loss year, the carry forward 
+year, and all intervening tax years. 
+21 
+Sub-article (I) of this Article shall not prevent the carry 
+forward of loss by a body when the body: 
+a) 
+conducts the same business in the loss year, the carry 
+forward year, and all intervening tax years; and 
+b) 
+does not, untiJ the loss has been fully deducted, engage 
+in any new business activity 
+after the change in 
+underlying ownership if the principal purpose of the 
+body or the members of the body in engaging in the 
+new business activity is to utilize the loss so as to 
+reduce the business income tax payable on the income 
+arising from the new business activity. 
+II 
+If a resident company (referred to as 
+the 
+'transferor') 
+transfers a business asset to another resident company 
+(referred to as the 'transferee') as part of reorganization: 
+a) 
+lbe transfer shall not be treated as a disposal of the 
+business asset by the transferor; 
+b) 
+the transferee shall be treated as having acquired the 
+business asset for a cost equal to the transferor's cost 
+for the asset at the time of the transfer; and 
+c) 
+if the transferee has issued shares in exchange for the 
+transferred asset, the cost of the shares is equal to the 
+cost of the transferred asset at the time of the transfer. 
+21 
+If the business asset referred 10 in sub-article (1) of this 
+Article is a depreciable a..<;set or business intangible, the 
+https://ethiodata.et/
+Chanter 
+reference in sub-article (I) of this Article to the coSt of the 
+business asset is a reference to the net book value of the 
+business asset at the time of the transfer. 
+31 
+In this Article, "reorganization" means: 
+a) 
+a merger of two or more resident companies; 
+b) 
+the acquisition or takeover of 50% or more of the 
+voting shares and 50% or more of all other shares by 
+value of a resident company solely in exchange for 
+shares in another resident company that is a party to the 
+reorganization; 
+c)  
+the acquisition of 50% or more of the assets of a 
+resident company by another resident company that is a 
+party to the reorganization solely in exchange for shares 
+with voting rights but no preferential right to dividends: 
+d)  
+a division of a residenl company into two or more 
+resident companies; or 
+e)  
+a spin off. 
+41  
+This Article shall apply only when the Authority is satisfied 
+that the merger, acquisition, takeover, division, or spin off 
+does not have a principal purpose of tax avoidance. 
+CHAPTER FOUR 
+MINING AND PETROLEUM OPERATIONS 
+36. 
+Four Definitions 
+Terms and phrases not defined in this chapter shall have the 
+meaning ascribed to them in the Mining Operations Proclanlalion 
+and Petroleum Operations Proclamation. In addition, unless the 
+context otherwise requires: 
+https://ethiodata.et/
+11 
+" Contractor" means a person who has entered into a 
+petroleum agreement with the government; 
+21 
+"Contract area" means the area designated as the contract 
+area under a petroleum agreement; 
+31 
+;'Faml-out agreement" means an agreement to which Article 
+43 of this Proclamation applies; 
+41 
+" Development 
+expenditure" 
+means capital 
+expenditure 
+incurred 
+by a licensee or contractor in 
+undertaking 
+development operations, other than expenditure incurred in 
+acquiring a depreciable asset, and includes the following: 
+a) 
+expenditure whenever incurred in acquiring: 
+(I) an interest in a mining right or petroleum 
+agreement, other than an interest referred to in 
+paragraph 6(a)(I) of the definition of "exploration 
+expenditure" in this Article; or 
+(2) mining or petroleum infomlalion. other than 
+information referred to in paragraph 6(a)(2) of the 
+defmition of "exploration expenditure" in this 
+Article; 
+b) 
+social infrastructure expenditure incurred relation to 
+development operations 
+under a mining right or 
+petroleum agreement; 
+5/ 
+"Development operations" means: 
+a) 
+for mining operations, authorised operations under a 
+mining licence; or 
+b) 
+for petroleum operations, authorised operations relating 
+to development and production under a petroleum 
+agreement; 
+61 
+"Exploration 
+expenditure" 
+means 
+capital 
+expenditure 
+incurred 
+by 
+a licensee or contractor in 
+undertaking 
+https://ethiodata.et/
+exploration operations, other than expenditure incurred in 
+acquiring a depreciable asset, and includes the following: 
+a) 
+expenditure incurred in acquiring: 
+(I) an interest in an exploration right from the 
+Government or under a farm-out agreement; or 
+(2) exploration infonnalion from the Government or 
+under a farm-out agreement; 
+b) 
+social infrastructure expenditure incurred in relation to 
+exploration operations under a mining exploration right 
+or petroleum agreement; 
+7/ 
+"Exploration information" means infonnalion relating to the 
+search for: 
+a) 
+minerals under a mining exploration right; or 
+b) 
+petroleum under a petroleum agreement; 
+81 
+"Exploration operations" means: 
+a) 
+for mining operations, authorised operations under a 
+mining exploration right; or 
+b) 
+for petroleum operations, authorised operations relating 
+to exploration under a petroleum agreement; 
+":JI 
+"Exploration right" means a mining exploration right 
+granted under Mining Proclamation or an exploration licence 
+issued under a petroleum agreement; 
+10/ "Licence area" means the area that is the subject of a mining 
+right: 
+1 1/ "Licensee" means a person who has been granted a mining 
+right; 
+12/ "Mining 
+exploration 
+right" 
+means 
+a 
+reconnaissance, 
+exploration, or retention licence granted under the Mining 
+Operations Proclamation; 
+https://ethiodata.et/
+131 "Mining infornmtion" means information relating to mining 
+operations; 
+141 ;'Mining operations" means authorised operations under a 
+mining right; 
+151 " Mining 
+right" 
+means 
+a 
+reconnaissance, 
+retention, or mining licence !,,'l'anted under 
+Operations Proclamation; 
+exploration, 
+the Mining 
+16/ " Petroleum agreement" means an agreement that a person 
+has entered into with the Government under the Petroleum 
+Operations Proclamation; 
+17/ "Petroleum information" 
+means information relating to 
+petroleum operations: 
+lSI "Petroleum operations" means authorized operations under a 
+petroleum agreement; 
+19/ "Social 
+infrastructure 
+expenditure" 
+means 
+capital 
+expenditure that a licensee or contractor is required to incur 
+under a mining 
+right or petroleum agreement on the 
+construction of a public school, hospital, road, or similar 
+social infrastructure; and 
+201 "Subcontractor" means a person supplying services to a 
+licensee in respect of mining operations undertaken by the 
+licensee, other than a person supplying services as an 
+employee. 
+37. Taxation of Licensees and Contractors 
+11 
+This Proclamation shall apply to a licensee or contractor 
+subject to the modifications in this Chapter. 
+21 
+If there is any inconsistency in the taxation of a Licensee or 
+contractor as between this Chapter and the other parts of this 
+Proclamation, this Chapter shall prevail. 
+31 
+The business income tax rate applicable to a licensee or 
+contractor is 25%. 
+https://ethiodata.et/
+Relating 
+Mining 
+Operations 
+4/ 
+A licen$ee effecting payment to a non-resident sub­
+contractor shalJ withhold and transfer 10 the lax authority 
+10% of the Payment. 
+5/ 
+In calculating the tax payable under sub article (4) of this 
+article, deduction shaU be allowed for cost of mobilization 
+and demobilization. 
+38. Limitation of Deductions 
+to 
+or Petroleum 
+1/ 
+A deduction for expenditure 10 the extent incurred by a 
+licensee in undertaking mining operations in a licence area 
+during a tax year shall be allowed only againsl the business 
+income derived by the licensee from the mining operations 
+in the licence area during the year. 
+2/ 
+If a licensee has a loss in respect of mining operations in a 
+licence area for a tax year, the amount of the loss shall be 
+earned forward and allowed as a deduction against the 
+business income of the licensee derived from mining 
+operations in the licence area in the next following lax year 
+of the licensee. 
+3/ 
+The amount of a loss of a licensee for a tax year thai is not 
+deducted under sub-article (2) of Ihis Article $halI be carried 
+forward by the licensee to the next following lax year and 
+deductible from the gross income of the licensee in that year 
+in accordance with sub-article (2) of this Article. and $0 on 
+until the loss is fully deducted, provided however that Ihe 
+licensee can't carry forward a loss sustained in a tax year 
+beyond ten years from the end of the tax year in which the 
+loss was sustained. 
+4/ 
+A licensee has a loss in relation to mining operations in a 
+licence area for a tax year if the lotal deductions of Ihe 
+licensee in respect of mining operations undertaken by the 
+licensee in the licence area during the year exceed the total 
+https://ethiodata.et/
+Exploration Expenditure 
+Development Expenditure 
+amount of business income derived from such operations in 
+the area for the year. 
+5/ 
+This Article shall apply, with the necessary changes made. to 
+a contractor in relation to a contract area of the contractor 
+under a petroleum agreement. 
+39. 
+1/ 
+For the purposes of Article 25 of this Proclamation, 
+exploration expenditure incurred by a licensee or contractor 
+shaU be treated as a business intangible with a useful life of 
+one year. 
+2J 
+The depreciation rate for a depreciable asset that has its first 
+use in exploration operations shall be 100%. 
+40. 
+1/ 
+For the purposes of Anicle 25 of Ihis Proclamation and 
+subject to sub-article (2) of this Article, development 
+expenditure of a licensee or contractor shall be treated as a 
+business intangible with a useful life of 4 years. 
+2J 
+Subject to sub-article (4) of this Article, if a licensee or 
+contractor incurs 
+development 
+expenditure before 
+the 
+commencement of commercial production, Article 25 of this 
+Proclamation shall apply on the basis that the expenditure 
+was incurred at the time of commencement of commercial 
+production. 
+31 
+Subject to sub-article (4) of this Article, if a depreciable 
+asset for use in development operations is acquired or 
+constructed 
+by 
+a 
+licensee 
+or contractor 
+before 
+the 
+commencement of commercial production. Article 25 of this 
+Proclamation shall apply to the asset on the basis that it was 
+https://ethiodata.et/
+acquired or constructed at the time of commencement of 
+commercial production. 
+41  
+The amount of the deduction allowed for development 
+expenditure referred to in sub-article (2) of this Article or the 
+depreciation deduction allowed for a depreciable asset 
+rererred to in sub-article (3) of this Article for the tax year in 
+which the commencement of commercial production occurs 
+shall be computed according to the following fom1Ula: 
+A x Ric 
+where: 
+A 
+is the amount of the expenditure or the cost of the asset; 
+B 
+is the number of days in the period beginning on the 
+date of commencement of commercial production and 
+ending on the last day of the tax year in which 
+commercial production commenced; and 
+C 
+is the number of days in the tax year in which 
+commercial production commenced. 
+51  
+If, other than under a fann-out agreement, a licensee 
+disposes of an interest in a mining right or a contractor 
+disposes of an interest in a petroleum agreement. any gain 
+arising on the disposal is reduced by any development 
+expenditure incurred by the licensee or contractor that has 
+not been deducted or otherwise recouped by the licensee or 
+contractor at the time of the disposal. 
+6/  
+In this Article, "commencement of commercial production" 
+means the first day of the period of 30 consecutive days 
+during which the average level of production on the 25 
+highest production days in the 3D-day period reaches a 
+https://ethiodata.et/
+Expenditure 
+production level as detennined by the Ministry of Mines, 
+Petroleum and Natural Gas to be commercial production. 
+41. Rehabilitation 
+1/ 
+A contribution made by a licensee or contractor to a 
+rehabilitation 
+fund 
+in accordance 
+with 
+an 
+approved 
+rehabilitation plan in relation to mining or petroleum 
+operations shall be allowed as a deduction in the tax year in 
+which the contribution was made. 
+21 
+An expenditure incurred by a licensee or contractor in 
+carrying out work required by an approved rehabilitation 
+plan in respect of the mining or petroleum operations of the 
+licensee or contractor shall be allowed as a deduction for the 
+tax year in which the expenditure is incurred provided that 
+the work is not paid for. directly or indirectly. from money 
+made available out of a rehabiUtation fund. 
+31 
+An amount accumulated in a rehabilitation fund. or an 
+amount withdrawn from a rehabilitation fund to meet 
+expenditure incurred under an approved rehabiJitation plan, 
+shall be exempt income. 
+41 
+An amount withdrawn from a rehabilitation fund and 
+returned to the licensee or contractor is business income of 
+the licensee or contractor for the tax year in which the 
+amount was returned. 
+51 
+Any surplus in a rehabilitation fund of a licensee or 
+contractor at the time of completion of rehabilitation is 
+business income of the licensee or contractor for the tax year 
+in which rehabilitation is completed. 
+61 
+In this Article: 
+a) 
+"approved rehabilitation plan" means a plan for 
+rehabiUtalion of a mine or petroleum site approved by 
+the Ministry of Mines, Petroleum and Natural Gas, 
+https://ethiodata.et/
+including rehabilitation obligations specified in a 
+mining right or petroleum agreement; and 
+b) 
+"rehabilitation fund" means a fund or account required 
+to be established under a mining right or petroleum 
+agreement to provide for the future payment of 
+remedial work to the licence area covered by the mining 
+right or contract area under the petroleum agreement 
+and is managed jointly by the Ministry of Mines, 
+Petroleum and Natural Gas and the licensee 
+or 
+contractor. 
+42, Deduction allowed for reinvestment 
+I! 
+A licensee or contractor may deduct up to 5% from his gross 
+income in each tax year for any investment expenditure 
+incurred by the licensee or contractor towards investment in 
+development projects authorized by the licensing authority. 
+21 
+The amount deducted by a licensee or contractor in a tax 
+year in accordance with sub article (1) of this article, shall 
+form part of the taxable income of the licensee or contractor 
+of the next following tax year, unless it is invested at the end 
+of that year. 
+43. Farm-ouls 
+11 
+Farm-outs shall apply if 
+the following conditions are 
+satisfied: 
+a) 
+a licensee or contractor (referred to as the 'transferor') 
+has entered into an agreement (referred to as a 'farm­
+out agreement') with a person (referred to as the 
+'transferee') for the transfer of part of the interest of the 
+transferor in a mining right or petroleum agreement; 
+b) 
+the consideration given by the transferee for the 
+transferred interest wholly or partly includes the 
+transferee agreeing to incur expenditure, or undertaking 
+https://ethiodata.et/
+Mining 
+Rigbts 
+some or all of the work commitments of the transferor, 
+in respect of the part of the interest retained by the 
+transferor. 
+21 
+If farm-out applies: 
+a) 
+the value of any work undertaken by the transferee in 
+relation to the part of the interest retained by the 
+transferor shaU not be included in: 
+(I) the consideration received by the transferor for the 
+transferred interest: or 
+(2) the business income of the transferor; and 
+b) 
+the following applies to any amount in money received 
+or receivable by the transferor for the transferred 
+interest: 
+(I) Article 73 of this Proclamation shall apply to the 
+amount in money on the basis that it is a 
+recoupment by the transferor of any deductions 
+allowed for expenditure incurred by the transferor 
+in respect of the transferred interest; 
+(2) if the amount in money exceeds the amount of 
+deducted expenditure to which Article 73 of this 
+Proclamation applies, the excess shaU be treated as 
+consideration received for the transferred interest. 
+44. Indirect Transfers of 
+or Petroleum 
+1/ 
+If there is a 10% or more change in the underlying 
+ownership of a licensee or contractor. the licensee or 
+contractor shall immediately notify the Authority, in writing, 
+of the change. 
+21 
+If the person direclly or indirectly disposing of the 
+membership interest in a body to which a notice under sub-
+https://ethiodata.et/
+Foreign 
+Foreign 
+article (I) of this Article relates is a non-resident, the 
+licensee or contractor shaU be liable, as agent for the non­
+resident, for any tax payable under this Proclamation by the 
+non-resident person in respect of the disposal. 
+3/ 
+Any tax paid by a licensee or contractor on behalf of a non­
+resident under sub-article (2) of this Article shall be credited 
+against the tax liability of the non-resident under this 
+Proclamation. 
+4/ 
+The membership interest in a body referred to in sub-article 
+(2) of this Article shall be treated as a business asset for the 
+purposes of this Proclamation. 
+CHAPTER FIVE 
+INTERNATlONAL TAX 
+45. 
+Tax Credit for 
+Business Income 
+II 
+If a resident taxpayer has foreign income taxable under 
+"Schedule C" in respect of which the resident has paid 
+foreign income tax, the taxpayer shall be allowed a tax credit 
+(referred to as a "foreign tax credit") of an amount equal to 
+the lesser of: 
+a) 
+the foreign income tax paid; or 
+b) 
+the business income tax payable under Schedule 'C' in 
+respect of the foreign income. 
+2J 
+The business income tax referred to in sub-article (I )(b) of 
+this Article shall be computed by applying the average rate 
+of business income tax applicable 10 the resident taxpayer 
+for the year against the net foreign income of the resident for 
+the year. 
+3/ A foreign tax credit shall be allowed under this Article only if: 
+a) 
+the resident taxpayer has paid the foreign income tax 
+within 2 years after the end of the lax year in which the 
+https://ethiodata.et/
+foreign income was derived by the taxpayer or within 
+such further rime as the Authori ty aJlows; and 
+b) 
+the resident taxpayer has a receipt for the tax from the 
+foreign tax authority 
+4! 
+In computing the business income tax payable by a resident 
+taxpayer for a tax year, the taxpayer shall apply the foreign 
+tax credit under this Article before applying any other tax 
+credits of the taxpayer for the tax year. 
+S! 
+If a foreign tax credit of a resident taxpayer for a tax year is 
+not fully credited for the year, the excess credit shall not be 
+refunded. carried back to the preceding tax year, or carried 
+forward to the following tax year. 
+61 
+In this Article: 
+a) 
+"average rate of business income tax", in relation to a 
+resident taxpayer for a tax year. means the percentage 
+that the business income tax payable by the tax payer 
+for the year, before the aJlowance of any tax credit 
+under this Proclamation, is of the taxable income of the 
+taxpayer for the year; 
+b)  
+"foreign income tax" means income tax, including 
+withholding tax, imposed by the government of 
+a 
+foreign country or a political subdivision of a 
+government of a foreign country, but does not include a 
+penalty. additional tax. or interest payable in respect of 
+such tax: and 
+c)  
+"net foreign income'" in relation to a resident taxpayer 
+for a tax year, means the total foreign income of the 
+taxpayer for the year taxable under thi s Schedule, as 
+reduced by any deductions allowed to the person under 
+this Schedule for the year that: 
+https://ethiodata.et/
+Foreign 
+(I)  relate exclusively to the derivation of the 
+foreign income; and 
+(2)  are apportioned to the derivation of the foreign 
+income in accordance with Article 76 of this 
+Proclamation on the basis that foreign income is a 
+separate class of income. 
+46. 
+Business Losses 
+II  
+An amount that a resident taxpayer is allowed as a deduction 
+under this Proclamation in deriving foreign income taxable 
+under "Schedule C" shall be deductible only against that 
+income. 
+21  
+If a resident taxpayer has a foreign loss for a tax year. the 
+amount of the loss shall be carried forward to the next 
+following tax year and allowed as a deduction in that year 
+against 
+the 
+taxpayer's foreign Lncome taxable 
+under 
+"Schedule C' for the following year. 
+31  
+If a resident taxpayer is not able to wholly deduct a foreign 
+loss under sub-article (2) of this Article, the amount not 
+deducted shaU be carried forward to the next following tax 
+year and applied as specified in sub-article (2) of this Article 
+in that year, and so on until the loss is fully deducted, but a 
+taxpayer shall not carry a foreign loss forward for more than 
+five  tax years after the end of year in which the loss was 
+incurred. 
+41  
+If there has been two tax years in which a taxpayer has 
+incurred a foreign loss and each of those losses has been 
+earned forward under sub-article (2) of this Article, the 
+taxpayer shall not be pennitted to carry forward any further 
+losses under sub-article (2) of this Article. 
+51  A taxpayer shall carry forward a foreign loss under sub­
+articles (2) and (3) of this Article in accordance with the 
+Council of Ministers Regulations. 
+https://ethiodata.et/
+Capitalization 
+61 
+In this Article. "foreign loss". in relation to a resident 
+taxpayer for a tax year, means the amount by which the 
+deductible expenditures incurred by the taxpayer in deriving 
+foreign income taxable under this Schedule exceeds the 
+amount of that income for the year. 
+47. Thin 
+1/ 
+Subject to sub-article (2) of this Article, if a foreign­
+controlled 
+resident 
+company, 
+other 
+than 
+a 
+financial 
+institution, has an average debt to average equity ratio in 
+excess of 2 to 1 for a tax year, a deduction shall be 
+disallowed for the interest paid by the company during that 
+year calculated according to the following fonnula: 
+A x RIC 
+where: 
+A 
+is the company's total amount of deductible interest for 
+the year: 
+B 
+is the company's excess debt for the year; and 
+C 
+is the company's average debt for the year. 
+21 
+If the average debt to average equity ratio of a foreign­
+controlled resident company exceeds 2 to I for a tax year, 
+sub-article ( I ) of this Article shall not apply if the amount of 
+the average debt of the company for the year does not 
+exceed the arm's length debt amount. 
+31 
+This Article shall apply 10 a Don-resident company with a 
+permanent establishment in Ethiopia on the basis of the 
+following: 
+a) 
+!.he permanent establishment is treated as a foreign­
+controlled resident company; and 
+b) 
+the 
+average 
+debt to 
+average 
+equity 
+ratio 
+of 
+the 
+permanent establishment is calculated by reference to: 
+(I) the debt obligations of the non-resident company 
+attributable to the permanent estab lishment; and 
+https://ethiodata.et/
+(2)  the equity of the non-resident company attributable 
+to the operations 
+of the company conducted 
+through the permanent estabUshmenl. 
+4/ 
+In this Article: 
+a) 
+"ann's length debt amount", in relation to a foreign­
+controlled resident company, means the amount of debt 
+that a financial institution would be prepared to lend to 
+the company in an am1's length transaction having 
+regard to all the circumstances of the company; 
+b) 
+"average debt", in relation to a foreign-controlled 
+resident company for a tax year, is the amount 
+calculated according to the following fonnula: 
+'\/12 
+where: 
+A  
+is the sum of the amount of debt of the company at 
+the end of each calendar month in the tax year; 
+c)  
+"average equity", in relation to a foreign-controlled 
+resident company for a 
+tax year, is the amount 
+calculated according to the following fonnula: 
+A/12 
+where: 
+A  
+is the sum of the amount of equity of the comp,my 
+at the end of each calendar month in the tax. year: 
+d)  
+"debt", in relation to a foreign-controUed resident 
+company, means the debt obligations of the company 
+on which interest is payable as determined according to 
+financial reporting standards; 
+e)  
+"debt obligation" means an obHgation to make a 
+repayment of money to another person, including 
+obligations arising under promissory nOles, bills of 
+exchange, and bonds, but not including: 
+https://ethiodata.et/
+a)  
+accounts payable; or 
+b)  
+an obligation to make a repayment of money in 
+respect of which no interest is payable; 
+f)  
+"equity", in relation to a foreign-controlled resident 
+company, means the greatest amount, at any time 
+during a tax year, of the equity of the company as 
+determined according to financial reporting standards 
+and include.;; an obligation to make a repayment of 
+money in respect of which no interest is payable; 
+g)  
+"excess debe', in relation to a foreign controlled 
+resident company for a tax year, means the amount by 
+which the company's average debt for the year exceeds 
+the maximum average debt alJowed for the year 
+according to the 2 to I ratio; and 
+h) 
+"foreign-controlJed resident company" means a resident 
+company in which more than 50% of the membership 
+interests in the company are held by a non-resident 
+either alone or together with a related person or 
+persons. 
+48.  Tax Treaties 
+1/  The Minister may enter into a tax treaty with a foreign 
+government or governments. 
+21  
+If there is any connict between the temlS of a tax treaty 
+having legal effect in Ethiopia and this Proclamation, with 
+the exception of sub-article (3) of this Article and Part Eight 
+of this Proclamation, the tax treaty shall prevail over the 
+provisions of this Proclamation. 
+3/  
+Subject to sub-article (4) of this Article, when a tax treaty 
+provides that Ethiopian source income is exempt or excluded 
+From tax, or the application of the tax treaty results in a 
+https://ethiodata.et/
+Categorv 
+Taxpayers 
+reduction in the rate of Ethiopian tax, the benefit of that 
+exemption, exclusion, or reduction is not available to a body 
+that, for the purposes of the tax treaty, is a resident of the 
+other contracting state when fifty percent or more of the 
+underlying ownership or control of that body is held by an 
+individual or individuals who are not residents of that other 
+contracting state for the purposes of the tax treaty. 
+4/ 
+If the resident of the other contracting state is: 
+a) 
+a company listed on a stock exchange in that other 
+contracting state; or 
+b) 
+a company carrying on an active business in that other 
+contracting state and the Ethiopian-source income 
+derived by the company is attributable to that business; 
+Sub-article (3) of this Article shall not apply. 
+51 
+In this Article: 
+a) "active business" does nOt include the business of 
+holding or managing shares, securities, or other 
+investments unless the company is a financial institution 
+or insurance company: and 
+b) 
+"tax treaty" means an international agreement for the 
+avoidance of double taxation and the prevention of 
+fiscal evasion. 
+CHAPTER SIX 
+PRESUMPTIVE BUSINESS TAXES 
+49. Taxation of 
+'e' 
+A Category 'C' taxpayer shall pay business income tax for each 
+tax year in accordance with the mode of payment of tax to be 
+https://ethiodata.et/
+Transporlation 
+detennined by a Regulations to be issued by the Council of 
+Ministers. 
+50. Taxation of Inlernational Air 
+Business of 
+Non-residents 
+1/ 
+A non-resident conducting an international air transportation 
+business shall pay business Lncome tax at the rate of 3% of 
+the gross amount derived by the non-resident for the carriage 
+of passengers, 
+livestock, mail, merchandise, or goods 
+embarked or loaded Ln Ethiopia and destined for a place 
+outside Ethiopia. 
+21 
+This Article shall not apply to the foUowing: 
+a) 
+an amount that is exempt income; 
+b) 
+an amount derived in respect of the following: 
+(I) a passenger who is in Ethiopia as a result of being 
+in transit between two places outside Ethiopia; 
+(2) the transhipment of livestock, mail, merchandise, 
+or goods. 
+PART FIVE 
+SCHEDULE 'D' OTHER INCOME 
+51. Income of Non-residents 
+1/ 
+A non-resident who has derived an Ethiopian source 
+dividend, interest, royalty, management fee, technical fee, or 
+insurance premium shall be liable for non-resident tax at the 
+rate specified in sub-article (2) of thi s Article. 
+21 
+The rate of non-resident tax is: 
+a) 
+for an insurance premium or royalty , 5% of the gross 
+amount of the premium or royalty; 
+b) 
+for a dividend or interest, 10% of the gross amount of 
+the di vidend or interest; 
+https://ethiodata.et/
+Recharged 
+Rovalties 
+c) 
+for a management or technical fee, 15 % of the gross 
+amount of the fee. 
+31 
+Sub-article (I) of this Article shall not apply to a dividend, 
+interest, royalty, management fee, technical fee, or insurance 
+premium that is attributable to a business camed on by the 
+non-resident through a permanent establishment in Ethiopia 
+and, in that case, the amount shall be taxable under Schedule 
+'C" or 'D", as the case may be. 
+52. Taxation of 
+Technical Fees and 
+II 
+This Article shall apply when the following conditions are 
+satisfied: 
+a) 
+a non-resident supplies technical services or the lease of 
+equipment 
+other 
+than 
+through 
+a 
+permanent 
+establishment in Ethiopia; 
+b) 
+the technical services are suppLied, or equipment leased, 
+to a person (referred to as the "recipient") who is: 
+(I) a resident of Ethiopia, other than in relation 10 a 
+business conducted by the resident through a 
+pennanent establishment outside Ethiopia; or 
+(2) a non-resident conducting business in Ethiopia 
+through a permanent establishment; 
+c) 
+the technical fee or royalty in respect of the supply or 
+leaĎ is paid to the non-resident by another non-resident 
+that is a related person of the recipient; 
+d) 
+the technical fee or royalty is recharged by the related 
+person to the recipient. 
+21 
+If this Article applies, the Proclamation shall apply as if the 
+related person is supplying the technical services or leased 
+equipment to the recipient and the recharged amount is the 
+technical fee for the services or royalty for the leased 
+equipment. 
+https://ethiodata.et/
+Rovallies 
+53. Taxation of Non-resident Entertainers 
+11 
+A 
+non-resident 
+entertainer 
+or 
+group 
+of non-resident 
+entertainers who has derived income from the participation 
+by the entertainer or group in a performance taking place in 
+Ethiopia shall be Liable for income tax at the rate of 10% on 
+the gross income derived from the perfommnce without 
+deduction of expenditures. 
+2! 
+When the income for a performance by an entertainer, 
+including as member of a group, is derived not by the 
+entertainer but by another person, sub-article (I) of this 
+Article shall apply to the gross income derived by that other 
+person. 
+31 
+In this Article: 
+a) 
+"entertainer" includes musician and sports person; 
+b) 
+"group" includes a sporting team; and 
+c) 
+"performance" includes a sporring event. 
+54. 
+11 
+A resident of Ethiopia who derives a royalty shall be liable 
+for income tax at the rate of 5% on the gross amount of the 
+royalty. 
+21 
+A non-resident who derives an Ethiopian source royalty that 
+is attributable to a permanent establishment of the non­
+resident in Ethiopia shall be liable for income tax at the rate 
+of 5% on the gross amount of the royalty. 
+55. Dividends 
+11 
+A resident of Ethiopia who derives a dividend shall be liable 
+for income tax at the rate of 10% of the gross amount of the 
+dividend. 
+https://ethiodata.et/
+56. Ipterest 
+a) 
+b) 
+2/  
+A non-resident who derives an Ethiopian source dividend 
+that is attributable to a pennanent establishment of the non­
+resident in Ethiopia shall be liable for income tax at the rate 
+of 10% on the gross amount of the dividend. 
+II 
+A resident of Ethiopia who derives interest shall be liable for 
+income tax at the rate of: 
+in the case a savings deposit with a financial institution 
+that is a resident of Ethiopia, 5% of the gross amount of 
+the interest; or 
+in any other case, 10% of the gross amount of the 
+interest. 
+21  
+A non-resident who derives Ethiopian source interest that is 
+attributable to a pennanent establishment of the non-resident 
+in Ethiopia shall be liable for income tax at the rate of: 
+a)  
+in the case a savings deposit with a financial institution 
+that is a resident of Ethiopia, 5% of tbe gross aillount of 
+the interest; or 
+b)  
+in any other case. 10% of the gross amount of the 
+interest. 
+57.  Income from Games of Chance 
+1/  
+A person wbo derives income from winning at games of 
+chance held in Ethiopia shall be liable for income tax at the 
+rate of 15% on the gross amount of tbe winnings. 
+21  
+In computing the gross amount of winnings under sub-article 
+(I) of this Article. no deduction shall be allowed for any loss 
+incurred by the person from games of chance. 
+31  
+Sub-article (I) of this Article shall not apply when the 
+winnings are less than 1000 Birr. 
+https://ethiodata.et/
+Disposal 
+41 
+In this Article. "games of chance" means a game whose 
+outcome depends primarily on chance rather than the skill of 
+the participant, including a lottery or tombola. 
+58. Income from Casual Rentals 
+11 
+A person who derives income from the casual rental of asset 
+in Ethiopia (including any land, building, or movable asset) 
+shall be liable for income tax on the annual gross rental 
+income at the rate of 15% of the gross amount of the rental 
+income. 
+21 
+This Article shall not apply to income that is a royalty 
+taxable under Article 51 or 54 of this Proclamation. 
+59. Gains on 
+of Certain Investment Asset 
+II 
+A person who deri ves a gain on the disposal of immovable 
+asset, a share, or bond (referred to as a "taxable asset') shall 
+be liable to pay income tax at the rate specified in sub-article 
+(2) of this Article on the amount of the gain. 
+21 
+The rate of income tax under sub-article (I) of this Article 
+shall be: 
+a) 
+for a class ' A' taxable asset, 15%; 
+b) 
+for a class 'B' taxable asset. 30%. 
+31 
+The amount of a gain on disposal of a taxable asset by a 
+person shall be the amount by which the consideration for 
+the disposal of the asset exceeds the cost of the asset at the 
+lime of disposal. 
+41 
+If a person makes a loss on disposal of a taxable asset during 
+a tax year, the loss shall be recognised and be available to 
+offset a gain on disposal of a taxable asset of the same class 
+during the year subject to the following: 
+a) 
+the loss may be used only to offset gains under this 
+Article; 
+https://ethiodata.et/
+a) 
+d) 
+b) 
+the unused amount of a loss can be carried forward 
+indefinitely for offset against gains on disposal of 
+taxable assets of the same class until fully offset; 
+c) 
+no loss is recognised on the disposal of a taxable asset 
+by a person to a related person; 
+d) 
+the person has substantiated the amount of the loss to 
+the satisfaction of the Authority. 
+51 
+The amount of a loss on disposal of a taxable asset is the 
+amount by which the cost of the asset at the time of disposal 
+exceeds the consideration for the disposal. 
+6/ 
+Article 35 of this Proclamation shall apply when the taxable 
+asset transferred is also a business asset. 
+7/ 
+In this Article: 
+a) 
+"immovable asset" shall not include a building held and 
+wholly used as a private residence for 2 years prior to 
+the disposal of the asset; 
+b)  
+"Class 'A' taxable asset" means immovable asset; and 
+c)  
+"Class 'S' taxable asset" means shares and bonds. 
+60.  Windfall Profil 
+1/  Windfall profit obtained from businesses prescribed in a 
+directive 10 be issued by the Minister shall be liable to tax at 
+a rate to be determined in such Directive. 
+21  
+The Minister is empowered to prescribe by a directive: 
+the amount of income to be considered as windfall 
+profit; 
+b) 
+businesses that are subject to tax levied on windfall 
+profit; 
+c) 
+the date on which such tax shall become effective; 
+the manner in which the tax is assessed and factors that 
+need to be taken into consideration: 
+https://ethiodata.et/
+profit 
+Repatriated 
+Relating 
+31 
+The Minister may, taking into consideration the nature of the 
+business, prescribe different amounts to be considered as 
+windfall profit and rates for different types of businesses. 
+41 
+In this Article, "windfall profit" means any unearned, 
+unexpected, or other non-recurring gain. 
+61. Undistributed 
+Tax shall be paid at the rate of 10% on the net undistributed 
+profit of a body in a tax year to the extent that it is not reinvested, 
+in accordance with the directive to be issued by the Minister. 
+62. 
+Profit 
+11 
+A non-resideot body conducting business in Ethiopia 
+through a permanent establishment shall be liable for tax at 
+the rate of 10% on the repatriated profit of the permanent 
+establishment. 
+2J 
+The mode of application of sub article (I) of this Article 
+shall be determined by the regu lations to be issued by the 
+council of ministers. 
+63. Other Income 
+A person who derives any income that is not taxable under 
+Schedule A. B. C, or the other Articles of this Schedule shall be 
+liable for income tax at the rate of 15% on tbe gross amount of 
+the income. 
+64. General Provisions 
+to Schedule 'D' Income 
+II 
+Tax under Schedule D shall not apply to: 
+a) 
+an amount that is Liable to tax under another Schedule; 
+or 
+b) 
+an amount that is exempt income. 
+https://ethiodata.et/
+Exempt 
+2J 
+Tax imposed on income under this Schedule shall be a final 
+tax on the income. 
+3/ 
+If a royalty, dividend, interest, gain on disposal of a taxable 
+asset, or income 
+referred 
+to in 
+Article 
+63 
+of this 
+Proclamation derived by a resident of Ethiopia is foreign 
+income, the resident is allowed to reduce, but not below 
+zero, the tax payable under this Schedule in respect of the 
+income by the amount of any foreign tax paid in respect of 
+the income. 
+4/ 
+There shall be no carry forward of any unused foreign tax 
+under sub-article (3) of this Article. 
+5/ 
+The liability of a person for income tax under Article 51, 52, 
+53, 54, 55,56 or 57 of this Proclamation shall be discharged 
+if a withholding agent has withheld tax from the income in 
+accordance with Pan Ten of this Proclamation. 
+PART SIX 
+SCHEDULE 'E' -EXEMPT INCOME 
+65. 
+Income 
+1/  
+The following amounts are exempt income for the purposes 
+of this Proclamation: 
+a)  
+Subject to the limits set forth in the directive to be 
+issued by the Minister in regard to items specified under 
+number (2), (3), (4) and (6) of this paragraph following 
+benefits provided to an employee: 
+(I)  an amount paid by an employer to cover the actual 
+cost of medical treatment of an employee; 
+(2)  an allowance in lieu of means of transportation 
+granted under a contract of employment; 
+https://ethiodata.et/
+(3)  a hardship allowance; 
+(4)  transpon expenses and per diem payments to an 
+employee travelling on a tour of duty: 
+(5)  travelling expenses paid to an employee recruited 
+from place other than the place of employment on 
+joining or completion of employment, including, in 
+the case of a foreign employee, travel expenses 
+from and to their country of origin, but only if the 
+travel expenses have been paid pursuant to specific 
+provisions 
+of 
+the 
+employee's 
+contract 
+of 
+employment; 
+(6)  food and beverages provided for free to an 
+employee by an employer conducting a mining, 
+manufacturing, or agricultural business; 
+(7)  allowances paid by the Government of the Federal 
+Democratic Republic of 
+Ethiopia to employees 
+engaged in public service in a foreign country 
+b)  
+allowances paid to members and secretaries of boards 
+of public enterprises, public bodies, or study groups 
+established by the Federal or a State Government or 
+City administration: 
+c)  
+contributions by an employer to a pension, provident, or 
+other retirement fund for the benefit of an employee 
+provided the monthly total of contributions does not 
+exceed 15% of the monthly employment income of the 
+employee; 
+d)  
+a pension to the extent exempt from lax under the 
+Public Servants Pension Proclamation or the Private 
+Organisation Employees' Pension Proclamation; 
+https://ethiodata.et/
+g) 
+e)  
+an amount derived by the Federal, or a State or Local 
+Government of Ethiopia, or the National Bank of 
+Ethiopia, from activities that are incidental to official 
+operations; 
+f)  
+an amount exempt from tax to the extent provided for 
+under an international agreement; 
+an amount exempt from tax to the extent provided for 
+under a provision (referred to as an "exemption 
+provision") in an Agreement entered into by the 
+Government of the Federal Democratic Republic of 
+Ethiopia when the foUowing conditions are satisfied: 
+(I)  the agreement is for the provision of financial, 
+technical, 
+humanjtarian. 
+or 
+administrative 
+assistance to the Government; and 
+(2)  the Minister has concurred, in writing, with the 
+exemption provision: 
+h)  
+a public award for outstanding performance in any field 
+or an award granted under Article 135 of the Tax 
+Administration Proclamation; 
+;)  
+an amount as compensa60n for personal ;njury or the 
+death of another person: 
+j)  
+subject to Article 59 of this proclamation, a cash 
+amount, or the value of asset, acquired by gift or 
+inheritance. other than a gift thm is employment, renlal 
+or business income; 
+k) 
+a 
+scholarship 
+or bursary 
+for 
+attendance 
+m 
+an 
+educational institution; 
+I)  
+maintenance or child suppon payments; 
+m)  the income of a non-profit organization other than 
+business income Ihat is nOl directly relmed to the core 
+function of the organization; 
+https://ethiodata.et/
+ACquisition 
+Disposal 
+n) 
+a cash indemnity allowance paid by an employer to an 
+employee. but only to the extent that the allowance 
+compensates the employee for shortfalls on money 
+counts: 
+0) 
+an amount that is specificaIJy exempted from income 
+tax under a law in force in Ethiopia; 
+p) 
+salaries paid to domestic servants; 
+q) 
+payments made by Contractors engaged in petroleum 
+operations to their sub-contractors. 
+11 The Council of Ministers may, by regulations, exempt any 
+income for economic, administrative, or social reasons. 
+PART SEVEN 
+COMMON PROVISIONS 
+CHAPTER ONE 
+ASSETS 
+66. 
+of an Asset 
+A person acquires an asset when legal title to the asset passes to 
+the person, including, in the case of an asset that is a right or 
+option, the granting of the right or option to the person. 
+67. 
+of an Asset 
+II 
+A person disposes of an asset when the person has sold, 
+exchanged, or otherwise transferred legal title to the asset, 
+and includes when the 
+asset is cancelled, redeemed, 
+relinquished, destroyed, lost, expired, or surrendered. 
+21 
+If a person creates an asset in another person being an asset 
+that did not previously exist, the first-mentioned person shall 
+https://ethiodata.et/
+a) 
+be treated as having made a disposal of the asset to the 
+second-mentioned person at the time the asset is created. 
+3/ 
+If an asset is transmitted by succession or under a will, the 
+deceased shall be treated as having disposed of the asset at 
+the time the asset is transmitted. 
+4/ 
+A disposal shall include the disposal of a part of an asset. 
+5/ 
+The vesting of an asset of a person (referred to as the 
+"owner") in a liquidator, trustee-in-bankruptcy, or receiver 
+shall not be treated as a disposal of the asset for the purposes 
+of this Proclamation, and acts done in relation to the asset by 
+the liquidator, trustee-in-bankruptcy, or receiver shall be 
+treated as done by the owner. 
+68.  Cost of an Asset 
+l/  Subject to this Article, the cost of an asset (other than a 
+business intangible) of a person shall be the tOlal of the 
+following amounts: 
+the total consideration given by the person for the 
+asset, including the fair market value of any 
+consideration in kind determined at the time the 
+asset is acquired and, if the asset is constructed, 
+produced, or developed, the cost of construction, 
+production, or development; 
+b) 
+any incidental expenditure incurred by the person in 
+acquiring or disposing of the asset; 
+c) 
+any expenditure incurred by the person to install, aiter, 
+renew, reconstruct, or improve the asset. 
+21  
+Subject to this Article. the COSI of a business intangible is: 
+a)  in relation to a business intangible referred to in 
+paragraph (I), (2), or (3) of the definition of 
+"business intangible" in sub 3J1icie (7)(a) of Article 
+25 of this Proclamation, the total expenditure 
+incurred by the person in acquiring, creating, 
+https://ethiodata.et/
+improving, and renewing the intangible, and any 
+incidental expenditure incurred in acquiring or 
+disposing of the intangible; or 
+b)  in relation to a business intangible referred to in 
+paragraph 
+(4) 
+of the definition of "business 
+intangible" in sub article 7 (a) of Article 25 of this 
+Proclamation, the amount of the expenditure. 
+3/  The cost of an asset acquired by way of gift in the 
+circumstances 
+specified 
+in 
+Article 70(2) of this 
+Proclamation shall be the fair market value of the asset 
+at the time of the acquisition. 
+4/  The cost of an asset shall not include any amount 
+allowed as a deduction under this Proclamation. 
+51 
+The cost of an asset of a person shall include any 
+amount given by the person for the grant of an option to 
+acquire the asset. 
+61 
+The cost of an asset of a person shall not be reduced by 
+an impairment write down in relation to the asset made 
+in the financial accounts of the person. 
+7/ 
+If a person disposes of a part of an asset, the cost of the 
+asset shall be apportioned between the part of the asset 
+retained and the part disposed of in accordance with 
+their respective fair market values detennined at the 
+time the person acquired the asset. 
+8/ 
+The cost of an asset of a person shall not include the 
+amount of any grant, subsidy, rebate, commission, or 
+other financial assistance received or receivable by a 
+person in respect of the acquisition of the asset, except 
+to the extent to which the amount is included in the 
+https://ethiodata.et/
+Disposal 
+business income of the person taxable under this 
+Proclamation. 
+91 
+The Council of Ministers may make regulations to 
+provide further rules for determin.ing the cost of an 
+asset. 
+69. Net Book Value of a BlL'iiness Asset 
+II 
+Subject to sub-article (2) of this Article, the net book 
+value of a business asset of a taxpayer is the cost of the 
+asset reduced by any deductions allowed to the 
+taxpayer in respect of the asset under Article 25(1) of 
+this Proclamation, or that would have been allowed but 
+for Article 25(4) of this Proclamation. 
+21 
+[f Article 68(7) of this Proclamation applies to a 
+business asset of a taxpayer, the net book value of the 
+asset is the cost apportioned to the asset under the same 
+Article reduced by any deductions allowed to the 
+taxpayer in respect of the asset under Article 25(1) of 
+this Proclamation, or that would have been allowed but 
+for Article 25(4) of this Proclamation, that relate to the 
+cost apportioned to the asset under Article 68(7) of this 
+Proclamation. 
+70. Consideration for the 
+of an Asset 
+II 
+The consideration for the disposal of an asset by a person is 
+the total amount received or receivable by the person for the 
+asset, including the fair market value of any consideration­
+in-kind detennined at the time of disposal. 
+21 
+[f an asset is disposed of by way of gift, other than as a 
+donation to 
+an Ethiopian Charity or Ethiopian 
+Association, the consideration for the disposal shall be 
+https://ethiodata.et/
+Recognition 
+the fair market value of the asset at the time of the 
+disposal. 
+31 
+The consideration for the disposal of an asset by a 
+person includes the consideration for the grant of an 
+option in relation to the disposal of the asset, but only if 
+the person has not been subject to tax in respect of any 
+gain made on the grant of the option. 
+41 
+[f an asset has been lost or destroyed by a person, the 
+consideration for the asset includes any compensation, 
+indemn.ity, or damages received or receivable by the 
+person as a result of the loss or destruction, including 
+amounts received or receivable: 
+a) 
+under an insurance policy, indemnity, or other 
+agreement; 
+b) 
+under a settlement; or 
+c) 
+as a consequence of a judicial decision. 
+51 
+If two or more assets are disposed of by a person in a 
+single transaction and the consideration for each asset is 
+not 
+specified, 
+the 
+total 
+consideration 
+shall 
+be 
+apportioned among the assets disposed of in proportion 
+to their respective fair market values determined at the 
+time of the disposal. 
+61 
+[f a taxpayer is unable 
+to provide documentary 
+evidence of the consideration for the disposal of an 
+asset, the consideration shall be the fair market value of 
+the asset at the time of disposal. 
+71. Deferral of 
+of Gain or Loss 
+II 
+For the purposes of this Proclamation and subject to sub­
+article (2) of this Article, no gain or loss shall be taken to 
+arise on the disposal of an asset: 
+a) 
+between spouses as part of a divorce settlement; 
+https://ethiodata.et/
+b)  by reason of the transmission of the asset on the 
+death of a person to an executor or beneficiary; 
+c)  
+by reason of the loss or destruction, or compulsory 
+acquisition of the asset (referred to as the "replaced 
+asset") if the consideration for the disposal is 
+reinvested by the recipient in an asset of a like kind 
+(referred to as a "replacement asset") within one 
+year of the disposal or within such further period as 
+the Authority shall allow; or 
+d)  if the asset is a depreciable asset (referred to as the 
+"replaced 
+asset") and the 
+person acquires 
+a 
+depreciable asset of a like kind to be wholly used 
+to derive amounts included in business income 
+(referred to as the "replacement asset") within six 
+months after the disposal or within sllch further 
+period as the Authority allows. 
+21  Sub-article (I )(a) or (b) of this Article shall not apply if 
+the person acquiring the asset will not be subject to tax 
+under the Proclamation in respect of a subsequent 
+disposal of the asset. 
+31  If sub-article (I)(a) or (b) of this Article applies, the 
+person acquiring the asset shall be treated as acquiring 
+the asset for an amount equal to the cost of the asset for 
+the person disposing of the asset at the time of the 
+disposal. 
+41  If sub-article ( I)(c) or (d) of this Article applies and the 
+cost of the replacement asset exceeds the consideration 
+for the replaced asset, the cost of the replacement asset 
+shall be the cost of the replaced asset at the time of 
+disposal increased by the amount of the excess. 
+51  If sub-article ( I)(c) or (d) of this Article applies and the 
+consideration received for the replaced asset exceeds 
+the consideration given for the replacement asset, the 
+https://ethiodata.et/
+Registration 
+Expenditure 
+Earning 
+cost of the replacement asset shall be the net book value 
+of the replaced asset at the time of disposal reduced by 
+the amount of the excess, but not below zero. 
+61 
+Any pall of the excess under sub-article (5) of this 
+Article that is not used to reduce the net book value of 
+the asset shall be included in the income of the person. 
+71 
+[f the asset disposed of is a depreciable asset or 
+business intangible, the reference: 
+a) 
+in sub-article (3) of this Article to the "cost of the 
+asset", shall be treated as a reference to the net 
+book value of the asset; and 
+b) 
+in sub-articles (4) and (5) of thjs Article to the 
+"cost of the replaced asset", shall be treated as a 
+reference to the net book value of the replaced 
+asset. 
+72. 
+of Transferred Assets 
+Any person authorised by law to accept, register, or in any way 
+approve the transfer of an asset shan not accept, regi ster, or 
+approve the transfer unless satisfied tbat any tax payable under 
+this Proclamation in respect of the transfer has been paid. 
+CHAPTER TWO 
+OTHER COMMON RULES 
+73. Recovered 
+If a taxpayer has been allowed a deduction for an expenditure 
+incurred, or bad debt written off, in a tax year and, subsequently, 
+the taxpayer has received, in cash or in kind, any amount as a 
+reimbursement or recovery of, or an indemnity for the 
+expenditure or bad debt, the amount received shall be treated as 
+income derived by the taxpayer in tbe tax year in which it is 
+received and the income shall have tbe same cbaracter as the 
+income to which the deduction related. 
+74. Cessation of Income 
+Activitv 
+https://ethiodata.et/
+Apportionment 
+Expenditures 
+1/ 
+When: 
+a) 
+any amount is derived by a taxpayer in a tax year 
+from a business, activity, or investment that had 
+ceased before the amount was derived; and 
+b) 
+if the amount had been derived before the business, 
+activity, or investment ceased it would have been 
+income subject to tax under this Proclamation; 
+this Proclamation shall apply to the amount on the basis that 
+the business, activity, or investment had not ceased at the 
+time the amount was derived. 
+21 
+An expense incurred to derive an amount to which sub­
+article (I) of this Article applies shall be deductible to the 
+extent allowed under the Proclamation. 
+75. Amounts in Kind 
+Subject to Article 12(4) of this Proclamation. the value of an 
+amount derived or incurred as a benefit-in-kind shaU be the fair 
+market value of the benefit at the time that the benefit is derived 
+or incurred and determined ignoring any restriction on transfer. 
+76. 
+of 
+1/ 
+Subject to this Proclamation, an expenditure relating to: 
+a) 
+the derivation of more than one class of income; or 
+b) 
+the derivation of a class of income and to some other 
+purpose; 
+shaU be apportioned on allY reasonable basis taking account 
+of the relative nature and size of the activities or purposes to 
+which the expenditure relates. 
+21 
+The following shaU be treated as a separate class of income: 
+a) 
+employment income; 
+b) 
+income from the rental of buildings; 
+c) 
+business income; 
+https://ethiodata.et/
+Currency 
+Splilting 
+d) 
+each amount taxable under Schedule 0 is a 
+separate class of income; and 
+e) 
+exempt income. 
+77. 
+Translalion 
+II 
+An amount taken into account under this Proclamation 
+shall be expressed in Birr. 
+2f 
+If an amount is in a currency other than Birr, the 
+amount shall be translated to Birr at the National Bank 
+of Ethiopia prevailing exchange rate applying between 
+the foreign currency and Birr on the date the amount is 
+taken 
+into 
+account 
+for 
+the 
+purposes 
+of 
+this 
+Proclamation. 
+31 
+All gains and losses arising from transactions in foreign 
+exchanges shall be brought to account for tax purposes 
+as additions to taxable income or deductible losses in 
+the tax year in which they are realised. 
+41 
+The Authority may issue a Directive providing for the 
+method 
+of calculation of lessor gain arising 
+in 
+connection with foreign exchange transaction and 
+conversion of amounts in a foreign currency to Birr. 
+PART EIGHT 
+ANTI-TAX AVOIDANCE 
+78. Income 
+11 
+If a taxpayer attempts to split income with a related person, 
+the Authority shall adjust the income and tax credits of both 
+persons to prevent any reduction in tax payable as a result of 
+the splitting of income. 
+21 
+A taxpayer shall be treated as having attempted to split 
+income when: 
+https://ethiodata.et/
+Pricing 
+a) 
+the taxpayer transfers income or the right to income, 
+directly or indirectly, to a related person; or 
+b) 
+the taxpayer transfers asset, including money, directly 
+or indirectly, to a related person with the result that the 
+related person receives or enjoys the benefit of the 
+income from that asset; 
+and the reason or one of the reasons for the transfer is to 
+lower the total tax payable upon the income of the transferor 
+and the transferee. 
+31 
+In determining whether a person has attempted to spUt 
+income, the Authority shaH consider the value, if any, given 
+for the transfer. 
+79. Transfer 
+II 
+The Authority may, in respect of any transaction that is 
+not an arm's length transaction, distribute, apportion, or 
+allocate income, gains, deductions, losses, or tax credits 
+between the parties to the transaction as is necessary to 
+reflect the income, gains, deductions, losses, or credits 
+that would have been realised in an arm's length 
+transaction. 
+21 
+[f 3. party to 3. transaction to which sub-article (I) of this 
+Article applies is located in, and subject to tax in, 
+Ethiopia and another party to the transaction is located 
+outside Ethiopia, any distribution, apportionment, or 
+allocation of income, gains, deductions, losses, or tax 
+credits shall be made in accordance with a Directive 
+issued by the Minister. 
+31 
+The allocation of income or deductions to a pennanent 
+establishment in Ethiopia of a non-resident or to a 
+pennanent establishment of a resident of Ethiopia 
+https://ethiodata.et/
+outside the Ethiopia shall be made in accordance with a 
+Directive issued by the Minister. 
+41  The Directive referred to in sub-article (2) of this 
+Article may apply also to transactions that take place 
+wholly in Ethiopia. 
+51  A taxpayer shall include details of transactions with 
+related persons during a tax year with the taxpayer's tax 
+declaration for the year. 
+61  In this Article, "ann's length transaction" means a 
+transaction between independent persons who are 
+dealing at arm's length with each other. 
+80.  Tax A voidance Schemes 
+11  This Anicle shall apply when the Authority is satisfied that: 
+a)  a scheme has been entered into or carried out; 
+b)  a person has obtained a tax benefit in connection 
+with the scheme; and 
+c)  having regard to the substance of the scheme, it 
+would be concluded that a person, or one of the 
+persons, who entered into or carried out the scheme 
+did so for the sole or dominant purpose of enabling 
+the person to obtain the tax benefit referred to in 
+paragraph (b) of this sub-article. 
+21  Despite anything in this Proclamation, when this 
+Article applies, the Authority may determine the tax 
+liability of the person who obtained the tax benefit and 
+of any other person related to the scheme as if the 
+scheme had not been entered into or carried out or in 
+such manner as in the circumstances the Authority 
+considers appropriate for the prevention or reduction of 
+the tax benefit. 
+https://ethiodata.et/
+Application 
+Record-keeping 
+3/ 
+If a detemlination is made under this Article, the 
+Authority shall serve a notice or notices of assessment 
+to give effect to the determination. 
+4/ 
+In this Article: 
+a) 
+"scheme" includes: 
+I) an 
+agreement, 
+arrangement, 
+promise, 
+or 
+undertaking, whether express or implied and 
+whether 
+or 
+not 
+enforceable 
+by 
+legal 
+proceedings; or 
+2) 
+any plan, proposal, course of action, or course 
+of conduct; and 
+b) 
+"tax benefit" means: 
+I) 
+a reduction in a liability of a person to pay tax: 
+2) 
+a postponement of a liability of a person to pay tax; 
+or 
+3) any other avoidance of a liability of a person to pay 
+tax 
+PART NINE 
+ADMINISTRATIVE AND PROCEDURAL RULES 
+81. 
+of Tax Administration Proclamation 
+The Tax Administration Proclamation shall apply for the 
+purposes of the administmdon of this Proclamation but subject to 
+this Part. 
+82. 
+11 
+Category ' A' tax payers liable for business income tax shall 
+keep books of account prepared in accordance with the 
+financial accounting reporting standards and, in particular 
+shall keep the following: 
+a) 
+a record of the business assets and liabilities of the 
+taxpayer, including a register of fixed assets showing 
+the acquisition date, the cost of acquisition, any costs of 
+https://ethiodata.et/
+improvement in relation to the asset, and the current net 
+book value of the asset: 
+b)  
+a record of all daily income and expenditures related to 
+the taxpayer's business; 
+c)  
+a record of all purchases and sales of trading stock, and 
+services provided and received by the taxpayer showing 
+the following: 
+(I)  the particular trading stock sold or received and 
+services supplied or received; 
+(2)  the name and TIN (if any) of the purchasers from. 
+and suppliers to, the taxpayer of trading stock or 
+services; 
+(3)  pre-numbered 
+invoices 
+containing 
+the 
+supplier's TIN; 
+d)  a record of trading stock on hand at the end of the 
+taxpayer's tax year, including the type, quantity, 
+and cost of the stock, and the method of valuation 
+used; 
+e)  any other document relevant in detennining the tax 
+liability of the taxpayer. 
+21  
+Category '8' taxpayers liable for business income tax shall 
+keep the following: 
+a)  a record of daily income and expenditures; 
+b)  a record of all purchases and sales of trading stock; 
+c)  a salary and wages register 
+d)  
+any other document relevant in determining the tax 
+liability of the taxpayer. 
+31  Category 'c' taxpayers may keep a record of gross 
+income and shall keep such other records as may be 
+specified in the Regulations. 
+https://ethiodata.et/
+41  A category 'A' or 'B' taxpayer liable for tax under 
+Schedule B of this Proclamation shall keep the 
+following: 
+a)  a record of rental income received; 
+b)  a record of fees and charges paid to a State or City 
+Administration in relation to the building; 
+c)  unless 
+Article 
+l5(5)(b) 
+of this Proclamation 
+applies, a record of any expenditures incurred in 
+relation to the building; 
+d)  a 
+register 
+of 
+rental 
+buildings 
+showing 
+the 
+acquisition date, the cost of acquisition, any costs 
+of improvement in relation to the building, and the 
+current net book value of the building; 
+e)  
+a record of any sub-lease arrangement in respect of the 
+building. 
+51  A taxpayer taxable under Article 59 of this Proclamation 
+shall keep a record of the acquisition date of the taxable 
+asset, the cost of acquisition, any costs of improvement in 
+relation to the asset, and the consideration received on 
+disposal of the asset. 
+61  The Authority may disallow a claim by a taxpayer for the 
+following: 
+a)  a deduction for an expenditure; 
+b)  
+the inclusion of an amount of expenditure in the cost of 
+an asset, 
+if the taxpayer is unable to produce documentary evidence 
+relating to the circumstances giving rise to the claim for the 
+deduction or the inclusion of the amount in the cost of an 
+asset. 
+71  The Authority shall issue directives necessary for the 
+implementation of this Article. 
+https://ethiodata.et/
+b) 
+83. Tax Declarations 
+11 
+An employee shall not be required to rile a tax declaration 
+unless the employee has more than one employer for a 
+calendar month or he has self-withholding obligation. 
+2J 
+If an employee has more than one employer for a calendar 
+month or a self withholding obligation , the employee shall 
+rile a tax declaration within 30 days from the end of every 
+three months . 
+31 
+For an employee who is not required to file a tax declaration. 
+the withholding tax receipt provided by the employer to the 
+employee under Article 96 of this Proclamation for 
+a month 
+shall be treated for the purposes of this 
+Proclamation and the Tax Administration Proclamation as an 
+assessment of the amount of tax payable by the employee for 
+the month being that amount as set out on the statement. 
+4/  
+A Category 'A' or Category 'B' taxpayer shall file a tax 
+declaration for a tax year within: 
+a)  for Category A taxpayers. 4 months from the end of the 
+tax year: or 
+for Category 'S' taxpayers, 2 months from the end of 
+the tax year. 
+5/ 
+A tax declaration filed under sub-anicle (4) of this Article 
+for a tax year shall be accompanied by: 
+a) 
+for a Category 'A' taxpayer, the taxpayer's profit and 
+loss statement and balance sheet for the year; or 
+b) 
+for a Category '8' taxpayer, the taxpayer's profit and 
+loss statement for the year. 
+61 
+A Category 'C' taxpayer shall file a tax declaration within 
+the period specified in Article 84(4) of this Proclamation. 
+https://ethiodata.et/
+Payment 
+Imports 
+7/ 
+A taxpayer who has Schedule 'D' income for a tax year that 
+is not discharged by the withholding of tax from the income 
+shall fiJe a tax declaration within two months after the date 
+of the transaction giving rise to the income. 
+84. 
+of Tax 
+11 
+The employment income tax payable by an employee for a 
+calendar month shall be due on the date that the taxpayer's 
+tax declaration for every three months in which the month 
+occurs is due. 
+2! 
+The tax payable for a tax year by a Category ' A' or Category 
+'8' tax payer shall be due on the date that the taxpayer's tax 
+declaration for the year is due. 
+3/ 
+The tax payable by a taxpayer to whom Article 83(7) applies 
+in respect of a transaction shall be due on the date that the 
+tax declaration in relation to the transaction is due. 
+4/ 
+A Category 'C' taxpayer shall pay tax on the 71h day of July 
+to the 6th day of August each fiscal year in accordance with 
+the Regulations issued hereunder. 
+85. Advance Pavment of Tax in Relation to 
+11 
+A 
+taxpayer 
+under 
+Schedule 
+'C' 
+importing 
+goods 
+for 
+commercial use shall make an advance payment of business 
+income tax to the Authority equal to 3% of the CIF value of 
+the goods. 
+21 
+The tax payable under suh-article (I) of this Article shall be 
+paid before the goods are released from Customs control and 
+shall be credited against the taxpayer' s business income tax 
+liability for the tax year in which the import occurred. 
+31 
+If the total amount of advance payments of tax credited 
+under sub-article (2) of this Article for a tax year exceeds the 
+business income tax liability of the taxpayer for the year, the 
+excess is applied in accordance with Article 49 of the Tax 
+Administration Proclamation. 
+https://ethiodata.et/
+41 
+The Minister may issue a Directive defining " commercial 
+use" for the purposes of this Article. 
+86. Installment of Tax 
+1/ 
+Subject to sub-article (2) of this Article, a Schedule 'C' 
+taxpayer may pay an installmenl of business income tax for 
+a tax year on the last day of the mOl1lh following the end of 
+the sixth month of the year. 
+21 
+Subject to sub-article (4) and (5) of this Article, the amount 
+of the installment of tax for a tax year payable by a taxpayer 
+may be one-half of the amount of the business income tax 
+payable by the taxpayer for the previous tax year. 
+3/ 
+If a taxpayer did not have a business income tax liability for 
+the previous year, the amount of the installment may be one­
+half of the amount of the business income tax payable in the 
+most recent tax year in which the taxpayer had a business 
+income tax liability. 
+4/ 
+The amount of an installmenl payable by a taxpayer for an 
+installment period as determined under sub-anicle (2) of this 
+Article shall be reduced, but not below zero, by any advance 
+tax paid under Article 85 of this Proclamation or any 
+withholding lax paid under Article 92 of this Proclamation in 
+respect of the business income derived by the taxpayer 
+during the installment period. 
+5/ 
+An installment of tax paid by a tax payer under this Article 
+for a lax year shall be credited against the business income 
+tax liability of the taxpayer for the year. 
+61 
+If the amount of the instaUment of tax credited under sub­
+article (5) of this Article for a tax year exceeds the business 
+income tax liability of the taxpayer for the year, the excess 
+shall be applied in accordance with Article 49 of the Tax 
+Administration Proclamation. 
+https://ethiodata.et/
+Transportation 
+Wilhholding 
+Emplovment 
+71 
+This Article may apply to a Schedule '8' taxpayer on the 
+basis that a reference in this Article to "business income tax" 
+shall be treated as a reference to "rental income tax". 
+81 
+In this Article, "installment period", in relation to the tax 
+year of a taxpayer, means the period of six months ending on 
+the sixth month of the year. 
+87. Collection of International Air 
+Income Tax 
+II A non-resident liable for tax under Ankle 50 of this 
+Proclamation shall file a tax declaration with the Authority 
+for each quarter by the last day of the month following the 
+end of the quaner. 
+21 
+The tax under Article 50 of this Proclamation payable by a 
+non-resident for a quarter shall be due on the due date for 
+filing the tax declaration for the quarter. 
+31 
+If the tax payable by a non-resident ror a quarter is not paid 
+within three months or the due date, the Authority may issue 
+to the Ethiopian Civil Aviation Authority a certificate 
+specirying the name or the non-resident and the amount or 
+tax due. and the Ethiopian Civil Aviation Authority shall 
+refuse clearance rrom any airport in Ethiopia 10 any aircraft 
+owned or chartered by the non-resident until the tax due has 
+been paid. 
+41 
+In this Article. "quarter" means the period or three months 
+ending on 31't March, 30th June, 30th September, and 3 l 't 
+December or each year. 
+PART TEN 
+WITHHOLDING TAX 
+88. 
+of Tax from 
+Income 
+II 
+Subject to sub-article (2) of this Article, an employer paying 
+employment income to an 
+employment 
+income 
+tax 
+employee who is 
+subject to 
+under 
+Article 
+10 
+or 
+this 
+Proclamation shall withhold tax from the gross amount or 
+https://ethiodata.et/
+Wilhholding 
+Payment.;; 
+each payment of employment income made to the employee 
+at the rate or rates applicable to the employee as specified in 
+Article I I of this Proclamation. 
+21 
+If an employer is aware that an employee has more than one 
+employment and that the other employer, or none of the 
+other 
+employers, 
+are 
+withholding 
+tax 
+based 
+on 
+the 
+aggregated 
+employment 
+income, 
+the 
+employer 
+shall 
+withhold tax based on the aggregated employment income. 
+31 
+The obligation of an employer to withhold tax from a 
+payment of employment income to an employee shall have 
+priority over any obligations of the employer to withhold 
+any other amount from a payment of employment income to 
+an employee. 
+89. 
+of Tax from 
+to Non-residents 
+11 
+A resident of Ethiopia or a permanent establishment in 
+Ethiopia of a non-resident making a payment of a dividend, 
+repatriated 
+profit, 
+payment 
+to 
+sub-contractor, 
+interest, 
+royalty, management fee. technical fee, insurance premium 
+or other income that is subject to tax, as the case may be 
+shall withhold tax from the gross amount paid at the tax rate 
+applicable to the income as specified in Article 37(4), 51(2), 
+54.55.56, 62 or 63 of this Proclamation. 
+21 
+A resident of Ethiopia or a permanent establishment in 
+Ethiopia of a non-resident making a payment to a non­
+resident entertainer that is income of the non-resident 
+entertainer subject to tax under Article 53 shall withhold tax 
+from the gross amount paid at the tax rate specified in 
+Article 53(1) of this Proclamation. 
+31 
+A Company which is a resident of Ethiopia shall withhold 
+tax specified under Article 61 of this Proclamation on its 
+undistributed profit. 
+https://ethiodata.et/
+Wilhholding 
+profit. 
+repatriated profit, Interest, 
+Rovalties 
+Wilhholding 
+Wilhholding 
+Payments 
+90. 
+of Tax from Dividends. Undistributed 
+and 
+11 
+A resident of Ethiopia or a permanent establishment in 
+Ethiopia of a non-resident paying a royalty that is subject to 
+tax under Article 54 of this Proclamation shall withhold tax 
+from the gross amount of the royalty at the rate specified in 
+that Article. 
+2J 
+A resident body paying a dividend that is subject to tax 
+under Article 55 or that has undistributed profit subject to 
+tax under Article 61 of this Proclamation, as the case may 
+be. shall withhold tax from the gross amount of the dividend 
+or undistributed profit at the rate specified in that Article. 
+3/ 
+A resident of Ethiopia or a permanent establishment in 
+Ethiopia of a non-resident paying interest or repatriated 
+profits that is subject to tax under Article 56 or 62 of this 
+Proclamation or undistributed profit shall withhold tax from 
+the gross amount of the interest or the repatriated profit at 
+the rate specified in those Articles. 
+91. 
+of Tax from Games of Chance Income 
+A person paying winnings from a game of chance subject to tax 
+under Article 57 of this Proclamation shall withhold tax from the 
+gross amolLnt of the winnings at the rate specified in that Article. 
+92. 
+of Tax from Domestic 
+11 
+Except micro enterprises, bodies having legal personality, 
+government agencies , non-profit organizations, or non­
+governmental organizations and other tax payers required 10 
+withhold tax by a directive of the authority, shall withhold 
+tax at the rate of 2% of the gross amount of a payment made 
+for the following: 
+a) 
+the supply of goods in Ethiopia involving more than 
+10,000 Birr in one transaction or supply contract; 
+https://ethiodata.et/
+Self-withholding 
+b) 
+the supply of services involving more than 3,000 Birr in 
+one supply contract 
+2! 
+Sub-article (I) of this Article shall apply to separate supplies 
+of goods or services for an amount that is less than the 
+amount specified in sub-article (I) of this Article when it 
+would reasonably be expected that the goods or services 
+would ordinarily be supplied in a single supply for an 
+amount exceeding the amount specified in sub-article (I) of 
+this Article. 
+31 
+When sub-article (2) applies, the Authority may determine 
+the amount of any unpaid withholding tax and, by notice in 
+writing, recover the unpaid withholding tax from either the 
+supplier or purchaser. 
+41 
+If the supplier in a transaction to which sub-article (I) 
+applies has faiJed to provide their TIN to the withholding 
+agent, the withholding agent shall withhold tax at the rate of 
+30% of the gross amount of the payment made. 
+51 
+The withholding tax payable under sub-article (4): 
+a) 
+shall be a final tax on the income derived by the 
+supplier from the supply: and 
+b) 
+shall not be waivered by either a Directive or 
+administrative decision. 
+6/ 
+The Minister may, by Directive, change the amounts 
+specified in sub-article (I) of this Article. 
+93. 
+II 
+An employee employed by an international organisation or 
+working in an embassy, diplomatic mission, or other 
+consular establishment in Ethiopia of a foreign government 
+or employed by an entity exempt by law from tax 
+withholding 
+obligations shall withhold 
+tax 
+from 
+the 
+employment income received from such entities as required 
+under Article 88 of this Article. 
+https://ethiodata.et/
+Withholding 
+Exempt 
+Pavment 
+Withholding 
+Withholding 
+Receipt 
+2/ 
+Sub-article (I) of this Article shall apply only when the 
+international organization or foreign government does not 
+withhold 
+tax 
+as 
+required 
+under 
+Article 
+88 of this 
+Proclamation. 
+3/ 
+When the payer of income: 
+a) 
+subject to tax under Articles 54.56 or 57 of this 
+Proclamation is a non-resident without a permanent 
+establishment in Ethiopia; or 
+b) 
+subject to tax under Article 55 of this Proclamation is a 
+non-resident body; 
+the resident of Ethiopia deriving the income shall withhold 
+tax from the income as required under Article 90 or 91 of 
+this Proclamation. 
+94. No 
+from 
+Income 
+A withholding agent shall not withhold tax under this Chapter 
+from an amount that is exempt income of the recipient. 
+95. Time of 
+of 
+Income 
+For the purposes of this Part, withholding income shall be treated 
+as having been paid by a withholding agent to a person if any of 
+the following applies: 
+11 
+the withholding income is actually paid to the person; 
+21 
+the withholding income is applied on behalf of the person 
+either at the instruction of the person or under any law; 
+31 
+the withholding income is reinvested, accumulated, or 
+capitalized for the benefit of the person; 
+41 
+the withholding income is credited to an account for the 
+benefit of the person. 
+96. 
+Tax 
+At the time of withholding tax from withholding income, a 
+withholding agent shall provide the recipient of the withholding 
+https://ethiodata.et/
+Payment 
+Withholding 
+Withholding 
+income with a withholding tax receipt in the approved foml in 
+accordance with the directive of the authority. 
+97. 
+of 
+Tax 
+11 
+Tax that a withholding agent is required to withhold from 
+withholding income shaU be paid to the Authority within 30 
+days after the end of the month in which the withholding 
+income was paid. 
+21 
+A withholding agent required to pay withholding tax under 
+sub-article (I) of this Article shall file a withholding tax 
+declaration in the approved form with the payment. 
+3/ 
+If a withholding agent: 
+a) 
+fails to withhold tax as required under this Part; or 
+b) 
+having withheld tax fails to pay the tax to the Authority 
+as required under sub-article (I) of this Anicle; 
+the withholding agent shall be personally liable to pay the 
+amount of tax to the Authority. 
+4/ 
+A withholding agent personally liable for an amount of tax 
+under sub-anicle (3) of this Article as a result of failing to 
+withhold the tax is entitled to recover the tax paid from the 
+recipient of the payment. 
+98. Credit for 
+Tax 
+11 
+If the withholding income of a taxpayer for a tax year is oat 
+subject to final taxation under Article 10(5) or 64(2) of this 
+Proclamation, the taxpayer shall be allowed a tax credit for 
+the withholding tax. 
+21 
+If the amount of the tax credit allowed under sub-anicle (1) 
+of this Article is less than the total tax liability of the 
+taxpayer for the year, the taxpayer shall pay the difference 
+https://ethiodata.et/
+Regulations 
+Repealed 
+Inapplicable 
+by the due date for filing the taxpayer's tax declaration for 
+the year. 
+31 
+If the amount of the tax credit allowed under sub-article (I) 
+of this Article exceeds the total tax liability of the taxpayer 
+for the year, the excess shall be applied in accordance with 
+Article 49 of the Tax Administration Proclamation. 
+PART ELEVEN 
+MISCELLANEOUS PROVISIONS 
+99. Power to Issue 
+and Directives 
+11 
+The Council of Ministers may issue Regulations necessary 
+for the proper implementation 
+of this 
+Proclamation, 
+including in relation to transitional matters. 
+21 
+The Minister may issue Directives necessary for the proper 
+implementation of this Proclamation and Regulations issued 
+under sub-article (I) of this Article. 
+100. 
+and 
+Laws 
+11 
+Without prejudice to Article 101 of this Proclamation, the 
+following laws (here in after referred to as 'Repealed law') 
+are hereby repealed; 
+a) 
+The Income Tax Proclamation No. 286/2002 and aU 
+amendments thereto; 
+b) 
+The Mining Income Tax Proclamation No 53/1993 
+and all amendments thereto: and 
+https://ethiodata.et/
+1/ 
+c)  
+The Petroleum Operations lncome Tax No 296/1986 
+and all amendments thereto. 
+21  
+No other law may, in so far as it is inconsistent with this 
+Proclamation, be app licable 
+with respect to matters 
+provided for by this Proclamation. 
+101. Transitional Provisions 
+Subject to the Tax Administration Proclamation, the laws 
+here by repealed shall continue to apply for the tax year 
+preceding the tax year in which this proclamation enters 
+into force. 
+21 
+A reference in this Proclamation to a previous tax year 
+includes, when the context requires, a reference to a tax 
+year under the repealed laws. 
+3/ 
+A reference in Article 73 of this Proclamation to a 
+previously deducted expenditure, loss, or bad debt includes 
+a reference to expenditure, loss, or bad debt deducted 
+under the repealed law. 
+4/ 
+Profit and loss or income statement to be prepared under 
+this proclamation shall be in accordance with the schedule 
+to be set by the Ethiopian Accounting and Audit Board 
+The laws here by repealed shall continue to apply until the 
+schedule becomes operative. 
+5/ 
+The Authority shall determine within one year from the 
+effective date of this Proclamation, the date from when the 
+Category of taxpayers provided herein shalJ begin to apply. 
+The repealed law relating to the Category of taxpayers 
+shall continue to apply until that time. 
+6/ 
+Regulations and Directives issued under the Repealed laws 
+shall continue to apply to the extent that they are not 
+https://ethiodata.et/
+inconsistent with this Proclamation and until such time as 
+they are replaced by new Regulations and Directives. 
+102. Effective Date 
+This Proclamation shall apply on income derived as of 8th day 
+of July , 2016. 
+Done at Addis Ababa 18th day of August, 2016. 
+MULATU TESHOME (Dr.)  
+PRESIDENT OF THE FEDERAL  
+DEMOCRATIC REPUBLIC OF ETHIOPIA  
+https://ethiodata.et/

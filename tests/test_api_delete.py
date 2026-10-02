@@ -5,20 +5,21 @@ Tests:
 - Delete employee without history → 200 + AuditLog
 - Delete employee with payroll history → 409 (IntegrityError)
 """
-import sys
+
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from datetime import date
+
 from payroll_engine import create_app, db
-from payroll_engine.models import (
-    Employee, Company, User, PayrollRun, Payslip,
-    AuditLog, TenantQuery, OvertimeEntry
-)
-from datetime import date, datetime
+from payroll_engine.models import AuditLog, Company, Employee, OvertimeEntry, PayrollRun, Payslip, TenantQuery, User
 
 
 @pytest.fixture
@@ -52,9 +53,7 @@ def company_user_employee(ctx):
     db.session.add(user)
     db.session.commit()
     emp = Employee(
-        employee_id='EMP001', name='Dawit Mekonnen',
-        basic_salary=10000, allowances=2000,
-        company_id=company.id
+        employee_id='EMP001', name='Dawit Mekonnen', basic_salary=10000, allowances=2000, company_id=company.id
     )
     db.session.add(emp)
     db.session.commit()
@@ -67,14 +66,12 @@ def client(app):
 
 
 def login(client, phone, password):
-    return client.post('/auth/login', data={
-        'login_id': phone, 'password': password
-    }, follow_redirects=True)
+    return client.post('/auth/login', data={'login_id': phone, 'password': password}, follow_redirects=True)
 
 
 def test_delete_employee_without_history(ctx, client, company_user_employee):
     """Delete employee without payroll history → 200 + AuditLog."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
 
     resp = client.delete(f'/api/v1/employees/{emp.id}')
@@ -82,19 +79,17 @@ def test_delete_employee_without_history(ctx, client, company_user_employee):
     assert resp.get_json()['message'] == 'Deleted'
 
     # Verify employee is gone
-    assert Employee.query.get(emp.id) is None
+    assert db.session.get(Employee, emp.id) is None
 
     # Verify audit log
-    log = AuditLog.query.filter_by(
-        company_id=company.id, action='employee_deleted_api'
-    ).first()
+    log = AuditLog.query.filter_by(company_id=company.id, action='employee_deleted_api').first()
     assert log is not None
     assert log.details['employee_name'] == 'Dawit Mekonnen'
 
 
 def test_delete_employee_with_history_returns_409(ctx, client, company_user_employee):
     """Delete employee with payroll history → 409 (IntegrityError)."""
-    company, user, emp = company_user_employee
+    company, _user, emp = company_user_employee
     login(client, '0911000001', 'Test1234!')
 
     # Create payroll history
@@ -103,9 +98,13 @@ def test_delete_employee_with_history_returns_409(ctx, client, company_user_empl
     db.session.commit()
 
     payslip = Payslip(
-        payroll_run_id=run.id, employee_id=emp.id,
-        gross_salary=12000, tax=500, employee_pension=700,
-        employer_pension=1100, net_pay=10800
+        payroll_run_id=run.id,
+        employee_id=emp.id,
+        gross_salary=12000,
+        tax=500,
+        employee_pension=700,
+        employer_pension=1100,
+        net_pay=10800,
     )
     db.session.add(payslip)
     db.session.commit()
@@ -116,4 +115,4 @@ def test_delete_employee_with_history_returns_409(ctx, client, company_user_empl
     assert 'payroll history' in resp.get_json()['error'].lower()
 
     # Employee should still exist
-    assert Employee.query.get(emp.id) is not None
+    assert db.session.get(Employee, emp.id) is not None

@@ -106,6 +106,21 @@ Inherited whitespace in merged main documents is not a code validation failure;
 existing document sections were preserved. Hosted CI for the published merge
 must be distinguished from these local checks.
 
+### Hosted follow-up
+
+Reconciliation commit `110d67045bab85b60f4f3c45021070a6d2328fc6` was pushed
+to the existing PR #8 head. GitHub confirms `mergeable: true`: code conflicts are
+resolved. Hosted lint and stylelint passed. The restored standalone Migration
+Tests workflow failed before exercising the schema: its unbounded dependencies
+selected an incompatible SQLAlchemy/sqlalchemy-utils combination and a missing
+psycopg driver. Its dependency installation now uses the same locked requirements
+as the passing CI/local environment. Application fixtures use SQLite while
+`TEST_DATABASE_URL` retains PostgreSQL for actual migration tests. Fresh hosted
+results remain to be checked after this workflow correction.
+
+GitGuardian's automatic scan reran on `110d670` and reported one finding; incident
+classification remains pending in the owner dashboard.
+
 ## GitGuardian and remaining release limits
 
 GitHub check `111002037835` still reports one finding and explicitly links incident

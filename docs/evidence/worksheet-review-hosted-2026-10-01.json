@@ -1,0 +1,158 @@
+{
+  "recorded_at": "2026-10-02 02:11 UTC",
+  "code_commit": "715ddd886366e96226d27883833b255b9f326a9d",
+  "hosted": {
+    "headSha": "715ddd886366e96226d27883833b255b9f326a9d",
+    "status": "completed",
+    "conclusion": "failure",
+    "url": "https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/36877266566",
+    "jobs": [
+      {
+        "name": "test (3.12)",
+        "databaseId": 110419773766,
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Strict security & tenancy gate (fail-hard, no --continue)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run tests (subprocess isolation)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Coverage report",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "summary_lines": [
+          "2026-10-01T14:40:12.7002621Z [102/113] test_tax.py                                   \u2705 15 passed",
+          "2026-10-01T14:40:13.8346641Z [103/113] test_tax_breakdown.py                         \u2705 11 passed",
+          "2026-10-01T14:40:16.7732210Z [104/113] test_tenant_bypass_guards.py                  \u2705 7 passed",
+          "2026-10-01T14:40:19.1951663Z [105/113] test_tenant_isolation.py                      \u2705 6 passed",
+          "2026-10-01T14:40:20.3304456Z [106/113] test_test_runner.py                           \u2705 20 passed",
+          "2026-10-01T14:40:22.5792703Z [107/113] test_tin.py                                   \u2705 5 passed",
+          "2026-10-01T14:40:25.4539628Z [108/113] test_transaction_boundary.py                  \u2705 3 passed",
+          "2026-10-01T14:40:26.6205180Z [109/113] test_trust_cache.py                           \u2705 23 passed",
+          "2026-10-01T14:40:31.3271257Z [110/113] test_undo_approval.py                         \u2705 6 passed",
+          "2026-10-01T14:40:34.2665636Z [111/113] test_usercompany_tenant.py                    \u2705 6 passed",
+          "2026-10-01T14:40:40.1091633Z [112/113] test_validation_phase2.py                     \u2705 19 passed",
+          "2026-10-01T14:40:46.8407619Z [113/113] test_verification.py                          \u2705 12 passed",
+          "2026-10-01T14:40:46.8410685Z TOTAL: 1245 passed, 0 failed, 0 errors, 61 skipped",
+          "2026-10-01T14:40:46.8411113Z TIME: 385.2s",
+          "2026-10-01T14:46:21.3201645Z 1245 passed, 61 skipped, 20 warnings in 330.97s (0:05:30)"
+        ],
+        "log_exit": 0
+      },
+      {
+        "name": "lint",
+        "databaseId": 110419773852,
+        "status": "completed",
+        "conclusion": "failure",
+        "steps": [],
+        "summary_lines": [
+          "2026-10-01T14:33:40.4906146Z Found 132 errors."
+        ],
+        "log_exit": 0
+      },
+      {
+        "name": "test-postgres",
+        "databaseId": 110419773865,
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Run migrations against PostgreSQL",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify migration rollback",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "summary_lines": [
+          "2026-10-01T14:34:40.4006673Z 69 passed, 177 warnings in 23.57s"
+        ],
+        "log_exit": 0
+      },
+      {
+        "name": "test (3.11)",
+        "databaseId": 110419774334,
+        "status": "completed",
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Strict security & tenancy gate (fail-hard, no --continue)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run tests (subprocess isolation)",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "name": "Coverage report",
+            "status": "completed",
+            "conclusion": "skipped"
+          }
+        ],
+        "summary_lines": [
+          "2026-10-01T14:40:02.1141430Z [101/113] test_system_setting.py                        \u2705 5 passed",
+          "2026-10-01T14:40:03.2559574Z [102/113] test_tax.py                                   \u2705 15 passed",
+          "2026-10-01T14:40:04.3808145Z [103/113] test_tax_breakdown.py                         \u2705 11 passed",
+          "2026-10-01T14:40:07.1707017Z [104/113] test_tenant_bypass_guards.py                  \u2705 7 passed",
+          "2026-10-01T14:40:09.5207975Z [105/113] test_tenant_isolation.py                      \u2705 6 passed",
+          "2026-10-01T14:40:10.6506141Z [106/113] test_test_runner.py                           \u2705 20 passed",
+          "2026-10-01T14:40:12.8175997Z [107/113] test_tin.py                                   \u2705 5 passed",
+          "2026-10-01T14:40:15.6678971Z [108/113] test_transaction_boundary.py                  \u2705 3 passed",
+          "2026-10-01T14:40:16.7651731Z [109/113] test_trust_cache.py                           \u2705 23 passed",
+          "2026-10-01T14:40:21.2313258Z [110/113] test_undo_approval.py                         \u2705 6 passed",
+          "2026-10-01T14:40:24.0517530Z [111/113] test_usercompany_tenant.py                    \u2705 6 passed",
+          "2026-10-01T14:40:29.5158186Z [112/113] test_validation_phase2.py                     \u2705 19 passed",
+          "2026-10-01T14:40:35.7210403Z [113/113] test_verification.py                          \u2705 12 passed",
+          "2026-10-01T14:40:35.7213631Z TOTAL: 1245 passed, 0 failed, 0 errors, 61 skipped",
+          "2026-10-01T14:40:35.7213955Z TIME: 376.3s"
+        ],
+        "log_exit": 0
+      }
+    ]
+  },
+  "lint_comparison": {
+    "base_count": 13,
+    "new_count": 12,
+    "introduced": [],
+    "removed": [
+      [
+        "payroll_engine\\payroll_bp.py",
+        "F401",
+        "`payroll_engine.catalog._norm` imported but unused"
+      ]
+    ]
+  },
+  "browser_download": {
+    "path": "C:/Users/25191/Downloads/payslips_run_134_2026-10-01.zip",
+    "pdf": "payslip_DEMO1_Demo_Employee.pdf",
+    "checked_amounts": [
+      "12,900.50",
+      "4,310.15",
+      "8,590.35"
+    ],
+    "all_match": true
+  },
+  "source_preflight": {
+    "verdict": "BLOCKED",
+    "findings": [
+      "DIFF_AUTH_REVIEW compare at diff_check.py:677",
+      "DIFF_AUTH_REVIEW download at diff_check.py:735"
+    ],
+    "migration_graph": "71 revisions; one head f4a5b6c7d8f0; no graph problems"
+  },
+  "deployment": "Not deployed; this record does not change runtime code."
+}

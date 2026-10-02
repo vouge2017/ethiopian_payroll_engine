@@ -1,7 +1,38 @@
 # STATUS.md — Command-Verified State
 
-**Last updated:** 2026-10-01 14:30 UTC
+**Last updated:** 2026-10-02 02:11 UTC
 
+
+
+
+## Pushed worksheet code and hosted verification - 2026-10-02 02:11 UTC
+
+Code commit 715ddd8 is pushed on feature/elements-architecture. GitHub's branch
+head was independently read through its API and matched the local commit.
+[Run 36877266566](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/36877266566) verifies this exact code:
+
+- test (3.11): `TOTAL: 1245 passed, 0 failed, 0 errors, 61 skipped`.
+- test-postgres: `69 passed, 177 warnings in 23.57s`.
+- lint: `Found 132 errors.`.
+
+Python 3.11 and 3.12 main suites each report 1,245 passed, zero failures/errors
+and 61 skipped. Both strict security gates and the Python 3.12 coverage job passed.
+All hosted jobs have completed; lint is the sole failing job.
+PostgreSQL migration, native tests and rollback passed. These hosted results
+supplement the earlier timed-out local full run; that timeout remains recorded.
+The general runner skips native PG cases; they execute in the separate PG job.
+
+Whole CI remains red due to lint. Comparing the changed Python files at bb39cde
+and 715ddd8 with the same Ruff config found 13 vs 12 findings, zero introduced,
+one unused import removed. The 132 global findings are not waived or fixed.
+Source preflight still flags the two existing Diff authorization review points.
+
+Visible Chrome completed Download All (ZIP) for the approved synthetic run.
+Its PDF contains gross 12,900.50, deductions 4,310.15 and net 8,590.35. This closes
+the browser download check; the results-screen individual PDF control, unsupported
+Undo button and completed-review badge remain small UI fixes before founder sign-off.
+No application deployment, merge, rebase or PR occurred. DESIGN.md remains untouched.
+[Hosted evidence](docs/evidence/worksheet-review-hosted-2026-10-01.json).
 
 
 ## Saved worksheet review and approval - 2026-10-01 14:30 UTC

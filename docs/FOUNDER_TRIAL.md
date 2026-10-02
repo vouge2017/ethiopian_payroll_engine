@@ -16,6 +16,7 @@ is also prepared. Local account details are kept with the demo handoff on D:.
 5. Click **Continue to approval**. Expand the employee breakdown, check total
    deductions **4,310.15**, enter the demo password, confirm and approve.
 6. The payroll is approved; no bank transfer, wallet payment or tax filing is sent.
+7. Click **Download All (ZIP)** on the results screen; its payslip shows the same amounts.
 
 Later worksheet edits do not silently change the preserved review. Before
 submission, use **Refresh from saved worksheet** deliberately if edits must be
@@ -25,7 +26,7 @@ included. Worksheet approval cannot yet be undone or corrected through this flow
 
 - Expose on-demand individual PDF on the results screen before a PDF already exists.
 - Hide the unsupported worksheet Undo button and correct the completed review badge.
-- Complete the final browser download click and founder trial feedback.
+- Founder trial feedback remains. The browser ZIP download succeeded and its PDF amounts match.
 - A sample generated PDF is available in the local handoff. PostgreSQL HTTP/worker
   tests already verify PDF and bank figures, persistence, retries and rollback.
 

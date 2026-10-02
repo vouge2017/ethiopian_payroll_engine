@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Filing History — EthioPayroll{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4><i class="bi bi-file-earmark-check me-2"></i>Filing History</h4>
+            <small class="text-muted">Track when ERCA, pension, and PSSA filings were completed.</small>
+        </div>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#markFiledModal">
+            <i class="bi bi-plus-circle me-1"></i> Mark as Filed
+        </button>
+    </div>
+
+    {% if records %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 sortable filterable responsive-card">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Period</th>
+                        <th>Filed At</th>
+                        <th>Filed By</th>
+                        <th>Confirmation #</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td data-label="Type">
+                            <span class="badge bg-{{ 'primary' if r.filing_type == 'erca' else 'success' if r.filing_type == 'pension' else 'info' }}">
+                                {{ r.filing_type|upper }}
+                            </span>
+                        </td>
+                        <td data-label="Period">{{ r.period }}</td>
+                        <td data-label="Filed At">{{ eth_date(r.filed_at) if r.filed_at else '' }}</td>
+                        <td data-label="Filed By">{{ r.user.email if r.user else '—' }}</td>
+                        <td data-label="Confirmation #"><code>{{ r.confirmation_number or '—' }}</code></td>
+                        <td data-label="Notes" class="text-muted small">{{ r.notes or '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-file-earmark-check" style="font-size: 3rem;"></i>
+        <p class="mt-2">No filings recorded yet. Click "Mark as Filed" to record your first filing.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Mark as Filed Modal -->
+<div class="modal fade" id="markFiledModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('reports.mark_filed') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Mark Filing as Done</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Filing Type</label>
+                        <select name="filing_type" class="form-select" required>
+                            <option value="erca">ERCA — Income Tax Filing</option>
+                            <option value="pension">Pension — PSSA Contribution</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Period</label>
+                        <input type="month" name="period" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirmation Number <small class="text-muted">(optional)</small></label>
+                        <input type="text" name="confirmation_number" class="form-control" placeholder="e.g. ERCA-2026-07-12345">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes <small class="text-muted">(optional)</small></label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Any notes about this filing..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i> Mark as Filed
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

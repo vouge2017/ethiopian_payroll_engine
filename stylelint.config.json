@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "no-duplicate-selectors": true,
+    "declaration-block-no-duplicate-properties": [
+      true,
+      { "ignore": ["consecutive-duplicates-with-different-values"] }
+    ],
+    "declaration-property-value-disallowed-list": {
+      "z-index": ["/^\\d{3,}$/"],
+      "color": ["/^#[0-9a-fA-F]{3,8}$/"],
+      "background-color": ["/^#[0-9a-fA-F]{3,8}$/"]
+    }
+  }
+}

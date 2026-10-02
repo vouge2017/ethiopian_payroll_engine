@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Payroll Register — {{ company.name }}{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <!-- Screen controls -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h4><i class="bi bi-printer"></i> Payroll Register</h4>
+        <div>
+            <button onclick="window.print()" class="btn btn-primary btn-sm">
+                <i class="bi bi-printer"></i> Print
+            </button>
+            <a href="{{ url_for('payroll.batch_payslips') }}" class="btn btn-outline-success btn-sm ms-2">
+                <i class="bi bi-file-earmark-zip"></i> Download All Payslips (ZIP)
+            </a>
+            <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-outline-secondary btn-sm ms-2">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Printable register -->
+    <div class="register-page">
+        <div class="text-center mb-3">
+            <h5 class="mb-1">{{ company.name }}</h5>
+            <div class="text-muted small">Payroll Register — {{ period }}</div>
+            <div class="text-muted small">Generated: {{ now().strftime('%d %B %Y') if now is defined else '' }}</div>
+        </div>
+
+        <div class="table-responsive">
+
+        <table class="table table-bordered table-sm register-table">
+            <thead>
+                <tr>
+                    <th class="text-center" style="width:30px">No.</th>
+                    <th style="width:80px">ID</th>
+                    <th style="width:140px">Name</th>
+                    <th class="text-end" style="width:80px">Basic</th>
+                    <th class="text-end" style="width:70px">Allow.</th>
+                    <th class="text-end" style="width:70px">Gross</th>
+                    <th class="text-end" style="width:65px">Pension</th>
+                    <th class="text-end" style="width:65px">Tax</th>
+                    <th class="text-end" style="width:80px">Net Pay</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="text-center">{{ loop.index }}</td>
+                    <td>{{ row.emp.employee_id }}</td>
+                    <td>{{ row.emp.name }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(row.emp.basic_salary) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(row.emp.allowances) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(row.gross) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(row.pension) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(row.tax) }}</td>
+                    <td class="text-end"><strong>{{ "{:,.2f}".format(row.net) }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="fw-bold">
+                    <td colspan="3" class="text-end">TOTALS</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_basic) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_allow) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_gross) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_pension) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_tax) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_net) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+</div>
+
+        <!-- Signature lines -->
+        <div class="row mt-5 signature-row">
+            <div class="col-6">
+                <div class="sig-line">Prepared by: _________________________</div>
+                <div class="sig-label">Name & Signature / Date</div>
+            </div>
+            <div class="col-6">
+                <div class="sig-line">Approved by: _________________________</div>
+                <div class="sig-label">Name & Signature / Date</div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3 text-muted small">
+            {{ company.name }} | TIN: {{ company.tin or 'N/A' }} | {{ period }}
+        </div>
+    </div>
+</div>
+
+<style>
+.register-table {
+    font-size: 0.8rem;
+}
+.register-table th {
+    background-color: #1a5276;
+    color: white;
+    font-size: 0.75rem;
+    padding: 4px 6px;
+}
+.register-table td {
+    padding: 3px 6px;
+    vertical-align: middle;
+}
+.register-table tfoot td {
+    background-color: #d6eaf8;
+    border-top: 2px solid #1a5276;
+}
+.sig-line {
+    margin-top: 40px;
+    font-size: 0.85rem;
+}
+.sig-label {
+    font-size: 0.75rem;
+    color: #666;
+}
+.register-page {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 10mm;
+    background: white;
+}
+@media print {
+    .no-print { display: none !important; }
+    body { background: white; }
+    .register-page {
+        padding: 0;
+        max-width: none;
+    }
+    .register-table { font-size: 0.7rem; }
+    .register-table th { font-size: 0.65rem; }
+    .register-table td { padding: 2px 4px; }
+}
+</style>
+{% endblock %}

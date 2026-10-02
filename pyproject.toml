@@ -1,0 +1,53 @@
+# Ruff — Python linter + formatter
+# https://docs.astral.sh/ruff/
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort (import sorting)
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E712",   # true/false comparison (SQLAlchemy column == False is intentional)
+    "E741",   # ambiguous variable name (l used for line items in financial code)
+    "E402",   # module import not at top (Flask __init__ patterns require this)
+    "B008",   # function call in default argument (Flask patterns)
+    "B017",   # assert blind exception (test patterns for IntegrityError)
+    "SIM108", # ternary operator (readability preference)
+    "SIM115", # open-file-with-context-handler (false positives in Flask)
+    "N802",   # function name should be lowercase (some Flask conventions)
+    "N803",   # argument name should be lowercase
+    "N806",   # variable in function should be lowercase
+    "N817",   # camelcase imported as acronym (SQLAlchemy model imports)
+    "UP007",  # use X | Y for union types (Python 3.10+)
+    "RUF001", # ambiguous unicode string (Amharic text — expected)
+    "RUF002", # ambiguous unicode docstring (Amharic text)
+    "RUF003", # ambiguous unicode comment (Amharic text)
+    "RUF012", # mutable class default (SQLAlchemy model columns)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["payroll_engine"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning:sqlalchemy.*",
+]

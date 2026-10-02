@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Payment Reconciliation — EthioPayroll{% endblock %}
+{% block content %}
+<div class="container-xxl py-4">
+    <h1 class="h3 mb-4">Payment Reconciliation</h1>
+
+    <div class="card mb-4"><div class="card-body">
+        <h2 class="h5 card-title">Pending confirmation <span class="badge bg-secondary">{{ pending|length }}</span></h2>
+        {% if pending %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Company</th><th>Period</th><th>Plan</th><th>Amount</th><th>Reference</th><th>Submitted</th><th></th></tr></thead>
+                <tbody>
+                {% for row in pending %}
+                    <tr>
+                        <td class="fw-bold">{{ row.company_name }}</td>
+                        <td>{{ row.payment.period_month }}</td>
+                        <td>{% if row.payment.plan_code %}→ {{ row.payment.plan_code }}{% else %}—{% endif %}</td>
+                        <td>ETB {{ '%.2f'|format(row.payment.amount_etb|float) }}</td>
+                        <td><code>{{ row.payment.reference }}</code>{% if row.payment.note %}<br><small class="text-muted">{{ row.payment.note }}</small>{% endif %}</td>
+                        <td class="small">{{ row.payment.submitted_at.strftime('%Y-%m-%d %H:%M') if row.payment.submitted_at }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{{ url_for('platform.confirm_payment', payment_id=row.payment.id) }}" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-success btn-sm" type="submit">Confirm</button>
+                            </form>
+                            <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#reject-{{ row.payment.id }}">Reject</button>
+                            <form method="post" action="{{ url_for('platform.reject_payment', payment_id=row.payment.id) }}" class="collapse mt-1" id="reject-{{ row.payment.id }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input class="form-control form-control-sm mb-1" name="review_note" placeholder="Reason (sent to tenant)">
+                                <button class="btn btn-danger btn-sm" type="submit">Confirm rejection</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted small mb-0">No pending payments.</p>
+        {% endif %}
+    </div></div>
+
+    <div class="card"><div class="card-body">
+        <h2 class="h5 card-title">Recently reviewed</h2>
+        {% if recent %}
+        <table class="table table-sm align-middle">
+            <thead><tr><th>Company</th><th>Period</th><th>Amount</th><th>Status</th><th>Reviewed</th></tr></thead>
+            <tbody>
+            {% for row in recent %}
+                <tr>
+                    <td>{{ row.company_name }}</td>
+                    <td>{{ row.payment.period_month }}</td>
+                    <td>ETB {{ '%.2f'|format(row.payment.amount_etb|float) }}</td>
+                    <td><span class="badge bg-{% if row.payment.status == 'confirmed' %}success{% else %}danger{% endif %}">{{ row.payment.status }}</span></td>
+                    <td class="small">{{ row.payment.reviewed_at.strftime('%Y-%m-%d') if row.payment.reviewed_at }}{% if row.payment.review_note %} — {{ row.payment.review_note }}{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted small mb-0">Nothing reviewed yet.</p>
+        {% endif %}
+    </div></div>
+</div>
+{% endblock %}

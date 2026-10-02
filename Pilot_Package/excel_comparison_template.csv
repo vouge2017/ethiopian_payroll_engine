@@ -1,0 +1,14 @@
+Employee ID,Field,EthioPayroll (ETB),Excel (ETB),Diff (ETB),Classification,Notes
+EMP-PLT-001,Gross,10000.00,10000.00,0.00,match,
+EMP-PLT-001,Allowances,2000.00,2000.00,0.00,match,
+EMP-PLT-001,Taxable,9650.00,9650.00,0.00,match,After 7% pension deduction from basic
+EMP-PLT-001,Income tax,0.00,0.00,0.00,match,Bracket 0-600: 0%
+EMP-PLT-001,Pension (employee 7%),560.00,560.00,0.00,match,
+EMP-PLT-001,Pension (employer 11%),880.00,880.00,0.00,match,
+EMP-PLT-001,Net pay,11440.00,11440.00,0.00,match,
+EMP-PLT-002,Gross,15000.00,,,
+EMP-PLT-002,Taxable,14160.00,,,
+EMP-PLT-002,Income tax,1532.00,,,
+EMP-PLT-002,Pension (employee 7%),840.00,,,
+EMP-PLT-002,Pension (employer 11%),1320.00,,,
+EMP-PLT-002,Net pay,12628.00,,,

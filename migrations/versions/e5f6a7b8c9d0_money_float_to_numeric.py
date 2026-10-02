@@ -12,8 +12,8 @@ SQLite does not support ALTER COLUMN TYPE — for SQLite, the migration
 skips the type change (SQLite stores everything as TEXT/REAL anyway).
 For PostgreSQL, it performs a safe CAST.
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'e5f6a7b8c9d0'
 down_revision = ('b3c4d5e6f7a8', 'b4c5d6e7f8a9')

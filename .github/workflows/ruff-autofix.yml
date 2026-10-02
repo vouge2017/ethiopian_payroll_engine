@@ -1,0 +1,37 @@
+name: "Ruff auto-fix"
+
+on:
+  push:
+    branches:
+      - 'ci/auto-fix-ruff'
+  workflow_dispatch: {}
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+      - name: Run ruff --fix
+        run: |
+          ruff check . --fix
+      - name: Commit and push fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: apply ruff --fix automatic lint fixes"
+            git push origin HEAD
+          else
+            echo "No changes from ruff --fix"
+          fi

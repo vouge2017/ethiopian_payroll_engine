@@ -90,6 +90,7 @@ def worksheet(monkeypatch, tmp_path):
                 # Delete only these two newly-created synthetic tenants.
                 tables = [
                     'payslip_generation_job',
+                    'payroll_preview',
                     'payroll_draft',
                     'payroll_validation_result',
                     'payslip',

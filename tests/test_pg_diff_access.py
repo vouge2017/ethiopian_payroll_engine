@@ -82,3 +82,11 @@ def test_employee_role_cannot_compare_or_download_payroll(worksheet):
         db.session.commit()
     assert client.post('/diff/compare', data=upload()).status_code == 403
     assert client.get('/diff/download/private').status_code == 403
+
+
+def test_diff_invalid_money_is_reported_without_creating_result(worksheet):
+    app, client, _ids, _engine, _cfg = worksheet
+    data = {'file': (io.BytesIO(b'name,basic_salary,allowances\nSynthetic,not a number,0\n'), 'synthetic.csv')}
+    response = client.post('/diff/compare', data=data)
+    assert response.status_code == 400 and b'Row 2' in response.data
+    assert not getattr(app, 'diff_results', {})

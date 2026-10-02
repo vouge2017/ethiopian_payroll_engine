@@ -229,6 +229,13 @@ def api_preview():
     try:
         employees_data, row_errors = parse_and_calculate_payroll(filepath)
 
+        if row_errors:
+            return jsonify({
+                'ok': False,
+                'error': 'Correct all numeric row errors before previewing payroll. ' + row_errors[0],
+                'row_errors': row_errors[:10],
+            }), 400
+
         limit_msg = check_csv_row_limit(employees_data)
         if limit_msg:
             return jsonify({'ok': False, 'error': limit_msg}), 400
@@ -804,9 +811,11 @@ def payroll_upload():
 
             if row_errors:
                 for err in row_errors[:5]:
-                    flash(err, 'warning')
+                    flash(err, 'danger')
                 if len(row_errors) > 5:
-                    flash(f'... and {len(row_errors) - 5} more row error(s).', 'warning')
+                    flash(f'... and {len(row_errors) - 5} more row error(s).', 'danger')
+                flash('Correct all numeric row errors before creating payroll.', 'danger')
+                return redirect(request.url)
 
             if not employees_data:
                 raise ValueError('No valid data rows in CSV')

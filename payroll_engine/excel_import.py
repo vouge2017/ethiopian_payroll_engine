@@ -114,11 +114,8 @@ def read_xlsx(file_path_or_bytes, sheet_name=None):
 
 
 def parse_salary(value):
-    """Parse salary value from various formats."""
-    if isinstance(value, (int, float)):
-        return Decimal(str(value))
-
-    if not value:
+    """Parse supported money formats; reject malformed or non-finite amounts."""
+    if value is None or (isinstance(value, str) and not value.strip()):
         return Decimal('0')
 
     # Remove common prefixes/suffixes
@@ -127,9 +124,12 @@ def parse_salary(value):
     value = value.replace(',', '').replace(' ', '').strip()
 
     try:
-        return Decimal(value)
+        amount = Decimal(value)
     except (InvalidOperation, ValueError):
-        return Decimal('0')
+        raise ValueError('Invalid numeric payroll amount.') from None
+    if not amount.is_finite():
+        raise ValueError('Invalid numeric payroll amount.')
+    return amount
 
 
 def normalize_phone(phone_str):

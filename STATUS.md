@@ -1,5 +1,28 @@
 # STATUS.md — Command-Verified State
 
+## Strict money import slice - 2026-10-02 13:53 UTC
+
+Malformed text, currency-only text, booleans, NaN and Infinity no longer become
+zero money. Existing numeric/currency formats and the existing blank-as-zero policy
+are preserved. Excel workflow reports numeric row errors. CSV/Excel upload and API
+preview now reject every file with row errors before persisting a partial draft or
+preview; users must correct the file. Diff shows a row-specific HTTP 400 and creates
+no cached result for malformed money.
+
+Before: `11 failed, 13 passed` for parser/workflow/Diff checks; partial-upload
+regressions then failed four cases. That negative test also exposed two fixture
+cleanup errors from missing preview-table cleanup; the fixture now cleans previews
+before its synthetic users. After: `40 passed, 35 warnings in 106.56s` for valid and
+invalid native PG CSV/Excel uploads/previews, parser/workflow and Diff checks. Target
+is the identified synthetic database, never customer data. New tests and changed
+import/payroll source pass Ruff; existing unrelated Diff lint remains open.
+
+Six bounded hardening slices are committed locally on `feature/elements-architecture`.
+GitHub write access, remote CI and deployment remain unverified/unavailable. Remaining
+work includes statutory snapshots/classifications, exemption and joining/exit policy,
+correction/undo accounting, previous-period checks, results/review UI, practitioner
+trial and full production gates. No production-readiness or legal-compliance claim.
+
 ## Private Diff authorization slice - 2026-10-02
 
 Comparisons and downloads require a signed-in owner/accountant, use the authorized
@@ -14,8 +37,8 @@ to CI. Source preflight has zero findings and one migration head; this is a limi
 static gate, not proof of production safety. Existing unrelated Diff lint remains open.
 GitHub API still reports no push permission; no fixes from this checkout are deployed.
 
-Next: statutory exports must freeze identity, salary and tax classifications; invalid
-Excel money must fail visibly; correction/undo accounting and previous-period validation
+Next: statutory exports must freeze identity, salary and tax classifications;
+correction/undo accounting and previous-period validation
 must be safe. Browser/founder trial, practitioner policy/chart sign-off, full CI/lint,
 worker/storage/key configuration and backup/restore evidence remain release requirements.
 

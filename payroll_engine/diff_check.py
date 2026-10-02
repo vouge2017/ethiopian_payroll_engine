@@ -281,18 +281,11 @@ def compare_spreadsheet(
 
             if cname == 'name':
                 canon['name'] = str(raw).strip()
-            elif cname == 'basic_salary':
-                canon['basic_salary'] = parse_salary(raw)
-            elif cname == 'allowances':
-                canon['allowances'] = parse_salary(raw)
-            elif cname == 'gross':
-                canon['gross'] = parse_salary(raw)
-            elif cname == 'net':
-                canon['net'] = parse_salary(raw)
-            elif cname == 'tax':
-                canon['tax'] = parse_salary(raw)
-            elif cname == 'pension':
-                canon['pension'] = parse_salary(raw)
+            elif cname in ('basic_salary', 'allowances', 'gross', 'net', 'tax', 'pension', 'deductions'):
+                try:
+                    canon[cname] = parse_salary(raw)
+                except ValueError:
+                    raise ValueError(f'Row {i + 2}: invalid numeric {cname} amount.') from None
             elif cname == 'phone':
                 canon['phone'] = str(raw).strip()
             elif cname == 'tin':
@@ -304,8 +297,6 @@ def compare_spreadsheet(
                     canon['overtime'] = Decimal(str(raw).strip())
                 except (InvalidOperation, ValueError):
                     canon['overtime'] = Decimal('0')
-            elif cname == 'deductions':
-                canon['deductions'] = parse_salary(raw)
 
         name = canon.get('name', '') or '(unnamed)'
 
@@ -705,6 +696,8 @@ def compare():
             match_mode=request.form.get('match_mode', 'auto'),
             col_mapping=col_mapping if col_mapping else None,
         )
+    except ValueError as e:
+        return render_template('diff/upload.html', error=str(e)), 400
     except Exception as e:
         import traceback
         tb = traceback.format_exc()

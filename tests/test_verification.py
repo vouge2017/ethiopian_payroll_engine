@@ -47,7 +47,7 @@ def logged_in(app, client):
             '/auth/register',
             data={
                 'company_name': 'Test PLC',
-                'phone': '0911123456',
+                'phone': '911123456',
                 'password': 'TestPass123!',
                 'password2': 'TestPass123!',
             },
@@ -56,7 +56,7 @@ def logged_in(app, client):
         client.post(
             '/auth/login',
             data={
-                'login_id': '0911123456',
+                'login_id': '911123456',
                 'password': 'TestPass123!',
             },
             follow_redirects=True,

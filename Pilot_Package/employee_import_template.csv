@@ -1,0 +1,11 @@
+employee_id,name,basic_salary,allowances,phone,department,position,tin,bank_or_telebirr,start_date
+EMP-PLT-001,Abebe Kebede Tadesse,8000.00,2000.00,0912345678,Operations,Clerk,1000000001,telebirr:0912345678,2025-01-15
+EMP-PLT-002,Bekelech Wondimu Alemu,12000.00,3000.00,0923456789,Operations,Supervisor,1000000002,bank:cbe,2024-06-01
+EMP-PLT-003,Daniel Tesfaye Bekele,5500.00,1000.00,0934567890,Finance,Junior Accountant,1000000003,telebirr:0934567890,2025-09-10
+EMP-PLT-004,Dawit Mengistu Haile,25000.00,5000.00,0945678901,Engineering,Senior Engineer,1000000004,bank:abyssinia,2023-03-20
+EMP-PLT-005,Eleni Haile Tesfaye,4200.00,600.00,0956789012,Operations,Receptionist,1000000005,telebirr:0956789012,2026-02-01
+EMP-PLT-006,Fitsum Girma Worku,9500.00,1500.00,0967890123,Engineering,Engineer,1000000006,bank:awash,2024-11-12
+EMP-PLT-007,Hanna Solomon Mekonnen,18000.00,4000.00,0978901234,Finance,CFO,1000000007,bank:cbe,2022-07-01
+EMP-PLT-008,Iyasu Berhe Gebreselassie,7200.00,800.00,0989012345,Operations,Driver,1000000008,telebirr:0989012345,2025-05-05
+EMP-PLT-009,Kalkidan Aregawi Tsegay,11000.00,2500.00,0910123456,Marketing,Marketing Lead,1000000009,bank:abyssinia,2024-09-15
+EMP-PLT-010,Lemma Tadesse Worku,6500.00,1000.00,0921234567,Operations,Storekeeper,1000000010,telebirr:0921234567,2025-11-20

@@ -60,6 +60,24 @@ services:
         generateValue: true
     autoDeploy: true
 
+  # P0-E: Render Cron Job -- runs /internal/cron/daily once per day at 06:00 UTC.
+  - type: cron
+    name: ethiopian-payroll-cron
+    schedule: "0 6 * * *"
+    envVars:
+      - key: CRON_TARGET_URL
+        fromService:
+          name: ethiopian-payroll-web
+          property: host
+      - key: CRON_SECRET
+        fromService:
+          name: ethiopian-payroll-web
+          property: envVarKey
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ethiopian-payroll-db
+          property: connectionString
+
 databases:
   - name: ethiopian-payroll-db
     plan: standard      # managed PG w/ PITR backups (production requirement)

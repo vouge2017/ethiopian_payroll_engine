@@ -49,47 +49,68 @@ except ImportError as exc:
 
 def validate_ethiopian_phone(phone: str) -> tuple:
     """
-    Validate Ethiopian phone number format.
+    Validate an Ethiopian phone number.
 
-    Accepted formats (Ethio Telecom 09X + Safaricom 07X):
-        +251911234567, 0911234567, 911234567, +251 911 234 567
-        +251711234567, 0711234567, 711234567, +251 711 234 567
+    Strict rules (2026-09 hardening):
+    - National format is EXACTLY 9 digits, starting with 7 or 9.
+      Examples: 911234567, 711234567
+    - International format is +251 followed by 9 digits (no leading 0).
+      Examples: +251911234567, +251711234567
+    - Leading 0 (e.g., 0911234567) is NOT accepted — type the 9-digit
+      form. The frontend's phone-input.js strips the leading 0.
+    - Reject anything with more or fewer than 9 national digits.
+    - Reject any prefix other than +251.
+    - Spaces and dashes are stripped before validation.
 
     Returns:
         (is_valid, normalized, error_message)
-        normalized is the number in 0XXXXXXXXX format (10 digits with leading 0),
+        normalized is the 9-digit national form (e.g. '911234567'),
         or None if invalid.
     """
     if not phone:
         return False, None, 'Phone number is required.'
 
-    # Strip all spaces
-    cleaned = phone.replace(' ', '')
+    # Strip whitespace, dashes, parentheses
+    cleaned = re.sub(r'[\s\-\(\)]', '', phone)
 
-    # Normalize to 10 digits with leading 0 (0XXXXXXXXX)
-    patterns = [
-        (r'^\+2510(9\d{8})$', '0{}'),  # +2510911234567 → 0911234567
-        (r'^\+2510(7\d{8})$', '0{}'),  # +2510711234567 → 0711234567
-        (r'^\+251(9\d{8})$', '0{}'),  # +251911234567 → 0911234567
-        (r'^\+251(7\d{8})$', '0{}'),  # +251711234567 → 0711234567
-        (r'^0(9\d{8})$', '0{}'),  # 0911234567 → 0911234567
-        (r'^0(7\d{8})$', '0{}'),  # 0711234567 → 0711234567
-        (r'^(9\d{8})$', '0{}'),  # 911234567 → 0911234567
-        (r'^(7\d{8})$', '0{}'),  # 711234567 → 0711234567
-    ]
+    # International format: +251 followed by exactly 9 digits, first 7 or 9
+    m = re.match(r'^\+251(7\d{8}|9\d{8})$', cleaned)
+    if m:
+        return True, m.group(1), None
 
-    for pattern, fmt in patterns:
-        m = re.match(pattern, cleaned)
-        if m:
-            normalized = fmt.format(m.group(1))
-            return True, normalized, None
+    # National format: exactly 9 digits, first must be 7 or 9
+    m = re.match(r'^(7\d{8}|9\d{8})$', cleaned)
+    if m:
+        return True, m.group(1), None
 
-    # Provide helpful error
+    # Helpful errors by failure mode
     if cleaned.startswith('+251'):
-        return False, None, 'Ethiopian mobile must start with +251 9XX or +251 7XX.'
-    if len(cleaned) < 9:
-        return False, None, 'Phone number too short. Enter 9 digits starting with 9 or 7.'
-    return False, None, 'Invalid Ethiopian phone format. Enter 9 digits starting with 9 or 7.'
+        return False, None, ('After +251 the number must be exactly 9 digits starting with 7 or 9.')
+    if cleaned.startswith('0'):
+        return (
+            False,
+            None,
+            (
+                'Do not include the leading 0. Type the 9 digits that follow the '
+                'country code, e.g. 911234567 (not 0911234567).'
+            ),
+        )
+    if cleaned.startswith('+'):
+        return (
+            False,
+            None,
+            (
+                'Only +251 is supported in Ethiopia. Select Ethiopia in the flag '
+                'dropdown or enter the 9-digit national number.'
+            ),
+        )
+    if re.match(r'^\d+$', cleaned):
+        if len(cleaned) > 9:
+            return False, None, (f'Too many digits: {len(cleaned)}. Enter exactly 9 digits starting with 7 or 9.')
+        if len(cleaned) < 9:
+            return False, None, (f'Too few digits: {len(cleaned)}. Enter exactly 9 digits starting with 7 or 9.')
+        return False, None, ('Ethiopian mobile numbers must start with 7 or 9.')
+    return False, None, ('Invalid phone format. Enter 9 digits starting with 7 or 9, or +251 followed by 9 digits.')
 
 
 def validate_fayda_fin(fin: str) -> tuple:
@@ -383,7 +404,10 @@ class Company(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Webhook for external integrations
     webhook_url = db.Column(db.String(500), nullable=True)
-    webhook_secret = db.Column(db.String(64), nullable=True)  # For HMAC signature verification
+    if _HAS_ENCRYPTION:
+        webhook_secret = db.Column(EncryptedType(db.String, _ENCRYPTION_KEY, AesEngine, 'pkcs5'), nullable=True)
+    else:
+        webhook_secret = db.Column(db.String(64), nullable=True)  # PLAINTEXT fallback — not for production
 
     # Report templates (JSON) — per-company column configuration
     # Structure: {"erca": {"columns": [{"key": "tin", "label": "TIN", "enabled": true, "order": 1}, ...]}}
@@ -412,15 +436,15 @@ class Company(db.Model):
 
 
 class UserCompany(db.Model):
-    query_class = TenantQuery
-
     """Association between users and companies with role.
 
     Enables multi-company for accountants:
     - One user can belong to multiple companies
     - Each membership has a role (owner, accountant, employee)
-    - TenantQuery enforces company_id filter on all queries
+    - Membership discovery must filter by user_id before company selection
+    - Company administration must filter by company_id and verify membership
     """
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
@@ -449,6 +473,14 @@ class User(UserMixin, db.Model):
         db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True
     )  # Null until user creates/joins a company
     must_change_password = db.Column(db.Boolean, default=False, nullable=False)
+    # Progressive profiling (2026-09): True after register until name/company
+    # are filled in on /auth/setup-profile. The setup_profile_required hook
+    # redirects to that page when True.
+    must_complete_profile = db.Column(db.Boolean, default=False, nullable=False)
+    # User's display name (collected in step 2 of progressive profiling)
+    first_name = db.Column(db.String(50), nullable=True)
+    middle_name = db.Column(db.String(50), nullable=True)
+    last_name = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Password reset tokens
     reset_token_hash = db.Column(db.String(64), nullable=True)
@@ -990,7 +1022,15 @@ class Payslip(db.Model):
     # relational) because line_items is a read-only snapshot, never queried.
     line_items = db.Column(db.JSON, nullable=True)
 
-    __table_args__ = (db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),)
+    __table_args__ = (
+        db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),
+        db.UniqueConstraint(
+            'payroll_run_id',
+            'employee_id',
+            'payslip_type',
+            name='uq_payslip_run_emp_type',
+        ),
+    )
 
     def __repr__(self):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
@@ -1081,9 +1121,11 @@ class PayrollDraft(db.Model):
 class PayrollPreview(db.Model):
     """Temporary storage for payroll preview data between upload and confirmation.
 
-    Replaces Flask session storage to prevent sensitive payroll data
-    (salaries, TIN, bank accounts) from being stored in client-side cookies.
+    Replaces Flask session storage which caused sensitive payroll data
+    (salaries, TIN, bank accounts) to be stored in client-side cookies.
     """
+
+    query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
     token = db.Column(db.String(64), unique=True, nullable=False, index=True)
@@ -1460,6 +1502,31 @@ def _audit_log_before_insert(mapper, connection, target):
     target.hash = target.compute_hash()
 
 
+@db.event.listens_for(db.Session, 'before_flush')
+def _sync_employee_name(session, flush_context, instances):
+    """Auto-sync Employee.name from structured fields before flush.
+
+    When first_name/father_name/grandfather_name change, rebuild the
+    legacy name field so they never drift apart.
+    """
+    for obj in session.dirty:
+        if not isinstance(obj, Employee):
+            continue
+        if not obj.first_name:
+            continue
+        # Check if any structured field is dirty
+        history = db.inspect(obj).attrs.first_name.history
+        father_history = db.inspect(obj).attrs.father_name.history
+        grand_history = db.inspect(obj).attrs.grandfather_name.history
+        if history.has_changes() or father_history.has_changes() or grand_history.has_changes():
+            parts = [obj.first_name]
+            if obj.father_name:
+                parts.append(obj.father_name)
+            if obj.grandfather_name:
+                parts.append(obj.grandfather_name)
+            obj.name = ' '.join(parts)
+
+
 class TaxRule(db.Model):
     """Versioned tax rules — brackets, pension rates, personal relief.
 
@@ -1705,6 +1772,8 @@ class PayslipAcknowledgment(db.Model):
 class Notification(db.Model):
     """In-app notification for users."""
 
+    query_class = TenantQuery
+
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
@@ -1761,6 +1830,8 @@ class PayslipGenerationJob(db.Model):
     One row per payslip-in-batch, grouped by batch_id (UUID).
     RQ job id == this row's id (set after enqueue).
     """
+
+    query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True, index=True)
@@ -1900,6 +1971,8 @@ class FilingRecord(db.Model):
     Stores when a filing was made, who did it, and the confirmation number.
     Used to show filing history and prevent duplicate filings.
     """
+
+    query_class = TenantQuery
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
@@ -2044,3 +2117,104 @@ class SpreadsheetInput(db.Model):
             dialect='postgresql'
         ),
     )
+
+
+# =============================================================================
+# PLATFORM ADMIN CONTROL PLANE & SUPPORT TICKET MODELS
+# =============================================================================
+
+
+class SupportTicket(db.Model):
+    """Support ticket raised by a tenant or created by platform admin for support tracking."""
+
+    query_class = TenantQuery
+    __tablename__ = 'support_ticket'
+    __table_args__ = (
+        db.Index('ix_support_ticket_company_status', 'company_id', 'status'),
+        db.Index('ix_support_ticket_code', 'ticket_code'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_code = db.Column(db.String(32), unique=True, nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    subject = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(64), nullable=False, default='general')  # payroll, tax, banking, access, bug
+    priority = db.Column(db.String(32), nullable=False, default='medium')  # low, medium, high, critical
+    status = db.Column(
+        db.String(32), nullable=False, default='open'
+    )  # open, in_progress, waiting_on_customer, resolved, closed
+
+    context_data = db.Column(db.JSON, nullable=True)  # route, payroll_run_id, error_trace, browser info
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False
+    )
+
+    messages = db.relationship('SupportTicketMessage', backref='ticket', cascade='all, delete-orphan', lazy='dynamic')
+
+    def __repr__(self):
+        return f'<SupportTicket {self.ticket_code} - {self.status}>'
+
+
+class SupportTicketMessage(db.Model):
+    """Messages and updates within a support ticket thread."""
+
+    query_class = TenantQuery
+    __tablename__ = 'support_ticket_message'
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey('support_ticket.id', ondelete='CASCADE'), nullable=False)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='CASCADE'), nullable=False)
+    sender_user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    is_admin_reply = db.Column(db.Boolean, nullable=False, default=False)
+    is_internal_note = db.Column(db.Boolean, nullable=False, default=False)
+    message_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+
+    def __repr__(self):
+        return f'<SupportTicketMessage {self.id} for Ticket {self.ticket_id}>'
+
+
+class PlatformAuditLog(db.Model):
+    """Platform-wide audit log capturing operations performed by Super Admins."""
+
+    __tablename__ = 'platform_audit_log'
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    action = db.Column(
+        db.String(64), nullable=False
+    )  # impersonate_start, impersonate_end, tenant_suspend, ticket_resolve, plan_override
+    target_company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
+    ip_address = db.Column(db.String(45), nullable=True)
+    user_agent = db.Column(db.String(255), nullable=True)
+    details = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+
+    def __repr__(self):
+        return f'<PlatformAuditLog {self.action} by Admin {self.admin_user_id}>'
+
+
+class ImpersonationSession(db.Model):
+    """Tracks active and past support assist (impersonation) sessions."""
+
+    __tablename__ = 'impersonation_session'
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_token = db.Column(db.String(64), unique=True, nullable=False)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    target_company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+
+    reason = db.Column(db.Text, nullable=False)
+    started_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    ended_at = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+
+    def __repr__(self):
+        return f'<ImpersonationSession Admin {self.admin_user_id} -> User {self.target_user_id}>'

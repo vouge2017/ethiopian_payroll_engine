@@ -139,7 +139,11 @@ def test_upgrade_rejects_legacy_plaintext_before_ddl(encrypted_employee_db):
         with pytest.raises(RuntimeError, match='unreadable with configured DB_ENCRYPTION_KEY'):
             command.upgrade(cfg, 'head')
         with engine.connect() as conn:
-            assert conn.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == PREVIOUS_HEAD
+            assert set(conn.execute(text('SELECT version_num FROM alembic_version')).scalars()) == {
+                PREVIOUS_HEAD,
+                'a9b8c7d6e5f4',
+                'zz1a2b3c4d5e',
+            }
             assert (
                 conn.execute(text('SELECT tin FROM employee WHERE id = :id'), {'id': employee_id}).scalar_one()
                 == '1234567890'
@@ -160,7 +164,11 @@ def test_upgrade_rejects_wrong_key_before_ddl(encrypted_employee_db, monkeypatch
             with pytest.raises(RuntimeError, match='unreadable with configured DB_ENCRYPTION_KEY'):
                 command.upgrade(cfg, 'head')
         with engine.connect() as conn:
-            assert conn.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == PREVIOUS_HEAD
+            assert set(conn.execute(text('SELECT version_num FROM alembic_version')).scalars()) == {
+                PREVIOUS_HEAD,
+                'a9b8c7d6e5f4',
+                'zz1a2b3c4d5e',
+            }
             assert (
                 conn.execute(text('SELECT bank_account FROM employee WHERE id = :id'), {'id': employee_id}).scalar_one()
                 == original

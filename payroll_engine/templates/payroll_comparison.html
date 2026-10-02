@@ -183,7 +183,7 @@
 {% block extra_js %}
 {% if not needs_two and totals %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 // Comparison bar chart
 new Chart(document.getElementById('comparisonChart'), {
     type: 'bar',

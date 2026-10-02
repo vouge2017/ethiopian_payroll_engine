@@ -1,11 +1,11 @@
-{% extends "auth/onboarding-base.html" %}
+﻿{% extends "auth/onboarding-base.html" %}
 {% block title %}Sign In — EthioPayroll{% endblock %}
 
 {% block content %}
 <!-- Left: Quick-start sidebar -->
-<aside class="onboarding-stepper">
+<aside class="onboarding-stepper" aria-label="Quick start steps">
     <div class="onboarding-stepper-card">
-        <h3 class="onboarding-stepper-title">Quick Start</h3>
+        <h2 class="onboarding-stepper-title">Quick Start</h2>
         <ul class="onboarding-stepper-list">
             <li class="onboarding-step completed">
                 <div class="onboarding-step-dot">
@@ -51,18 +51,29 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Phone or Email -->
-        <div class="onboarding-field">
+        <div class="onboarding-field" id="loginIdField">
             <label for="login_id">Phone or Email</label>
-            <div class="onboarding-field-wrapper">
-                <div class="onboarding-phone-wrapper">
-                    <span class="onboarding-phone-prefix">+251</span>
-                    <input type="text" id="login_id" name="login_id"
+            <div class="phone-input-tabs" data-phone-tabs>
+                <button type="button" class="phone-input-tab active" data-phone-tab="phone">Phone</button>
+                <button type="button" class="phone-input-tab" data-phone-tab="email">Email</button>
+            </div>
+            <div class="onboarding-phone-wrapper" id="loginPhoneWrapper">
+                <div class="phone-input-with-prefix">
+                    <span class="phone-prefix-box">+251</span>
+                    <input type="tel" id="login_id" name="login_id"
                            required autofocus
-                           placeholder="911 234 567 or email"
-                           inputmode="tel">
+                           data-tel-placeholder="91 234 5678"
+                           data-email-placeholder="name@company.com"
+                           placeholder="91 234 5678"
+                           inputmode="tel"
+                           maxlength="9"
+                           autocomplete="username">
                 </div>
             </div>
-            <span class="field-hint">9 digits starting with 9 or 7, or your email address</span>
+            <span class="field-hint" data-tab-hint>
+                <span data-hint-phone>Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</span>
+                <span data-hint-email style="display:none;">Email address (e.g., name@company.com).</span>
+            </span>
         </div>
 
         <!-- Password -->
@@ -70,7 +81,7 @@
             <label for="password">Password</label>
             <div class="onboarding-field-wrapper">
                 <input type="password" id="password" name="password"
-                       required placeholder="••••••••">
+                       required autocomplete="current-password" placeholder="••••••••">
                 <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
                     <span class="material-symbols-outlined">visibility_off</span>
                 </button>
@@ -82,14 +93,14 @@
 
         <!-- Remember me -->
         <div class="onboarding-field" style="flex-direction: row; align-items: center; gap: var(--space-2);">
-            <input type="checkbox" id="remember" name="remember" style="width: 18px; height: 18px; accent-color: var(--brand-primary);">
+            <input type="checkbox" id="remember" name="remember" aria-label="Remember me" style="width: 18px; height: 18px; accent-color: var(--brand-primary);">
             <label for="remember" style="margin: 0; font-weight: 400; color: var(--text-secondary);">Remember me</label>
         </div>
 
         <!-- Actions -->
         <div class="onboarding-actions">
             <span></span>
-            <button type="submit" class="onboarding-btn-next">
+            <button type="submit" class="onboarding-btn-next" id="reviewBtn" data-pw-submit>
                 Sign In
                 <span class="material-symbols-outlined">arrow_forward</span>
             </button>
@@ -127,7 +138,7 @@
     <div class="onboarding-help-card">
         <div class="onboarding-help-header">
             <span class="material-symbols-outlined">support_agent</span>
-            <h4>Need Help?</h4>
+            <h2>Need Help?</h2>
         </div>
         <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
         <a href="/help" class="onboarding-help-link">
@@ -138,7 +149,7 @@
     <div class="onboarding-checklist">
         <div class="onboarding-checklist-header">
             <span class="material-symbols-outlined">rocket_launch</span>
-            <h3>New Here?</h3>
+            <h2>New Here?</h2>
         </div>
         <p class="onboarding-checklist-desc">Create an account to start running compliant payroll for your Ethiopian business.</p>
         <a href="{{ url_for('auth.register') }}" class="onboarding-btn-next" style="text-decoration: none; width: 100%; justify-content: center;">

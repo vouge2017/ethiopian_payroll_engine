@@ -1,156 +1,103 @@
-"""
-UserCompany tenant isolation tests.
-
-Proves that UserCompany is structurally enforced by TenantQuery —
-a query without company_id must raise RuntimeError.
-"""
-
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+"""Membership discovery before company selection, and company access checks."""
 
 import pytest
 
-os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
-os.environ['CELERY_BROKER_URL'] = 'memory://'
-
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, TenantQuery, User, UserCompany
+from payroll_engine.models import Company, Employee, TenantQuery, User, UserCompany
 
 
 @pytest.fixture
 def app():
     app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    app.config.update(TESTING=True, WTF_CSRF_ENABLED=False, RATELIMIT_ENABLED=False)
     with app.app_context():
         db.create_all()
         yield app
+        db.session.remove()
         db.drop_all()
 
 
 @pytest.fixture
-def ctx(app):
+def membership(app):
     with app.app_context():
-        yield
+        companies = [Company(name=name) for name in ('Company A', 'Company B', 'Company C')]
+        db.session.add_all(companies)
+        db.session.flush()
+        user = User(phone='911234567', company_id=companies[0].id, role='owner')
+        other = User(phone='922234567', company_id=companies[2].id, role='owner')
+        for account in (user, other):
+            account.set_password('SecurePass123!')
+        db.session.add_all([user, other])
+        db.session.flush()
+        db.session.add_all(
+            [
+                UserCompany(user_id=user.id, company_id=companies[1].id, role='accountant'),
+                UserCompany(user_id=other.id, company_id=companies[2].id, role='owner'),
+            ]
+        )
+        db.session.commit()
+        return user.id, other.id, [company.id for company in companies]
 
 
-def test_usercompany_registered_with_tenant_query(ctx):
-    """UserCompany must be in the TenantQuery registry."""
-    assert UserCompany in TenantQuery._tenant_scoped_models, 'UserCompany is not registered with TenantQuery'
+def test_memberships_are_user_scoped_before_company_selection(app, membership):
+    """A user's memberships span companies without a company query context."""
+    uid, other_uid, (_, linked, foreign) = membership
+    with app.app_context():
+        links = UserCompany.query.filter_by(user_id=uid).all()
+        assert [(link.company_id, link.role) for link in links] == [(linked, 'accountant')]
+        other_links = UserCompany.query.filter_by(user_id=other_uid).all()
+        assert [link.company_id for link in other_links] == [foreign]
 
 
-def test_usercompany_query_without_company_id_raises(ctx):
-    """Querying UserCompany without company_id must raise RuntimeError."""
-    company = Company(name='TestCo')
-    db.session.add(company)
-    db.session.flush()
-
-    user = User(phone='0911234567', company_id=company.id, role='owner')
-    user.set_password('pass')
-    db.session.add(user)
-    db.session.flush()
-
-    link = UserCompany(user_id=user.id, company_id=company.id, role='owner')
-    db.session.add(link)
-    db.session.commit()
-
-    # Query WITHOUT company_id — must raise
-    with pytest.raises(RuntimeError, match='TENANT ISOLATION VIOLATION'):
-        UserCompany.query.all()
+def test_company_filtered_memberships_still_work(app, membership):
+    uid, _, (_, linked, _) = membership
+    with app.app_context():
+        links = UserCompany.query.filter_by(company_id=linked).all()
+        assert [link.user_id for link in links] == [uid]
 
 
-def test_usercompany_query_with_company_id_works(ctx):
-    """Querying UserCompany WITH company_id must work normally."""
-    company = Company(name='TestCo')
-    db.session.add(company)
-    db.session.flush()
-
-    user = User(phone='0911234567', company_id=company.id, role='owner')
-    user.set_password('pass')
-    db.session.add(user)
-    db.session.flush()
-
-    link = UserCompany(user_id=user.id, company_id=company.id, role='owner')
-    db.session.add(link)
-    db.session.commit()
-
-    # Query WITH company_id — must work
-    results = UserCompany.query.filter_by(company_id=company.id).all()
-    assert len(results) == 1
-    assert results[0].user_id == user.id
+def test_company_access_and_roles_check_membership(app, membership):
+    uid, _, (own, linked, foreign) = membership
+    with app.app_context():
+        user = db.session.get(User, uid)
+        assert user.can_access_company(own)
+        assert user.can_access_company(linked)
+        assert not user.can_access_company(foreign)
+        assert user.get_role_for_company(linked) == 'accountant'
+        assert {company.id for company in user.companies} == {own, linked}
 
 
-def test_cross_tenant_usercompany_blocked(ctx):
-    """Cannot access another company's UserCompany links."""
-    company_a = Company(name='Company A')
-    company_b = Company(name='Company B')
-    db.session.add_all([company_a, company_b])
-    db.session.flush()
-
-    user_a = User(phone='0911111111', company_id=company_a.id, role='owner')
-    user_a.set_password('pass')
-    user_b = User(phone='0922222222', company_id=company_b.id, role='owner')
-    user_b.set_password('pass')
-    db.session.add_all([user_a, user_b])
-    db.session.flush()
-
-    link_a = UserCompany(user_id=user_a.id, company_id=company_a.id, role='owner')
-    link_b = UserCompany(user_id=user_b.id, company_id=company_b.id, role='owner')
-    db.session.add_all([link_a, link_b])
-    db.session.commit()
-
-    # Company A's admin can see their own links
-    a_links = UserCompany.query.filter_by(company_id=company_a.id).all()
-    assert len(a_links) == 1
-    assert a_links[0].user_id == user_a.id
-
-    # Company A's admin CANNOT see Company B's links without filter
-    with pytest.raises(RuntimeError, match='TENANT ISOLATION VIOLATION'):
-        UserCompany.query.filter_by(user_id=user_b.id).all()
+def test_switch_company_rejects_another_users_membership(app, membership):
+    uid, _, (own, _, foreign) = membership
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session['_user_id'] = str(uid)
+        session['_fresh'] = True
+        session['active_company_id'] = own
+    response = client.post(f'/switch-company/{foreign}')
+    assert response.status_code == 403
+    with client.session_transaction() as session:
+        assert session['active_company_id'] == own
+    with app.app_context():
+        assert db.session.get(User, uid).company_id == own
 
 
-def test_get_role_for_company_uses_filtered_query(ctx):
-    """get_role_for_company must work (it already filters by company_id)."""
-    company = Company(name='TestCo')
-    db.session.add(company)
-    db.session.flush()
-
-    user = User(phone='0911234567', company_id=company.id, role='owner')
-    user.set_password('pass')
-    db.session.add(user)
-    db.session.flush()
-
-    link = UserCompany(user_id=user.id, company_id=company.id, role='accountant')
-    db.session.add(link)
-    db.session.commit()
-
-    # This query includes company_id — must work
-    role = user.get_role_for_company(company.id)
-    assert role == 'accountant'
+def test_switch_company_accepts_own_membership(app, membership):
+    uid, _, (own, linked, _) = membership
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session['_user_id'] = str(uid)
+        session['_fresh'] = True
+    response = client.post(f'/switch-company/{linked}')
+    assert response.status_code == 302
+    with client.session_transaction() as session:
+        assert session['active_company_id'] == linked
+    with app.app_context():
+        assert db.session.get(User, uid).company_id == own
 
 
-def test_user_companies_property_works(ctx):
-    """User.companies property must work across companies with TenantQuery."""
-    company_a = Company(name='Company A')
-    company_b = Company(name='Company B')
-    db.session.add_all([company_a, company_b])
-    db.session.flush()
-
-    # User belongs to A as owner, linked to B as accountant
-    user = User(phone='0911234567', company_id=company_a.id, role='owner')
-    user.set_password('pass')
-    db.session.add(user)
-    db.session.flush()
-
-    link = UserCompany(user_id=user.id, company_id=company_b.id, role='accountant')
-    db.session.add(link)
-    db.session.commit()
-
-    # companies property should return both (sets tenant context internally)
-    companies = user.companies
-    company_ids = {c.id for c in companies}
-    assert company_a.id in company_ids
-    assert company_b.id in company_ids
-    assert len(companies) == 2
+def test_payroll_tenant_models_remain_guarded(app):
+    with app.app_context():
+        assert Employee in TenantQuery._tenant_scoped_models
+        with pytest.raises(RuntimeError, match='TENANT ISOLATION VIOLATION'):
+            Employee.query.all()

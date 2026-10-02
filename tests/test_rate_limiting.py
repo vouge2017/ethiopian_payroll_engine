@@ -1,3 +1,5 @@
+from helpers import register_company
+
 """
 Tests for rate limiting on API endpoints.
 
@@ -45,11 +47,11 @@ def client(app):
 def seed_data(app, client):
     """Register company and create payroll."""
     with app.app_context():
-        client.post(
-            '/auth/register',
+        register_company(
+            client,
             data={
                 'company_name': 'Test PLC',
-                'phone': '0911123456',
+                'phone': '911123456',
                 'password': 'TestPass123!',
                 'password2': 'TestPass123!',
             },
@@ -57,7 +59,7 @@ def seed_data(app, client):
         )
 
         company = Company.query.filter_by(name='Test PLC').first()
-        user = User.query.filter_by(phone='0911123456').first()
+        user = User.query.filter_by(phone='911123456').first()
 
         emp = Employee(
             employee_id='EMP-001',
@@ -106,7 +108,7 @@ def login(client):
     return client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'TestPass123!',
         },
         follow_redirects=True,
@@ -164,13 +166,13 @@ class TestRateLimitingBehavior:
 
 
 class TestHTMLPagesNotRateLimited:
-    """Verify HTML pages are NOT rate-limited — normal accountant use."""
+    """Verify HTML pages are NOT rate-limited â€” normal accountant use."""
 
     def test_cockpit_page_not_rate_limited(self, app, client, seed_data):
         """Cockpit HTML page should not be rate-limited."""
         with app.app_context():
             login(client)
-            # Make several rapid requests — should all succeed (not 429)
+            # Make several rapid requests â€” should all succeed (not 429)
             for _ in range(10):
                 resp = client.get('/payroll/cockpit')
                 assert resp.status_code in (200, 302)

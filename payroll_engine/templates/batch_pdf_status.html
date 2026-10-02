@@ -124,7 +124,7 @@
 
 {% if not all_done %}
 <!-- Auto-refresh script -->
-<script>
+<script nonce="{{ csp_nonce }}">
     setTimeout(function() { location.reload(); }, 2000);
 </script>
 {% endif %}

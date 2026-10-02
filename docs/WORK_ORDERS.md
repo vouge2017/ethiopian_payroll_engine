@@ -52,3 +52,16 @@ After each slice: report changed behavior, before/after evidence, checked SHA,
 push and deployment status, remaining limits and the next work order. A local
 fix is not a deployed fix; a passing component test is not a successful user
 trial. Do not say production-ready while required release checks remain open.
+
+## 2026-10-03 checkpoint — PR #8 and restored main
+
+Code conflicts and combined migrations are reconciled. Final native PostgreSQL
+selection: `93 passed, 262 warnings in 186.20s (0:03:06)`; security/tenant gate:
+`173 passed, 1 skipped, 41 warnings in 205.76s (0:03:25)`. Ruff passes.
+See [reconciliation evidence](PR8_RECONCILIATION_2026-10-03.md) for full scope and
+the initial broad-suite failures followed by successful targeted rechecks.
+
+Next gate: publish the reconciliation to the existing PR #8 branch and inspect
+its hosted checks. Owner must classify GitGuardian incident 37741140 as a test
+credential; supplied owner-page evidence still shows Triggered. Recovery PR #9
+is already merged. PR #8 merging and deployment are separate remaining actions.

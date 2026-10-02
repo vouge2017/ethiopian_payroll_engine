@@ -60,7 +60,23 @@ def setup_company():
 
             current_user.company_id = company.id
             current_user.role = 'owner'
-            db.session.commit()
+            current_user.must_complete_profile = False
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.exception('Failed to setup company: %s', e)
+                # Capture in Sentry with onboarding context
+                try:
+                    import sentry_sdk
+
+                    sentry_sdk.capture_exception(e)
+                    sentry_sdk.set_tag('onboarding_step', 'setup_company')
+                    sentry_sdk.set_tag('company_name_attempt', company_name)
+                except Exception:
+                    pass
+                flash('Company setup failed. Please try again.', 'danger')
+                return redirect(url_for('main.setup_company'))
 
             flash(f'Company "{company_name}" created! Welcome to EthioPayroll.', 'success')
             return redirect(url_for('main.index'))
@@ -171,6 +187,11 @@ def demo_mode():
 def index():
     """Dashboard home."""
     company = current_user.company
+    if company is None:
+        flash('Company not found. Please contact support.', 'danger')
+        return redirect(url_for('main.setup_company'))
+    if current_user.role == 'employee':
+        return redirect(url_for('portal.employee_dashboard'))
     employee_count = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
 
     # All completed runs for the period selector

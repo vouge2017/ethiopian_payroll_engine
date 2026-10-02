@@ -7,6 +7,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/icon-192.png?v={{ static_version }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png?v={{ static_version }}">
     <title>{% block title %}EthioPayroll{% endblock %}</title>
 
     <!-- Fonts -->
@@ -18,9 +20,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-    <!-- Design System -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+    <!-- Design System (cache-busted per deploy — see onboarding-base.html) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}?v={{ static_version }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}?v={{ static_version }}">
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -52,49 +54,49 @@
         <nav class="sidebar-nav" id="sidebarNav" role="menu">
             {% if current_user.role == 'employee' %}
             <!-- Employee Portal Nav -->
-            <a href="{{ url_for('portal.employee_dashboard') }}" class="nav-link {% if request.endpoint == 'portal.employee_dashboard' %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('portal.employee_dashboard') }}" class="nav-link {% if (request.endpoint or '') == 'portal.employee_dashboard' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-grid-1x2"></i><span>{{ _('my_dashboard') }}</span>
             </a>
-            <a href="{{ url_for('portal.my_payslips') }}" class="nav-link {% if 'payslip' in request.endpoint and 'my' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('portal.my_payslips') }}" class="nav-link {% if 'payslip' in (request.endpoint or '') and 'my' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                 <i class="bi bi-receipt"></i><span>{{ _('my_payslips') }}</span>
             </a>
-            <a href="{{ url_for('portal.my_profile') }}" class="nav-link {% if request.endpoint == 'portal.my_profile' %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('portal.my_profile') }}" class="nav-link {% if (request.endpoint or '') == 'portal.my_profile' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-person"></i><span>{{ _('my_profile') }}</span>
             </a>
-            <a href="{{ url_for('selfservice.ytd_earnings') }}" class="nav-link {% if 'ytd' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('selfservice.ytd_earnings') }}" class="nav-link {% if 'ytd' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                 <i class="bi bi-graph-up"></i><span>YTD Earnings</span>
             </a>
-            <a href="{{ url_for('selfservice.tax_certificate') }}" class="nav-link {% if 'tax_certificate' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('selfservice.tax_certificate') }}" class="nav-link {% if 'tax_certificate' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                 <i class="bi bi-file-earmark-text"></i><span>Tax Certificate</span>
             </a>
-            <a href="{{ url_for('help.help_center') }}" class="nav-link {% if 'help' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('help.help_center') }}" class="nav-link {% if 'help' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                 <i class="bi bi-question-circle"></i><span>{{ _('help') }}</span>
             </a>
             {% else %}
             <!-- Owner/Accountant Nav — 5 collapsible groups -->
 
             <!-- Dashboard (always visible, outside groups) -->
-            <a href="{{ url_for('main.index') }}" class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('main.index') }}" class="nav-link {% if (request.endpoint or '') == 'main.index' %}active{% endif %}" role="menuitem">
                 <i class="bi bi-grid-1x2"></i><span>{{ _('dashboard') }}</span>
             </a>
             {% if current_user.companies|length > 1 %}
-            <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                 <i class="bi bi-buildings"></i><span>My Companies</span>
             </a>
             {% endif %}
 
             <!-- Setup -->
-            <div class="nav-section {% if 'employee' in request.endpoint and 'my' not in request.endpoint or 'team' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+            <div class="nav-section {% if 'employee' in (request.endpoint or '') and 'my' not in (request.endpoint or '') or 'team' in (request.endpoint or '') %}expanded has-active{% endif %}">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Setup</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
-                    <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employee' in request.endpoint and 'my' not in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employee' in (request.endpoint or '') and 'my' not in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-people"></i><span>{{ _('employees') }}</span>
                     </a>
                     {% if current_user.role == 'owner' %}
-                    <a href="{{ url_for('settings.team_settings') }}" class="nav-link {% if 'team' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('settings.team_settings') }}" class="nav-link {% if 'team' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-gear"></i><span>{{ _('team') }}</span>
                     </a>
                     {% endif %}
@@ -102,26 +104,26 @@
             </div>
 
             <!-- Run -->
-            <div class="nav-section {% if request.endpoint == 'payroll.payroll_upload' or 'payroll_runs' in request.endpoint or 'attendance' in request.endpoint or 'leave' in request.endpoint or 'calendar' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+            <div class="nav-section {% if (request.endpoint or '') == 'payroll.payroll_upload' or 'payroll_runs' in (request.endpoint or '') or 'attendance' in (request.endpoint or '') or 'leave' in (request.endpoint or '') or 'calendar' in (request.endpoint or '') %}expanded has-active{% endif %}">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Run</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
-                    <a href="{{ url_for('payroll.payroll_upload') }}" class="nav-link {% if request.endpoint == 'payroll.payroll_upload' %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('payroll.payroll_upload') }}" class="nav-link {% if (request.endpoint or '') == 'payroll.payroll_upload' %}active{% endif %}" role="menuitem">
                         <i class="bi bi-cloud-upload"></i><span>{{ _('run_payroll') }}</span>
                     </a>
-                    <a href="{{ url_for('payroll.payroll_runs') }}" class="nav-link {% if 'payroll_runs' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('payroll.payroll_runs') }}" class="nav-link {% if 'payroll_runs' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-clock-history"></i><span>{{ _('payroll_runs') }}</span>
                     </a>
-                    <a href="{{ url_for('attendance.attendance_list') }}" class="nav-link {% if 'attendance' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('attendance.attendance_list') }}" class="nav-link {% if 'attendance' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-calendar-check"></i><span>Attendance</span>
                     </a>
                     {% if employee_count > 5 %}
-                    <a href="{{ url_for('employees.leave_management') }}" class="nav-link {% if 'leave' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('employees.leave_management') }}" class="nav-link {% if 'leave' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-calendar-event"></i><span>Leave</span>
                     </a>
-                    <a href="{{ url_for('calendar.leave_calendar') }}" class="nav-link {% if 'calendar' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('calendar.leave_calendar') }}" class="nav-link {% if 'calendar' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-calendar3"></i><span>Calendar</span>
                     </a>
                     {% endif %}
@@ -129,55 +131,55 @@
             </div>
 
             <!-- Review -->
-            <div class="nav-section {% if 'profile_change' in request.endpoint or 'comparison' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+            <div class="nav-section {% if 'profile_change' in (request.endpoint or '') or 'comparison' in (request.endpoint or '') %}expanded has-active{% endif %}">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Review</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
                     {% if pending_profile_changes > 0 %}
-                    <a href="{{ url_for('employees.profile_changes') }}" class="nav-link {% if 'profile_change' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('employees.profile_changes') }}" class="nav-link {% if 'profile_change' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-person-lines-fill"></i><span>Approvals</span>
                         <span class="nav-badge">{{ pending_profile_changes }}</span>
                     </a>
                     {% endif %}
-                    <a href="{{ url_for('reports.payroll_comparison') }}" class="nav-link {% if 'comparison' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('reports.payroll_comparison') }}" class="nav-link {% if 'comparison' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-bar-chart-steps"></i><span>Compare</span>
                     </a>
                 </div>
             </div>
 
             <!-- File -->
-            <div class="nav-section {% if 'filing' in request.endpoint or 'erc' in request.endpoint or 'bank' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+            <div class="nav-section {% if 'filing' in (request.endpoint or '') or 'erc' in (request.endpoint or '') or 'bank' in (request.endpoint or '') %}expanded has-active{% endif %}">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>File</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
-                    <a href="{{ url_for('reports.filing_history') }}" class="nav-link {% if 'filing' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('reports.filing_history') }}" class="nav-link {% if 'filing' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-folder-check"></i><span>Filing History</span>
                     </a>
                 </div>
             </div>
 
             <!-- Report -->
-            <div class="nav-section {% if 'report' in request.endpoint or 'analytics' in request.endpoint or 'accounting' in request.endpoint or 'impact' in request.endpoint %}expanded has-active{% endif %}">
-                <div class="nav-section-label" onclick="toggleNavSection(this)">
+            <div class="nav-section {% if 'report' in (request.endpoint or '') or 'analytics' in (request.endpoint or '') or 'accounting' in (request.endpoint or '') or 'impact' in (request.endpoint or '') %}expanded has-active{% endif %}">
+                <button type="button" class="nav-section-label" aria-expanded="false" onclick="toggleNavSection(this)">
                     <span>Report</span>
                     <i class="bi bi-chevron-right section-chevron"></i>
-                </div>
+                </button>
                 <div class="nav-section-items">
-                    <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'report' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'report' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-bar-chart-line"></i><span>{{ _('reports') }}</span>
                     </a>
-                    <a href="{{ url_for('reports.analytics') }}" class="nav-link {% if 'analytics' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('reports.analytics') }}" class="nav-link {% if 'analytics' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-graph-up"></i><span>Analytics</span>
                     </a>
-                    <a href="{{ url_for('accounting.accounting_home') }}" class="nav-link {% if 'accounting' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('accounting.accounting_home') }}" class="nav-link {% if 'accounting' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-journal-text"></i><span>Accounting</span>
                     </a>
                     {% if employee_count > 20 %}
-                    <a href="{{ url_for('reports.impact_calculator') }}" class="nav-link {% if 'impact' in request.endpoint %}active{% endif %}" role="menuitem">
+                    <a href="{{ url_for('reports.impact_calculator') }}" class="nav-link {% if 'impact' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                         <i class="bi bi-calculator"></i><span>Impact Calculator</span>
                     </a>
                     {% endif %}
@@ -185,7 +187,7 @@
             </div>
 
             <!-- Help (always visible, outside groups) -->
-            <a href="{{ url_for('help.help_center') }}" class="nav-link {% if 'help' in request.endpoint %}active{% endif %}" role="menuitem">
+            <a href="{{ url_for('help.help_center') }}" class="nav-link {% if 'help' in (request.endpoint or '') %}active{% endif %}" role="menuitem">
                 <i class="bi bi-question-circle"></i><span>{{ _('help') }}</span>
             </a>
             {% endif %}
@@ -299,7 +301,7 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
 // Service Worker
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -313,6 +315,7 @@ function toggleTheme() {
     html.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     updateThemeIcon(next);
+    applyChartTheme();
 }
 
 function updateThemeIcon(theme) {
@@ -340,16 +343,32 @@ function toggleSidebar() {
     if (btn) btn.setAttribute('aria-expanded', isOpen);
 }
 
-// Toggle collapsible sidebar sections
+// Toggle collapsible sidebar sections (keeps aria-expanded in sync)
 function toggleNavSection(labelEl) {
     var section = labelEl.closest('.nav-section');
+    var expanded;
     if (section.classList.contains('has-active')) {
         // Active sections: toggle collapsed to override has-active
         section.classList.toggle('collapsed');
+        expanded = !section.classList.contains('collapsed');
     } else {
         section.classList.toggle('expanded');
+        expanded = section.classList.contains('expanded');
     }
+    labelEl.setAttribute('aria-expanded', expanded ? 'true' : 'false');
 }
+
+// Initialize aria-expanded from each section's server-rendered state
+(function() {
+    document.querySelectorAll('.nav-section-label').forEach(function(btn) {
+        var section = btn.closest('.nav-section');
+        var expanded =
+            section.classList.contains('expanded') ||
+            (section.classList.contains('has-active') &&
+                !section.classList.contains('collapsed'));
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+})();
 
 // Close sidebar on mobile link click
 document.querySelectorAll('.sidebar-nav .nav-link').forEach(function(a) {
@@ -365,49 +384,53 @@ document.querySelectorAll('.sidebar-nav .nav-link').forEach(function(a) {
     });
 });
 
-// Toast Notifications
+// Toast Notifications — delegated to EthioPayroll.toast (HTML-escaped,
+// rendered into an aria-live container). Shim kept for legacy callers.
 function showToast(message, type = 'info', duration = 4000) {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-
-    const icons = {
-        success: 'bi-check-circle-fill',
-        error: 'bi-x-circle-fill',
-        warning: 'bi-exclamation-triangle-fill',
-        info: 'bi-info-circle-fill'
-    };
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <i class="toast-icon bi ${icons[type] || icons.info}"></i>
-        <span class="toast-message">${message}</span>
-        <button class="toast-close" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>
-    `;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(16px)';
-        toast.style.transition = 'all 300ms ease';
-        setTimeout(() => toast.remove(), 300);
-    }, duration);
+    if (window.EthioPayroll && typeof EthioPayroll.toast === 'function') {
+        EthioPayroll.toast(message, type, '', duration);
+    }
 }
 
-// Chart.js defaults
+// Chart.js defaults — themed from design-system tokens, re-applied on theme change
+function applyChartTheme() {
+    if (typeof Chart === 'undefined') return;
+    const css = getComputedStyle(document.documentElement);
+    const textColor = css.getPropertyValue('--text-secondary').trim() || '#424656';
+    const gridColor = css.getPropertyValue('--border-light').trim() || '#e1e1ee';
+    Chart.defaults.color = textColor;
+    Chart.defaults.scale.grid = { color: gridColor, drawBorder: false };
+    // Live-update any charts already on the page
+    if (Chart.instances) {
+        Object.values(Chart.instances).forEach(function (inst) {
+            if (!inst || !inst.options) return;
+            inst.options.color = textColor;
+            if (inst.options.scales) {
+                Object.values(inst.options.scales).forEach(function (s) {
+                    if (s && s.grid) s.grid.color = gridColor;
+                });
+            }
+            inst.update('none');
+        });
+    }
+}
+
 if (typeof Chart !== 'undefined') {
     Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
     Chart.defaults.font.size = 12;
-    Chart.defaults.color = '#64748b';
     Chart.defaults.plugins.legend.labels.usePointStyle = true;
     Chart.defaults.plugins.legend.labels.padding = 16;
     Chart.defaults.elements.bar.borderRadius = 6;
     Chart.defaults.elements.line.tension = 0.3;
     Chart.defaults.elements.point.radius = 4;
     Chart.defaults.elements.point.hoverRadius = 6;
-    Chart.defaults.scale.grid = { color: '#e2e8f0', drawBorder: false };
+    applyChartTheme();
 }
 </script>
+
+<!-- Phone input helper: tab switching + +251 prefix enforcement. -->
+<script src="{{ url_for('static', filename='js/phone-input.js') }}?v={{ static_version }}" data-static-base="{{ url_for('static', filename='') }}"></script>
+
 {% block extra_js %}{% endblock %}
 
 <!-- Reusable Confirmation Modal -->
@@ -426,7 +449,7 @@ if (typeof Chart !== 'undefined') {
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 // Reusable confirmation modal
 function confirmAction(title, message, onConfirm) {
     const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
@@ -459,32 +482,32 @@ document.addEventListener('DOMContentLoaded', () => {
     <ul class="nav-list">
         {% if current_user.role == 'employee' %}
         <li class="nav-item">
-            <a href="{{ url_for('portal.employee_dashboard') }}" class="nav-link {% if request.endpoint == 'portal.employee_dashboard' %}active{% endif %}">
+            <a href="{{ url_for('portal.employee_dashboard') }}" class="nav-link {% if (request.endpoint or '') == 'portal.employee_dashboard' %}active{% endif %}">
                 <i class="bi bi-grid-1x2"></i>
                 <span>Home</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ url_for('portal.my_payslips') }}" class="nav-link {% if 'payslip' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('portal.my_payslips') }}" class="nav-link {% if 'payslip' in (request.endpoint or '') %}active{% endif %}">
                 <i class="bi bi-receipt"></i>
                 <span>Payslips</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ url_for('portal.my_profile') }}" class="nav-link {% if request.endpoint == 'portal.my_profile' %}active{% endif %}">
+            <a href="{{ url_for('portal.my_profile') }}" class="nav-link {% if (request.endpoint or '') == 'portal.my_profile' %}active{% endif %}">
                 <i class="bi bi-person"></i>
                 <span>Profile</span>
             </a>
         </li>
         {% else %}
         <li class="nav-item">
-            <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in (request.endpoint or '') %}active{% endif %}">
                 <i class="bi bi-grid-1x2"></i>
                 <span>Home</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employees' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('employees.list_employees') }}" class="nav-link {% if 'employees' in (request.endpoint or '') %}active{% endif %}">
                 <i class="bi bi-people"></i>
                 <span>Staff</span>
             </a>
@@ -496,13 +519,13 @@ document.addEventListener('DOMContentLoaded', () => {
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'reports' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('reports.reports') }}" class="nav-link {% if 'reports' in (request.endpoint or '') %}active{% endif %}">
                 <i class="bi bi-file-earmark-bar-graph"></i>
                 <span>Reports</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{{ url_for('settings.company_profile') }}" class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('settings.company_profile') }}" class="nav-link {% if 'settings' in (request.endpoint or '') %}active{% endif %}">
                 <i class="bi bi-gear"></i>
                 <span>More</span>
             </a>

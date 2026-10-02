@@ -256,7 +256,7 @@
                         <div class="mb-4">
                             <label for="password" class="form-label fw-bold">{{ _('enter_password_confirm') }}</label>
                             <input type="password" class="form-control form-control-lg" id="password"
-                                   name="password" required autofocus placeholder="{{ _('your_login_password') }}">
+                                   name="password" required autocomplete="current-password" autofocus placeholder="{{ _('your_login_password') }}">
                             <div class="form-text">Re-authentication required for security.</div>
                         </div>
 
@@ -307,7 +307,7 @@
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
 // Disable approve button on submit to prevent double-click
 const approveForm = document.getElementById('approve-form');
 if (approveForm) {

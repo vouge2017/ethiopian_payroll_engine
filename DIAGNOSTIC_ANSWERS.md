@@ -936,6 +936,57 @@ The system is a functional prototype with strong foundations (tenant isolation, 
 
 ---
 
+## 21b. Strategic Benchmark Update (2026-08-26)
+
+**Source:** Team response document + PLATFORM_GAP_ANALYSIS_AND_STRATEGIC_SCORECARD.md
+
+### Working Decision:
+- Internal use: **GO**
+- One controlled accountant pilot: **CONDITIONAL GO**
+- 10 companies: **NOT YET**
+- 100 companies: **NO-GO**
+- 1,000+ companies: **NO-GO**
+
+### New since last assessment:
+
+- ✅ Excel-compatible payroll engine (`excel_payroll.py`) — deterministic, explainable, auditable. 57 tests. **2026-08-26**
+- ✅ Per-employee calculation flow (8-12 steps with formula, inputs, result, legal reference) **2026-08-26**
+- ✅ SHA-256 determinism proof (input hash + output hash) **2026-08-26**
+- ✅ Multi-sheet Excel export (8 sheets: Summary, Payroll, Calculation Flow, Tax Breakdown, Exceptions, Changes, Bank File, Approval) **2026-08-26**
+- ✅ 9 validation rules in new engine (BLOCK/FLAG/WARN) **2026-08-26**
+- ✅ Change detection vs previous period (new hires, departures, salary changes) **2026-08-26**
+- ✅ Approval state machine (draft → review → approved → locked) **2026-08-26**
+- ✅ Bank file auto-generation from approved payroll **2026-08-26**
+
+### P0 priorities (from strategic benchmark):
+
+| # | Priority | Status |
+|---|---|---|
+| 1 | Complete payroll trust/review workflow | ⚠️ Components exist, web UI integration incomplete |
+| 2 | Filing Workspace with readiness tracking | ✅ Code exists, needs production testing |
+| 3 | Fix accountant journey (month-end close) | ❌ No guided close workflow |
+| 4 | Adjustment payslip workflow (undo/correction) | ❌ Not implemented |
+| 5 | Verify concurrency, locking, rollback | ❌ Not tested |
+| 6 | Verify production resilience | ⚠️ Unit tests pass, no live drill |
+| 7 | Send verification package to accountant | 📋 Ready to send |
+| 8 | Surface calculation flow in web UI | ⚠️ Only in Excel export, not web |
+
+### Scores (updated 2026-08-26):
+
+| Category | Score | Change | Justification |
+|---|---|---|---|
+| **Payroll depth** | **8/10** | — | Tax, pension, overtime, severance, leave, deductions, allowances, daily workers, proration |
+| **SME usability** | **6/10** | — | Registration wizard, CSV import, cockpit dashboard. Needs real user testing. |
+| **Accountant experience** | **5/10** | — | Cockpit, change summary, filing workspace. Missing: month-close, adjustment workflow, web calculation flow. |
+| **Employee experience** | **6/10** | — | Self-service portal, payslip download. Missing: mobile-optimized view. |
+| **Payroll review/trust** | **7/10** | — | Change summary, narrative, evidence, exceptions. Missing: web calculation flow, undo. |
+| **Compliance automation** | **5/10** | — | Configurable deadlines, filing workspace. ERCA/pension formats unverified. |
+| **Auditability/security** | **8/10** | — | Hash chain, tenant isolation, MFA, encrypted fields. |
+| **Localization** | **7/10** | — | English, Amharic, Afaan Oromoo, Ethiopian calendar, ETB. |
+| **Overall** | **5.6/10** | — | Strong engine, incomplete workflow. The gap is operational trust maturity, not calculation capacity. |
+
+---
+
 ## Session Summary — 2026-07-20
 
 **Duration:** Full day session

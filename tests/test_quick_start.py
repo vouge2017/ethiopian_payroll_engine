@@ -41,7 +41,7 @@ def company_user(app):
         company = Company(name='TestCo')
         db.session.add(company)
         db.session.commit()
-        user = User(phone='0911000001', company_id=company.id, role='owner')
+        user = User(phone='911000001', company_id=company.id, role='owner')
         user.set_password('Test1234!')
         db.session.add(user)
         db.session.commit()
@@ -57,7 +57,7 @@ def client(app):
 
 
 def login(client):
-    client.post('/auth/login', data={'login_id': '0911000001', 'password': 'Test1234!'}, follow_redirects=True)
+    client.post('/auth/login', data={'login_id': '911000001', 'password': 'Test1234!'}, follow_redirects=True)
 
 
 def test_quick_start_page_loads(app, company_user, client):
@@ -75,8 +75,8 @@ def test_import_employees_json(app, company_user, client):
         '/quick-start/import',
         json={
             'employees': [
-                {'name': 'Abebe Kebede', 'phone': '0911234567', 'salary': 8000},
-                {'name': 'Tigist Hailu', 'phone': '0922345678', 'salary': 12000},
+                {'name': 'Abebe Kebede', 'phone': '911234567', 'salary': 8000},
+                {'name': 'Tigist Hailu', 'phone': '922345678', 'salary': 12000},
             ]
         },
         headers={'Content-Type': 'application/json'},
@@ -100,8 +100,8 @@ def test_import_validates_missing_name(app, company_user, client):
         '/quick-start/import',
         json={
             'employees': [
-                {'name': '', 'phone': '0911234567', 'salary': 8000},
-                {'name': 'Valid Name', 'phone': '0922345678', 'salary': 5000},
+                {'name': '', 'phone': '911234567', 'salary': 8000},
+                {'name': 'Valid Name', 'phone': '922345678', 'salary': 5000},
             ]
         },
         headers={'Content-Type': 'application/json'},
@@ -119,7 +119,7 @@ def test_import_validates_negative_salary(app, company_user, client):
         '/quick-start/import',
         json={
             'employees': [
-                {'name': 'Bad Salary', 'phone': '0911234567', 'salary': -1000},
+                {'name': 'Bad Salary', 'phone': '911234567', 'salary': -1000},
             ]
         },
         headers={'Content-Type': 'application/json'},
@@ -136,7 +136,7 @@ def test_import_validates_invalid_salary(app, company_user, client):
         '/quick-start/import',
         json={
             'employees': [
-                {'name': 'Bad Input', 'phone': '0911234567', 'salary': 'abc'},
+                {'name': 'Bad Input', 'phone': '911234567', 'salary': 'abc'},
             ]
         },
         headers={'Content-Type': 'application/json'},
@@ -164,9 +164,9 @@ def test_import_generates_employee_ids(app, company_user, client):
         '/quick-start/import',
         json={
             'employees': [
-                {'name': 'First', 'phone': '0911000001', 'salary': 5000},
-                {'name': 'Second', 'phone': '0911000002', 'salary': 6000},
-                {'name': 'Third', 'phone': '0911000003', 'salary': 7000},
+                {'name': 'First', 'phone': '911000001', 'salary': 5000},
+                {'name': 'Second', 'phone': '911000002', 'salary': 6000},
+                {'name': 'Third', 'phone': '911000003', 'salary': 7000},
             ]
         },
         headers={'Content-Type': 'application/json'},

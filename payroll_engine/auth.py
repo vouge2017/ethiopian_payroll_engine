@@ -1,4 +1,4 @@
-import hashlib
+import re
 from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
@@ -9,6 +9,20 @@ from .models import Company, User, validate_ethiopian_phone
 from .security import safe_redirect_target
 
 auth = Blueprint('auth', __name__)
+
+
+def _login_phone(value):
+    """Accept legacy sign-in formats without relaxing new-registration rules."""
+    cleaned = value.replace(' ', '')
+    if re.fullmatch(r'0[79][0-9]{8}', cleaned):
+        cleaned = cleaned[1:]
+    valid, normalized, _ = validate_ethiopian_phone(cleaned)
+    return normalized if valid else None
+
+
+def _phone_user(phone):
+    matches = User.query.filter(User.phone.in_((phone, '0' + phone))).limit(2).all()
+    return matches[0] if len(matches) == 1 else None
 
 
 def _get_google_oauth():
@@ -58,21 +72,9 @@ def login():
 
         # Normalize identifier for lockout tracking
         # Must match the format used in DB lookup to prevent bypass via format variation
-        identifier = login_id.lower().strip() if login_id else ''
-        if identifier:
-            cleaned = identifier.replace(' ', '')
-            looks_like_phone = (
-                cleaned.startswith('09')
-                or cleaned.startswith('07')
-                or cleaned.startswith('+251')
-                or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
-            )
-            if looks_like_phone:
-                from payroll_engine.models import validate_ethiopian_phone
-
-                is_valid, normalized, _ = validate_ethiopian_phone(identifier)
-                if is_valid:
-                    identifier = normalized
+        phone = _login_phone(login_id)
+        looks_like_phone = phone is not None
+        identifier = phone or login_id.lower()
 
         # Check brute-force lockout BEFORE processing
         from payroll_engine.models import LoginAttempt
@@ -89,20 +91,10 @@ def login():
         # Try to find user by phone or email
         user = None
         if login_id:
-            # Check if it looks like a phone number
-            cleaned = login_id.replace(' ', '')
-            looks_like_phone = (
-                cleaned.startswith('09')
-                or cleaned.startswith('07')
-                or cleaned.startswith('+251')
-                or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
-            )
-            if looks_like_phone:
-                # Normalize phone and look up
-                is_valid, normalized, _ = validate_ethiopian_phone(login_id)
-                if is_valid:
-                    user = User.query.filter_by(phone=normalized).first()
-            if user is None:
+            if phone:
+                # Legacy and new spellings must not identify different accounts.
+                user = _phone_user(phone)
+            else:
                 # Try email
                 user = User.query.filter_by(email=login_id.lower()).first()
 
@@ -112,7 +104,7 @@ def login():
 
             # Audit: failed login attempt (tenant-scoped table requires a
             # company; skip for unknown identifiers — logged instead).
-            if user:
+            if user and user.company_id:
                 from payroll_engine.shared import create_audit_log
 
                 create_audit_log(
@@ -121,9 +113,9 @@ def login():
                     action='login_failed',
                     details={'attempted_id': login_id[:120], 'locked': is_locked},
                 )
-                db.session.commit()
             else:
                 current_app.logger.warning('Login failed for unknown identifier (%s)', identifier)
+            db.session.commit()
 
             if is_locked:
                 minutes = max(1, remaining // 60)
@@ -150,7 +142,7 @@ def login():
                 action='login_success',
                 details={'method': 'phone' if looks_like_phone else 'email'},
             )
-            db.session.commit()
+        db.session.commit()
         if user.must_change_password:
             flash('Please set a new password to continue. Your temporary password needs to be changed.', 'warning')
             return redirect(url_for('auth.change_password'))
@@ -167,11 +159,13 @@ def login():
 @auth.route('/logout')
 @login_required
 def logout():
-    # Audit: logout
-    from payroll_engine.shared import create_audit_log
+    # Audit: logout (skip if user has no company yet — e.g., just registered
+    # but hasn't completed progressive profiling)
+    if current_user.company_id is not None:
+        from payroll_engine.shared import create_audit_log
 
-    create_audit_log(company_id=current_user.company_id, user_id=current_user.id, action='logout')
-    db.session.commit()
+        create_audit_log(company_id=current_user.company_id, user_id=current_user.id, action='logout')
+        db.session.commit()
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
@@ -181,28 +175,39 @@ def logout():
 @login_required
 @limiter.limit('10 per minute')
 def change_password():
-    """Force or allow password change (required for invited temporary passwords)."""
+    """Force or allow password change. User is already authenticated, so
+    we don't re-verify identity — only the new password is required."""
     if request.method == 'POST':
-        current = request.form.get('current_password', '')
         new_password = request.form.get('new_password', '')
         new_password2 = request.form.get('new_password2', '')
 
-        if not current_user.check_password(current):
-            flash('Current password is incorrect.', 'danger')
+        if not new_password:
+            flash('Please enter a new password.', 'danger')
             return redirect(url_for('auth.change_password'))
         if new_password != new_password2:
             flash('New passwords do not match.', 'danger')
             return redirect(url_for('auth.change_password'))
-        if len(new_password) < 8:
-            flash('Password must be at least 8 characters.', 'danger')
+
+        from payroll_engine.password_policy import check_password_strength
+
+        is_strong, pw_error = check_password_strength(new_password)
+        if not is_strong:
+            flash(pw_error, 'danger')
             return redirect(url_for('auth.change_password'))
+
         if current_user.check_password(new_password):
             flash('New password must be different from the current password.', 'danger')
             return redirect(url_for('auth.change_password'))
 
-        current_user.set_password(new_password)
-        current_user.must_change_password = False
-        db.session.commit()
+        try:
+            current_user.set_password(new_password)
+            current_user.must_change_password = False
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to change password: %s', e)
+            flash('Password change failed. Please try again.', 'danger')
+            return redirect(url_for('auth.change_password'))
 
         # Invalidate current session and log out, forcing re-authentication
         from flask_login import logout_user
@@ -233,65 +238,99 @@ def set_language(lang):
 
 
 @auth.route('/register', methods=['GET', 'POST'])
+@limiter.limit('3 per minute')
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+
+    phone = ''
+    email = None
+    password = ''
+    password2 = ''
+
     if request.method == 'POST':
         phone = request.form.get('phone', '').strip()
         email = request.form.get('email', '').strip().lower() or None
         password = request.form.get('password', '')
         password2 = request.form.get('password2', '')
-        company_name = request.form.get('company_name', '').strip() or None
 
-        # Validate required fields
+        # Validate required fields (progressive: only phone + password)
         if not phone or not password:
             flash('Phone and password are required.', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'phone': phone,
+                    'email': request.form.get('email', ''),
+                },
+            ), 400
 
         # Validate phone format
         is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
         if not is_valid:
             flash(phone_error, 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'phone': phone,
+                    'email': request.form.get('email', ''),
+                },
+            ), 400
 
         # Validate password
         if password != password2:
             flash('Passwords do not match.', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'phone': normalized_phone or phone,
+                    'email': request.form.get('email', ''),
+                },
+            ), 400
         from payroll_engine.password_policy import check_password_strength
 
         is_strong, pw_error = check_password_strength(password)
         if not is_strong:
             flash(pw_error, 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'phone': normalized_phone or phone,
+                    'email': request.form.get('email', ''),
+                },
+            ), 400
 
         # Check duplicate phone
-        if User.query.filter_by(phone=normalized_phone).first():
+        if User.query.filter(User.phone.in_((normalized_phone, '0' + normalized_phone))).first():
             flash('Phone number already registered.', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'phone': normalized_phone,
+                    'email': request.form.get('email', ''),
+                },
+            ), 400
 
         # Check duplicate email (if provided)
         if email and User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
-            return redirect(url_for('auth.register'))
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'phone': normalized_phone,
+                    'email': request.form.get('email', ''),
+                },
+            ), 400
 
-        # Create company if name provided (backward-compatible one-step flow)
-        company = None
-        if company_name:
-            existing_company = Company.query.filter_by(name=company_name).first()
-            if existing_company:
-                flash('A company with that name already exists.', 'danger')
-                return redirect(url_for('auth.register'))
-            company = Company(name=company_name)
-            # 30-day trial for new signups (see payroll_engine/billing.py).
-            from payroll_engine.billing import TRIAL_DAYS
-
-            company.trial_ends_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=TRIAL_DAYS)
-            db.session.add(company)
-            db.session.flush()
-
-        # Create user
-        user = User(email=email, phone=normalized_phone, company_id=company.id if company else None, role='owner')
+        # Create user with progressive profiling flag
+        # (must_complete_profile=True until name + company are set)
+        user = User(
+            email=email,
+            phone=normalized_phone,
+            company_id=None,
+            role='owner',
+            must_complete_profile=True,
+        )
         user.set_password(password)
 
         # Apply referral code if present
@@ -301,11 +340,201 @@ def register():
             if referrer:
                 user.referred_by = referrer.id
 
-        db.session.add(user)
-        db.session.commit()
-        flash('Account created! Please log in and set up your company.', 'success')
-        return redirect(url_for('auth.login'))
-    return render_template('auth/register.html')
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to create user: %s', e)
+            # Log the user object state for debugging
+            current_app.logger.error(
+                'Register failed: phone=%s email=%s role=%s company_id=%s must_complete_profile=%s '
+                'pw_set=%s created_at=%s first_name=%s',
+                normalized_phone,
+                email,
+                user.role,
+                user.company_id,
+                user.must_complete_profile,
+                bool(user.password_hash),
+                user.created_at,
+                user.first_name,
+            )
+            err_msg = str(e).lower()
+            if 'unique' in err_msg or 'duplicate' in err_msg:
+                if 'phone' in err_msg:
+                    flash('This phone number is already registered. Try logging in instead.', 'danger')
+                elif 'email' in err_msg:
+                    flash('This email is already registered. Try logging in instead.', 'danger')
+                else:
+                    flash('This account already exists. Try logging in instead.', 'danger')
+            elif 'null' in err_msg or 'not-null' in err_msg:
+                # Try to extract the column name from the error
+                column_match = re.search(r'column "([^"]+)"', str(e))
+                column_name = column_match.group(1) if column_match else 'unknown'
+                current_app.logger.error('NOT NULL violation on column: %s', column_name)
+                flash(f'Account creation failed. Please contact support. (ref: notnull-{column_name})', 'danger')
+            else:
+                err_type = type(e).__name__
+                flash(f'Account creation failed ({err_type}). Please try again or contact support.', 'danger')
+            return render_template(
+                'auth/register.html',
+                form_data={
+                    'phone': normalized_phone,
+                    'email': request.form.get('email', ''),
+                },
+            ), 400
+
+        # Auto-login the new user and route to profile setup
+        login_user(user)
+        from datetime import datetime
+
+        session['_login_time'] = datetime.now(UTC).timestamp()
+        session['_last_active'] = session['_login_time']
+        session.permanent = True
+
+        flash('Account created! Let&apos;s set up your profile.', 'success')
+        return redirect(url_for('auth.setup_profile'))
+    return render_template('auth/register.html', form_data=None)
+
+
+@auth.route('/setup-profile', methods=['GET', 'POST'])
+@login_required
+def setup_profile():
+    """Step 2 of progressive profiling: collect name + company name.
+
+    The user has just registered (or hasn't completed their profile yet)
+    and is signed in but `must_complete_profile=True`. This route
+    collects the remaining fields and clears the flag.
+    """
+    if not current_user.must_complete_profile:
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        middle_name = request.form.get('middle_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        company_name = request.form.get('company_name', '').strip()
+
+        # Validate required fields
+        if not first_name or not last_name:
+            flash('First name and last name are required.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        if not company_name:
+            flash('Company name is required.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        # Check for duplicate company name
+        existing_company = Company.query.filter_by(name=company_name).first()
+        if existing_company:
+            flash('A company with that name already exists. Please choose a different name.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        # Create company and link to user
+        company = Company(name=company_name)
+        from payroll_engine.billing import TRIAL_DAYS
+
+        company.trial_ends_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=TRIAL_DAYS)
+        db.session.add(company)
+        db.session.flush()
+
+        current_user.first_name = first_name
+        current_user.middle_name = middle_name
+        current_user.last_name = last_name
+        current_user.company_id = company.id
+        current_user.must_complete_profile = False
+
+        try:
+            db.session.commit()
+            db.session.refresh(current_user)
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to setup profile: %s', e)
+            # Capture in Sentry with onboarding context
+            try:
+                import sentry_sdk
+
+                sentry_sdk.capture_exception(e)
+                sentry_sdk.set_tag('onboarding_step', 'setup_profile')
+                sentry_sdk.set_tag('company_name_attempt', company_name)
+            except Exception:
+                pass
+            flash('Profile setup failed. Please try again.', 'danger')
+            return render_template(
+                'auth/setup_profile.html',
+                form_data={
+                    'first_name': first_name,
+                    'middle_name': middle_name,
+                    'last_name': last_name,
+                    'company_name': company_name,
+                },
+            ), 400
+
+        flash('Profile complete! Welcome to EthioPayroll.', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template('auth/setup_profile.html', form_data=None)
+
+
+@auth.route('/setup-profile/skip', methods=['GET', 'POST'])
+@login_required
+def setup_profile_skip():
+    """Skip profile setup for now — user can fill it in later from settings.
+
+    The `must_complete_profile` flag stays True so a banner can prompt
+    them later, but we don't force-redirect to this page anymore.
+    """
+    current_user.must_complete_profile = False
+    db.session.commit()
+    flash('You can complete your profile anytime from your account settings.', 'info')
+    return redirect(url_for('main.index'))
+
+
+@auth.before_request
+def setup_profile_required():
+    """Redirect users with `must_complete_profile=True` to /auth/setup-profile
+    unless they're already on that page or the skip endpoint.
+    """
+    if not current_user.is_authenticated:
+        return None
+    if not getattr(current_user, 'must_complete_profile', False):
+        return None
+    # Allow access to setup-profile, logout, and static assets
+    allowed = (
+        '/auth/setup-profile',
+        '/auth/logout',
+        '/static/',
+    )
+    from flask import request as _req
+
+    path = _req.path
+    if any(path.startswith(p) for p in allowed):
+        return None
+    return redirect(url_for('auth.setup_profile'))
 
 
 @auth.route('/google/login')
@@ -394,7 +623,7 @@ def google_register():
             flash(phone_error, 'danger')
             return redirect(url_for('auth.google_register'))
 
-        if User.query.filter_by(phone=normalized_phone).first():
+        if User.query.filter(User.phone.in_((normalized_phone, '0' + normalized_phone))).first():
             flash('Phone number already registered.', 'danger')
             return redirect(url_for('auth.google_register'))
 
@@ -412,6 +641,7 @@ def google_register():
             phone=normalized_phone,
             company_id=company.id,
             role='owner',
+            must_change_password=True,  # Force password change on first login
         )
         user.set_password(User._generate_temp_password())
         db.session.add(user)
@@ -427,8 +657,8 @@ def google_register():
         session['_login_time'] = datetime.now(UTC).timestamp()
         session['_last_active'] = session['_login_time']
         session.permanent = True
-        flash('Account created with Google!', 'success')
-        return redirect(url_for('main.index'))
+        flash('Account created with Google! Please set your password.', 'success')
+        return redirect(url_for('auth.change_password'))
 
     return render_template(
         'auth/google_register.html',
@@ -437,13 +667,13 @@ def google_register():
     )
 
 
-# --- Password Reset ---
+# --- Password Reset (3-step flow: forgot → verify → new) ---
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])
-@limiter.limit('5 per minute')
+@limiter.limit('3 per minute')
 def forgot_password():
-    """Request a password reset token. Accepts phone or email."""
+    """Step 1 of password recovery: collect phone/email, store in session."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
@@ -453,9 +683,11 @@ def forgot_password():
             flash('Please enter your phone number or email.', 'danger')
             return redirect(url_for('auth.forgot_password'))
 
-        # Find user by phone or email
-        user = None
+        # Determine if phone or email
         cleaned = login_id.replace(' ', '')
+        identity_type = None
+        identity_value = None
+
         looks_like_phone = (
             cleaned.startswith('09')
             or cleaned.startswith('07')
@@ -463,70 +695,187 @@ def forgot_password():
             or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
         )
         if looks_like_phone:
-            is_valid, normalized, _ = validate_ethiopian_phone(login_id)
-            if is_valid:
-                user = User.query.filter_by(phone=normalized).first()
-        if user is None:
-            user = User.query.filter_by(email=login_id.lower()).first()
+            normalized = _login_phone(login_id)
+            if normalized:
+                identity_type = 'phone'
+                identity_value = normalized
+        if identity_type is None and '@' in login_id:
+            identity_type = 'email'
+            identity_value = login_id.lower()
 
-        # Always show the same message (don't reveal whether account exists)
+        if identity_type is None:
+            flash('Please enter a valid Ethiopian phone or email address.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+
+        # Find user
+        if identity_type == 'phone':
+            user = _phone_user(identity_value)
+        else:
+            user = User.query.filter_by(email=identity_value).first()
+
+        # Always show the same message (no account enumeration)
         if user:
             token = user.generate_reset_token()
             db.session.commit()
-            # In production, this would be sent via SMS/email
-            # In dev/test, log the token so developers can find it
             current_app.logger.debug(f'Password reset token for {login_id}: {token}')
 
-        # Same message and redirect whether user exists or not (no enumeration)
-        flash('If an account with that phone/email exists, a reset link has been sent.', 'info')
-        return redirect(url_for('auth.login'))
+        # Preserve identity in session — the KEY improvement
+        # No re-typing phone/email after this step!
+        session['reset_identity'] = {
+            'type': identity_type,
+            'value': identity_value,
+            'code_attempts': 0,
+        }
+        session.permanent = True
+        flash('If an account exists for that phone/email, a reset code has been sent.', 'info')
+        return redirect(url_for('auth.reset_password_verify'))
 
     return render_template('auth/forgot_password.html')
 
 
-@auth.route('/reset-password', methods=['GET', 'POST'])
+@auth.route('/reset-password/verify', methods=['GET', 'POST'])
 @limiter.limit('5 per minute')
-def reset_password():
-    """Reset password using a token pasted by the user."""
+def reset_password_verify():
+    """Step 2 of password recovery: enter the 6-digit code.
+    Identity is preserved in session — no re-typing needed."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
+
+    identity = session.get('reset_identity')
+    if not identity:
+        flash('Please start the password reset from the beginning.', 'danger')
+        return redirect(url_for('auth.forgot_password'))
 
     if request.method == 'POST':
         token = request.form.get('token', '').strip()
         if not token:
-            flash('Please enter the reset code you received.', 'danger')
-            return redirect(url_for('auth.reset_password'))
+            flash('Please enter the 6-digit code we sent.', 'danger')
+            return redirect(url_for('auth.reset_password_verify'))
 
-        # Find user by token hash
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        user = User.query.filter_by(reset_token_hash=token_hash).first()
+        # Brute-force protection
+        if identity.get('code_attempts', 0) >= 5:
+            session.pop('reset_identity', None)
+            flash('Too many attempts. Please start over.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+
+        if identity['type'] == 'phone':
+            user = _phone_user(identity['value'])
+        else:
+            user = User.query.filter_by(email=identity['value']).first()
 
         if not user or not user.verify_reset_token(token):
-            flash('Invalid or expired reset code.', 'danger')
-            return redirect(url_for('auth.reset_password'))
+            identity['code_attempts'] = identity.get('code_attempts', 0) + 1
+            session['reset_identity'] = identity
+            flash('Invalid or expired code. Please try again.', 'danger')
+            return redirect(url_for('auth.reset_password_verify'))
 
+        # Code accepted — mark verified, proceed to password step
+        session['reset_identity']['verified'] = True
+        flash('Code verified. Now set your new password.', 'success')
+        return redirect(url_for('auth.reset_password_new'))
+
+    return render_template(
+        'auth/reset_password_verify.html',
+        identity_type=identity['type'],
+        masked_value=_mask_identity(identity['type'], identity['value']),
+    )
+
+
+@auth.route('/reset-password/new', methods=['GET', 'POST'])
+@limiter.limit('5 per minute')
+def reset_password_new():
+    """Step 3 of password recovery: set the new password.
+    Identity is already in session — only password fields are shown."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+
+    identity = session.get('reset_identity')
+    if not identity or not identity.get('verified'):
+        flash('Please verify your identity first.', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
         password = request.form.get('password', '')
         password2 = request.form.get('password2', '')
 
+        if not password:
+            flash('Please enter a new password.', 'danger')
+            return redirect(url_for('auth.reset_password_new'))
+
         if password != password2:
             flash('Passwords do not match.', 'danger')
-            return redirect(url_for('auth.reset_password'))
+            return redirect(url_for('auth.reset_password_new'))
 
         from payroll_engine.password_policy import check_password_strength
 
         is_strong, pw_error = check_password_strength(password)
         if not is_strong:
             flash(pw_error, 'danger')
-            return redirect(url_for('auth.reset_password'))
+            return redirect(url_for('auth.reset_password_new'))
 
-        user.set_password(password)
-        user.clear_reset_token()
-        user.must_change_password = False
-        db.session.commit()
-        flash('Password reset successfully. Please log in.', 'success')
-        return redirect(url_for('auth.login'))
+        # Look up user by the preserved identity
+        if identity['type'] == 'phone':
+            user = _phone_user(identity['value'])
+        else:
+            user = User.query.filter_by(email=identity['value']).first()
 
-    return render_template('auth/reset_password.html')
+        if not user:
+            session.pop('reset_identity', None)
+            flash('Account not found. Please start over.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+
+        try:
+            user.set_password(password)
+            user.clear_reset_token()
+            user.must_change_password = False
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception('Failed to reset password: %s', e)
+            flash('Password reset failed. Please try again.', 'danger')
+            return redirect(url_for('auth.reset_password_new'))
+
+        # Auto-login the user with the new password
+        login_user(user)
+        from datetime import datetime
+
+        session['_login_time'] = datetime.now(UTC).timestamp()
+        session['_last_active'] = session['_login_time']
+        session.permanent = True
+        session.pop('reset_identity', None)
+
+        flash('Password updated! You are now signed in.', 'success')
+        return redirect(url_for('main.index'))
+
+    return render_template(
+        'auth/reset_password_new.html',
+        identity_type=identity['type'],
+        masked_value=_mask_identity(identity['type'], identity['value']),
+    )
+
+
+def _mask_identity(identity_type: str, value: str) -> str:
+    """Mask an identity value for display (e.g., +251 91***567)."""
+    if identity_type == 'phone':
+        if len(value) >= 9:
+            return '+251 ' + value[:2] + '***' + value[-3:]
+        return '+251 ' + value
+    # email
+    if '@' in value:
+        local, domain = value.split('@', 1)
+        if len(local) <= 2:
+            masked_local = local[0] + '***'
+        else:
+            masked_local = local[:2] + '***' + local[-1:]
+        return f'{masked_local}@{domain}'
+    return value
+
+
+# Backward-compat: old /reset-password URL redirects to the new flow
+@auth.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    """Legacy single-step reset — redirects users to the new 3-step flow."""
+    return redirect(url_for('auth.forgot_password'))
 
 
 # --- MFA / TOTP Setup ---

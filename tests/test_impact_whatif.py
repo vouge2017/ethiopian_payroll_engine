@@ -66,8 +66,8 @@ def test_preview_new_hire_uses_catalog_and_writes_nothing(seeded_company):
     from payroll_engine.impact import preview_new_hire
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
-    allowances_before = EmployeeAllowance.query.count()
-    assignments_before = PayrollItemAssignment.query.count()
+    allowances_before = EmployeeAllowance.query.filter_by(company_id=seeded_company.id).count()
+    assignments_before = PayrollItemAssignment.query.filter_by(company_id=seeded_company.id).count()
 
     result = preview_new_hire(
         basic_salary=20000,
@@ -85,8 +85,10 @@ def test_preview_new_hire_uses_catalog_and_writes_nothing(seeded_company):
     )
 
     # The critical guarantee: a preview writes nothing.
-    assert EmployeeAllowance.query.count() == allowances_before, 'what-if must never create an EmployeeAllowance'
-    assert PayrollItemAssignment.query.count() == assignments_before, (
+    assert EmployeeAllowance.query.filter_by(company_id=seeded_company.id).count() == allowances_before, (
+        'what-if must never create an EmployeeAllowance'
+    )
+    assert PayrollItemAssignment.query.filter_by(company_id=seeded_company.id).count() == assignments_before, (
         'what-if must never persist a PayrollItemAssignment'
     )
 

@@ -899,3 +899,20 @@ The following are NOT verified in this session. Do not cite them as fact until r
 ---
 
 *Update this file every session. Timestamp every claim. When in doubt, run the command.*
+
+## 2026-10-03 — PR #8 reconciliation
+
+Reconciled feature input `e1d5e37` with restored main `facf818`; recovery PR #9
+was already merged at `3f3ae3b`. No restored main files are deleted. The combined
+Alembic graph has 76 revisions and one head, `f4a5b6c7d8f2`.
+
+- Final PostgreSQL selection: `93 passed, 262 warnings in 186.20s (0:03:06)`.
+- Strict security/tenant and migration gate: `173 passed, 1 skipped, 41 warnings in 205.76s (0:03:25)`.
+- Repaired broad-suite file selection: `TOTAL: 199 passed, 0 failed, 0 errors, 2 skipped`.
+- Ruff lint and formatting pass. Hosted checks for the reconciliation are separate.
+- GitGuardian 37741140 is confirmed as the historical synthetic pytest default;
+  owner page still says Triggered. Ignore with reason Test credential remains pending.
+- PR #8 merge into main and production deployment remain pending.
+
+Full scope, initial failures, fixes and evidence:
+[PR8_RECONCILIATION_2026-10-03.md](docs/PR8_RECONCILIATION_2026-10-03.md).

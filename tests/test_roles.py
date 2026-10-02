@@ -180,7 +180,7 @@ def test_switch_company(app):
         db.session.add_all([company1, company2])
         db.session.commit()
 
-        user = User(phone='0911234567', company_id=company1.id, role='accountant')
+        user = User(phone='911234567', company_id=company1.id, role='accountant')
         user.set_password('pass123')
         db.session.add(user)
         db.session.flush()
@@ -192,7 +192,7 @@ def test_switch_company(app):
 
     # Login as the multi-company accountant
     login_resp = client.post(
-        '/auth/login', data={'login_id': '0911234567', 'password': 'pass123'}, follow_redirects=True
+        '/auth/login', data={'login_id': '911234567', 'password': 'pass123'}, follow_redirects=True
     )
     assert login_resp.status_code == 200, f'Login failed: {login_resp.status_code}'
     assert b'Dashboard' in login_resp.data or b'dashboard' in login_resp.data.lower()

@@ -320,7 +320,12 @@ def test_real_revision_rollback_preserves_employees_and_refuses_saved_inputs(wor
         with pytest.raises(RuntimeError, match='saved worksheet inputs must be preserved'):
             command.downgrade(cfg, 'f4a5b6c7d8ef')
     with engine.connect() as conn:
-        assert conn.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == 'f4a5b6c7d8f0'
+        from alembic.script import ScriptDirectory
+
+        assert (
+            conn.execute(text('SELECT version_num FROM alembic_version')).scalar_one()
+            == ScriptDirectory.from_config(cfg).get_current_head()
+        )
         assert (
             conn.execute(
                 text('SELECT bonus FROM spreadsheet_input WHERE company_id=:id'), {'id': ids['company']}

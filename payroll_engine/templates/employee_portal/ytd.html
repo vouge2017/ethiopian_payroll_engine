@@ -130,7 +130,7 @@
 
 {% block extra_js %}
 {% if ytd.payslips|length > 1 %}
-<script>
+<script nonce="{{ csp_nonce }}">
 new Chart(document.getElementById('ytdChart'), {
     type: 'line',
     data: {

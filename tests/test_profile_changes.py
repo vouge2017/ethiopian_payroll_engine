@@ -1,5 +1,5 @@
 """
-Profile change request tests — verifies the employee edit workflow:
+Profile change request tests â€” verifies the employee edit workflow:
 - Employees can edit safe fields directly
 - Sensitive fields create approval requests
 - Admins can approve/reject
@@ -47,12 +47,12 @@ def _setup(app):
         db.session.add(company)
         db.session.flush()
 
-        admin = User(phone='0910000000', role='owner', company_id=company.id)
+        admin = User(phone='910000000', role='owner', company_id=company.id)
         admin.set_password('AdminPass1!')
         db.session.add(admin)
         db.session.flush()
 
-        emp_user = User(phone='0910000001', role='employee', company_id=company.id)
+        emp_user = User(phone='910000001', role='employee', company_id=company.id)
         emp_user.set_password('EmpPass1!')
         db.session.add(emp_user)
         db.session.flush()
@@ -60,7 +60,7 @@ def _setup(app):
         emp = Employee(
             employee_id='EMP001',
             name='Tigist Haile',
-            phone='0911111111',
+            phone='911111111',
             department='Finance',
             position='Accountant',
             basic_salary=10000,
@@ -97,8 +97,8 @@ class TestProfileChangeRequestModel:
                 company_id=company_id,
                 employee_id=emp_id,
                 field_name='phone',
-                old_value='0911111111',
-                new_value='0922222222',
+                old_value='911111111',
+                new_value='922222222',
                 requested_by=emp_user_id,
             )
             db.session.add(req)
@@ -142,7 +142,7 @@ class TestEmployeeProfileEdit:
     def test_edit_page_loads(self, app):
         _company_id, _admin_id, _emp_user_id, _emp_id = _setup(app)
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         resp = client.get('/my/profile/edit')
         assert resp.status_code == 200
         assert b'Edit My Profile' in resp.data
@@ -150,13 +150,13 @@ class TestEmployeeProfileEdit:
     def test_safe_field_updates_immediately(self, app):
         _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         resp = client.post(
             '/my/profile/edit',
             data={
                 'address': 'Bole, Addis Ababa',
                 'emergency_contact': 'Abebe Kebede',
-                'emergency_phone': '0933333333',
+                'emergency_phone': '933333333',
             },
             follow_redirects=True,
         )
@@ -166,16 +166,16 @@ class TestEmployeeProfileEdit:
             emp = db.session.get(Employee, emp_id)
             assert emp.address == 'Bole, Addis Ababa'
             assert emp.emergency_contact == 'Abebe Kebede'
-            assert emp.emergency_phone == '0933333333'
+            assert emp.emergency_phone == '933333333'
 
     def test_sensitive_field_creates_approval_request(self, app):
         _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         resp = client.post(
             '/my/profile/edit',
             data={
-                'phone': '0922222222',
+                'phone': '922222222',
             },
             follow_redirects=True,
         )
@@ -184,47 +184,58 @@ class TestEmployeeProfileEdit:
         with app.app_context():
             emp = db.session.get(Employee, emp_id)
             # Employee phone should NOT be updated yet
-            assert emp.phone == '0911111111'
+            assert emp.phone == '911111111'
 
             # But a change request should exist
-            req = ProfileChangeRequest.query.filter_by(employee_id=emp_id, field_name='phone').first()
+            req = ProfileChangeRequest.query.filter_by(
+                employee_id=emp_id,
+                field_name='phone',
+                company_id=_company_id,
+            ).first()
             assert req is not None
             assert req.status == 'pending'
-            assert req.new_value == '0922222222'
-            assert req.old_value == '0911111111'
+            assert req.new_value == '922222222'
+            assert req.old_value == '911111111'
 
     def test_no_change_submitted_if_value_same(self, app):
         _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         resp = client.post(
             '/my/profile/edit',
             data={
-                'phone': '0911111111',  # Same as current
+                'phone': '911111111',  # Same as current
             },
             follow_redirects=True,
         )
         assert resp.status_code == 200
 
         with app.app_context():
-            reqs = ProfileChangeRequest.query.filter_by(employee_id=emp_id, field_name='phone').all()
+            reqs = ProfileChangeRequest.query.filter_by(
+                employee_id=emp_id,
+                field_name='phone',
+                company_id=_company_id,
+            ).all()
             assert len(reqs) == 0
 
     def test_duplicate_pending_request_blocked(self, app):
         _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         # First request
-        client.post('/my/profile/edit', data={'phone': '0922222222'})
+        client.post('/my/profile/edit', data={'phone': '922222222'})
         # Second request for same field
-        client.post('/my/profile/edit', data={'phone': '0933333333'})
+        client.post('/my/profile/edit', data={'phone': '933333333'})
 
         with app.app_context():
             pending = ProfileChangeRequest.query.filter_by(
-                employee_id=emp_id, field_name='phone', status='pending'
+                employee_id=emp_id,
+                field_name='phone',
+                status='pending',
+                company_id=_company_id,
             ).all()
             assert len(pending) == 1
-            assert pending[0].new_value == '0922222222'
+            assert pending[0].new_value == '922222222'
 
 
 class TestAdminApproval:
@@ -237,18 +248,18 @@ class TestAdminApproval:
                 company_id=company_id,
                 employee_id=emp_id,
                 field_name='phone',
-                old_value='0911111111',
-                new_value='0922222222',
+                old_value='911111111',
+                new_value='922222222',
                 requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
 
         client = app.test_client()
-        _login(client, '0910000000', 'AdminPass1!')
+        _login(client, '910000000', 'AdminPass1!')
         resp = client.get('/profile-changes')
         assert resp.status_code == 200
-        assert b'0922222222' in resp.data
+        assert b'922222222' in resp.data
 
     def test_admin_approve_applies_change(self, app):
         company_id, admin_id, emp_user_id, emp_id = _setup(app)
@@ -257,8 +268,8 @@ class TestAdminApproval:
                 company_id=company_id,
                 employee_id=emp_id,
                 field_name='phone',
-                old_value='0911111111',
-                new_value='0922222222',
+                old_value='911111111',
+                new_value='922222222',
                 requested_by=emp_user_id,
             )
             db.session.add(req)
@@ -266,13 +277,13 @@ class TestAdminApproval:
             req_id = req.id
 
         client = app.test_client()
-        _login(client, '0910000000', 'AdminPass1!')
+        _login(client, '910000000', 'AdminPass1!')
         resp = client.post(f'/profile-changes/{req_id}/approve', follow_redirects=True)
         assert resp.status_code == 200
 
         with app.app_context():
             emp = db.session.get(Employee, emp_id)
-            assert emp.phone == '0922222222'
+            assert emp.phone == '922222222'
 
             req = db.session.get(ProfileChangeRequest, req_id)
             assert req.status == 'approved'
@@ -295,7 +306,7 @@ class TestAdminApproval:
             req_id = req.id
 
         client = app.test_client()
-        _login(client, '0910000000', 'AdminPass1!')
+        _login(client, '910000000', 'AdminPass1!')
         resp = client.post(
             f'/profile-changes/{req_id}/reject', data={'reason': 'Need bank statement'}, follow_redirects=True
         )
@@ -325,11 +336,11 @@ class TestAdminApproval:
             req_id = req.id
 
         client = app.test_client()
-        _login(client, '0910000000', 'AdminPass1!')
+        _login(client, '910000000', 'AdminPass1!')
         client.post(f'/profile-changes/{req_id}/approve')
 
         with app.app_context():
-            notif = Notification.query.filter_by(user_id=emp_user_id).first()
+            notif = Notification.query.filter_by(user_id=emp_user_id, company_id=company_id).first()
             assert notif is not None
             assert 'approved' in notif.message.lower()
             assert notif.type == 'success'
@@ -350,11 +361,11 @@ class TestAdminApproval:
             req_id = req.id
 
         client = app.test_client()
-        _login(client, '0910000000', 'AdminPass1!')
+        _login(client, '910000000', 'AdminPass1!')
         client.post(f'/profile-changes/{req_id}/reject', data={'reason': 'Use full name'})
 
         with app.app_context():
-            notif = Notification.query.filter_by(user_id=emp_user_id).first()
+            notif = Notification.query.filter_by(user_id=emp_user_id, company_id=company_id).first()
             assert notif is not None
             assert 'rejected' in notif.message.lower()
             assert notif.type == 'danger'
@@ -366,8 +377,8 @@ class TestAdminApproval:
                 company_id=company_id,
                 employee_id=emp_id,
                 field_name='phone',
-                old_value='0911111111',
-                new_value='0922222222',
+                old_value='911111111',
+                new_value='922222222',
                 requested_by=emp_user_id,
                 status='approved',
             )
@@ -376,7 +387,7 @@ class TestAdminApproval:
             req_id = req.id
 
         client = app.test_client()
-        _login(client, '0910000000', 'AdminPass1!')
+        _login(client, '910000000', 'AdminPass1!')
         resp = client.post(f'/profile-changes/{req_id}/approve', follow_redirects=True)
         assert resp.status_code == 200
         assert b'already been reviewed' in resp.data
@@ -388,8 +399,8 @@ class TestAdminApproval:
                 company_id=company_id,
                 employee_id=emp_id,
                 field_name='phone',
-                old_value='0911111111',
-                new_value='0922222222',
+                old_value='911111111',
+                new_value='922222222',
                 requested_by=emp_user_id,
             )
             db.session.add(req)
@@ -397,7 +408,7 @@ class TestAdminApproval:
             req_id = req.id
 
         client = app.test_client()
-        _login(client, '0910000000', 'AdminPass1!')
+        _login(client, '910000000', 'AdminPass1!')
         client.post(f'/profile-changes/{req_id}/approve')
 
         with app.app_context():
@@ -417,15 +428,15 @@ class TestProfileViewWithPending:
                 company_id=company_id,
                 employee_id=emp_id,
                 field_name='phone',
-                old_value='0911111111',
-                new_value='0922222222',
+                old_value='911111111',
+                new_value='922222222',
                 requested_by=emp_user_id,
             )
             db.session.add(req)
             db.session.commit()
 
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         resp = client.get('/my/profile')
         assert resp.status_code == 200
         assert b'Change pending' in resp.data
@@ -445,7 +456,7 @@ class TestProfileViewWithPending:
             db.session.commit()
 
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         resp = client.get('/my/profile')
         assert resp.status_code == 200
         assert b'Pending Approval' in resp.data
@@ -461,8 +472,8 @@ class TestAccessControl:
                 company_id=company_id,
                 employee_id=emp_id,
                 field_name='phone',
-                old_value='0911111111',
-                new_value='0922222222',
+                old_value='911111111',
+                new_value='922222222',
                 requested_by=emp_user_id,
             )
             db.session.add(req)
@@ -470,14 +481,14 @@ class TestAccessControl:
             req_id = req.id
 
         client = app.test_client()
-        _login(client, '0910000001', 'EmpPass1!')
+        _login(client, '910000001', 'EmpPass1!')
         resp = client.post(f'/profile-changes/{req_id}/approve', follow_redirects=True)
         # Should be forbidden or redirected
         assert resp.status_code in (403, 200)
         # Employee phone should NOT change
         with app.app_context():
             emp = db.session.get(Employee, emp_id)
-            assert emp.phone == '0911111111'
+            assert emp.phone == '911111111'
 
     def test_unauthenticated_redirected(self, app):
         client = app.test_client()

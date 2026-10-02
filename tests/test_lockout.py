@@ -122,25 +122,32 @@ class TestLoginAttemptModel:
             assert LoginAttempt.query.count() == 0
 
     def test_phone_format_normalization(self, app):
-        """Different phone formats for the same number share lockout counter."""
+        """Different phone formats for the same number share lockout counter.
+
+        New strict validation (2026-09):
+        - 9-digit national format (7 or 9 first digit) is accepted
+        - +251 prefix is accepted and normalized to 9-digit
+        - Leading 0 is NOT accepted (must use 9-digit or +251 format)
+        """
         with app.app_context():
-            # These are all the same phone number in different formats
-            formats = ['0910000000', '+251910000000', '910000000']
+            # All these formats normalize to the same 9-digit number
+            formats = ['+251910000000', '910000000']
             for fmt in formats:
                 from payroll_engine.models import validate_ethiopian_phone
 
                 is_valid, normalized, _ = validate_ethiopian_phone(fmt)
-                if is_valid:
-                    LoginAttempt.record_failure(normalized)
+                assert is_valid, f"Format '{fmt}' should be valid for lockout test"
+                LoginAttempt.record_failure(normalized)
 
-            # All should resolve to the same normalized phone
-            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
-            assert is_locked is False  # 3 < 5
+            # Both should resolve to the same normalized phone (910000000)
+            is_locked, _ = LoginAttempt.is_locked_out('910000000')
+            assert is_locked is False  # 2 < 5
 
-            # Two more to hit the limit
-            LoginAttempt.record_failure('0910000000')
-            LoginAttempt.record_failure('0910000000')
-            is_locked, _ = LoginAttempt.is_locked_out('0910000000')
+            # Three more to hit the limit
+            LoginAttempt.record_failure('910000000')
+            LoginAttempt.record_failure('910000000')
+            LoginAttempt.record_failure('910000000')
+            is_locked, _ = LoginAttempt.is_locked_out('910000000')
             assert is_locked is True  # 5 >= 5
 
     def test_is_locked_out_not_locked(self, app):

@@ -85,7 +85,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 const searchInput = document.getElementById('helpSearch');
 const resultsDiv = document.getElementById('searchResults');
 const allQuestions = [

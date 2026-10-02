@@ -461,7 +461,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 // Refresh dashboard data via API
 function refreshDashboard() {
   fetch('/payroll/api/dashboard')

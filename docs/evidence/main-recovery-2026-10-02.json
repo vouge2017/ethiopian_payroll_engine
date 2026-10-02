@@ -1,0 +1,42 @@
+{
+  "accidental_commit": "aa2e657736a572dc4bc51bc3cd9140682aef4c25",
+  "recovery_source": "1ff33d18fd48563d408ea8f9088d42414d296733",
+  "previous_tracked_files": 596,
+  "damaged_tracked_entries": 166,
+  "restored_previously_missing_files": 445,
+  "restored_deleted_migration_files": 37,
+  "restored_total_migration_files": 55,
+  "unchanged_parent_files": 572,
+  "documented_modified_parent_files": [
+    ".gitignore",
+    "payroll_engine/__init__.py",
+    "payroll_engine/models.py",
+    "tests/test_p0a_tenant_isolation.py",
+    "tests/test_usercompany_tenant.py"
+  ],
+  "recovered_private_or_generated_files_kept_local": [
+    "p1_push.txt",
+    "reference_data/real_erca_filing_sene.csv",
+    "scripts/e2e_screenshots/01_register_page.png",
+    "scripts/e2e_screenshots/02_register_filled.png",
+    "scripts/e2e_screenshots/03_after_register.png",
+    "scripts/e2e_screenshots/03_register_error.png",
+    "scripts/e2e_screenshots/06_login_page.png",
+    "scripts/e2e_screenshots/07_login_filled.png",
+    "scripts/e2e_screenshots/08_login_error.png",
+    "scripts/e2e_screenshots/10_login_ux.png",
+    "scripts/e2e_screenshots/11_email_tab.png",
+    "scripts/e2e_screenshots/onboarding_exception_1788591901.png",
+    "scripts/e2e_screenshots/onboarding_exception_1788593302.png",
+    "scripts/e2e_screenshots/onboarding_exception_1788593946.png",
+    "scripts/e2e_screenshots/onboarding_exception_1788596173.png",
+    "scripts/e2e_screenshots/onboarding_exception_1788598400.png",
+    "scripts/e2e_screenshots/register_exception_1788591755.png",
+    "scripts/e2e_screenshots/register_exception_1788591811.png",
+    "scripts/e2e_screenshots/register_exception_1788593838.png"
+  ],
+  "unexpected_missing_parent_files": [],
+  "unexpected_modified_parent_files": [],
+  "gitlinks_in_recovery": 0,
+  "tracked_bytecode_in_recovery": 0
+}

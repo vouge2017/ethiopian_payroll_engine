@@ -243,8 +243,8 @@ def _check_salary_change_significant(data: list[dict], previous: dict[str, dict]
             continue
 
         prev = previous[emp_id]
-        prev_total = float(prev.get('basic', 0)) + float(prev.get('allowances', 0))
-        curr_total = float(emp.get('basic', 0)) + float(emp.get('allowances', 0))
+        prev_total = _D(prev.get('basic', 0)) + _D(prev.get('allowances', 0))
+        curr_total = _D(emp.get('basic', 0)) + _D(emp.get('allowances', 0))
 
         if prev_total <= 0:
             continue
@@ -293,8 +293,8 @@ def _check_payroll_variance(data: list[dict], company_id: int, results: list[Val
         if not last_run:
             return
 
-        previous_net = sum(float(p.net_pay) for p in last_run.payslips)
-        current_net = sum(float(e.get('net', 0)) for e in data)
+        previous_net = sum(_D(p.net_pay) for p in last_run.payslips)
+        current_net = sum(_D(e.get('net', 0)) for e in data)
 
         if previous_net <= 0:
             return
@@ -391,9 +391,9 @@ def _check_pending_leave_impact(data: list[dict], company_id: int, results: list
                     leave_days = (overlap_end - overlap_start).days + 1
                     if leave_days > 0:
                         # Estimate the salary deduction
-                        monthly_gross = float(emp.basic_salary) + float(emp.allowances)
-                        daily_rate = monthly_gross / 30
-                        est_deduction = daily_rate * leave_days
+                        monthly_gross = _D(emp.basic_salary) + _D(emp.allowances)
+                        daily_rate = (monthly_gross / Decimal('30')).quantize(Decimal('0.01'))
+                        est_deduction = (daily_rate * Decimal(str(leave_days))).quantize(Decimal('0.01'))
                         results.append(
                             ValidationResult(
                                 rule_code='PENDING_UNPAID_LEAVE',

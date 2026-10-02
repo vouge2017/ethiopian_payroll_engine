@@ -1,11 +1,11 @@
-{% extends "auth/onboarding-base.html" %}
+﻿{% extends "auth/onboarding-base.html" %}
 {% block title %}Accept Invite — EthioPayroll{% endblock %}
 
 {% block content %}
 <!-- Left: Stepper -->
-<aside class="onboarding-stepper">
+<aside class="onboarding-stepper" aria-label="Quick start steps">
     <div class="onboarding-stepper-card">
-        <h3 class="onboarding-stepper-title">Join Team</h3>
+        <h2 class="onboarding-stepper-title">Join Team</h2>
         <ul class="onboarding-stepper-list">
             <li class="onboarding-step active">
                 <div class="onboarding-step-dot">
@@ -37,44 +37,59 @@
 
         <div class="onboarding-field">
             <label for="phone">Phone Number</label>
-            <div class="onboarding-field-wrapper">
-                <div class="onboarding-phone-wrapper">
-                    <span class="onboarding-phone-prefix">+251</span>
+            <div class="onboarding-phone-wrapper">
+                <div class="phone-input-with-prefix">
+                    <span class="phone-prefix-box">+251</span>
                     <input type="tel" id="phone" name="phone"
-                           required placeholder="911 234 567"
-                           pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
-                           title="Enter 9 digits starting with 9 or 7 (or 10 with leading 0)">
+                           data-intl-tel-name="phone_full"
+                           required placeholder="91 234 5678"
+                           inputmode="tel"
+                           maxlength="9"
+                           title="Enter 9 digits starting with 9 or 7">
                 </div>
             </div>
-            <span class="field-hint">9 digits starting with 9 or 7.</span>
+            <span class="field-hint">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</span>
         </div>
 
         <div class="onboarding-field">
             <label for="password">Password</label>
             <div class="onboarding-field-wrapper">
                 <input type="password" id="password" name="password"
-                       required minlength="8" placeholder="Min 8 characters">
+                       required minlength="8" autocomplete="new-password" placeholder="Min 8 characters">
                 <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
                     <span class="material-symbols-outlined">visibility_off</span>
                 </button>
             </div>
             <span class="field-hint">Must be at least 8 characters with a number and symbol.</span>
+            <ul class="pw-rules" data-pw-rules data-pw-target="password" data-pw-confirm="password2" data-pw-strong="pwStrong">
+                <li class="pw-rule" data-pw-rule="length"><span data-pw-dot>&middot;</span> At least 8 characters</li>
+                <li class="pw-rule" data-pw-rule="upper"><span data-pw-dot>&middot;</span> One uppercase letter (A&ndash;Z)</li>
+                <li class="pw-rule" data-pw-rule="lower"><span data-pw-dot>&middot;</span> One lowercase letter (a&ndash;z)</li>
+                <li class="pw-rule" data-pw-rule="digit"><span data-pw-dot>&middot;</span> One number (0&ndash;9)</li>
+                <li class="pw-rule" data-pw-rule="symbol"><span data-pw-dot>&middot;</span> One symbol (@#$%!&amp;* etc.)</li>
+            </ul>
+            <div id="pwStrong" class="pw-strong">
+                <span class="material-symbols-outlined">verified</span> Strong password
+            </div>
         </div>
 
         <div class="onboarding-field">
             <label for="password2">Confirm Password</label>
             <div class="onboarding-field-wrapper">
                 <input type="password" id="password2" name="password2"
-                       required minlength="8" placeholder="Type it again">
+                       required minlength="8" autocomplete="new-password" placeholder="Type it again">
                 <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
                     <span class="material-symbols-outlined">visibility_off</span>
                 </button>
             </div>
+            <span data-pw-match></span>
         </div>
+
+        <script src="{{ url_for('static', filename='js/password-strength.js') }}?v={{ static_version }}"></script>
 
         <div class="onboarding-actions">
             <span></span>
-            <button type="submit" class="onboarding-btn-next">
+            <button type="submit" class="onboarding-btn-next" data-pw-submit>
                 Create Account
                 <span class="material-symbols-outlined">person_add</span>
             </button>
@@ -91,7 +106,7 @@
     <div class="onboarding-checklist">
         <div class="onboarding-checklist-header">
             <span class="material-symbols-outlined">verified_user</span>
-            <h3>What's Next?</h3>
+            <h2>What's Next?</h2>
         </div>
         <p class="onboarding-checklist-desc">After creating your account, you'll have access to:</p>
         <ul class="onboarding-checklist-items">
@@ -122,7 +137,7 @@
     <div class="onboarding-help-card">
         <div class="onboarding-help-header">
             <span class="material-symbols-outlined">support_agent</span>
-            <h4>Need Help?</h4>
+            <h3>Need Help?</h3>
         </div>
         <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
         <a href="/help" class="onboarding-help-link">

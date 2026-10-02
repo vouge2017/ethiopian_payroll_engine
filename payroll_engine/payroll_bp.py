@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from flask import (
     Blueprint,
+    Response,
     abort,
     current_app,
     flash,
@@ -35,6 +36,7 @@ from payroll_engine.dashboard_api import get_dashboard_data
 from payroll_engine.evidence import collect_evidence
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
+from payroll_engine.idempotency import idempotent
 from payroll_engine.models import (
     AuditLog,
     Company,
@@ -170,7 +172,7 @@ def api_last_run():
     # Store server-side and issue a single-use token (same flow as file upload)
     now = datetime.now(UTC).replace(tzinfo=None)
     token = uuid.uuid4().hex
-    PayrollPreview.query.filter_by(user_id=current_user.id).delete()
+    PayrollPreview.query.filter_by(user_id=current_user.id, company_id=_company_id()).delete()
     db.session.add(
         PayrollPreview(
             token=token,
@@ -276,7 +278,7 @@ def api_preview():
         token = uuid.uuid4().hex
 
         # One active preview per user — drop stale ones
-        PayrollPreview.query.filter_by(user_id=current_user.id).delete()
+        PayrollPreview.query.filter_by(user_id=current_user.id, company_id=_company_id()).delete()
 
         db.session.add(
             PayrollPreview(
@@ -329,7 +331,7 @@ def api_validate():
     if not token:
         return jsonify({'ok': False, 'error': 'No preview data. Upload a file first.'}), 400
 
-    preview = PayrollPreview.query.filter_by(token=token).first()
+    preview = PayrollPreview.query.filter_by(token=token, company_id=_company_id()).first()
     if not preview or preview.company_id != _company_id() or preview.user_id != current_user.id:
         return jsonify({'ok': False, 'error': 'Invalid preview. Upload a file again.'}), 400
     if preview.expires_at < datetime.now(UTC).replace(tzinfo=None):
@@ -951,6 +953,7 @@ def reject_payroll(run_id):
 @login_required
 @role_required('owner')
 @limiter.limit('10 per minute')
+@idempotent
 def approve_payroll():
     """
     Approve a payroll run and process it.
@@ -1174,76 +1177,124 @@ def undo_approval(run_id):
 @role_required('owner', 'accountant')
 def create_adjustment(run_id):
     """Create an adjustment payslip for a completed payroll run."""
+    from decimal import Decimal, InvalidOperation
 
-    run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
+    from payroll_engine import models as adj_models
+    from payroll_engine.services.adjustment_service import create_adjustment as svc_create_adjustment
+
+    cid = _company_id()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
 
     if run.status not in ('completed', 'locked'):
         flash('Can only adjust completed or locked payroll runs.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     emp_id = request.form.get('employee_id')
-    amount = request.form.get('amount', '0').strip()
+    amount_str = request.form.get('amount', '0').strip()
     reason = request.form.get('reason', '').strip()
+    adj_type = request.form.get('adjustment_type', 'addition').strip()
 
-    if not emp_id or not amount or not reason:
+    if not emp_id or not amount_str or not reason:
         flash('Employee, amount, and reason are required.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     try:
-        from decimal import Decimal, InvalidOperation
-
-        amount = Decimal(amount)
+        amount = Decimal(amount_str)
         if amount <= 0:
             raise ValueError('Amount must be positive')
     except (InvalidOperation, ValueError):
-        flash('Invalid amount.', 'danger')
+        flash('Amount must be a positive number.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    emp = Employee.query.filter_by(id=int(emp_id), company_id=_company_id(), is_deleted=False).first_or_404()
+    if adj_type not in ('addition', 'deduction', 'net_override'):
+        adj_type = 'addition'
 
-    # Find original payslip for this employee in this run
-    original = Payslip.query.filter_by(
-        company_id=_company_id(), payroll_run_id=run.id, employee_id=emp.id, payslip_type='regular'
-    ).first()
+    emp = Employee.query.filter_by(id=int(emp_id), company_id=cid, is_deleted=False).first_or_404()
 
-    # Calculate adjustment (simplified: treat amount as gross, compute tax)
-    result = calculate_payroll(basic_salary=amount, allowances=Decimal('0'))
-
-    # Create adjustment payslip
-    adj = Payslip(
-        payroll_run_id=run.id,
+    result = svc_create_adjustment(
+        db=db,
+        models=adj_models,
+        run_id=run_id,
+        company_id=cid,
         employee_id=emp.id,
-        company_id=_company_id(),
-        gross_salary=result['gross'],
-        tax=result['tax'],
-        employee_pension=result['pension_employee'],
-        employer_pension=result['pension_employer'],
-        net_pay=result['net'],
-        payslip_type='adjustment',
+        adjustment_amount=amount,
+        adjustment_type=adj_type,
         reason=reason,
-        original_payslip_id=original.id if original else None,
-    )
-    db.session.add(adj)
-
-    # Audit log
-    log = AuditLog(
-        company_id=_company_id(),
         user_id=current_user.id,
-        action='adjustment_payslip_created',
-        details={
-            'run_id': run.id,
-            'employee_id': emp.employee_id,
-            'amount': str(amount),
-            'reason': reason,
-            'adjustment_id': adj.id,
-        },
+        basic_salary=emp.basic_salary,
     )
-    db.session.add(log)
-    db.session.commit()
 
-    net = result['net']
-    flash(f'Adjustment of ETB {amount:,.2f} created for {emp.name}. Net: ETB {net:,.2f}.', 'success')
+    if result.success:
+        flash(
+            f'Adjustment of ETB {amount:,.2f} ({adj_type}) created for {result.employee_name}. '
+            f'Net: ETB {result.adjustment_net:,.2f}.',
+            'success',
+        )
+    else:
+        flash(f'Adjustment failed: {result.error}', 'danger')
+
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+
+@payroll_bp.route('/payroll/<int:run_id>/adjustments')
+@login_required
+def adjustment_summary(run_id):
+    """View all adjustments for a payroll run."""
+    from payroll_engine import models as adj_models
+    from payroll_engine.services.adjustment_service import get_adjustment_summary
+
+    cid = _company_id()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+    summary = get_adjustment_summary(db, adj_models, run_id, cid)
+
+    employees = Employee.query.filter_by(company_id=cid, is_deleted=False).order_by(Employee.name).all()
+
+    return render_template(
+        'payroll/adjustments.html',
+        run=run,
+        summary=summary,
+        employees=employees,
+    )
+
+
+@payroll_bp.route('/payroll/<int:run_id>/adjustment-bank-file')
+@login_required
+@role_required('owner', 'accountant')
+def adjustment_bank_file(run_id):
+    """Generate bank file for positive adjustment payslips."""
+    from payroll_engine import models as adj_models
+    from payroll_engine.services.adjustment_service import generate_adjustment_bank_file
+
+    cid = _company_id()
+    run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+    csv_bytes = generate_adjustment_bank_file(db, adj_models, run_id, cid)
+
+    if not csv_bytes:
+        flash('No positive adjustments to generate bank file for.', 'info')
+        return redirect(url_for('payroll.adjustment_summary', run_id=run_id))
+
+    return Response(
+        csv_bytes,
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename=adjustments_{run.reference}.csv'},
+    )
+
+
+# --- Month-End Close ---
+
+
+@payroll_bp.route('/payroll/<int:run_id>/close')
+@login_required
+@role_required('owner', 'accountant')
+def month_end_close(run_id):
+    """Month-end close workflow — guided sequence for accountants."""
+    from payroll_engine import models as close_models
+    from payroll_engine.services.month_close import build_month_end_close
+
+    cid = _company_id()
+    close = build_month_end_close(db, close_models, run_id, cid)
+
+    return render_template('payroll/month_close.html', close=close, run_id=run_id)
 
 
 # --- Historical Payroll Import ---
@@ -1952,6 +2003,7 @@ def unlock_payroll(run_id):
 @payroll_bp.route('/payroll/runs/<int:run_id>/disburse', methods=['POST'])
 @login_required
 @role_required('owner')
+@idempotent
 def mark_disbursed(run_id):
     """Mark a payroll run as disbursed (bank file sent to bank)."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
@@ -1993,6 +2045,7 @@ def mark_disbursed(run_id):
 @payroll_bp.route('/payroll/runs/<int:run_id>/confirm-payment', methods=['POST'])
 @login_required
 @role_required('owner')
+@idempotent
 def confirm_payment(run_id):
     """Confirm that bank has processed the payment."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
@@ -2565,7 +2618,7 @@ def batch_pdf_status(batch_id):
     """
     from payroll_engine.tasks import get_batch_jobs, get_batch_status
 
-    status = get_batch_status(batch_id)
+    status = get_batch_status(batch_id, company_id=_company_id())
     jobs = get_batch_jobs(batch_id, company_id=_company_id())
 
     run_id = request.args.get('run_id', type=int)
@@ -2642,7 +2695,7 @@ def batch_pdf_status_json(batch_id):
     """
     from payroll_engine.tasks import get_batch_status
 
-    status = get_batch_status(batch_id)
+    status = get_batch_status(batch_id, company_id=_company_id())
     status['all_done'] = status.get('queued', 0) == 0 and status.get('running', 0) == 0
     return jsonify(status)
 

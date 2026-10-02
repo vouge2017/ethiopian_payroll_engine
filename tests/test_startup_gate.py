@@ -58,4 +58,7 @@ exit 0
     else:
         assert result.returncode == 0
         assert len(calls) == 2
-        assert calls[1] == 'gunicorn --bind 0.0.0.0:10000 --workers 4 --timeout 120 wsgi:app'
+        assert (
+            calls[1]
+            == 'gunicorn --bind 0.0.0.0:10000 --workers 4 --timeout 120 --worker-tmp-dir /tmp/gunicorn-workers wsgi:app'
+        )

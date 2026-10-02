@@ -87,13 +87,16 @@
                     </div>
                     <div class="col-md-3">
                         <label for="phone" class="form-label">{{ _('phone') }} *</label>
-                        <div class="input-group">
-                            <span class="input-group-text">+251</span>
-                            <input type="tel" class="form-control" id="phone" name="phone" required placeholder="9XXXXXXXX" pattern="0?[79][0-9]{8}" maxlength="10" inputmode="tel"
-                                   pattern="[0-9]{9}" maxlength="9"
-                                   title="Enter 9 digits starting with 9 or 7">
+                        <div class="onboarding-phone-wrapper">
+                            <div class="phone-input-with-prefix">
+                                <span class="phone-prefix-box">+251</span>
+                                <input type="tel" class="form-control" id="phone" name="phone" required
+                                       data-intl-tel-name="phone_full"
+                                       placeholder="91 234 5678" inputmode="tel" maxlength="9"
+                                       title="Enter 9 digits starting with 9 or 7">
+                            </div>
                         </div>
-                        <div class="form-text">9 digits starting with 9 or 7. Example: <code>911234567</code></div>
+                        <div class="form-text">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</div>
                     </div>
                     <div class="col-md-3">
                         <label for="role" class="form-label">{{ _('role') }} *</label>
@@ -119,7 +122,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 async function removeTeamMember(userId, btn) {
     if (!confirm('Remove this team member?')) return;
     try {

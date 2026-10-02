@@ -34,7 +34,7 @@ def test_valid_passwords():
         'MyP@ssw0rd!',  # mixed case + digit + special
         'Ethiopia#2026X',  # country + year but mixed case + special
         'C0mpl3x!Pass',  # all requirements met
-        'SunRise4Ver',  # mixed case + digit
+        'SunRise4Ver!',  # mixed case + digit + symbol
         'Xkcd9393!',  # random-ish
         'G3nu1n3ly$trong',  # long, complex
         'Qw3rTy!829',  # keyboard-ish but mixed + digit + special

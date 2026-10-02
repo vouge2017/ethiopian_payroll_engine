@@ -165,15 +165,9 @@ def create_app():
 
     csrf.init_app(app)
 
-    # EMERGENCY VALVE (temporary): production proxy breaks CSRF pairing on
-    # auth routes; flip EMERGENCY_DISABLE_CSRF_AUTH=1 to exempt auth blueprint.
-    # Rate limiting + brute-force lockout remain fully active. REMOVE once the
-    # root cause is fixed and verified.
-    if os.environ.get('EMERGENCY_DISABLE_CSRF_AUTH') == '1':
-        from .auth import auth_blueprint
-
-        csrf.exempt(auth_blueprint)
-        app.logger.warning('EMERGENCY: CSRF disabled on /auth/* routes')
+    # CSRF is enforced on all blueprints. The emergency valve
+    # (EMERGENCY_DISABLE_CSRF_AUTH) was removed 2026-08-29 — the root-cause
+    # proxy fix (ProxyFix + Render HTTPS) has been stable since 2026-08-26.
     limiter.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
@@ -241,7 +235,6 @@ def create_app():
         PayrollRun,
         Payslip,
         TenantQuery,
-        UserCompany,
     )
 
     TenantQuery.register_model(Employee)
@@ -249,7 +242,6 @@ def create_app():
     TenantQuery.register_model(AuditLog)
     TenantQuery.register_model(OvertimeEntry)
     TenantQuery.register_model(EmployeeDeduction)
-    TenantQuery.register_model(UserCompany)
     # Batch 2 (Phase 2b): swept 2026-08-22 — all query sites carry explicit
     # company_id filters; retention purge uses tenant_context(0).
     TenantQuery.register_model(Attendance)
@@ -267,6 +259,65 @@ def create_app():
     TenantQuery.register_model(PayItemType)
     TenantQuery.register_model(PayrollItemAssignment)
 
+    # Batch 4 (Phase 3b, P0-A, 2026-08-31): tenant-isolation registration.
+    #
+    # Each of these models was swept across every call site before
+    # registration. The audit log is in `docs/p0a_tenant_audit.md`. Adding
+    # a model here WITHOUT a prior sweep is a P0 — unfiltered terminal
+    # queries that previously returned empty are now loud RuntimeError
+    # failures, which is the desired behaviour (we want the test to fail,
+    # not silent cross-tenant reads).
+    from .models import (
+        EmployeeAllowance,
+        FilingRecord,
+        FinalSettlement,
+        Leave,
+        LeaveBalance,
+        Notification,
+        PayrollPreview,
+        PayslipAcknowledgment,
+        PayslipGenerationJob,
+        ProfileChangeRequest,
+        SpreadsheetInput,
+        SupportTicket,
+        SupportTicketMessage,
+    )
+
+    TenantQuery.register_model(EmployeeAllowance)
+    TenantQuery.register_model(FilingRecord)
+    TenantQuery.register_model(FinalSettlement)
+    TenantQuery.register_model(Leave)
+    TenantQuery.register_model(LeaveBalance)
+    TenantQuery.register_model(Notification)
+    TenantQuery.register_model(PayrollPreview)
+    TenantQuery.register_model(PayslipAcknowledgment)
+    TenantQuery.register_model(PayslipGenerationJob)
+    TenantQuery.register_model(ProfileChangeRequest)
+    TenantQuery.register_model(SpreadsheetInput)
+    TenantQuery.register_model(SupportTicket)
+    TenantQuery.register_model(SupportTicketMessage)
+
+    # CSP nonce — available in all templates as {{ csp_nonce }}
+    @app.context_processor
+    def inject_csp_nonce():
+        return {'csp_nonce': getattr(g, 'csp_nonce', '')}
+
+    # Static asset version — used to bust CDN/Cloudflare/browser caches after
+    # a deploy. Render sets GIT_COMMIT_SHA automatically on every build, so
+    # each deploy produces a new version string and the browser fetches
+    # fresh assets. Falls back to a startup-time timestamp if the env var
+    # is missing (e.g., local development).
+    import time as _time
+
+    _static_version = (
+        os.environ.get('GIT_COMMIT_SHA') or os.environ.get('RENDER_GIT_COMMIT') or str(int(_time.time()))
+    )[:12]
+    app.config['STATIC_ASSET_VERSION'] = _static_version
+
+    @app.context_processor
+    def inject_static_version():
+        return {'static_version': app.config['STATIC_ASSET_VERSION']}
+
     # Template filter: calculation flow for transparent payslips
     @app.template_filter('calculation_flow')
     def calculation_flow_filter(result):
@@ -277,6 +328,7 @@ def create_app():
     @app.before_request
     def set_request_id():
         g.request_id = request.headers.get('X-Request-Id', uuid.uuid4().hex[:12])
+        g.csp_nonce = uuid.uuid4().hex[:16]
 
     @app.before_request
     def check_session_timeout():
@@ -292,6 +344,22 @@ def create_app():
         # Skip for unauthenticated, static, and auth routes
         if not current_user.is_authenticated:
             return
+
+        # Set Sentry user context for error tracking
+        try:
+            import sentry_sdk
+
+            sentry_sdk.set_user(
+                {
+                    'id': str(current_user.id),
+                    'phone': current_user.phone or None,
+                    'email': current_user.email or None,
+                    'company_id': str(current_user.company_id) if current_user.company_id else None,
+                    'role': current_user.role,
+                }
+            )
+        except Exception:
+            pass  # Sentry is optional, don't break if not configured
         endpoint = request.endpoint or ''
         if endpoint.startswith('static') or endpoint.startswith('auth.'):
             return
@@ -447,9 +515,10 @@ def create_app():
                 'default-src': "'self'",
                 'script-src': [
                     "'self'",
-                    "'unsafe-inline'",
+                    "'unsafe-inline'",  # fallback for old browsers; modern browsers prefer nonce
                     'https://cdn.jsdelivr.net',
                 ],
+                'script-src-attr': ["'unsafe-inline'"],  # inline event handlers (onclick, etc.)
                 'style-src': [
                     "'self'",
                     "'unsafe-inline'",
@@ -472,14 +541,6 @@ def create_app():
                 ],
             },
         )
-
-    @app.route('/favicon.ico')
-    def favicon():
-        import os
-
-        from flask import send_from_directory
-
-        return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/x-icon')
 
     from .main import main as main_blueprint
 
@@ -534,6 +595,18 @@ def create_app():
 
     app.register_blueprint(diff_bp, url_prefix='/diff')
     csrf.exempt(diff_bp)
+
+    # P0-E: Internal cron blueprint (authenticated by X-Cron-Secret).
+    # Hit by Render Cron Job service on the schedule declared in
+    # render.yaml. POST only — see cron_bp.py:daily docstring.
+    from .cron_bp import cron_bp
+
+    app.register_blueprint(cron_bp)
+
+    from .admin_bp import admin_bp, support_bp
+
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(support_bp)
 
     # Billing enforcement gate: derived state -> access control on every request.
     from .billing import enforce_billing_gate
@@ -705,6 +778,24 @@ def create_app():
     def service_worker():
         return app.send_static_file('sw.js'), 200, {'Content-Type': 'application/javascript'}
 
+    @app.route('/favicon.ico')
+    def favicon():
+        """Serve the app icon as favicon.ico.
+
+        Browsers (and the Network tab) automatically request /favicon.ico.
+        We don't ship a .ico file — the project uses a 192px PNG instead.
+        Returning the PNG with a long cache avoids the 404 in the console
+        without shipping a new binary asset.
+        """
+        from flask import make_response
+
+        response = make_response(
+            app.send_static_file('icons/icon-192.png'),
+        )
+        response.headers['Content-Type'] = 'image/png'
+        response.headers['Cache-Control'] = 'public, max-age=86400'
+        return response
+
     @app.route('/offline')
     def offline():
         return (
@@ -865,11 +956,51 @@ def create_app():
 
         return render_template('errors/404.html'), 404
 
+    @app.errorhandler(400)
+    def bad_request(e):
+        """400 is the Flask-WTF CSRF rejection status. Convert the cryptic
+        400 into a friendly message + a link to refresh the page (which
+        regenerates the CSRF token). This is the most common user-facing
+        400 on auth forms: a session expires, the cookie is gone, but the
+        page the user is filling in still has the old token."""
+        from flask import flash, redirect, render_template, request, url_for
+
+        # Only intervene on form posts; other 400s pass through.
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and 'csrf' in (e.description or '').lower():
+            flash(
+                'Your session expired while you were filling the form. Please refresh the page and try again.',
+                'warning',
+            )
+            # If we can guess the originating page, redirect there; otherwise home.
+            referer = request.headers.get('Referer', '')
+            if referer:
+                from urllib.parse import urlparse
+
+                path = urlparse(referer).path
+                if path and path != request.path:
+                    return redirect(path)
+            return redirect(url_for('main.index'))
+        # Default: render the 400 template if we have one, else pass through.
+        try:
+            return render_template('errors/400.html'), 400
+        except Exception:
+            return 'Bad Request', 400
+
     @app.errorhandler(500)
     def internal_error(e):
-        from flask import render_template
+        from flask import render_template, request
 
         from payroll_engine import db
+
+        # Capture additional context in Sentry
+        try:
+            import sentry_sdk
+
+            sentry_sdk.capture_exception(e)
+            sentry_sdk.set_tag('request_path', request.path)
+            sentry_sdk.set_tag('request_method', request.method)
+        except Exception:
+            pass  # Sentry is optional
 
         db.session.rollback()
         return render_template('errors/500.html'), 500

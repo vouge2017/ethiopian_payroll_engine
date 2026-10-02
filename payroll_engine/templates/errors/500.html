@@ -54,7 +54,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     let seconds = 30;
     const countdown = document.getElementById('countdown');

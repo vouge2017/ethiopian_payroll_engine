@@ -209,7 +209,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 async function markDisbursedAjax(runId, form) {
     if (!confirm('Confirm that bank files have been sent to the bank?')) return false;
     const notes = form.querySelector('[name="notes"]')?.value || '';

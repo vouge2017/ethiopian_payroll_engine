@@ -87,7 +87,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('file');

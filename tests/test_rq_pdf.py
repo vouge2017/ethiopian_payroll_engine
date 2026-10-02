@@ -179,12 +179,12 @@ class TestBatchStatus:
 
     def test_empty_batch_returns_empty_counts(self, app):
         """A batch_id with no jobs returns total=0."""
-        _cid, _oid, _rid = _setup(app)
+        cid, _oid, _rid = _setup(app)
 
         with app.app_context():
             from payroll_engine.tasks import get_batch_status
 
-            status = get_batch_status('nonexistent-batch-id')
+            status = get_batch_status('nonexistent-batch-id', cid)
             assert status['total'] == 0
 
     def test_batch_status_counts_jobs(self, app):
@@ -198,6 +198,7 @@ class TestBatchStatus:
 
             for i, ps in enumerate(payslips):
                 job = PayslipGenerationJob(
+                    company_id=cid,
                     payslip_id=ps.id,
                     batch_id=batch_id,
                     status='generated' if i == 0 else 'queued',
@@ -207,7 +208,7 @@ class TestBatchStatus:
 
             from payroll_engine.tasks import get_batch_status
 
-            status = get_batch_status(batch_id)
+            status = get_batch_status(batch_id, cid)
             assert status['total'] == len(payslips)
             assert status.get('generated', 0) == 1
             assert status.get('queued', 0) == len(payslips) - 1

@@ -1,88 +1,99 @@
 #!/usr/bin/env python3
-"""Run all test files in separate processes to avoid SQLite lock contention.
-
-This is the fix for the full-suite hang: in-memory SQLite doesn't support
-multiple concurrent connections well. Running each file in its own process
-avoids the issue entirely.
+"""
+Run each test_*.py file in its own process to avoid SQLite/in-memory lock contention.
 
 Usage:
-    python3 run_tests.py              # run all, stop on first failure
-    python3 run_tests.py --continue   # run all, report all failures
-    python3 run_tests.py --verbose    # show each test name
+   python3 run_tests.py              # run all, stop on first failure
+   python3 run_tests.py --continue   # run all, report all failures
+   python3 run_tests.py --verbose    # show each test name
 """
 import glob
 import os
+import re
 import subprocess
 import sys
 import time
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-TEST_DIR = os.path.join(REPO_ROOT, 'tests')
+TEST_DIR = os.path.join(REPO_ROOT, "tests")
+PYTEST_TIMEOUT = 120
 
 
 def get_test_files():
-    """Get all test_*.py files, sorted."""
-    files = glob.glob(os.path.join(TEST_DIR, 'test_*.py'))
+    """Return all test_*.py files (sorted)."""
+    files = glob.glob(os.path.join(TEST_DIR, "test_*.py"))
     return sorted(files)
 
 
+def _parse_pytest_counts(output):
+    """
+    Parse pytest summary numbers from output.
+    Returns dict with keys: passed, failed, errors, skipped (ints).
+    """
+    counts = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0}
+    for number, status in re.findall(r"(\d+)\s+(passed|failed|errors?|skipped)\b", output):
+        n = int(number)
+        key = "errors" if status.startswith("error") else status
+        counts[key] = n
+    return counts
+
+
 def run_test_file(filepath, verbose=False):
-    """Run a single test file in a subprocess. Returns (passed, failed, errors, output)."""
-    cmd = [sys.executable, '-m', 'pytest', filepath, '--tb=line', '-q']
+    """Run a single test file in a subprocess."""
+    cmd = [sys.executable, "-m", "pytest", filepath, "--tb=line", "-q"]
     if verbose:
-        cmd.append('-v')
+        cmd.append("-v")
 
     try:
         env = os.environ.copy()
-        env['PYTHONIOENCODING'] = 'utf-8'
-        env['PYTHONUTF8'] = '1'
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=PYTEST_TIMEOUT,
             cwd=REPO_ROOT,
             env=env,
-            encoding='utf-8',
-            errors='replace',
+            encoding="utf-8",
+            errors="replace",
         )
-        output = (result.stdout or '') + (result.stderr or '')
+        output = (result.stdout or "") + (result.stderr or "")
+        counts = _parse_pytest_counts(output)
+        return (
+            counts["passed"],
+            counts["failed"],
+            counts["errors"],
+            counts["skipped"],
+            output,
+            result.returncode,
+        )
+    except subprocess.TimeoutExpired as exc:
+        def diagnostic(value):
+            if value is None:
+                return ""
+            if isinstance(value, bytes):
+                return value.decode("utf-8", errors="replace")
+            return value
 
-        # Parse summary
-        passed = failed = errors = skipped = 0
-        for line in output.split('\n'):
-            if 'passed' in line:
-                import re
-                m = re.search(r'(\d+) passed', line)
-                if m:
-                    passed = int(m.group(1))
-                m = re.search(r'(\d+) failed', line)
-                if m:
-                    failed = int(m.group(1))
-                m = re.search(r'(\d+) error', line)
-                if m:
-                    errors = int(m.group(1))
-                m = re.search(r'(\d+) skipped', line)
-                if m:
-                    skipped = int(m.group(1))
-
-        return passed, failed, errors, skipped, output, result.returncode
-
-    except subprocess.TimeoutExpired:
-        return 0, 0, 1, 0, 'TIMEOUT after 120s', 2
+        output = diagnostic(getattr(exc, "stdout", None)) + diagnostic(getattr(exc, "stderr", None))
+        return 0, 0, 1, 0, output + f"\nTIMEOUT after {PYTEST_TIMEOUT}s", 2
+    except Exception as exc:
+        return 0, 0, 1, 0, f"UNEXPECTED ERROR: {exc}\n", 2
 
 
 def main():
-    continue_on_failure = '--continue' in sys.argv
-    verbose = '--verbose' in sys.argv
+    continue_on_failure = "--continue" in sys.argv
+    verbose = "--verbose" in sys.argv
 
     test_files = get_test_files()
+    if not test_files:
+        print("ERROR: no test files selected", file=sys.stderr)
+        sys.exit(5)
+
     print(f"Running {len(test_files)} test files in separate processes...\n")
 
-    total_passed = 0
-    total_failed = 0
-    total_errors = 0
-    total_skipped = 0
+    total_passed = total_failed = total_errors = total_skipped = 0
     failed_files = []
     start_time = time.time()
 
@@ -104,8 +115,8 @@ def main():
             failed_files.append(filename)
             print(f"❌ {passed} passed, {failed} failed, {errors} errors")
             if verbose:
-                for line in output.split('\n'):
-                    if 'FAILED' in line or 'ERROR' in line:
+                for line in output.splitlines():
+                    if "FAILED" in line or "ERROR" in line:
                         print(f"   {line.strip()}")
             if not continue_on_failure:
                 print("\nStopping on first failure. Use --continue to run all.")
@@ -122,5 +133,5 @@ def main():
     sys.exit(1 if (total_failed > 0 or total_errors > 0) else 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

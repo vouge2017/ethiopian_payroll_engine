@@ -1,5 +1,19 @@
 # STATUS.md — Command-Verified State
 
+## Legacy delivery slice - 2026-10-02
+
+A reproduced PDF queue exception previously returned failure after money committed.
+Legacy approval now protects delivery outside the committed money transaction, as
+the worksheet path already does. Approval messages say payment is pending.
+
+Before: the new PostgreSQL service regression returned `Synthetic PDF queue outage`.
+After: `20 passed, 33 warnings in 92.48s` for delivery, existing PDF and worksheet
+journey checks. Final guard verification: `1 passed, 5 warnings in 8.36s`. Independent
+PG connection confirms completed status; one payslip, one loan recovery, one completion
+audit, no failure audit and a safe HTTP retry are checked. No real payment occurs.
+Changed source/tests pass Ruff. Native PG regression added to CI. Durable queue handoff,
+correction/reversal accounting and full legacy user journey remain separate open work.
+
 ## Calculation context slice - 2026-10-02
 
 Fixed reproduced code defects: full calendar months receive the full settlement

@@ -644,7 +644,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         create_notification(
             company_id=company_id,
             user_id=user_id,
-            message=f'Payroll processed: {len(employees_data)} employees paid, compliance score {score}%.',
+            message=f'Payroll approved for {len(employees_data)} employees. Payment is still pending.',
             type='success',
             link=f'/payroll/runs/{run.id}',
         )
@@ -653,9 +653,17 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         db.session.commit()
 
         # Trigger background PDF generation via RQ (or fall back to inline on download)
-        from payroll_engine.tasks import enqueue_batch
+        try:
+            from payroll_engine.tasks import enqueue_batch
 
-        enqueue_batch(run.id, company_id)
+            enqueue_batch(run.id, company_id)
+        except Exception:
+            # Payroll money has committed. Delivery failure must never mark it
+            # failed or enable another run for the same period.
+            db.session.rollback()
+            import logging
+
+            logging.getLogger('payroll_engine').exception('PDF delivery pending for approved run %s', run.id)
 
         # Fire webhook — payroll completed
         try:
@@ -679,7 +687,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             pass
 
         # Build result message
-        message = f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%. PDFs will be generated on download.'
+        message = f'Payroll approved for {len(employees_data)} employees. Payment is still pending. PDFs will be generated on download.'
 
         return ApprovalResult(
             success=True,

@@ -155,7 +155,8 @@ class TestLazyPdfGeneration:
             )
 
             assert result.success is True
-            assert '2 employees paid' in result.message
+            assert 'approved for 2 employees' in result.message
+            assert 'Payment is still pending' in result.message
 
     def test_payslips_created_with_not_generated_status(self, app):
         """Payslips should be created with pdf_status='not_generated'."""

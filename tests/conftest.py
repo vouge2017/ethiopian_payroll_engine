@@ -4,16 +4,17 @@ Database fixtures own their engines; this module makes no full-suite hang claim.
 """
 
 import os
+import secrets
 
 import pytest
 
 os.environ.setdefault('FLASK_ENV', 'testing')
 os.environ.setdefault('DATABASE_URL', 'sqlite:///:memory:')
 os.environ.setdefault('CELERY_BROKER_URL', 'memory://')
-# Models require a key during collection, before fixtures run. This public
-# synthetic key is only a pytest default; production policy is unchanged.
+# Models require a key during collection, before fixtures run. Generate an
+# ephemeral test-only default while preserving explicitly configured keys.
 if os.environ.get('FLASK_ENV') == 'testing':
-    os.environ.setdefault('DB_ENCRYPTION_KEY', '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f')
+    os.environ.setdefault('DB_ENCRYPTION_KEY', secrets.token_hex(32))
 
 
 @pytest.fixture(autouse=True)

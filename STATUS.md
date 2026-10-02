@@ -1,5 +1,45 @@
 # STATUS.md — Command-Verified State
 
+## PR #8 security finding and integration blockers - 2026-10-02
+
+GitHub PR #8 is open against the correct repository. Source head `9dc65b3`
+was published successfully. GitGuardian incident 37741140 points at the fixed
+synthetic pytest encryption default introduced in `2c05019`, not a configured
+production credential. `tests/conftest.py` now generates an ephemeral default
+only in testing and preserves explicitly configured keys. No production key,
+encryption policy, persistent customer data or Git history was changed.
+
+Regression before: `1 failed, 3 passed, 3 warnings in 4.09s`. Focused checks
+after: `12 passed, 3 warnings in 5.58s`. The additional encrypted-field run on
+the previously used synthetic database returned `3 failed, 16 passed, 39 warnings
+in 8.99s`: unrelated retained test rows blocked downgrade to short text columns.
+Rerunning on a newly created disposable PostgreSQL database, upgraded through
+the actual Alembic chain, returned `19 passed, 54 warnings in 11.78s`. This covers
+encrypted employee fields, migration rejection/rollback guards, production
+startup policy and the new key-default regressions. Changed test files pass Ruff.
+
+Removing the literal does not erase its earlier commit: GitGuardian scans each
+PR commit. The historical incident needs dashboard classification as a test
+credential and a check re-run. Browser automation failed to load its request-header
+policy; the user was given the exact incident and dashboard action. No broad
+scanner exclusion or fabricated successful check was applied.
+
+GitHub Actions run `37018121375` at `6262a17` completed: both Python test jobs
+and the PostgreSQL job succeeded; lint failed. Local Ruff 0.16.9 reports
+`Found 128 errors.` and `64 files would be reformatted, 137 files already formatted`.
+These are current measurements, separate from older lint counts at earlier SHAs.
+This security slice does not resolve that existing lint backlog.
+
+GitHub reports PR #8 `mergeable=false`, `mergeable_state=dirty`. A non-mutating
+`git merge-tree --write-tree --name-only HEAD FETCH_HEAD` inspection against main
+`aa2e657` identifies 75 conflicting files: six migration files, 33 payroll source
+files, 29 tests and seven other files. Before this fix the feature branch and main
+have 50 and 61 unique commits respectively. Conflicts include tenant constraints,
+models, payroll services and migration deletions; choosing an entire side would
+discard independently developed work. Main integration needs a separately reviewed
+reconciliation, migration proof and passing checks. No merge, rebase, force-push or
+deployment was performed. PR #8 remains unmerged and is not production-ready.
+
 ## GitHub publication recovered - 2026-10-02 14:13 UTC
 
 The remote URL was already correct: `https://github.com/vouge2017/ethiopian_payroll_engine.git`.

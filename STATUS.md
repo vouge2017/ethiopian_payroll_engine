@@ -1,5 +1,21 @@
 # STATUS.md — Command-Verified State
 
+## Calculation context slice - 2026-10-02
+
+Fixed reproduced code defects: full calendar months receive the full settlement
+salary (February, leap February, October previously miscalculated); the existing
+30-day midmonth convention is unchanged. Percentage-of-basic and rate-times-units
+deductions now receive employee salary and period units. Overtime uses the selected
+rule date and no longer crashes constructing its saved line item.
+
+Before: `6 failed, 3 passed` for new regressions. After: `69 passed, 3 warnings in
+80.60s` for calculation, elements, services and deductions; then `25 passed, 35
+warnings in 49.60s` for final calculation fixtures, persisted PostgreSQL deductions
+and worksheet journey (overlap). Native PG cases added to CI. No statutory rate or
+tax-base policy change, dependency change, migration or deployment. New tests and
+settlement service pass Ruff; existing unrelated elements-file lint remains open.
+Malformed Excel salaries, exemption caps and first/final-month policy remain open.
+
 ## Approved register slice - 2026-10-02
 
 The register now selects a completed/locked run in the active company and reads

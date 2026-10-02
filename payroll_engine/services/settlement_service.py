@@ -8,6 +8,7 @@ Extracted from main.py to enable:
 - Clarity (business logic separate from HTTP handling)
 """
 
+import calendar
 from datetime import date
 from decimal import Decimal
 
@@ -38,7 +39,7 @@ def calculate_outstanding_salary(employee: Employee, end_date: date) -> Decimal:
     gross = basic + allowances
 
     # If end_date is the last day of the month, full salary
-    if end_date.month != (end_date.replace(day=28) + __import__('datetime').timedelta(days=4)).day:
+    if end_date.day != calendar.monthrange(end_date.year, end_date.month)[1]:
         # Not the last day - prorate
         days_in_month = 30  # Ethiopian convention
         days_worked = end_date.day

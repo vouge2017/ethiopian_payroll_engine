@@ -20,7 +20,7 @@ calling a real-money pilot ready. No completion percentage is justified today.
 | 5 | Close release blockers and deploy an identified demo build. | Pending: current CI/lint, route ownership, schema readiness, shared worker key, durable artifacts and restore drill; record exact deployed SHA |
 | 6 | Reconcile accounting exports to approved payroll and reject unsafe files. | Locally verified: 55 unit/export, 19 PG accounting/worksheet and 57 accounting/role/security cases pass (overlap); removed foreign membership denied; trial account mapping only, not deployed |
 | 7 | Make the register and statutory reports consume approved historical facts. | Register locally verified: 23 PG register/accounting/worksheet cases pass; approved/locked saved amounts and retained worksheet identity, including removed employees; browser review and statutory identity/classification remain open |
-| 8 | Fix reproduced calculation/input defects and protect legacy approval failures. | Pending: settlement dates, invalid salary, deduction context, rule dates and postcommit delivery handling |
+| 8 | Fix reproduced calculation/input defects and protect legacy approval failures. | Settlement calendar boundaries, deduction context, overtime rule dates/crash locally verified: 69 engine/service/deduction and 25 calculation/PG journey cases pass (overlap). Invalid salary, exemption caps, joining/exit policy and legacy postcommit delivery handling remain open |
 | 9 | Close company-access gaps and connect previous-period review checks. | Pending: public Diff ownership and worksheet baseline integration |
 
 Save updates the estimate; Review saved payroll freezes it for owner approval. Approval does not send money.

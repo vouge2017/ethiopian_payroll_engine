@@ -236,7 +236,7 @@ def calculate_payroll_from_assignments(
     overtime_total_hours = Decimal('0')
     overtime_result = None
     if overtime_entries:
-        overtime_result = calculate_total_overtime(basic_salary, overtime_entries)
+        overtime_result = calculate_total_overtime(basic_salary, overtime_entries, for_date=for_date)
         overtime_pay = overtime_result['total_pay']
         overtime_total_hours = overtime_result['total_hours']
         line_items.append(_line_item_dict(
@@ -291,7 +291,8 @@ def calculate_payroll_from_assignments(
     total_post_tax_deductions = _merge_post_tax_deductions(
         deductions, employee_items['deductions'],
         net_before_deductions, tax, deduction_details,
-        line_items, Decimal('0'), for_date, consume_balances=consume_balances
+        line_items, Decimal('0'), for_date, employee=employee,
+        units_input=units_input, consume_balances=consume_balances
     )
 
     sick_leave_reduction = _D(sick_leave_reduction)
@@ -645,14 +646,13 @@ def _apply_exempt_cap(item, amount, basic_salary):
 
 
 def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions,
-                                tax, deduction_details, line_items, total, for_date, *, consume_balances=True):
+                                tax, deduction_details, line_items, total, for_date, *,
+                                employee, units_input=None, consume_balances=True):
     """Merge legacy EmployeeDeduction list and new PayrollItemAssignment deductions.
 
     New deduction assignments with tracking_mode='declining' decrement their
     remaining_balance each period (up to the amount recovered this period).
     """
-    from payroll_engine.models import EmployeeDeduction
-
     total = _D(total) if total else Decimal('0')
     post_tax_detail_list = deduction_details  # already a list reference
 
@@ -687,8 +687,7 @@ def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions
     # New assignment-based deductions (declining-balance or date-bounded)
     for assignment in new_deductions:
         item_type = assignment.item_type
-        method = item_type.calculation_method if item_type else PayItemCalcMethod.FIXED
-        amount = _calculate_item_amount(assignment, None, for_date, None, net_before_deductions)
+        amount = _calculate_item_amount(assignment, employee, for_date, units_input, net_before_deductions)
 
         # Declining-balance: recover up to remaining_balance this period
         if assignment.tracking_mode == 'declining' and assignment.remaining_balance is not None:
@@ -806,6 +805,7 @@ def _allowance_detail(item, amount, exempt, taxable):
 def _make_overtime_placeholder():
     """Placeholder PayItemType-like object for overtime line items."""
     class _Placeholder:
+        id = None
         key = 'overtime'
         name_en = 'Overtime'
         name_am = 'ፈተና ስርዓት'

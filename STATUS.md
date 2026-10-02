@@ -1,5 +1,49 @@
 # STATUS.md — Command-Verified State
 
+## Ruff gates and overtime page repair - 2026-10-02
+
+The existing pending cleanup was reviewed and completed on
+`feature/elements-architecture`, based on `4b6c8c5`. A real employee-detail bug
+was reproduced when the employee had current-month overtime: the route evaluated
+`Decimal('1')` without importing Decimal. The module import now repairs that path;
+the regression also checks the saved overtime row and its existing rounded pay.
+No payroll rate, tax policy or schema revision was changed.
+
+Ruff 0.16.9 now reports `All checks passed!` and `201 files already formatted`.
+The earlier 128 findings were at the pushed baseline; the previously pending
+cleanup left 41, and this slice closes those 41. Formatting touched 64 files,
+with zero AST changes across the 201 checked Python files. No lint rules or gates
+were relaxed. Manual import, exception-chaining and row-closure fixes were reviewed
+separately. `git diff --check` passes.
+
+Before the route fix: `1 failed, 3 warnings in 16.96s`.
+The first expanded run passed 94 other cases but exposed an incorrect expected
+rounding value in the new assertion (144.23 rather than the existing 144.24).
+After correcting that test expectation, final affected checks:
+`95 passed, 19 warnings in 90.69s (0:01:30)`.
+Native PostgreSQL checks: `63 passed, 178 warnings in 168.91s (0:02:48)`.
+These selections are focused checks, not a full-suite total.
+
+The native target is the newly created disposable database
+`payroll_cleanup_20261002_2240`, PostgreSQL 16.6 on `127.0.0.1:55439`.
+The real Alembic chain upgraded the empty database; native encryption tests
+also exercise affected downgrade/upgrade and preservation guards. Money,
+worksheet approval/retry, accounting/register, imports, Diff access and legacy
+delivery cases passed. No customer database was used. Windows denied pytest's
+temporary-directory cleanup inside the sandbox; the successful complete runs
+used authorized execution outside it.
+
+Source preflight reports zero findings, 71 revisions and one head
+`f4a5b6c7d8f0`; this is a limited static check. The initial INCOMPLETE result was
+resolved by passing repository-local safe-directory configuration to the Git
+subprocess, without changing global Git configuration.
+
+Independent review found no remaining blocker in this slice. GitGuardian browser
+access still fails to load its request-header policy; the user is handling
+incident 37741140. PR #8 still conflicts with main `aa2e657` in 75 files.
+No integration, deployment or production-readiness claim is made here.
+[Evidence](docs/evidence/cleanup-2026-10-02.json).
+
 ## PR #8 security finding and integration blockers - 2026-10-02
 
 GitHub PR #8 is open against the correct repository. Source head `9dc65b3`

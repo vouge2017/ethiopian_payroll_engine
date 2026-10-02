@@ -7,10 +7,12 @@ across as a General Allowance assignment instead.
 
 No itemised CSV columns in this phase -- that is a later change.
 """
-from decimal import Decimal
+
 from datetime import date
+from decimal import Decimal
 
 import pytest
+
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, PayrollDraft, PayrollRun, User
 
@@ -53,9 +55,15 @@ def company(ctx):
 
 def _draft_row(**over):
     row = {
-        'id': 'EMP001', 'name': 'Dawit', 'basic': 10000.0, 'allowances': 2500.0,
-        'gross': 12500.0, 'tax': 1500.0, 'pension_employee': 700.0,
-        'pension_employer': 1100.0, 'net': 10300.0,
+        'id': 'EMP001',
+        'name': 'Dawit',
+        'basic': 10000.0,
+        'allowances': 2500.0,
+        'gross': 12500.0,
+        'tax': 1500.0,
+        'pension_employee': 700.0,
+        'pension_employer': 1100.0,
+        'net': 10300.0,
     }
     row.update(over)
     return row
@@ -99,19 +107,23 @@ def test_csv_allowance_becomes_assignment_and_reaches_gross(ctx, company):
     _annotate_general_allowance(company.id, rows)
 
     run = PayrollRun(
-        company_id=company.id, period='2026-09', status='review',
-        run_date=date(2026, 9, 1), approved_by=user.id,
+        company_id=company.id,
+        period='2026-09',
+        status='review',
+        run_date=date(2026, 9, 1),
+        approved_by=user.id,
     )
     db.session.add(run)
     db.session.commit()
-    db.session.add(
-        PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=rows)
-    )
+    db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=rows))
     db.session.commit()
 
     result = process_payroll(
-        run=run, company_id=company.id, user_id=user.id,
-        user_email=user.email or 'owner@test.com', request_ip='127.0.0.1',
+        run=run,
+        company_id=company.id,
+        user_id=user.id,
+        user_email=user.email or 'owner@test.com',
+        request_ip='127.0.0.1',
     )
     assert result.success is True
 
@@ -126,14 +138,10 @@ def test_csv_allowance_becomes_assignment_and_reaches_gross(ctx, company):
     assert ga is not None, 'CSV allowance must become a General Allowance assignment'
     assert ga.fixed_amount == Decimal('2500')
 
-    payslip = Payslip.query.filter_by(
-        payroll_run_id=run.id, company_id=company.id
-    ).first()
+    payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).first()
     assert payslip is not None
     # 10000 basic + 2500 general allowance
-    assert payslip.gross_salary == Decimal('12500'), (
-        f"CSV allowances must reach gross, got {payslip.gross_salary}"
-    )
+    assert payslip.gross_salary == Decimal('12500'), f'CSV allowances must reach gross, got {payslip.gross_salary}'
     keys = {li['item_key'] for li in (payslip.line_items or [])}
     assert COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value in keys
 
@@ -153,8 +161,10 @@ def test_zero_allowance_creates_no_assignment(ctx, company):
     from payroll_engine.services.payroll_service import _ensure_general_allowance
 
     emp = Employee(
-        employee_id='EMP002', name='No Allowance',
-        basic_salary=10000, company_id=company.id,
+        employee_id='EMP002',
+        name='No Allowance',
+        basic_salary=10000,
+        company_id=company.id,
     )
     db.session.add(emp)
     db.session.commit()
@@ -168,8 +178,10 @@ def test_ensure_general_allowance_is_idempotent(ctx, company):
     from payroll_engine.services.payroll_service import _ensure_general_allowance
 
     emp = Employee(
-        employee_id='EMP003', name='Idem',
-        basic_salary=10000, company_id=company.id,
+        employee_id='EMP003',
+        name='Idem',
+        basic_salary=10000,
+        company_id=company.id,
     )
     db.session.add(emp)
     db.session.commit()
@@ -180,9 +192,7 @@ def test_ensure_general_allowance_is_idempotent(ctx, company):
     assert first is not None and second is not None
     assert first.id == second.id, 'must not create a second assignment'
     assert first.fixed_amount == Decimal('2500'), 'original amount preserved'
-    count = PayrollItemAssignment.query.filter_by(
-        company_id=company.id, employee_id=emp.id
-    ).count()
+    count = PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).count()
     assert count == 1
 
 
@@ -208,21 +218,19 @@ def test_no_basic_salary_creates_no_basic_assignment(ctx, company, amount):
     from payroll_engine.services.payroll_service import _ensure_basic_assignment
 
     emp = Employee(
-        employee_id='EMP-NOBASIC', name='No Basic',
-        basic_salary=0, company_id=company.id,
+        employee_id='EMP-NOBASIC',
+        name='No Basic',
+        basic_salary=0,
+        company_id=company.id,
     )
     db.session.add(emp)
     db.session.commit()
 
-    before = PayrollItemAssignment.query.filter_by(
-        company_id=company.id, employee_id=emp.id
-    ).count()
+    before = PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).count()
 
     assert _ensure_basic_assignment(emp, company.id, amount) is None
 
-    after = PayrollItemAssignment.query.filter_by(
-        company_id=company.id, employee_id=emp.id
-    ).count()
+    after = PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).count()
     assert after == before, 'no assignment may be created for a zero basic salary'
 
 
@@ -245,8 +253,11 @@ def test_employee_with_only_non_basic_assignment_gets_full_basic(ctx, company):
     db.session.commit()
 
     run = PayrollRun(
-        company_id=company.id, period='2026-09', status='review',
-        run_date=date(2026, 9, 1), approved_by=user.id,
+        company_id=company.id,
+        period='2026-09',
+        status='review',
+        run_date=date(2026, 9, 1),
+        approved_by=user.id,
     )
     db.session.add(run)
     db.session.commit()
@@ -255,39 +266,32 @@ def test_employee_with_only_non_basic_assignment_gets_full_basic(ctx, company):
     # for this employee, which is exactly the underpayment condition.
     row = _draft_row()
     row['general_allowance'] = 2500.0
-    db.session.add(
-        PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=[row])
-    )
+    db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=[row]))
     db.session.commit()
 
     result = process_payroll(
-        run=run, company_id=company.id, user_id=user.id,
-        user_email=user.email or 'owner@test.com', request_ip='127.0.0.1',
+        run=run,
+        company_id=company.id,
+        user_id=user.id,
+        user_email=user.email or 'owner@test.com',
+        request_ip='127.0.0.1',
     )
     assert result.success is True
 
-    payslip = Payslip.query.filter_by(
-        payroll_run_id=run.id, company_id=company.id
-    ).first()
+    payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).first()
     assert payslip is not None
     assert payslip.gross_salary == Decimal('12500'), (
-        f"engine path must include the employee's full basic salary, got "
-        f"{payslip.gross_salary}"
+        f"engine path must include the employee's full basic salary, got {payslip.gross_salary}"
     )
 
     keys = {li['item_key'] for li in (payslip.line_items or [])}
-    assert 'basic_salary' in keys, (
-        'a basic_salary line must be present on the engine path'
-    )
+    assert 'basic_salary' in keys, 'a basic_salary line must be present on the engine path'
     assert COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value in keys
 
-    emp = Employee.query.filter_by(
-        company_id=company.id, employee_id='EMP001'
-    ).first()
+    emp = Employee.query.filter_by(company_id=company.id, employee_id='EMP001').first()
     basic_assignments = [
-        a for a in PayrollItemAssignment.query.filter_by(
-            company_id=company.id, employee_id=emp.id, is_active=True
-        ).all()
+        a
+        for a in PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id, is_active=True).all()
         if a.item_type and a.item_type.key == 'basic_salary'
     ]
     assert len(basic_assignments) == 1

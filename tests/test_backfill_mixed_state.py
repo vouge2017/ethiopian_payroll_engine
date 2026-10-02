@@ -8,10 +8,12 @@ the legacy rows, so the same money could be counted twice.
 The backfill must refuse that COMPANY, name the employees, write nothing, and
 still let a clean company in the same run proceed.
 """
+
 from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from payroll_engine import create_app, db
 
 
@@ -42,10 +44,14 @@ def ctx(app):
 def _make_company(name, with_mixed):
     from payroll_engine.catalog import seed_company_templates
     from payroll_engine.models import (
-        Company, Employee, EmployeeAllowance, User,
+        Company,
+        Employee,
+        EmployeeAllowance,
+        User,
     )
     from payroll_engine.models_payroll_elements import (
-        PayItemType, PayrollItemAssignment,
+        PayItemType,
+        PayrollItemAssignment,
     )
 
     co = Company(name=name)
@@ -57,30 +63,45 @@ def _make_company(name, with_mixed):
     u.set_password('Test1234!')
     db.session.add(u)
 
-    emp = Employee(employee_id='EMP001', name=f'{name} Person',
-                  basic_salary=Decimal('20000'), allowances=Decimal('0'),
-                  company_id=co.id, start_date=date(2020, 1, 1))
+    emp = Employee(
+        employee_id='EMP001',
+        name=f'{name} Person',
+        basic_salary=Decimal('20000'),
+        allowances=Decimal('0'),
+        company_id=co.id,
+        start_date=date(2020, 1, 1),
+    )
     db.session.add(emp)
     db.session.commit()
 
     # Legacy rows in BOTH companies.
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emp.id, allowance_type='housing',
-        amount=Decimal('2000'), calculation_basis='fixed', tax_treatment='taxable',
-        is_active=True, effective_date=date(2020, 1, 1),
-    ))
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emp.id,
+            allowance_type='housing',
+            amount=Decimal('2000'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
     db.session.commit()
 
     if with_mixed:
         # A hand-created assignment (legacy_source is None) alongside the
         # unconverted legacy row: exactly the ambiguous state.
-        item = PayItemType.query.filter_by(
-            company_id=co.id, key='transport'
-        ).first()
-        db.session.add(PayrollItemAssignment(
-            company_id=co.id, employee_id=emp.id, pay_item_type_id=item.id,
-            fixed_amount=Decimal('500'), is_active=True,
-        ))
+        item = PayItemType.query.filter_by(company_id=co.id, key='transport').first()
+        db.session.add(
+            PayrollItemAssignment(
+                company_id=co.id,
+                employee_id=emp.id,
+                pay_item_type_id=item.id,
+                fixed_amount=Decimal('500'),
+                is_active=True,
+            )
+        )
         db.session.commit()
     return co, emp
 
@@ -89,11 +110,11 @@ def test_mixed_state_aborts_that_company_and_names_the_employee(ctx):
     from payroll_engine.backfill import backfill_company, find_mixed_state
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
-    co, emp = _make_company('Mixed', with_mixed=True)
+    co, _emp = _make_company('Mixed', with_mixed=True)
 
     mixed = find_mixed_state(co.id)
     assert len(mixed) == 1
-    assert mixed[0]['name'] == f'Mixed Person'
+    assert mixed[0]['name'] == 'Mixed Person'
     assert mixed[0]['assignments'] == 1
     assert mixed[0]['legacy_rows'] == 1
 
@@ -102,9 +123,7 @@ def test_mixed_state_aborts_that_company_and_names_the_employee(ctx):
 
     assert result['error'], 'the backfill must refuse a mixed-state company'
     assert 'MIXED STATE' in result['error']
-    assert f'Mixed Person' in result['error'], (
-        f'the error must NAME the employee, got: {result["error"]}'
-    )
+    assert 'Mixed Person' in result['error'], f'the error must NAME the employee, got: {result["error"]}'
     assert '1 assignment(s)' in result['error']
     assert '1 unconverted legacy row(s)' in result['error']
 

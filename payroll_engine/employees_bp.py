@@ -5,6 +5,7 @@ import io
 import os
 import uuid
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
@@ -109,6 +110,7 @@ def list_employees():
     # Filter out soft-deleted employees by default
     show_archived = request.args.get('archived', '') == '1'
     from sqlalchemy.orm import defer
+
     query = Employee.query.options(
         defer(Employee.bank_account),
         defer(Employee.tin),
@@ -575,17 +577,12 @@ def employee_detail(emp_id):
         deductions=deductions,
         active_deductions=active_deductions,
         inactive_deductions=inactive_deductions,
-        deduction_types=[
-            (i.key, i.name_en)
-            for i in company_pay_items(PayItemClassification.DEDUCTION)
-        ],
+        deduction_types=[(i.key, i.name_en) for i in company_pay_items(PayItemClassification.DEDUCTION)],
         allowance_records=emp.allowance_records,
         # Per-company catalog drives the dropdowns. The legacy
         # EmployeeAllowance.ALLOWANCE_TYPES / TAX_TREATMENTS class enums are no
         # longer consulted; tax treatment now comes from the PayItemType row.
-        allowance_types=[
-            (i.key, i.name_en) for i in company_pay_items(PayItemClassification.EARNING)
-        ],
+        allowance_types=[(i.key, i.name_en) for i in company_pay_items(PayItemClassification.EARNING)],
         tax_treatments=[],
     )
 
@@ -670,8 +667,6 @@ def add_allowance(emp_id):
     # used to hardcode `transport -> min(2200, 25% of basic)` and
     # `hardship -> partial`; both now live in catalog.COMPANY_TEMPLATE_ITEMS.
     tax_treatment = item.tax_treatment
-    exempt_cap = item.exempt_cap_amount
-    regulation_ref = item.regulation_reference
 
     assignment = PayrollItemAssignment(
         company_id=_company_id(),

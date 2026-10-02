@@ -386,9 +386,7 @@ def test_add_deduction_route(ctx, client, company_user_employee):
         PayrollItemAssignment,
     )
 
-    item = PayItemType.query.filter_by(
-        company_id=company.id, key='cost_sharing'
-    ).first()
+    item = PayItemType.query.filter_by(company_id=company.id, key='cost_sharing').first()
     assert item is not None, 'route should resolve the type via PayItemType'
 
     a = PayrollItemAssignment.query.filter_by(
@@ -403,9 +401,7 @@ def test_add_deduction_route(ctx, client, company_user_employee):
     assert a.custom_label == 'MoE Batch 2024-07'
 
     # Permanent guard: the legacy table is never written by new code.
-    legacy = EmployeeDeduction.query.filter_by(
-        company_id=company.id, employee_id=emp.id
-    ).first()
+    legacy = EmployeeDeduction.query.filter_by(company_id=company.id, employee_id=emp.id).first()
     assert legacy is None, 'add_deduction must not write EmployeeDeduction'
 
 

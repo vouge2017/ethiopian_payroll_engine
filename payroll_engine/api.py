@@ -359,6 +359,7 @@ def update_employee(emp_id):
     # Audit log: salary/allowance/bank changes with old vs new values
     if old_values:
         from payroll_engine.shared import create_audit_log
+
         create_audit_log(
             company_id=_get_company_id(),
             user_id=_get_current_user().id,
@@ -367,9 +368,7 @@ def update_employee(emp_id):
                 'employee_id': emp.employee_id,
                 'employee_name': emp.name,
                 'old_values': old_values,
-                'new_values': {
-                    k: str(data[k]) for k in old_values if k in data
-                },
+                'new_values': {k: str(data[k]) for k in old_values if k in data},
             },
         )
         db.session.commit()
@@ -472,7 +471,7 @@ def download_payslip(payslip_id):
 
     # Tenant-scoped fetch: 404 (not 403) so payslip IDs are not enumerable
     payslip = Payslip.query.filter_by(id=payslip_id, company_id=_get_company_id()).first_or_404()
-    run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=_get_company_id()).first()
+    PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=_get_company_id()).first()
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
         return jsonify({'error': 'PDF not found'}), 404
     return send_file(payslip.pdf_file_path, as_attachment=True)
@@ -1075,13 +1074,14 @@ def get_bank_file(run_id):
         )
 
 
-
 # --- OpenAPI / Swagger API Docs ---
+
 
 @api.route('/openapi.json', methods=['GET'])
 def openapi_json():
     """Return the OpenAPI specification as JSON."""
     from .openapi_spec import get_openapi_spec
+
     return jsonify(get_openapi_spec())
 
 

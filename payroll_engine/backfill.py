@@ -17,12 +17,11 @@ Design rules:
   * Basic salary is migrated FIRST, so no employee can end up holding
     assignments without a basic_salary row (the underpayment hole).
 """
+
 from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal, InvalidOperation
-
-
 
 BASIC_TAG = 'legacy_basic'
 ALLOWANCE_TAG = 'legacy_allowance'
@@ -58,12 +57,7 @@ def _D(value) -> Decimal:
 def _already_backfilled(company_id, tag) -> bool:
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
-    return (
-        PayrollItemAssignment.query.filter_by(
-            company_id=company_id, legacy_source=tag
-        ).first()
-        is not None
-    )
+    return PayrollItemAssignment.query.filter_by(company_id=company_id, legacy_source=tag).first() is not None
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +74,6 @@ def _resolve_type(company_id, key, classification, label=None):
     COMPANY_TEMPLATE_ITEMS when the company genuinely lacks the item.
     """
     from payroll_engine import db
-    from payroll_engine.models import PayItemCalcMethod
     from payroll_engine.catalog import COMPANY_TEMPLATE_ITEMS
     from payroll_engine.models_payroll_elements import PayItemType
 
@@ -119,7 +112,6 @@ def _resolve_type(company_id, key, classification, label=None):
             sort_order=tmpl.get('sort_order'),
             is_system=False,
         )
-    from payroll_engine import db
 
     db.session.add(item)
     db.session.flush()
@@ -157,11 +149,7 @@ def basic_effective_date(employee, legacy_rows):
 
     from payroll_engine.models import PayrollRun
 
-    first_run = (
-        PayrollRun.query.filter_by(company_id=employee.company_id)
-        .order_by(PayrollRun.run_date.asc())
-        .first()
-    )
+    first_run = PayrollRun.query.filter_by(company_id=employee.company_id).order_by(PayrollRun.run_date.asc()).first()
     if first_run and first_run.run_date:
         return first_run.run_date.date() if hasattr(first_run.run_date, 'date') else first_run.run_date
 
@@ -202,9 +190,13 @@ def _convert_allowance(allowance, emp, company_id, effective):
 
     a = PayrollItemAssignment()
     _assign_common(
-        a, emp, item, company_id,
+        a,
+        emp,
+        item,
+        company_id,
         _tag(ALLOWANCE_TAG, allowance.id),
-        effective, allowance.is_active,
+        effective,
+        allowance.is_active,
         label=label or item.name_en,
     )
     a.end_date = allowance.end_date
@@ -243,9 +235,7 @@ def _ensure_calc_method(item, method, conflicts):
     """
     if method is None or item.calculation_method == method:
         return
-    if item.calculation_method not in (None, '', 'fixed') and (
-        item.calculation_method != method
-    ):
+    if item.calculation_method not in (None, '', 'fixed') and (item.calculation_method != method):
         pair = (item.key, item.calculation_method, method)
         if pair not in conflicts:
             conflicts.append(pair)
@@ -261,9 +251,13 @@ def _convert_deduction(deduction, emp, company_id, effective, conflicts):
 
     a = PayrollItemAssignment()
     _assign_common(
-        a, emp, item, company_id,
+        a,
+        emp,
+        item,
+        company_id,
         _tag(DEDUCTION_TAG, deduction.id),
-        effective, deduction.is_active,
+        effective,
+        deduction.is_active,
         label=deduction.label or item.name_en,
     )
     a.end_date = deduction.end_date
@@ -330,27 +324,30 @@ def find_mixed_state(company_id):
 
         # Only rows the backfill has not already converted still count.
         unconverted = [
-            r for r in legacy_rows
-            if not _tag(
-                DEDUCTION_TAG if hasattr(r, 'deduction_type') else ALLOWANCE_TAG, r.id
-            ) == _existing_tag(r, company_id)
+            r
+            for r in legacy_rows
+            if _tag(DEDUCTION_TAG if hasattr(r, 'deduction_type') else ALLOWANCE_TAG, r.id)
+            != _existing_tag(r, company_id)
         ]
         if not unconverted:
             continue
 
         manual = [
-            a for a in PayrollItemAssignment.query.filter_by(
+            a
+            for a in PayrollItemAssignment.query.filter_by(
                 company_id=company_id, employee_id=emp.id, is_active=True
             ).all()
             if a.legacy_source is None
         ]
         if manual:
-            out.append({
-                'id': emp.id,
-                'name': emp.name,
-                'assignments': len(manual),
-                'legacy_rows': len(unconverted),
-            })
+            out.append(
+                {
+                    'id': emp.id,
+                    'name': emp.name,
+                    'assignments': len(manual),
+                    'legacy_rows': len(unconverted),
+                }
+            )
     return out
 
 
@@ -359,33 +356,21 @@ def _existing_tag(row, company_id):
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
     kind = DEDUCTION_TAG if hasattr(row, 'deduction_type') else ALLOWANCE_TAG
-    return _tag(kind, row.id) if PayrollItemAssignment.query.filter_by(
-        company_id=company_id, legacy_source=_tag(kind, row.id)
-    ).first() else None
+    return (
+        _tag(kind, row.id)
+        if PayrollItemAssignment.query.filter_by(company_id=company_id, legacy_source=_tag(kind, row.id)).first()
+        else None
+    )
 
 
 def backfill_company(company_id, dry_run=False):
     """Backfill one company atomically. Returns a counts dict."""
     from payroll_engine import db
-    from payroll_engine.models import PayItemCalcMethod
     from payroll_engine.models import Employee, EmployeeAllowance, EmployeeDeduction
-    from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
-    employees = (
-        Employee.query.filter_by(company_id=company_id, is_deleted=False)
-        .order_by(Employee.id)
-        .all()
-    )
-    allowances = (
-        EmployeeAllowance.query.filter_by(company_id=company_id)
-        .order_by(EmployeeAllowance.id)
-        .all()
-    )
-    deductions = (
-        EmployeeDeduction.query.filter_by(company_id=company_id)
-        .order_by(EmployeeDeduction.id)
-        .all()
-    )
+    employees = Employee.query.filter_by(company_id=company_id, is_deleted=False).order_by(Employee.id).all()
+    allowances = EmployeeAllowance.query.filter_by(company_id=company_id).order_by(EmployeeAllowance.id).all()
+    deductions = EmployeeDeduction.query.filter_by(company_id=company_id).order_by(EmployeeDeduction.id).all()
 
     conflicts = []
     counts = {
@@ -414,8 +399,8 @@ def backfill_company(company_id, dry_run=False):
     mixed = find_mixed_state(company_id)
     if mixed:
         names = ', '.join(
-            f"{m['name']} (id {m['id']}: {m['assignments']} assignment(s), "
-            f"{m['legacy_rows']} unconverted legacy row(s))"
+            f'{m["name"]} (id {m["id"]}: {m["assignments"]} assignment(s), '
+            f'{m["legacy_rows"]} unconverted legacy row(s))'
             for m in mixed
         )
         counts['error'] = (
@@ -443,9 +428,9 @@ def backfill_company(company_id, dry_run=False):
                 from payroll_engine.models_payroll_elements import PayrollItemAssignment as PIA
 
                 a = PIA()
-                _assign_common(a, emp, item, company_id, tag,
-                               basic_effective_date(emp, emp_rows), True,
-                               label=item.name_en)
+                _assign_common(
+                    a, emp, item, company_id, tag, basic_effective_date(emp, emp_rows), True, label=item.name_en
+                )
                 a.fixed_amount = _D(emp.basic_salary)
                 db.session.add(a)
                 db.session.flush()
@@ -487,7 +472,6 @@ def backfill_all(dry_run=False):
     remaining companies still run, so one bad tenant cannot block the rollout.
     """
     from payroll_engine import db
-    from payroll_engine.models import PayItemCalcMethod
     from payroll_engine.models import Company
 
     results = []
@@ -499,19 +483,21 @@ def backfill_all(dry_run=False):
             else:
                 try:
                     results.append(backfill_company(company.id, dry_run=False))
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     db.session.rollback()
                     failed = backfill_company(company.id, dry_run=True)
                     failed['error'] = str(exc)
                     failed['rolled_back'] = True
                     results.append(failed)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             db.session.rollback()
-            results.append({
-                'company_id': company.id,
-                'error': str(exc),
-                'rolled_back': True,
-            })
+            results.append(
+                {
+                    'company_id': company.id,
+                    'error': str(exc),
+                    'rolled_back': True,
+                }
+            )
     return results
 
 
@@ -535,9 +521,7 @@ def verify_basic_present(company_id):
 
     offenders = []
     for emp in Employee.query.filter_by(company_id=company_id, is_deleted=False).all():
-        rows = PayrollItemAssignment.query.filter_by(
-            company_id=company_id, employee_id=emp.id, is_active=True
-        ).all()
+        rows = PayrollItemAssignment.query.filter_by(company_id=company_id, employee_id=emp.id, is_active=True).all()
         if not rows:
             continue
         if not any(r.pay_item_type_id in basic_ids for r in rows):

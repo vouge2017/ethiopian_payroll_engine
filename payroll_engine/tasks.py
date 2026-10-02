@@ -89,9 +89,7 @@ def generate_payslip_pdf(job_id):
         try:
             from payroll_engine.payroll import generate_calculation_flow
 
-            run = PayrollRun.query.filter_by(
-                id=payslip.payroll_run_id, company_id=payslip.company_id
-            ).first()
+            run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=payslip.company_id).first()
             company = db.session.get(Company, run.company_id) if run else None
             company_info = {
                 'name': company.name if company else 'Company',
@@ -126,14 +124,20 @@ def generate_payslip_pdf(job_id):
             from datetime import date
 
             from payroll_engine.services.worksheet_review import published_row
+
             snapshot = published_row(payslip)
             if snapshot:
                 emp_data.update(snapshot)
-                emp_data['period'] = date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
+                emp_data['period'] = (
+                    date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
+                )
             emp_data['calc_flow'] = generate_calculation_flow(emp_data)
 
             from flask import current_app
-            output_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'payslips', str(payslip.company_id), str(payslip.payroll_run_id))
+
+            output_dir = os.path.join(
+                current_app.config['UPLOAD_FOLDER'], 'payslips', str(payslip.company_id), str(payslip.payroll_run_id)
+            )
             pdf_path = generate_payslip(emp_data, company=company_info, output_dir=output_dir, file_key=str(payslip.id))
 
             payslip.pdf_file_path = pdf_path

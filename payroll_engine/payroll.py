@@ -327,6 +327,7 @@ def generate_calculation_flow(result: dict) -> dict:
     # Without pension deduction, tax would be on (gross - exempt)
     # With pension deduction, tax is on (gross - pension - exempt)
     from datetime import date
+
     rule_date = date.fromisoformat(result['calculation_date']) if result.get('calculation_date') else None
     tax_without_pension = calculate_tax(gross - exempt, rule_date)
     pension_savings = tax_without_pension - tax
@@ -394,13 +395,22 @@ def generate_calculation_flow(result: dict) -> dict:
             }
         )
 
-    for key, label in (('sick_leave_reduction', 'Sick leave reduction'),
-                       ('unpaid_leave_reduction', 'Unpaid days deduction'),
-                       ('total_deductions', 'Other payroll deductions')):
+    for key, label in (
+        ('sick_leave_reduction', 'Sick leave reduction'),
+        ('unpaid_leave_reduction', 'Unpaid days deduction'),
+        ('total_deductions', 'Other payroll deductions'),
+    ):
         amount = _D(result.get(key, 0))
         if amount > 0:
-            steps.append({'label': label, 'amount': amount, 'is_deduction': True,
-                          'note': 'Included in this reviewed payroll', 'icon': ''})
+            steps.append(
+                {
+                    'label': label,
+                    'amount': amount,
+                    'is_deduction': True,
+                    'note': 'Included in this reviewed payroll',
+                    'icon': '',
+                }
+            )
 
     steps.append(
         {

@@ -1,20 +1,25 @@
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Mock pywebpush and its WebPushException before any imports
 mock_pywebpush = MagicMock()
-class MockWebPushException(Exception):
+
+
+class MockWebPushError(Exception):
     def __init__(self, message, response=None):
         super().__init__(message)
         self.response = response
 
-mock_pywebpush.WebPushException = MockWebPushException
+
+mock_pywebpush.WebPushException = MockWebPushError
 sys.modules['pywebpush'] = mock_pywebpush
 
 import pytest
+
 from payroll_engine import create_app, db
-from payroll_engine.models import User, Company, PushSubscription, Notification
+from payroll_engine.models import Company, Notification, PushSubscription, User
 from payroll_engine.push import save_subscription, send_push_notification
+
 
 @pytest.fixture
 def app():
@@ -38,12 +43,13 @@ def app():
         db.session.remove()
         db.drop_all()
 
+
 def test_save_subscription_creates_new(app):
     with app.app_context():
         user = User.query.filter_by(phone='0911000000').first()
         sub_info = {
             'endpoint': 'https://fcm.googleapis.com/fcm/send/token123',
-            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'}
+            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'},
         }
 
         # Save subscription
@@ -61,12 +67,13 @@ def test_save_subscription_creates_new(app):
         assert notif is not None
         assert 'Push notifications enabled' in notif.message
 
+
 def test_save_subscription_updates_existing(app):
     with app.app_context():
         user = User.query.filter_by(phone='0911000000').first()
         sub_info = {
             'endpoint': 'https://fcm.googleapis.com/fcm/send/token123',
-            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'}
+            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'},
         }
 
         # Save initial
@@ -75,7 +82,7 @@ def test_save_subscription_updates_existing(app):
         # Save again with same endpoint but updated keys or different user
         updated_sub_info = {
             'endpoint': 'https://fcm.googleapis.com/fcm/send/token123',
-            'keys': {'auth': 'new_auth', 'p256dh': 'new_p256dh'}
+            'keys': {'auth': 'new_auth', 'p256dh': 'new_p256dh'},
         }
         res = save_subscription(user.id, updated_sub_info)
         assert res is True
@@ -84,6 +91,7 @@ def test_save_subscription_updates_existing(app):
         subs = PushSubscription.query.filter_by(user_id=user.id).all()
         assert len(subs) == 1
         assert subs[0].subscription_json == updated_sub_info
+
 
 @patch('payroll_engine.push.VAPID_PRIVATE_KEY', 'some-private-key')
 def test_send_push_notification_success(app):
@@ -94,7 +102,7 @@ def test_send_push_notification_success(app):
         user = User.query.filter_by(phone='0911000000').first()
         sub_info = {
             'endpoint': 'https://fcm.googleapis.com/fcm/send/token123',
-            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'}
+            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'},
         }
         save_subscription(user.id, sub_info)
 
@@ -108,6 +116,7 @@ def test_send_push_notification_success(app):
         assert kwargs['subscription_info'] == sub_info
         assert 'Test Title' in kwargs['data']
 
+
 @patch('payroll_engine.push.VAPID_PRIVATE_KEY', 'some-private-key')
 def test_send_push_notification_cleanup_on_gone(app):
     # Reset mock
@@ -116,13 +125,13 @@ def test_send_push_notification_cleanup_on_gone(app):
     # Configure webpush mock to raise WebPushException with 410 Gone response
     mock_response = MagicMock()
     mock_response.status_code = 410
-    mock_pywebpush.webpush.side_effect = MockWebPushException('Subscription expired', response=mock_response)
+    mock_pywebpush.webpush.side_effect = MockWebPushError('Subscription expired', response=mock_response)
 
     with app.app_context():
         user = User.query.filter_by(phone='0911000000').first()
         sub_info = {
             'endpoint': 'https://fcm.googleapis.com/fcm/send/token123',
-            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'}
+            'keys': {'auth': 'auth123', 'p256dh': 'p256dh123'},
         }
         save_subscription(user.id, sub_info)
 

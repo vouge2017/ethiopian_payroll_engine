@@ -201,6 +201,7 @@ def download_bank_file(run_id):
     for p in run.payslips:
         emp = p.employee
         from payroll_engine.services.worksheet_review import published_row
+
         snapshot = published_row(p)
         employees_data.append(
             {
@@ -511,7 +512,9 @@ def analytics():
     # ── Headcount (count payslips per month in Python) ──
     headcount_by_month = {}
     if run_ids:
-        all_payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == _company_id()).all()
+        all_payslips = Payslip.query.filter(
+            Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == _company_id()
+        ).all()
         run_map = {r.id: r.run_date.strftime('%Y-%m') for r in runs}
         for ps in all_payslips:
             month_key = run_map.get(ps.payroll_run_id)
@@ -519,7 +522,11 @@ def analytics():
                 headcount_by_month[month_key] = headcount_by_month.get(month_key, 0) + 1
 
     # ── Year options ──
-    years = db.session.query(db.func.distinct(db.extract('year', PayrollRun.run_date))).filter(PayrollRun.company_id == cid).all()
+    years = (
+        db.session.query(db.func.distinct(db.extract('year', PayrollRun.run_date)))
+        .filter(PayrollRun.company_id == cid)
+        .all()
+    )
     available_years = sorted([int(y[0]) for y in years if y[0]], reverse=True)
     if not available_years:
         available_years = [date.today().year]

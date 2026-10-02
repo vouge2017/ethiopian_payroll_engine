@@ -12,11 +12,13 @@ payroll_workflow.parse_and_calculate_payroll() line 77 calls
 calculate_payroll(basic, allow) with the allowance as a BARE NUMBER and no
 allowance_records. That is reproduced here verbatim.
 """
+
 import uuid
 from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from payroll_engine import create_app, db
 from payroll_engine.backfill import backfill_company
 from payroll_engine.models import (
@@ -69,12 +71,14 @@ def proof_company(ctx):
     db.session.add(user)
 
     emps = []
-    for i, (eid, basic) in enumerate(
-        [('EMP001', Decimal('20000')), ('EMP002', Decimal('12000'))]
-    ):
+    for i, (eid, basic) in enumerate([('EMP001', Decimal('20000')), ('EMP002', Decimal('12000'))]):
         e = Employee(
-            employee_id=eid, name=f'Person {i}', basic_salary=basic,
-            allowances=Decimal('0'), company_id=co.id, start_date=date(2020, 1, 1),
+            employee_id=eid,
+            name=f'Person {i}',
+            basic_salary=basic,
+            allowances=Decimal('0'),
+            company_id=co.id,
+            start_date=date(2020, 1, 1),
         )
         db.session.add(e)
         emps.append(e)
@@ -83,54 +87,115 @@ def proof_company(ctx):
     # EMP001: capped transport (exempt up to min(2200, 25% of basic) = 2200),
     # an INACTIVE housing allowance, a ZERO food allowance, a custom unknown
     # allowance type, plus percentage deductions and a court order.
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emps[0].id, allowance_type='transport',
-        amount=Decimal('3000'), calculation_basis='fixed', tax_treatment='partial',
-        exempt_cap_amount=Decimal('2200'), exempt_cap_percent=Decimal('25'),
-        exempt_cap_basis='basic_salary', is_active=True,
-        effective_date=date(2020, 1, 1),
-    ))
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emps[0].id, allowance_type='housing',
-        amount=Decimal('9999'), calculation_basis='fixed',
-        tax_treatment='taxable', is_active=False, effective_date=date(2020, 1, 1),
-    ))
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emps[0].id, allowance_type='food',
-        amount=Decimal('0'), calculation_basis='fixed', tax_treatment='taxable',
-        is_active=True, effective_date=date(2020, 1, 1),
-    ))
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emps[0].id, allowance_type='custom_thing',
-        custom_type_name='Custom Thing', amount=Decimal('500'),
-        calculation_basis='fixed', tax_treatment='taxable', is_active=True,
-        effective_date=date(2020, 1, 1),
-    ))
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emps[0].id,
+            allowance_type='transport',
+            amount=Decimal('3000'),
+            calculation_basis='fixed',
+            tax_treatment='partial',
+            exempt_cap_amount=Decimal('2200'),
+            exempt_cap_percent=Decimal('25'),
+            exempt_cap_basis='basic_salary',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emps[0].id,
+            allowance_type='housing',
+            amount=Decimal('9999'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=False,
+            effective_date=date(2020, 1, 1),
+        )
+    )
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emps[0].id,
+            allowance_type='food',
+            amount=Decimal('0'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emps[0].id,
+            allowance_type='custom_thing',
+            custom_type_name='Custom Thing',
+            amount=Decimal('500'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
     # EMP002: a plain fully-taxable allowance and a declining loan. No caps, so
     # the two paths should agree exactly for this employee.
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emps[1].id, allowance_type='housing',
-        amount=Decimal('2000'), calculation_basis='fixed', tax_treatment='taxable',
-        is_active=True, effective_date=date(2020, 1, 1),
-    ))
-    db.session.add(EmployeeDeduction(
-        company_id=co.id, employee_id=emps[0].id, deduction_type='cost_sharing',
-        label='MoE Batch', amount_mode='percentage', amount=Decimal('33.33'),
-        tracking_mode='date_bounded', start_date=date(2020, 1, 1), is_active=True,
-    ))
-    db.session.add(EmployeeDeduction(
-        company_id=co.id, employee_id=emps[0].id, deduction_type='court_order',
-        label='Case 123', amount_mode='percentage', amount=Decimal('10'),
-        tracking_mode='date_bounded', start_date=date(2020, 1, 1),
-        reference_number='CASE-123', document_path='/u/case123.pdf', is_active=True,
-    ))
-    db.session.add(EmployeeDeduction(
-        company_id=co.id, employee_id=emps[1].id, deduction_type='loan',
-        label='Staff loan', amount_mode='fixed', amount=Decimal('1000'),
-        tracking_mode='declining', total_to_recover=Decimal('5000'),
-        remaining_balance=Decimal('4000'), start_date=date(2020, 1, 1),
-        is_active=True,
-    ))
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emps[1].id,
+            allowance_type='housing',
+            amount=Decimal('2000'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
+    db.session.add(
+        EmployeeDeduction(
+            company_id=co.id,
+            employee_id=emps[0].id,
+            deduction_type='cost_sharing',
+            label='MoE Batch',
+            amount_mode='percentage',
+            amount=Decimal('33.33'),
+            tracking_mode='date_bounded',
+            start_date=date(2020, 1, 1),
+            is_active=True,
+        )
+    )
+    db.session.add(
+        EmployeeDeduction(
+            company_id=co.id,
+            employee_id=emps[0].id,
+            deduction_type='court_order',
+            label='Case 123',
+            amount_mode='percentage',
+            amount=Decimal('10'),
+            tracking_mode='date_bounded',
+            start_date=date(2020, 1, 1),
+            reference_number='CASE-123',
+            document_path='/u/case123.pdf',
+            is_active=True,
+        )
+    )
+    db.session.add(
+        EmployeeDeduction(
+            company_id=co.id,
+            employee_id=emps[1].id,
+            deduction_type='loan',
+            label='Staff loan',
+            amount_mode='fixed',
+            amount=Decimal('1000'),
+            tracking_mode='declining',
+            total_to_recover=Decimal('5000'),
+            remaining_balance=Decimal('4000'),
+            start_date=date(2020, 1, 1),
+            is_active=True,
+        )
+    )
     db.session.commit()
     return co, user, emps
 
@@ -146,17 +211,22 @@ def _draft_rows(co, emps):
 
     rows = []
     for e in emps:
-        active = EmployeeAllowance.query.filter_by(
-            company_id=co.id, employee_id=e.id, is_active=True
-        ).all()
+        active = EmployeeAllowance.query.filter_by(company_id=co.id, employee_id=e.id, is_active=True).all()
         total = sum((Decimal(str(a.amount or 0)) for a in active), Decimal('0'))
         r = calculate_payroll(Decimal(str(e.basic_salary)), total)
-        rows.append({
-            'id': e.employee_id, 'name': e.name, 'basic': float(e.basic_salary),
-            'allowances': float(total), 'gross': r['gross'], 'tax': r['tax'],
-            'pension_employee': r['pension_employee'],
-            'pension_employer': r['pension_employer'], 'net': r['net'],
-        })
+        rows.append(
+            {
+                'id': e.employee_id,
+                'name': e.name,
+                'basic': float(e.basic_salary),
+                'allowances': float(total),
+                'gross': r['gross'],
+                'tax': r['tax'],
+                'pension_employee': r['pension_employee'],
+                'pension_employer': r['pension_employer'],
+                'net': r['net'],
+            }
+        )
     return rows
 
 
@@ -165,39 +235,46 @@ def _run(co, user, emps, period, label):
     from payroll_engine.services.payroll_service import process_payroll
 
     run = PayrollRun(
-        company_id=co.id, period=period, status='review',
-        run_date=date(2026, 9, 1), approved_by=user.id,
+        company_id=co.id,
+        period=period,
+        status='review',
+        run_date=date(2026, 9, 1),
+        approved_by=user.id,
     )
     db.session.add(run)
     db.session.commit()
-    db.session.add(PayrollDraft(
-        payroll_run_id=run.id, company_id=co.id,
-        employee_data=_draft_rows(co, emps),
-    ))
+    db.session.add(
+        PayrollDraft(
+            payroll_run_id=run.id,
+            company_id=co.id,
+            employee_data=_draft_rows(co, emps),
+        )
+    )
     db.session.commit()
 
     result = process_payroll(
-        run=run, company_id=co.id, user_id=user.id,
-        user_email=user.email or 'o@t.com', request_ip='127.0.0.1',
+        run=run,
+        company_id=co.id,
+        user_id=user.id,
+        user_email=user.email or 'o@t.com',
+        request_ip='127.0.0.1',
     )
     assert result.success is True, f'{label}: {getattr(result, "error", None)}'
 
     out = {}
     for e in emps:
-        ps = Payslip.query.filter_by(
-            payroll_run_id=run.id, company_id=co.id, employee_id=e.id
-        ).first()
+        ps = Payslip.query.filter_by(payroll_run_id=run.id, company_id=co.id, employee_id=e.id).first()
         assert ps is not None, f'{label}: no payslip for {e.employee_id}'
         out[e.employee_id] = {
             'gross': Decimal(str(ps.gross_salary)),
-            'taxable': Decimal(str(ps.taxable_income)) if ps.taxable_income is not None
-                       else Decimal(str(ps.gross_salary)) - Decimal(str(ps.employee_pension)),
+            'taxable': Decimal(str(ps.taxable_income))
+            if ps.taxable_income is not None
+            else Decimal(str(ps.gross_salary)) - Decimal(str(ps.employee_pension)),
             'exempt': Decimal(str(ps.exempt_allowances or 0)),
             'tax': Decimal(str(ps.tax)),
             'pension': Decimal(str(ps.employee_pension)),
             'deductions': sum(
-                (Decimal(str(d.get('amount') or 0))
-                 for d in (ps.deduction_details or [])),
+                (Decimal(str(d.get('amount') or 0)) for d in (ps.deduction_details or [])),
                 Decimal('0'),
             ),
             'net': Decimal(str(ps.net_pay)),
@@ -209,6 +286,7 @@ def test_money_proof_before_vs_after(ctx, proof_company):
     co, user, emps = proof_company
 
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
+
     assert PayrollItemAssignment.query.filter_by(company_id=co.id).count() == 0
 
     before = _run(co, user, emps, '2026-08', 'BEFORE')
@@ -252,8 +330,7 @@ def test_money_proof_before_vs_after(ctx, proof_company):
     # 3. Percentage deductions must actually deduct. cost_sharing 33.33% and
     #    court_order 10% of net_before_deductions (20585) is not zero.
     assert after['EMP001']['deductions'] > Decimal('7000'), (
-        f'percentage deductions were not applied: '
-        f'{after["EMP001"]["deductions"]}'
+        f'percentage deductions were not applied: {after["EMP001"]["deductions"]}'
     )
     assert after['EMP001']['net'] < before['EMP001']['net'] + Decimal('2000'), (
         'net must not jump once the exemptions are applied correctly'
@@ -268,18 +345,17 @@ def test_money_proof_before_vs_after(ctx, proof_company):
         f'the exemption must be visible, got {after["EMP001"]["exempt"]}'
     )
     assert after['EMP001']['taxable'] == Decimal('19900.00'), (
-        f'gross 23500 - pension 1400 - exempt 2200 = 19900, got '
-        f'{after["EMP001"]["taxable"]}'
+        f'gross 23500 - pension 1400 - exempt 2200 = 19900, got {after["EMP001"]["taxable"]}'
     )
     from payroll_engine.tax import calculate_tax
+
     assert calculate_tax(after['EMP001']['taxable']) == after['EMP001']['tax'], (
         'tax must equal the public brackets applied to the reported taxable'
     )
 
     # 5. EMP002 -- no capped allowance -- matches on all six figures exactly.
     assert before['EMP002'] == after['EMP002'], (
-        f'EMP002 has no capped allowance and must match exactly: '
-        f'{before["EMP002"]} vs {after["EMP002"]}'
+        f'EMP002 has no capped allowance and must match exactly: {before["EMP002"]} vs {after["EMP002"]}'
     )
 
     # 5. EMP001 net differs ONLY because the engine now applies the transport
@@ -289,9 +365,7 @@ def test_money_proof_before_vs_after(ctx, proof_company):
     #    tax treatment never ran in production. The engine runs it, so taxable
     #    income falls and tax falls with it. That is a business decision for the
     #    accountant -- see the cross-check in test_legacy_itemized_path_agrees.
-    assert after['EMP001']['tax'] < before['EMP001']['tax'], (
-        'the exemption correction must reduce tax'
-    )
+    assert after['EMP001']['tax'] < before['EMP001']['tax'], 'the exemption correction must reduce tax'
 
 
 def test_legacy_itemized_path_agrees_with_engine(ctx, proof_company):
@@ -307,36 +381,26 @@ def test_legacy_itemized_path_agrees_with_engine(ctx, proof_company):
     co, _u, emps = proof_company
     emp = emps[0]  # EMP001, holds the capped transport allowance
 
-    active = EmployeeAllowance.query.filter_by(
-        company_id=co.id, employee_id=emp.id, is_active=True
-    ).all()
+    active = EmployeeAllowance.query.filter_by(company_id=co.id, employee_id=emp.id, is_active=True).all()
     total = sum((Decimal(str(a.amount or 0)) for a in active), Decimal('0'))
 
     bare = calculate_payroll(Decimal(str(emp.basic_salary)), total)
-    itemized = calculate_payroll(
-        Decimal(str(emp.basic_salary)), total, allowance_records=active
-    )
+    itemized = calculate_payroll(Decimal(str(emp.basic_salary)), total, allowance_records=active)
 
     backfill_company(co.id)
     from payroll_engine.payroll_elements import calculate_payroll_from_assignments
 
     engine = calculate_payroll_from_assignments(emp, co.id, date(2026, 9, 1))
 
-    print(f'\n  gross   bare={bare["gross"]}  itemized={itemized["gross"]}  '
-          f'engine={engine["gross"]}')
-    print(f'  tax     bare={bare["tax"]}  itemized={itemized["tax"]}  '
-          f'engine={engine["tax"]}')
-    print(f'  exempt  itemized={itemized.get("exempt_allowances")}  '
-          f'engine={engine.get("exempt_allowances")}')
+    print(f'\n  gross   bare={bare["gross"]}  itemized={itemized["gross"]}  engine={engine["gross"]}')
+    print(f'  tax     bare={bare["tax"]}  itemized={itemized["tax"]}  engine={engine["tax"]}')
+    print(f'  exempt  itemized={itemized.get("exempt_allowances")}  engine={engine.get("exempt_allowances")}')
 
     assert engine['gross'] == bare['gross'] == itemized['gross']
     assert engine['tax'] == itemized['tax'], (
-        'engine tax must equal the legacy ITEMIZED tax; if this holds the CSV '
-        'bare-number path was the only defect'
+        'engine tax must equal the legacy ITEMIZED tax; if this holds the CSV bare-number path was the only defect'
     )
-    assert engine['tax'] < bare['tax'], (
-        'the bare path must be the one that overstates tax'
-    )
+    assert engine['tax'] < bare['tax'], 'the bare path must be the one that overstates tax'
     assert engine.get('exempt_allowances') == itemized.get('exempt_allowances')
 
 
@@ -364,13 +428,13 @@ def test_reconciliation_legacy_rows_in_assignments_out(ctx, proof_company):
     tags = {a.legacy_source for a in backfilled}
     assert len(tags) == len(legacy_a) + len(legacy_d), 'tags must be distinct'
 
-    fixed_out = sum(
-        (a.fixed_amount for a in backfilled if a.fixed_amount is not None), Decimal('0')
-    )
+    fixed_out = sum((a.fixed_amount for a in backfilled if a.fixed_amount is not None), Decimal('0'))
     fixed_in = sum(
-        (Decimal(str(r.amount or 0)) for r in legacy_a + legacy_d
-         if (r.amount_mode if hasattr(r, 'amount_mode') else r.calculation_basis)
-         != 'percentage'),
+        (
+            Decimal(str(r.amount or 0))
+            for r in legacy_a + legacy_d
+            if (r.amount_mode if hasattr(r, 'amount_mode') else r.calculation_basis) != 'percentage'
+        ),
         Decimal('0'),
     )
     pct_rows = [a for a in backfilled if a.percent_of_net is not None]

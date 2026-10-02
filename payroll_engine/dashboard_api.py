@@ -358,8 +358,12 @@ def _hr_metrics(current_run, recent_runs, company_id, db, models):
 
     # New hires / departures
     if len(recent_runs) >= 2:
-        current_payslips = Payslip.query.filter_by(payroll_run_id=current_run.id, company_id=current_run.company_id).all()
-        prev_payslips = Payslip.query.filter_by(payroll_run_id=recent_runs[1].id, company_id=current_run.company_id).all()
+        current_payslips = Payslip.query.filter_by(
+            payroll_run_id=current_run.id, company_id=current_run.company_id
+        ).all()
+        prev_payslips = Payslip.query.filter_by(
+            payroll_run_id=recent_runs[1].id, company_id=current_run.company_id
+        ).all()
         current_ids = {ps.employee_id for ps in current_payslips}
         prev_ids = {ps.employee_id for ps in prev_payslips}
 
@@ -527,7 +531,11 @@ def _build_trends(recent_runs, company_id, db, models):
 
     # Batch fetch all payslips for recent runs (avoid N+1)
     run_ids = [r.id for r in recent_runs]
-    all_payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == company_id).all() if run_ids else []
+    all_payslips = (
+        Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids), Payslip.company_id == company_id).all()
+        if run_ids
+        else []
+    )
 
     # Group by run_id
     payslips_by_run = {}

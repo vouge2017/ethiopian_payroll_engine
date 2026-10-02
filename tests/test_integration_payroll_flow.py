@@ -122,7 +122,7 @@ class TestIntegrationPayrollFlow:
             for emp, gross, tax, pension, net in payslip_data:
                 ps = Payslip(
                     payroll_run_id=run.id,
-                        company_id=run.company_id,
+                    company_id=run.company_id,
                     employee_id=emp.id,
                     gross_salary=Decimal(str(gross)),
                     tax=Decimal(str(tax)),
@@ -273,7 +273,7 @@ class TestIntegrationPayrollFlow:
             # Negative net pay (blocking)
             ps = Payslip(
                 payroll_run_id=run.id,
-                    company_id=run.company_id,
+                company_id=run.company_id,
                 employee_id=emp.id,
                 gross_salary=Decimal('10000'),
                 tax=Decimal('12000'),

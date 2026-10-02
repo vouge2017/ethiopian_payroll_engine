@@ -46,20 +46,17 @@ def save_subscription(user_id, subscription_info):
         existing.user_id = user_id
         existing.subscription_json = subscription_info
     else:
-        sub = PushSubscription(
-            user_id=user_id,
-            endpoint=endpoint,
-            subscription_json=subscription_info
-        )
+        sub = PushSubscription(user_id=user_id, endpoint=endpoint, subscription_json=subscription_info)
         db.session.add(sub)
 
     # Fetch user to get company_id
     user = db.session.get(User, user_id)
     company_id = user.company_id if user else None
 
-
     # Also store in-app notification
-    notif = Notification(company_id=company_id, user_id=user_id, message='Push notifications enabled', type='system', is_read=True)
+    notif = Notification(
+        company_id=company_id, user_id=user_id, message='Push notifications enabled', type='system', is_read=True
+    )
     db.session.add(notif)
     db.session.commit()
 
@@ -80,7 +77,7 @@ def send_push_notification(user_id, title, body, url='/', notif_type='info'):
 
     # Always create in-app notification
     notif = Notification(
-        company_id=company_id, user_id=user_id, message=f"{title}: {body}" if body else title, type=notif_type, link=url
+        company_id=company_id, user_id=user_id, message=f'{title}: {body}' if body else title, type=notif_type, link=url
     )
     db.session.add(notif)
     db.session.commit()

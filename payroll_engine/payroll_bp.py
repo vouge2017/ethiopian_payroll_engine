@@ -230,11 +230,13 @@ def api_preview():
         employees_data, row_errors = parse_and_calculate_payroll(filepath)
 
         if row_errors:
-            return jsonify({
-                'ok': False,
-                'error': 'Correct all numeric row errors before previewing payroll. ' + row_errors[0],
-                'row_errors': row_errors[:10],
-            }), 400
+            return jsonify(
+                {
+                    'ok': False,
+                    'error': 'Correct all numeric row errors before previewing payroll. ' + row_errors[0],
+                    'row_errors': row_errors[:10],
+                }
+            ), 400
 
         limit_msg = check_csv_row_limit(employees_data)
         if limit_msg:
@@ -749,9 +751,7 @@ def _annotate_general_allowance(company_id, employees_data):
 
     if count:
         # Make sure the company has the item before any row is processed.
-        existing = PayItemType.query.filter_by(
-            company_id=company_id, key=target_key
-        ).first()
+        existing = PayItemType.query.filter_by(company_id=company_id, key=target_key).first()
         if existing is None:
             seed_company_templates(company_id)
     return count
@@ -886,6 +886,7 @@ def payroll_confirm(run_id):
     employees_data = draft.employee_data if draft else []
     if run.source == 'spreadsheet':
         from payroll_engine.services.worksheet_review import display_rows
+
         employees_data = display_rows(employees_data)
     total_gross = sum(e.get('gross', 0) for e in employees_data)
     total_tax = sum(e.get('tax', 0) for e in employees_data)
@@ -1025,7 +1026,10 @@ def approve_payroll():
         )
     except StaleDataError:
         db.session.rollback()
-        flash('Concurrency Conflict: This payroll period was modified by another user. Please refresh and try again.', 'warning')
+        flash(
+            'Concurrency Conflict: This payroll period was modified by another user. Please refresh and try again.',
+            'warning',
+        )
         return redirect(url_for('payroll.payroll_run_detail', run_id=int(run_id)))
 
     if result.success:
@@ -1093,7 +1097,10 @@ def undo_approval(run_id):
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).with_for_update().first_or_404()
 
     if run.source == 'spreadsheet':
-        flash('Worksheet payroll needs a linked correction; undo is not supported yet. The approved records are preserved.', 'warning')
+        flash(
+            'Worksheet payroll needs a linked correction; undo is not supported yet. The approved records are preserved.',
+            'warning',
+        )
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     # Only completed runs can be undone
@@ -1195,7 +1202,9 @@ def create_adjustment(run_id):
     emp = Employee.query.filter_by(id=int(emp_id), company_id=_company_id(), is_deleted=False).first_or_404()
 
     # Find original payslip for this employee in this run
-    original = Payslip.query.filter_by(company_id=_company_id(), payroll_run_id=run.id, employee_id=emp.id, payslip_type='regular').first()
+    original = Payslip.query.filter_by(
+        company_id=_company_id(), payroll_run_id=run.id, employee_id=emp.id, payslip_type='regular'
+    ).first()
 
     # Calculate adjustment (simplified: treat amount as gross, compute tax)
     result = calculate_payroll(basic_salary=amount, allowances=Decimal('0'))
@@ -1648,7 +1657,11 @@ def payroll_spreadsheet():
 
             prev_advance = _current_advance(emp.id, _company_id(), month_start)
             set_advance_assignment(
-                emp.id, _company_id(), advance, month_start, today,
+                emp.id,
+                _company_id(),
+                advance,
+                month_start,
+                today,
                 created_by=current_user.id,
             )
             create_audit_log(
@@ -1689,18 +1702,33 @@ def payroll_spreadsheet():
             ot = {'day': Decimal('0'), 'night': Decimal('0'), 'holiday': Decimal('0'), 'rest_day_holiday': Decimal('0')}
             for entry in snapshot['worksheet_inputs']['overtime']:
                 ot[entry['type']] += Decimal(entry['hours'])
-            rows.append({'emp': emp, 'bonus': Decimal(snapshot['worksheet_inputs']['bonus']),
-                         'absence_days': snapshot['worksheet_inputs']['absence_days'],
-                         'advance': _current_advance(emp.id, _company_id(), month_start),
-                         'ot_day': ot['day'], 'ot_night': ot['night'], 'ot_holiday': ot['holiday'], 'ot_rest': ot['rest_day_holiday'],
-                         'gross': Decimal(snapshot['gross']), 'tax': Decimal(snapshot['tax']),
-                         'pension': Decimal(snapshot['pension_employee']), 'net': Decimal(snapshot['net']),
-                         'exceeds_ot_limit': sum(ot.values()) > MAX_OVERTIME_HOURS_MONTH})
-    return render_template('payroll_spreadsheet.html', rows=rows, period_start=month_start,
-                           total_gross=sum((row['gross'] for row in rows), Decimal('0')),
-                           total_tax=sum((row['tax'] for row in rows), Decimal('0')),
-                           total_net=sum((row['net'] for row in rows), Decimal('0')),
-                           review_error=review_error, year=date.today().year)
+            rows.append(
+                {
+                    'emp': emp,
+                    'bonus': Decimal(snapshot['worksheet_inputs']['bonus']),
+                    'absence_days': snapshot['worksheet_inputs']['absence_days'],
+                    'advance': _current_advance(emp.id, _company_id(), month_start),
+                    'ot_day': ot['day'],
+                    'ot_night': ot['night'],
+                    'ot_holiday': ot['holiday'],
+                    'ot_rest': ot['rest_day_holiday'],
+                    'gross': Decimal(snapshot['gross']),
+                    'tax': Decimal(snapshot['tax']),
+                    'pension': Decimal(snapshot['pension_employee']),
+                    'net': Decimal(snapshot['net']),
+                    'exceeds_ot_limit': sum(ot.values()) > MAX_OVERTIME_HOURS_MONTH,
+                }
+            )
+    return render_template(
+        'payroll_spreadsheet.html',
+        rows=rows,
+        period_start=month_start,
+        total_gross=sum((row['gross'] for row in rows), Decimal('0')),
+        total_tax=sum((row['tax'] for row in rows), Decimal('0')),
+        total_net=sum((row['net'] for row in rows), Decimal('0')),
+        review_error=review_error,
+        year=date.today().year,
+    )
 
 
 @payroll_bp.route('/payroll/spreadsheet/review', methods=['POST'])
@@ -1813,7 +1841,11 @@ def payroll_spreadsheet_autosave():
 
         prev_advance = _current_advance(emp.id, _company_id(), month_start)
         set_advance_assignment(
-            emp.id, _company_id(), advance, month_start, today,
+            emp.id,
+            _company_id(),
+            advance,
+            month_start,
+            today,
             created_by=current_user.id,
         )
         create_audit_log(
@@ -2133,10 +2165,12 @@ def payroll_register():
         basic = other = None
         if earnings:
             basic = sum(
-                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] == 'basic_salary'), Decimal('0')
+                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] == 'basic_salary'),
+                Decimal('0'),
             )
             other = sum(
-                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] != 'basic_salary'), Decimal('0')
+                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] != 'basic_salary'),
+                Decimal('0'),
             )
         rows.append(
             {
@@ -2276,6 +2310,7 @@ def export_payslips():
         for ps in payslips:
             emp = ps.employee
             from payroll_engine.services.worksheet_review import published_row
+
             snapshot = published_row(ps)
             taxable = (ps.gross_salary or 0) - (ps.employee_pension or 0)
             total_deductions = (ps.employee_pension or 0) + (ps.tax or 0)
@@ -2469,13 +2504,15 @@ def payroll_review_workspace(run_id):
     worksheet_rows = []
     if run.source == 'spreadsheet':
         from payroll_engine.services.worksheet_review import display_rows
+
         draft = PayrollDraft.query.filter_by(company_id=cid, payroll_run_id=run.id).first()
         worksheet_rows = display_rows(draft.employee_data) if draft else []
         from payroll_engine.services.worksheet_review import review_evidence
+
         evidence = review_evidence(run, worksheet_rows)
         change_summary = None
         total_net = sum((row['net'] for row in worksheet_rows), Decimal('0'))
-        narrative = f"Saved {run.run_date.strftime('%B %Y')} (Gregorian) payroll includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent."
+        narrative = f'Saved {run.run_date.strftime("%B %Y")} (Gregorian) payroll includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
         can_approve = can_approve and evidence.ready_for_approval
     return render_template(
         'payroll_review_workspace.html',

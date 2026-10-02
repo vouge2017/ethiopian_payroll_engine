@@ -118,18 +118,19 @@ def _ensure_pdf(payslip, emp, company_info=None):
             'tax_explanation': '',
         }
         from payroll_engine.services.worksheet_review import published_row
+
         snapshot = published_row(payslip)
         if snapshot:
             emp_data.update(snapshot)
-            emp_data['period'] = date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
+            emp_data['period'] = (
+                date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
+            )
         emp_data['calc_flow'] = generate_calculation_flow(emp_data)
 
         # Get period from the payroll run
         from payroll_engine.models import PayrollRun
 
-        run = PayrollRun.query.filter_by(
-            id=payslip.payroll_run_id, company_id=payslip.company_id
-        ).first()
+        run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=payslip.company_id).first()
         if run and not snapshot:
             emp_data['period'] = run.period or (run.run_date.strftime('%B %Y') if run.run_date else '')
 
@@ -148,7 +149,10 @@ def _ensure_pdf(payslip, emp, company_info=None):
             }
 
         from flask import current_app
-        output_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'payslips', str(payslip.company_id), str(payslip.payroll_run_id))
+
+        output_dir = os.path.join(
+            current_app.config['UPLOAD_FOLDER'], 'payslips', str(payslip.company_id), str(payslip.payroll_run_id)
+        )
         pdf_path = generate_payslip(emp_data, company=company_info, output_dir=output_dir, file_key=str(payslip.id))
         payslip.pdf_file_path = pdf_path
         payslip.pdf_status = 'generated'
@@ -175,12 +179,10 @@ WARNING = HexColor('#f59e0b')
 DANGER = HexColor('#ef4444')
 
 
-
 def _bilingual_markup(text):
     # NotoSansEthiopic contains Ethiopic glyphs but lacks Latin letters/digits.
     # Keep Latin in Helvetica and explicitly select the embedded Ethiopic font.
-    return re.sub(r'([\u1200-\u139f\u2d80-\u2ddf\uab00-\uab2f]+)',
-                  r'<font name="NotoSansEthiopic">\1</font>', text)
+    return re.sub(r'([\u1200-\u139f\u2d80-\u2ddf\uab00-\uab2f]+)', r'<font name="NotoSansEthiopic">\1</font>', text)
 
 
 def _paragraph(text, *args, **kwargs):
@@ -189,13 +191,21 @@ def _paragraph(text, *args, **kwargs):
 
 def _table(data, *args, **kwargs):
     style = ParagraphStyle('BilingualCell', fontName=FONT, fontSize=8, leading=11)
-    rows = [[_paragraph(escape(cell), style) if isinstance(cell, str) and
-             re.search(r'[\u1200-\u139f\u2d80-\u2ddf\uab00-\uab2f]', cell) else cell
-             for cell in row] for row in data]
+    rows = [
+        [
+            _paragraph(escape(cell), style)
+            if isinstance(cell, str) and re.search(r'[\u1200-\u139f\u2d80-\u2ddf\uab00-\uab2f]', cell)
+            else cell
+            for cell in row
+        ]
+        for row in data
+    ]
     return _Table(rows, *args, **kwargs)
 
 
-def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | None = None, file_key: str | None = None) -> str:
+def generate_payslip(
+    emp: dict, output_dir: str | None = None, company: dict | None = None, file_key: str | None = None
+) -> str:
     """
     Generate a PDF payslip for a single employee.
 
@@ -216,6 +226,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     os.makedirs(output_dir, exist_ok=True)
 
     from werkzeug.utils import secure_filename
+
     filename_id = secure_filename(file_key or str(emp['id'])) or 'employee'
     filename = f'payslip_{filename_id}_{date.today().strftime("%Y%m%d")}.pdf'
     filepath = os.path.join(output_dir, filename)
@@ -361,20 +372,14 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     # generated lazily, so recomputing here could diverge from what was paid.
     # Bilingual labels come from PayItemType.name_en / name_am.
     line_items = emp.get('line_items') or []
-    earning_lines = [
-        li for li in line_items if li.get('classification') == 'earning' and li.get('earned_amount')
-    ]
-    deduction_lines = [
-        li for li in line_items if li.get('classification') in ('deduction', 'tax')
-    ]
+    earning_lines = [li for li in line_items if li.get('classification') == 'earning' and li.get('earned_amount')]
+    deduction_lines = [li for li in line_items if li.get('classification') in ('deduction', 'tax')]
 
     if earning_lines:
         for li in earning_lines:
             label = _item_label(li)
             if label:
-                earnings_data.append(
-                    [label, f'{li.get("earned_amount", 0):,.2f}']
-                )
+                earnings_data.append([label, f'{li.get("earned_amount", 0):,.2f}'])
     else:
         # Legacy payslip with no engine breakdown (not yet backfilled).
         earnings_data.append(['Basic Salary', f'{emp["basic"]:,.2f}'])
@@ -417,14 +422,10 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
         for li in deduction_lines:
             label = _item_label(li)
             if label:
-                deductions_data.append(
-                    [label, f'{li.get("earned_amount", 0):,.2f}']
-                )
+                deductions_data.append([label, f'{li.get("earned_amount", 0):,.2f}'])
     else:
         # Pension
-        deductions_data.append(
-            ['Employee Pension (7%)', f'{emp["pension_employee"]:,.2f}']
-        )
+        deductions_data.append(['Employee Pension (7%)', f'{emp["pension_employee"]:,.2f}'])
 
         # Tax with bracket breakdown
         tax_breakdown = emp.get('tax_breakdown')
@@ -466,8 +467,7 @@ def generate_payslip(emp: dict, output_dir: str | None = None, company: dict | N
     flow_data = emp.get('calc_flow')
     if flow_data and flow_data.get('steps'):
         flow_summary = (
-            f"Gross {emp['gross']:,.2f} - total deductions {total_deductions:,.2f} "
-            f"= net {emp['net']:,.2f} (ETB)"
+            f'Gross {emp["gross"]:,.2f} - total deductions {total_deductions:,.2f} = net {emp["net"]:,.2f} (ETB)'
         )
         elements.append(
             _paragraph(

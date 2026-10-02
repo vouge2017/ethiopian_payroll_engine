@@ -32,6 +32,7 @@ from payroll_engine.models import (
 @pytest.fixture
 def app():
     import os
+
     os.environ['FLASK_ENV'] = 'testing'
     app = create_app()
     app.config['TESTING'] = True

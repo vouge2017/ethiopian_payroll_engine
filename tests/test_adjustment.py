@@ -92,7 +92,7 @@ def _create_completed_run(app, company_id, user_id):
 
         ps = Payslip(
             payroll_run_id=run.id,
-                company_id=run.company_id,
+            company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=10000,
             tax=1325,

@@ -10,10 +10,12 @@ This test approves a payroll for an employee who HAS active assignments (so the
 engine is authoritative rather than the legacy bridge) and asserts the snapshot
 was captured, with the approved amounts.
 """
-from decimal import Decimal
+
 from datetime import date
+from decimal import Decimal
 
 import pytest
+
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, PayrollDraft, PayrollRun, User
 
@@ -59,9 +61,20 @@ def company_user_employee(ctx):
     return company, user, emp
 
 
-def _assign(company, emp, key, name, amount, classification, am_label=None,
-            calc_method='fixed', percent_of_net=None, percent_of_basic=None,
-            rate_per_unit=None, max_percent_of_net=None):
+def _assign(
+    company,
+    emp,
+    key,
+    name,
+    amount,
+    classification,
+    am_label=None,
+    calc_method='fixed',
+    percent_of_net=None,
+    percent_of_basic=None,
+    rate_per_unit=None,
+    max_percent_of_net=None,
+):
     """Create a company PayItemType + PayrollItemAssignment.
 
     For percent_of_net/percent_of_basic items, `amount` is the
@@ -107,12 +120,9 @@ def test_approval_snapshots_line_items(ctx, company_user_employee):
 
     # The employee HAS assignments, so process_payroll must take the engine
     # branch (not the legacy draft-figures bridge).
-    basic_item, _ = _assign(company, emp, 'basic_salary', 'Basic Salary',
-                            Decimal('10000'), 'earning', 'መሠሪያ ደምም')
-    house_item, _ = _assign(company, emp, 'housing', 'Housing Allowance',
-                            Decimal('3000'), 'earning', 'ቤት ክፍያ')
-    _assign(company, emp, 'court_order', 'Court Order',
-            Decimal('1000'), 'deduction', 'የውሳኔ ትዕዛዝ')
+    _basic_item, _ = _assign(company, emp, 'basic_salary', 'Basic Salary', Decimal('10000'), 'earning', 'መሠሪያ ደምም')
+    _house_item, _ = _assign(company, emp, 'housing', 'Housing Allowance', Decimal('3000'), 'earning', 'ቤት ክፍያ')
+    _assign(company, emp, 'court_order', 'Court Order', Decimal('1000'), 'deduction', 'የውሳኔ ትዕዛዝ')
 
     run = PayrollRun(
         company_id=company.id,
@@ -127,17 +137,19 @@ def test_approval_snapshots_line_items(ctx, company_user_employee):
     draft = PayrollDraft(
         payroll_run_id=run.id,
         company_id=company.id,
-        employee_data=[{
-            'id': emp.employee_id,
-            'name': emp.name,
-            'basic': 10000.0,
-            'allowances': 5000.0,
-            'gross': 15000.0,
-            'tax': 1500.0,
-            'pension_employee': 700.0,
-            'pension_employer': 1100.0,
-            'net': 12800.0,
-        }],
+        employee_data=[
+            {
+                'id': emp.employee_id,
+                'name': emp.name,
+                'basic': 10000.0,
+                'allowances': 5000.0,
+                'gross': 15000.0,
+                'tax': 1500.0,
+                'pension_employee': 700.0,
+                'pension_employer': 1100.0,
+                'net': 12800.0,
+            }
+        ],
     )
     db.session.add(draft)
     db.session.commit()
@@ -151,15 +163,12 @@ def test_approval_snapshots_line_items(ctx, company_user_employee):
     )
     assert result.success is True
 
-    payslip = Payslip.query.filter_by(
-        payroll_run_id=run.id, company_id=company.id
-    ).first()
+    payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).first()
     assert payslip is not None
 
     # The snapshot must exist -- this is what the lazy PDF renders.
     assert payslip.line_items is not None, (
-        'line_items must be snapshotted at approval; the payslip PDF renders '
-        'these instead of recomputing'
+        'line_items must be snapshotted at approval; the payslip PDF renders these instead of recomputing'
     )
     assert len(payslip.line_items) > 0
 
@@ -184,8 +193,7 @@ def test_approval_snapshots_line_items(ctx, company_user_employee):
 
     # Guard against the legacy bridge silently taking over.
     assert payslip.gross_salary == Decimal('13000'), (
-        'engine path should sum assignments (10000 + 3000), not the draft '
-        'figures (15000)'
+        'engine path should sum assignments (10000 + 3000), not the draft figures (15000)'
     )
 
 
@@ -200,8 +208,11 @@ def test_legacy_employee_has_no_line_items(ctx, company_user_employee):
     company, user, emp = company_user_employee
 
     run = PayrollRun(
-        company_id=company.id, period='2026-09', status='review',
-        run_date=date(2026, 9, 1), approved_by=user.id,
+        company_id=company.id,
+        period='2026-09',
+        status='review',
+        run_date=date(2026, 9, 1),
+        approved_by=user.id,
     )
     db.session.add(run)
     db.session.commit()
@@ -209,28 +220,36 @@ def test_legacy_employee_has_no_line_items(ctx, company_user_employee):
     draft = PayrollDraft(
         payroll_run_id=run.id,
         company_id=company.id,
-        employee_data=[{
-            'id': emp.employee_id, 'name': emp.name, 'basic': 10000.0,
-            'allowances': 2000.0, 'gross': 12000.0, 'tax': 1500.0,
-            'pension_employee': 700.0, 'pension_employer': 1100.0, 'net': 9800.0,
-        }],
+        employee_data=[
+            {
+                'id': emp.employee_id,
+                'name': emp.name,
+                'basic': 10000.0,
+                'allowances': 2000.0,
+                'gross': 12000.0,
+                'tax': 1500.0,
+                'pension_employee': 700.0,
+                'pension_employer': 1100.0,
+                'net': 9800.0,
+            }
+        ],
     )
     db.session.add(draft)
     db.session.commit()
 
     result = process_payroll(
-        run=run, company_id=company.id, user_id=user.id,
-        user_email=user.email or 'owner@test.com', request_ip='127.0.0.1',
+        run=run,
+        company_id=company.id,
+        user_id=user.id,
+        user_email=user.email or 'owner@test.com',
+        request_ip='127.0.0.1',
     )
     assert result.success is True
 
-    payslip = Payslip.query.filter_by(
-        payroll_run_id=run.id, company_id=company.id
-    ).first()
+    payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).first()
     assert payslip is not None
     assert payslip.line_items is None, (
-        'legacy path has no engine breakdown; the PDF falls back to the old '
-        'hardcoded rows by design'
+        'legacy path has no engine breakdown; the PDF falls back to the old hardcoded rows by design'
     )
     assert payslip.gross_salary == Decimal('12000'), 'legacy path uses draft figures'
 
@@ -247,63 +266,87 @@ def test_total_deductions_equals_sum_of_deduction_lines(ctx, company_user_employ
     double-subtract scenario where a deduction is applied
     twice."""
     from decimal import Decimal
-    from payroll_engine.models_payroll_elements import (
-        PayItemClassification,
-    )
-    from payroll_engine.services.payroll_service import process_payroll
+
     from payroll_engine.models import PayrollRun
+    from payroll_engine.services.payroll_service import process_payroll
 
     co, user, emp = company_user_employee
 
     # The employee must have assignments so the engine branch is taken.
     # Inline the same pattern as _assign in this file.
     from payroll_engine.models_payroll_elements import (
-        PayItemType, PayrollItemAssignment,
+        PayItemType,
+        PayrollItemAssignment,
     )
+
     for key, name, amount, classification, am_label in (
         ('basic_salary', 'Basic Salary', Decimal('10000'), 'earning', 'መሠሪያ ደምም'),
         ('court_order', 'Court Order', Decimal('1000'), 'deduction', 'የውሳኔ ትዕዛዝ'),
     ):
         item = PayItemType(
-            company_id=co.id, key=key, name_en=name,
-            name_am=am_label, classification=classification,
-            calculation_method='fixed', tax_treatment='taxable',
+            company_id=co.id,
+            key=key,
+            name_en=name,
+            name_am=am_label,
+            classification=classification,
+            calculation_method='fixed',
+            tax_treatment='taxable',
             is_system=False,
         )
-        db.session.add(item); db.session.flush()
+        db.session.add(item)
+        db.session.flush()
         a = PayrollItemAssignment(
-            company_id=co.id, employee_id=emp.id,
-            pay_item_type_id=item.id, fixed_amount=amount, is_active=True,
+            company_id=co.id,
+            employee_id=emp.id,
+            pay_item_type_id=item.id,
+            fixed_amount=amount,
+            is_active=True,
         )
-        db.session.add(a); db.session.flush()
+        db.session.add(a)
+        db.session.flush()
 
     run = PayrollRun(
-        company_id=co.id, period='2026-09',
-        status='review', run_date=__import__('datetime').date(2026, 9, 1),
+        company_id=co.id,
+        period='2026-09',
+        status='review',
+        run_date=__import__('datetime').date(2026, 9, 1),
         approved_by=user.id,
     )
-    db.session.add(run); db.session.commit()
+    db.session.add(run)
+    db.session.commit()
 
     # process_payroll requires a PayrollDraft to exist.
     from payroll_engine.models import PayrollDraft
+
     draft = PayrollDraft(
-        payroll_run_id=run.id, company_id=co.id,
-        employee_data=[{
-            'id': emp.employee_id, 'name': emp.name,
-            'basic': 10000.0, 'allowances': 0.0,
-            'gross': 15000.0, 'tax': 1500.0,
-            'pension_employee': 700.0,
-            'pension_employer': 1100.0, 'net': 11700.0,
-        }],
+        payroll_run_id=run.id,
+        company_id=co.id,
+        employee_data=[
+            {
+                'id': emp.employee_id,
+                'name': emp.name,
+                'basic': 10000.0,
+                'allowances': 0.0,
+                'gross': 15000.0,
+                'tax': 1500.0,
+                'pension_employee': 700.0,
+                'pension_employer': 1100.0,
+                'net': 11700.0,
+            }
+        ],
     )
-    db.session.add(draft); db.session.commit()
+    db.session.add(draft)
+    db.session.commit()
 
     result = process_payroll(
-        run=run, company_id=co.id, user_id=user.id,
-        user_email=user.email, request_ip='127.0.0.1',
+        run=run,
+        company_id=co.id,
+        user_id=user.id,
+        user_email=user.email,
+        request_ip='127.0.0.1',
     )
 
-    assert result.success, f"payroll must succeed: {result.message}"
+    assert result.success, f'payroll must succeed: {result.message}'
     # The payslip is stored via the payslips relationship.
     payslip = run.payslips[0] if run.payslips else None
     assert payslip is not None, 'payroll must produce a payslip'
@@ -312,24 +355,16 @@ def test_total_deductions_equals_sum_of_deduction_lines(ctx, company_user_employ
     # only — system items like pension/tax are in line_items but not
     # in deduction_details).
     deduction_details = payslip.deduction_details or []
-    detail_total = sum(
-        Decimal(str(d.get('amount', 0)))
-        for d in deduction_details if isinstance(d, dict)
-    )
+    detail_total = sum(Decimal(str(d.get('amount', 0))) for d in deduction_details if isinstance(d, dict))
 
     # line_items contains ALL items including system-managed ones.
     # Compare user-assigned deduction details against the
     # non-system deduction lines in line_items.
     line_items = payslip.line_items or []
     user_deduction_lines = [
-        li for li in line_items
-        if li.get('classification') == 'deduction'
-        and not li.get('is_system')
+        li for li in line_items if li.get('classification') == 'deduction' and not li.get('is_system')
     ]
-    sum_lines = sum(
-        Decimal(str(li.get('earned_amount', 0)))
-        for li in user_deduction_lines
-    )
+    sum_lines = sum(Decimal(str(li.get('earned_amount', 0))) for li in user_deduction_lines)
     assert abs(detail_total - sum_lines) < Decimal('0.01'), (
         f'deduction_details total ({detail_total}) must match '
         f'non-system deduction line items ({sum_lines}); '
@@ -360,18 +395,33 @@ def test_two_percent_of_net_deductions_lock_base(ctx, company_user_employee):
     db.session.commit()
 
     # basic_salary must be an assignment so the engine assembles gross
-    _assign(company, emp, 'basic_salary', 'Basic Salary',
-            Decimal('10000'), 'earning', am_label='መሠሪያ ደምም')
+    _assign(company, emp, 'basic_salary', 'Basic Salary', Decimal('10000'), 'earning', am_label='መሠሪያ ደምም')
 
     # Two percent_of_net deductions: 10% and 5% of net_before_deductions
-    _, a10 = _assign(company, emp, 'court_order_10', 'Court Order 10%',
-                     Decimal('10'), 'deduction', am_label='የውሳኔ ትዕዛዝ 10%',
-                     calc_method='percent_of_net', percent_of_net=Decimal('10'),
-                     max_percent_of_net=Decimal('50'))
-    _, a5 = _assign(company, emp, 'loan_repayment_5', 'Loan Repayment 5%',
-                    Decimal('5'), 'deduction', am_label='የልቤ እቀሻ 5%',
-                    calc_method='percent_of_net', percent_of_net=Decimal('5'),
-                    max_percent_of_net=Decimal('50'))
+    _, _a10 = _assign(
+        company,
+        emp,
+        'court_order_10',
+        'Court Order 10%',
+        Decimal('10'),
+        'deduction',
+        am_label='የውሳኔ ትዕዛዝ 10%',
+        calc_method='percent_of_net',
+        percent_of_net=Decimal('10'),
+        max_percent_of_net=Decimal('50'),
+    )
+    _, _a5 = _assign(
+        company,
+        emp,
+        'loan_repayment_5',
+        'Loan Repayment 5%',
+        Decimal('5'),
+        'deduction',
+        am_label='የልቤ እቀሻ 5%',
+        calc_method='percent_of_net',
+        percent_of_net=Decimal('5'),
+        max_percent_of_net=Decimal('50'),
+    )
 
     run = PayrollRun(
         company_id=company.id,
@@ -384,45 +434,50 @@ def test_two_percent_of_net_deductions_lock_base(ctx, company_user_employee):
 
     # process_payroll requires a PayrollDraft to exist.
     from payroll_engine.models import PayrollDraft
+
     # The draft's gross/tax/pension define net_before_deductions,
     # which is the percent_of_net base (= gross − income_tax − emp_pen).
     # Use non-zero values so the base is non-trivial.
     draft = PayrollDraft(
-        payroll_run_id=run.id, company_id=company.id,
-        employee_data=[{
-            'id': emp.employee_id, 'name': emp.name,
-            'basic': float(emp.basic_salary), 'allowances': float(emp.allowances),
-            'gross': 15000.0, 'tax': 1500.0, 'pension_employee': 700.0,
-            'pension_employer': 1100.0, 'net': 11700.0,
-        }],
+        payroll_run_id=run.id,
+        company_id=company.id,
+        employee_data=[
+            {
+                'id': emp.employee_id,
+                'name': emp.name,
+                'basic': float(emp.basic_salary),
+                'allowances': float(emp.allowances),
+                'gross': 15000.0,
+                'tax': 1500.0,
+                'pension_employee': 700.0,
+                'pension_employer': 1100.0,
+                'net': 11700.0,
+            }
+        ],
     )
     db.session.add(draft)
     db.session.commit()
 
-    process_payroll(run=run, company_id=company.id, user_id=user.id,
-                    user_email=user.email or 'owner@test.com',
-                    request_ip='127.0.0.1')
+    process_payroll(
+        run=run,
+        company_id=company.id,
+        user_id=user.id,
+        user_email=user.email or 'owner@test.com',
+        request_ip='127.0.0.1',
+    )
 
     # Reload to get fresh data from the DB
     db.session.refresh(payslip := run.payslips[0])
     deduction_details = payslip.deduction_details or []
-    detail_total = sum(
-        Decimal(str(d.get('amount', 0)))
-        for d in deduction_details if isinstance(d, dict)
-    )
+    detail_total = sum(Decimal(str(d.get('amount', 0))) for d in deduction_details if isinstance(d, dict))
 
     # Each percent_of_net deduction is computed against the same base.
     # If base = B, then: deduction1 = B * 10/100, deduction2 = B * 5/100
     # total = B * 15/100 = deduction1 + deduction2
-    assert len(deduction_details) >= 2, (
-        f'Expected at least 2 percent_of_net deductions, got {len(deduction_details)}'
-    )
+    assert len(deduction_details) >= 2, f'Expected at least 2 percent_of_net deductions, got {len(deduction_details)}'
 
     # Verify the amounts are proportional to their percentages
-    amounts = sorted(
-        Decimal(str(d.get('amount', 0)))
-        for d in deduction_details if isinstance(d, dict)
-    )
+    amounts = sorted(Decimal(str(d.get('amount', 0))) for d in deduction_details if isinstance(d, dict))
     # The smaller deduction should be exactly 1/2 the larger
     # (since 5% is half of 10%)
     assert abs(amounts[0] * 2 - amounts[1]) < Decimal('0.01'), (
@@ -430,6 +485,5 @@ def test_two_percent_of_net_deductions_lock_base(ctx, company_user_employee):
     )
     # Total must equal the sum
     assert abs(detail_total - (amounts[0] + amounts[1])) < Decimal('0.01'), (
-        f'Total deductions ({detail_total}) must equal sum of individual '
-        f'deductions ({amounts[0] + amounts[1]})'
+        f'Total deductions ({detail_total}) must equal sum of individual deductions ({amounts[0] + amounts[1]})'
     )

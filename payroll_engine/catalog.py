@@ -16,13 +16,10 @@ catalog seeding + flask migrate-pay-items CLI).
 from decimal import Decimal
 
 from payroll_engine.constants import (
-    ALLOWANCE_ITEM_KEYS,
     COMPANY_TEMPLATE_ITEM_KEYS,
-    DEDUCTION_ITEM_KEYS,
     SYSTEM_ITEM_KEYS,
 )
-from payroll_engine.models import db, PayItemClassification, PayItemCalcMethod, PayItemTaxTreatment, PayItemType
-
+from payroll_engine.models import PayItemCalcMethod, PayItemClassification, PayItemTaxTreatment, PayItemType, db
 
 Q = Decimal('0.01')
 
@@ -45,7 +42,7 @@ SYSTEM_ITEMS: list[dict] = [
         'tax_treatment': PayItemTaxTreatment.TAXABLE,
         # FIXED items store their default amount in rate (paid per unit or flat);
         # basic salary is rate × 1 unit by default (units_field = 'working_days').
-        'rate': Decimal('0'),          # placeholder; real amount set per-company
+        'rate': Decimal('0'),  # placeholder; real amount set per-company
         'percent_of_item_key': None,
         'exempt_cap_amount': None,
         'exempt_cap_percent': None,
@@ -161,7 +158,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
         # of ETB 2,200 or 25% of basic. Was hardcoded in add_allowance as
         # `min(Decimal('2200'), emp.basic_salary * Decimal('0.25'))`.
         'tax_treatment': PayItemTaxTreatment.PARTIAL,
-        'rate': Decimal('0'),     # placeholder; admin sets per-company
+        'rate': Decimal('0'),  # placeholder; admin sets per-company
         'percent_of_item_key': None,
         'exempt_cap_amount': Decimal('2200'),
         'exempt_cap_percent': Decimal('25'),

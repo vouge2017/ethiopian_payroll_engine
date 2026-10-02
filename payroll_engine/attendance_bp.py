@@ -228,12 +228,16 @@ def attendance_import():
                     continue
 
                 # Check for existing record
-                existing = Attendance.query.filter_by(employee_id=emp.id, company_id=emp.company_id, date=att_date).first()
+                existing = Attendance.query.filter_by(
+                    employee_id=emp.id, company_id=emp.company_id, date=att_date
+                ).first()
 
                 if existing:
                     existing.hours_worked = hours
                 else:
-                    record = Attendance(employee_id=emp.id, company_id=emp.company_id, date=att_date, hours_worked=hours)
+                    record = Attendance(
+                        employee_id=emp.id, company_id=emp.company_id, date=att_date, hours_worked=hours
+                    )
                     db.session.add(record)
 
                 imported += 1
@@ -324,8 +328,8 @@ def attendance_delete(att_id):
 @role_required('owner', 'accountant')
 def mark_absent():
     """Mark an employee absent for one or more days (creates unpaid leave record)."""
-    from payroll_engine.models import Leave
     from payroll_engine.leave import LeaveType
+    from payroll_engine.models import Leave
 
     company_id = current_user.company_id
 
@@ -377,7 +381,10 @@ def mark_absent():
     db.session.add(leave)
     db.session.commit()
 
-    flash(f'Marked {emp.name} absent for {days} day(s) ({start_date} to {end_date}). Pay will be reduced in the next payroll run.', 'success')
+    flash(
+        f'Marked {emp.name} absent for {days} day(s) ({start_date} to {end_date}). Pay will be reduced in the next payroll run.',
+        'success',
+    )
     return redirect(url_for('attendance.mark_absent'))
 
 

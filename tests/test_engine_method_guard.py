@@ -9,10 +9,12 @@ bug. These tests pin the guard from both sides:
   * a mismatch resolves to the POPULATED column, not the type's default;
   * a genuinely ambiguous assignment (two value columns) raises.
 """
+
 from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from payroll_engine import create_app, db
 
 
@@ -52,8 +54,14 @@ def _company():
     u = User(phone='0911000001', company_id=co.id, role='owner')
     u.set_password('Test1234!')
     db.session.add(u)
-    e = Employee(employee_id='EMP001', name='Guard', basic_salary=Decimal('20000'),
-                allowances=Decimal('0'), company_id=co.id, start_date=date(2020, 1, 1))
+    e = Employee(
+        employee_id='EMP001',
+        name='Guard',
+        basic_salary=Decimal('20000'),
+        allowances=Decimal('0'),
+        company_id=co.id,
+        start_date=date(2020, 1, 1),
+    )
     db.session.add(e)
     db.session.commit()
     return co, u, e
@@ -70,29 +78,35 @@ def test_percent_of_net_on_fixed_type_deducts_not_zeroes(ctx):
     co, _u, emp = _company()
 
     item = PayItemType.query.filter_by(company_id=co.id, key='cost_sharing').first()
-    assert item.calculation_method == 'fixed', (
-        'precondition: the template ships as fixed, which is what armed the bug'
-    )
+    assert item.calculation_method == 'fixed', 'precondition: the template ships as fixed, which is what armed the bug'
 
-    basic = PayItemType.query.filter_by(
-        company_id=None, key='basic_salary'
-    ).first()
-    db.session.add(PayrollItemAssignment(
-        company_id=co.id, employee_id=emp.id, pay_item_type_id=basic.id,
-        fixed_amount=Decimal('20000'), is_active=True,
-    ))
+    basic = PayItemType.query.filter_by(company_id=None, key='basic_salary').first()
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=co.id,
+            employee_id=emp.id,
+            pay_item_type_id=basic.id,
+            fixed_amount=Decimal('20000'),
+            is_active=True,
+        )
+    )
     # percent_of_net on a 'fixed' type -- the writer mistake.
-    db.session.add(PayrollItemAssignment(
-        company_id=co.id, employee_id=emp.id, pay_item_type_id=item.id,
-        percent_of_net=Decimal('25'), is_active=True,
-    ))
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=co.id,
+            employee_id=emp.id,
+            pay_item_type_id=item.id,
+            percent_of_net=Decimal('25'),
+            is_active=True,
+        )
+    )
     db.session.commit()
 
     r = calculate_payroll_from_assignments(emp, co.id, date(2026, 9, 1))
 
     assert r['total_deductions'] > Decimal('0'), (
         'a percent_of_net assignment on a fixed type deducted '
-        f"{r['total_deductions']} -- the overpayment guard is not working"
+        f'{r["total_deductions"]} -- the overpayment guard is not working'
     )
     assert len(r['deduction_details']) == 1
     assert r['deduction_details'][0]['type'] == 'cost_sharing'
@@ -110,14 +124,25 @@ def test_two_value_columns_raises_loudly(ctx):
     item = PayItemType.query.filter_by(company_id=co.id, key='cost_sharing').first()
     basic = PayItemType.query.filter_by(company_id=None, key='basic_salary').first()
 
-    db.session.add(PayrollItemAssignment(
-        company_id=co.id, employee_id=emp.id, pay_item_type_id=basic.id,
-        fixed_amount=Decimal('20000'), is_active=True,
-    ))
-    db.session.add(PayrollItemAssignment(
-        company_id=co.id, employee_id=emp.id, pay_item_type_id=item.id,
-        fixed_amount=Decimal('500'), percent_of_net=Decimal('25'), is_active=True,
-    ))
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=co.id,
+            employee_id=emp.id,
+            pay_item_type_id=basic.id,
+            fixed_amount=Decimal('20000'),
+            is_active=True,
+        )
+    )
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=co.id,
+            employee_id=emp.id,
+            pay_item_type_id=item.id,
+            fixed_amount=Decimal('500'),
+            percent_of_net=Decimal('25'),
+            is_active=True,
+        )
+    )
     db.session.commit()
 
     with pytest.raises(ValueError) as exc:
@@ -139,14 +164,24 @@ def test_fixed_type_with_fixed_amount_still_uses_fixed(ctx):
     item = PayItemType.query.filter_by(company_id=co.id, key='loan').first()
     basic = PayItemType.query.filter_by(company_id=None, key='basic_salary').first()
 
-    db.session.add(PayrollItemAssignment(
-        company_id=co.id, employee_id=emp.id, pay_item_type_id=basic.id,
-        fixed_amount=Decimal('20000'), is_active=True,
-    ))
-    db.session.add(PayrollItemAssignment(
-        company_id=co.id, employee_id=emp.id, pay_item_type_id=item.id,
-        fixed_amount=Decimal('1000'), is_active=True,
-    ))
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=co.id,
+            employee_id=emp.id,
+            pay_item_type_id=basic.id,
+            fixed_amount=Decimal('20000'),
+            is_active=True,
+        )
+    )
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=co.id,
+            employee_id=emp.id,
+            pay_item_type_id=item.id,
+            fixed_amount=Decimal('1000'),
+            is_active=True,
+        )
+    )
     db.session.commit()
 
     r = calculate_payroll_from_assignments(emp, co.id, date(2026, 9, 1))

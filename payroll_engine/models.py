@@ -10,14 +10,14 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from payroll_engine import db
-
 # Encryption key for sensitive fields (bank_account, tin, fayda_fin)
 # In production: set DB_ENCRYPTION_KEY env var (32-byte hex or base64).
 # Losing this key makes all encrypted fields unrecoverable — store it in a
 # secret manager and keep an offline escrow copy.
 # In dev/test: falls back to a deterministic key (NOT secure).
 import logging as _logging
+
+from payroll_engine import db
 
 _ENCRYPTION_KEY = os.environ.get('DB_ENCRYPTION_KEY')
 _IS_PRODUCTION = os.environ.get('FLASK_ENV') == 'production'
@@ -35,16 +35,15 @@ try:
     from sqlalchemy_utils.types.encrypted.encrypted_type import AesEngine
 
     _HAS_ENCRYPTION = True
-except ImportError:
+except ImportError as exc:
     if _IS_PRODUCTION:
         raise RuntimeError(
             'sqlalchemy-utils is required for database encryption in production. '
             'Install it with: pip install sqlalchemy-utils'
-        )
+        ) from exc
     _HAS_ENCRYPTION = False
     _logging.getLogger('payroll_engine').warning(
-        'sqlalchemy-utils not installed — sensitive columns will be PLAINTEXT. '
-        'Install it before storing real data.'
+        'sqlalchemy-utils not installed — sensitive columns will be PLAINTEXT. Install it before storing real data.'
     )
 
 
@@ -672,7 +671,9 @@ class Employee(db.Model):
         fayda_fin = db.Column(db.String(20), nullable=True)  # Fayda Digital ID — 12 digits
     bank_or_telebirr = db.Column(db.String(100))  # Legacy: 'telebirr:0912345678' or 'bank:cbe'
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)  # Link to User account
+    user_id = db.Column(
+        db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True
+    )  # Link to User account
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     # Soft delete — employee is deactivated, not removed
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
@@ -1367,7 +1368,8 @@ class EmployeeDeduction(db.Model):
         db.CheckConstraint("amount_mode IN ('fixed', 'percentage')", name='ck_deduction_amount_mode'),
         db.CheckConstraint("tracking_mode IN ('declining', 'date_bounded')", name='ck_deduction_tracking_mode'),
         db.CheckConstraint(
-            "deduction_type IN ('cost_sharing', 'court_order', 'penalty', 'loan', 'advance', 'other')", name='ck_deduction_type'
+            "deduction_type IN ('cost_sharing', 'court_order', 'penalty', 'loan', 'advance', 'other')",
+            name='ck_deduction_type',
         ),
     )
 
@@ -1380,7 +1382,9 @@ class AuditLog(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)  # Null if system action
+    user_id = db.Column(
+        db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True
+    )  # Null if system action
     action = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
     details = db.Column(db.JSON)
@@ -1923,7 +1927,9 @@ class Holiday(db.Model):
     __tablename__ = 'holiday'
 
     id = db.Column(db.Integer, primary_key=True)
-    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True)  # None = national
+    company_id = db.Column(
+        db.Integer, db.ForeignKey('company.id', ondelete='SET NULL'), nullable=True
+    )  # None = national
     name = db.Column(db.String(100), nullable=False)
     name_am = db.Column(db.String(200), nullable=True)  # Amharic name
     holiday_date = db.Column(db.Date, nullable=False)
@@ -1951,7 +1957,9 @@ class PushSubscription(db.Model):
     endpoint = db.Column(db.String(500), nullable=False, unique=True, index=True)
     subscription_json = db.Column(db.JSON, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
-    user = db.relationship('User', backref=db.backref('push_subscriptions', lazy='dynamic', cascade='all, delete-orphan'))
+    user = db.relationship(
+        'User', backref=db.backref('push_subscriptions', lazy='dynamic', cascade='all, delete-orphan')
+    )
 
     def __repr__(self):
         return f'<PushSubscription user={self.user_id} endpoint={self.endpoint[:50]}>'
@@ -1967,9 +1975,7 @@ class BillingPayment(db.Model):
     """
 
     __tablename__ = 'billing_payment'
-    __table_args__ = (
-        db.Index('ix_billing_payment_company_status', 'company_id', 'status'),
-    )
+    __table_args__ = (db.Index('ix_billing_payment_company_status', 'company_id', 'status'),)
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
@@ -1999,14 +2005,21 @@ class BillingPayment(db.Model):
 # Phase 1 definition (the one with lock-in compliance fields).
 # ===========================================================================
 
-from payroll_engine.models_payroll_elements import (  # noqa: E402,F811
-    PayItemCalcMethod,
-    PayItemClassification,
-    PayItemTaxTreatment,
-    PayItemType,
-    PayrollItemAssignment,
+from payroll_engine.models_payroll_elements import (
+    PayItemCalcMethod as PayItemCalcMethod,
 )
-
+from payroll_engine.models_payroll_elements import (
+    PayItemClassification as PayItemClassification,
+)
+from payroll_engine.models_payroll_elements import (
+    PayItemTaxTreatment as PayItemTaxTreatment,
+)
+from payroll_engine.models_payroll_elements import (
+    PayItemType as PayItemType,
+)
+from payroll_engine.models_payroll_elements import (
+    PayrollItemAssignment as PayrollItemAssignment,
+)
 
 
 class SpreadsheetInput(db.Model):

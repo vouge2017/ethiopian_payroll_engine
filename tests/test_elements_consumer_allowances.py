@@ -50,8 +50,10 @@ def app():
         db.session.flush()
         migrate_pay_items()
         emp = Employee(
-            employee_id='EMP001', name='Smoke Tester',
-            basic_salary=Decimal('10000'), company_id=co.id,
+            employee_id='EMP001',
+            name='Smoke Tester',
+            basic_salary=Decimal('10000'),
+            company_id=co.id,
         )
         db.session.add(emp)
         u = User(phone='0911111111', role='owner', company_id=co.id)
@@ -163,9 +165,12 @@ def test_add_deduction_percentage_creates_assignment(app, ctx):
     ctx.client.post(
         f'/employees/{ctx.emp.id}/deductions/add',
         data={
-            'deduction_type': 'court_order', 'label': 'Case 42',
-            'amount_mode': 'percentage', 'amount': '60',
-            'tracking_mode': 'declining', 'total_to_recover': '1000',
+            'deduction_type': 'court_order',
+            'label': 'Case 42',
+            'amount_mode': 'percentage',
+            'amount': '60',
+            'tracking_mode': 'declining',
+            'total_to_recover': '1000',
             'start_date': date.today().isoformat(),
         },
         follow_redirects=True,
@@ -182,9 +187,12 @@ def test_add_deduction_fixed_uses_fixed_amount(app, ctx):
     ctx.client.post(
         f'/employees/{ctx.emp.id}/deductions/add',
         data={
-            'deduction_type': 'court_order', 'label': 'Case 43',
-            'amount_mode': 'fixed', 'amount': '500',
-            'tracking_mode': 'declining', 'total_to_recover': '1000',
+            'deduction_type': 'court_order',
+            'label': 'Case 43',
+            'amount_mode': 'fixed',
+            'amount': '500',
+            'tracking_mode': 'declining',
+            'total_to_recover': '1000',
             'start_date': date.today().isoformat(),
         },
         follow_redirects=True,
@@ -199,9 +207,12 @@ def test_add_deduction_persists_document_trail(app, ctx):
     ctx.client.post(
         f'/employees/{ctx.emp.id}/deductions/add',
         data={
-            'deduction_type': 'court_order', 'label': 'Case 44',
-            'amount_mode': 'fixed', 'amount': '500',
-            'tracking_mode': 'declining', 'total_to_recover': '1000',
+            'deduction_type': 'court_order',
+            'label': 'Case 44',
+            'amount_mode': 'fixed',
+            'amount': '500',
+            'tracking_mode': 'declining',
+            'total_to_recover': '1000',
             'start_date': date.today().isoformat(),
             'reference_number': 'SC-2026-99',
         },
@@ -217,9 +228,12 @@ def test_add_deduction_writes_no_legacy_row(app, ctx):
     ctx.client.post(
         f'/employees/{ctx.emp.id}/deductions/add',
         data={
-            'deduction_type': 'court_order', 'label': 'Case 45',
-            'amount_mode': 'fixed', 'amount': '500',
-            'tracking_mode': 'declining', 'start_date': date.today().isoformat(),
+            'deduction_type': 'court_order',
+            'label': 'Case 45',
+            'amount_mode': 'fixed',
+            'amount': '500',
+            'tracking_mode': 'declining',
+            'start_date': date.today().isoformat(),
         },
         follow_redirects=True,
     )
@@ -283,9 +297,7 @@ def test_engine_clamps_percent_of_net_to_ceiling(app, ctx):
     assert item.max_percent_of_net == Decimal('50')
 
     a = _make_assignment(app, item, '90')
-    amount = _calculate_item_amount(
-        a, ctx.emp, date.today(), None, Decimal('1000')
-    )
+    amount = _calculate_item_amount(a, ctx.emp, date.today(), None, Decimal('1000'))
     # 90% would be 900; the 50% ceiling caps it at 500.
     assert amount == Decimal('500.00')
 
@@ -295,9 +307,7 @@ def test_engine_does_not_clamp_below_ceiling(app, ctx):
 
     item = PayItemType.query.filter_by(company_id=ctx.co.id, key='court_order').one()
     a = _make_assignment(app, item, '20')
-    amount = _calculate_item_amount(
-        a, ctx.emp, date.today(), None, Decimal('1000')
-    )
+    amount = _calculate_item_amount(a, ctx.emp, date.today(), None, Decimal('1000'))
     assert amount == Decimal('200.00')
 
 
@@ -309,7 +319,5 @@ def test_engine_ignores_ceiling_when_null(app, ctx):
     assert item.max_percent_of_net is None
 
     a = _make_assignment(app, item, '90')
-    amount = _calculate_item_amount(
-        a, ctx.emp, date.today(), None, Decimal('1000')
-    )
+    amount = _calculate_item_amount(a, ctx.emp, date.today(), None, Decimal('1000'))
     assert amount == Decimal('900.00')

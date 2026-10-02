@@ -1,8 +1,9 @@
 import logging
 import os
 import uuid
-import click
 from datetime import UTC, date, datetime, timedelta
+
+import click
 
 logger = logging.getLogger('payroll_engine')
 
@@ -115,6 +116,7 @@ def create_app():
         app.config.from_object(StagingConfig())
     elif env == 'testing':
         from config import TestingConfig
+
         app.config.from_object(TestingConfig())
     else:
         from config import _env_bool
@@ -233,9 +235,9 @@ def create_app():
         FinalSettlement,
         Leave,
         OvertimeEntry,
+        PayItemType,
         PayrollDraft,
         PayrollItemAssignment,
-        PayItemType,
         PayrollRun,
         Payslip,
         TenantQuery,
@@ -458,8 +460,8 @@ def create_app():
                     "'self'",
                     'https://cdn.jsdelivr.net',
                     'https://fonts.gstatic.com',
-                    "https://fonts.googleapis.com",
-                    "https://fonts.gstatic.com",
+                    'https://fonts.googleapis.com',
+                    'https://fonts.gstatic.com',
                 ],
                 'img-src': "'self' data:",
                 'connect-src': [
@@ -473,13 +475,11 @@ def create_app():
 
     @app.route('/favicon.ico')
     def favicon():
-        from flask import send_from_directory
         import os
-        return send_from_directory(
-            os.path.join(app.root_path, 'static'),
-            'favicon.ico',
-            mimetype='image/x-icon'
-        )
+
+        from flask import send_from_directory
+
+        return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/x-icon')
 
     from .main import main as main_blueprint
 
@@ -531,6 +531,7 @@ def create_app():
 
     # Diff Check: upload old spreadsheet, auto-highlight where our math differs from their manual numbers
     from .diff_check import diff_bp
+
     app.register_blueprint(diff_bp, url_prefix='/diff')
     csrf.exempt(diff_bp)
 
@@ -561,11 +562,15 @@ def create_app():
 
     @app.cli.command('migrate-pay-items')
     @click.option(
-        '--dry-run', is_flag=True, default=False,
+        '--dry-run',
+        is_flag=True,
+        default=False,
         help='Report what would be created per company without writing.',
     )
     @click.option(
-        '--catalog-only', is_flag=True, default=False,
+        '--catalog-only',
+        is_flag=True,
+        default=False,
         help='Only seed the per-company PayItemType catalog; do not backfill rows.',
     )
     def migrate_pay_items_cmd(dry_run: bool, catalog_only: bool) -> None:
@@ -584,8 +589,8 @@ def create_app():
 
         --dry-run prints per-company counts and writes nothing.
         """
-        from payroll_engine.catalog import migrate_pay_items
         from payroll_engine.backfill import backfill_all, verify_basic_present
+        from payroll_engine.catalog import migrate_pay_items
 
         counts = migrate_pay_items()
         print(
@@ -603,9 +608,7 @@ def create_app():
         tot_basic = tot_allow = tot_ded = 0
         for r in results:
             if r.get('error'):
-                print(
-                    f'  company {r.get("company_id")}: ROLLED BACK - {r["error"]}'
-                )
+                print(f'  company {r.get("company_id")}: ROLLED BACK - {r["error"]}')
                 continue
             print(
                 f'  company {r["company_id"]}: {r["employees"]} employees | '

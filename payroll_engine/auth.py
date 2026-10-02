@@ -123,9 +123,7 @@ def login():
                 )
                 db.session.commit()
             else:
-                current_app.logger.warning(
-                    'Login failed for unknown identifier (%s)', identifier
-                )
+                current_app.logger.warning('Login failed for unknown identifier (%s)', identifier)
 
             if is_locked:
                 minutes = max(1, remaining // 60)
@@ -208,6 +206,7 @@ def change_password():
 
         # Invalidate current session and log out, forcing re-authentication
         from flask_login import logout_user
+
         logout_user()
         session.clear()
 

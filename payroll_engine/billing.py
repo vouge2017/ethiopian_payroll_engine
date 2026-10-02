@@ -24,7 +24,7 @@ The request gate (see enforce_billing_gate) turns these into:
 import os
 from datetime import date, datetime, timedelta
 
-from flask import g, jsonify, redirect, request, url_for, flash
+from flask import flash, g, jsonify, redirect, request, url_for
 from flask_login import current_user
 
 from payroll_engine import db
@@ -60,12 +60,19 @@ ALWAYS_EXEMPT = {
     'static',
     'health',
     # auth
-    'auth.login', 'auth.logout', 'auth.register',
-    'auth.forgot_password', 'auth.reset_password',
-    'auth.google_login', 'auth.google_callback', 'auth.google_register',
+    'auth.login',
+    'auth.logout',
+    'auth.register',
+    'auth.forgot_password',
+    'auth.reset_password',
+    'auth.google_login',
+    'auth.google_callback',
+    'auth.google_register',
     'auth.set_language',
     # billing self-service
-    'billing.view', 'billing.submit_payment', 'billing.blocked',
+    'billing.view',
+    'billing.submit_payment',
+    'billing.blocked',
 }
 
 
@@ -118,9 +125,7 @@ def employee_count(company_id):
     """Count active (non-deleted) employees for tier capping."""
     from payroll_engine.models import Employee
 
-    return (
-        Employee.query.filter_by(company_id=company_id, is_deleted=False).count()
-    )
+    return Employee.query.filter_by(company_id=company_id, is_deleted=False).count()
 
 
 def check_employee_slot(company):
@@ -129,8 +134,8 @@ def check_employee_slot(company):
     used = employee_count(company.id)
     if used >= plan['max_employees']:
         return False, (
-            f"Your {plan['name']} plan allows up to {plan['max_employees']} employees "
-            f"(you have {used}). Upgrade your plan on the Billing page to add more."
+            f'Your {plan["name"]} plan allows up to {plan["max_employees"]} employees '
+            f'(you have {used}). Upgrade your plan on the Billing page to add more.'
         )
     return True, None
 
@@ -177,8 +182,7 @@ def enforce_billing_gate():
         if request.path.startswith('/api/'):
             return jsonify({'error': 'Payment overdue — read-only mode.', 'billing_status': status}), 402
         flash(
-            'Your payment is overdue. The account is read-only until you settle '
-            'the invoice on the Billing page.',
+            'Your payment is overdue. The account is read-only until you settle the invoice on the Billing page.',
             'warning',
         )
         return redirect(url_for('billing.view'))

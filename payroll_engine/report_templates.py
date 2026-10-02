@@ -47,8 +47,18 @@ COLUMN_LIBRARY = [
     # other_taxable trio, which is kept only for stored templates that still
     # reference those keys (see _legacy_allowance_total).
     {'key': 'pay_item_housing', 'label': 'Housing Allowance', 'data_path': '_pay_item:housing', 'group': 'salary'},
-    {'key': 'pay_item_transport', 'label': 'Transport Allowance', 'data_path': '_pay_item:transport', 'group': 'salary'},
-    {'key': 'pay_item_taxable', 'label': 'Taxable Benefits (all)', 'data_path': '_pay_item:taxable:taxable', 'group': 'salary'},
+    {
+        'key': 'pay_item_transport',
+        'label': 'Transport Allowance',
+        'data_path': '_pay_item:transport',
+        'group': 'salary',
+    },
+    {
+        'key': 'pay_item_taxable',
+        'label': 'Taxable Benefits (all)',
+        'data_path': '_pay_item:taxable:taxable',
+        'group': 'salary',
+    },
     {'key': 'total_taxable', 'label': 'Total Taxable', 'data_path': 'taxable', 'group': 'tax'},
     {'key': 'tax_withheld', 'label': 'Tax withheld', 'data_path': 'tax', 'group': 'tax'},
     # Employee info
@@ -330,9 +340,7 @@ def _pay_item_amount(payslip, key, mode=None):
         try:
             from payroll_engine.models_payroll_elements import PayItemType
 
-            item = PayItemType.query.filter_by(
-                company_id=payslip.company_id, key=key
-            ).first()
+            item = PayItemType.query.filter_by(company_id=payslip.company_id, key=key).first()
             if item is None or item.tax_treatment != 'taxable':
                 return 0
         except Exception:
@@ -411,7 +419,7 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
     #               type row, so this is resolved via PayItemType, not the
     #               snapshot)
     if data_path.startswith('_pay_item:'):
-        spec = data_path[len('_pay_item:'):]
+        spec = data_path[len('_pay_item:') :]
         key, _, mode = spec.partition(':')
         return _pay_item_amount(payslip, key, mode or None)
 

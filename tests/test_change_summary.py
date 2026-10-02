@@ -45,8 +45,8 @@ def _make_payslip(emp_id, gross, tax=0, pension_emp=0, pension_empr=0, net=None,
 
 def _mock_employee_query(mock_models, emp_map):
     """Set up Employee.query.filter_by mock for change_summary tests."""
-    mock_models.Employee.query.filter_by.side_effect = lambda **kwargs: (
-        MagicMock(first=lambda: emp_map.get(kwargs.get('id')))
+    mock_models.Employee.query.filter_by.side_effect = lambda **kwargs: MagicMock(
+        first=lambda: emp_map.get(kwargs.get('id'))
     )
 
 
@@ -133,8 +133,8 @@ class TestFirstPayroll:
 
         emp_map = {1: emp1, 2: emp2}
         mock_db.session.get.side_effect = lambda model, id: emp_map.get(id)
-        mock_models.Employee.query.filter_by.side_effect = lambda **kwargs: (
-            MagicMock(first=lambda: emp_map.get(kwargs.get('id')))
+        mock_models.Employee.query.filter_by.side_effect = lambda **kwargs: MagicMock(
+            first=lambda: emp_map.get(kwargs.get('id'))
         )
 
         result = _build_summary(current_run, None, [ps1, ps2], 1, mock_db, mock_models)

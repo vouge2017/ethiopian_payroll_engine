@@ -30,10 +30,9 @@ from payroll_engine.models import (
     Employee,
     PayrollDraft,
     PayrollRun,
+    PayrollValidationResult,
     Payslip,
     PayslipGenerationJob,
-    PayrollValidationResult,
-    TenantQuery,
     User,
 )
 
@@ -65,8 +64,9 @@ def two_companies(ctx):
         u = User(phone=phone, company_id=c.id, role='owner')
         u.set_password('testpass123')
         db.session.add(u)
-        e = Employee(employee_id=f'E-{name[:2]}', name=f'Emp {name}', basic_salary=10000,
-                     allowances=1000, company_id=c.id)
+        e = Employee(
+            employee_id=f'E-{name[:2]}', name=f'Emp {name}', basic_salary=10000, allowances=1000, company_id=c.id
+        )
         db.session.add(e)
         db.session.commit()
         out[name[0]] = {'company': c, 'user': u, 'employee': e}
@@ -74,8 +74,7 @@ def two_companies(ctx):
 
 
 def _make_run(company, status='review'):
-    r = PayrollRun(company_id=company.id, run_date=datetime.now(UTC).date(),
-                   status=status, period='2018-10')
+    r = PayrollRun(company_id=company.id, run_date=datetime.now(UTC).date(), status=status, period='2018-10')
     db.session.add(r)
     db.session.flush()
     return r
@@ -85,15 +84,19 @@ def _make_run(company, status='review'):
 # A2 — BLOCK gate must actually stop approval
 # ---------------------------------------------------------------
 
+
 def test_unresolved_block_is_detected(ctx, two_companies):
     """BLOCK with overridden=False must appear as an unresolved block."""
     run = _make_run(two_companies['A']['company'])
-    db.session.add(PayrollValidationResult(
-        payroll_run_id=run.id, rule_code='NEG_NET', severity='BLOCK',
-        message='net pay below zero', overridden=False))
+    db.session.add(
+        PayrollValidationResult(
+            payroll_run_id=run.id, rule_code='NEG_NET', severity='BLOCK', message='net pay below zero', overridden=False
+        )
+    )
     db.session.commit()
 
     from payroll_engine.services.payroll_service import apply_flag_overrides
+
     blocks = apply_flag_overrides(run.id, {})
     assert len(blocks) == 1
     assert blocks[0].rule_code == 'NEG_NET'
@@ -114,6 +117,7 @@ def test_null_override_block_is_detected(ctx, two_companies):
     db.session.commit()
 
     from payroll_engine.services.payroll_service import apply_flag_overrides
+
     blocks = apply_flag_overrides(run.id, {})
     assert len(blocks) == 1
 
@@ -121,12 +125,20 @@ def test_null_override_block_is_detected(ctx, two_companies):
 def test_overridden_block_passes_gate(ctx, two_companies):
     """BLOCK with overridden=True is resolved and does NOT block."""
     run = _make_run(two_companies['A']['company'])
-    db.session.add(PayrollValidationResult(
-        payroll_run_id=run.id, rule_code='NEG_NET', severity='BLOCK',
-        message='net below zero', overridden=True, override_reason='signed waiver'))
+    db.session.add(
+        PayrollValidationResult(
+            payroll_run_id=run.id,
+            rule_code='NEG_NET',
+            severity='BLOCK',
+            message='net below zero',
+            overridden=True,
+            override_reason='signed waiver',
+        )
+    )
     db.session.commit()
 
     from payroll_engine.services.payroll_service import apply_flag_overrides
+
     assert apply_flag_overrides(run.id, {}) == []
 
 
@@ -134,16 +146,32 @@ def test_overridden_block_passes_gate(ctx, two_companies):
 # B1 — reprocessing a finished run is rejected
 # ---------------------------------------------------------------
 
+
 @pytest.mark.parametrize('status', ['completed', 'locked', 'processing'])
 def test_finished_run_cannot_be_reprocessed(ctx, two_companies, status):
     alpha = two_companies['A']
     run = _make_run(alpha['company'], status=status)
-    db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=alpha['company'].id,
-                                employee_data=[{'id': 'E-Al', 'name': 'x', 'gross': 1, 'tax': 0,
-                                                'pension_employee': 0, 'pension_employer': 0, 'net': 1}]))
+    db.session.add(
+        PayrollDraft(
+            payroll_run_id=run.id,
+            company_id=alpha['company'].id,
+            employee_data=[
+                {
+                    'id': 'E-Al',
+                    'name': 'x',
+                    'gross': 1,
+                    'tax': 0,
+                    'pension_employee': 0,
+                    'pension_employer': 0,
+                    'net': 1,
+                }
+            ],
+        )
+    )
     db.session.commit()
 
     from payroll_engine.services.payroll_service import process_payroll
+
     result = process_payroll(run, alpha['company'].id, alpha['user'].id, 'a@x.y', '127.0.0.1')
 
     assert result.success is False
@@ -155,6 +183,7 @@ def test_finished_run_cannot_be_reprocessed(ctx, two_companies, status):
 # C3 — pagination must not resurrect soft-deleted employees
 # ---------------------------------------------------------------
 
+
 def test_soft_deleted_excluded_from_paginated_query(ctx, two_companies):
     alpha = two_companies['A']
     beta_emp = two_companies['B']['employee']
@@ -163,12 +192,7 @@ def test_soft_deleted_excluded_from_paginated_query(ctx, two_companies):
     alpha_emp.is_deleted = True
     db.session.commit()
 
-    page = (
-        Employee.query
-        .filter_by(company_id=alpha['company'].id)
-        .limit(5).offset(0)
-        .all()
-    )
+    page = Employee.query.filter_by(company_id=alpha['company'].id).limit(5).offset(0).all()
     assert alpha_emp not in page
     # sanity: the other company's employee was never in scope anyway
     assert beta_emp not in page
@@ -178,11 +202,11 @@ def test_soft_deleted_excluded_from_paginated_query(ctx, two_companies):
 # Phase 2b — TenantQuery enforcement for Attendance / PayrollDraft
 # ---------------------------------------------------------------
 
+
 def test_attendance_unfiltered_query_raises(ctx, two_companies):
     c = two_companies['A']['company']
     e = two_companies['A']['employee']
-    db.session.add(Attendance(employee_id=e.id, company_id=c.id,
-                              date=datetime.now(UTC).date(), hours_worked=8))
+    db.session.add(Attendance(employee_id=e.id, company_id=c.id, date=datetime.now(UTC).date(), hours_worked=8))
     db.session.commit()
 
     with pytest.raises(RuntimeError, match='TENANT ISOLATION VIOLATION'):
@@ -192,8 +216,7 @@ def test_attendance_unfiltered_query_raises(ctx, two_companies):
 def test_attendance_company_filtered_query_ok(ctx, two_companies):
     c = two_companies['A']['company']
     e = two_companies['A']['employee']
-    db.session.add(Attendance(employee_id=e.id, company_id=c.id,
-                              date=datetime.now(UTC).date(), hours_worked=8))
+    db.session.add(Attendance(employee_id=e.id, company_id=c.id, date=datetime.now(UTC).date(), hours_worked=8))
     db.session.commit()
     rows = Attendance.query.filter_by(company_id=c.id).all()
     assert len(rows) == 1
@@ -221,6 +244,7 @@ def test_retention_purge_crosses_tenants_via_context(app, two_companies):
     db.session.commit()
 
     from payroll_engine.retention import purge_expired_drafts
+
     purged = purge_expired_drafts(app)
 
     assert purged == 2
@@ -229,6 +253,7 @@ def test_retention_purge_crosses_tenants_via_context(app, two_companies):
 # ---------------------------------------------------------------
 # Phase 2 — get_tenant_or_404
 # ---------------------------------------------------------------
+
 
 def test_get_tenant_or_404_scopes_to_company(ctx, two_companies):
     from werkzeug.exceptions import NotFound
@@ -247,6 +272,7 @@ def test_get_tenant_or_404_scopes_to_company(ctx, two_companies):
 # Phase 2 — batch PDF jobs are company-scoped
 # ---------------------------------------------------------------
 
+
 def test_get_batch_jobs_filters_by_company(ctx, two_companies):
     from payroll_engine.tasks import get_batch_jobs
 
@@ -255,9 +281,17 @@ def test_get_batch_jobs_filters_by_company(ctx, two_companies):
         co = two_companies[key]['company']
         emp = two_companies[key]['employee']
         run = _make_run(co, status='completed')
-        ps = Payslip(payroll_run_id=run.id, employee_id=emp.id, company_id=co.id,
-                     gross_salary=100, tax=10, employee_pension=7, employer_pension=11,
-                     net_pay=83, pdf_status='generated')
+        ps = Payslip(
+            payroll_run_id=run.id,
+            employee_id=emp.id,
+            company_id=co.id,
+            gross_salary=100,
+            tax=10,
+            employee_pension=7,
+            employer_pension=11,
+            net_pay=83,
+            pdf_status='generated',
+        )
         db.session.add(ps)
         db.session.flush()
         job = PayslipGenerationJob(payslip_id=ps.id, batch_id='batch-123', status='generated')

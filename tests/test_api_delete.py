@@ -99,7 +99,7 @@ def test_delete_employee_with_history_returns_409(ctx, client, company_user_empl
 
     payslip = Payslip(
         payroll_run_id=run.id,
-            company_id=run.company_id,
+        company_id=run.company_id,
         employee_id=emp.id,
         gross_salary=12000,
         tax=500,

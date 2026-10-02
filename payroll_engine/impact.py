@@ -10,8 +10,8 @@ Shows management the financial impact of decisions BEFORE they happen:
 Simple, clear, actionable. No jargon. Just numbers.
 """
 
-from decimal import Decimal, InvalidOperation
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pension import employee_pension
@@ -47,9 +47,9 @@ def resolve_pay_item(company_id, key):
     return item
 
 
-def virtual_assignment(company_id, key, amount, classification=None,
-                       tax_treatment=None, calc_method=None, for_date=None,
-                       units_field=None):
+def virtual_assignment(
+    company_id, key, amount, classification=None, tax_treatment=None, calc_method=None, for_date=None, units_field=None
+):
     """Build a transient PayrollItemAssignment for a what-if simulation.
 
     Never added to the session and never written. `item_type` is populated so
@@ -62,7 +62,8 @@ def virtual_assignment(company_id, key, amount, classification=None,
     from datetime import date as _date
 
     from payroll_engine.models_payroll_elements import (
-        PayrollItemAssignment, PayItemCalcMethod,
+        PayItemCalcMethod,
+        PayrollItemAssignment,
     )
 
     item = resolve_pay_item(company_id, key)
@@ -173,8 +174,12 @@ def preview_salary_raise(
 
 
 def preview_new_hire(
-    basic_salary, allowances, transport_allowance: Decimal = Decimal('0'),
-    employee_name: str = 'New Employee', company_id=None, item_key: str = 'transport',
+    basic_salary,
+    allowances,
+    transport_allowance: Decimal = Decimal('0'),
+    employee_name: str = 'New Employee',
+    company_id=None,
+    item_key: str = 'transport',
 ) -> dict:
     """Show management what a new hire costs.
 
@@ -210,9 +215,7 @@ def preview_new_hire(
         # item; if that item does not exist, fall back to the legacy
         # calculation rather than under-reporting gross.
         if allowances > 0:
-            gen = virtual_assignment(
-                company_id, 'general_allowance', allowances
-            )
+            gen = virtual_assignment(company_id, 'general_allowance', allowances)
             if gen is None:
                 extra_items = []
             else:
@@ -235,18 +238,18 @@ def preview_new_hire(
                 units_input[uf] = int(item.fixed_amount)
 
         result = calculate_payroll_from_assignments(
-            emp, company_id, date.today(),
-            extra_items=extra_items, units_input=units_input,
+            emp,
+            company_id,
+            date.today(),
+            extra_items=extra_items,
+            units_input=units_input,
         )
         total_allowances = allowances + transport_allowance
-        exempt_allowances = result.get('exempt_allowances', Decimal('0'))
     else:
         # Legacy path: bare numbers. Kept for callers with no company context
         # (and for catalogs that do not define the item) so existing behaviour
         # is unchanged until the company is migrated.
-        total_allowances = (
-            allowances + transport_allowance if transport_allowance > 0 else allowances
-        )
+        total_allowances = allowances + transport_allowance if transport_allowance > 0 else allowances
         if transport_allowance > 0:
             cap = calculate_transport_exempt_amount(basic_salary, transport_allowance)
             from payroll_engine.models import EmployeeAllowance
@@ -268,7 +271,6 @@ def preview_new_hire(
             allowances=total_allowances if not allowance_records else allowances,
             allowance_records=allowance_records,
         )
-        exempt_allowances = result.get('exempt_allowances', Decimal('0'))
 
     employer_cost = result['gross'] + result['pension_employer']
 
@@ -347,9 +349,9 @@ def preview_termination(
     }
 
 
-def preview_allowance_change(current_amount, new_amount, basic_salary,
-                              allowance_type: str = 'transport',
-                              company_id=None) -> dict:
+def preview_allowance_change(
+    current_amount, new_amount, basic_salary, allowance_type: str = 'transport', company_id=None
+) -> dict:
     """Show management what changing an allowance costs.
 
     Returns:
@@ -373,21 +375,29 @@ def preview_allowance_change(current_amount, new_amount, basic_salary,
 
             emp = _what_if_employee(basic_salary, company_id)
             cur_item_basic = virtual_assignment(
-                company_id, 'basic_salary', basic_salary,
+                company_id,
+                'basic_salary',
+                basic_salary,
             )
             new_item_basic = virtual_assignment(
-                company_id, 'basic_salary', basic_salary,
+                company_id,
+                'basic_salary',
+                basic_salary,
             )
             cur = calculate_payroll_from_assignments(
-                emp, company_id, date.today(),
+                emp,
+                company_id,
+                date.today(),
                 extra_items=[cur_item_basic, cur_item],
             )
             new = calculate_payroll_from_assignments(
-                emp, company_id, date.today(),
+                emp,
+                company_id,
+                date.today(),
                 extra_items=[new_item_basic, new_item],
             )
             tax_change = new['tax'] - cur['tax']
-            net_change = (new['net'] - cur['net'])
+            net_change = new['net'] - cur['net']
             return {
                 'type': 'allowance_change',
                 'allowance_type': allowance_type,

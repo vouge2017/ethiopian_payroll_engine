@@ -26,8 +26,10 @@ from payroll_engine import db
 # Enumerations (mirror the migration enums; kept here for model/validation use)
 # ---------------------------------------------------------------------------
 
+
 class PayItemClassification:
     """Valid values for PayItemType.classification."""
+
     EARNING = 'earning'
     DEDUCTION = 'deduction'
     EMPLOYER_CHARGE = 'employer_charge'
@@ -40,6 +42,7 @@ class PayItemClassification:
 class PayItemCalcMethod:
     """Valid calculation methods for PayItemType.calculation_method
     and PayrollItemAssignment (per-method value column)."""
+
     FIXED = 'fixed'
     RATE_X_UNITS = 'rate_x_units'
     PERCENT_OF_BASIC = 'percent_of_basic'
@@ -51,6 +54,7 @@ class PayItemCalcMethod:
 
 class PayItemTaxTreatment:
     """Valid tax treatments for earning items."""
+
     TAXABLE = 'taxable'
     EXEMPT = 'exempt'
     PARTIAL = 'partial'
@@ -61,6 +65,7 @@ class PayItemTaxTreatment:
 # ---------------------------------------------------------------------------
 # PayItemType — per-company pay item type registry
 # ---------------------------------------------------------------------------
+
 
 class PayItemType(db.Model):
     """Per-company pay item type registry (elements architecture).
@@ -79,7 +84,7 @@ class PayItemType(db.Model):
 
     # System catalog classification constants (used for seeding and queries)
     CLASS_BASIC_SALARY = 'earning'
-    CLASS_EMPLOYEE_PENSION = 'deduction'    # lock-in 1
+    CLASS_EMPLOYEE_PENSION = 'deduction'  # lock-in 1
     CLASS_EMPLOYER_PENSION = 'employer_charge'
     CLASS_INCOME_TAX = 'tax'
 
@@ -103,7 +108,8 @@ class PayItemType(db.Model):
             ENUM(*PayItemCalcMethod.ALL, name='payitem_calc_method', create_type=False),
             'postgresql',
         ),
-        nullable=False, default=PayItemCalcMethod.FIXED,
+        nullable=False,
+        default=PayItemCalcMethod.FIXED,
     )
     percent_of_item_key = db.Column(db.String(30), nullable=True)
     rate = db.Column(db.Numeric(10, 4), nullable=True)
@@ -112,7 +118,8 @@ class PayItemType(db.Model):
             ENUM(*PayItemTaxTreatment.ALL, name='payitem_tax_treatment', create_type=False),
             'postgresql',
         ),
-        nullable=False, default=PayItemTaxTreatment.TAXABLE,
+        nullable=False,
+        default=PayItemTaxTreatment.TAXABLE,
     )
     exempt_cap_amount = db.Column(db.Numeric(12, 2), nullable=True)
     exempt_cap_percent = db.Column(db.Numeric(5, 2), nullable=True)
@@ -134,8 +141,7 @@ class PayItemType(db.Model):
 
     __table_args__ = (
         db.CheckConstraint(
-            'max_percent_of_net IS NULL '
-            'OR (max_percent_of_net >= 0 AND max_percent_of_net <= 100)',
+            'max_percent_of_net IS NULL OR (max_percent_of_net >= 0 AND max_percent_of_net <= 100)',
             name='ck_pay_item_type_max_percent_of_net',
         ),
     )
@@ -164,6 +170,7 @@ class PayItemType(db.Model):
 # PayrollItemAssignment — employee + pay item + effective dates
 # ---------------------------------------------------------------------------
 
+
 class PayrollItemAssignment(db.Model):
     """Employee pay item assignment (elements architecture).
 
@@ -184,10 +191,12 @@ class PayrollItemAssignment(db.Model):
 
     # Value columns — one is populated based on calculation_method
     fixed_amount = db.Column(db.Numeric(12, 2), nullable=True)
-    rate_per_unit = db.Column(db.Numeric(10, 4), nullable=True)   # for rate_x_units
-    percent_of_basic = db.Column(db.Numeric(5, 2), nullable=True) # for percent_of_basic
-    percent_of_item_id = db.Column(db.Integer, db.ForeignKey('payroll_item_assignment.id', ondelete='SET NULL'), nullable=True)  # for percent_of_item
-    percent_of_net = db.Column(db.Numeric(5, 2), nullable=True)   # lock-in 3: deduction-only
+    rate_per_unit = db.Column(db.Numeric(10, 4), nullable=True)  # for rate_x_units
+    percent_of_basic = db.Column(db.Numeric(5, 2), nullable=True)  # for percent_of_basic
+    percent_of_item_id = db.Column(
+        db.Integer, db.ForeignKey('payroll_item_assignment.id', ondelete='SET NULL'), nullable=True
+    )  # for percent_of_item
+    percent_of_net = db.Column(db.Numeric(5, 2), nullable=True)  # lock-in 3: deduction-only
 
     # units_input key resolution (lock-in 4)
     # When set, the engine uses this as the units_input key FIRST.
@@ -214,7 +223,7 @@ class PayrollItemAssignment(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
     # Declining-balance state (for deduction items in declining tracking mode)
-    tracking_mode = db.Column(db.String(15), nullable=True)     # 'declining' or 'date_bounded'
+    tracking_mode = db.Column(db.String(15), nullable=True)  # 'declining' or 'date_bounded'
     total_to_recover = db.Column(db.Numeric(12, 2), nullable=True)
     remaining_balance = db.Column(db.Numeric(12, 2), nullable=True)
 
@@ -231,8 +240,10 @@ class PayrollItemAssignment(db.Model):
     employee = db.relationship('Employee', backref=db.backref('payroll_assignments', lazy=True))
 
     def __repr__(self):
-        return f'<PayrollItemAssignment {self.item_type.key if self.item_type else "?"} ' \
-               f'emp={self.employee_id} {self.company_id}>'
+        return (
+            f'<PayrollItemAssignment {self.item_type.key if self.item_type else "?"} '
+            f'emp={self.employee_id} {self.company_id}>'
+        )
 
     @property
     def label(self):

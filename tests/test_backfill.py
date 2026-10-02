@@ -5,13 +5,14 @@ with deliberately awkward legacy data BEFORE the backfill (legacy path) and
 AFTER it (engine path), and require gross and net to match to the cent per
 employee. Any difference is a bug to explain, not a rounding note.
 """
+
 from datetime import date
 from decimal import Decimal
 
 import pytest
+
 from payroll_engine import create_app, db
 from payroll_engine.backfill import (
-    backfill_all,
     backfill_company,
     verify_basic_present,
 )
@@ -20,8 +21,6 @@ from payroll_engine.models import (
     Employee,
     EmployeeAllowance,
     EmployeeDeduction,
-    PayrollDraft,
-    PayrollRun,
     User,
 )
 
@@ -72,65 +71,120 @@ def edge_company(ctx):
     db.session.add(user)
 
     emp = Employee(
-        employee_id='EMP001', name='Dawit Mekonnen',
-        basic_salary=Decimal('20000'), allowances=Decimal('0'),
-        company_id=co.id, start_date=date(2020, 1, 1),
+        employee_id='EMP001',
+        name='Dawit Mekonnen',
+        basic_salary=Decimal('20000'),
+        allowances=Decimal('0'),
+        company_id=co.id,
+        start_date=date(2020, 1, 1),
     )
     db.session.add(emp)
     db.session.commit()
 
     # Capped transport allowance: exempt up to the lower of 2200 or 25% of basic.
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emp.id, allowance_type='transport',
-        amount=Decimal('3000'), calculation_basis='fixed',
-        tax_treatment='partial', exempt_cap_amount=Decimal('2200'),
-        exempt_cap_percent=Decimal('25'), exempt_cap_basis='basic_salary',
-        is_active=True, effective_date=date(2020, 1, 1),
-    ))
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emp.id,
+            allowance_type='transport',
+            amount=Decimal('3000'),
+            calculation_basis='fixed',
+            tax_treatment='partial',
+            exempt_cap_amount=Decimal('2200'),
+            exempt_cap_percent=Decimal('25'),
+            exempt_cap_basis='basic_salary',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
     # INACTIVE allowance - must not affect payroll after backfill.
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emp.id, allowance_type='housing',
-        amount=Decimal('9999'), calculation_basis='fixed',
-        tax_treatment='taxable', is_active=False,
-        effective_date=date(2020, 1, 1),
-    ))
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emp.id,
+            allowance_type='housing',
+            amount=Decimal('9999'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=False,
+            effective_date=date(2020, 1, 1),
+        )
+    )
     # ZERO amount allowance - must not invent pay.
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emp.id, allowance_type='food',
-        amount=Decimal('0'), calculation_basis='fixed',
-        tax_treatment='taxable', is_active=True,
-        effective_date=date(2020, 1, 1),
-    ))
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emp.id,
+            allowance_type='food',
+            amount=Decimal('0'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
     # Custom type not in the catalog.
-    db.session.add(EmployeeAllowance(
-        company_id=co.id, employee_id=emp.id, allowance_type='custom_thing',
-        custom_type_name='Custom Thing', amount=Decimal('500'),
-        calculation_basis='fixed', tax_treatment='taxable', is_active=True,
-        effective_date=date(2020, 1, 1),
-    ))
+    db.session.add(
+        EmployeeAllowance(
+            company_id=co.id,
+            employee_id=emp.id,
+            allowance_type='custom_thing',
+            custom_type_name='Custom Thing',
+            amount=Decimal('500'),
+            calculation_basis='fixed',
+            tax_treatment='taxable',
+            is_active=True,
+            effective_date=date(2020, 1, 1),
+        )
+    )
 
     # Percentage deduction: one third of net.
-    db.session.add(EmployeeDeduction(
-        company_id=co.id, employee_id=emp.id, deduction_type='cost_sharing',
-        label='MoE Batch', amount_mode='percentage', amount=Decimal('33.33'),
-        tracking_mode='date_bounded', start_date=date(2020, 1, 1), is_active=True,
-    ))
+    db.session.add(
+        EmployeeDeduction(
+            company_id=co.id,
+            employee_id=emp.id,
+            deduction_type='cost_sharing',
+            label='MoE Batch',
+            amount_mode='percentage',
+            amount=Decimal('33.33'),
+            tracking_mode='date_bounded',
+            start_date=date(2020, 1, 1),
+            is_active=True,
+        )
+    )
     # Court order WITH document trail.
-    db.session.add(EmployeeDeduction(
-        company_id=co.id, employee_id=emp.id, deduction_type='court_order',
-        label='Case 123', amount_mode='percentage', amount=Decimal('10'),
-        tracking_mode='date_bounded', start_date=date(2020, 1, 1),
-        reference_number='CASE-123/2020', document_path='/uploads/case123.pdf',
-        is_active=True, created_by=user.id,
-    ))
+    db.session.add(
+        EmployeeDeduction(
+            company_id=co.id,
+            employee_id=emp.id,
+            deduction_type='court_order',
+            label='Case 123',
+            amount_mode='percentage',
+            amount=Decimal('10'),
+            tracking_mode='date_bounded',
+            start_date=date(2020, 1, 1),
+            reference_number='CASE-123/2020',
+            document_path='/uploads/case123.pdf',
+            is_active=True,
+            created_by=user.id,
+        )
+    )
     # Declining loan with a balance.
-    db.session.add(EmployeeDeduction(
-        company_id=co.id, employee_id=emp.id, deduction_type='loan',
-        label='Staff loan', amount_mode='fixed', amount=Decimal('1000'),
-        tracking_mode='declining', total_to_recover=Decimal('5000'),
-        remaining_balance=Decimal('4000'), start_date=date(2020, 1, 1),
-        is_active=True,
-    ))
+    db.session.add(
+        EmployeeDeduction(
+            company_id=co.id,
+            employee_id=emp.id,
+            deduction_type='loan',
+            label='Staff loan',
+            amount_mode='fixed',
+            amount=Decimal('1000'),
+            tracking_mode='declining',
+            total_to_recover=Decimal('5000'),
+            remaining_balance=Decimal('4000'),
+            start_date=date(2020, 1, 1),
+            is_active=True,
+        )
+    )
     db.session.commit()
     return co, user, emp
 
@@ -200,7 +254,8 @@ def test_field_mapping_and_document_trail(ctx, edge_company):
 
     # Court order keeps its reference number and document path verbatim.
     court = PayrollItemAssignment.query.filter_by(
-        company_id=co.id, employee_id=emp.id,
+        company_id=co.id,
+        employee_id=emp.id,
         reference_number='CASE-123/2020',
     ).first()
     assert court is not None, 'court order reference_number must survive'
@@ -211,10 +266,9 @@ def test_field_mapping_and_document_trail(ctx, edge_company):
 
     # Declining loan keeps its balance.
     loan = PayrollItemAssignment.query.filter_by(
-        company_id=co.id, employee_id=emp.id,
-        pay_item_type_id=PayItemType.query.filter_by(
-            company_id=co.id, key='loan'
-        ).first().id,
+        company_id=co.id,
+        employee_id=emp.id,
+        pay_item_type_id=PayItemType.query.filter_by(company_id=co.id, key='loan').first().id,
     ).first()
     assert loan.fixed_amount == Decimal('1000')
     assert loan.remaining_balance == Decimal('4000')
@@ -222,18 +276,15 @@ def test_field_mapping_and_document_trail(ctx, edge_company):
 
     # Inactive allowance stays inactive.
     housing = PayrollItemAssignment.query.filter_by(
-        company_id=co.id, employee_id=emp.id,
-        pay_item_type_id=PayItemType.query.filter_by(
-            company_id=co.id, key='housing'
-        ).first().id,
+        company_id=co.id,
+        employee_id=emp.id,
+        pay_item_type_id=PayItemType.query.filter_by(company_id=co.id, key='housing').first().id,
     ).first()
     assert housing is not None
     assert housing.is_active is False
 
     # Custom type creates a company PayItemType on demand.
-    custom = PayItemType.query.filter_by(
-        company_id=co.id, key='custom_thing'
-    ).first()
+    custom = PayItemType.query.filter_by(company_id=co.id, key='custom_thing').first()
     assert custom is not None, 'unknown key must still get a PayItemType'
     assert custom.classification == 'earning'
 
@@ -246,7 +297,8 @@ def test_basic_effective_date_rule(ctx, edge_company):
     backfill_company(co.id)
 
     basic = PayrollItemAssignment.query.filter_by(
-        company_id=co.id, employee_id=emp.id,
+        company_id=co.id,
+        employee_id=emp.id,
         legacy_source=f'legacy_basic:{emp.id}',
     ).first()
     assert basic is not None
@@ -256,37 +308,43 @@ def test_basic_effective_date_rule(ctx, edge_company):
 
 def test_basic_effective_date_falls_back_to_legacy_dates(ctx, edge_company):
     from payroll_engine.backfill import basic_effective_date
-    from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
     co, _u, emp = edge_company
     emp.start_date = None
     db.session.commit()
 
     a = EmployeeAllowance(
-        company_id=co.id, employee_id=emp.id, allowance_type='transport',
-        amount=Decimal('100'), calculation_basis='fixed',
-        tax_treatment='taxable', is_active=True, effective_date=date(2019, 5, 1),
+        company_id=co.id,
+        employee_id=emp.id,
+        allowance_type='transport',
+        amount=Decimal('100'),
+        calculation_basis='fixed',
+        tax_treatment='taxable',
+        is_active=True,
+        effective_date=date(2019, 5, 1),
     )
     d = EmployeeDeduction(
-        company_id=co.id, employee_id=emp.id, deduction_type='loan',
-        label='L', amount_mode='fixed', amount=Decimal('100'),
-        tracking_mode='date_bounded', start_date=date(2018, 3, 1), is_active=True,
+        company_id=co.id,
+        employee_id=emp.id,
+        deduction_type='loan',
+        label='L',
+        amount_mode='fixed',
+        amount=Decimal('100'),
+        tracking_mode='date_bounded',
+        start_date=date(2018, 3, 1),
+        is_active=True,
     )
     db.session.add_all([a, d])
     db.session.commit()
 
-    assert basic_effective_date(emp, [a, d]) == date(2018, 3, 1), (
-        'earliest legacy row date when start_date is unknown'
-    )
+    assert basic_effective_date(emp, [a, d]) == date(2018, 3, 1), 'earliest legacy row date when start_date is unknown'
 
 
 def test_verify_basic_present_after_backfill(ctx, edge_company):
-    co, _u, emp = edge_company
+    co, _u, _emp = edge_company
     assert verify_basic_present(co.id) == [], 'must be clean even before backfill'
     backfill_company(co.id)
-    assert verify_basic_present(co.id) == [], (
-        'nobody may end with assignments but no basic_salary row'
-    )
+    assert verify_basic_present(co.id) == [], 'nobody may end with assignments but no basic_salary row'
 
 
 def test_legacy_rows_are_not_deleted(ctx, edge_company):
@@ -321,7 +379,7 @@ def test_company_failure_rolls_back_whole_company(ctx, edge_company, monkeypatch
     monkeypatch.setattr(bf, '_convert_allowance', boom)
     results = bf.backfill_all(dry_run=False)
 
-    rec = [r for r in results if r.get('company_id') == co.id][0]
+    rec = next(r for r in results if r.get('company_id') == co.id)
     assert rec.get('error'), 'the failure must be reported'
     assert rec.get('rolled_back') is True
     assert PayrollItemAssignment.query.filter_by(company_id=co.id).count() == 0, (
@@ -345,11 +403,9 @@ def test_seed_system_items_idempotent_twice(ctx, edge_company):
     """
     from payroll_engine.catalog import seed_system_items
 
-    result_a = seed_system_items()
+    seed_system_items()
     result_b = seed_system_items()
-    assert result_b['created'] == 0, (
-        'double seed must not create duplicate system items'
-    )
+    assert result_b['created'] == 0, 'double seed must not create duplicate system items'
     assert result_b['skipped'] > 0
 
 
@@ -357,15 +413,13 @@ def test_backfill_resumable_after_interruption(ctx, edge_company):
     """If backfill is interrupted mid-company, a re-run must not
     duplicate or lose rows.  Idempotency holds: re-running reports
     0 newly created rows for an already-migrated company."""
-    from payroll_engine.models_payroll_elements import PayrollItemAssignment
     from payroll_engine.backfill import backfill_company
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
 
     co, _u, _e = edge_company
 
-    first = backfill_company(co.id)
-    count_after = PayrollItemAssignment.query.filter_by(
-        company_id=co.id
-    ).count()
+    backfill_company(co.id)
+    count_after = PayrollItemAssignment.query.filter_by(company_id=co.id).count()
 
     # Simulate interruption then resume: re-run must produce zero
     # new rows and report all skipped.
@@ -373,6 +427,4 @@ def test_backfill_resumable_after_interruption(ctx, edge_company):
     assert resumed['basic_created'] == 0
     assert resumed['allowances_created'] == 0
     assert resumed['deductions_created'] == 0
-    assert PayrollItemAssignment.query.filter_by(
-        company_id=co.id
-    ).count() == count_after
+    assert PayrollItemAssignment.query.filter_by(company_id=co.id).count() == count_after

@@ -19,6 +19,7 @@ class SystemItemKey(enum.Enum):
 
     These are shared across ALL companies and are NEVER company-scoped.
     """
+
     BASIC_SALARY = 'basic_salary'
     EMPLOYEE_PENSION = 'employee_pension'
     EMPLOYER_PENSION = 'employer_pension'
@@ -31,6 +32,7 @@ class CompanyTemplateItemKey(enum.Enum):
     Seeded at company creation and backfilled via flask migrate-pay-items.
     Company admins can customise these per company.
     """
+
     # Allowances
     # Landing spot for the legacy single `allowances` column in the CSV import
     # format (basic_salary, allowances). One undifferentiated allowance number
@@ -59,26 +61,30 @@ class CompanyTemplateItemKey(enum.Enum):
 SYSTEM_ITEM_KEYS = SystemItemKey
 COMPANY_TEMPLATE_ITEM_KEYS = CompanyTemplateItemKey
 
-ALLOWANCE_ITEM_KEYS = frozenset((
-    CompanyTemplateItemKey.TRANSPORT,
-    CompanyTemplateItemKey.HARDSHIP,
-    CompanyTemplateItemKey.HOUSING,
-    CompanyTemplateItemKey.COMMUNICATION,
-    CompanyTemplateItemKey.PER_DIEM,
-    CompanyTemplateItemKey.MEDICAL,
-    CompanyTemplateItemKey.FOOD,
-    CompanyTemplateItemKey.EDUCATION,
-    CompanyTemplateItemKey.UNIFORM,
-    CompanyTemplateItemKey.OTHER,
-))
+ALLOWANCE_ITEM_KEYS = frozenset(
+    (
+        CompanyTemplateItemKey.TRANSPORT,
+        CompanyTemplateItemKey.HARDSHIP,
+        CompanyTemplateItemKey.HOUSING,
+        CompanyTemplateItemKey.COMMUNICATION,
+        CompanyTemplateItemKey.PER_DIEM,
+        CompanyTemplateItemKey.MEDICAL,
+        CompanyTemplateItemKey.FOOD,
+        CompanyTemplateItemKey.EDUCATION,
+        CompanyTemplateItemKey.UNIFORM,
+        CompanyTemplateItemKey.OTHER,
+    )
+)
 
-DEDUCTION_ITEM_KEYS = frozenset((
-    CompanyTemplateItemKey.ADVANCE,
-    CompanyTemplateItemKey.LOAN,
-    CompanyTemplateItemKey.COST_SHARING,
-    CompanyTemplateItemKey.COURT_ORDER,
-    CompanyTemplateItemKey.OTHER_DEDUCTION,
-))
+DEDUCTION_ITEM_KEYS = frozenset(
+    (
+        CompanyTemplateItemKey.ADVANCE,
+        CompanyTemplateItemKey.LOAN,
+        CompanyTemplateItemKey.COST_SHARING,
+        CompanyTemplateItemKey.COURT_ORDER,
+        CompanyTemplateItemKey.OTHER_DEDUCTION,
+    )
+)
 
 # All standard keys (system + company template) — for enumeration / validation.
 ALL_STANDARD_KEYS = frozenset((*SYSTEM_ITEM_KEYS, *COMPANY_TEMPLATE_ITEM_KEYS))

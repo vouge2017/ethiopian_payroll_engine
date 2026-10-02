@@ -591,9 +591,7 @@ def _build_employee_view(user, company_id, db, models):
     )
 
     if latest_payslip:
-        run = models.PayrollRun.query.filter_by(
-            id=latest_payslip.payroll_run_id, company_id=company_id
-        ).first()
+        run = models.PayrollRun.query.filter_by(id=latest_payslip.payroll_run_id, company_id=company_id).first()
         view.latest_payslip = {
             'period': run.period if run else 'Unknown',
             'gross': float(latest_payslip.gross_salary or 0),

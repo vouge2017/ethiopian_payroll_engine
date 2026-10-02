@@ -69,6 +69,35 @@ def employee(app, company_user):
         return emp.id
 
 
+def test_employee_detail_with_overtime_renders(app, company_user, employee):
+    """A saved overtime entry must not crash the employee detail page."""
+    from payroll_engine.models import OvertimeEntry
+
+    company_id, user_id = company_user
+    with app.app_context():
+        db.session.add(
+            OvertimeEntry(
+                company_id=company_id,
+                employee_id=employee,
+                date=date.today(),
+                hours=Decimal('2'),
+                overtime_type='day',
+            )
+        )
+        db.session.commit()
+
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session['_user_id'] = str(user_id)
+        session['_fresh'] = True
+    response = client.get(f'/employees/{employee}')
+    assert response.status_code == 200
+    assert b'Abebe Kebede' in response.data
+    assert f'<td data-label="Date">{date.today().isoformat()}</td>'.encode() in response.data
+    assert b'<td data-label="Type">day</td>' in response.data
+    assert b'<td data-label="Pay (ETB)">144.24</td>' in response.data
+
+
 class TestBug1AdvancesViaSpreadsheet:
     """BUG 1: Advances via spreadsheet path caused check constraint violation."""
 
@@ -117,33 +146,38 @@ class TestBug1AdvancesViaSpreadsheet:
             db.session.add(run)
             db.session.flush()
             from payroll_engine.models import PayrollDraft
+
             emp = db.session.get(Employee, employee)
-            draft_data = [{
-                'id': emp.employee_id,
-                'name': emp.name,
-                'basic': float(emp.basic_salary),
-                'allowances': float(emp.allowances),
-                'gross': 12000.0,
-                'tax': 1500.0,
-                'pension_employee': 700.0,
-                'pension_employer': 1100.0,
-                'net': 9800.0,
-            }]
+            draft_data = [
+                {
+                    'id': emp.employee_id,
+                    'name': emp.name,
+                    'basic': float(emp.basic_salary),
+                    'allowances': float(emp.allowances),
+                    'gross': 12000.0,
+                    'tax': 1500.0,
+                    'pension_employee': 700.0,
+                    'pension_employer': 1100.0,
+                    'net': 9800.0,
+                }
+            ]
             draft = PayrollDraft(payroll_run_id=run.id, company_id=cid, employee_data=draft_data)
             db.session.add(draft)
             db.session.commit()
 
             # Process payroll
             from payroll_engine.services.payroll_service import process_payroll
-            result = process_payroll(run=run, company_id=cid, user_id=uid,
-                                     user_email='test@test.com', request_ip='127.0.0.1')
+
+            result = process_payroll(
+                run=run, company_id=cid, user_id=uid, user_email='test@test.com', request_ip='127.0.0.1'
+            )
             assert result.success is True
 
             # Verify: net pay reduced by advance amount
             payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=cid).first()
             assert payslip is not None
             expected_net = Decimal('9800') - advance_amount
-            assert payslip.net_pay == expected_net, f"Expected {expected_net}, got {payslip.net_pay}"
+            assert payslip.net_pay == expected_net, f'Expected {expected_net}, got {payslip.net_pay}'
 
             # Verify: deduction details stored on payslip
             assert payslip.deduction_details is not None
@@ -159,7 +193,7 @@ class TestBug1AdvancesViaSpreadsheet:
                     company_id=cid,
                     employee_id=employee,
                     deduction_type='advance',
-                    label=f'Advance #{i+1}',
+                    label=f'Advance #{i + 1}',
                     amount_mode='fixed',
                     amount=Decimal('100'),
                     tracking_mode='date_bounded',
@@ -178,7 +212,7 @@ class TestBug2AbsenceMarking:
 
     def test_mark_absent_endpoint_exists(self, app, company_user, employee):
         """The /attendance/mark-absent endpoint must exist and create a Leave record."""
-        cid, uid = company_user
+        cid, _uid = company_user
         with app.app_context():
             client = app.test_client()
             # Login
@@ -186,12 +220,16 @@ class TestBug2AbsenceMarking:
 
             # Mark absent
             today = date.today()
-            resp = client.post('/attendance/mark-absent', data={
-                'employee_id': employee,
-                'start_date': today.isoformat(),
-                'end_date': today.isoformat(),
-                'reason': 'Unexcused absence',
-            }, follow_redirects=True)
+            resp = client.post(
+                '/attendance/mark-absent',
+                data={
+                    'employee_id': employee,
+                    'start_date': today.isoformat(),
+                    'end_date': today.isoformat(),
+                    'reason': 'Unexcused absence',
+                },
+                follow_redirects=True,
+            )
             assert resp.status_code == 200
 
             # Verify Leave record created
@@ -203,13 +241,13 @@ class TestBug2AbsenceMarking:
 
     @pytest.mark.parametrize(
         'approval_day,expected_days',
-        [(date(2026, 10, 1), 0), (date(2026, 10, 2), 1),
-         (date(2026, 10, 3), 2), (date(2026, 9, 15), 2)],
+        [(date(2026, 10, 1), 0), (date(2026, 10, 2), 1), (date(2026, 10, 3), 2), (date(2026, 9, 15), 2)],
     )
     def test_unpaid_absence_reduces_pay_in_approval_flow(
         self, app, company_user, employee, monkeypatch, approval_day, expected_days
     ):
         """Only the absence days overlapping the payroll month reduce pay."""
+
         class ApprovalDate(date):
             @classmethod
             def today(cls):
@@ -248,35 +286,40 @@ class TestBug2AbsenceMarking:
             db.session.add(run)
             db.session.flush()
             from payroll_engine.models import PayrollDraft
-            gross = basic + allowances
             from payroll_engine.payroll import calculate_payroll
+
             calc = calculate_payroll(float(basic), float(allowances))
-            draft_data = [{
-                'id': emp.employee_id,
-                'name': emp.name,
-                'basic': float(basic),
-                'allowances': float(allowances),
-                'gross': float(calc['gross']),
-                'tax': float(calc['tax']),
-                'pension_employee': float(calc['pension_employee']),
-                'pension_employer': float(calc['pension_employer']),
-                'net': float(calc['net']),
-            }]
+            draft_data = [
+                {
+                    'id': emp.employee_id,
+                    'name': emp.name,
+                    'basic': float(basic),
+                    'allowances': float(allowances),
+                    'gross': float(calc['gross']),
+                    'tax': float(calc['tax']),
+                    'pension_employee': float(calc['pension_employee']),
+                    'pension_employer': float(calc['pension_employer']),
+                    'net': float(calc['net']),
+                }
+            ]
             draft = PayrollDraft(payroll_run_id=run.id, company_id=cid, employee_data=draft_data)
             db.session.add(draft)
             db.session.commit()
 
             # Process payroll
             from payroll_engine.services.payroll_service import process_payroll
-            result = process_payroll(run=run, company_id=cid, user_id=uid,
-                                     user_email='test@test.com', request_ip='127.0.0.1')
+
+            result = process_payroll(
+                run=run, company_id=cid, user_id=uid, user_email='test@test.com', request_ip='127.0.0.1'
+            )
             assert result.success is True
 
             # Verify: only overlapping days reduce this month's pay
             payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=cid).first()
             expected_net = Decimal(str(calc['net'])) - expected_reduction
-            assert payslip.net_pay == expected_net.quantize(Decimal('0.01')), \
-                f"Expected {expected_net.quantize(Decimal('0.01'))}, got {payslip.net_pay}"
+            assert payslip.net_pay == expected_net.quantize(Decimal('0.01')), (
+                f'Expected {expected_net.quantize(Decimal("0.01"))}, got {payslip.net_pay}'
+            )
 
             # Verify: unpaid leave reduction recorded
             assert payslip.unpaid_leave_reduction == expected_reduction.quantize(Decimal('0.01'))
@@ -305,27 +348,33 @@ class TestBug2AbsenceMarking:
             db.session.add(run)
             db.session.flush()
             from payroll_engine.models import PayrollDraft
+
             emp = db.session.get(Employee, employee)
             from payroll_engine.payroll import calculate_payroll
+
             calc = calculate_payroll(float(emp.basic_salary), float(emp.allowances))
-            draft_data = [{
-                'id': emp.employee_id,
-                'name': emp.name,
-                'basic': float(emp.basic_salary),
-                'allowances': float(emp.allowances),
-                'gross': float(calc['gross']),
-                'tax': float(calc['tax']),
-                'pension_employee': float(calc['pension_employee']),
-                'pension_employer': float(calc['pension_employer']),
-                'net': float(calc['net']),
-            }]
+            draft_data = [
+                {
+                    'id': emp.employee_id,
+                    'name': emp.name,
+                    'basic': float(emp.basic_salary),
+                    'allowances': float(emp.allowances),
+                    'gross': float(calc['gross']),
+                    'tax': float(calc['tax']),
+                    'pension_employee': float(calc['pension_employee']),
+                    'pension_employer': float(calc['pension_employer']),
+                    'net': float(calc['net']),
+                }
+            ]
             draft = PayrollDraft(payroll_run_id=run.id, company_id=cid, employee_data=draft_data)
             db.session.add(draft)
             db.session.commit()
 
             from payroll_engine.services.payroll_service import process_payroll
-            result = process_payroll(run=run, company_id=cid, user_id=uid,
-                                     user_email='test@test.com', request_ip='127.0.0.1')
+
+            result = process_payroll(
+                run=run, company_id=cid, user_id=uid, user_email='test@test.com', request_ip='127.0.0.1'
+            )
             assert result.success is True
 
             payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=cid).first()

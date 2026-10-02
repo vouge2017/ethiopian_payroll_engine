@@ -99,9 +99,7 @@ def create_demo_data():
     with TenantQuery.tenant_context(0):
         for old in old_demos:
             # Delete employees, runs, payslips, users for this demo company
-            Payslip.query.filter(
-                Payslip.company_id == old.id
-            ).delete(synchronize_session='fetch')
+            Payslip.query.filter(Payslip.company_id == old.id).delete(synchronize_session='fetch')
             PayrollRun.query.filter_by(company_id=old.id).delete()
             OvertimeEntry.query.filter_by(company_id=old.id).delete()
             AuditLog.query.filter_by(company_id=old.id).delete()

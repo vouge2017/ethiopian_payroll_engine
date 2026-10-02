@@ -192,10 +192,10 @@ def calculate_payroll_from_assignments(
     deduction_details = []
 
     # Earnings accumulation
-    for item in sorted(system_items['earnings'] + employee_items['earnings'],
-                       key=_item_sort_key):
-        amount = _calculate_item_amount(item, employee, for_date, units_input,
-                                        total_earnings + total_deductions_pre_tax)
+    for item in sorted(system_items['earnings'] + employee_items['earnings'], key=_item_sort_key):
+        amount = _calculate_item_amount(
+            item, employee, for_date, units_input, total_earnings + total_deductions_pre_tax
+        )
         # Normalize: assignments carry their PayItemType via .item_type
         item_type = item if isinstance(item, PayItemType) else getattr(item, 'item_type', None)
         classification = item_type.classification if item_type else PayItemClassification.EARNING
@@ -217,7 +217,7 @@ def calculate_payroll_from_assignments(
             elif tt == PayItemTaxTreatment.PARTIAL:
                 exempt = _apply_exempt_cap(item_type or item, amount, basic_salary)
                 exempt_allowances += exempt
-                taxable_allowances += (amount - exempt)
+                taxable_allowances += amount - exempt
                 allowance_details.append(_allowance_detail(item, amount, exempt, amount - exempt))
             else:
                 taxable_allowances += amount
@@ -239,11 +239,15 @@ def calculate_payroll_from_assignments(
         overtime_result = calculate_total_overtime(basic_salary, overtime_entries, for_date=for_date)
         overtime_pay = overtime_result['total_pay']
         overtime_total_hours = overtime_result['total_hours']
-        line_items.append(_line_item_dict(
-            _make_overtime_placeholder(), overtime_pay,
-            PayItemClassification.EARNING, False,
-            custom_label='Overtime (from overtime module)',
-        ))
+        line_items.append(
+            _line_item_dict(
+                _make_overtime_placeholder(),
+                overtime_pay,
+                PayItemClassification.EARNING,
+                False,
+                custom_label='Overtime (from overtime module)',
+            )
+        )
     total_earnings += overtime_pay
 
     gross = total_earnings  # base_gross + overtime_pay (overtime already added above)
@@ -265,17 +269,21 @@ def calculate_payroll_from_assignments(
     # appended after the assignment loop because they are derived from basic
     # salary, not from any assignment.
     for _key, _label, _amount, _class in (
-        ('employee_pension', 'Employee Pension', emp_pen,
-         PayItemClassification.DEDUCTION),
-        ('employer_pension', 'Employer Pension', empr_pen,
-         PayItemClassification.EMPLOYER_CHARGE),
+        ('employee_pension', 'Employee Pension', emp_pen, PayItemClassification.DEDUCTION),
+        ('employer_pension', 'Employer Pension', empr_pen, PayItemClassification.EMPLOYER_CHARGE),
         ('income_tax', 'Income Tax', tax, PayItemClassification.TAX),
     ):
         if _amount and _amount > 0:
-            line_items.append(_line_item_dict(
-                _make_placeholder(_key), _amount, _class, True,
-                custom_label=_label, is_legacy=False,
-            ))
+            line_items.append(
+                _line_item_dict(
+                    _make_placeholder(_key),
+                    _amount,
+                    _class,
+                    True,
+                    custom_label=_label,
+                    is_legacy=False,
+                )
+            )
 
     net_before_deductions = gross - tax - emp_pen
     # percent_of_net base (line 589-607 of payroll_elements.py):
@@ -289,10 +297,17 @@ def calculate_payroll_from_assignments(
     # Post-tax deductions — from the legacy `deductions` list or from new
     # declining-balance assignment rows
     total_post_tax_deductions = _merge_post_tax_deductions(
-        deductions, employee_items['deductions'],
-        net_before_deductions, tax, deduction_details,
-        line_items, Decimal('0'), for_date, employee=employee,
-        units_input=units_input, consume_balances=consume_balances
+        deductions,
+        employee_items['deductions'],
+        net_before_deductions,
+        tax,
+        deduction_details,
+        line_items,
+        Decimal('0'),
+        for_date,
+        employee=employee,
+        units_input=units_input,
+        consume_balances=consume_balances,
     )
 
     sick_leave_reduction = _D(sick_leave_reduction)
@@ -329,9 +344,11 @@ def calculate_payroll_from_assignments(
 def _normalize_date(for_date):
     if for_date is None:
         from datetime import date as _date
+
         return _date.today()
     if isinstance(for_date, str):
         from datetime import datetime as _dt
+
         return _dt.strptime(for_date, '%Y-%m-%d').date()
     return for_date
 
@@ -347,21 +364,29 @@ def seed_pay_item_types(company_id):
     has per-company assignment rows to work with.
     """
     from payroll_engine import db
-    from payroll_engine.models import PayItemType as _PPT
+    from payroll_engine.models import PayItemType as _PayItemType
 
-    system_items = db.session.query(_PPT).filter(
-        _PPT.company_id.is_(None),
-        _PPT.is_active == True,
-    ).all()
+    system_items = (
+        db.session.query(_PayItemType)
+        .filter(
+            _PayItemType.company_id.is_(None),
+            _PayItemType.is_active == True,
+        )
+        .all()
+    )
 
     for sys_item in system_items:
-        exists = db.session.query(_PPT).filter(
-            _PPT.company_id == company_id,
-            _PPT.key == sys_item.key,
-        ).first()
+        exists = (
+            db.session.query(_PayItemType)
+            .filter(
+                _PayItemType.company_id == company_id,
+                _PayItemType.key == sys_item.key,
+            )
+            .first()
+        )
         if exists:
             continue
-        company_item = _PPT(
+        company_item = _PayItemType(
             company_id=company_id,
             key=sys_item.key,
             name_en=sys_item.name_en,
@@ -390,8 +415,8 @@ def _load_system_items(company_id, for_date):
 
     Returns a dict with keys 'earnings', 'deductions', 'employer_charges', 'tax'.
     """
+
     from payroll_engine import db
-    from datetime import date as _date
 
     # System items are PayItemType rows with no assignment, so only the
     # type-level window applies there.
@@ -402,10 +427,16 @@ def _load_system_items(company_id, for_date):
     employer_charges = []
     tax_items = []
 
-    rows = db.session.query(PayItemType).filter(
-        PayItemType.company_id.is_(None),
-        PayItemType.is_active == True,
-    ).filter(type_effective).order_by(PayItemType.sort_order).all()
+    rows = (
+        db.session.query(PayItemType)
+        .filter(
+            PayItemType.company_id.is_(None),
+            PayItemType.is_active == True,
+        )
+        .filter(type_effective)
+        .order_by(PayItemType.sort_order)
+        .all()
+    )
 
     for row in rows:
         bucket = {
@@ -431,21 +462,25 @@ def _load_employee_items(employee_id, company_id, for_date):
     Returns dict with 'earnings', 'deductions', 'employer_charges', 'tax'.
     Filters by effective date and is_active.
     """
+
     from payroll_engine import db
-    from datetime import date as _date
 
     type_effective, assignment_effective = _effective_query(for_date)
 
-    query = db.session.query(PayrollItemAssignment).join(
-        PayItemType,
-        PayrollItemAssignment.pay_item_type_id == PayItemType.id,
-    ).filter(
-        PayrollItemAssignment.employee_id == employee_id,
-        PayrollItemAssignment.company_id == company_id,
-        PayrollItemAssignment.is_active == True,
-        PayItemType.is_active == True,
-    ).filter(type_effective, assignment_effective).order_by(
-        PayItemType.sort_order, PayrollItemAssignment.id
+    query = (
+        db.session.query(PayrollItemAssignment)
+        .join(
+            PayItemType,
+            PayrollItemAssignment.pay_item_type_id == PayItemType.id,
+        )
+        .filter(
+            PayrollItemAssignment.employee_id == employee_id,
+            PayrollItemAssignment.company_id == company_id,
+            PayrollItemAssignment.is_active == True,
+            PayItemType.is_active == True,
+        )
+        .filter(type_effective, assignment_effective)
+        .order_by(PayItemType.sort_order, PayrollItemAssignment.id)
     )
 
     rows = query.all()
@@ -494,8 +529,9 @@ def _effective_query(for_date):
     columns are kept because they exist on the model and are the right home
     for a future catalog-level version window, but they are not relied on.
     """
-    from sqlalchemy import or_, and_
     from datetime import date as _date
+
+    from sqlalchemy import and_, or_
 
     if isinstance(for_date, _date):
         d = for_date
@@ -532,11 +568,13 @@ def _effective_method(assignment, item_type):
     has_pct_basic = getattr(assignment, 'percent_of_basic', None) is not None
 
     populated = [
-        m for m, has in (
+        m
+        for m, has in (
             (PayItemCalcMethod.FIXED, has_fixed),
             (PayItemCalcMethod.PERCENT_OF_NET, has_pct_net),
             (PayItemCalcMethod.PERCENT_OF_BASIC, has_pct_basic),
-        ) if has
+        )
+        if has
     ]
 
     if len(populated) > 1:
@@ -588,8 +626,11 @@ def _calculate_item_amount(item, employee, for_date, units_input, running_total)
     if method == PayItemCalcMethod.FIXED:
         return _D(fixed or 0)
     elif method == PayItemCalcMethod.RATE_X_UNITS:
-        qty = _item_quantity(item if isinstance(item, PayrollItemAssignment) else None,
-                             units_input) if isinstance(item, PayrollItemAssignment) else _D(0)
+        qty = (
+            _item_quantity(item if isinstance(item, PayrollItemAssignment) else None, units_input)
+            if isinstance(item, PayrollItemAssignment)
+            else _D(0)
+        )
         if not isinstance(item, PayrollItemAssignment):
             qty = _D(0)  # system items don't have per-period units
         return (rate or Decimal('0')) * qty
@@ -645,9 +686,20 @@ def _apply_exempt_cap(item, amount, basic_salary):
     return _D(amount)
 
 
-def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions,
-                                tax, deduction_details, line_items, total, for_date, *,
-                                employee, units_input=None, consume_balances=True):
+def _merge_post_tax_deductions(
+    deductions,
+    new_deductions,
+    net_before_deductions,
+    tax,
+    deduction_details,
+    line_items,
+    total,
+    for_date,
+    *,
+    employee,
+    units_input=None,
+    consume_balances=True,
+):
     """Merge legacy EmployeeDeduction list and new PayrollItemAssignment deductions.
 
     New deduction assignments with tracking_mode='declining' decrement their
@@ -677,12 +729,16 @@ def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions
                     }
                 )
                 # Line item for the deduction
-                line_items.append(_line_item_dict(
-                    _make_legacy_deduction_placeholder(ded), ded_amount,
-                    PayItemClassification.DEDUCTION, False,
-                    custom_label=ded.label or ded.type_label,
-                    is_legacy=True,
-                ))
+                line_items.append(
+                    _line_item_dict(
+                        _make_legacy_deduction_placeholder(ded),
+                        ded_amount,
+                        PayItemClassification.DEDUCTION,
+                        False,
+                        custom_label=ded.label or ded.type_label,
+                        is_legacy=True,
+                    )
+                )
 
     # New assignment-based deductions (declining-balance or date-bounded)
     for assignment in new_deductions:
@@ -694,7 +750,9 @@ def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions
             recoverable = min(amount, _D(assignment.remaining_balance))
             amount = recoverable
             if consume_balances:
-                assignment.remaining_balance = (_D(assignment.remaining_balance) - amount).quantize(Q, rounding=ROUND_HALF_UP)
+                assignment.remaining_balance = (_D(assignment.remaining_balance) - amount).quantize(
+                    Q, rounding=ROUND_HALF_UP
+                )
                 db.session.add(assignment)
 
         if amount > 0:
@@ -712,20 +770,23 @@ def _merge_post_tax_deductions(deductions, new_deductions, net_before_deductions
                     'assignment_id': assignment.id,
                 }
             )
-            line_items.append(_line_item_dict(
-                item_type if item_type else _make_placeholder('unknown'),
-                amount,
-                PayItemClassification.DEDUCTION, False,
-                # Pass ONLY the employee's real custom label. Falling back to
-                # name_en here made _line_item_dict set label_am to the
-                # English string, overwriting the catalog's Amharic name_am --
-                # so every itemised DEDUCTION rendered with no Amharic label
-                # and the payslip showed a blank/Latin line. With custom_label
-                # None, _line_item_dict falls through to the catalog's
-                # name_en / name_am, matching the earning path.
-                custom_label=assignment.custom_label,
-                is_legacy=False,
-            ))
+            line_items.append(
+                _line_item_dict(
+                    item_type if item_type else _make_placeholder('unknown'),
+                    amount,
+                    PayItemClassification.DEDUCTION,
+                    False,
+                    # Pass ONLY the employee's real custom label. Falling back to
+                    # name_en here made _line_item_dict set label_am to the
+                    # English string, overwriting the catalog's Amharic name_am --
+                    # so every itemised DEDUCTION rendered with no Amharic label
+                    # and the payslip showed a blank/Latin line. With custom_label
+                    # None, _line_item_dict falls through to the catalog's
+                    # name_en / name_am, matching the earning path.
+                    custom_label=assignment.custom_label,
+                    is_legacy=False,
+                )
+            )
 
     return total
 
@@ -770,7 +831,8 @@ def _line_item_dict(item, amount, classification, is_system, **kwargs):
         'classification': classification,
         'calculation_method': calc_method,
         'earned_amount': _D(amount).quantize(Q, rounding=ROUND_HALF_UP) if amount is not None else Decimal('0'),
-        'is_deduction': classification in (PayItemClassification.DEDUCTION, PayItemClassification.EMPLOYER_CHARGE, PayItemClassification.TAX),
+        'is_deduction': classification
+        in (PayItemClassification.DEDUCTION, PayItemClassification.EMPLOYER_CHARGE, PayItemClassification.TAX),
         'effective_date': effective_date.isoformat() if hasattr(effective_date, 'isoformat') else effective_date,
         'is_system': is_system or getattr(item, 'is_system', False),
         'is_legacy': is_legacy,
@@ -804,6 +866,7 @@ def _allowance_detail(item, amount, exempt, taxable):
 
 def _make_overtime_placeholder():
     """Placeholder PayItemType-like object for overtime line items."""
+
     class _Placeholder:
         id = None
         key = 'overtime'
@@ -817,11 +880,13 @@ def _make_overtime_placeholder():
         effective_date = None
         end_date = None
         is_active = True
+
     return _Placeholder()
 
 
 def _make_legacy_deduction_placeholder(ded):
     """Placeholder for legacy EmployeeDeduction line items."""
+
     class _Placeholder:
         # Must expose `id`: _line_item_dict's `hasattr(item, 'key')` branch
         # treats this like a PayItemType and reads item.id. Without it, any
@@ -840,6 +905,7 @@ def _make_legacy_deduction_placeholder(ded):
         effective_date = None
         end_date = None
         is_active = True
+
     return _Placeholder()
 
 
@@ -866,6 +932,7 @@ def _make_placeholder(key):
         effective_date = None
         end_date = None
         is_active = True
+
     return _Placeholder()
 
 
@@ -891,8 +958,10 @@ def calculate_payroll_legacy(
     See migration plan (Phase 2 section 2e) for the consumer migration order.
     """
     from payroll_engine.payroll import calculate_payroll as _real
-    return _real(basic_salary, allowances, overtime_entries, for_date,
-                 deductions, allowance_records, sick_leave_reduction)
+
+    return _real(
+        basic_salary, allowances, overtime_entries, for_date, deductions, allowance_records, sick_leave_reduction
+    )
 
 
 # Re-export the LEGACY name under the old name so existing imports continue to

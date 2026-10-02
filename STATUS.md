@@ -1,5 +1,39 @@
 # STATUS.md — Command-Verified State
 
+## Accounting reconciliation slice - 2026-10-02
+
+Isolated implementation checkout: `D:\ethiopian_payroll_engine\payroll-production-work`,
+based on pushed `5c9e682` on `feature/elements-architecture`. Older dirty checkout
+and the separate audit checkout were preserved. No deployment was performed.
+
+Accounting now accounts for unpaid/sick reductions, loan/advance recoveries and
+other deductions using explicitly synthetic trial defaults. Each employee and
+the journal must reconcile before any CSV/IIF export; no balancing plug exists.
+Worksheet identity and money remain tied to the approved snapshot. Preview
+links use actual run IDs, and accounting uses the active company context.
+
+Before: `4 failed, 5 warnings in 9.90s` (unit export guards), and
+`5 failed, 19 warnings in 19.43s` (migrated PostgreSQL output cases).
+After: `55 passed, 3 warnings in 3.07s` (accounting unit/export cases), and
+`19 passed, 52 warnings in 35.50s` (PG accounting plus existing worksheet journey).
+Target: isolated PostgreSQL 16.6 database `payroll_fixes_20261002`, local port 55439;
+upgraded from empty by the real Alembic chain. No customer database was used.
+Changed accounting source and new tests pass Ruff. Native PG cases are added to CI.
+
+The access regression then reproduced a real bug: deleting foreign-company
+membership still allowed export (HTTP 200), because the user's default role
+was used for any company. That fallback now applies only to the default company.
+After the fix: `57 passed, 27 warnings in 56.48s` for PG accounting plus existing
+roles, membership, tenant and security regressions. Authorized switching works;
+removed membership receives 403. The full source gate still reports the two
+Diff authorization review points; they remain required release work.
+
+Account mapping is authorized for synthetic testing only. Practitioner chart
+validation, register/statutory consistency, calculation defects, legacy failure
+handling, Diff authorization, user trial and production gates remain open.
+Whole-repository lint and source preflight are not claimed green by this slice.
+Statutory calculations remain deterministic; see `docs/PAYROLL_CALCULATION_POLICY.md`.
+
 **Last updated:** 2026-10-02 02:11 UTC
 
 

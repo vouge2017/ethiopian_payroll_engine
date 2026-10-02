@@ -543,7 +543,11 @@ class User(UserMixin, db.Model):
     def get_role_for_company(self, company_id):
         """Get user's role for a specific company."""
         uc = UserCompany.query.filter_by(user_id=self.id, company_id=company_id).first()
-        return uc.role if uc else self.role
+        if uc is not None:
+            return uc.role
+        # The legacy role belongs only to the user's default company. A stale
+        # active-company session must not retain access after membership removal.
+        return self.role if self.company_id == company_id else None
 
     def can_access_company(self, company_id):
         """Check if user can access a specific company."""

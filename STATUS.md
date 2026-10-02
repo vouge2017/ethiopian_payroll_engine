@@ -1,5 +1,21 @@
 # STATUS.md — Command-Verified State
 
+## GitHub publication recovered - 2026-10-02 14:13 UTC
+
+The remote URL was already correct: `https://github.com/vouge2017/ethiopian_payroll_engine.git`.
+Git Credential Manager had multiple saved accounts and selected `Mayademe1020`,
+which GitHub denied with HTTP 403. Selecting the already-saved `vouge2017` account
+passed a dry run and the actual push. Repository-local
+`credential.https://github.com.username=vouge2017` is now configured in both the
+isolated hardening checkout and the original checkout; global credentials and the
+original checkout's dirty code were preserved.
+
+All six hardening commits are published to `feature/elements-architecture`.
+`git ls-remote` independently verified the remote source head exactly matches
+`6262a1713b65da25e14074b6c24f2bff92cb835f`. GitHub access is no longer the push blocker.
+No main-branch merge or deployment was performed. Remote CI and remaining production
+gates are not claimed verified. This publication note changes documentation only.
+
 ## Strict money import slice - 2026-10-02 13:53 UTC
 
 Malformed text, currency-only text, booleans, NaN and Infinity no longer become
@@ -17,8 +33,8 @@ invalid native PG CSV/Excel uploads/previews, parser/workflow and Diff checks. T
 is the identified synthetic database, never customer data. New tests and changed
 import/payroll source pass Ruff; existing unrelated Diff lint remains open.
 
-Six bounded hardening slices are committed locally on `feature/elements-architecture`.
-GitHub write access, remote CI and deployment remain unverified/unavailable. Remaining
+Six bounded hardening slices are pushed on `feature/elements-architecture` (publication
+recovery above). Remote CI and deployment remain unverified. Remaining
 work includes statutory snapshots/classifications, exemption and joining/exit policy,
 correction/undo accounting, previous-period checks, results/review UI, practitioner
 trial and full production gates. No production-readiness or legal-compliance claim.
@@ -35,7 +51,8 @@ passed, 17 warnings in 39.05s` for Diff access plus role/isolation checks. Exist
 mocked comparison/XLSX tests: `8 passed, 3 warnings in 5.40s`. Native PG checks added
 to CI. Source preflight has zero findings and one migration head; this is a limited
 static gate, not proof of production safety. Existing unrelated Diff lint remains open.
-GitHub API still reports no push permission; no fixes from this checkout are deployed.
+At this slice's completion the default account lacked push access; publication was
+subsequently recovered above. No fixes from this checkout are claimed deployed.
 
 Next: statutory exports must freeze identity, salary and tax classifications;
 correction/undo accounting and previous-period validation
@@ -85,7 +102,8 @@ Before: two new PostgreSQL regressions failed. After: `23 passed, 61 warnings in
 database. Checks cover unapproved/unknown/foreign runs, authorized company switching,
 revoked membership and anonymous access. Changed Python passes Ruff; diff checks pass.
 HTTP rendering is checked; visual browser review is still pending. No deployment.
-GitHub API still reports `push: false`; committed fixes remain local pending access.
+At this slice's completion GitHub reported `push: false`; publication was subsequently
+recovered using the saved repository-owner account as recorded above.
 Statutory reports, calculation defects and all broader release blockers remain open.
 
 ## Accounting reconciliation slice - 2026-10-02

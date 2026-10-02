@@ -1,5 +1,21 @@
 # STATUS.md — Command-Verified State
 
+## Approved register slice - 2026-10-02
+
+The register now selects a completed/locked run in the active company and reads
+saved payslip amounts instead of calculating today's employee salaries. Approved
+worksheet names survive later master edits; soft-deleted employees remain in the
+historical register. Its ZIP link targets the same run. Legacy runs without identity
+snapshots explicitly warn about current names and leave unavailable breakdowns blank.
+
+Before: two new PostgreSQL regressions failed. After: `23 passed, 61 warnings in
+37.54s` for register, accounting and worksheet journey checks on the isolated migrated
+database. Checks cover unapproved/unknown/foreign runs, authorized company switching,
+revoked membership and anonymous access. Changed Python passes Ruff; diff checks pass.
+HTTP rendering is checked; visual browser review is still pending. No deployment.
+GitHub API still reports `push: false`; committed fixes remain local pending access.
+Statutory reports, calculation defects and all broader release blockers remain open.
+
 ## Accounting reconciliation slice - 2026-10-02
 
 Isolated implementation checkout: `D:\ethiopian_payroll_engine\payroll-production-work`,

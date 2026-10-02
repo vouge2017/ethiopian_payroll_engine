@@ -2090,57 +2090,75 @@ def retry_pdf(run_id, payslip_id):
 @login_required
 @role_required('owner', 'accountant')
 def payroll_register():
-    """
-    Payroll register — single-page summary of all employees for the current month.
-    Printable on A4. Shows: ID, Name, Basic, Allowances, OT, Gross, Pension, Tax, Net.
-    """
+    """Display saved amounts from one approved run, including departed employees."""
+    from payroll_engine.services.worksheet_review import published_row
 
-    employees = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).order_by(Employee.name).all()
+    company_id = _company_id()
+    approved = PayrollRun.query.filter_by(company_id=company_id).filter(PayrollRun.status.in_(['completed', 'locked']))
+    if 'run_id' in request.args:
+        run_id = request.args.get('run_id', type=int)
+        if run_id is None:
+            abort(400)
+        run = approved.filter_by(id=run_id).first_or_404()
+    else:
+        run = approved.order_by(PayrollRun.run_date.desc(), PayrollRun.id.desc()).first()
+        if run is None:
+            flash('Approve a payroll before opening its register.', 'warning')
+            return redirect(url_for('payroll.payroll_runs'))
 
+    payslips = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run.id).order_by(Payslip.id).all()
     rows = []
-    total_basic = Decimal('0')
-    total_allow = Decimal('0')
-    total_ot = Decimal('0')
-    total_gross = Decimal('0')
-    total_pension = Decimal('0')
-    total_tax = Decimal('0')
-    total_net = Decimal('0')
-
-    for emp in employees:
-        result = calculate_payroll(emp.basic_salary, emp.allowances)
+    legacy_identity = False
+    for ps in payslips:
+        try:
+            snapshot = published_row(ps)
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+            return redirect(url_for('payroll.payroll_runs'))
+        emp = Employee.query.with_deleted().filter_by(id=ps.employee_id, company_id=company_id).first()
+        if emp is None:
+            flash('The payroll employee record is missing. Contact support before exporting.', 'danger')
+            return redirect(url_for('payroll.payroll_runs'))
+        legacy_identity = legacy_identity or snapshot is None
+        earnings = [item for item in (ps.line_items or []) if item.get('classification') == 'earning']
+        basic = other = None
+        if earnings:
+            basic = sum(
+                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] == 'basic_salary'), Decimal('0')
+            )
+            other = sum(
+                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] != 'basic_salary'), Decimal('0')
+            )
         rows.append(
             {
-                'emp': emp,
-                'gross': result['gross'],
-                'pension': result['pension_employee'],
-                'tax': result['tax'],
-                'net': result['net'],
-                'ot_pay': result['overtime_pay'],
+                'employee_id': snapshot['id'] if snapshot else emp.employee_id,
+                'name': snapshot['name'] if snapshot else emp.name,
+                'basic': basic,
+                'other': other,
+                'gross': ps.gross_salary,
+                'pension': ps.employee_pension,
+                'tax': ps.tax,
+                'net': ps.net_pay,
             }
         )
-        total_basic += emp.basic_salary
-        total_allow += emp.allowances
-        total_ot += result['overtime_pay']
-        total_gross += result['gross']
-        total_pension += result['pension_employee']
-        total_tax += result['tax']
-        total_net += result['net']
-
-    company = db.session.get(Company, _company_id())
-
+    totals = {
+        key: sum((row[key] for row in rows), Decimal('0')) if all(row[key] is not None for row in rows) else None
+        for key in ('basic', 'other', 'gross', 'pension', 'tax', 'net')
+    }
     return render_template(
         'payroll_register.html',
         rows=rows,
-        company=company,
-        total_basic=total_basic,
-        total_allow=total_allow,
-        total_ot=total_ot,
-        total_gross=total_gross,
-        total_pension=total_pension,
-        total_tax=total_tax,
-        total_net=total_net,
-        period=date.today().strftime('%B %Y'),
-        year=date.today().year,
+        company=db.session.get(Company, company_id),
+        run=run,
+        legacy_identity=legacy_identity,
+        total_basic=totals['basic'],
+        total_allow=totals['other'],
+        total_gross=totals['gross'],
+        total_pension=totals['pension'],
+        total_tax=totals['tax'],
+        total_net=totals['net'],
+        period=run.run_date.strftime('%B %Y'),
+        year=run.run_date.year,
     )
 
 

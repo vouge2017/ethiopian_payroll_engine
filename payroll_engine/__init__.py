@@ -274,6 +274,7 @@ def create_app():
         Leave,
         LeaveBalance,
         Notification,
+        PayrollCorrection,
         PayrollPreview,
         PayslipAcknowledgment,
         PayslipGenerationJob,
@@ -290,6 +291,7 @@ def create_app():
     TenantQuery.register_model(LeaveBalance)
     TenantQuery.register_model(Notification)
     TenantQuery.register_model(PayrollPreview)
+    TenantQuery.register_model(PayrollCorrection)
     TenantQuery.register_model(PayslipAcknowledgment)
     TenantQuery.register_model(PayslipGenerationJob)
     TenantQuery.register_model(ProfileChangeRequest)

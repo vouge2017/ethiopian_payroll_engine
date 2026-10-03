@@ -131,7 +131,7 @@ def generate_payslip_pdf(job_id):
                 emp_data['period'] = (
                     date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
                 )
-            emp_data['calc_flow'] = generate_calculation_flow(emp_data)
+            emp_data['calc_flow'] = None if emp_data.get('correction_note') else generate_calculation_flow(emp_data)
 
             from flask import current_app
 

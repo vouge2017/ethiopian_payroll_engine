@@ -1021,19 +1021,76 @@ class Payslip(db.Model):
     # it cannot recompute -- it must render what was actually paid. JSON (not
     # relational) because line_items is a read-only snapshot, never queried.
     line_items = db.Column(db.JSON, nullable=True)
+    calculation_context = db.Column(db.JSON, nullable=True)
 
     __table_args__ = (
         db.Index('ix_payslip_run_employee', 'payroll_run_id', 'employee_id'),
-        db.UniqueConstraint(
+        db.UniqueConstraint('id', 'company_id', name='uq_payslip_id_company'),
+        db.Index(
+            'uq_payslip_regular_run_employee',
             'payroll_run_id',
             'employee_id',
-            'payslip_type',
-            name='uq_payslip_run_emp_type',
+            unique=True,
+            sqlite_where=db.text("payslip_type = 'regular'"),
+            postgresql_where=db.text("payslip_type = 'regular'"),
         ),
     )
 
     def __repr__(self):
         return f'<Payslip {self.id} for employee {self.employee_id}>'
+
+
+class PayrollCorrection(db.Model):
+    """An evidenced draft becomes payable only through explicit owner approval."""
+
+    query_class = TenantQuery
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
+    payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id', ondelete='RESTRICT'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id', ondelete='RESTRICT'), nullable=False)
+    original_payslip_id = db.Column(db.Integer, nullable=False)
+    approved_payslip_id = db.Column(db.Integer, unique=True, nullable=True)
+    source = db.Column(db.String(32), nullable=False)
+    source_reference = db.Column(db.String(128), nullable=False)
+    effective_date = db.Column(db.Date, nullable=False)
+    reason = db.Column(db.String(255), nullable=False)
+    amount = db.Column(db.Numeric(12, 2), nullable=False)
+    tax_delta = db.Column(db.Numeric(12, 2), nullable=False)
+    net_delta = db.Column(db.Numeric(12, 2), nullable=False)
+    snapshot = db.Column(db.JSON, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='draft')
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['original_payslip_id', 'company_id'],
+            ['payslip.id', 'payslip.company_id'],
+            name='fk_correction_original_company',
+            ondelete='RESTRICT',
+        ),
+        db.ForeignKeyConstraint(
+            ['approved_payslip_id', 'company_id'],
+            ['payslip.id', 'payslip.company_id'],
+            name='fk_correction_approved_company',
+            ondelete='RESTRICT',
+        ),
+        db.UniqueConstraint('company_id', 'original_payslip_id', 'source_reference', name='uq_correction_source'),
+        db.Index(
+            'uq_correction_pending_original',
+            'original_payslip_id',
+            unique=True,
+            sqlite_where=db.text("status = 'draft'"),
+            postgresql_where=db.text("status = 'draft'"),
+        ),
+        db.CheckConstraint("status IN ('draft', 'approved', 'rejected')", name='ck_correction_status'),
+        db.CheckConstraint('amount > 0 AND amount <= 9999999999.99', name='ck_correction_amount'),
+        db.CheckConstraint(
+            "(status = 'approved' AND approved_payslip_id IS NOT NULL AND approved_by IS NOT NULL AND approved_at IS NOT NULL) OR (status <> 'approved' AND approved_payslip_id IS NULL AND approved_by IS NULL AND approved_at IS NULL)",
+            name='ck_correction_approval',
+        ),
+    )
 
 
 class FinalSettlement(db.Model):

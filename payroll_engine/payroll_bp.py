@@ -1111,6 +1111,12 @@ def undo_approval(run_id):
         flash('Only completed payroll runs can be undone.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
+    from payroll_engine.models import PayrollCorrection
+
+    if PayrollCorrection.query.filter_by(company_id=run.company_id, payroll_run_id=run.id).first():
+        flash('This payroll has linked corrections. Its approved payslips must be preserved.', 'warning')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
     # Cannot undo if disbursement has started
     if run.disbursement_status not in ('pending',):
         flash('Cannot undo: disbursement has already started.', 'danger')
@@ -1172,11 +1178,21 @@ def undo_approval(run_id):
 # --- Adjustment Payslips ---
 
 
+def _correction_membership():
+    from payroll_engine.models import UserCompany
+
+    membership = UserCompany.query.filter_by(user_id=current_user.id, company_id=_company_id()).first()
+    if membership is None or membership.role not in ('owner', 'accountant'):
+        abort(403)
+    return membership
+
+
 @payroll_bp.route('/payroll/<int:run_id>/adjustment', methods=['POST'])
 @login_required
 @role_required('owner', 'accountant')
 def create_adjustment(run_id):
-    """Create an adjustment payslip for a completed payroll run."""
+    """Save an evidenced draft; explicit approval creates a payable delta."""
+    _correction_membership()
     from decimal import Decimal, InvalidOperation
 
     from payroll_engine import models as adj_models
@@ -1200,16 +1216,17 @@ def create_adjustment(run_id):
 
     try:
         amount = Decimal(amount_str)
-        if amount <= 0:
+        if not amount.is_finite() or amount <= 0:
             raise ValueError('Amount must be positive')
     except (InvalidOperation, ValueError):
         flash('Amount must be a positive number.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    if adj_type not in ('addition', 'deduction', 'net_override'):
-        adj_type = 'addition'
-
-    emp = Employee.query.filter_by(id=int(emp_id), company_id=cid, is_deleted=False).first_or_404()
+    try:
+        emp_id = int(emp_id)
+    except (ValueError, TypeError):
+        abort(400)
+    emp = Employee.query.filter_by(id=emp_id, company_id=cid, is_deleted=False).first_or_404()
 
     result = svc_create_adjustment(
         db=db,
@@ -1222,24 +1239,28 @@ def create_adjustment(run_id):
         reason=reason,
         user_id=current_user.id,
         basic_salary=emp.basic_salary,
+        source=request.form.get('source', ''),
+        source_reference=request.form.get('source_reference', ''),
+        effective_date=request.form.get('effective_date', ''),
     )
 
     if result.success:
         flash(
-            f'Adjustment of ETB {amount:,.2f} ({adj_type}) created for {result.employee_name}. '
-            f'Net: ETB {result.adjustment_net:,.2f}.',
+            f'Correction saved for {result.employee_name}. Review its status and amounts before approval.',
             'success',
         )
     else:
         flash(f'Adjustment failed: {result.error}', 'danger')
 
-    return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+    return redirect(url_for('payroll.adjustment_summary', run_id=run.id))
 
 
 @payroll_bp.route('/payroll/<int:run_id>/adjustments')
 @login_required
+@role_required('owner', 'accountant')
 def adjustment_summary(run_id):
     """View all adjustments for a payroll run."""
+    membership = _correction_membership()
     from payroll_engine import models as adj_models
     from payroll_engine.services.adjustment_service import get_adjustment_summary
 
@@ -1254,7 +1275,32 @@ def adjustment_summary(run_id):
         run=run,
         summary=summary,
         employees=employees,
+        can_approve=membership.role == 'owner',
     )
+
+
+@payroll_bp.route('/payroll/<int:run_id>/corrections/<int:correction_id>/<decision>', methods=['POST'])
+@login_required
+@role_required('owner')
+def decide_correction(run_id, correction_id, decision):
+    if _correction_membership().role != 'owner':
+        abort(403)
+    from payroll_engine import models
+    from payroll_engine.services.adjustment_service import decide_adjustment
+
+    if decision not in ('approve', 'reject'):
+        abort(404)
+    cid = _company_id()
+    PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+    models.PayrollCorrection.query.filter_by(id=correction_id, company_id=cid, payroll_run_id=run_id).first_or_404()
+    result = decide_adjustment(db, models, run_id, cid, correction_id, current_user.id, approve=decision == 'approve')
+    flash(
+        'Correction ' + ('approved. It is now included in payable outputs.' if decision == 'approve' else 'rejected.')
+        if result.success
+        else result.error,
+        'success' if result.success else 'danger',
+    )
+    return redirect(url_for('payroll.adjustment_summary', run_id=run_id))
 
 
 @payroll_bp.route('/payroll/<int:run_id>/adjustment-bank-file')
@@ -1262,12 +1308,17 @@ def adjustment_summary(run_id):
 @role_required('owner', 'accountant')
 def adjustment_bank_file(run_id):
     """Generate bank file for positive adjustment payslips."""
+    _correction_membership()
     from payroll_engine import models as adj_models
     from payroll_engine.services.adjustment_service import generate_adjustment_bank_file
 
     cid = _company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
-    csv_bytes = generate_adjustment_bank_file(db, adj_models, run_id, cid)
+    try:
+        csv_bytes = generate_adjustment_bank_file(db, adj_models, run_id, cid)
+    except ValueError as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('payroll.adjustment_summary', run_id=run_id))
 
     if not csv_bytes:
         flash('No positive adjustments to generate bank file for.', 'info')

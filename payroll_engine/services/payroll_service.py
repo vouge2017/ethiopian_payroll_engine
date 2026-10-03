@@ -550,6 +550,17 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 line_items = calc.get('line_items')
                 exempt_allowances = calc.get('exempt_allowances')
                 taxable_income = calc.get('taxable')
+                from payroll_engine.services.correction_context import freeze_context
+
+                calculation_context = freeze_context(
+                    today,
+                    employee_id=emp.employee_id,
+                    name=emp_data.get('name') or emp.name,
+                    bank=emp_data.get('bank') or emp.bank_account or emp.bank_or_telebirr,
+                    tin=emp_data.get('tin') or emp.tin,
+                    department=emp.department,
+                    position=emp.position,
+                )
             else:
                 # Legacy path: pre-computed draft figures, with the
                 # hand-rolled deduction loop that pre-dates the engine.
@@ -586,6 +597,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 line_items = None  # legacy path has no engine breakdown
                 exempt_allowances = None
                 taxable_income = None
+                calculation_context = None  # Do not invent context for precomputed legacy amounts.
 
             payslip = Payslip(
                 payroll_run_id=run.id,
@@ -603,6 +615,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 line_items=line_items,
                 exempt_allowances=exempt_allowances,
                 taxable_income=taxable_income,
+                calculation_context=calculation_context,
             )
             db.session.add(payslip)
 

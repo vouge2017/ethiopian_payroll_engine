@@ -125,7 +125,7 @@ def _ensure_pdf(payslip, emp, company_info=None):
             emp_data['period'] = (
                 date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
             )
-        emp_data['calc_flow'] = generate_calculation_flow(emp_data)
+        emp_data['calc_flow'] = None if emp_data.get('correction_note') else generate_calculation_flow(emp_data)
 
         # Get period from the payroll run
         from payroll_engine.models import PayrollRun
@@ -360,6 +360,10 @@ def generate_payslip(
     )
     elements.append(info_table)
     elements.append(Spacer(1, 8))
+
+    if emp.get('correction_note'):
+        elements.append(_paragraph(escape(emp['correction_note']), styles['Normal']))
+        elements.append(Spacer(1, 8))
 
     # ── EARNINGS ──
     elements.append(_paragraph('Earnings / ገቢዎች', section_style))

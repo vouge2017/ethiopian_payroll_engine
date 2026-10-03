@@ -1,11 +1,11 @@
-"""Gate-5/6 regression: Payslip UNIQUE(payroll_run_id, employee_id, payslip_type).
+"""Gate-5/6 regression: one regular payslip per run and employee.
 
 This is the local-DB proof of the constraint. The same DDL is shipped by
-migrations/versions/p0f1a2b3c4d5_payslip_unique_run_emp_type.py and must be
+migrations/versions/f4a5b6c7d8f3_payroll_corrections.py and must be
 verified in the live PostgreSQL schema as part of gate 6.
 
 Three things this test asserts:
-  1. The SQLAlchemy model declares the unique constraint (idempotent with the
+  1. The SQLAlchemy model declares the partial unique index (idempotent with the
      migration — model + migration agree on the invariant).
   2. Inserting a duplicate (run, employee, 'regular') raises IntegrityError.
   3. A 'regular' + 'adjustment' pair for the same (run, employee) is allowed.
@@ -59,12 +59,11 @@ def _make_world(app):
         return company.id, user.id, emp.id, run.id
 
 
-def test_model_declares_unique_constraint():
-    """The model must declare UNIQUE(payroll_run_id, employee_id, payslip_type)."""
-    constraints = {c.name for c in Payslip.__table__.constraints if hasattr(c, 'name') and c.name}
-    assert 'uq_payslip_run_emp_type' in constraints, (
-        f"Payslip model is missing 'uq_payslip_run_emp_type'. Found: {sorted(constraints)}"
-    )
+def test_model_declares_regular_unique_index():
+    """Regular payroll remains unique while distinct approved corrections can coexist."""
+    index = next(i for i in Payslip.__table__.indexes if i.name == 'uq_payslip_regular_run_employee')
+    assert index.unique
+    assert str(index.dialect_options['postgresql']['where']) == "payslip_type = 'regular'"
 
 
 def test_duplicate_regular_payslip_rejected(app):

@@ -22,6 +22,7 @@ from payroll_engine.models import (
 )
 from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
 from payroll_engine.payroll_elements import _load_employee_items, calculate_payroll_from_assignments
+from payroll_engine.services.correction_context import freeze_context
 from payroll_engine.shared import create_audit_log
 
 Q = Decimal('0.01')
@@ -281,6 +282,16 @@ def calculate_rows(company_id, start, *, lock=False):
                     'worksheet_inputs': {'bonus': str(bonus.quantize(Q)), 'absence_days': absence_days, 'overtime': ot},
                     'worksheet_period_start': start.isoformat(),
                     'calculation_date': end.isoformat(),
+                    'calculation_context': freeze_context(
+                        end,
+                        employee_id=employee.employee_id,
+                        name=employee.name,
+                        bank=employee.bank_account or employee.bank_or_telebirr,
+                        period_start=start,
+                        tin=employee.tin,
+                        department=employee.department,
+                        position=employee.position,
+                    ),
                     'balance_movements': ledgers,
                 }
             )
@@ -393,6 +404,7 @@ def apply_approved_rows(run, company_id, rows):
                 taxable_income=Decimal(row['taxable']),
                 deduction_details=row['deduction_details'],
                 line_items=row['line_items'],
+                calculation_context=row.get('calculation_context'),
                 pdf_status='not_generated',
             )
         )
@@ -404,6 +416,14 @@ def apply_approved_rows(run, company_id, rows):
 
 def published_row(payslip):
     """Reuse retained approved facts for both inline and worker output."""
+    if payslip.payslip_type == 'adjustment':
+        from payroll_engine.models import PayrollCorrection
+        from payroll_engine.services.adjustment_service import correction_output
+
+        correction = PayrollCorrection.query.filter_by(
+            company_id=payslip.company_id, approved_payslip_id=payslip.id, status='approved'
+        ).first()
+        return correction_output(correction, payslip) if correction else None
     run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=payslip.company_id).first()
     if run is None or run.source != 'spreadsheet':
         return None

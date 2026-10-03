@@ -67,3 +67,23 @@ Ignored / Test credential status for GitGuardian incident 37741140 on 2026-10-03
 Next gate: verify the fresh scan triggered by this status checkpoint; direct
 GitHub rerequest returned HTTP 404. Recovery PR #9 is already merged. PR #8
 merging and deployment are separate remaining actions.
+
+## 2026-10-03 checkpoint — approved-payroll corrections
+
+10. Save and approve evidenced taxable overtime/bonus corrections while preserving approved originals.
+
+Verified locally on `feature/approved-payroll-corrections`, based on merged main
+`9a46f28`: `118 passed, 132 warnings in 142.72s (0:02:22)` for affected workflows;
+`39 passed, 5 warnings in 97.16s (0:01:37)` for the final correction selection.
+Ruff passes. Actual PostgreSQL migrations, concurrent approvals, retry/conflict
+behavior, active membership, audit rollback, frozen PDF/bank output and a
+CSRF-enabled desktop/phone journey are covered. See
+[evidence and limits](PAYROLL_CORRECTIONS_2026-10-03.md), including the intermediate
+test-fixture failure and successful focused recheck. Selections overlap.
+
+Older records without complete calculation context require historical review;
+salary/pension/deduction/net-only corrections remain outside this slice.
+PR #8 reconciliation and GitGuardian are complete. This new branch still needs
+hosted checks and review; production deployment is separate.
+
+11. Finish the three existing results/review UI defects and run the synthetic practitioner journey.

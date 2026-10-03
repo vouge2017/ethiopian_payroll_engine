@@ -16,7 +16,7 @@ FEATURE_HEAD = 'f4a5b6c7d8f0'
 MAIN_HEAD = 'a9b8c7d6e5f4'
 COMPLIANCE_HEAD = 'zz1a2b3c4d5e'
 MERGE_HEAD = 'f4a5b6c7d8f1'
-HEAD = 'f4a5b6c7d8f2'
+HEAD = 'f4a5b6c7d8f3'
 
 
 @pytest.fixture
@@ -96,7 +96,7 @@ def assert_reconciled(engine, cfg, company, original):
     assert isinstance(
         next(c for c in inspector.get_columns('company') if c['name'] == 'webhook_secret')['type'], sa.LargeBinary
     )
-    assert any(c['name'] == 'uq_payslip_run_emp_type' for c in inspector.get_unique_constraints('payslip'))
+    assert any(c['name'] == 'uq_payslip_regular_run_employee' and c['unique'] for c in inspector.get_indexes('payslip'))
     assert financial_snapshot(engine) == original
     from payroll_engine.models import Company
 

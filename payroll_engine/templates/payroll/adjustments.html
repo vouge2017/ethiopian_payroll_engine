@@ -4,7 +4,7 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-1">Adjustment Payslips</h4>
+            <h4 class="mb-1">Payroll Corrections</h4>
             <p class="text-muted mb-0">{{ run.reference or 'Run #' ~ run.id }} · {{ run.period or '' }}</p>
         </div>
         <div>
@@ -19,12 +19,20 @@
         </div>
     </div>
 
+    <p>Draft corrections do not change approved payroll or payable totals. An owner must review and approve each correction.</p>
+    {% if summary.legacy_count %}
+    <div class="alert alert-warning">{{ summary.legacy_count }} legacy adjustment(s) require historical review. They are preserved and excluded from this correction bank file.</div>
+    {% endif %}
+    {% if summary.pending_count %}
+    <div class="alert alert-info">{{ summary.pending_count }} correction(s) awaiting owner approval.</div>
+    {% endif %}
+
     <!-- Summary Cards -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-muted small">Total Adjustments</div>
+                    <div class="text-muted small">Approved Corrections</div>
                     <div class="fs-4 fw-bold">{{ summary.total_adjustments }}</div>
                 </div>
             </div>
@@ -48,8 +56,8 @@
         <div class="col-md-3">
             <div class="card">
                 <div class="card-body text-center">
-                    <div class="text-muted small">Negative (to deduct)</div>
-                    <div class="fs-4 fw-bold text-danger">ETB {{ '{:,.2f}'.format(summary.total_negative_net) }}</div>
+                    <div class="text-muted small">Awaiting Approval</div>
+                    <div class="fs-4 fw-bold">{{ summary.pending_count }}</div>
                 </div>
             </div>
         </div>
@@ -59,11 +67,13 @@
     {% if run.status in ('completed', 'locked') %}
     <div class="card mb-4">
         <div class="card-header">
-            <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create New Adjustment</h6>
+            <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Save Draft Correction</h6>
         </div>
         <div class="card-body">
             <form method="POST" action="{{ url_for('payroll.create_adjustment', run_id=run.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="adjustment_type" value="addition">
+                <p class="text-muted">For additional taxable overtime or bonus in this payroll period. Salary, pension, deduction and net-only corrections require policy review.</p>
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">Employee</label>
@@ -75,12 +85,19 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Type</label>
-                        <select name="adjustment_type" class="form-select">
-                            <option value="addition">Addition (gross)</option>
-                            <option value="deduction">Deduction (gross)</option>
-                            <option value="net_override">Net Override</option>
+                        <label class="form-label" for="correction-source">Approved source</label>
+                        <select name="source" id="correction-source" class="form-select">
+                            <option value="approved_overtime">Approved overtime</option>
+                            <option value="approved_bonus">Approved taxable bonus</option>
                         </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="source-reference">Supporting reference</label>
+                        <input type="text" id="source-reference" name="source_reference" class="form-control" maxlength="128" placeholder="Approval record or document reference" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="effective-date">Work or bonus effective date</label>
+                        <input type="date" id="effective-date" name="effective_date" class="form-control" required>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Amount (ETB)</label>
@@ -92,7 +109,7 @@
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-plus me-1"></i>Create
+                            <i class="bi bi-plus me-1"></i>Save Draft
                         </button>
                     </div>
                 </div>
@@ -105,10 +122,10 @@
     {% if summary.adjustments %}
     <div class="card">
         <div class="card-header">
-            <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Adjustments ({{ summary.total_adjustments }})</h6>
+            <h6 class="mb-0"><i class="bi bi-list-ul me-2"></i>Corrections ({{ summary.adjustments|length }})</h6>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
@@ -118,9 +135,11 @@
                             <th class="text-end">Tax</th>
                             <th class="text-end">Pension</th>
                             <th class="text-end">Net</th>
-                            <th class="text-end">Original Net</th>
-                            <th class="text-end">New Total</th>
+                            <th class="text-end">Previously Approved Net</th>
+                            <th class="text-end">Net After Approval</th>
                             <th>Reason</th>
+                            <th>Source / date</th>
+                            <th>Status / action</th>
                             <th>Created</th>
                         </tr>
                     </thead>
@@ -147,6 +166,20 @@
                             <td class="text-end text-muted">{{ '{:,.2f}'.format(adj.original_net) }}</td>
                             <td class="text-end fw-bold">{{ '{:,.2f}'.format(adj.new_total) }}</td>
                             <td><small>{{ adj.reason }}</small></td>
+                            <td><small>{{ adj.source_reference }}<br>{{ adj.effective_date }}</small></td>
+                            <td>
+                                <span class="badge {% if adj.status == 'approved' %}bg-success{% elif adj.status == 'draft' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ adj.status }}</span>
+                                {% if adj.status == 'draft' and can_approve %}
+                                <form method="POST" action="{{ url_for('payroll.decide_correction', run_id=run.id, correction_id=adj.id, decision='approve') }}" class="mt-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-success btn-sm" type="submit">Approve Correction</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('payroll.decide_correction', run_id=run.id, correction_id=adj.id, decision='reject') }}" class="mt-2">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button class="btn btn-outline-danger btn-sm" type="submit">Reject</button>
+                                </form>
+                                {% endif %}
+                            </td>
                             <td><small class="text-muted">{{ adj.created_at[:10] if adj.created_at else '' }}</small></td>
                         </tr>
                         {% endfor %}
@@ -161,6 +194,30 @@
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+            <div class="d-md-none p-3">
+                {% for adj in summary.adjustments %}
+                <article class="border rounded p-3 mb-3">
+                    <h6>{{ adj.employee_name }} <span class="badge bg-secondary">{{ adj.status }}</span></h6>
+                    <p class="small mb-2">{{ adj.reason }}<br>{{ adj.source_reference }} · {{ adj.effective_date }}</p>
+                    <dl class="row mb-2">
+                        <dt class="col-6">Gross addition</dt><dd class="col-6 text-end">{{ '{:,.2f}'.format(adj.gross) }}</dd>
+                        <dt class="col-6">Tax difference</dt><dd class="col-6 text-end">{{ '{:,.2f}'.format(adj.tax) }}</dd>
+                        <dt class="col-6">Net addition</dt><dd class="col-6 text-end fw-bold">ETB {{ '{:,.2f}'.format(adj.net) }}</dd>
+                        <dt class="col-6">Net after approval</dt><dd class="col-6 text-end">{{ '{:,.2f}'.format(adj.new_total) }}</dd>
+                    </dl>
+                    {% if adj.status == 'draft' and can_approve %}
+                    <form method="POST" action="{{ url_for('payroll.decide_correction', run_id=run.id, correction_id=adj.id, decision='approve') }}" class="mb-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-success w-100">Approve Correction</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('payroll.decide_correction', run_id=run.id, correction_id=adj.id, decision='reject') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-outline-danger w-100">Reject</button>
+                    </form>
+                    {% endif %}
+                </article>
+                {% endfor %}
             </div>
         </div>
     </div>

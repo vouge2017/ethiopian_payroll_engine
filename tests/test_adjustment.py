@@ -18,6 +18,7 @@ from payroll_engine.models import (
     Company,
     Employee,
     OvertimeEntry,
+    PayrollCorrection,
     PayrollRun,
     Payslip,
     TenantQuery,
@@ -95,11 +96,17 @@ def _create_completed_run(app, company_id, user_id):
             company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=10000,
-            tax=1325,
+            tax=1475,
             employee_pension=700,
             employer_pension=1100,
-            net_pay=7975,
+            net_pay=7825,
+            taxable_income=9300,
             payslip_type='regular',
+        )
+        from payroll_engine.services.correction_context import freeze_context
+
+        ps.calculation_context = freeze_context(
+            run.run_date, employee_id=emp.employee_id, name=emp.name, bank=emp.bank_or_telebirr
         )
         db.session.add(ps)
         db.session.commit()
@@ -118,17 +125,22 @@ def test_create_adjustment(app, company_user, client):
             'employee_id': str(emp_id),
             'amount': '2000',
             'reason': 'Overtime correction',
+            'source': 'approved_overtime',
+            'source_reference': 'HR-OT-1',
+            'effective_date': datetime.now(UTC).date().isoformat(),
         },
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert b'Adjustment' in resp.data
+    assert b'Correction' in resp.data
 
     with app.app_context():
-        adjustments = Payslip.query.filter_by(company_id=cid, payroll_run_id=run_id, payslip_type='adjustment').all()
+        adjustments = PayrollCorrection.query.filter_by(company_id=cid, payroll_run_id=run_id).all()
         assert len(adjustments) == 1
         assert adjustments[0].reason == 'Overtime correction'
-        assert adjustments[0].gross_salary == 2000
+        assert adjustments[0].amount == 2000
+        assert adjustments[0].status == 'draft'
+        assert Payslip.query.filter_by(company_id=cid, payroll_run_id=run_id, payslip_type='adjustment').count() == 0
         assert adjustments[0].original_payslip_id is not None
 
 
@@ -181,13 +193,16 @@ def test_adjustment_creates_audit_log(app, company_user, client):
             'employee_id': str(emp_id),
             'amount': '1500',
             'reason': 'Bonus correction',
+            'source': 'approved_bonus',
+            'source_reference': 'HR-BONUS-1',
+            'effective_date': datetime.now(UTC).date().isoformat(),
         },
         follow_redirects=True,
     )
     assert resp.status_code == 200
 
     with app.app_context():
-        log = AuditLog.query.filter_by(company_id=cid, action='adjustment_payslip_created').first()
+        log = AuditLog.query.filter_by(company_id=cid, action='payroll_correction_drafted').first()
         assert log is not None
         assert log.details['reason'] == 'Bonus correction'
 

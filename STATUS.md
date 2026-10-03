@@ -918,3 +918,30 @@ Alembic graph has 76 revisions and one head, `f4a5b6c7d8f2`.
 
 Full scope, initial failures, fixes and evidence:
 [PR8_RECONCILIATION_2026-10-03.md](docs/PR8_RECONCILIATION_2026-10-03.md).
+
+## 2026-10-03 — approved-payroll correction slice
+
+Supersedes the prior pending merge checkpoint: the user merged PR #8 into main
+at `9a46f2880188c7bb473bd3ac1c42fd89053bf839`; GitGuardian passed after the owner
+classified incident 37741140 as a test credential.
+
+New branch `feature/approved-payroll-corrections` implements evidenced drafts and
+explicit owner approval for additional taxable overtime/bonus. Approved originals
+are preserved; retained-period tax deltas, source identity, active membership,
+atomic audit, concurrency/retries, PDF and bank outputs are verified. New reviews
+retain calculation context; missing/ambiguous historical context is blocked.
+Migration `f4a5b6c7d8f3` is the sole head of 77 revisions. Original dirty workspaces
+remain unchanged.
+
+- Affected migration/output/approval checks: `118 passed, 132 warnings in 142.72s (0:02:22)`.
+- Final correction selection: `39 passed, 5 warnings in 97.16s (0:01:37)`.
+- Intermediate security/correction batch: `1 failed, 121 passed, 12 warnings in 162.44s (0:02:42)`;
+  its sole failure was a new test mocking nonexistent enqueue_pdf, fixed and
+  rechecked in the final correction selection. Counts overlap; not a full-suite total.
+- Ruff passes; `230 files already formatted`. CSRF-enabled desktop/phone synthetic
+  draft-to-approval journey verified; no phone page overflow.
+- Branch publication/hosted CI are separate from these local checks. No merge,
+  production migration or deployment performed for this slice.
+
+Scope, logs and screenshots:
+[PAYROLL_CORRECTIONS_2026-10-03.md](docs/PAYROLL_CORRECTIONS_2026-10-03.md).

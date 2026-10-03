@@ -42,7 +42,11 @@
       <p class="text-muted mb-0">{{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }} · {{ run.reference or 'Run #' + run.id|string }}</p>
     </div>
     <div class="d-flex align-items-center gap-3">
-      {% if can_approve %}
+      {% if run.status in ('completed', 'locked') %}
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+          <i class="bi bi-check-circle me-1"></i> {{ 'Approved and locked' if run.status == 'locked' else 'Approved' }}
+        </span>
+      {% elif can_approve %}
         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
           <i class="bi bi-check-circle me-1"></i> Ready for Approval
         </span>
@@ -68,6 +72,20 @@
     <div class="card-body">
       <h5 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>What Happened</h5>
       <p class="text-body">{{ narrative }}</p>
+
+      {% if change_summary and change_summary.retained_comparison %}
+      <h6>What changed from previous approved payroll</h6>
+      <p class="small">Previous approved: {{ change_summary.previous_period or 'No earlier approved payroll' }}</p>
+      <p class="small">{{ change_summary.summary_text }} Net pay change: ETB {{ '{:+,.2f}'.format(change_summary.net_delta) }}.</p>
+      {% for note in change_summary.comparison_notes %}<p class="small text-muted">{{ note }}</p>{% endfor %}
+      {% if change_summary.changes %}
+      <ul class="list-unstyled">
+        {% for change in change_summary.changes %}
+        <li class="border-bottom py-2"><strong>{{ change.employee_name }} ({{ change.employee_id }})</strong><br>{{ change.description }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endif %}
 
       {% if change_summary and change_summary.changes %}
       <div class="row g-3 mt-2">
@@ -263,9 +281,25 @@
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- SECTION 4: APPROVAL — Ready? -->
+  {% if validation_results %}
+  <div class="card mb-4"><div class="card-body">
+    <h5>Saved validation checks</h5>
+    <ul class="list-unstyled">{% for finding in validation_results %}
+      <li class="border-bottom py-2"><strong>{{ finding.severity }} · {{ finding.rule_code }}</strong>: {{ finding.message }}
+      {% if finding.overridden %}<span class="badge bg-secondary">Override recorded</span>{% endif %}</li>
+    {% endfor %}</ul>
+    <p class="small text-muted">Resolve blocking findings and review flags on the approval screen.</p>
+  </div></div>
+  {% endif %}
   <!-- ═══════════════════════════════════════════ -->
 
-  {% if component_errors and component_errors.exceptions %}
+  {% if run.status in ('completed', 'locked') %}
+  <div class="card mb-4"><div class="card-body">
+    <h5>Approved payroll</h5>
+    <p>Approval is recorded. Downloading outputs does not mean salaries have been paid.</p>
+    <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">View approved payroll</a>
+  </div></div>
+  {% elif component_errors and component_errors.exceptions %}
   <div class="card mb-4">
     <div class="card-body">
       <h5 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-purple me-2"></i>Approval</h5>

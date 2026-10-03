@@ -1,5 +1,51 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT AUTHORITATIVE STATE - 2026-10-03
+
+- **Merged:** remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf` includes
+  accepted recovery/hardening PR #8 and approved overtime/bonus correction PR #10
+  (`90779cb`). No newer main commit was reported by today's remote read.
+- **Schema:** 77 Alembic revisions, sole head `f4a5b6c7d8f3`; source graph checked.
+- **Locally verified:** reconciliation and correction PostgreSQL receipts below
+  remain attributable to their tested slices; they are not full-main CI proof.
+- **Hosted CI on exact main:** PostgreSQL, standalone migrations Python 3.11/3.12,
+  lint and format passed. Full Python 3.11 failed:
+  `TOTAL: 1550 passed, 11 failed, 0 errors, 116 skipped`; Python 3.12 cancelled.
+  Failed files: `test_p0_features.py`, `test_p0d_concurrency.py`.
+  [Exact-main CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37105301824).
+- **GitGuardian:** success on merged PR #10 head `90779cb`, check `111152463105`;
+  no GitGuardian check is attached to merge SHA `9670a92`. Do not label main's
+  absent scan as a separately passed scan. Historical incident 37741140 is
+  classified Ignored / Test credential, with prior fresh success.
+- **Deployed:** no identified deployment or restore proof for this baseline.
+- **Practitioner verified:** founder/Tigist monthly trial not yet completed.
+- **Still open / authorized now:** repair the two stale CI test contracts;
+  close only the three known results/review controls; connect existing saved
+  review, previous approved comparison and deterministic checks. Then report
+  trial scripts and STOP before practitioner expansion or deployment.
+
+This section supersedes older pending/next-task statements below. Historical
+receipts remain unchanged. Working branch: `feature/monthly-payroll-journey`
+in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
+
+### Monthly slice completion - 2026-10-03
+
+Prepared on the review branch, unmerged and undeployed. Repaired the obsolete CI
+test contracts; closed individual PDF, worksheet Undo and completed-review label
+defects; connected existing change summary to frozen review and earlier approved
+regular payroll. Existing exceptions and saved checker findings are visible.
+No new policy thresholds, statutory math, migrations or correction categories.
+
+Affected result: `136 passed, 104 warnings in 80.49s (0:01:20)`.
+Final recheck: `57 passed, 20 warnings in 20.60s`. Counts overlap.
+Ruff passes; `231 files already formatted`. CSRF-enabled accountant/owner browser
+journey verified on desktop and 390px; saved phone review width 384 <= 390.
+Downloaded PDF/bank both contain net 11,053.99; payment remains Pending.
+New-commit hosted CI remains a separate verification gate after push.
+
+[Scope, receipts, policy/release limits and founder/Tigist scripts](docs/MONTHLY_PAYROLL_JOURNEY_2026-10-03.md).
+STOP after this slice; no further work order or practitioner expansion is started.
+
 ## Ruff gates and overtime page repair - 2026-10-02
 
 The existing pending cleanup was reviewed and completed on

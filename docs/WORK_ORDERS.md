@@ -1,5 +1,42 @@
 # Focused delivery work orders
 
+## CURRENT AUTHORITATIVE STATE - 2026-10-03
+
+Accepted baseline: remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf`
+contains merged PR #8 and #10. Schema: 77 revisions, one head `f4a5b6c7d8f3`.
+Local PostgreSQL receipts remain slice-specific. Exact-main hosted PostgreSQL,
+standalone migrations and lint/format pass; full Python 3.11 has
+`TOTAL: 1550 passed, 11 failed, 0 errors, 116 skipped`, Python 3.12 cancelled.
+GitGuardian passed on PR #10 head `90779cb`; merge SHA has no separate scan.
+Deployment/restore and founder/Tigist verification are open.
+
+12. Prepare the ordinary monthly payroll journey using existing comparison and checks, then STOP.
+
+First repair the two stale CI test contracts. Close the individual PDF control,
+unsupported worksheet Undo and completed-review label. Connect previous approved
+facts to saved-review changes and exceptions; exercise desktop/phone using
+synthetic data. Reuse existing services, keep statutory policy unchanged, expose
+threshold decisions, and report founder/Tigist trial scripts. No further
+correction categories, AI, bank execution, statutory submission, HRMS expansion
+or production deployment. The latest user instruction authorizes this bounded
+slice and supersedes the earlier reconciliation-only stop below.
+
+See STATUS.md for source/CI/deployment distinctions. Historical orders and
+receipts below are retained; stale pending instructions do not override this
+current section.
+
+### Order 12 local acceptance - 2026-10-03
+
+Delivered on `feature/monthly-payroll-journey`: three results/review control fixes,
+existing frozen previous-period comparison, exceptions and saved checks.
+`136 passed, 104 warnings in 80.49s (0:01:20)` affected cases;
+`57 passed, 20 warnings in 20.60s` final recheck (overlap). Ruff passes.
+Desktop/390px accountant-to-owner approval, PDF and bank download were exercised
+with synthetic data; outputs agree and payment stays Pending.
+Review branch hosted checks, merge, practitioner acceptance and deployment remain
+separate. [Report and trial scripts](MONTHLY_PAYROLL_JOURNEY_2026-10-03.md).
+**STOP:** no further work order begins automatically.
+
 We own the technical investigation and implementation. The product owner supplies
 the user problem, policy decisions and user feedback; expert prompting is not a
 prerequisite. STATUS.md remains the evidence record. Update this board when work

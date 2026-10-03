@@ -5,13 +5,17 @@ Tests for P0 features:
 3. Concurrency and locking
 """
 
+from datetime import date
 from decimal import Decimal
+
+import pytest
 
 from payroll_engine.services.adjustment_service import (
     AdjustmentResult,
     AdjustmentSummary,
     calculate_adjustment,
 )
+from payroll_engine.services.correction_context import freeze_context
 from payroll_engine.services.month_close import (
     CloseStep,
     MonthEndClose,
@@ -22,105 +26,55 @@ from payroll_engine.services.month_close import (
 # ---------------------------------------------------------------------------
 
 
+def _addition(amount, **options):
+    context = freeze_context(date(2026, 9, 30), employee_id='SYNTHETIC', name='Synthetic', bank='1000123456789')
+    return calculate_adjustment(
+        original_gross=Decimal('10000'),
+        original_tax=Decimal('1475'),
+        original_pension=Decimal('700'),
+        original_net=Decimal('7825'),
+        adjustment_amount=Decimal(amount),
+        taxable_income=Decimal('9300'),
+        tax_context=context,
+        **options,
+    )
+
+
 class TestAdjustmentCalculation:
     """Test the adjustment calculation logic."""
 
     def test_positive_addition(self):
-        """Adding ETB 5000 to a payslip."""
-        result = calculate_adjustment(
-            original_gross=Decimal('15000'),
-            original_tax=Decimal('2340'),
-            original_pension=Decimal('700'),
-            original_net=Decimal('11960'),
-            adjustment_amount=Decimal('5000'),
-            adjustment_type='addition',
-        )
-
-        # Adjustment should have tax calculated
+        result = _addition('5000')
         assert result['adjustment_gross'] == Decimal('5000')
         assert result['adjustment_tax'] > 0
-        assert result['adjustment_net'] > 0
-        assert result['new_total_net'] > Decimal('11960')
+        assert result['adjustment_net'] == result['adjustment_gross'] - result['adjustment_tax']
+        assert result['new_total_net'] == Decimal('7825') + result['adjustment_net']
+        assert result['mode'] == 'retained_period_delta'
 
     def test_deduction(self):
-        """Deducting ETB 2000 from a payslip."""
-        result = calculate_adjustment(
-            original_gross=Decimal('15000'),
-            original_tax=Decimal('2340'),
-            original_pension=Decimal('700'),
-            original_net=Decimal('11960'),
-            adjustment_amount=Decimal('2000'),
-            adjustment_type='deduction',
-        )
-
-        # Deduction should reduce net
-        assert result['adjustment_gross'] < 0
-        assert result['adjustment_net'] < 0
-        assert result['new_total_net'] < Decimal('11960')
+        with pytest.raises(ValueError, match='policy review'):
+            _addition('2000', adjustment_type='deduction')
 
     def test_net_override(self):
-        """Net override: pay exactly ETB 3000."""
-        result = calculate_adjustment(
-            original_gross=Decimal('15000'),
-            original_tax=Decimal('2340'),
-            original_pension=Decimal('700'),
-            original_net=Decimal('11960'),
-            adjustment_amount=Decimal('3000'),
-            adjustment_type='net_override',
-        )
-
-        # Net override: no recalculation
-        assert result['adjustment_net'] == Decimal('3000')
-        assert result['adjustment_gross'] == Decimal('0')
-        assert result['adjustment_tax'] == Decimal('0')
-        assert result['new_total_net'] == Decimal('14960')
+        with pytest.raises(ValueError, match='policy review'):
+            _addition('3000', adjustment_type='net_override')
 
     def test_addition_with_basic_salary(self):
-        """Addition with basic salary recalculates pension."""
-        result = calculate_adjustment(
-            original_gross=Decimal('15000'),
-            original_tax=Decimal('2340'),
-            original_pension=Decimal('700'),
-            original_net=Decimal('11960'),
-            adjustment_amount=Decimal('5000'),
-            adjustment_type='addition',
-            basic_salary=Decimal('5000'),
-        )
-
-        # With basic salary, pension should be calculated
-        assert result['adjustment_pension'] > 0
-        assert result['mode'] == 'recalculated'
+        # Overtime/bonus additions must never mutate pension, even if an old
+        # caller supplies the legacy basic_salary argument.
+        result = _addition('5000', basic_salary=Decimal('5000'))
+        assert result['adjustment_pension'] == Decimal('0.00')
+        assert result['mode'] == 'retained_period_delta'
 
     def test_zero_adjustment(self):
-        """Zero adjustment should produce zero delta."""
-        result = calculate_adjustment(
-            original_gross=Decimal('15000'),
-            original_tax=Decimal('2340'),
-            original_pension=Decimal('700'),
-            original_net=Decimal('11960'),
-            adjustment_amount=Decimal('0'),
-            adjustment_type='addition',
-        )
-
-        assert result['adjustment_gross'] == Decimal('0')
-        assert result['adjustment_net'] == Decimal('0')
-        assert result['new_total_net'] == Decimal('11960')
+        with pytest.raises(ValueError, match='Amount must'):
+            _addition('0')
 
     def test_decimal_precision(self):
-        """All results must be Decimal with 2 decimal places."""
-        result = calculate_adjustment(
-            original_gross=Decimal('12345.67'),
-            original_tax=Decimal('1234.56'),
-            original_pension=Decimal('864.19'),
-            original_net=Decimal('10246.92'),
-            adjustment_amount=Decimal('1111.11'),
-            adjustment_type='addition',
-        )
-
-        assert isinstance(result['adjustment_gross'], Decimal)
-        assert isinstance(result['adjustment_tax'], Decimal)
-        assert isinstance(result['adjustment_net'], Decimal)
-        assert isinstance(result['new_total_net'], Decimal)
+        result = _addition('1111.11')
+        for name in ('adjustment_gross', 'adjustment_tax', 'adjustment_net', 'new_total_net'):
+            assert isinstance(result[name], Decimal)
+            assert result[name] == result[name].quantize(Decimal('0.01'))
 
 
 # ---------------------------------------------------------------------------
@@ -266,19 +220,12 @@ class TestAdjustmentResult:
     """Test the adjustment result dataclass."""
 
     def test_success_result(self):
-        """Success result must have all fields."""
         result = AdjustmentResult(
-            success=True,
-            adjustment_id=42,
-            employee_name='Abebe Kebede',
-            original_net=Decimal('11960'),
-            adjustment_net=Decimal('3500'),
-            new_total_net=Decimal('15460'),
-            reason='Overtime correction',
+            success=True, adjustment_id=42, employee_name='Synthetic worker', adjustment_net=Decimal('3500')
         )
-
         assert result.success is True
         assert result.adjustment_id == 42
+        assert result.adjustment_net == Decimal('3500')
         assert result.error == ''
 
     def test_failure_result(self):
@@ -356,43 +303,16 @@ class TestAdjustmentEdgeCases:
     """Edge cases for adjustment calculations."""
 
     def test_very_small_adjustment(self):
-        """Adjustment of ETB 0.01 should work."""
-        result = calculate_adjustment(
-            original_gross=Decimal('10000'),
-            original_tax=Decimal('1475'),
-            original_pension=Decimal('700'),
-            original_net=Decimal('7825'),
-            adjustment_amount=Decimal('0.01'),
-            adjustment_type='addition',
-        )
-
+        result = _addition('0.01')
         assert result['adjustment_gross'] == Decimal('0.01')
-        assert result['new_total_net'] != Decimal('7825')
+        assert result['new_total_net'] == Decimal('7825.01')
 
     def test_large_adjustment(self):
-        """Adjustment of ETB 100,000 should work."""
-        result = calculate_adjustment(
-            original_gross=Decimal('10000'),
-            original_tax=Decimal('1475'),
-            original_pension=Decimal('700'),
-            original_net=Decimal('7825'),
-            adjustment_amount=Decimal('100000'),
-            adjustment_type='addition',
-        )
-
+        result = _addition('100000')
         assert result['adjustment_gross'] == Decimal('100000')
         assert result['adjustment_tax'] > 0
+        assert result['adjustment_net'] > 0
 
     def test_deduction_larger_than_net(self):
-        """Deduction larger than original net should produce negative total."""
-        result = calculate_adjustment(
-            original_gross=Decimal('5000'),
-            original_tax=Decimal('450'),
-            original_pension=Decimal('350'),
-            original_net=Decimal('4200'),
-            adjustment_amount=Decimal('10000'),
-            adjustment_type='deduction',
-        )
-
-        # Net should go negative (overpayment recovery)
-        assert result['new_total_net'] < 0
+        with pytest.raises(ValueError, match='policy review'):
+            _addition('10000', adjustment_type='deduction')

@@ -71,21 +71,17 @@ def test_approval_guard_rejects_completed_run(app, seeded):
 
 
 def test_payslip_uniqueness_constraint_in_model(app, seeded):
-    """P0-F: Payslip __table_args__ declares UNIQUE(run, employee, type)."""
-    declared = any(c.name == 'uq_payslip_run_emp_type' for c in Payslip.__table__.constraints)
-    assert declared, (
-        "Payslip model must declare UniqueConstraint('payroll_run_id', "
-        "'employee_id', 'payslip_type', name='uq_payslip_run_emp_type'). "
-        'Without it, fresh DBs created via db.create_all() (dev, tests, '
-        'onboarding) are unprotected even after the migration runs.'
-    )
+    """One regular payslip per employee/run; distinct approved corrections remain possible."""
+    index = next(i for i in Payslip.__table__.indexes if i.name == 'uq_payslip_regular_run_employee')
+    assert index.unique
+    assert [column.name for column in index.columns] == ['payroll_run_id', 'employee_id']
+    assert str(index.dialect_options['sqlite']['where']) == "payslip_type = 'regular'"
+    assert str(index.dialect_options['postgresql']['where']) == "payslip_type = 'regular'"
 
     # Senior-level: also confirm the DB enforces the constraint.
     insp = __import__('sqlalchemy').inspect(db.engine)
-    uqs = insp.get_unique_constraints('payslip')
-    assert any(u.get('name') == 'uq_payslip_run_emp_type' for u in uqs), (
-        f"DB-level UNIQUE constraint 'uq_payslip_run_emp_type' missing. Constraints found: {uqs}"
-    )
+    indexes = insp.get_indexes('payslip')
+    assert any(i['name'] == 'uq_payslip_regular_run_employee' and i['unique'] for i in indexes)
 
 
 def test_duplicate_payslip_rejected_via_python_check(app, seeded):

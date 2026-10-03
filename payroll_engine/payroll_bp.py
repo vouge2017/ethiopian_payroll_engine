@@ -2614,10 +2614,16 @@ def payroll_review_workspace(run_id):
         from payroll_engine.services.worksheet_review import review_evidence
 
         evidence = review_evidence(run, worksheet_rows)
-        change_summary = None
         total_net = sum((row['net'] for row in worksheet_rows), Decimal('0'))
         narrative = f'Saved {run.run_date.strftime("%B %Y")} (Gregorian) payroll includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
         can_approve = can_approve and evidence.ready_for_approval
+    validation_results = PayrollValidationResult.query.filter_by(payroll_run_id=run.id).all()
+    can_approve = (
+        can_approve
+        and not errors
+        and not any(finding.severity == 'BLOCK' and not finding.overridden for finding in validation_results)
+        and run.status in ('review', 'pending_approval')
+    )
     return render_template(
         'payroll_review_workspace.html',
         worksheet_rows=worksheet_rows,
@@ -2627,6 +2633,7 @@ def payroll_review_workspace(run_id):
         exceptions=exceptions,
         sorted_issues=sorted_issues,
         change_summary=change_summary,
+        validation_results=validation_results,
         can_approve=can_approve,
         component_errors=errors,
         year=date.today().year,

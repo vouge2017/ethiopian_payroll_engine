@@ -11,6 +11,7 @@ review screen should start with this summary.
 
 from dataclasses import dataclass, field
 from decimal import Decimal
+from types import SimpleNamespace
 
 
 @dataclass
@@ -67,8 +68,10 @@ class ChangeSummary:
 
     # Variance flags
     has_unusual_variance: bool = False
-    variance_threshold_pct: float = 20.0
+    variance_threshold_pct: float | None = 20.0
     variance_notes: list = field(default_factory=list)
+    retained_comparison: bool = False
+    comparison_notes: list = field(default_factory=list)
 
     # Summary text
     summary_text: str = ''
@@ -96,6 +99,23 @@ def compute_change_summary(current_run_id, company_id, db, models):
     if not current_run:
         return None
 
+    if current_run.source == 'spreadsheet':
+        draft = models.PayrollDraft.query.filter_by(payroll_run_id=current_run_id, company_id=company_id).first()
+        if draft is None or not draft.employee_data:
+            return None
+        rows = _snapshot_payslips(draft.employee_data)
+        previous_run = (
+            PayrollRun.query.filter(
+                PayrollRun.company_id == company_id,
+                PayrollRun.run_date < current_run.run_date,
+                PayrollRun.status.in_(['completed', 'locked']),
+                PayrollRun.approved_at.isnot(None),
+            )
+            .order_by(PayrollRun.run_date.desc(), PayrollRun.id.desc())
+            .first()
+        )
+        return _build_summary(current_run, previous_run, rows, company_id, db, models, retained=True)
+
     # Get current payslips
     current_payslips = Payslip.query.filter_by(payroll_run_id=current_run_id, company_id=company_id).all()
 
@@ -121,7 +141,46 @@ def _find_previous_run(PayrollRun, company_id, current_run_id):
     )
 
 
-def _build_summary(current_run, previous_run, current_payslips, company_id, db, models):
+def _snapshot_payslips(rows):
+    """Adapt existing frozen worksheet facts to the existing summary builder."""
+    from payroll_engine.services.worksheet_review import display_rows
+
+    result = []
+    for row in display_rows(rows):
+        result.append(
+            SimpleNamespace(
+                employee_id=row['employee_pk'],
+                gross_salary=row['gross'],
+                net_pay=row['net'],
+                tax=row['tax'],
+                payslip_type='regular',
+                reason='',
+                retained=row,
+            )
+        )
+    if len({ps.employee_id for ps in result}) != len(result):
+        raise ValueError('Duplicate employees in saved payroll review.')
+    return result
+
+
+def _retained_employee(ps, company_id, Employee):
+    """Use historical identity where retained; never infer historical basic pay."""
+    row = getattr(ps, 'retained', None)
+    if not isinstance(row, dict):
+        from payroll_engine.services.worksheet_review import published_row
+
+        row = published_row(ps)
+    if isinstance(row, dict):
+        return {'payslip': ps, 'employee': SimpleNamespace(employee_id=row['id'], name=row['name']), 'facts': row}
+    context = ps.calculation_context
+    identity = context.get('employee', {}) if isinstance(context, dict) else {}
+    employee = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
+    if identity:
+        employee = SimpleNamespace(employee_id=identity['id'], name=identity['name'])
+    return {'payslip': ps, 'employee': employee, 'facts': None} if employee else None
+
+
+def _build_summary(current_run, previous_run, current_payslips, company_id, db, models, *, retained=False):
     """Build the change summary from current and previous run data."""
     Payslip = models.Payslip
     Employee = models.Employee
@@ -129,6 +188,9 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
     # Build employee maps
     current_employees = {}
     for ps in current_payslips:
+        if retained:
+            current_employees[ps.employee_id] = _retained_employee(ps, company_id, Employee)
+            continue
         emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
         if emp:
             current_employees[emp.id] = {
@@ -140,6 +202,19 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
     if previous_run:
         prev_payslips = Payslip.query.filter_by(payroll_run_id=previous_run.id, company_id=company_id).all()
         for ps in prev_payslips:
+            if retained:
+                if ps.payslip_type != 'regular':
+                    continue
+                fact = _retained_employee(ps, company_id, Employee)
+                if fact:
+                    current_amounts = fact.get('facts')
+                    if current_amounts and any(
+                        current_amounts[key] != getattr(ps, field)
+                        for key, field in [('gross', 'gross_salary'), ('net', 'net_pay'), ('tax', 'tax')]
+                    ):
+                        raise ValueError('Previous approved payroll does not reconcile to its retained snapshot.')
+                    previous_employees[ps.employee_id] = fact
+                continue
             emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
             if emp:
                 previous_employees[emp.id] = {
@@ -184,11 +259,30 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
         net_delta=net_delta,
         net_delta_pct=round(net_delta_pct, 1),
     )
+    if retained:
+        summary.retained_comparison = True
+        summary.variance_threshold_pct = None
+        summary.current_period = current_run.run_date.strftime('%B %Y') + ' (Gregorian)'
+        summary.previous_period = previous_run.run_date.strftime('%B %Y') + ' (Gregorian)' if previous_run else None
+        summary.comparison_notes.append('Regular payroll is compared. Supplemental corrections remain separate.')
+        summary.comparison_notes.append(
+            'All exact amount changes are shown. A company materiality threshold still needs agreement; '
+            'no new automatic variance threshold is applied.'
+        )
+        if previous_run is None:
+            summary.comparison_notes.append(
+                'No earlier approved payroll exists for this company. This is the first baseline.'
+            )
+        if any(entry['facts'] is None for entry in previous_employees.values()):
+            summary.comparison_notes.append(
+                'Previous legacy payroll lacks detailed retained inputs. Gross/net/tax remain comparable; '
+                'basic pay, bonus, overtime and deduction details are not inferred.'
+            )
 
     # Detect individual changes
     all_employee_ids = set(current_employees.keys()) | set(previous_employees.keys())
 
-    for emp_id in all_employee_ids:
+    for emp_id in sorted(all_employee_ids):
         curr = current_employees.get(emp_id)
         prev = previous_employees.get(emp_id)
 
@@ -202,7 +296,7 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
                 employee_id=emp_id_str,
                 employee_name=emp_name,
                 change_type='new_hire',
-                description='New employee this period',
+                description='Added to this payroll' if retained else 'New employee this period',
                 new_value=curr['payslip'].gross_salary,
                 severity='info',
             )
@@ -226,6 +320,56 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
             # Both present — compare
             curr_ps = curr['payslip']
             prev_ps = prev['payslip']
+
+            if retained:
+                comparisons = [
+                    ('gross_change', 'Gross', prev_ps.gross_salary, curr_ps.gross_salary),
+                    ('net_change', 'Net pay', prev_ps.net_pay, curr_ps.net_pay),
+                ]
+                old, new = prev['facts'], curr['facts']
+                if old is not None and new is not None:
+                    comparisons.extend(
+                        [
+                            ('salary_change', 'Basic salary', old['basic'], new['basic']),
+                            (
+                                'bonus_change',
+                                'Bonus',
+                                Decimal(str(old['worksheet_inputs']['bonus'])),
+                                Decimal(str(new['worksheet_inputs']['bonus'])),
+                            ),
+                            ('overtime', 'Overtime pay', _overtime(old), _overtime(new)),
+                            (
+                                'deduction_change',
+                                'Other deductions / recoveries',
+                                old['total_deductions'],
+                                new['total_deductions'],
+                            ),
+                            (
+                                'leave_change',
+                                'Leave deductions',
+                                old['sick_leave_reduction'] + old['unpaid_leave_reduction'],
+                                new['sick_leave_reduction'] + new['unpaid_leave_reduction'],
+                            ),
+                        ]
+                    )
+                for kind, label, before, after in comparisons:
+                    if before != after:
+                        change = EmployeeChange(
+                            employee_id=emp_id_str,
+                            employee_name=emp_name,
+                            change_type=kind,
+                            description=f'{label}: ETB {before:,.2f} → {after:,.2f}',
+                            old_value=before,
+                            new_value=after,
+                            delta=after - before,
+                            severity='attention',
+                        )
+                        summary.changes.append(change)
+                        if kind == 'salary_change':
+                            summary.salary_changes.append(change)
+                        elif kind == 'overtime':
+                            summary.overtime_entries.append(change)
+                continue
 
             # Salary change
             if curr_ps.gross_salary != prev_ps.gross_salary:
@@ -279,18 +423,22 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
                 summary.adjustments.append(change)
 
     # Variance check
-    if abs(gross_delta_pct) > summary.variance_threshold_pct:
+    if summary.variance_threshold_pct is not None and abs(gross_delta_pct) > summary.variance_threshold_pct:
         summary.has_unusual_variance = True
         summary.variance_notes.append(
             f'Total gross {gross_delta_pct:+.1f}% — exceeds {summary.variance_threshold_pct:.0f}% threshold'
         )
         summary.status = 'review'
-    elif abs(gross_delta_pct) > 10:
+    elif not retained and abs(gross_delta_pct) > 10:
         summary.status = 'attention'
 
     # Build summary text
     parts = []
-    if not summary.changes:
+    if not previous_run:
+        parts.append('First approved-period baseline; no earlier payroll to compare.')
+    elif retained:
+        parts.append(f'{len(summary.changes)} exact changes from the previous approved payroll')
+    elif not summary.changes:
         parts.append('No changes from last period.')
     else:
         if summary.new_hires:
@@ -310,3 +458,14 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
     summary.summary_text = '. '.join(parts) + '.'
 
     return summary
+
+
+def _overtime(row):
+    return sum(
+        (
+            Decimal(str(item['earned_amount']))
+            for item in row.get('line_items', [])
+            if item.get('item_key') == 'overtime'
+        ),
+        Decimal('0'),
+    )

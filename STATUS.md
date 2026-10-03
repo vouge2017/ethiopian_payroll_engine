@@ -945,3 +945,31 @@ remain unchanged.
 
 Scope, logs and screenshots:
 [PAYROLL_CORRECTIONS_2026-10-03.md](docs/PAYROLL_CORRECTIONS_2026-10-03.md).
+## Priority Override review and stop - 2026-10-03
+
+The latest user instruction is reconciliation only, then STOP. This supersedes
+automatic continuation into later work orders. No new product code was changed
+in this review.
+
+Both `c2b636f` recovery and `e1d5e37` hardening are ancestors of merged PR #8
+`9a46f2880188c7bb473bd3ac1c42fd89053bf839` (ancestry commands exit 0).
+The reconciliation is complete and published; no repeat merge is required.
+Hosted checks re-read today at that SHA: lint, Python 3.11/3.12, PostgreSQL,
+standalone migrations 3.11/3.12 all success.
+
+Recorded local receipts, not rerun for this documentation-only review:
+`93 passed, 262 warnings in 186.20s (0:03:06)`;
+`173 passed, 1 skipped, 41 warnings in 205.76s (0:03:25)`;
+`TOTAL: 199 passed, 0 failed, 0 errors, 2 skipped` (repaired selection).
+Selections overlap. Reconciliation: 76 revisions, sole head `f4a5b6c7d8f2`.
+
+Actual remote main is `9670a92487c705a6614e3c6df67aff24d29c7bcf`, after PR #10
+merged later correction work `90779cb`. Its head is `f4a5b6c7d8f3` (77 revisions).
+Current main lint, PostgreSQL and both standalone migration checks pass; full
+Python 3.11/3.12 remain running at this checkpoint. These are separate from the
+fully passed reconciliation checks. No deployment was performed.
+
+Preservation, resolved conflicts, exact test selections, receipts and limits:
+[reconciliation review](docs/PR8_RECONCILIATION_2026-10-03.md#priority-override-review-and-stop-checkpoint---2026-10-03).
+Later work is on hold pending review; do not interpret previous next-order text
+as authorization to continue.

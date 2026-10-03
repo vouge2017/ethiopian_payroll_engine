@@ -87,3 +87,17 @@ PR #8 reconciliation and GitGuardian are complete. This new branch still needs
 hosted checks and review; production deployment is separate.
 
 11. Finish the three existing results/review UI defects and run the synthetic practitioner journey.
+## Current Priority Override - 2026-10-03
+
+Reconcile recovery `c2b636f` with hardening `e1d5e37`, report verified evidence,
+then **STOP**. This latest user instruction overrides the reusable continuation
+instruction and any next-order suggestion below.
+
+Delivered in merged PR #8 at `9a46f2880188c7bb473bd3ac1c42fd89053bf839`.
+Both source inputs remain in its ancestry; hosted Python 3.11/3.12,
+PostgreSQL, standalone migrations and lint all passed at that SHA.
+See [acceptance receipts and exact checks](PR8_RECONCILIATION_2026-10-03.md#priority-override-review-and-stop-checkpoint---2026-10-03).
+
+Current main `9670a92` also includes subsequently merged correction PR #10;
+this review does not undo that merge or authorize further correction work.
+No later work order may begin until the reconciliation result is reviewed.

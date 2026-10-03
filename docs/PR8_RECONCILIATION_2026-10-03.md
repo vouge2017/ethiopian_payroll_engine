@@ -115,15 +115,16 @@ Tests workflow failed before exercising the schema: its unbounded dependencies
 selected an incompatible SQLAlchemy/sqlalchemy-utils combination and a missing
 psycopg driver. Its dependency installation now uses the same locked requirements
 as the passing CI/local environment. Application fixtures use SQLite while
-`TEST_DATABASE_URL` retains PostgreSQL for actual migration tests. Fresh hosted
-results remain to be checked after this workflow correction.
+`TEST_DATABASE_URL` retains PostgreSQL for actual migration tests. At workflow
+correction `c12155873b853ca602fd8bce4eaa5d421a19a3cf`, all hosted Python 3.11/3.12,
+PostgreSQL, standalone migration and lint checks passed.
 
-GitGuardian's automatic scan reran on `110d670` and reported one finding; incident
-classification remains pending in the owner dashboard.
+GitGuardian's automatic scans at `110d670` and `c121558` reported the same historical
+finding. The owner subsequently supplied confirmation of **Ignored / Test credential**.
 
 ## GitGuardian and remaining release limits
 
-GitHub check `111002037835` still reports one finding and explicitly links incident
+GitHub check `111075344252` reported one finding and explicitly links incident
 **37741140**, `tests/conftest.py`, and historical commit `2c05019`. Its workspace is
 **685067**:
 
@@ -136,13 +137,13 @@ owner signed in using another Chrome profile, outside the connected browser.
 
 The owner supplied the incident page: it identifies the testing-only synthetic
 default, its removal in `4b6c8c5`, three historical occurrences and zero files
-requiring a code fix. Its status remains **Triggered**, so classification is
-still pending.
+requiring a code fix. On 2026-10-03, the owner supplied the updated Details panel:
+**Status Ignored**, reason **Test credential**. Classification is complete based
+on that owner-provided evidence; the connected browser still lacks this workspace.
 
-Owner action: choose **Ignore → Test credential**,
-then rerun the GitGuardian check. A source push triggers a fresh scan too, but a
-scan alone does not classify the historical incident. Do not install another app,
-erase `tests/conftest.py` from history, or force-push as a first response.
+The direct GitHub check-rerequest endpoint returned HTTP 404. Publishing this
+status checkpoint triggers a fresh GitGuardian scan; its result must be verified
+separately. No history rewrite or additional integration installation is needed.
 
 This reconciliation does not close the previously documented payment/adjustment
 business gaps, finish the separate worksheet UI work, prove production deployment

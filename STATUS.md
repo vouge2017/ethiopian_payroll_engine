@@ -909,9 +909,11 @@ Alembic graph has 76 revisions and one head, `f4a5b6c7d8f2`.
 - Final PostgreSQL selection: `93 passed, 262 warnings in 186.20s (0:03:06)`.
 - Strict security/tenant and migration gate: `173 passed, 1 skipped, 41 warnings in 205.76s (0:03:25)`.
 - Repaired broad-suite file selection: `TOTAL: 199 passed, 0 failed, 0 errors, 2 skipped`.
-- Ruff lint and formatting pass. Hosted checks for the reconciliation are separate.
+- Ruff lint and formatting pass. All hosted Python 3.11/3.12, PostgreSQL,
+  standalone migration and lint checks passed at `c121558`.
 - GitGuardian 37741140 is confirmed as the historical synthetic pytest default;
-  owner page still says Triggered. Ignore with reason Test credential remains pending.
+  owner supplied updated status Ignored / Test credential on 2026-10-03.
+  Direct GitHub rerequest returned HTTP 404; this status push triggers a fresh scan.
 - PR #8 merge into main and production deployment remain pending.
 
 Full scope, initial failures, fixes and evidence:

@@ -61,7 +61,9 @@ selection: `93 passed, 262 warnings in 186.20s (0:03:06)`; security/tenant gate:
 See [reconciliation evidence](PR8_RECONCILIATION_2026-10-03.md) for full scope and
 the initial broad-suite failures followed by successful targeted rechecks.
 
-Next gate: publish the reconciliation to the existing PR #8 branch and inspect
-its hosted checks. Owner must classify GitGuardian incident 37741140 as a test
-credential; supplied owner-page evidence still shows Triggered. Recovery PR #9
-is already merged. PR #8 merging and deployment are separate remaining actions.
+Reconciliation is published to PR #8. All hosted Python 3.11/3.12, PostgreSQL,
+standalone migration and lint checks passed at `c121558`. The owner supplied
+Ignored / Test credential status for GitGuardian incident 37741140 on 2026-10-03.
+Next gate: verify the fresh scan triggered by this status checkpoint; direct
+GitHub rerequest returned HTTP 404. Recovery PR #9 is already merged. PR #8
+merging and deployment are separate remaining actions.

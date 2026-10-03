@@ -8,8 +8,8 @@ Verifies that:
 - Legacy /reset-password URL redirects to the new flow
 - change_password no longer requires current_password
 """
+
 import os
-import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -20,7 +20,7 @@ os.environ.setdefault('DATABASE_URL', 'sqlite:///:memory:')
 import pytest
 
 from payroll_engine import create_app, db
-from payroll_engine.models import User, Company
+from payroll_engine.models import User
 
 
 @pytest.fixture
@@ -58,6 +58,7 @@ def _get_reset_token(app, phone='911234567'):
 
 
 # --- Step 1: forgot-password (identity capture) ---
+
 
 def test_forgot_password_get_renders_form(client):
     r = client.get('/auth/forgot-password')
@@ -105,6 +106,7 @@ def test_forgot_password_no_enumeration(client):
 
 # --- Step 2: verify (code entry, no identity re-typing) ---
 
+
 def test_verify_requires_session(client):
     """If you hit verify without going through forgot first, redirect back."""
     r = client.get('/auth/reset-password/verify', follow_redirects=False)
@@ -143,7 +145,6 @@ def test_verify_correct_code_proceeds_to_new(client, app):
         # The token is hashed in the DB, so we can't retrieve the raw token.
         # Instead, we need to generate a new one for this test using the
         # service method.
-        from payroll_engine.models import User as UserModel
         # Reset the user's token to a known value
         u.reset_token_hash = None
         u.reset_token_expires = None
@@ -157,7 +158,7 @@ def test_verify_correct_code_proceeds_to_new(client, app):
 
 
 def test_verify_wrong_code_rejected(client, app):
-    token = _get_reset_token(app)
+    _token = _get_reset_token(app)
     with client.session_transaction() as sess:
         sess['reset_identity'] = {
             'type': 'phone',
@@ -185,6 +186,7 @@ def test_verify_brute_force_protection(client, app):
 
 # --- Step 3: new password (only password fields, no identity re-typing) ---
 
+
 def test_new_requires_verified_session(client):
     """If you hit /new without verifying, redirect back to forgot."""
     r = client.get('/auth/reset-password/new', follow_redirects=False)
@@ -194,7 +196,7 @@ def test_new_requires_verified_session(client):
 
 def test_new_renders_password_fields_and_identity_chip(client, app):
     """Verify page renders only password fields, with identity chip on top."""
-    token = _get_reset_token(app)
+    _token = _get_reset_token(app)
     with client.session_transaction() as sess:
         sess['reset_identity'] = {
             'type': 'phone',
@@ -215,7 +217,7 @@ def test_new_renders_password_fields_and_identity_chip(client, app):
 
 def test_new_password_success_logs_user_in(client, app):
     """Successful reset should auto-login the user and redirect to dashboard."""
-    token = _get_reset_token(app)
+    _token = _get_reset_token(app)
     with client.session_transaction() as sess:
         sess['reset_identity'] = {
             'type': 'phone',
@@ -234,7 +236,7 @@ def test_new_password_success_logs_user_in(client, app):
 
 
 def test_new_password_mismatch_rejected(client, app):
-    token = _get_reset_token(app)
+    _token = _get_reset_token(app)
     with client.session_transaction() as sess:
         sess['reset_identity'] = {
             'type': 'phone',
@@ -251,7 +253,7 @@ def test_new_password_mismatch_rejected(client, app):
 
 
 def test_new_password_weak_rejected(client, app):
-    token = _get_reset_token(app)
+    _token = _get_reset_token(app)
     with client.session_transaction() as sess:
         sess['reset_identity'] = {
             'type': 'phone',
@@ -270,6 +272,7 @@ def test_new_password_weak_rejected(client, app):
 
 # --- Backward compatibility ---
 
+
 def test_legacy_reset_password_url_redirects(client):
     """The old /reset-password URL should redirect to the new forgot-password."""
     r = client.get('/auth/reset-password', follow_redirects=False)
@@ -279,11 +282,11 @@ def test_legacy_reset_password_url_redirects(client):
 
 # --- change_password no longer requires current_password ---
 
+
 def test_change_password_does_not_require_current_password(client, app):
     """Authenticated user changing password only needs new + confirm."""
     with app.app_context():
-        user = User.query.filter_by(phone='911234567').first()
-        from flask_login import login_user
+        _user = User.query.filter_by(phone='911234567').first()
         # We can't easily login via test client without going through login route,
         # so just verify the route doesn't read 'current_password' anymore.
         # The template check is the simpler verification.
@@ -293,12 +296,14 @@ def test_change_password_does_not_require_current_password(client, app):
 def test_change_password_template_no_current_field(app):
     """Verify the template doesn't include a current_password field anymore."""
     from pathlib import Path
+
     tpl = Path('payroll_engine/templates/auth/change_password.html').read_text()
     assert 'id="current_password"' not in tpl
     assert 'name="current_password"' not in tpl
 
 
 # --- Identity preservation across navigation ---
+
 
 def test_identity_preserved_across_navigation(client, app):
     """The user should NOT have to re-enter their phone/email between steps."""

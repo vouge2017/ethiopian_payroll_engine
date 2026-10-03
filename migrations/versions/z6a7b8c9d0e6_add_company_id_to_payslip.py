@@ -37,5 +37,5 @@ def upgrade():
 def downgrade():
     with op.batch_alter_table('payslip', schema=None) as batch_op:
         batch_op.drop_index('ix_payslip_company_id')
-        batch_op.drop_constraint('fk_payslip_company_id', 'payslip', type_='foreignkey')
+        batch_op.drop_constraint('fk_payslip_company_id', type_='foreignkey')
         batch_op.drop_column('company_id')

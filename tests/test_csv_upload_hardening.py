@@ -3,6 +3,7 @@
 import io
 import os
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -12,7 +13,9 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery, User
+from payroll_engine.catalog import seed_company_templates
+from payroll_engine.models import AuditLog, Company, Employee, OvertimeEntry, TenantQuery, User
+from payroll_engine.models_payroll_elements import PayrollItemAssignment
 from payroll_engine.security import prevent_csv_injection
 
 # ================================================================
@@ -60,12 +63,12 @@ class TestPreventCsvInjection:
 
 
 @pytest.fixture
-def app():
+def app(tmp_path):
     app = create_app()
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     app.config['WTF_CSRF_ENABLED'] = False
-    app.config['UPLOAD_FOLDER'] = os.path.join(os.environ.get('TEMP', '/tmp'), 'test_uploads')
+    app.config['UPLOAD_FOLDER'] = str(tmp_path / 'uploads')
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     with app.app_context():
         db.create_all()
@@ -73,9 +76,6 @@ def app():
         TenantQuery.register_model(OvertimeEntry)
         yield app
         db.drop_all()
-    import shutil
-
-    shutil.rmtree(app.config['UPLOAD_FOLDER'], ignore_errors=True)
 
 
 @pytest.fixture
@@ -89,6 +89,7 @@ def company_user(ctx):
     company = Company(name='TestCo')
     db.session.add(company)
     db.session.commit()
+    seed_company_templates(company.id)
     user = User(phone='0911000001', company_id=company.id, role='owner')
     user.set_password('Test1234!')
     db.session.add(user)
@@ -175,7 +176,11 @@ def test_deduction_doc_pdf_allowed(ctx, client, company_user):
     }
     resp = client.post(f'/employees/{emp.id}/deductions/add', data=data, follow_redirects=True)
     assert resp.status_code == 200
-    assert b'success' in resp.data.lower() or b'added' in resp.data
+    assignment = PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).one()
+    assert assignment.fixed_amount == 1000
+    assert Path(assignment.document_path).read_bytes() == pdf_header
+    audit = AuditLog.query.filter_by(company_id=company.id, action='deduction_created').one()
+    assert audit.details['assignment_id'] == assignment.id
 
 
 def test_deduction_doc_exe_rejected(ctx, client, company_user):
@@ -198,6 +203,9 @@ def test_deduction_doc_exe_rejected(ctx, client, company_user):
     resp = client.post(f'/employees/{emp.id}/deductions/add', data=data, follow_redirects=True)
     assert resp.status_code == 200
     assert b'not allowed' in resp.data.lower() or b'rejected' in resp.data
+    assert PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).count() == 0
+    assert AuditLog.query.filter_by(company_id=company.id, action='deduction_created').count() == 0
+    assert not list(Path(client.application.config['UPLOAD_FOLDER']).rglob('*.*'))
 
 
 def test_deduction_doc_renamed_exe_rejected(ctx, client, company_user):
@@ -220,3 +228,6 @@ def test_deduction_doc_renamed_exe_rejected(ctx, client, company_user):
     resp = client.post(f'/employees/{emp.id}/deductions/add', data=data, follow_redirects=True)
     assert resp.status_code == 200
     assert b'not match' in resp.data or b'not allowed' in resp.data
+    assert PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).count() == 0
+    assert AuditLog.query.filter_by(company_id=company.id, action='deduction_created').count() == 0
+    assert not list(Path(client.application.config['UPLOAD_FOLDER']).rglob('*.*'))

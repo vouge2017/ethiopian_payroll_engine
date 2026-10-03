@@ -1,0 +1,1407 @@
+{
+  "observed_at_utc": "2026-09-30 09:11 UTC",
+  "source_revision": "2c05019b980af60dc5d380044fb2b3498e8bf67b",
+  "branch": "feature/elements-architecture",
+  "command": "python D:/payroll-work-2026-09-30/file_baseline.py",
+  "runner": "run_tests.py get_test_files() and run_test_file(), sequentially, one process per file",
+  "environment": {
+    "FLASK_ENV": "testing",
+    "database": "SQLite memory unit fixtures",
+    "TEST_DATABASE_URL": "unset",
+    "WEBHOOKS_ENABLED": "false",
+    "encryption_key": "synthetic test-only",
+    "external_delivery": "disabled"
+  },
+  "pytest_options": "-p no:cacheprovider --basetemp=D:/payroll-work-2026-09-30/file-suite-temp -o addopts=",
+  "process_exit": 1,
+  "summary": {
+    "files": 104,
+    "expected_files": 104,
+    "seconds": 1053.74,
+    "passed": 1225,
+    "failed": 8,
+    "errors": 0,
+    "skipped": 2,
+    "failed_files": [
+      "test_csv_upload_hardening.py",
+      "test_filing_workspace.py",
+      "test_notifications_webhooks.py",
+      "test_security_regressions.py",
+      "test_size_interface.py"
+    ],
+    "timeouts": []
+  },
+  "results": [
+    {
+      "file": "test_ac10_pdf.py",
+      "passed": 1,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.17,
+      "summary": [
+        "1 passed, 3 warnings in 3.85s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_ac_acceptance.py",
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 8.69,
+      "summary": [
+        "9 passed, 3 warnings in 7.79s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_accounting_export.py",
+      "passed": 43,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.91,
+      "summary": [
+        "43 passed, 3 warnings in 1.17s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_adjustment.py",
+      "passed": 5,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 8.55,
+      "summary": [
+        "5 passed, 3 warnings in 7.60s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_analytics.py",
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 11.41,
+      "summary": [
+        "9 passed, 3 warnings in 10.40s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_api_delete.py",
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.16,
+      "summary": [
+        "2 passed, 3 warnings in 4.16s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_api_docs.py",
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.64,
+      "summary": [
+        "2 passed, 3 warnings in 1.80s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_api_token.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 10.28,
+      "summary": [
+        "15 passed, 3 warnings in 9.36s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_api_validation.py",
+      "passed": 13,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 28.3,
+      "summary": [
+        "13 passed, 3 warnings in 26.98s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_approval_and_soft_delete.py",
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 14.97,
+      "summary": [
+        "9 passed, 3 warnings in 13.40s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_audit_log.py",
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 16.61,
+      "summary": [
+        "12 passed, 3 warnings in 15.15s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_auth.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 6.69,
+      "summary": [
+        "6 passed, 3 warnings in 5.48s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_backfill.py",
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 13.81,
+      "summary": [
+        "10 passed, 3 warnings in 12.56s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_backfill_mixed_state.py",
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 7.44,
+      "summary": [
+        "2 passed, 3 warnings in 6.07s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_backfill_money_proof.py",
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.64,
+      "summary": [
+        "3 passed, 3 warnings in 4.43s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_backup_restore.py",
+      "passed": 38,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.2,
+      "summary": [
+        "38 passed, 3 warnings in 1.34s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_bank_file.py",
+      "passed": 32,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.08,
+      "summary": [
+        "32 passed, 3 warnings in 1.25s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_benchmark.py",
+      "passed": 17,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 41.38,
+      "summary": [
+        "17 passed, 3 warnings in 40.02s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_billing.py",
+      "passed": 14,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 9.31,
+      "summary": [
+        "14 passed, 10 warnings in 7.49s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_bugfixes.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 14.44,
+      "summary": [
+        "6 passed, 3 warnings in 12.59s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_calculation_flow.py",
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.48,
+      "summary": [
+        "11 passed, 3 warnings in 1.50s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_cash_compliance.py",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.98,
+      "summary": [
+        "7 passed, 3 warnings in 1.12s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_change_summary.py",
+      "passed": 20,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.25,
+      "summary": [
+        "20 passed, 3 warnings in 1.34s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_cockpit.py",
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.59,
+      "summary": [
+        "10 passed, 3 warnings in 1.54s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_cockpits.py",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.17,
+      "summary": [
+        "7 passed, 3 warnings in 1.78s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_compliance.py",
+      "passed": 17,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.5,
+      "summary": [
+        "17 passed, 3 warnings in 2.21s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_configurable_rules.py",
+      "passed": 20,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.45,
+      "summary": [
+        "20 passed, 3 warnings in 4.05s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_cors.py",
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 20.91,
+      "summary": [
+        "10 passed, 3 warnings in 19.64s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_csv_general_allowance.py",
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.64,
+      "summary": [
+        "9 passed, 3 warnings in 4.46s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_csv_upload_hardening.py",
+      "passed": 15,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 1,
+      "seconds": 13.06,
+      "summary": [
+        "2 failed, 15 passed, 3 warnings in 11.74s"
+      ],
+      "failures": [
+        "FAILED tests/test_csv_upload_hardening.py::test_deduction_doc_exe_rejected - ...",
+        "FAILED tests/test_csv_upload_hardening.py::test_deduction_doc_renamed_exe_rejected"
+      ]
+    },
+    {
+      "file": "test_dashboard_api.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.23,
+      "summary": [
+        "8 passed, 3 warnings in 1.25s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_deductions.py",
+      "passed": 16,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 15.69,
+      "summary": [
+        "16 passed, 3 warnings in 14.57s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_demo_and_template.py",
+      "passed": 13,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 21.92,
+      "summary": [
+        "13 passed, 3 warnings in 20.59s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_diff_check_e2e.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.53,
+      "summary": [
+        "8 passed, 3 warnings in 2.34s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_disbursement.py",
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 25.38,
+      "summary": [
+        "11 passed, 3 warnings in 24.18s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_e2e_full.py",
+      "passed": 1,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 8.5,
+      "summary": [
+        "1 passed, 3 warnings in 7.24s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_elements_consumer_allowances.py",
+      "passed": 17,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 37.39,
+      "summary": [
+        "17 passed, 3 warnings in 35.99s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_elements_engine.py",
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.91,
+      "summary": [
+        "11 passed, 3 warnings in 4.58s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_employee_phone.py",
+      "passed": 4,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 6.55,
+      "summary": [
+        "4 passed, 3 warnings in 5.37s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_employee_portal.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 14.08,
+      "summary": [
+        "6 passed, 3 warnings in 12.91s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_engine_method_guard.py",
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.92,
+      "summary": [
+        "3 passed, 3 warnings in 4.88s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_env_policy.py",
+      "passed": 4,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.76,
+      "summary": [
+        "4 passed, 3 warnings in 1.94s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_error_boundaries.py",
+      "passed": 14,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 37.31,
+      "summary": [
+        "14 passed, 3 warnings in 35.88s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_ethiopian_calendar.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.38,
+      "summary": [
+        "15 passed, 3 warnings in 1.98s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_evidence.py",
+      "passed": 19,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.53,
+      "summary": [
+        "19 passed, 3 warnings in 2.23s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_exceptions.py",
+      "passed": 26,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.39,
+      "summary": [
+        "26 passed, 3 warnings in 3.77s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_fayda_fin.py",
+      "passed": 21,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 4.69,
+      "summary": [
+        "21 passed, 3 warnings in 2.62s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_filing_workspace.py",
+      "passed": 13,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 1,
+      "seconds": 3.8,
+      "summary": [
+        "2 failed, 13 passed, 3 warnings in 2.00s"
+      ],
+      "failures": [
+        "FAILED tests/test_filing_workspace.py::TestFilingSteps::test_ready_when_payroll_completed",
+        "FAILED tests/test_filing_workspace.py::TestWorkspaceSummary::test_ready_count"
+      ]
+    },
+    {
+      "file": "test_help.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 33.67,
+      "summary": [
+        "15 passed, 3 warnings in 32.02s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_i18n.py",
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.92,
+      "summary": [
+        "11 passed, 3 warnings in 1.74s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_impact.py",
+      "passed": 13,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.99,
+      "summary": [
+        "13 passed, 3 warnings in 4.76s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_impact_whatif.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 4.98,
+      "summary": [
+        "6 passed, 12 warnings in 3.76s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_indexes.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 4.34,
+      "summary": [
+        "6 passed, 3 warnings in 3.24s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_input_validation.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 30.27,
+      "summary": [
+        "15 passed, 3 warnings in 28.90s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_integration_payroll_flow.py",
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.33,
+      "summary": [
+        "2 passed, 4 warnings in 2.38s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_leave_balance.py",
+      "passed": 4,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.23,
+      "summary": [
+        "4 passed, 3 warnings in 4.28s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_line_items_snapshot.py",
+      "passed": 4,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 5.33,
+      "summary": [
+        "4 passed, 3 warnings in 4.41s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_lockout.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 22.42,
+      "summary": [
+        "15 passed, 3 warnings in 21.37s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_mfa.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 13.23,
+      "summary": [
+        "8 passed, 3 warnings in 12.19s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_migration_chain.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 2,
+      "exit": 0,
+      "seconds": 3.89,
+      "summary": [
+        "8 passed, 2 skipped, 3 warnings in 2.95s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_narrative.py",
+      "passed": 30,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.73,
+      "summary": [
+        "30 passed, 3 warnings in 1.01s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_notifications_webhooks.py",
+      "passed": 28,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 1,
+      "seconds": 24.94,
+      "summary": [
+        "2 failed, 28 passed, 3 warnings in 23.93s"
+      ],
+      "failures": [
+        "FAILED tests/test_notifications_webhooks.py::TestFireWebhook::test_fires_webhook_for_configured_company",
+        "FAILED tests/test_notifications_webhooks.py::TestFireWebhook::test_webhook_url_passed_to_thread"
+      ]
+    },
+    {
+      "file": "test_overtime.py",
+      "passed": 16,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.75,
+      "summary": [
+        "16 passed, 3 warnings in 0.97s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_overtime_integration.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.81,
+      "summary": [
+        "15 passed, 3 warnings in 1.98s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_password_policy.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.69,
+      "summary": [
+        "15 passed, 3 warnings in 1.00s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_password_reset.py",
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 9.86,
+      "summary": [
+        "9 passed, 3 warnings in 8.87s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_payroll.py",
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.7,
+      "summary": [
+        "12 passed, 3 warnings in 1.84s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_payroll_draft.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.11,
+      "summary": [
+        "6 passed, 3 warnings in 2.23s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_payroll_workflow.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.25,
+      "summary": [
+        "8 passed, 3 warnings in 2.33s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_pdf_failure.py",
+      "passed": 5,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 7.55,
+      "summary": [
+        "5 passed, 3 warnings in 6.56s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_performance_large_csv.py",
+      "passed": 1,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 4.44,
+      "summary": [
+        "1 passed, 3 warnings in 3.50s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_period_and_lock.py",
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 10.2,
+      "summary": [
+        "11 passed, 3 warnings in 9.20s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_phase_regressions.py",
+      "passed": 13,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 19.36,
+      "summary": [
+        "13 passed, 3 warnings in 18.38s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_phone_auth.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 7.78,
+      "summary": [
+        "8 passed, 3 warnings in 6.82s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_proactive.py",
+      "passed": 19,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 12.59,
+      "summary": [
+        "19 passed, 3 warnings in 11.53s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_profile_changes.py",
+      "passed": 20,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 41.31,
+      "summary": [
+        "20 passed, 3 warnings in 40.00s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_push_subscription.py",
+      "passed": 4,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 6.8,
+      "summary": [
+        "4 passed, 3 warnings in 5.64s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_quick_start.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 15.94,
+      "summary": [
+        "8 passed, 3 warnings in 14.84s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_rate_limiting.py",
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 17.48,
+      "summary": [
+        "11 passed, 3 warnings in 16.28s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_retention.py",
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.88,
+      "summary": [
+        "2 passed, 3 warnings in 2.00s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_retention_hook.py",
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.86,
+      "summary": [
+        "3 passed, 3 warnings in 1.98s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_roles.py",
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 23.38,
+      "summary": [
+        "12 passed, 3 warnings in 22.36s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_rq_pdf.py",
+      "passed": 10,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 9.41,
+      "summary": [
+        "10 passed, 3 warnings in 8.29s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_rule_source.py",
+      "passed": 29,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.86,
+      "summary": [
+        "29 passed, 3 warnings in 1.08s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_security_regressions.py",
+      "passed": 19,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 1,
+      "seconds": 35.2,
+      "summary": [
+        "1 failed, 19 passed, 3 warnings in 34.12s"
+      ],
+      "failures": [
+        "FAILED tests/test_security_regressions.py::TestFileUploadRestrictions::test_reject_exe_as_pdf"
+      ]
+    },
+    {
+      "file": "test_security_wave1.py",
+      "passed": 16,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 24.23,
+      "summary": [
+        "16 passed, 3 warnings in 22.99s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_self_service.py",
+      "passed": 8,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 17.19,
+      "summary": [
+        "8 passed, 3 warnings in 16.11s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_services.py",
+      "passed": 33,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 20.61,
+      "summary": [
+        "33 passed, 3 warnings in 19.63s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_severance.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.72,
+      "summary": [
+        "15 passed, 3 warnings in 0.99s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_size_interface.py",
+      "passed": 9,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 1,
+      "seconds": 15.56,
+      "summary": [
+        "1 failed, 9 passed, 3 warnings in 14.57s"
+      ],
+      "failures": [
+        "FAILED tests/test_size_interface.py::TestQuickStartPrimary::test_quick_start_button_visible"
+      ]
+    },
+    {
+      "file": "test_smoke_e2e.py",
+      "passed": 2,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.95,
+      "summary": [
+        "2 passed, 3 warnings in 2.99s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_system_setting.py",
+      "passed": 5,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.88,
+      "summary": [
+        "5 passed, 3 warnings in 2.01s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_tax.py",
+      "passed": 15,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.69,
+      "summary": [
+        "15 passed, 3 warnings in 1.00s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_tax_breakdown.py",
+      "passed": 11,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.66,
+      "summary": [
+        "11 passed, 3 warnings in 0.96s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_tenant_bypass_guards.py",
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.66,
+      "summary": [
+        "7 passed, 3 warnings in 2.72s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_tenant_isolation.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 3.0,
+      "summary": [
+        "6 passed, 3 warnings in 2.12s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_test_runner.py",
+      "passed": 19,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.67,
+      "summary": [
+        "19 passed, 3 warnings in 1.00s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_tin.py",
+      "passed": 5,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 2.92,
+      "summary": [
+        "5 passed, 3 warnings in 2.10s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_transaction_boundary.py",
+      "passed": 3,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 6.7,
+      "summary": [
+        "3 passed, 3 warnings in 5.65s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_trust_cache.py",
+      "passed": 23,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 1.7,
+      "summary": [
+        "23 passed, 3 warnings in 0.99s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_undo_approval.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 11.66,
+      "summary": [
+        "6 passed, 3 warnings in 10.63s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_usercompany_tenant.py",
+      "passed": 6,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 6.75,
+      "summary": [
+        "6 passed, 3 warnings in 5.75s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_validation_phase2.py",
+      "passed": 19,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 16.12,
+      "summary": [
+        "19 passed, 3 warnings in 15.07s"
+      ],
+      "failures": []
+    },
+    {
+      "file": "test_verification.py",
+      "passed": 12,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exit": 0,
+      "seconds": 17.61,
+      "summary": [
+        "12 passed, 3 warnings in 16.42s"
+      ],
+      "failures": []
+    }
+  ],
+  "limits": [
+    "Single-process full suite timed out after 600 seconds; final outcome unknown.",
+    "Two webhook failures depend on the disabled delivery flag; TestFireWebhook separately passed 5 tests with flag enabled and mocked delivery.",
+    "Two PostgreSQL migration tests were skipped in this SQLite baseline.",
+    "This baseline does not prove PostgreSQL money persistence or concurrency."
+  ]
+}

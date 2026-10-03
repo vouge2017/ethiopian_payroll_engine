@@ -14,7 +14,6 @@ They don't modify the original — they create a delta. This preserves the audit
 """
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 Q = Decimal('0.01')
@@ -316,20 +315,22 @@ def get_adjustment_summary(db, models, run_id: int, company_id: int) -> Adjustme
             if original:
                 original_net = _D(original.net_pay)
 
-        adj_list.append({
-            'id': adj.id,
-            'employee_id': emp.employee_id if emp else '',
-            'employee_name': emp.name if emp else 'Unknown',
-            'type': 'addition' if net >= 0 else 'deduction',
-            'gross': _D(adj.gross_salary),
-            'tax': _D(adj.tax),
-            'pension': _D(adj.employee_pension),
-            'net': net,
-            'original_net': original_net,
-            'new_total': original_net + net,
-            'reason': adj.reason or '',
-            'created_at': adj.generated_at.isoformat() if adj.generated_at else '',
-        })
+        adj_list.append(
+            {
+                'id': adj.id,
+                'employee_id': emp.employee_id if emp else '',
+                'employee_name': emp.name if emp else 'Unknown',
+                'type': 'addition' if net >= 0 else 'deduction',
+                'gross': _D(adj.gross_salary),
+                'tax': _D(adj.tax),
+                'pension': _D(adj.employee_pension),
+                'net': net,
+                'original_net': original_net,
+                'new_total': original_net + net,
+                'reason': adj.reason or '',
+                'created_at': adj.generated_at.isoformat() if adj.generated_at else '',
+            }
+        )
 
     return AdjustmentSummary(
         run_id=run_id,
@@ -375,12 +376,14 @@ def generate_adjustment_bank_file(db, models, run_id: int, company_id: int) -> b
             company_id=company_id,
         ).first()
 
-        employees_data.append({
-            'id': adj['employee_id'],
-            'name': adj['employee_name'],
-            'bank': emp.bank_or_telebirr if emp else '',
-            'net': float(adj['net']),
-        })
+        employees_data.append(
+            {
+                'id': adj['employee_id'],
+                'name': adj['employee_name'],
+                'bank': emp.bank_or_telebirr if emp else '',
+                'net': float(adj['net']),
+            }
+        )
 
     if employees_data:
         return generate_csv(

@@ -11,6 +11,7 @@ Proves the end-to-end recovery flow:
 
 Run: pytest tests/test_p0b_encryption_recovery.py -v
 """
+
 import json
 import os
 
@@ -44,9 +45,13 @@ def test_encrypted_field_round_trip(app_a, key):
         db.session.add(co)
         db.session.commit()
         emp = Employee(
-            company_id=co.id, employee_id='E001', name='Alice',
-            basic_salary=5000, bank_account='CBE-1234567890',
-            tin='TIN-EMP-001', fayda_fin='FIN-ABCDEF',
+            company_id=co.id,
+            employee_id='E001',
+            name='Alice',
+            basic_salary=5000,
+            bank_account='CBE-1234567890',
+            tin='TIN-EMP-001',
+            fayda_fin='FIN-ABCDEF',
         )
         db.session.add(emp)
         db.session.commit()
@@ -56,7 +61,8 @@ def test_encrypted_field_round_trip(app_a, key):
         # Read back via fresh query (within same app/connection)
         db.session.expire_all()
         loaded = Employee.query.filter_by(
-            company_id=co_id, id=emp_id,
+            company_id=co_id,
+            id=emp_id,
         ).first()
         assert loaded.tin == 'TIN-EMP-001'
         assert loaded.bank_account == 'CBE-1234567890'
@@ -75,9 +81,13 @@ def test_recovery_drill_backup_restore(app_a, key, tmp_path):
         db.session.add(co)
         db.session.commit()
         emp = Employee(
-            company_id=co.id, employee_id='E001', name='Alice',
-            basic_salary=8000, bank_account='CBE-RECOVERY-TEST',
-            tin='TIN-RECOVERY-001', fayda_fin='FIN-RECOVERY-ABC',
+            company_id=co.id,
+            employee_id='E001',
+            name='Alice',
+            basic_salary=8000,
+            bank_account='CBE-RECOVERY-TEST',
+            tin='TIN-RECOVERY-001',
+            fayda_fin='FIN-RECOVERY-ABC',
         )
         db.session.add(emp)
         db.session.commit()
@@ -90,17 +100,25 @@ def test_recovery_drill_backup_restore(app_a, key, tmp_path):
         co_dump = Company.query.filter_by(id=co_id).first()
         emp_dump = Employee.query.filter_by(id=emp_id, company_id=co_id).first()
         backup = {
-            'companies': [{
-                'id': co_dump.id, 'name': co_dump.name, 'tin': co_dump.tin,
-            }],
-            'employees': [{
-                'id': emp_dump.id, 'company_id': emp_dump.company_id,
-                'employee_id': emp_dump.employee_id, 'name': emp_dump.name,
-                'basic_salary': float(emp_dump.basic_salary),
-                'tin': emp_dump.tin,
-                'bank_account': emp_dump.bank_account,
-                'fayda_fin': emp_dump.fayda_fin,
-            }],
+            'companies': [
+                {
+                    'id': co_dump.id,
+                    'name': co_dump.name,
+                    'tin': co_dump.tin,
+                }
+            ],
+            'employees': [
+                {
+                    'id': emp_dump.id,
+                    'company_id': emp_dump.company_id,
+                    'employee_id': emp_dump.employee_id,
+                    'name': emp_dump.name,
+                    'basic_salary': float(emp_dump.basic_salary),
+                    'tin': emp_dump.tin,
+                    'bank_account': emp_dump.bank_account,
+                    'fayda_fin': emp_dump.fayda_fin,
+                }
+            ],
         }
         backup_file.write_text(json.dumps(backup, indent=2))
 
@@ -119,7 +137,8 @@ def test_recovery_drill_backup_restore(app_a, key, tmp_path):
         co_restored = Company(
             id=data['companies'][0]['id'],
             name=data['companies'][0]['name'],
-            country='ET', currency='ETB',
+            country='ET',
+            currency='ETB',
             tin=data['companies'][0]['tin'],
         )
         emp_restored = Employee(
@@ -139,11 +158,10 @@ def test_recovery_drill_backup_restore(app_a, key, tmp_path):
     # 6. Decrypt with the recovered key
     with app_a.app_context():
         loaded = Employee.query.filter_by(
-            id=emp_id, company_id=co_id,
+            id=emp_id,
+            company_id=co_id,
         ).first()
-        assert loaded.tin == 'TIN-RECOVERY-001', (
-            f'recovery failed: tin={loaded.tin!r}'
-        )
+        assert loaded.tin == 'TIN-RECOVERY-001', f'recovery failed: tin={loaded.tin!r}'
         assert loaded.bank_account == 'CBE-RECOVERY-TEST'
         assert loaded.fayda_fin == 'FIN-RECOVERY-ABC'
 
@@ -178,6 +196,4 @@ def test_encryption_key_required_in_production(monkeypatch):
         f'DB_ENCRYPTION_KEY must fail. stdout={result.stdout!r} '
         f'stderr={result.stderr!r}'
     )
-    assert 'DB_ENCRYPTION_KEY' in result.stderr, (
-        f'stderr must mention DB_ENCRYPTION_KEY, got: {result.stderr!r}'
-    )
+    assert 'DB_ENCRYPTION_KEY' in result.stderr, f'stderr must mention DB_ENCRYPTION_KEY, got: {result.stderr!r}'

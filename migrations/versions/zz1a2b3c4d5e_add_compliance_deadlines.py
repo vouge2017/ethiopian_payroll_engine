@@ -4,8 +4,7 @@ Revision ID: zz1a2b3c4d5e
 Revises: a1b2c3d4e5f7
 Create Date: 2026-09-07 00:00:00.000000
 """
-from alembic import op
-import sqlalchemy as sa
+from migrations.shared_compliance import add_compliance_column, drop_compliance_column_unless_applied
 
 revision = 'zz1a2b3c4d5e'
 down_revision = 'a1b2c3d4e5f7'
@@ -14,8 +13,8 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('company', sa.Column('compliance_deadlines', sa.JSON(), nullable=True))
+    add_compliance_column()
 
 
 def downgrade():
-    op.drop_column('company', 'compliance_deadlines')
+    drop_compliance_column_unless_applied('f4a5b6c7d8ec')

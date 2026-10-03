@@ -32,6 +32,12 @@ def _make_company(company_id=1, name='Test PLC'):
     company = MagicMock()
     company.id = company_id
     company.name = name
+    # A real Company with no stored deadlines has an empty dict, not a
+    # MagicMock. Left unset, MagicMock auto-creates a truthy child, which
+    # get_company_deadlines() treats as a stored override and then reads
+    # cfg['day'] from -- a MagicMock reaches compliance date math and
+    # min(day, max_day) raises TypeError.
+    company.compliance_deadlines = {}
     return company
 
 
@@ -82,6 +88,12 @@ def _setup(company, run=None, prev_run=None, employees=None, payslips=None):
     mock_models.PayrollRun.query.filter_by.return_value.filter.return_value.order_by.return_value.first.return_value = (
         run
     )
+    # Direct .filter_by(...).first() seam. build_filing_workspace and
+    # collect_evidence resolve the run this way (company_id is filtered in the
+    # query rather than checked after the fetch), so without this the call
+    # returns an unconfigured MagicMock and its .run_date leaks into
+    # compliance date math.
+    mock_models.PayrollRun.query.filter_by.return_value.first.return_value = run
 
     # Employees
     mock_models.Employee.query.filter_by.return_value.all.return_value = employees or []

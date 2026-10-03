@@ -48,35 +48,35 @@ def test_valid_phone_formats():
     """Valid Ethiopian phone numbers should be accepted (Ethio Telecom + Safaricom)."""
     valid_numbers = [
         # Ethio Telecom (09X)
-        ('+251911234567', '0911234567'),
-        ('0911234567', '0911234567'),
-        ('+251 911 234 567', '0911234567'),
-        ('0911 234 567', '0911234567'),
-        ('+251922345678', '0922345678'),
-        ('0922345678', '0922345678'),
-        ('+251933456789', '0933456789'),
-        ('0933456789', '0933456789'),
-        ('+251944567890', '0944567890'),
-        ('0944567890', '0944567890'),
-        ('+251955678901', '0955678901'),
-        ('0955678901', '0955678901'),
-        ('+251966789012', '0966789012'),
-        ('0966789012', '0966789012'),
-        ('+251977890123', '0977890123'),
-        ('0977890123', '0977890123'),
-        ('+251988901234', '0988901234'),
-        ('0988901234', '0988901234'),
-        ('+251999012345', '0999012345'),
-        ('0999012345', '0999012345'),
+        ('+251911234567', '911234567'),
+        ('911234567', '911234567'),
+        ('+251 911 234 567', '911234567'),
+        ('911 234 567', '911234567'),
+        ('+251922345678', '922345678'),
+        ('922345678', '922345678'),
+        ('+251933456789', '933456789'),
+        ('933456789', '933456789'),
+        ('+251944567890', '944567890'),
+        ('944567890', '944567890'),
+        ('+251955678901', '955678901'),
+        ('955678901', '955678901'),
+        ('+251966789012', '966789012'),
+        ('966789012', '966789012'),
+        ('+251977890123', '977890123'),
+        ('977890123', '977890123'),
+        ('+251988901234', '988901234'),
+        ('988901234', '988901234'),
+        ('+251999012345', '999012345'),
+        ('999012345', '999012345'),
         # Safaricom (07X)
-        ('+251711234567', '0711234567'),
-        ('0711234567', '0711234567'),
-        ('+251 711 234 567', '0711234567'),
-        ('0711 234 567', '0711234567'),
-        ('+251722345678', '0722345678'),
-        ('0722345678', '0722345678'),
-        ('+251733456789', '0733456789'),
-        ('0733456789', '0733456789'),
+        ('+251711234567', '711234567'),
+        ('711234567', '711234567'),
+        ('+251 711 234 567', '711234567'),
+        ('711 234 567', '711234567'),
+        ('+251722345678', '722345678'),
+        ('722345678', '722345678'),
+        ('+251733456789', '733456789'),
+        ('733456789', '733456789'),
     ]
     for phone, expected in valid_numbers:
         is_valid, normalized, error = validate_ethiopian_phone(phone)
@@ -106,14 +106,14 @@ def test_invalid_phone_formats():
 
 
 def test_phone_normalization():
-    """Phone numbers should normalize to 09XXXXXXXX format."""
+    """Phone numbers should normalize to nine-digit national format."""
     is_valid, normalized, _error = validate_ethiopian_phone('+251911234567')
     assert is_valid
-    assert normalized == '0911234567'
+    assert normalized == '911234567'
 
-    is_valid, normalized, _error = validate_ethiopian_phone('0911234567')
+    is_valid, normalized, _error = validate_ethiopian_phone('911234567')
     assert is_valid
-    assert normalized == '0911234567'
+    assert normalized == '911234567'
 
 
 # ---------------------------------------------------------------
@@ -130,12 +130,12 @@ def test_register_with_phone(ctx):
     db.session.add(company)
     db.session.commit()
 
-    user = User(phone='0911234567', company_id=company.id, role='admin')
+    user = User(phone='911234567', company_id=company.id, role='admin')
     user.set_password('testpass123')
     db.session.add(user)
     db.session.commit()
 
-    found = User.query.filter_by(phone='0911234567').first()
+    found = User.query.filter_by(phone='911234567').first()
     assert found is not None
     assert found.check_password('testpass123')
 
@@ -146,12 +146,12 @@ def test_duplicate_phone_rejected(ctx):
     db.session.add(company)
     db.session.commit()
 
-    user1 = User(phone='0911234567', company_id=company.id, role='admin')
+    user1 = User(phone='911234567', company_id=company.id, role='admin')
     user1.set_password('pass1')
     db.session.add(user1)
     db.session.commit()
 
-    user2 = User(phone='0911234567', company_id=company.id, role='employee')
+    user2 = User(phone='911234567', company_id=company.id, role='employee')
     user2.set_password('pass2')
     db.session.add(user2)
 
@@ -166,14 +166,14 @@ def test_user_without_email(ctx):
     db.session.add(company)
     db.session.commit()
 
-    user = User(phone='0911234567', company_id=company.id, role='admin')
+    user = User(phone='911234567', company_id=company.id, role='admin')
     user.set_password('testpass123')
     db.session.add(user)
     db.session.commit()
 
-    found = User.query.filter_by(phone='0911234567').first()
+    found = User.query.filter_by(phone='911234567').first()
     assert found.email is None
-    assert found.phone == '0911234567'
+    assert found.phone == '911234567'
 
 
 def test_phone_lookup_works(ctx):
@@ -182,7 +182,7 @@ def test_phone_lookup_works(ctx):
     db.session.add(company)
     db.session.commit()
 
-    user = User(phone='0911234567', company_id=company.id, role='admin')
+    user = User(phone='911234567', company_id=company.id, role='admin')
     user.set_password('testpass123')
     db.session.add(user)
     db.session.commit()
@@ -192,7 +192,7 @@ def test_phone_lookup_works(ctx):
     assert is_valid
     found = User.query.filter_by(phone=normalized).first()
     assert found is not None
-    assert found.phone == '0911234567'
+    assert found.phone == '911234567'
 
 
 def test_multiple_users_different_phones(ctx):
@@ -201,12 +201,12 @@ def test_multiple_users_different_phones(ctx):
     db.session.add(company)
     db.session.commit()
 
-    user1 = User(phone='0911234567', company_id=company.id, role='admin')
+    user1 = User(phone='911234567', company_id=company.id, role='admin')
     user1.set_password('pass1')
-    user2 = User(phone='0922345678', company_id=company.id, role='employee')
+    user2 = User(phone='922345678', company_id=company.id, role='employee')
     user2.set_password('pass2')
     db.session.add_all([user1, user2])
     db.session.commit()
 
-    assert User.query.filter_by(phone='0911234567').first() is not None
-    assert User.query.filter_by(phone='0922345678').first() is not None
+    assert User.query.filter_by(phone='911234567').first() is not None
+    assert User.query.filter_by(phone='922345678').first() is not None

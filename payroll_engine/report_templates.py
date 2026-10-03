@@ -41,6 +41,24 @@ COLUMN_LIBRARY = [
     },
     {'key': 'overtime_pay', 'label': 'Over Time', 'data_path': 'overtime_pay', 'group': 'salary'},
     {'key': 'other_taxable', 'label': 'Other Taxable Benefit', 'data_path': '_other_taxable', 'group': 'salary'},
+    # Generic pay-item columns: resolve ANY item in the company's catalog by
+    # its PayItemType.key, so a report can surface a new allowance without a
+    # code change. These replace the hardcoded transport/taxable_transport/
+    # other_taxable trio, which is kept only for stored templates that still
+    # reference those keys (see _legacy_allowance_total).
+    {'key': 'pay_item_housing', 'label': 'Housing Allowance', 'data_path': '_pay_item:housing', 'group': 'salary'},
+    {
+        'key': 'pay_item_transport',
+        'label': 'Transport Allowance',
+        'data_path': '_pay_item:transport',
+        'group': 'salary',
+    },
+    {
+        'key': 'pay_item_taxable',
+        'label': 'Taxable Benefits (all)',
+        'data_path': '_pay_item:taxable:taxable',
+        'group': 'salary',
+    },
     {'key': 'total_taxable', 'label': 'Total Taxable', 'data_path': 'taxable', 'group': 'tax'},
     {'key': 'tax_withheld', 'label': 'Tax withheld', 'data_path': 'tax', 'group': 'tax'},
     # Employee info
@@ -304,6 +322,58 @@ def get_enabled_columns(company, report_type: str = 'erca') -> list[dict]:
     return result
 
 
+def _pay_item_amount(payslip, key, mode=None):
+    """Sum one pay item by PayItemType.key from the payslip's line_items.
+
+    `mode='taxable'` restricts the sum to items whose PayItemType.tax_treatment
+    is 'taxable', which is what the ERCA "taxable benefit" columns mean. The
+    tax treatment lives on the type row, not in the line-item snapshot, so it
+    is looked up from the catalog.
+
+    Returns 0 when the payslip has no engine snapshot (not yet backfilled).
+    """
+    line_items = getattr(payslip, 'line_items', None)
+    if not line_items:
+        return 0
+
+    if mode == 'taxable':
+        try:
+            from payroll_engine.models_payroll_elements import PayItemType
+
+            item = PayItemType.query.filter_by(company_id=payslip.company_id, key=key).first()
+            if item is None or item.tax_treatment != 'taxable':
+                return 0
+        except Exception:
+            return 0
+
+    total = 0.0
+    for li in line_items:
+        if li.get('item_key') != key:
+            continue
+        if li.get('classification') not in ('earning', 'deduction'):
+            continue
+        try:
+            total += float(li.get('earned_amount') or 0)
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def _legacy_allowance_total(payslip):
+    """Pre-elements fallback: total non-basic earnings on the payslip.
+
+    Only used for payslips with no engine line_items snapshot. It cannot
+    distinguish one allowance from another, which is exactly why the generic
+    `_pay_item:` resolution exists.
+    """
+    try:
+        basic = float(payslip.employee.basic_salary or 0)
+        gross = float(payslip.gross_salary or 0)
+        return max(0, gross - basic)
+    except Exception:
+        return 0
+
+
 def get_column_value(payslip, data_path: str, company=None, static_value=None):
     """Extract a value from a payslip using a data_path string.
 
@@ -329,21 +399,29 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
     if data_path == '_end_date':
         return ''
     if data_path == '_transport_allowance':
-        try:
-            basic = float(payslip.employee.basic_salary or 0)
-            gross = float(payslip.gross_salary or 0)
-            return max(0, gross - basic)
-        except Exception:
-            return 0
+        return _legacy_allowance_total(payslip)
     if data_path == '_taxable_transport':
-        try:
-            basic = float(payslip.employee.basic_salary or 0)
-            gross = float(payslip.gross_salary or 0)
-            return max(0, gross - basic)
-        except Exception:
-            return 0
+        return _legacy_allowance_total(payslip)
     if data_path == '_other_taxable':
         return 0
+
+    # --- Generic pay-item resolution (elements architecture) ---
+    #
+    # `_pay_item:<key>[:taxable]` resolves ANY pay item by its PayItemType.key
+    # from the engine's line_items snapshot on the payslip. This replaces the
+    # hardcoded transport_allowance / taxable_transport / other_taxable
+    # columns: a report can now ask for any item the company's catalog defines
+    # without a code change.
+    #
+    # Suffixes:
+    #   (none)  -- sum of every line for that key
+    #   :taxable -- only lines whose tax treatment is 'taxable' (needs the
+    #               type row, so this is resolved via PayItemType, not the
+    #               snapshot)
+    if data_path.startswith('_pay_item:'):
+        spec = data_path[len('_pay_item:') :]
+        key, _, mode = spec.partition(':')
+        return _pay_item_amount(payslip, key, mode or None)
 
     # Handle encrypted fields
     if data_path == 'employee.bank_account':

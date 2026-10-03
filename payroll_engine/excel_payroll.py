@@ -21,12 +21,10 @@ Design principles:
 - Approval is a state machine, not a checkbox
 """
 
-import io
 import json
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
-from typing import Any
 
 Q = Decimal('0.01')
 
@@ -448,7 +446,7 @@ class ExcelPayrollEngine:
             CalculationStep(
                 step_number=step_num,
                 label='Employee Pension (7%)',
-                formula=f'{emp_rate*100:.0f}% of basic salary',
+                formula=f'{emp_rate * 100:.0f}% of basic salary',
                 inputs={'basic_salary': result.basic_salary, 'rate': emp_rate, 'ceiling': ceiling},
                 result=pension_emp,
                 note='Deducted BEFORE tax (legal requirement)',
@@ -676,7 +674,7 @@ class ExcelPayrollEngine:
                     employee_name=str(emp_data.get('name', '')),
                     rule_code='CALCULATION_ERROR',
                     severity='BLOCK',
-                    message=f'Calculation failed: {str(e)}',
+                    message=f'Calculation failed: {e!s}',
                     hint='Check the input values for this employee.',
                 )
                 run.exceptions.append(exc)
@@ -756,6 +754,7 @@ class ExcelPayrollEngine:
                 rows = [dict(row) for row in reader]
         else:
             from payroll_engine.excel_import import read_xlsx
+
             rows = read_xlsx(filepath)
 
         if not rows:
@@ -1029,10 +1028,9 @@ class ExcelPayrollEngine:
                 Font,
                 PatternFill,
                 Side,
-                numbers,
             )
         except ImportError:
-            raise ImportError('openpyxl is required for Excel export')
+            raise ImportError('openpyxl is required for Excel export') from None
 
         wb = openpyxl.Workbook()
 
@@ -1113,10 +1111,23 @@ class ExcelPayrollEngine:
         # ---- Sheet 2: Payroll ----
         ws2 = wb.create_sheet('Payroll')
         headers = [
-            'Employee ID', 'Name', 'Department', 'Position',
-            'Basic Salary', 'Allowances', 'Exempt Allow.', 'Taxable Allow.',
-            'Overtime', 'Gross', 'Pension (7%)', 'Taxable Income',
-            'Tax', 'Deductions', 'Net Pay', 'Eff. Tax Rate', 'Status',
+            'Employee ID',
+            'Name',
+            'Department',
+            'Position',
+            'Basic Salary',
+            'Allowances',
+            'Exempt Allow.',
+            'Taxable Allow.',
+            'Overtime',
+            'Gross',
+            'Pension (7%)',
+            'Taxable Income',
+            'Tax',
+            'Deductions',
+            'Net Pay',
+            'Eff. Tax Rate',
+            'Status',
         ]
         for col, h in enumerate(headers, 1):
             ws2.cell(row=1, column=col, value=h)
@@ -1124,13 +1135,22 @@ class ExcelPayrollEngine:
 
         for i, emp in enumerate(run.employees, 2):
             values = [
-                emp.employee_id, emp.employee_name, emp.department, emp.position,
-                float(emp.basic_salary), float(emp.allowances),
-                float(emp.exempt_allowances), float(emp.taxable_allowances),
-                float(emp.overtime_pay), float(emp.gross),
-                float(emp.pension_employee), float(emp.taxable),
-                float(emp.tax), float(emp.total_deductions),
-                float(emp.net), float(emp.effective_tax_rate) / 100,
+                emp.employee_id,
+                emp.employee_name,
+                emp.department,
+                emp.position,
+                float(emp.basic_salary),
+                float(emp.allowances),
+                float(emp.exempt_allowances),
+                float(emp.taxable_allowances),
+                float(emp.overtime_pay),
+                float(emp.gross),
+                float(emp.pension_employee),
+                float(emp.taxable),
+                float(emp.tax),
+                float(emp.total_deductions),
+                float(emp.net),
+                float(emp.effective_tax_rate) / 100,
                 emp.status,
             ]
             for col, val in enumerate(values, 1):
@@ -1153,7 +1173,11 @@ class ExcelPayrollEngine:
             ws2.cell(row=totals_row, column=col).font = totals_font
 
         total_cols = {
-            5: float(run.total_gross - run.total_overtime - sum((e.taxable_allowances + e.exempt_allowances) for e in run.employees)),
+            5: float(
+                run.total_gross
+                - run.total_overtime
+                - sum((e.taxable_allowances + e.exempt_allowances) for e in run.employees)
+            ),
             6: float(sum((e.taxable_allowances + e.exempt_allowances) for e in run.employees)),
             9: float(run.total_overtime),
             10: float(run.total_gross),
@@ -1170,12 +1194,23 @@ class ExcelPayrollEngine:
 
         # Auto-width
         from openpyxl.utils import get_column_letter
+
         for col in range(1, len(headers) + 1):
             ws2.column_dimensions[get_column_letter(col)].width = 15
 
         # ---- Sheet 3: Calculation Flow ----
         ws3 = wb.create_sheet('Calculation Flow')
-        flow_headers = ['Employee ID', 'Name', 'Step', 'Label', 'Formula', 'Inputs', 'Result', 'Note', 'Legal Reference']
+        flow_headers = [
+            'Employee ID',
+            'Name',
+            'Step',
+            'Label',
+            'Formula',
+            'Inputs',
+            'Result',
+            'Note',
+            'Legal Reference',
+        ]
         for col, h in enumerate(flow_headers, 1):
             ws3.cell(row=1, column=col, value=h)
         _style_header(ws3, 1, len(flow_headers))
@@ -1212,9 +1247,11 @@ class ExcelPayrollEngine:
                     ws4.cell(row=row, column=2, value=emp.employee_name)
                     ws4.cell(row=row, column=3, value=float(emp.taxable))
                     upper = bracket.get('upper')
-                    bracket_label = f"ETB {bracket['lower']:,.0f} – {upper:,.0f}" if upper else f"ETB {bracket['lower']:,.0f}+"
+                    bracket_label = (
+                        f'ETB {bracket["lower"]:,.0f} – {upper:,.0f}' if upper else f'ETB {bracket["lower"]:,.0f}+'
+                    )
                     ws4.cell(row=row, column=4, value=bracket_label)
-                    ws4.cell(row=row, column=5, value=f"{bracket['rate_pct']}%")
+                    ws4.cell(row=row, column=5, value=f'{bracket["rate_pct"]}%')
                     ws4.cell(row=row, column=6, value=float(bracket['taxable_amount']))
                     ws4.cell(row=row, column=7, value=float(bracket['bracket_tax']))
                     for col in range(1, len(tax_headers) + 1):
@@ -1226,16 +1263,30 @@ class ExcelPayrollEngine:
 
         # ---- Sheet 5: Exceptions ----
         ws5 = wb.create_sheet('Exceptions')
-        exc_headers = ['Severity', 'Employee ID', 'Name', 'Rule Code', 'Message', 'Hint', 'Overridden', 'Override Reason']
+        exc_headers = [
+            'Severity',
+            'Employee ID',
+            'Name',
+            'Rule Code',
+            'Message',
+            'Hint',
+            'Overridden',
+            'Override Reason',
+        ]
         for col, h in enumerate(exc_headers, 1):
             ws5.cell(row=1, column=col, value=h)
         _style_header(ws5, 1, len(exc_headers))
 
         for i, exc in enumerate(run.exceptions, 2):
             values = [
-                exc.severity, exc.employee_id, exc.employee_name,
-                exc.rule_code, exc.message, exc.hint,
-                'Yes' if exc.overridden else 'No', exc.override_reason,
+                exc.severity,
+                exc.employee_id,
+                exc.employee_name,
+                exc.rule_code,
+                exc.message,
+                exc.hint,
+                'Yes' if exc.overridden else 'No',
+                exc.override_reason,
             ]
             for col, val in enumerate(values, 1):
                 cell = ws5.cell(row=i, column=col, value=val)
@@ -1250,7 +1301,7 @@ class ExcelPayrollEngine:
         # ---- Sheet 6: Changes ----
         ws6 = wb.create_sheet('Changes')
         ws6.merge_cells('A1:E1')
-        ws6['A1'] = f'Changes vs Previous Period'
+        ws6['A1'] = 'Changes vs Previous Period'
         ws6['A1'].font = subtitle_font
 
         if run.previous_employee_count > 0:
@@ -1300,7 +1351,7 @@ class ExcelPayrollEngine:
                 ws6.cell(row=row, column=3, value=float(c['old_gross'])).number_format = etb_format
                 ws6.cell(row=row, column=4, value=float(c['new_gross'])).number_format = etb_format
                 ws6.cell(row=row, column=5, value=float(c['delta'])).number_format = etb_format
-                ws6.cell(row=row, column=6, value=f"{c['delta_pct']}%")
+                ws6.cell(row=row, column=6, value=f'{c["delta_pct"]}%')
                 row += 1
 
         # ---- Sheet 7: Bank File ----

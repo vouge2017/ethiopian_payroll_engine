@@ -10,17 +10,22 @@ import pytest
 
 class TestProductionConfigGuards:
     def test_production_forces_demo_off(self, monkeypatch):
+        import config as cfg_mod
+
         monkeypatch.setenv('SECRET_KEY', 'a-real-secret-key-32-chars-minimum-here!')
         monkeypatch.setenv('DATABASE_URL', 'postgresql://user:pass@localhost/db')
         monkeypatch.setenv('DB_ENCRYPTION_KEY', 'a-real-encryption-key-32-chars-minimum-here')
-        import importlib
+        import importlib.util
 
-        import config as cfg_mod
+        original_testing_config = cfg_mod.TestingConfig
+        original_testing_url = original_testing_config.SQLALCHEMY_DATABASE_URI
+        spec = importlib.util.spec_from_file_location('_production_config_probe', cfg_mod.__file__)
+        isolated_config = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(isolated_config)
 
-        importlib.reload(cfg_mod)
-        from config import ProductionConfig
-
-        cfg = ProductionConfig()
+        cfg = isolated_config.ProductionConfig()
+        assert cfg_mod.TestingConfig is original_testing_config
+        assert original_testing_url == cfg_mod.TestingConfig.SQLALCHEMY_DATABASE_URI
         assert cfg.ENABLE_DEMO_MODE is False
 
     def test_development_allows_demo(self):

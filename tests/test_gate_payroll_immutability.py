@@ -13,6 +13,7 @@ Three things this test asserts:
   3. Adjustment payslips are an additive channel (separate `payslip_type`),
      not a mutation of the original regular payslip.
 """
+
 from datetime import date
 
 import pytest
@@ -81,7 +82,7 @@ def _seed_completed_run(app):
 
 
 def test_approval_guard_rejects_terminal_run(app):
-    company_id, user_id, emp_id, run_id = _seed_completed_run(app)
+    company_id, user_id, _emp_id, run_id = _seed_completed_run(app)
     with app.app_context():
         run = db.session.get(PayrollRun, run_id)
         run.status = 'completed'
@@ -154,12 +155,7 @@ def test_regular_payslip_value_immutable_when_adjustment_added(app):
         assert regular.gross_salary == original_gross
         assert regular.payslip_type == 'regular'
 
-        rows = (
-            db.session.query(Payslip)
-            .filter_by(payroll_run_id=run_id, employee_id=emp_id)
-            .order_by(Payslip.id)
-            .all()
-        )
+        rows = db.session.query(Payslip).filter_by(payroll_run_id=run_id, employee_id=emp_id).order_by(Payslip.id).all()
         assert [r.payslip_type for r in rows] == ['regular', 'adjustment']
         assert sum(r.net_pay for r in rows) == 8800
 
@@ -199,10 +195,7 @@ def test_historical_report_is_deterministic(app):
         db.session.commit()
 
         rows1 = (
-            db.session.query(Payslip)
-            .filter_by(payroll_run_id=run_id, employee_id=emp_id)
-            .order_by(Payslip.id)
-            .all()
+            db.session.query(Payslip).filter_by(payroll_run_id=run_id, employee_id=emp_id).order_by(Payslip.id).all()
         )
         totals1 = (
             sum(r.gross_salary for r in rows1),
@@ -211,10 +204,7 @@ def test_historical_report_is_deterministic(app):
         )
 
         rows2 = (
-            db.session.query(Payslip)
-            .filter_by(payroll_run_id=run_id, employee_id=emp_id)
-            .order_by(Payslip.id)
-            .all()
+            db.session.query(Payslip).filter_by(payroll_run_id=run_id, employee_id=emp_id).order_by(Payslip.id).all()
         )
         totals2 = (
             sum(r.gross_salary for r in rows2),

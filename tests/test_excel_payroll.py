@@ -14,7 +14,6 @@ Tests cover:
 """
 
 import io
-import json
 import os
 import tempfile
 from decimal import Decimal
@@ -22,14 +21,8 @@ from decimal import Decimal
 import pytest
 
 from payroll_engine.excel_payroll import (
-    CalculationStep,
-    EmployeePayrollResult,
     ExcelPayrollEngine,
-    ExceptionItem,
-    PayrollRunResult,
-    _D,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -110,7 +103,7 @@ class TestDeterminism:
         result1 = engine.run_from_data(sample_employees)
         result2 = engine.run_from_data(sample_employees)
 
-        for e1, e2 in zip(result1.employees, result2.employees):
+        for e1, e2 in zip(result1.employees, result2.employees, strict=True):
             assert e1.gross == e2.gross
             assert e1.tax == e2.tax
             assert e1.net == e2.net
@@ -480,7 +473,13 @@ class TestExceptions:
     def test_missing_tin_warned(self, engine):
         """Missing TIN must be flagged as WARN."""
         employees = [
-            {'employee_id': 'E001', 'name': 'No TIN', 'basic_salary': 10000, 'bank_account': 'bank:cbe:1000123456789', 'tin': ''},
+            {
+                'employee_id': 'E001',
+                'name': 'No TIN',
+                'basic_salary': 10000,
+                'bank_account': 'bank:cbe:1000123456789',
+                'tin': '',
+            },
         ]
 
         result = engine.run_from_data(employees)
@@ -521,9 +520,21 @@ class TestExceptions:
     def test_exception_counts(self, engine):
         """Exception counts must be accurate."""
         employees = [
-            {'employee_id': 'E001', 'name': 'OK', 'basic_salary': 10000, 'bank_account': 'bank:cbe:1000123456789', 'tin': '123'},
+            {
+                'employee_id': 'E001',
+                'name': 'OK',
+                'basic_salary': 10000,
+                'bank_account': 'bank:cbe:1000123456789',
+                'tin': '123',
+            },
             {'employee_id': 'E002', 'name': 'No Bank', 'basic_salary': 10000, 'bank_account': '', 'tin': '456'},
-            {'employee_id': 'E003', 'name': 'No TIN', 'basic_salary': 10000, 'bank_account': 'bank:cbe:1000987654321', 'tin': ''},
+            {
+                'employee_id': 'E003',
+                'name': 'No TIN',
+                'basic_salary': 10000,
+                'bank_account': 'bank:cbe:1000987654321',
+                'tin': '',
+            },
         ]
 
         result = engine.run_from_data(employees)
@@ -542,7 +553,12 @@ class TestChangeDetection:
     def test_new_hires(self, engine):
         """New employees must be detected."""
         employees = [
-            {'employee_id': 'E001', 'name': 'Existing', 'basic_salary': 10000, 'bank_account': 'bank:cbe:1000123456789'},
+            {
+                'employee_id': 'E001',
+                'name': 'Existing',
+                'basic_salary': 10000,
+                'bank_account': 'bank:cbe:1000123456789',
+            },
             {'employee_id': 'E002', 'name': 'New Hire', 'basic_salary': 8000, 'bank_account': 'bank:cbe:1000987654321'},
         ]
 
@@ -654,7 +670,7 @@ class TestApprovalWorkflow:
         ]
 
         result = engine.run_from_data(employees)
-        block = [e for e in result.exceptions if e.severity == 'BLOCK'][0]
+        block = next(e for e in result.exceptions if e.severity == 'BLOCK')
 
         with pytest.raises(ValueError, match='BLOCK'):
             engine.override_exception(
@@ -771,7 +787,16 @@ class TestExcelExport:
         xlsx = engine.export_to_excel(result)
 
         wb = openpyxl.load_workbook(io.BytesIO(xlsx))
-        expected_sheets = ['Summary', 'Payroll', 'Calculation Flow', 'Tax Breakdown', 'Exceptions', 'Changes', 'Bank File', 'Approval']
+        expected_sheets = [
+            'Summary',
+            'Payroll',
+            'Calculation Flow',
+            'Tax Breakdown',
+            'Exceptions',
+            'Changes',
+            'Bank File',
+            'Approval',
+        ]
         for sheet in expected_sheets:
             assert sheet in wb.sheetnames, f'Missing sheet: {sheet}'
         wb.close()
@@ -843,7 +868,13 @@ class TestEdgeCases:
     def test_string_salary_parsed(self, engine):
         """String salary values should be parsed correctly."""
         employees = [
-            {'employee_id': 'E001', 'name': 'Test', 'basic_salary': '10000', 'allowances': '2000', 'bank_account': 'bank:cbe:1000123456789'},
+            {
+                'employee_id': 'E001',
+                'name': 'Test',
+                'basic_salary': '10000',
+                'allowances': '2000',
+                'bank_account': 'bank:cbe:1000123456789',
+            },
         ]
 
         result = engine.run_from_data(employees)

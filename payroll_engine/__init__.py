@@ -3,6 +3,8 @@ import os
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
+import click
+
 logger = logging.getLogger('payroll_engine')
 
 from flask import Flask, current_app, flash, g, redirect, request, url_for
@@ -114,6 +116,7 @@ def create_app():
         app.config.from_object(StagingConfig())
     elif env == 'testing':
         from config import TestingConfig
+
         app.config.from_object(TestingConfig())
     else:
         from config import _env_bool
@@ -218,12 +221,17 @@ def create_app():
     # FinalSettlement, etc.) must be added ONLY after a per-model sweep of
     # every call site (Phase 2), never in bulk.
     from .models import (
+        ApiKey,
         Attendance,
         AuditLog,
         Employee,
         EmployeeDeduction,
+        FinalSettlement,
+        Leave,
         OvertimeEntry,
+        PayItemType,
         PayrollDraft,
+        PayrollItemAssignment,
         PayrollRun,
         Payslip,
         TenantQuery,
@@ -242,6 +250,14 @@ def create_app():
     # run/emp context; retention + demo cleanup use tenant_context(0);
     # service-layer fns (exceptions/evidence/change_summary) thread company_id.
     TenantQuery.register_model(Payslip)
+    # Batch 4 (Phase 4): ApiKey, Leave, FinalSettlement — all query sites
+    # verified to filter by company_id or use token-scoped lookup.
+    TenantQuery.register_model(ApiKey)
+    TenantQuery.register_model(Leave)
+    TenantQuery.register_model(FinalSettlement)
+    # Elements architecture (Phase 2): pay item type registry + assignments
+    TenantQuery.register_model(PayItemType)
+    TenantQuery.register_model(PayrollItemAssignment)
 
     # Batch 4 (Phase 3b, P0-A, 2026-08-31): tenant-isolation registration.
     #
@@ -262,7 +278,11 @@ def create_app():
         PayslipAcknowledgment,
         PayslipGenerationJob,
         ProfileChangeRequest,
+        SpreadsheetInput,
+        SupportTicket,
+        SupportTicketMessage,
     )
+
     TenantQuery.register_model(EmployeeAllowance)
     TenantQuery.register_model(FilingRecord)
     TenantQuery.register_model(FinalSettlement)
@@ -273,6 +293,9 @@ def create_app():
     TenantQuery.register_model(PayslipAcknowledgment)
     TenantQuery.register_model(PayslipGenerationJob)
     TenantQuery.register_model(ProfileChangeRequest)
+    TenantQuery.register_model(SpreadsheetInput)
+    TenantQuery.register_model(SupportTicket)
+    TenantQuery.register_model(SupportTicketMessage)
 
     # CSP nonce — available in all templates as {{ csp_nonce }}
     @app.context_processor
@@ -285,10 +308,9 @@ def create_app():
     # fresh assets. Falls back to a startup-time timestamp if the env var
     # is missing (e.g., local development).
     import time as _time
+
     _static_version = (
-        os.environ.get('GIT_COMMIT_SHA')
-        or os.environ.get('RENDER_GIT_COMMIT')
-        or str(int(_time.time()))
+        os.environ.get('GIT_COMMIT_SHA') or os.environ.get('RENDER_GIT_COMMIT') or str(int(_time.time()))
     )[:12]
     app.config['STATIC_ASSET_VERSION'] = _static_version
 
@@ -326,13 +348,16 @@ def create_app():
         # Set Sentry user context for error tracking
         try:
             import sentry_sdk
-            sentry_sdk.set_user({
-                'id': str(current_user.id),
-                'phone': current_user.phone or None,
-                'email': current_user.email or None,
-                'company_id': str(current_user.company_id) if current_user.company_id else None,
-                'role': current_user.role,
-            })
+
+            sentry_sdk.set_user(
+                {
+                    'id': str(current_user.id),
+                    'phone': current_user.phone or None,
+                    'email': current_user.email or None,
+                    'company_id': str(current_user.company_id) if current_user.company_id else None,
+                    'role': current_user.role,
+                }
+            )
         except Exception:
             pass  # Sentry is optional, don't break if not configured
         endpoint = request.endpoint or ''
@@ -504,16 +529,19 @@ def create_app():
                     "'self'",
                     'https://cdn.jsdelivr.net',
                     'https://fonts.gstatic.com',
-                    "https://fonts.googleapis.com",
-                    "https://fonts.gstatic.com",
+                    'https://fonts.googleapis.com',
+                    'https://fonts.gstatic.com',
                 ],
                 'img-src': "'self' data:",
                 'connect-src': [
                     "'self'",
                     'https://cdn.jsdelivr.net',
+                    'https://fonts.googleapis.com',
+                    'https://fonts.gstatic.com',
                 ],
             },
         )
+
     from .main import main as main_blueprint
 
     app.register_blueprint(main_blueprint)
@@ -562,6 +590,12 @@ def create_app():
     app.register_blueprint(billing_bp)
     app.register_blueprint(platform_bp)
 
+    # Diff Check: upload old spreadsheet, auto-highlight where our math differs from their manual numbers
+    from .diff_check import diff_bp
+
+    app.register_blueprint(diff_bp, url_prefix='/diff')
+    csrf.exempt(diff_bp)
+
     # P0-E: Internal cron blueprint (authenticated by X-Cron-Secret).
     # Hit by Render Cron Job service on the schedule declared in
     # render.yaml. POST only — see cron_bp.py:daily docstring.
@@ -570,6 +604,7 @@ def create_app():
     app.register_blueprint(cron_bp)
 
     from .admin_bp import admin_bp, support_bp
+
     app.register_blueprint(admin_bp)
     app.register_blueprint(support_bp)
 
@@ -579,12 +614,108 @@ def create_app():
     app.before_request(enforce_billing_gate)
 
     @app.cli.command('seed-holidays')
-    def seed_holidays_cmd():
+    def seed_holidays_cmd() -> None:
         """Seed Ethiopian national holidays."""
         from payroll_engine.holidays import seed_holidays
 
         added = seed_holidays()
         print(f'Seeded {added} holidays.')
+
+    @app.cli.command('seed-system-items')
+    def seed_system_items_cmd() -> None:
+        """Seed the system pay-item catalog (company_id IS NULL, shared across all companies).
+
+        Idempotent — safe to re-run. Creates the 4 system items (basic_salary,
+        employee_pension, employer_pension, income_tax) if they don't already exist.
+        """
+        from payroll_engine.catalog import seed_system_items
+
+        counts = seed_system_items()
+        print(f'System items — created: {counts["created"]}, skipped: {counts["skipped"]}')
+
+    @app.cli.command('migrate-pay-items')
+    @click.option(
+        '--dry-run',
+        is_flag=True,
+        default=False,
+        help='Report what would be created per company without writing.',
+    )
+    @click.option(
+        '--catalog-only',
+        is_flag=True,
+        default=False,
+        help='Only seed the per-company PayItemType catalog; do not backfill rows.',
+    )
+    def migrate_pay_items_cmd(dry_run: bool, catalog_only: bool) -> None:
+        """Backfill pay items for all existing companies.
+
+        Two phases, both idempotent and safe to re-run:
+
+          1. Catalog  -- seed the per-company PayItemType rows a company lacks.
+          2. Data     -- convert EmployeeAllowance / EmployeeDeduction rows into
+                         PayrollItemAssignment rows, and give every active
+                         employee a basic_salary assignment.
+
+        Data backfill runs one transaction per company: a company either
+        converts completely or is rolled back whole and reported as failed.
+        Legacy rows are never deleted.
+
+        --dry-run prints per-company counts and writes nothing.
+        """
+        from payroll_engine.backfill import backfill_all, verify_basic_present
+        from payroll_engine.catalog import migrate_pay_items
+
+        counts = migrate_pay_items()
+        print(
+            f'Catalog: {counts["companies"]} companies, '
+            f'{counts["items_created"]} items created, '
+            f'{counts["items_skipped"]} items skipped (already present).'
+        )
+
+        if catalog_only:
+            print('--catalog-only: skipping data backfill.')
+            return
+
+        results = backfill_all(dry_run=dry_run)
+        prefix = 'Would create' if dry_run else 'Created'
+        tot_basic = tot_allow = tot_ded = 0
+        for r in results:
+            if r.get('error'):
+                print(f'  company {r.get("company_id")}: ROLLED BACK - {r["error"]}')
+                continue
+            print(
+                f'  company {r["company_id"]}: {r["employees"]} employees | '
+                f'{prefix} {r["basic_created"]} basic, '
+                f'{r["allowances_created"]} allowances, '
+                f'{r["deductions_created"]} deductions '
+                f'(skipped {r["basic_skipped"]}/{r["allowances_skipped"]}/'
+                f'{r["deductions_skipped"]}) | '
+                f'source checksum {r["source_checksum"]}'
+            )
+            tot_basic += r['basic_created']
+            tot_allow += r['allowances_created']
+            tot_ded += r['deductions_created']
+
+        print(
+            f'{"Would create" if dry_run else "Created"} total: '
+            f'{tot_basic} basic, {tot_allow} allowances, {tot_ded} deductions.'
+        )
+
+        if not dry_run:
+            # The invariant this whole exercise exists to guarantee.
+            offenders = []
+            for r in results:
+                if r.get('error'):
+                    continue
+                bad = verify_basic_present(r['company_id'])
+                if bad:
+                    offenders.append((r['company_id'], bad))
+            if offenders:
+                print('INVARIANT VIOLATED - employees with assignments but no basic:')
+                for cid, bad in offenders:
+                    print(f'  company {cid}: employee ids {bad}')
+            else:
+                print('Invariant OK: every employee with assignments has a basic_salary row.')
 
     # Push notification endpoints
     @app.route('/api/vapid-key')
@@ -657,6 +788,7 @@ def create_app():
         without shipping a new binary asset.
         """
         from flask import make_response
+
         response = make_response(
             app.send_static_file('icons/icon-192.png'),
         )
@@ -683,6 +815,14 @@ def create_app():
     # Make Ethiopian calendar available in all templates
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
     from payroll_engine.i18n import get_string
+
+    # Register Python built-ins that templates use (Jinja2 doesn't expose them by default)
+    app.jinja_env.globals['abs'] = abs
+    app.jinja_env.globals['max'] = max
+    app.jinja_env.globals['min'] = min
+    app.jinja_env.globals['round'] = round
+    app.jinja_env.globals['int'] = int
+    app.jinja_env.globals['float'] = float
 
     @app.context_processor
     def inject_ethiopian_calendar():
@@ -823,14 +963,19 @@ def create_app():
         regenerates the CSRF token). This is the most common user-facing
         400 on auth forms: a session expires, the cookie is gone, but the
         page the user is filling in still has the old token."""
-        from flask import render_template, request, flash, redirect, url_for
+        from flask import flash, redirect, render_template, request, url_for
+
         # Only intervene on form posts; other 400s pass through.
         if request.method in ('POST', 'PUT', 'PATCH', 'DELETE') and 'csrf' in (e.description or '').lower():
-            flash('Your session expired while you were filling the form. Please refresh the page and try again.', 'warning')
+            flash(
+                'Your session expired while you were filling the form. Please refresh the page and try again.',
+                'warning',
+            )
             # If we can guess the originating page, redirect there; otherwise home.
             referer = request.headers.get('Referer', '')
             if referer:
                 from urllib.parse import urlparse
+
                 path = urlparse(referer).path
                 if path and path != request.path:
                     return redirect(path)
@@ -850,6 +995,7 @@ def create_app():
         # Capture additional context in Sentry
         try:
             import sentry_sdk
+
             sentry_sdk.capture_exception(e)
             sentry_sdk.set_tag('request_path', request.path)
             sentry_sdk.set_tag('request_method', request.method)
@@ -858,7 +1004,5 @@ def create_app():
 
         db.session.rollback()
         return render_template('errors/500.html'), 500
-
-    
 
     return app

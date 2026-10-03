@@ -16,8 +16,6 @@ The accountant can't skip steps or close prematurely.
 """
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
-from decimal import Decimal
 
 
 @dataclass
@@ -225,9 +223,7 @@ def build_month_end_close(db, models, run_id: int, company_id: int) -> MonthEndC
 
     try:
         FilingRecord = models.FilingRecord
-        erca_record = FilingRecord.query.filter_by(
-            company_id=company_id, filing_type='erca', period=period
-        ).first()
+        erca_record = FilingRecord.query.filter_by(company_id=company_id, filing_type='erca', period=period).first()
     except Exception:
         erca_record = None
 
@@ -304,7 +300,11 @@ def build_month_end_close(db, models, run_id: int, company_id: int) -> MonthEndC
         step6.detail = f'{len(adjustment_payslips)} adjustment(s), net: ETB {adj_net:,.2f}'
         step6.actions = [
             {'label': 'View Adjustments', 'url': f'/payroll/runs/{run_id}/adjustments', 'method': 'GET'},
-            {'label': 'Generate Adjustment Bank File', 'url': f'/payroll/runs/{run_id}/adjustment-bank-file', 'method': 'GET'},
+            {
+                'label': 'Generate Adjustment Bank File',
+                'url': f'/payroll/runs/{run_id}/adjustment-bank-file',
+                'method': 'GET',
+            },
         ]
     close.steps.append(step6)
 
@@ -326,11 +326,7 @@ def build_month_end_close(db, models, run_id: int, company_id: int) -> MonthEndC
     else:
         # Check if all prerequisites are met
         prereq_steps = {s.step_number: s for s in close.steps}
-        all_prereqs_met = all(
-            prereq_steps[p].status == 'completed'
-            for p in step7.prerequisites
-            if p in prereq_steps
-        )
+        all_prereqs_met = all(prereq_steps[p].status == 'completed' for p in step7.prerequisites if p in prereq_steps)
 
         if all_prereqs_met:
             step7.status = 'ready'

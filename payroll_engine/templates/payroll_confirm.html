@@ -6,7 +6,7 @@
 <div class="wizard-stepper">
     <div class="wizard-step completed">
         <div class="wizard-step-number"><i class="bi bi-check"></i></div>
-        <span class="wizard-step-label">Upload</span>
+        <span class="wizard-step-label">{{ "Worksheet" if run.source == "spreadsheet" else "Upload" }}</span>
     </div>
     <div class="wizard-step-connector completed"></div>
     <div class="wizard-step completed">
@@ -35,7 +35,7 @@
                 <h3 class="mb-0">
                     {{ _('confirm_payroll_processing') }}
                     {% if run.period %}
-                        <small class="text-muted ms-2">{{ run.period }}</small>
+                        <small class="text-muted ms-2">{{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if run.source == 'spreadsheet' else run.period }}</small>
                     {% endif %}
                 </h3>
             </div>
@@ -112,10 +112,16 @@
                                     <h6 class="text-success">{{ _('earnings') }}</h6>
                                     <div class="table-responsive">
                                     <table class="table table-sm table-borderless mb-0">
+                                        {% if run.source == 'spreadsheet' %}
+                                        {% for li in emp.line_items if li.classification == 'earning' and li.earned_amount %}
+                                        <tr><td class="text-muted">{{ li.item_label }}</td><td class="text-end">ETB {{ '%.2f'|format(li.earned_amount) }}</td></tr>
+                                        {% endfor %}
+                                        {% else %}
                                         <tr><td class="text-muted">{{ _('basic_salary') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.basic) }}</td></tr>
                                         <tr><td class="text-muted">{{ _('allowances') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.allowances) }}</td></tr>
                                         {% if emp.get('overtime_pay', 0) > 0 %}
                                         <tr><td class="text-muted">{{ _('overtime') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.overtime_pay) }}</td></tr>
+                                        {% endif %}
                                         {% endif %}
                                         <tr class="table-light"><td><strong>{{ _('gross') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.gross) }}</strong></td></tr>
                                     </table>
@@ -147,7 +153,12 @@
                                             </details>
                                         </td></tr>
                                         {% endif %}
-                                        <tr class="table-light"><td><strong>{{ _('total_deductions') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.tax + emp.pension_employee) }}</strong></td></tr>
+                                        {% if run.source == 'spreadsheet' %}
+                                        {% for li in emp.line_items if li.classification == 'deduction' and not li.is_system %}
+                                        <tr><td class="text-muted">{{ li.item_label }}</td><td class="text-end">ETB {{ '%.2f'|format(li.earned_amount) }}</td></tr>
+                                        {% endfor %}
+                                        {% endif %}
+                                        <tr class="table-light"><td><strong>{{ _('total_deductions') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.gross - emp.net) }}</strong></td></tr>
                                     </table>
 </div>
                                 </div>
@@ -208,6 +219,13 @@
                     <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{{ _('confirm_approve') }}</h5>
                 </div>
                 <div class="card-body p-4">
+                    {% if run.source == 'spreadsheet' %}
+                    <div class="alert alert-info mb-4">
+                        <strong>Approval preserves the reviewed payroll amounts.</strong>
+                        <p class="mb-1">Payslips and a bank file can be downloaded afterwards. No bank transfer, wallet payment or tax submission is sent.</p>
+                        <p class="mb-0">Worksheet approval cannot be undone yet. Check every amount before approving; a linked correction workflow is still required.</p>
+                    </div>
+                    {% else %}
                     <div class="d-flex flex-wrap gap-2 mb-4">
                         <span class="trust-badge trust-badge-success"><i class="bi bi-check-circle"></i> Tax calculated</span>
                         <span class="trust-badge trust-badge-success"><i class="bi bi-check-circle"></i> Pension applied</span>
@@ -228,6 +246,8 @@
                             <strong>Can be undone within 1 hour.</strong> After that, you'll need to create adjustment payslips.
                         </div>
                     </div>
+
+                    {% endif %}
 
                     <form method="POST" action="{{ url_for('payroll.approve_payroll') }}" id="approve-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

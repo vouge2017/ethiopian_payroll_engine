@@ -81,6 +81,7 @@ def _setup(app):
 
         payslip = Payslip(
             payroll_run_id=run.id,
+            company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=12000,
             tax=1500,
@@ -158,7 +159,9 @@ class TestAcknowledgePayslip:
 
         with app.app_context():
             ack = PayslipAcknowledgment.query.filter_by(
-                payslip_id=pid, employee_id=eid, company_id=_cid,
+                payslip_id=pid,
+                employee_id=eid,
+                company_id=_cid,
             ).first()
             assert ack is not None
 

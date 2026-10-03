@@ -30,14 +30,14 @@ Senior-engineer hardening (2026-08-31):
 - BUGFIX: response body is read once and used for both cache and replay,
   so partial body reads don't yield inconsistent cached bodies.
 """
+
 import functools
 import hashlib
 import json
 import logging
 import time
-from typing import Optional
 
-from flask import current_app, jsonify, make_response, request
+from flask import jsonify, make_response, request
 
 logger = logging.getLogger('payroll_engine.idempotency')
 
@@ -65,12 +65,11 @@ def _cache_key(company_id: int, route: str, idem_key: str, body_hash: str) -> st
     return f'idem:{company_id}:{route}:{idem_key}:{body_hash}'
 
 
-def _get_cached(key: str) -> Optional[dict]:
+def _get_cached(key: str) -> dict | None:
     """Return cached response dict or None."""
     # Try Redis first
     try:
         import redis as _redis
-
         from flask import current_app as _ca
 
         url = _ca.config.get('RATELIMIT_STORAGE_URI') or _ca.config.get('REDIS_URL')
@@ -101,7 +100,6 @@ def _set_cached(key: str, response: dict) -> bool:
     """
     try:
         import redis as _redis
-
         from flask import current_app as _ca
 
         url = _ca.config.get('RATELIMIT_STORAGE_URI') or _ca.config.get('REDIS_URL')
@@ -182,6 +180,7 @@ def idempotent(view):
     - If the header is absent, the view executes normally and a warning
       is logged so we can identify clients that need to add the header.
     """
+
     @functools.wraps(view)
     def wrapper(*args, **kwargs):
         idem_key = request.headers.get('Idempotency-Key') or request.form.get('idempotency_key')
@@ -216,12 +215,16 @@ def idempotent(view):
         if cached_other_body:
             logger.warning(
                 'idempotent payload mismatch key=%s route=%s from %s',
-                idem_key, route, request.remote_addr,
+                idem_key,
+                route,
+                request.remote_addr,
             )
-            return jsonify({
-                'ok': False,
-                'error': _PAYLOAD_MISMATCH_MSG,
-            }), 422
+            return jsonify(
+                {
+                    'ok': False,
+                    'error': _PAYLOAD_MISMATCH_MSG,
+                }
+            ), 422
 
         # Serialize the read-then-set within this worker.
         if not _acquire_lock(key):
@@ -253,7 +256,8 @@ def idempotent(view):
             headers = {}
             if isinstance(response, tuple):
                 response_obj = make_response(
-                    response[0], response[1] if len(response) > 1 else 200,
+                    response[0],
+                    response[1] if len(response) > 1 else 200,
                 )
                 if len(response) > 2 and isinstance(response[2], dict):
                     response_obj.headers.update(response[2])

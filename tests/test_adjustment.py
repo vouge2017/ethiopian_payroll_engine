@@ -36,6 +36,7 @@ def app():
         db.create_all()
         TenantQuery.register_model(Employee)
         TenantQuery.register_model(OvertimeEntry)
+        TenantQuery.register_model(Payslip)
         yield app
         db.drop_all()
 
@@ -91,8 +92,8 @@ def _create_completed_run(app, company_id, user_id):
 
         ps = Payslip(
             payroll_run_id=run.id,
+            company_id=run.company_id,
             employee_id=emp.id,
-            company_id=company_id,
             gross_salary=10000,
             tax=1325,
             employee_pension=700,
@@ -124,7 +125,7 @@ def test_create_adjustment(app, company_user, client):
     assert b'Adjustment' in resp.data
 
     with app.app_context():
-        adjustments = Payslip.query.filter_by(payroll_run_id=run_id, company_id=cid, payslip_type='adjustment').all()
+        adjustments = Payslip.query.filter_by(company_id=cid, payroll_run_id=run_id, payslip_type='adjustment').all()
         assert len(adjustments) == 1
         assert adjustments[0].reason == 'Overtime correction'
         assert adjustments[0].gross_salary == 2000

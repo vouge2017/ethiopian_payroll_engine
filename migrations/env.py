@@ -1,4 +1,5 @@
 import logging
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -26,8 +27,7 @@ def get_engine():
 
 def get_engine_url():
     try:
-        return get_engine().url.render_as_string(hide_password=False).replace(
-            '%', '%%')
+        return get_engine().url.render_as_string(hide_password=False).replace('%', '%%')
     except AttributeError:
         return str(get_engine().url).replace('%', '%%')
 
@@ -46,6 +46,14 @@ try:
 except RuntimeError:
     # No Flask app context — running via alembic CLI directly
     target_db = None
+    # CLI callers must identify their target. A programmatic override wins over
+    # the environment, so disposable test gates cannot be redirected by it.
+    migration_url = config.get_main_option('sqlalchemy.url') or os.environ.get('DATABASE_URL', '')
+    if not migration_url.strip():
+        raise RuntimeError('Set DATABASE_URL or an explicit sqlalchemy.url before running Alembic.') from None
+    if migration_url.startswith('postgres://'):
+        migration_url = migration_url.replace('postgres://', 'postgresql://', 1)
+    config.set_main_option('sqlalchemy.url', migration_url.replace('%', '%%'))
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -55,8 +63,10 @@ except RuntimeError:
 
 def get_metadata():
     if target_db is None:
-        from sqlalchemy import MetaData
-        return MetaData()
+        # CLI mode — load real model metadata so alembic check works
+        from payroll_engine.models import db as _db
+
+        return _db.metadata
     if hasattr(target_db, 'metadatas'):
         return target_db.metadatas[None]
     return target_db.metadata
@@ -74,10 +84,8 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url, target_metadata=get_metadata(), literal_binds=True
-    )
+    url = config.get_main_option('sqlalchemy.url')
+    context.configure(url=url, target_metadata=get_metadata(), literal_binds=True)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -104,26 +112,23 @@ def run_migrations_online():
     if target_db is not None:
         # Running via Flask-Migrate (flask db upgrade)
         conf_args = current_app.extensions['migrate'].configure_args
-        if conf_args.get("process_revision_directives") is None:
-            conf_args["process_revision_directives"] = process_revision_directives
+        if conf_args.get('process_revision_directives') is None:
+            conf_args['process_revision_directives'] = process_revision_directives
         connectable = get_engine()
     else:
         # Running via alembic CLI directly — create engine from URL
         from sqlalchemy import engine_from_config
-        url = config.get_main_option("sqlalchemy.url")
+
+        url = config.get_main_option('sqlalchemy.url')
         connectable = engine_from_config(
-            {"url": url},
+            {'url': url},
             prefix='',
             poolclass=NullPool,
         )
         conf_args = {}
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=get_metadata(),
-            **conf_args
-        )
+        context.configure(connection=connection, target_metadata=get_metadata(), **conf_args)
 
         with context.begin_transaction():
             context.run_migrations()

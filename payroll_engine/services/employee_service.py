@@ -71,7 +71,7 @@ def parse_employee_form(form_data):
             if len(cleaned) >= 7 and len(cleaned) <= 20 and cleaned.replace('+', '').replace('-', '').isdigit():
                 phone = cleaned
             else:
-                return None, f'Employee phone: invalid format. Enter 7-20 digits (Ethiopian or international).'
+                return None, 'Employee phone: invalid format. Enter 7-20 digits (Ethiopian or international).'
 
     # Validate Fayda FIN if provided
     if fayda_fin:

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>EthioPayroll — Diff Check Results</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f2f5; margin: 0; padding: 0; color: #1a1a2e; line-height: 1.5; }
+        .page { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+        .header { margin-bottom: 16px; }
+        .header h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 2px; }
+        .header .sub { font-size: 0.88rem; color: #555; }
+
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+        .card { background: #fff; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.04); border-top: 3px solid #ddd; }
+        .card.blue   { border-top-color: #004bca; }
+        .card.green  { border-top-color: #198754; }
+        .card.red    { border-top-color: #dc3545; }
+        .card.gray   { border-top-color: #6c757d; }
+        .card .num { font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
+        .card .lbl { font-size: 0.68rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+
+        .impact { background: #fff; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); border-left: 4px solid #dc3545; }
+        .impact.ok { border-left-color: #198754; }
+        .impact-title { font-size: 0.82rem; color: #666; margin-bottom: 4px; }
+        .impact-val { font-size: 1.4rem; font-weight: 700; }
+        .impact-detail { font-size: 0.8rem; color: #666; margin-top: 2px; }
+
+        .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .search-box input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem; }
+        .search-box input:focus { outline: none; border-color: #004bca; }
+        .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999; font-size: 0.85rem; }
+
+        .filter-btn { padding: 7px 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; font-size: 0.8rem; cursor: pointer; color: #555; white-space: nowrap; }
+        .filter-btn:hover { background: #f5f5f5; }
+        .filter-btn.active { background: #004bca; color: #fff; border-color: #004bca; }
+
+        .table-wrap { background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden; }
+        .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table.diff { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 1000px; }
+        table.diff th, table.diff td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+        table.diff th { background: #f8f9fa; font-size: 0.72rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.4px; position: sticky; top: 0; z-index: 3; border-bottom: 2px solid #e0e0e0; }
+        table.diff td.r { text-align: right; }
+        table.diff tbody tr:hover { background: #fafbfc; }
+        table.diff tbody tr.row-issue { background: #fffef5; }
+        table.diff tbody tr.row-issue:hover { background: #fffde7; }
+        table.diff tbody tr.row-ok { background: #f8fdf8; }
+        table.diff tbody tr.expanded { background: #f0f7ff !important; }
+
+        table.diff th:nth-child(1), table.diff td:nth-child(1) { position: sticky; left: 0; z-index: 2; background: inherit; min-width: 40px; text-align: center; }
+        table.diff th:nth-child(2), table.diff td:nth-child(2) { position: sticky; left: 40px; z-index: 2; background: inherit; min-width: 140px; }
+        table.diff th:nth-child(3), table.diff td:nth-child(3) { position: sticky; left: 180px; z-index: 2; background: inherit; min-width: 60px; }
+        table.diff th:nth-child(1), table.diff th:nth-child(2), table.diff th:nth-child(3) { z-index: 4; background: #f8f9fa; }
+
+        .money { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+        .delta-pos { color: #198754; font-weight: 600; }
+        .delta-neg { color: #dc3545; font-weight: 600; }
+        .delta-zero { color: #6c757d; }
+
+        .status-yes { background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; }
+        .status-no { background: #fff3cd; color: #856404; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; }
+        .issue-count { background: #fff3cd; color: #856404; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
+        .issue-count.zero { background: #d4edda; color: #155724; }
+
+        .issue-summary { font-size: 0.75rem; color: #666; }
+        .issue-tag { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 0.68rem; font-weight: 500; margin-right: 4px; margin-bottom: 2px; }
+        .issue-tag.missing { background: #d1ecf1; color: #0c5460; }
+        .issue-tag.diff { background: #fff3cd; color: #856404; }
+
+        .expand-btn { cursor: pointer; color: #004bca; font-size: 0.75rem; white-space: nowrap; }
+        .expand-btn:hover { text-decoration: underline; }
+
+        .detail-row { display: none; }
+        .detail-row.show { display: table-row; }
+        .detail-row td { padding: 0 !important; border-bottom: 1px solid #e0e0e0; }
+        .detail-content { padding: 12px 16px 12px 180px; background: #f8f9fa; }
+        .detail-field { margin-bottom: 10px; }
+        .detail-field:last-child { margin-bottom: 0; }
+        .detail-field-name { font-weight: 600; font-size: 0.82rem; margin-bottom: 2px; }
+        .detail-field-vals { display: flex; gap: 12px; font-size: 0.78rem; color: #555; flex-wrap: wrap; }
+        .detail-field-vals .v { display: flex; align-items: center; gap: 3px; }
+        .detail-field-reason { font-size: 0.78rem; color: #555; margin-top: 2px; }
+        .detail-field-law { color: #1565c0; font-size: 0.73rem; font-style: italic; margin-top: 2px; }
+
+        .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.8rem; color: #666; }
+        .pagination-btns { display: flex; gap: 4px; }
+        .pagination-btns button { padding: 4px 10px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .pagination-btns button.active { background: #004bca; color: #fff; border-color: #004bca; }
+        .pagination-btns button:disabled { opacity: 0.5; cursor: default; }
+        .page-size { display: flex; gap: 4px; align-items: center; }
+        .page-size select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem; }
+
+        .missing-hint { display: flex; align-items: flex-start; gap: 8px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.82rem; color: #0d47a1; }
+        .missing-hint i { font-size: 1rem; flex-shrink: 0; }
+
+        .actions { display: flex; gap: 8px; position: sticky; bottom: 0; background: #f0f2f5; padding: 12px 0; margin-top: 8px; }
+        .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 0.82rem; font-weight: 500; border: none; cursor: pointer; }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background: #004bca; color: #fff; }
+        .btn-secondary { background: #6c757d; color: #fff; }
+
+        .empty { text-align: center; padding: 40px 20px; color: #999; }
+        .empty i { font-size: 2rem; margin-bottom: 8px; }
+
+        @media (max-width: 768px) {
+            .cards { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+            .card .num { font-size: 1.4rem; }
+            .page { padding: 10px 8px; }
+            .toolbar { flex-direction: column; }
+            .search-box { width: 100%; }
+            .detail-content { padding-left: 16px; }
+            table.diff th:nth-child(2), table.diff td:nth-child(2) { left: 30px; min-width: 120px; }
+            table.diff th:nth-child(3), table.diff td:nth-child(3) { left: 150px; }
+            .actions { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <div class="header">
+        <h1>Diff Check Results</h1>
+        <p class="sub">Company: <strong>{{ result.company.name if result.company else 'Sample Trading PLC' }}</strong></p>
+    </div>
+
+    <div class="cards">
+        <div class="card blue"><div class="num" id="card-total">{{ result.summary.total }}</div><div class="lbl">Rows read</div></div>
+        <div class="card green"><div class="num" id="card-identical">{{ result.summary.identical }}</div><div class="lbl">Identical</div></div>
+        <div class="card red"><div class="num" id="card-differ">{{ result.summary.differ }}</div><div class="lbl">Different</div></div>
+        <div class="card gray"><div class="num" id="card-unmatched">{{ result.summary.unmatched }}</div><div class="lbl">Not in system</div></div>
+    </div>
+
+    {% set ns = namespace(total_impact=0) %}
+    {% for row in result.rows %}
+        {% if row.their_net and row.engine_net %}
+            {% set ns.total_impact = ns.total_impact + (row.engine_net - row.their_net) %}
+        {% endif %}
+    {% endfor %}
+    <div class="impact {{ 'ok' if ns.total_impact == 0 else '' }}">
+        <div class="impact-title">Total net pay discrepancy ({{ result.summary.total }} employees)</div>
+        <div class="impact-val {{ 'delta-pos' if ns.total_impact > 0 else 'delta-neg' }}">{{ '{:+,.2f}'.format(ns.total_impact) }} ETB</div>
+        <div class="impact-detail">{{ 'All net pay values match — your sheet agrees with our engine' if ns.total_impact == 0 else 'Our engine calculates ' ~ ('more' if ns.total_impact > 0 else 'less') ~ ' than your sheet. Download the Excel for a row-by-row breakdown.' }}</div>
+    </div>
+
+    {% set all_missing = [] %}
+    {% for row in result.rows %}{% for m in row.missing_cols %}{% if m not in all_missing %}{% if all_missing.append(m) %}{% endif %}{% endif %}{% endfor %}{% endfor %}
+    {% if all_missing %}
+    <div class="missing-hint">
+        <i class="bi bi-lightbulb"></i>
+        <div><strong>Tip:</strong> Your sheet doesn't have: <strong>{{ all_missing|join(', ') }}</strong>. The engine computed these from Basic Salary — add the columns to compare directly.</div>
+    </div>
+    {% endif %}
+
+    <div class="toolbar">
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" placeholder="Search by name or ID..." oninput="filterTable()">
+        </div>
+        <button class="filter-btn active" onclick="setFilter('all', this)">All <span class="count" id="count-all">{{ result.summary.total }}</span></button>
+        <button class="filter-btn" onclick="setFilter('issues', this)">Has Issues <span class="count" id="count-issues">{{ result.summary.differ }}</span></button>
+        <button class="filter-btn" onclick="setFilter('missing', this)">Missing Columns <span class="count" id="count-missing">0</span></button>
+        <button class="filter-btn" onclick="setFilter('net-diff', this)">Net Differs <span class="count" id="count-net">0</span></button>
+        <button class="filter-btn" onclick="toggleAllDetails()" id="toggleAllBtn">Expand all</button>
+    </div>
+
+    <div id="table-container">
+        <div class="table-wrap">
+            <div class="table-scroll">
+                <table class="diff" id="diffTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Match</th>
+                            <th class="r">Issues</th>
+                            <th class="r">Your Gross</th>
+                            <th class="r">Our Gross</th>
+                            <th class="r">Δ Gross</th>
+                            <th class="r">Your Tax</th>
+                            <th class="r">Our Tax</th>
+                            <th class="r">Δ Tax</th>
+                            <th class="r">Your Pen.</th>
+                            <th class="r">Our Pen.</th>
+                            <th class="r">Δ Pen.</th>
+                            <th class="r">Your Net</th>
+                            <th class="r">Our Net</th>
+                            <th class="r">Δ Net</th>
+                            <th>Issue Summary</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    {% for row in result.rows %}
+                        {% set issue_count = row.differences|length %}
+                        {% set has_missing = row.missing_cols|length > 0 %}
+                        {% set has_net_diff = row.their_net and row.engine_net and row.their_net != row.engine_net %}
+                        {% set data_issues = row.differences|rejectattr('theirs', 'equalto', 'Not in sheet')|list %}
+                        <tr class="diff-row {{ 'row-issue' if row.has_diff else 'row-ok' }}" 
+                            data-name="{{ row.name|lower }}"
+                            data-row-num="{{ row.row_number }}"
+                            data-has-issue="{{ '1' if row.has_diff else '0' }}"
+                            data-has-missing="{{ '1' if has_missing else '0' }}"
+                            data-net-diff="{{ '1' if has_net_diff else '0' }}"
+                            data-match="{{ 'yes' if row.matched else 'no' }}">
+                            <td>{{ row.row_number }}</td>
+                            <td><strong>{{ row.name }}</strong>{% if row.employee_id and row.employee_id != '—' %}<br><small style="color:#888">{{ row.employee_id }}</small>{% endif %}</td>
+                            <td>{% if row.matched %}<span class="status-yes">Yes</span>{% else %}<span class="status-no">No</span>{% endif %}</td>
+                            <td class="r">{% if row.has_diff %}<span class="issue-count">{{ issue_count }}</span>{% else %}<span class="issue-count zero">0</span>{% endif %}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.their_gross) if row.their_gross else '—' }}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.engine_gross) if row.engine_gross else '—' }}</td>
+                            <td class="r money">{% if row.their_gross and row.engine_gross %}{% set dg = row.engine_gross - row.their_gross %}<span class="{{ 'delta-pos' if dg > 0 else 'delta-neg' if dg < 0 else '' }}">{{ '{:+,.2f}'.format(dg) }}</span>{% else %}—{% endif %}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.their_tax) if row.their_tax else '—' }}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.engine_tax) if row.engine_tax else '—' }}</td>
+                            <td class="r money">{% if row.their_tax and row.engine_tax %}{% set dt = row.engine_tax - row.their_tax %}<span class="{{ 'delta-pos' if dt > 0 else 'delta-neg' if dt < 0 else '' }}">{{ '{:+,.2f}'.format(dt) }}</span>{% else %}—{% endif %}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.their_pension) if row.their_pension else '—' }}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.engine_pension) if row.engine_pension else '—' }}</td>
+                            <td class="r money">{% if row.their_pension and row.engine_pension %}{% set dp = row.engine_pension - row.their_pension %}<span class="{{ 'delta-pos' if dp > 0 else 'delta-neg' if dp < 0 else '' }}">{{ '{:+,.2f}'.format(dp) }}</span>{% else %}—{% endif %}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.their_net) if row.their_net else '—' }}</td>
+                            <td class="r money">{{ '{:,.2f}'.format(row.engine_net) if row.engine_net else '—' }}</td>
+                            <td class="r money">{% if row.their_net and row.engine_net %}{% set dn = row.engine_net - row.their_net %}<span class="{{ 'delta-pos' if dn > 0 else 'delta-neg' }}">{{ '{:+,.2f}'.format(dn) }}</span>{% else %}—{% endif %}</td>
+                            <td>
+                                {% if row.has_diff %}
+                                <div class="issue-summary">
+                                    {% for d in row.differences %}
+                                    <span class="issue-tag {{ 'missing' if d.theirs == 'Not in sheet' else 'diff' }}">{{ d.field }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <span style="color:#198754;font-size:0.78rem"><i class="bi bi-check"></i></span>
+                                {% endif %}
+                            </td>
+                            <td>{% if row.has_diff %}<span class="expand-btn">Expand</span>{% endif %}</td>
+                        </tr>
+                        {% if row.has_diff %}
+                        <tr class="detail-row" id="detail-{{ row.row_number }}">
+                            <td colspan="18">
+                                <div class="detail-content">
+                                    {% for d in row.differences %}
+                                    <div class="detail-field">
+                                        <div class="detail-field-name">{{ d.field }} {% if d.law %}<span class="issue-tag diff">{{ d.law }}</span>{% endif %}</div>
+                                        <div class="detail-field-vals">
+                                            {% if d.theirs == 'Not in sheet' %}
+                                                <span class="v">Not in your sheet → Ours: <strong>ETB {{ d.ours }}</strong></span>
+                                            {% else %}
+                                                <span class="v">Yours: <strong>ETB {{ d.theirs }}</strong></span>
+                                                <span class="v">Ours: <strong>ETB {{ d.ours }}</strong></span>
+                                                <span class="v {{ 'delta-neg' if d.diff.startswith('-') else 'delta-pos' }}">Δ {{ d.diff }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="detail-field-reason">{{ d.reason }}</div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="pagination" id="paginationControls">
+            <div class="page-size">
+                Show 
+                <select onchange="changePageSize(this.value)">
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="9999">All</option>
+                </select>
+                per page
+            </div>
+            <div id="paginationInfo">Showing 1-{{ result.summary.total }} of {{ result.summary.total }}</div>
+            <div class="pagination-btns" id="paginationBtns"></div>
+        </div>
+    </div>
+
+    <div class="empty" id="emptyState" style="display:none">
+        <i class="bi bi-inbox"></i>
+        <div>No employees match this filter.</div>
+    </div>
+
+    <div class="actions">
+        <a href="/diff/download/{{ result_id }}" class="btn btn-primary"><i class="bi bi-download"></i> Download Excel</a>
+        <a href="/diff" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> New upload</a>
+    </div>
+
+</div>
+
+<script>
+let currentFilter = 'all';
+let currentPage = 1;
+let pageSize = 25;
+
+function countByType() {
+    const rows = document.querySelectorAll('.diff-row');
+    let missing = 0, netDiff = 0;
+    rows.forEach(r => {
+        if (r.dataset.hasMissing === '1') missing++;
+        if (r.dataset.netDiff === '1') netDiff++;
+    });
+    document.getElementById('count-missing').textContent = missing;
+    document.getElementById('count-net').textContent = netDiff;
+}
+
+function setFilter(type, btn) {
+    currentFilter = type;
+    currentPage = 1;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterTable();
+}
+
+function filterTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('.diff-row');
+    let visible = 0;
+    let visibleMissing = 0, visibleNetDiff = 0;
+    
+    rows.forEach(row => {
+        const name = row.dataset.name || '';
+        const match = name.includes(search);
+        let show = false;
+        if (!match) show = false;
+        else if (currentFilter === 'all') show = true;
+        else if (currentFilter === 'issues') show = row.dataset.hasIssue === '1';
+        else if (currentFilter === 'missing') show = row.dataset.hasMissing === '1';
+        else if (currentFilter === 'net-diff') show = row.dataset.netDiff === '1';
+        
+        row.style.display = show ? '' : 'none';
+        const detail = document.getElementById('detail-' + row.dataset.rowNum);
+        if (detail) detail.classList.remove('show');
+        if (show) {
+            visible++;
+            if (row.dataset.hasMissing === '1') visibleMissing++;
+            if (row.dataset.netDiff === '1') visibleNetDiff++;
+        }
+    });
+    
+    // Update filter counts for current search
+    document.getElementById('count-all').textContent = visible;
+    document.getElementById('count-issues').textContent = Array.from(rows).filter(r => r.style.display !== 'none' && r.dataset.hasIssue === '1').length;
+    document.getElementById('count-missing').textContent = visibleMissing;
+    document.getElementById('count-net').textContent = visibleNetDiff;
+    
+    const empty = document.getElementById('emptyState');
+    const container = document.getElementById('table-container');
+    if (visible === 0) { empty.style.display = 'block'; container.style.display = 'none'; }
+    else { empty.style.display = 'none'; container.style.display = 'block'; }
+    
+    updatePagination(visible);
+}
+
+function updatePagination(visibleCount) {
+    const totalPages = Math.ceil(visibleCount / pageSize);
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, visibleCount);
+    document.getElementById('paginationInfo').textContent = `Showing ${visibleCount > 0 ? start || 1 : 0}-${end} of ${visibleCount}`;
+    
+    const btns = document.getElementById('paginationBtns');
+    let html = `<button onclick="goPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>‹</button>`;
+    for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+        html += `<button onclick="goPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+    }
+    if (totalPages > 5) html += `<button disabled>…</button><button onclick="goPage(${totalPages})" class="${totalPages === currentPage ? 'active' : ''}">${totalPages}</button>`;
+    html += `<button onclick="goPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>›</button>`;
+    btns.innerHTML = html;
+}
+
+function goPage(p) {
+    const rows = document.querySelectorAll('.diff-row');
+    const visibleRows = Array.from(rows).filter(r => r.style.display !== 'none');
+    const totalPages = Math.ceil(visibleRows.length / pageSize);
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    
+    visibleRows.forEach((row, i) => {
+        const page = Math.floor(i / pageSize) + 1;
+        const onPage = page === currentPage;
+        row.style.display = onPage ? '' : 'none';
+        const detail = document.getElementById('detail-' + row.dataset.rowNum);
+        if (detail) detail.classList.remove('show');
+    });
+    
+    updatePagination(visibleRows.length);
+}
+
+function changePageSize(size) {
+    pageSize = parseInt(size);
+    currentPage = 1;
+    filterTable();
+}
+
+// Use event delegation for expand buttons - more reliable
+document.addEventListener('click', function(e) {
+    const expandBtn = e.target.closest('.expand-btn');
+    if (expandBtn) {
+        const row = expandBtn.closest('.diff-row');
+        if (row) {
+            const rowNum = row.dataset.rowNum;
+            const detail = document.getElementById('detail-' + rowNum);
+            if (detail) {
+                detail.classList.toggle('show');
+                expandBtn.textContent = detail.classList.contains('show') ? 'Collapse' : 'Expand';
+            }
+        }
+    }
+});
+
+function toggleAllDetails() {
+    const allDetails = document.querySelectorAll('.detail-row');
+    const allBtns = document.querySelectorAll('.expand-btn');
+    const anyCollapsed = Array.from(allDetails).some(d => !d.classList.contains('show'));
+    
+    allDetails.forEach(d => { if (anyCollapsed) d.classList.add('show'); else d.classList.remove('show'); });
+    allBtns.forEach(b => { b.textContent = anyCollapsed ? 'Collapse' : 'Expand'; });
+    const btn = document.getElementById('toggleAllBtn');
+    if (btn) btn.textContent = anyCollapsed ? 'Collapse all' : 'Expand all';
+}
+
+// Init
+countByType();
+filterTable();
+</script>
+</body>
+</html>

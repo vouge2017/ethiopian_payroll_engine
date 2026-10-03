@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from flask import (
     Blueprint,
+    Response,
     abort,
     current_app,
     flash,
@@ -35,11 +36,11 @@ from payroll_engine.dashboard_api import get_dashboard_data
 from payroll_engine.evidence import collect_evidence
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
+from payroll_engine.idempotency import idempotent
 from payroll_engine.models import (
     AuditLog,
     Company,
     Employee,
-    Leave,
     OvertimeEntry,
     PayrollDraft,
     PayrollPreview,
@@ -48,7 +49,6 @@ from payroll_engine.models import (
     Payslip,
     User,
 )
-from payroll_engine.idempotency import idempotent
 from payroll_engine.narrative import generate_narrative
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pdf import _ensure_pdf
@@ -92,7 +92,7 @@ def api_last_run():
     if not last_run:
         return jsonify({'ok': False, 'error': 'No previous payroll run found.'}), 404
 
-    draft = PayrollDraft.query.filter_by(payroll_run_id=last_run.id).first()
+    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=last_run.id).first()
     if not draft or not draft.employee_data:
         # Fallback: build from payslips
         employees_data = []
@@ -230,6 +230,15 @@ def api_preview():
 
     try:
         employees_data, row_errors = parse_and_calculate_payroll(filepath)
+
+        if row_errors:
+            return jsonify(
+                {
+                    'ok': False,
+                    'error': 'Correct all numeric row errors before previewing payroll. ' + row_errors[0],
+                    'row_errors': row_errors[:10],
+                }
+            ), 400
 
         limit_msg = check_csv_row_limit(employees_data)
         if limit_msg:
@@ -712,6 +721,44 @@ def api_cockpit_dismiss():
     return jsonify({'dismissed': item_key})
 
 
+def _annotate_general_allowance(company_id, employees_data):
+    """Mark each CSV row's undifferentiated `allowances` for assignment creation.
+
+    The legacy CSV has a single `allowances` column with no item breakdown. The
+    engine assembles gross from assignments, so that bare number would vanish.
+    We stamp it onto the draft row under 'general_allowance'; process_payroll
+    then creates one PayrollItemAssignment per employee against the company's
+    General Allowance item, which is created from the catalog on demand.
+
+    Returns the number of rows annotated. Pure in-memory: nothing is written
+    here, so a rejected upload leaves no trace.
+    """
+    from payroll_engine.catalog import seed_company_templates
+    from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS
+    from payroll_engine.models_payroll_elements import PayItemType
+
+    target_key = COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value
+    count = 0
+    for row in employees_data:
+        amount = row.get('allowances') or 0
+        try:
+            amount = float(amount)
+        except (TypeError, ValueError):
+            amount = 0.0
+        if amount > 0:
+            row['general_allowance'] = amount
+            count += 1
+        else:
+            row['general_allowance'] = None
+
+    if count:
+        # Make sure the company has the item before any row is processed.
+        existing = PayItemType.query.filter_by(company_id=company_id, key=target_key).first()
+        if existing is None:
+            seed_company_templates(company_id)
+    return count
+
+
 @payroll_bp.route('/payroll', methods=['GET', 'POST'])
 @login_required
 @role_required('owner', 'accountant')
@@ -766,12 +813,21 @@ def payroll_upload():
 
             if row_errors:
                 for err in row_errors[:5]:
-                    flash(err, 'warning')
+                    flash(err, 'danger')
                 if len(row_errors) > 5:
-                    flash(f'... and {len(row_errors) - 5} more row error(s).', 'warning')
+                    flash(f'... and {len(row_errors) - 5} more row error(s).', 'danger')
+                flash('Correct all numeric row errors before creating payroll.', 'danger')
+                return redirect(request.url)
 
             if not employees_data:
                 raise ValueError('No valid data rows in CSV')
+
+            # Legacy CSV format is (basic_salary, allowances) -- one
+            # undifferentiated allowance column. Under the elements model that
+            # number has to live on an assignment, so record it on the draft row
+            # and let process_payroll materialise a General Allowance
+            # assignment. No itemised CSV columns in this phase.
+            _annotate_general_allowance(_company_id(), employees_data)
 
             previous_payslips = get_previous_payslips(_company_id())
 
@@ -825,11 +881,15 @@ def payroll_upload():
 def payroll_confirm(run_id):
     """Show confirmation page before approval. Password re-auth required."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
-    if run.status != 'review':
+    if run.status not in ('review', 'pending_approval'):
         flash('This payroll run is not in review status.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=_company_id()).first()
+    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
     employees_data = draft.employee_data if draft else []
+    if run.source == 'spreadsheet':
+        from payroll_engine.services.worksheet_review import display_rows
+
+        employees_data = display_rows(employees_data)
     total_gross = sum(e.get('gross', 0) for e in employees_data)
     total_tax = sum(e.get('tax', 0) for e in employees_data)
     total_pension = sum(e.get('pension_employee', 0) for e in employees_data)
@@ -845,7 +905,7 @@ def payroll_confirm(run_id):
     from payroll_engine.tax import calculate_tax_breakdown
 
     for emp in employees_data:
-        taxable = emp.get('gross', 0) - emp.get('pension_employee', 0)
+        taxable = emp.get('taxable', emp.get('gross', 0) - emp.get('pension_employee', 0))
         emp['tax_breakdown'] = calculate_tax_breakdown(taxable)
         emp['calc_flow'] = generate_calculation_flow(emp)
 
@@ -969,7 +1029,10 @@ def approve_payroll():
         )
     except StaleDataError:
         db.session.rollback()
-        flash('Concurrency Conflict: This payroll period was modified by another user. Please refresh and try again.', 'warning')
+        flash(
+            'Concurrency Conflict: This payroll period was modified by another user. Please refresh and try again.',
+            'warning',
+        )
         return redirect(url_for('payroll.payroll_run_detail', run_id=int(run_id)))
 
     if result.success:
@@ -1023,7 +1086,7 @@ def approve_payroll():
             )
         else:
             flash(result.message, 'danger')
-        return redirect(url_for('payroll.payroll_upload'))
+        return redirect(url_for('payroll.payroll_review_workspace', run_id=run.id))
 
 
 # --- Undo Approval ---
@@ -1035,6 +1098,13 @@ def approve_payroll():
 def undo_approval(run_id):
     """Undo payroll approval within 1 hour. Only if disbursement hasn't started."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).with_for_update().first_or_404()
+
+    if run.source == 'spreadsheet':
+        flash(
+            'Worksheet payroll needs a linked correction; undo is not supported yet. The approved records are preserved.',
+            'warning',
+        )
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
     # Only completed runs can be undone
     if run.status != 'completed':
@@ -1068,7 +1138,7 @@ def undo_approval(run_id):
         db.session.delete(ps)
 
     # Delete draft
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=_company_id()).first()
+    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
     if draft:
         db.session.delete(draft)
 
@@ -1381,7 +1451,7 @@ def historical_import():
             for buf in rows_buffer:
                 if buf['existing']:
                     existing_payslip = Payslip.query.filter_by(
-                        payroll_run_id=buf['existing'].id, employee_id=buf['emp'].id
+                        company_id=_company_id(), payroll_run_id=buf['existing'].id, employee_id=buf['emp'].id
                     ).first()
                     if existing_payslip:
                         existing_payslip.gross_salary = buf['gross']
@@ -1474,6 +1544,99 @@ def historical_import():
 # --- Spreadsheet-Style Payroll Editor ---
 
 
+def _current_advance(employee_id, company_id, period_start):
+    """Current active advance amount for an employee in a period (Decimal 0 if none).
+
+    Read before set_advance_assignment so the audit entry can record the
+    before/after pair. Looks at the assignment the helper is about to retire.
+    """
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+    from payroll_engine.services.worksheet_review import month_end
+
+    item = PayItemType.query.filter_by(company_id=company_id, key='advance').first()
+    if item is None:
+        return Decimal('0')
+    row = PayrollItemAssignment.query.filter(
+        PayrollItemAssignment.employee_id == employee_id,
+        PayrollItemAssignment.company_id == company_id,
+        PayrollItemAssignment.pay_item_type_id == item.id,
+        PayrollItemAssignment.is_active.is_(True),
+        PayrollItemAssignment.effective_date >= period_start,
+        PayrollItemAssignment.effective_date <= month_end(period_start),
+    ).first()
+    if row is None or row.fixed_amount is None:
+        return Decimal('0')
+    return Decimal(str(row.fixed_amount))
+
+
+def set_advance_assignment(employee_id, company_id, advance, period_start, today, created_by=None):
+    """Record a payroll advance as a PayrollItemAssignment.
+
+    Replaces the old hardcoded `EmployeeDeduction(deduction_type='advance')`
+    write. The item itself is resolved by key from the company catalog, so a
+    company can rename or re-tax an advance without a code change; if the
+    company has no 'advance' row yet we create one from the standard template
+    so the spreadsheet keeps working for a freshly migrated company.
+
+    An advance is a one-per-period deduction: any active assignment for this
+    employee/item dated on or after period_start is deactivated first, then
+    re-created only if the new amount is positive. Deactivating (rather than
+    deleting) keeps the audit trail.
+    """
+    from payroll_engine.catalog import COMPANY_TEMPLATE_ITEMS
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+    from payroll_engine.services.worksheet_review import month_end
+
+    item = PayItemType.query.filter_by(company_id=company_id, key='advance').first()
+    if item is None:
+        tmpl = next(
+            (t for t in COMPANY_TEMPLATE_ITEMS if str(t.get('key')).strip().lower() == 'advance'),
+            None,
+        )
+        if tmpl is None:
+            # No standard advance template -- nothing sensible to invent here.
+            return None
+        item = PayItemType(
+            company_id=company_id,
+            key='advance',
+            name_en=tmpl.get('name_en'),
+            name_am=tmpl.get('name_am'),
+            classification=tmpl.get('classification', 'deduction'),
+            calculation_method=tmpl.get('calculation_method', 'fixed'),
+            tax_treatment=tmpl.get('tax_treatment', 'taxable'),
+            is_system=False,
+        )
+        db.session.add(item)
+        db.session.flush()
+
+    # Retire this period's previous advance (soft delete -- keeps the trail).
+    PayrollItemAssignment.query.filter(
+        PayrollItemAssignment.employee_id == employee_id,
+        PayrollItemAssignment.company_id == company_id,
+        PayrollItemAssignment.pay_item_type_id == item.id,
+        PayrollItemAssignment.is_active.is_(True),
+        PayrollItemAssignment.effective_date >= period_start,
+        PayrollItemAssignment.effective_date <= month_end(period_start),
+    ).update({'is_active': False}, synchronize_session=False)
+
+    if advance is None or advance <= 0:
+        return None
+
+    a = PayrollItemAssignment(
+        company_id=company_id,
+        employee_id=employee_id,
+        pay_item_type_id=item.id,
+        fixed_amount=advance,
+        tracking_mode='date_bounded',
+        effective_date=today,
+        end_date=month_end(period_start),
+        is_active=True,
+        created_by=created_by,
+    )
+    db.session.add(a)
+    return a
+
+
 @payroll_bp.route('/payroll/spreadsheet', methods=['GET', 'POST'])
 @login_required
 @role_required('owner', 'accountant')
@@ -1485,39 +1648,27 @@ def payroll_spreadsheet():
     """
     from decimal import Decimal, InvalidOperation
 
-    from payroll_engine.models import EmployeeDeduction
     from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
-    from payroll_engine.payroll import calculate_payroll
+    from payroll_engine.services.worksheet import parse_changes, save_inputs
+    from payroll_engine.services.worksheet_review import month_end
 
     if request.method == 'POST':
         action = request.form.get('action', 'save')
 
-        # Collect all employee changes from the form
-        emp_ids = request.form.getlist('emp_id')
-        changes = []
-        for eid in emp_ids:
-            prefix = f'emp_{eid}_'
-            changes.append(
-                {
-                    'emp_id': int(eid),
-                    'ot_day': request.form.get(f'{prefix}ot_day', '0').strip() or '0',
-                    'ot_night': request.form.get(f'{prefix}ot_night', '0').strip() or '0',
-                    'ot_holiday': request.form.get(f'{prefix}ot_holiday', '0').strip() or '0',
-                    'ot_rest': request.form.get(f'{prefix}ot_rest', '0').strip() or '0',
-                    'absences': request.form.get(f'{prefix}absences', '0').strip() or '0',
-                    'advance': request.form.get(f'{prefix}advance', '0').strip() or '0',
-                    'bonus': request.form.get(f'{prefix}bonus', '0').strip() or '0',
-                }
-            )
-
-        # Save overtime entries
+        try:
+            month_start, changes = parse_changes(request.form, _company_id())
+        except ValueError as error:
+            db.session.rollback()
+            flash(str(error), 'danger')
+            return render_template('worksheet_error.html'), 400
         today = date.today()
-        month_start = today.replace(day=1)
 
         for change in changes:
             emp = Employee.query.filter_by(id=change['emp_id'], company_id=_company_id(), is_deleted=False).first()
             if not emp:
-                continue
+                abort(404)
+
+            save_inputs(_company_id(), current_user.id, month_start, change)
 
             # Save overtime entries for this month (delete existing first to avoid duplicates)
             for ot_type, ot_key in [
@@ -1536,6 +1687,7 @@ def payroll_spreadsheet():
                     OvertimeEntry.company_id == _company_id(),
                     OvertimeEntry.overtime_type == ot_type,
                     OvertimeEntry.date >= month_start,
+                    OvertimeEntry.date <= month_end(month_start),
                 ).delete()
 
                 if hours > 0:
@@ -1548,33 +1700,33 @@ def payroll_spreadsheet():
                     )
                     db.session.add(ot)
 
-            # Save advance as a one-time deduction (delete existing this month first)
+            # Save advance as a one-per-period payroll_item_assignment.
             try:
                 advance = Decimal(change['advance'])
             except (InvalidOperation, ValueError):
                 advance = Decimal('0')
 
-            EmployeeDeduction.query.filter(
-                EmployeeDeduction.employee_id == emp.id,
-                EmployeeDeduction.company_id == _company_id(),
-                EmployeeDeduction.deduction_type == 'advance',
-                EmployeeDeduction.start_date >= month_start,
-            ).delete()
-
-            if advance > 0:
-                ded = EmployeeDeduction(
-                    company_id=_company_id(),
-                    employee_id=emp.id,
-                    deduction_type='advance',
-                    label=f'Advance {today.strftime("%B %Y")}',
-                    amount_mode='fixed',
-                    amount=advance,
-                    tracking_mode='date_bounded',
-                    start_date=today,
-                    is_active=True,
-                    created_by=current_user.id,
-                )
-                db.session.add(ded)
+            prev_advance = _current_advance(emp.id, _company_id(), month_start)
+            set_advance_assignment(
+                emp.id,
+                _company_id(),
+                advance,
+                month_start,
+                today,
+                created_by=current_user.id,
+            )
+            create_audit_log(
+                company_id=_company_id(),
+                user_id=current_user.id,
+                action='payroll.advance_saved',
+                details={
+                    'employee_id': emp.id,
+                    'employee_name': emp.name,
+                    'previous': str(prev_advance),
+                    'new': str(advance),
+                    'period_start': month_start.isoformat(),
+                },
+            )
 
         db.session.commit()
         trust_cache.invalidate_trust_cache(_company_id())
@@ -1585,135 +1737,93 @@ def payroll_spreadsheet():
             flash(f'{len(changes)} employee records updated.', 'success')
         return redirect(url_for('payroll.payroll_spreadsheet'))
 
-    # GET — show the spreadsheet
-    employees = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).order_by(Employee.name).all()
+    # GET uses the same pure calculation that is frozen into a review.
+    from payroll_engine.services.worksheet_review import calculate_rows
 
-    # Calculate current month overtime for each employee
     month_start = date.today().replace(day=1)
-
-    # Batch-load ALL overtime entries for this month (avoid N+1)
-    all_ot = OvertimeEntry.query.filter(
-        OvertimeEntry.company_id == _company_id(),
-        OvertimeEntry.date >= month_start,
-    ).all()
-    from collections import defaultdict
-
-    ot_by_emp = defaultdict(list)
-    for ot in all_ot:
-        ot_by_emp[ot.employee_id].append(ot)
-
-    # Batch-load ALL approved leave for this month (avoid N+1)
-    from payroll_engine.leave import LeaveType
-
-    if date.today().month == 12:
-        next_month = date(date.today().year + 1, 1, 1)
-    else:
-        next_month = date(date.today().year, date.today().month + 1, 1)
-    month_end_batch = next_month - date.resolution
-
-    all_leave = Leave.query.filter(
-        Leave.company_id == _company_id(),
-        Leave.status == 'approved',
-        Leave.start_date <= month_end_batch,
-        Leave.end_date >= month_start,
-    ).all()
-
-    # Group leave by employee and type
-    leave_by_emp = defaultdict(list)
-    for lv in all_leave:
-        leave_by_emp[lv.employee_id].append(lv)
-
-    # Pre-compute deductions for all employees
-    unpaid_deductions = {}  # employee_id → Decimal
-    sick_reductions = {}  # employee_id → Decimal
-    for emp in employees:
-        # Unpaid leave deduction
-        emp_unpaid = [lv for lv in leave_by_emp.get(emp.id, []) if lv.leave_type == LeaveType.UNPAID]
-        unpaid_days = 0
-        for lv in emp_unpaid:
-            overlap_start = max(lv.start_date, month_start)
-            overlap_end = min(lv.end_date, month_end_batch)
-            if overlap_start <= overlap_end:
-                unpaid_days += (overlap_end - overlap_start).days + 1
-        if unpaid_days > 0:
-            daily = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
-            unpaid_deductions[emp.id] = (daily * Decimal(str(unpaid_days))).quantize(Decimal('0.01'))
-        else:
-            unpaid_deductions[emp.id] = Decimal('0')
-
-        # Sick leave reduction (tiered)
-        from payroll_engine.leave import DEFAULT_SICK_TIER_1_DAYS as SICK_TIER_1_DAYS
-
-        emp_sick = [lv for lv in leave_by_emp.get(emp.id, []) if lv.leave_type == LeaveType.SICK]
-        total_sick_this_year = sum(lv.days_requested for lv in emp_sick if lv.start_date.year == date.today().year)
-        if total_sick_this_year > SICK_TIER_1_DAYS:
-            month_sick = sum(lv.days_requested for lv in emp_sick if lv.start_date >= month_start)
-            if month_sick > 0:
-                daily = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
-                sick_reductions[emp.id] = (daily * Decimal(str(month_sick)) * Decimal('0.5')).quantize(Decimal('0.01'))
-            else:
-                sick_reductions[emp.id] = Decimal('0')
-        else:
-            sick_reductions[emp.id] = Decimal('0')
-
-    rows = []
-    total_gross = Decimal('0')
-    total_tax = Decimal('0')
-    total_net = Decimal('0')
-
-    for emp in employees:
-        emp_ot = ot_by_emp.get(emp.id, [])
-        ot_by_type = {'day': 0, 'night': 0, 'holiday': 0, 'rest_day_holiday': 0}
-        for ot in emp_ot:
-            ot_by_type[ot.overtime_type] = float(ot.hours)
-
-        ot_list = [{'hours': h, 'type': t} for t, h in ot_by_type.items() if h > 0]
-
-        total_reduction = unpaid_deductions.get(emp.id, Decimal('0')) + sick_reductions.get(emp.id, Decimal('0'))
-
-        # Calculate payroll based on employee type
-        if emp.employee_type == 'daily' and emp.daily_rate:
-            from payroll_engine.payroll import calculate_daily_worker_payroll
-
-            result = calculate_daily_worker_payroll(emp.daily_rate, 26)
-        else:
-            result = calculate_payroll(
-                emp.basic_salary,
-                emp.allowances,
-                overtime_entries=ot_list if ot_list else None,
-                sick_leave_reduction=total_reduction,
+    employees = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).order_by(Employee.id).all()
+    rows, review_error = [], None
+    if employees:
+        try:
+            snapshots = calculate_rows(_company_id(), month_start)
+        except ValueError as error:
+            snapshots, review_error = [], str(error)
+        for snapshot in snapshots:
+            emp = next(emp for emp in employees if emp.id == snapshot['employee_pk'])
+            ot = {'day': Decimal('0'), 'night': Decimal('0'), 'holiday': Decimal('0'), 'rest_day_holiday': Decimal('0')}
+            for entry in snapshot['worksheet_inputs']['overtime']:
+                ot[entry['type']] += Decimal(entry['hours'])
+            rows.append(
+                {
+                    'emp': emp,
+                    'bonus': Decimal(snapshot['worksheet_inputs']['bonus']),
+                    'absence_days': snapshot['worksheet_inputs']['absence_days'],
+                    'advance': _current_advance(emp.id, _company_id(), month_start),
+                    'ot_day': ot['day'],
+                    'ot_night': ot['night'],
+                    'ot_holiday': ot['holiday'],
+                    'ot_rest': ot['rest_day_holiday'],
+                    'gross': Decimal(snapshot['gross']),
+                    'tax': Decimal(snapshot['tax']),
+                    'pension': Decimal(snapshot['pension_employee']),
+                    'net': Decimal(snapshot['net']),
+                    'exceeds_ot_limit': sum(ot.values()) > MAX_OVERTIME_HOURS_MONTH,
+                }
             )
-
-        total_gross += result['gross']
-        total_tax += result['tax']
-        total_net += result['net']
-
-        rows.append(
-            {
-                'emp': emp,
-                'ot_day': ot_by_type.get('day', 0),
-                'ot_night': ot_by_type.get('night', 0),
-                'ot_holiday': ot_by_type.get('holiday', 0),
-                'ot_rest': ot_by_type.get('rest_day_holiday', 0),
-                'gross': result['gross'],
-                'tax': result['tax'],
-                'pension': result['pension_employee'],
-                'net': result['net'],
-                'ot_pay': result['overtime_pay'],
-                'exceeds_ot_limit': result['overtime_total_hours'] > MAX_OVERTIME_HOURS_MONTH
-                if result['overtime_total_hours']
-                else False,
-            }
-        )
-
     return render_template(
         'payroll_spreadsheet.html',
         rows=rows,
-        total_gross=total_gross,
-        total_tax=total_tax,
-        total_net=total_net,
+        period_start=month_start,
+        total_gross=sum((row['gross'] for row in rows), Decimal('0')),
+        total_tax=sum((row['tax'] for row in rows), Decimal('0')),
+        total_net=sum((row['net'] for row in rows), Decimal('0')),
+        review_error=review_error,
         year=date.today().year,
     )
+
+
+@payroll_bp.route('/payroll/spreadsheet/review', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def worksheet_review():
+    from payroll_engine.services.worksheet_review import create_review
+
+    start = date.today().replace(day=1)
+    if request.form.get('period_start') != start.isoformat():
+        flash('The payroll month changed. Reload and save the worksheet before review.', 'danger')
+        return render_template('worksheet_error.html'), 400
+    refresh_id = request.form.get('refresh_run_id')
+    try:
+        if refresh_id is not None:
+            refresh_id = int(refresh_id)
+            if not 0 < refresh_id <= 2147483647:
+                abort(404)
+        run = create_review(_company_id(), current_user.id, start, refresh_id)
+        db.session.commit()
+    except ValueError as error:
+        db.session.rollback()
+        flash(str(error), 'danger')
+        return render_template('worksheet_error.html'), 400
+    except IntegrityError:
+        db.session.rollback()
+        flash('A payroll review already exists for this period. Open it from Payroll Runs.', 'warning')
+        return redirect(url_for('payroll.payroll_runs'))
+    flash('Saved payroll review opened. Approval uses these reviewed figures.', 'success')
+    return redirect(url_for('payroll.payroll_review_workspace', run_id=run.id))
+
+
+@payroll_bp.route('/payroll/runs/<int:run_id>/submit', methods=['POST'])
+@login_required
+@role_required('owner', 'accountant')
+def submit_worksheet_review(run_id):
+    run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).with_for_update().first_or_404()
+    if run.source != 'spreadsheet' or run.status != 'review':
+        abort(409)
+    run.status = 'pending_approval'
+    create_audit_log(_company_id(), current_user.id, 'payroll.worksheet_submitted', {'run_id': run.id})
+    db.session.commit()
+    flash('Payroll submitted for owner approval. The reviewed amounts are preserved.', 'success')
+    return redirect(url_for('payroll.payroll_review_workspace', run_id=run.id))
 
 
 @payroll_bp.route('/payroll/spreadsheet/autosave', methods=['POST'])
@@ -1728,22 +1838,19 @@ def payroll_spreadsheet_autosave():
     """
     from decimal import Decimal, InvalidOperation
 
-    from payroll_engine.models import EmployeeDeduction
+    from payroll_engine.services.worksheet import parse_changes
+    from payroll_engine.services.worksheet_review import month_end
 
-    emp_ids = request.form.getlist('emp_id')
-    if not emp_ids:
-        return jsonify({'status': 'empty', 'message': 'No data'}), 400
-
+    try:
+        month_start, changes = parse_changes(request.form, _company_id())
+    except ValueError as error:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(error)}), 400
     today = date.today()
-    month_start = today.replace(day=1)
     saved = 0
 
-    for eid in emp_ids:
-        emp = Employee.query.filter_by(id=int(eid), company_id=_company_id(), is_deleted=False).first()
-        if not emp:
-            continue
-
-        prefix = f'emp_{eid}_'
+    for change in changes:
+        emp = change['employee']
 
         # --- Overtime: delete existing, re-create if hours > 0 ---
         for ot_type, ot_key in [
@@ -1752,7 +1859,7 @@ def payroll_spreadsheet_autosave():
             ('holiday', 'ot_holiday'),
             ('rest_day_holiday', 'ot_rest'),
         ]:
-            val = request.form.get(f'{prefix}{ot_key}', '0').strip() or '0'
+            val = change[ot_key]
             try:
                 hours = Decimal(val)
             except (InvalidOperation, ValueError):
@@ -1763,6 +1870,7 @@ def payroll_spreadsheet_autosave():
                 OvertimeEntry.company_id == _company_id(),
                 OvertimeEntry.overtime_type == ot_type,
                 OvertimeEntry.date >= month_start,
+                OvertimeEntry.date <= month_end(month_start),
             ).delete()
 
             if hours > 0:
@@ -1775,35 +1883,34 @@ def payroll_spreadsheet_autosave():
                 )
                 db.session.add(ot)
 
-        # --- Advance: delete existing this month, re-create if amount > 0 ---
-        advance_val = request.form.get(f'{prefix}advance', '0').strip() or '0'
+        # --- Advance: retire this period's, re-create if amount > 0 ---
+        advance_val = change['advance']
         try:
             advance = Decimal(advance_val)
         except (InvalidOperation, ValueError):
             advance = Decimal('0')
 
-        # Delete existing advance deductions for this employee this month
-        EmployeeDeduction.query.filter(
-            EmployeeDeduction.employee_id == emp.id,
-            EmployeeDeduction.company_id == _company_id(),
-            EmployeeDeduction.deduction_type == 'advance',
-            EmployeeDeduction.start_date >= month_start,
-        ).delete()
-
-        if advance > 0:
-            ded = EmployeeDeduction(
-                company_id=_company_id(),
-                employee_id=emp.id,
-                deduction_type='advance',
-                label=f'Advance {today.strftime("%B %Y")}',
-                amount_mode='fixed',
-                amount=advance,
-                tracking_mode='date_bounded',
-                start_date=today,
-                is_active=True,
-                created_by=current_user.id,
-            )
-            db.session.add(ded)
+        prev_advance = _current_advance(emp.id, _company_id(), month_start)
+        set_advance_assignment(
+            emp.id,
+            _company_id(),
+            advance,
+            month_start,
+            today,
+            created_by=current_user.id,
+        )
+        create_audit_log(
+            company_id=_company_id(),
+            user_id=current_user.id,
+            action='payroll.advance_autosaved',
+            details={
+                'employee_id': emp.id,
+                'employee_name': emp.name,
+                'previous': str(prev_advance),
+                'new': str(advance),
+                'period_start': month_start.isoformat(),
+            },
+        )
 
         saved += 1
 
@@ -2044,7 +2151,7 @@ def retry_pdf(run_id, payslip_id):
         flash('Can only retry PDFs for completed runs.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    payslip = Payslip.query.filter_by(id=payslip_id, payroll_run_id=run.id).first_or_404()
+    payslip = Payslip.query.filter_by(company_id=_company_id(), id=payslip_id, payroll_run_id=run.id).first_or_404()
 
     if payslip.pdf_status == 'generated' and payslip.pdf_file_path and os.path.exists(payslip.pdf_file_path):
         flash('This payslip already has a PDF. No need to retry.', 'info')
@@ -2077,57 +2184,77 @@ def retry_pdf(run_id, payslip_id):
 @login_required
 @role_required('owner', 'accountant')
 def payroll_register():
-    """
-    Payroll register — single-page summary of all employees for the current month.
-    Printable on A4. Shows: ID, Name, Basic, Allowances, OT, Gross, Pension, Tax, Net.
-    """
+    """Display saved amounts from one approved run, including departed employees."""
+    from payroll_engine.services.worksheet_review import published_row
 
-    employees = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).order_by(Employee.name).all()
+    company_id = _company_id()
+    approved = PayrollRun.query.filter_by(company_id=company_id).filter(PayrollRun.status.in_(['completed', 'locked']))
+    if 'run_id' in request.args:
+        run_id = request.args.get('run_id', type=int)
+        if run_id is None:
+            abort(400)
+        run = approved.filter_by(id=run_id).first_or_404()
+    else:
+        run = approved.order_by(PayrollRun.run_date.desc(), PayrollRun.id.desc()).first()
+        if run is None:
+            flash('Approve a payroll before opening its register.', 'warning')
+            return redirect(url_for('payroll.payroll_runs'))
 
+    payslips = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run.id).order_by(Payslip.id).all()
     rows = []
-    total_basic = Decimal('0')
-    total_allow = Decimal('0')
-    total_ot = Decimal('0')
-    total_gross = Decimal('0')
-    total_pension = Decimal('0')
-    total_tax = Decimal('0')
-    total_net = Decimal('0')
-
-    for emp in employees:
-        result = calculate_payroll(emp.basic_salary, emp.allowances)
+    legacy_identity = False
+    for ps in payslips:
+        try:
+            snapshot = published_row(ps)
+        except ValueError as exc:
+            flash(str(exc), 'danger')
+            return redirect(url_for('payroll.payroll_runs'))
+        emp = Employee.query.with_deleted().filter_by(id=ps.employee_id, company_id=company_id).first()
+        if emp is None:
+            flash('The payroll employee record is missing. Contact support before exporting.', 'danger')
+            return redirect(url_for('payroll.payroll_runs'))
+        legacy_identity = legacy_identity or snapshot is None
+        earnings = [item for item in (ps.line_items or []) if item.get('classification') == 'earning']
+        basic = other = None
+        if earnings:
+            basic = sum(
+                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] == 'basic_salary'),
+                Decimal('0'),
+            )
+            other = sum(
+                (Decimal(str(item['earned_amount'])) for item in earnings if item['item_key'] != 'basic_salary'),
+                Decimal('0'),
+            )
         rows.append(
             {
-                'emp': emp,
-                'gross': result['gross'],
-                'pension': result['pension_employee'],
-                'tax': result['tax'],
-                'net': result['net'],
-                'ot_pay': result['overtime_pay'],
+                'employee_id': snapshot['id'] if snapshot else emp.employee_id,
+                'name': snapshot['name'] if snapshot else emp.name,
+                'basic': basic,
+                'other': other,
+                'gross': ps.gross_salary,
+                'pension': ps.employee_pension,
+                'tax': ps.tax,
+                'net': ps.net_pay,
             }
         )
-        total_basic += emp.basic_salary
-        total_allow += emp.allowances
-        total_ot += result['overtime_pay']
-        total_gross += result['gross']
-        total_pension += result['pension_employee']
-        total_tax += result['tax']
-        total_net += result['net']
-
-    company = db.session.get(Company, _company_id())
-
+    totals = {
+        key: sum((row[key] for row in rows), Decimal('0')) if all(row[key] is not None for row in rows) else None
+        for key in ('basic', 'other', 'gross', 'pension', 'tax', 'net')
+    }
     return render_template(
         'payroll_register.html',
         rows=rows,
-        company=company,
-        total_basic=total_basic,
-        total_allow=total_allow,
-        total_ot=total_ot,
-        total_gross=total_gross,
-        total_pension=total_pension,
-        total_tax=total_tax,
-        total_net=total_net,
-        period=date.today().strftime('%B %Y'),
-        year=date.today().year,
+        company=db.session.get(Company, company_id),
+        run=run,
+        legacy_identity=legacy_identity,
+        total_basic=totals['basic'],
+        total_allow=totals['other'],
+        total_gross=totals['gross'],
+        total_pension=totals['pension'],
+        total_tax=totals['tax'],
+        total_net=totals['net'],
+        period=run.run_date.strftime('%B %Y'),
+        year=run.run_date.year,
     )
 
 
@@ -2235,16 +2362,22 @@ def export_payslips():
         payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
         for ps in payslips:
             emp = ps.employee
+            from payroll_engine.services.worksheet_review import published_row
+
+            snapshot = published_row(ps)
             taxable = (ps.gross_salary or 0) - (ps.employee_pension or 0)
             total_deductions = (ps.employee_pension or 0) + (ps.tax or 0)
+            if snapshot:
+                taxable = ps.taxable_income
+                total_deductions = ps.gross_salary - ps.net_pay
             writer.writerow(
                 [
                     run.period or '',
                     run.reference or '',
-                    emp.employee_id if emp else '',
-                    emp.name if emp else '',
-                    emp.department if emp else '',
-                    str(emp.basic_salary if emp else 0),
+                    snapshot['id'] if snapshot else (emp.employee_id if emp else ''),
+                    snapshot['name'] if snapshot else (emp.name if emp else ''),
+                    snapshot['department'] if snapshot else (emp.department if emp else ''),
+                    str(snapshot['basic'] if snapshot else (emp.basic_salary if emp else 0)),
                     str(ps.gross_salary),
                     str(ps.employee_pension),
                     str(ps.employer_pension),
@@ -2252,7 +2385,7 @@ def export_payslips():
                     str(ps.tax),
                     str(total_deductions),
                     str(ps.net_pay),
-                    emp.bank_or_telebirr if emp else '',
+                    snapshot['bank'] if snapshot else (emp.bank_or_telebirr if emp else ''),
                     ps.payslip_type or 'regular',
                     run.status,
                 ]
@@ -2361,6 +2494,7 @@ def payroll_run_detail(run_id):
 
 @payroll_bp.route('/payroll/runs/<int:run_id>/review')
 @login_required
+@role_required('owner', 'accountant')
 def payroll_review_workspace(run_id):
     """Payroll Review Workspace — unified trust view.
 
@@ -2420,8 +2554,22 @@ def payroll_review_workspace(run_id):
         errors['exceptions'] = str(e)
         can_approve = False  # Cannot approve if we can't verify issues
 
+    worksheet_rows = []
+    if run.source == 'spreadsheet':
+        from payroll_engine.services.worksheet_review import display_rows
+
+        draft = PayrollDraft.query.filter_by(company_id=cid, payroll_run_id=run.id).first()
+        worksheet_rows = display_rows(draft.employee_data) if draft else []
+        from payroll_engine.services.worksheet_review import review_evidence
+
+        evidence = review_evidence(run, worksheet_rows)
+        change_summary = None
+        total_net = sum((row['net'] for row in worksheet_rows), Decimal('0'))
+        narrative = f'Saved {run.run_date.strftime("%B %Y")} (Gregorian) payroll includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
+        can_approve = can_approve and evidence.ready_for_approval
     return render_template(
         'payroll_review_workspace.html',
+        worksheet_rows=worksheet_rows,
         run=run,
         narrative=narrative,
         evidence=evidence,

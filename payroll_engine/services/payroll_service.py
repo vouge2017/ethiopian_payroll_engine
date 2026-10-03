@@ -4,10 +4,12 @@ Extracted from payroll_bp.py to separate business logic from HTTP handling.
 The route handler handles auth/flash/redirects; this service handles the data.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from payroll_engine import db
 from payroll_engine.compliance import compute_compliance_score
+from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS, SYSTEM_ITEM_KEYS
 from payroll_engine.models import (
     Employee,
     PayrollDraft,
@@ -15,6 +17,7 @@ from payroll_engine.models import (
     PayrollValidationResult,
     Payslip,
 )
+from payroll_engine.models_payroll_elements import PayrollItemAssignment
 from payroll_engine.shared import create_audit_log, create_notification, tenant_get
 
 
@@ -28,6 +31,200 @@ class ApprovalResult:
         self.employee_count = employee_count
         self.compliance_score = compliance_score
         self.redirect_to = redirect_to  # 'detail', 'runs', or 'upload'
+
+
+def _deduction_is_backfilled(employee_id, company_id, deduction):
+    """True if this legacy deduction already has a backfilled assignment.
+
+    The backfill never deletes legacy rows, so after it runs the same money
+    exists twice: once as the EmployeeDeduction the bridge reads, once as the
+    PayrollItemAssignment the engine reads. Applying both double-deducts the
+    employee, so the bridge must skip any row the backfill has converted.
+    """
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+
+    tag = f'legacy_deduction:{getattr(deduction, "id", None)}'
+    return PayrollItemAssignment.query.filter_by(company_id=company_id, legacy_source=tag).first() is not None
+
+
+def _ensure_basic_assignment(employee, company_id, basic_amount):
+    """Guarantee the employee has an active basic_salary assignment.
+
+    Gross is assembled ENTIRELY from assignments, so an employee that reaches
+    the engine path with any assignment but no basic_salary row is paid their
+    allowances and nothing else. Creating the employee (CSV import) or the
+    backfill migration both produce that state, so this is enforced here
+    rather than trusted to the caller.
+
+    Idempotent; returns None when the company has no basic_salary item at all
+    (the catalog is incomplete), in which case the engine simply omits it.
+    """
+
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+
+    amount = Decimal(str(basic_amount or 0))
+    if amount <= 0:
+        return None
+
+    item = PayItemType.query.filter_by(company_id=company_id, key=SYSTEM_ITEM_KEYS.BASIC_SALARY.value).first()
+    if item is None:
+        item = PayItemType.query.filter_by(company_id=None, key=SYSTEM_ITEM_KEYS.BASIC_SALARY.value).first()
+    if item is None:
+        return None
+
+    existing = PayrollItemAssignment.query.filter_by(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        is_active=True,
+    ).first()
+    if existing is not None:
+        return existing
+
+    a = PayrollItemAssignment(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        fixed_amount=amount,
+        is_active=True,
+    )
+    db.session.add(a)
+    db.session.flush()
+    return a
+
+
+def _ensure_general_allowance(employee, company_id, amount):
+    """Create a General Allowance assignment for a legacy CSV import row.
+
+    The CSV carries one undifferentiated `allowances` number. Under the elements
+    model gross is assembled from assignments, so that number would silently
+    vanish from the payslip. This materialises it as a single assignment against
+    the company's General Allowance item (created from the catalog if missing).
+
+    Idempotent: an existing active assignment for that item is left alone.
+    """
+
+    from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
+
+    amount = Decimal(str(amount or 0))
+    if amount <= 0:
+        return None
+
+    item = PayItemType.query.filter_by(
+        company_id=company_id, key=COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value
+    ).first()
+    if item is None:
+        return None
+
+    existing = PayrollItemAssignment.query.filter_by(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        is_active=True,
+    ).first()
+    if existing is not None:
+        return existing
+
+    a = PayrollItemAssignment(
+        company_id=company_id,
+        employee_id=employee.id,
+        pay_item_type_id=item.id,
+        fixed_amount=amount,
+        is_active=True,
+    )
+    db.session.add(a)
+    db.session.flush()
+    return a
+
+
+def _build_units_input(emp_data):
+    """Collect per-period units for rate_x_units pay items from a draft row.
+
+    The engine resolves a key in this order (lock-in 4):
+      1. assignment.units_field
+      2. the pay item key itself
+    So we pass through every unit-ish field the draft carries, keyed both by
+    the raw field name and by a normalized alias, and let the engine match.
+
+    Draft rows may supply:
+      - 'units': {name: qty}                  explicit map (preferred)
+      - 'overtime_hours' / 'ot_hours'        shorthand for the common case
+    """
+    units = {}
+
+    explicit = emp_data.get('units')
+    if isinstance(explicit, dict):
+        for k, v in explicit.items():
+            if v is None or v == '':
+                continue
+            units[str(k)] = v
+
+    for field in ('overtime_hours', 'ot_hours'):
+        if emp_data.get(field) not in (None, ''):
+            units.setdefault(field, emp_data[field])
+            units.setdefault('overtime', emp_data[field])
+
+    return units or None
+
+
+def _decline_balances(employee_id, company_id, deduction_details):
+    """Decrement remaining_balance on declining deductions after a run.
+
+    Legacy deduction IDs and assignment IDs belong to separate ledgers;
+    an assignment detail must never consume a legacy row with the same ID.
+    The caller owns the approval guard, row lock and transaction. This helper
+    is not independently idempotent.
+    """
+
+    from payroll_engine.models import EmployeeDeduction
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+
+    # New-model rows: match on the item key we recorded in the detail dict.
+    for detail in deduction_details or []:
+        item_key = detail.get('item_key')
+        if not item_key:
+            continue
+        amount = Decimal(str(detail.get('amount') or 0))
+        if amount <= 0:
+            continue
+        rows = PayrollItemAssignment.query.filter_by(
+            company_id=company_id,
+            employee_id=employee_id,
+            tracking_mode='declining',
+            is_active=True,
+        ).all()
+        for a in rows:
+            if a.item_type and a.item_type.key == item_key and a.remaining_balance is not None:
+                a.remaining_balance = max(Decimal('0'), a.remaining_balance - amount)
+                if a.remaining_balance <= 0:
+                    a.is_active = False
+                break
+
+    # Legacy bridge rows carry their id in the detail dict.
+    # Older legacy payloads lack a discriminator; preserve that contract,
+    # but exclude both explicit assignment flags and assignment identities.
+    by_id = {
+        d['id']: d
+        for d in (deduction_details or [])
+        if d.get('id') and d.get('legacy', True) and not d.get('assignment_id')
+    }
+    if not by_id:
+        return
+    legacy = EmployeeDeduction.query.filter(
+        EmployeeDeduction.employee_id == employee_id,
+        EmployeeDeduction.company_id == company_id,
+        EmployeeDeduction.tracking_mode == 'declining',
+    ).all()
+    for ded in legacy:
+        detail = by_id.get(ded.id)
+        if not detail or ded.remaining_balance is None:
+            continue
+        amount = Decimal(str(detail.get('amount') or 0))
+        if amount <= 0:
+            continue
+        ded.remaining_balance = max(Decimal('0'), ded.remaining_balance - amount)
+        if ded.remaining_balance <= 0:
+            ded.is_active = False
 
 
 def apply_flag_overrides(run_id, form_data):
@@ -68,7 +265,10 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
     Returns:
         ApprovalResult
     """
-    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).first()
+    if run.company_id != company_id:
+        db.session.rollback()
+        return ApprovalResult(success=False, message='Payroll run not found.', redirect_to='runs')
+    draft = PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=company_id).first()
     if not draft:
         db.session.rollback()
         return ApprovalResult(
@@ -87,6 +287,60 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
     employees_data = draft.employee_data
 
+    if run.source == 'spreadsheet':
+        from payroll_engine.services.worksheet_review import apply_approved_rows
+
+        try:
+            apply_approved_rows(run, company_id, employees_data)
+            run.status = 'completed'
+            run.approved_by = user_id
+            run.approved_at = datetime.now(UTC).replace(tzinfo=None)
+            run.approval_ip = request_ip
+            create_audit_log(
+                company_id,
+                user_id,
+                'payroll_run_completed',
+                {
+                    'run_id': run.id,
+                    'employee_count': len(employees_data),
+                    'approved_by': user_email,
+                    'approval_ip': request_ip,
+                    'source': 'spreadsheet',
+                    'total_net': str(sum(Decimal(row['net']) for row in employees_data)),
+                },
+            )
+            create_notification(
+                company_id=company_id,
+                user_id=user_id,
+                message=f'Payroll approved for {len(employees_data)} employees. Payment is still pending.',
+                type='success',
+                link=f'/payroll/runs/{run.id}',
+            )
+            # Retain the reviewed facts for lazy PDFs, workers and exports.
+            db.session.commit()
+        except ValueError as error:
+            db.session.rollback()
+            return ApprovalResult(success=False, message=str(error), redirect_to='detail')
+        except Exception as error:
+            db.session.rollback()
+            return ApprovalResult(success=False, error=str(error), redirect_to='detail')
+        # Delivery is outside the money transaction. On-demand download can recover.
+        try:
+            from payroll_engine.tasks import enqueue_batch
+
+            enqueue_batch(run.id, company_id)
+        except Exception:
+            db.session.rollback()
+            import logging
+
+            logging.getLogger('payroll_engine').exception('PDF delivery pending for approved run %s', run.id)
+        return ApprovalResult(
+            success=True,
+            message='Payroll approved. Payslips and bank files are ready to generate; payment is still pending.',
+            employee_count=len(employees_data),
+            redirect_to='detail',
+        )
+
     try:
         run.status = 'processing'
         run.approved_by = user_id
@@ -102,8 +356,102 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         ).all()
         emp_by_eid = {e.employee_id: e for e in existing_emps}
 
+        # --- BUG FIX: Compute leave reductions from actual Leave records ---
+        # The draft has stale values; we need real leave data at approval time.
+        from payroll_engine.leave import DEFAULT_SICK_TIER_1_DAYS, LeaveType
+        from payroll_engine.models import EmployeeDeduction, Leave
+
+        # A delayed approval must use the selected run date, not the click date.
+        today = run.run_date or date.today()
+        month_start = today.replace(day=1)
+
+        # Pre-compute leave reductions per employee
+        leave_reductions = {}  # emp_id -> (sick_reduction, unpaid_reduction)
+        for emp in existing_emps:
+            sick_reduction = Decimal('0')
+            unpaid_reduction = Decimal('0')
+
+            # Fetch approved leave for this employee in current month
+            emp_leave = Leave.query.filter(
+                Leave.employee_id == emp.id,
+                Leave.company_id == company_id,
+                Leave.status == 'approved',
+                Leave.start_date <= today,
+                Leave.end_date >= month_start,
+            ).all()
+
+            for lv in emp_leave:
+                overlap_start = max(lv.start_date, month_start)
+                overlap_end = min(lv.end_date, today)
+                if overlap_start > overlap_end:
+                    continue
+                overlap_days = (overlap_end - overlap_start).days + 1
+                daily_rate = (Decimal(str(emp.basic_salary)) + Decimal(str(emp.allowances))) / Decimal('30')
+
+                if lv.leave_type == LeaveType.UNPAID:
+                    unpaid_reduction += daily_rate * Decimal(str(overlap_days))
+                elif lv.leave_type == LeaveType.SICK:
+                    # Tiered: first SICK_TIER_1_DAYS at 100%, next at 50%, rest unpaid
+                    # We need cumulative sick days in the 12-month period
+                    import calendar
+
+                    year_ago = today.replace(
+                        year=today.year - 1, day=min(today.day, calendar.monthrange(today.year - 1, today.month)[1])
+                    )
+                    sick_history = Leave.query.filter(
+                        Leave.employee_id == emp.id,
+                        Leave.company_id == company_id,
+                        Leave.leave_type == LeaveType.SICK,
+                        Leave.status == 'approved',
+                        Leave.start_date >= year_ago,
+                    ).all()
+                    cumulative_sick = sum(lv2.days_requested for lv2 in sick_history)
+                    tier1 = DEFAULT_SICK_TIER_1_DAYS
+
+                    # Days in this leave that fall into each tier
+                    days_at_100 = min(max(0, tier1 - (cumulative_sick - lv.days_requested)), overlap_days)
+                    days_at_50 = min(
+                        max(0, overlap_days - days_at_100),
+                        max(0, (tier1 * 2) - (cumulative_sick - lv.days_requested) - days_at_100),
+                    )
+                    # Remaining are unpaid (100% reduction)
+                    days_unpaid = overlap_days - days_at_100 - days_at_50
+
+                    sick_reduction += daily_rate * Decimal(str(days_at_50)) * Decimal('0.5')
+                    sick_reduction += daily_rate * Decimal(str(days_unpaid))  # unpaid portion
+
+            leave_reductions[emp.id] = (
+                sick_reduction.quantize(Decimal('0.01')),
+                unpaid_reduction.quantize(Decimal('0.01')),
+            )
+
+        # Pre-compute active deductions (advances, loans, etc.) per employee
+        active_deductions = {}  # emp_id -> list of deduction dicts
+        for emp in existing_emps:
+            deductions = EmployeeDeduction.query.filter(
+                EmployeeDeduction.employee_id == emp.id,
+                EmployeeDeduction.company_id == company_id,
+                EmployeeDeduction.is_active == True,
+            ).all()
+            emp_deds = []
+            for ded in deductions:
+                # For date-bounded, check if within range
+                if ded.tracking_mode == 'date_bounded' and ded.end_date and ded.end_date < today:
+                    continue
+                # For declining, check exhausted
+                if (
+                    ded.tracking_mode == 'declining'
+                    and ded.remaining_balance is not None
+                    and ded.remaining_balance <= 0
+                ):
+                    continue
+                emp_deds.append(ded)
+            active_deductions[emp.id] = emp_deds
+
         # Create/update employees and payslips
         # PDFs are generated lazily on download (not at approval time)
+        from payroll_engine.payroll_elements import calculate_payroll_from_assignments
+
         for emp_data in employees_data:
             emp = emp_by_eid.get(emp_data['id'])
             if not emp:
@@ -127,18 +475,140 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     emp.tin = emp_data['tin']
                 db.session.flush()
 
+            # --- BUG FIX: Apply leave reductions and deductions ---
+            sick_red, unpaid_red = leave_reductions.get(emp.id, (Decimal('0'), Decimal('0')))
+
+            # ---- The bridge (spec: "new assignments if present, else old records")
+            #
+            # An employee with no pay-item assignments at all has not been
+            # backfilled yet. The elements engine can only assemble gross FROM
+            # assignments, so calling it blind returns gross=0 / net=0 and
+            # silently pays the employee nothing. In that case keep the legacy
+            # path (the draft's pre-computed figures) until the backfill
+            # migration runs. Once the employee has any active assignment the
+            # engine is authoritative.
+            has_assignments = (
+                PayrollItemAssignment.query.filter_by(company_id=company_id, employee_id=emp.id, is_active=True).first()
+                is not None
+            )
+
+            # Legacy CSV import: the draft row's `allowances` column was
+            # annotated by the upload path. Materialise it as an assignment
+            # BEFORE the bridge check, so an imported employee is not silently
+            # treated as un-backfilled and dropped to the legacy path.
+            if emp_data.get('general_allowance'):
+                _ensure_general_allowance(emp, company_id, emp_data.get('general_allowance'))
+                has_assignments = True
+
+            if has_assignments:
+                # Basic salary must be represented as an assignment for gross to
+                # include it. Without this an employee carrying only a General
+                # Allowance row is paid 2,500 instead of 12,500.
+                _ensure_basic_assignment(emp, company_id, emp_data.get('basic'))
+
+                # Legacy bridge: EmployeeDeduction rows are still honoured. But a
+                # row the BACKFILL already converted is now represented by a
+                # PayrollItemAssignment, and the engine would apply BOTH -- double
+                # deducting the employee. Skip any legacy row whose type already
+                # has a backfilled assignment for this employee.
+                legacy_deductions = [
+                    d for d in active_deductions.get(emp.id, []) if not _deduction_is_backfilled(emp.id, company_id, d)
+                ]
+
+                # Units for rate_x_units pay items (lock-in 4). The draft carries
+                # whatever the upload/autosave collected; keys are matched against
+                # assignment.units_field first, then the item key itself.
+                units_input = _build_units_input(emp_data)
+
+                # Overtime entries still come from their own module (spec 2d).
+                ot_entries = [
+                    {'hours': e.get('hours', 0), 'type': e.get('type', 'day')} for e in (emp_data.get('overtime') or [])
+                ]
+
+                # Elements engine: reads the employee's active
+                # PayrollItemAssignment rows for the run period. `deductions` is
+                # the legacy bridge -- EmployeeDeduction rows are still honoured
+                # until the backfill migration moves them, but they are no longer
+                # computed by hand here. The engine merges bridge rows with new
+                # assignment rows and returns the merged deduction_details.
+                calc = calculate_payroll_from_assignments(
+                    emp,
+                    company_id,
+                    today,
+                    units_input=units_input,
+                    overtime_entries=ot_entries or None,
+                    deductions=legacy_deductions or None,
+                    sick_leave_reduction=sick_red + unpaid_red,
+                )
+
+                deduction_details = calc['deduction_details']
+                final_net = calc['net']
+                gross = calc['gross']
+                tax = calc['tax']
+                pension_employee = calc['pension_employee']
+                pension_employer = calc['pension_employer']
+                line_items = calc.get('line_items')
+                exempt_allowances = calc.get('exempt_allowances')
+                taxable_income = calc.get('taxable')
+            else:
+                # Legacy path: pre-computed draft figures, with the
+                # hand-rolled deduction loop that pre-dates the engine.
+                net_before_deductions = Decimal(str(emp_data['net'])) - sick_red - unpaid_red
+                deduction_details = []
+                total_deductions = Decimal('0')
+                for ded in active_deductions.get(emp.id, []):
+                    if ded.amount_mode == 'percentage':
+                        ded_amount = (net_before_deductions * ded.amount / Decimal('100')).quantize(Decimal('0.01'))
+                    else:
+                        ded_amount = ded.amount
+                    if ded.tracking_mode == 'declining' and ded.remaining_balance is not None:
+                        ded_amount = min(ded_amount, ded.remaining_balance)
+                    ded_amount = min(ded_amount, net_before_deductions - total_deductions)
+                    if ded_amount > 0:
+                        total_deductions += ded_amount
+                        deduction_details.append(
+                            {
+                                'id': ded.id,
+                                'type': ded.deduction_type,
+                                'type_label': ded.type_label,
+                                'label': ded.label,
+                                'amount': float(ded_amount),
+                                'remaining_balance': float(ded.remaining_balance) if ded.remaining_balance else None,
+                            }
+                        )
+                        # Balance mutation belongs to _decline_balances below,
+                        # once for both the legacy fallback and bridge paths.
+                final_net = net_before_deductions - total_deductions
+                gross = Decimal(str(emp_data['gross']))
+                tax = Decimal(str(emp_data['tax']))
+                pension_employee = Decimal(str(emp_data['pension_employee']))
+                pension_employer = Decimal(str(emp_data['pension_employer']))
+                line_items = None  # legacy path has no engine breakdown
+                exempt_allowances = None
+                taxable_income = None
+
             payslip = Payslip(
                 payroll_run_id=run.id,
                 employee_id=emp.id,
                 company_id=company_id,
                 pdf_status='not_generated',  # Lazy: generated on first download
-                gross_salary=emp_data['gross'],
-                tax=emp_data['tax'],
-                employee_pension=emp_data['pension_employee'],
-                employer_pension=emp_data['pension_employer'],
-                net_pay=emp_data['net'],
+                gross_salary=gross,
+                tax=tax,
+                employee_pension=pension_employee,
+                employer_pension=pension_employer,
+                net_pay=final_net.quantize(Decimal('0.01')),
+                sick_leave_reduction=sick_red,
+                unpaid_leave_reduction=unpaid_red,
+                deduction_details=deduction_details,
+                line_items=line_items,
+                exempt_allowances=exempt_allowances,
+                taxable_income=taxable_income,
             )
             db.session.add(payslip)
+
+            # Decrement declining-balance balances from the engine's result so
+            # the ledger stays in step with what was actually deducted.
+            _decline_balances(emp.id, company_id, deduction_details)
 
         run.status = 'completed'
 
@@ -196,7 +666,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         create_notification(
             company_id=company_id,
             user_id=user_id,
-            message=f'Payroll processed: {len(employees_data)} employees paid, compliance score {score}%.',
+            message=f'Payroll approved for {len(employees_data)} employees. Payment is still pending.',
             type='success',
             link=f'/payroll/runs/{run.id}',
         )
@@ -205,9 +675,17 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         db.session.commit()
 
         # Trigger background PDF generation via RQ (or fall back to inline on download)
-        from payroll_engine.tasks import enqueue_batch
+        try:
+            from payroll_engine.tasks import enqueue_batch
 
-        enqueue_batch(run.id, company_id)
+            enqueue_batch(run.id, company_id)
+        except Exception:
+            # Payroll money has committed. Delivery failure must never mark it
+            # failed or enable another run for the same period.
+            db.session.rollback()
+            import logging
+
+            logging.getLogger('payroll_engine').exception('PDF delivery pending for approved run %s', run.id)
 
         # Fire webhook — payroll completed
         try:
@@ -231,7 +709,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             pass
 
         # Build result message
-        message = f'Payroll processed! {len(employees_data)} employees paid, compliance score {score}%. PDFs will be generated on download.'
+        message = f'Payroll approved for {len(employees_data)} employees. Payment is still pending. PDFs will be generated on download.'
 
         return ApprovalResult(
             success=True,

@@ -8,6 +8,29 @@ from datetime import date
 from unittest.mock import MagicMock
 
 
+def register_company(client, data, follow_redirects=True):
+    """Use both real onboarding steps for fixtures that need a company."""
+    values = dict(data)
+    phone = values['phone'].replace(' ', '')
+    if phone.startswith('0'):
+        phone = phone[1:]
+    values['phone'] = phone
+    response = client.post('/auth/register', data=values, follow_redirects=False)
+    assert response.status_code == 302 and response.headers['Location'].endswith('/auth/setup-profile')
+    response = client.post(
+        '/auth/setup-profile',
+        data={
+            'first_name': 'Synthetic',
+            'last_name': 'Owner',
+            'company_name': data['company_name'],
+        },
+        follow_redirects=follow_redirects,
+    )
+    assert response.status_code in (200, 302)
+    client.get('/auth/logout')
+    return response
+
+
 def make_user(user_id=1, name='Dawit', role='owner'):
     """Create a mock user."""
     user = MagicMock()

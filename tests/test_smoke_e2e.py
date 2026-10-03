@@ -86,9 +86,9 @@ def _seed_company_with_employees():
 
 def test_full_money_path_smoke(app):
     """upload-shape data -> validate -> run+draft -> process -> payslips -> bank rows."""
-    from payroll_engine.validation import validate_payroll_data
     from payroll_engine.services import payroll_workflow
     from payroll_engine.services.payroll_service import process_payroll
+    from payroll_engine.validation import validate_payroll_data
 
     company, owner, employees_data = _seed_company_with_employees()
 
@@ -130,15 +130,18 @@ def test_full_money_path_smoke(app):
         assert ps.net_pay == expected_net
 
     # 5) Draft consumed after successful processing
-    assert (
-        PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=company.id).first() is None
-    )
+    assert PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=company.id).first() is None
 
     # 6) Bank file rows can be generated from the processed payslips
     from payroll_engine.bank_file import generate_csv
 
     bank_rows = [
-        {'id': ps.employee.employee_id, 'name': ps.employee.name, 'bank': ps.employee.bank_account, 'net': float(ps.net_pay)}
+        {
+            'id': ps.employee.employee_id,
+            'name': ps.employee.name,
+            'bank': ps.employee.bank_account,
+            'net': float(ps.net_pay),
+        }
         for ps in payslips
     ]
     csv_bytes = generate_csv(bank_rows, bank='cbe', company_name=company.name, period=run.period or '')
@@ -154,9 +157,7 @@ def test_reprocessing_smoke_run_is_rejected(app):
     run.generate_period()
     db.session.add(run)
     db.session.flush()
-    db.session.add(
-        PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=employees_data)
-    )
+    db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=employees_data))
     db.session.commit()
 
     result = process_payroll(run, company.id, owner.id, 'o@s.et', '127.0.0.1')

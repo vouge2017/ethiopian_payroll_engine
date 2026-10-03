@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-02",
+  "branch": "feature/elements-architecture",
+  "base_sha": "4b6c8c5874bbaa310fb11e88d3cc67f3178b4415",
+  "python": "3.12.13",
+  "ruff": "0.16.9",
+  "lint_before_pending_edits": 128,
+  "lint_after_inherited_pending_edits": 41,
+  "lint_final": "All checks passed!",
+  "format_final": "201 files already formatted",
+  "formatter": {"files_reformatted": 64, "python_files_compared": 201, "ast_changes": 0},
+  "overtime_before": "1 failed, 3 warnings in 16.96s",
+  "affected_tests": "95 passed, 19 warnings in 90.69s (0:01:30)",
+  "postgres_tests": "63 passed, 178 warnings in 168.91s (0:02:48)",
+  "postgres": {
+    "database": "payroll_cleanup_20261002_2240",
+    "host": "127.0.0.1",
+    "port": 55439,
+    "version": "16.6",
+    "migration_setup": "Actual Alembic upgrade from empty; encryption tests also exercise downgrade/upgrade",
+    "customer_data": false
+  },
+  "source_preflight": {"findings": 0, "revisions": 71, "heads": ["f4a5b6c7d8f0"], "verdict": "SOURCE_CHECKS_ONLY_PASS"},
+  "local_logs": {
+    "before": "local-evidence/checks-20261002-222828-266824.log",
+    "affected": "local-evidence/checks-20261002-224324-296700.log",
+    "postgres": "local-evidence/cleanup-pg-20261002-224000-133673.log",
+    "lint": "local-evidence/cleanup-final-lint.log",
+    "format": "local-evidence/cleanup-final-format.log",
+    "formatter_ast": "local-evidence/cleanup-format-ast.json"
+  },
+  "limits": ["Not a full-suite total", "Hosted checks must verify the published commit", "GitGuardian requires dashboard action", "PR main conflicts remain", "Not deployed"]
+}

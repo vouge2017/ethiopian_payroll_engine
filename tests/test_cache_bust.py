@@ -10,6 +10,7 @@ exposing `static_version` (set from GIT_COMMIT_SHA / RENDER_GIT_COMMIT /
 a startup-time fallback) and the templates appending it as a query
 string on the CSS link.
 """
+
 import os
 import re
 
@@ -52,9 +53,7 @@ def test_login_html_has_cache_bust_query_on_css(app):
     m = re.search(r'<link[^>]+design-system\.css[^>]*>', html)
     assert m is not None, 'login page must link to design-system.css'
     link_tag = m.group(0)
-    assert '?v=' in link_tag, (
-        f'design-system.css link must include a ?v= cache-bust query, got: {link_tag}'
-    )
+    assert '?v=' in link_tag, f'design-system.css link must include a ?v= cache-bust query, got: {link_tag}'
 
 
 def test_login_html_has_cache_bust_query_on_responsive_css(app):
@@ -75,9 +74,7 @@ def test_static_version_falls_back_to_int_when_no_git_env(app):
     # The fixture already cleared the env; just assert the config is sane
     sv = app.config['STATIC_ASSET_VERSION']
     # Must not contain characters that would break a URL query string
-    assert re.match(r'^[A-Za-z0-9_-]+$', sv), (
-        f'static_version must be URL-safe, got: {sv!r}'
-    )
+    assert re.match(r'^[A-Za-z0-9_-]+$', sv), f'static_version must be URL-safe, got: {sv!r}'
 
 
 def test_base_layout_also_uses_cache_bust(app):

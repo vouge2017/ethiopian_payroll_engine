@@ -394,7 +394,11 @@ class TestWebhookSigning:
 
 
 class TestFireWebhook:
-    """Tests for fire_webhook."""
+    """Tests for fire_webhook with explicit flags and mocked delivery threads."""
+
+    @pytest.fixture(autouse=True)
+    def enabled_webhooks(self, monkeypatch):
+        monkeypatch.setattr('payroll_engine.webhooks.WEBHOOKS_ENABLED', True)
 
     @patch('payroll_engine.webhooks.threading.Thread')
     def test_fires_webhook_for_configured_company(self, mock_thread, app):
@@ -433,16 +437,14 @@ class TestFireWebhook:
             mock_thread.assert_not_called()
 
     @patch('payroll_engine.webhooks.threading.Thread')
-    def test_skips_when_webhooks_disabled(self, mock_thread, app):
+    def test_skips_when_webhooks_disabled(self, mock_thread, app, monkeypatch):
         import payroll_engine.webhooks as wh_mod
 
-        orig = wh_mod.WEBHOOKS_ENABLED
-        wh_mod.WEBHOOKS_ENABLED = False
+        monkeypatch.setattr(wh_mod, 'WEBHOOKS_ENABLED', False)
         cid, _owner_id, _emp_uid, _emp_id = _setup(app)
         with app.app_context():
             fire_webhook(cid, 'payroll.approved', {'run_id': 1})
             mock_thread.assert_not_called()
-        wh_mod.WEBHOOKS_ENABLED = orig
 
 
 class TestWebhookDelivery:
@@ -481,10 +483,12 @@ class TestWebhookDelivery:
         call_args = mock_post.call_args
         assert 'X-Webhook-Signature' not in call_args[1]['headers']
 
+    @patch('payroll_engine.webhooks.time')
     @patch('requests.post')
-    def test_deliver_handles_network_error(self, mock_post):
+    def test_deliver_handles_network_error(self, mock_post, mock_time):
         """Network errors should be caught, not raised."""
         mock_post.side_effect = Exception('Connection refused')
+        mock_time.sleep = lambda *a, **kw: None  # Don't actually wait
         payload = {'event': 'test', 'timestamp': '', 'data': {}}
         # Should not raise
         _deliver('https://example.com/hook', payload, 'secret')

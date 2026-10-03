@@ -2,16 +2,44 @@
 <!-- Combines: Story → Evidence → Issues → Resolution → Approval -->
 
 {% extends "base.html" %}
-{% block title %}Payroll Review — {{ run.period or run.run_date }}{% endblock %}
+{% block title %}Payroll Review — {{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }}{% endblock %}
 
 {% block content %}
 <div class="p-4 p-md-5">
+
+  {% if worksheet_rows %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h3 class="h5">Saved payroll for {{ run.run_date.strftime('%B %Y') }} (Gregorian)</h3>
+      <p class="small text-muted">These figures are preserved for approval. Later worksheet edits do not change them. Refresh before submission to include saved changes. Approval does not send payment.</p>
+      <div class="table-responsive">
+        <table class="table table-sm"><caption>Amounts preserved for approval, in ETB</caption>
+          <thead><tr><th scope="col">Employee</th><th scope="col">Bonus</th><th scope="col">Extra unpaid days</th><th scope="col">Gross</th><th scope="col">Tax</th><th scope="col">Pension</th><th scope="col">Leave deductions</th><th scope="col">Other deductions</th><th scope="col">Net pay</th></tr></thead>
+          <tbody>{% for row in worksheet_rows %}<tr>
+            <th scope="row">{{ row.name }}<br><small>{{ row.id }}</small></th>
+            <td>{{ row.worksheet_inputs.bonus }}</td><td>{{ row.worksheet_inputs.absence_days }}</td>
+            <td>{{ '{:,.2f}'.format(row.gross) }}</td><td>{{ '{:,.2f}'.format(row.tax) }}</td><td>{{ '{:,.2f}'.format(row.pension_employee) }}</td>
+            <td>{{ '{:,.2f}'.format(row.unpaid_leave_reduction + row.sick_leave_reduction) }}</td><td>{{ '{:,.2f}'.format(row.total_deductions) }}</td><td><strong>{{ '{:,.2f}'.format(row.net) }}</strong></td>
+          </tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% if run.status == 'review' %}
+      <form method="POST" action="{{ url_for('payroll.worksheet_review') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="period_start" value="{{ run.run_date.isoformat() }}">
+        <input type="hidden" name="refresh_run_id" value="{{ run.id }}">
+        <button class="btn btn-outline-secondary" type="submit">Refresh from saved worksheet</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Header -->
   <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
       <h2 class="fw-bold mb-1">Payroll Review</h2>
-      <p class="text-muted mb-0">{{ run.period or run.run_date }} · {{ run.reference or 'Run #' + run.id|string }}</p>
+      <p class="text-muted mb-0">{{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }} · {{ run.reference or 'Run #' + run.id|string }}</p>
     </div>
     <div class="d-flex align-items-center gap-3">
       {% if can_approve %}
@@ -258,15 +286,28 @@
       {% if can_approve %}
       <div class="d-flex align-items-center justify-content-between">
         <div>
-          <p class="small mb-1">All checks passed. This payroll is ready for approval.</p>
+          <p class="small mb-1">No blocking issues were found. Check the amounts and any warnings before approval.</p>
           <p class="text-muted small mb-0">Once approved, payslips will be finalized and the bank file can be generated.</p>
         </div>
+        {% if worksheet_rows %}
+          {% if run.status in ('completed', 'locked') %}
+          <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">View approved payroll</a>
+          {% elif current_user.get_role_for_company(run.company_id) == 'owner' %}
+          <a href="{{ url_for('payroll.payroll_confirm', run_id=run.id) }}" class="btn btn-success">Continue to approval</a>
+          {% elif run.status == 'review' %}
+          <form method="POST" action="{{ url_for('payroll.submit_worksheet_review', run_id=run.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-success" type="submit">Submit to owner</button>
+          </form>
+          {% else %}<span>Waiting for owner approval</span>{% endif %}
+        {% else %}
         <form method="POST" action="/payroll/runs/{{ run.id }}/approve">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-success btn-lg">
             <i class="bi bi-check-circle me-1"></i> Approve Payroll
           </button>
         </form>
+        {% endif %}
       </div>
       {% else %}
       <div class="d-flex align-items-center justify-content-between">

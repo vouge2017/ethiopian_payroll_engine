@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Check worksheet values — EthioPayroll{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h1 class="h4">Check your worksheet values</h1>
+    <p>Your saved worksheet is unchanged. Return to correct the employee and field shown above.</p>
+    <a class="btn btn-primary" href="{{ url_for('payroll.payroll_spreadsheet') }}">Return to worksheet</a>
+</div>
+{% endblock %}

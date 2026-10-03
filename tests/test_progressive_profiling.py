@@ -4,6 +4,7 @@ After register (Step 1: phone + password only), the user is auto-logged-in
 with `must_complete_profile=True` and redirected to /auth/setup-profile
 (Step 2) to collect first/middle/last name + company name.
 """
+
 import os
 import sys
 
@@ -37,6 +38,7 @@ def client(app):
 
 
 # --- Step 1: register collects only phone + password ---
+
 
 def test_register_collects_only_phone_and_password(client):
     """Step 1 form should not include first_name, middle_name, last_name, or company_name fields."""
@@ -97,6 +99,7 @@ def test_register_auto_logs_in_user(client, app):
 
 
 # --- Step 2: setup-profile collects name + company ---
+
 
 def test_setup_profile_redirects_logged_out_users(client):
     """Anonymous users should be redirected to login."""
@@ -242,6 +245,7 @@ def test_setup_profile_rejects_duplicate_company_name(client, app):
 
 # --- Skip option ---
 
+
 def test_setup_profile_skip_clears_flag(client, app):
     """User can skip profile setup; must_complete_profile becomes False."""
     client.post(
@@ -262,6 +266,7 @@ def test_setup_profile_skip_clears_flag(client, app):
 
 
 # --- before_request hook: forces profile setup until complete ---
+
 
 def test_must_complete_profile_redirects_to_setup(client, app):
     """Logged-in user with must_complete_profile=True is forced to /auth/setup-profile."""

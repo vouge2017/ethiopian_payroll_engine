@@ -32,6 +32,7 @@ from payroll_engine.models import (
 @pytest.fixture
 def app():
     import os
+
     os.environ['FLASK_ENV'] = 'testing'
     app = create_app()
     app.config['TESTING'] = True
@@ -81,6 +82,7 @@ def _setup_approval_data(app):
 
         draft = PayrollDraft(
             payroll_run_id=run.id,
+            company_id=company.id,
             employee_data=[
                 {
                     'id': 'EMP001',
@@ -115,8 +117,8 @@ def test_approval_succeeds_without_pdf_generation(app):
         # Verify starting state
         run = db.session.get(PayrollRun, run_id)
         assert run.status == 'review'
-        assert Payslip.query.filter_by(payroll_run_id=run_id).count() == 0
-        assert PayrollDraft.query.filter_by(payroll_run_id=run_id).first() is not None
+        assert Payslip.query.filter_by(payroll_run_id=run_id, company_id=_company_id).count() == 0
+        assert PayrollDraft.query.filter_by(payroll_run_id=run_id, company_id=_company_id).first() is not None
 
     # Attempt approval — no PDF generation happens at approval time
     with app.test_client() as client:
@@ -143,14 +145,14 @@ def test_approval_succeeds_without_pdf_generation(app):
         assert run.status == 'completed', f"Expected 'completed', got '{run.status}'"
 
         # Payslips should exist with pdf_status='not_generated'
-        payslips = Payslip.query.filter_by(payroll_run_id=run_id).all()
+        payslips = Payslip.query.filter_by(payroll_run_id=run_id, company_id=_company_id).all()
         assert len(payslips) > 0, 'No payslips created'
         for ps in payslips:
             assert ps.pdf_file_path is None, f'Expected no PDF path for {ps.id}'
             assert ps.pdf_status == 'not_generated', f"Expected 'not_generated', got '{ps.pdf_status}'"
 
         # Draft should be cleaned up
-        draft = PayrollDraft.query.filter_by(payroll_run_id=run_id).first()
+        draft = PayrollDraft.query.filter_by(payroll_run_id=run_id, company_id=_company_id).first()
         assert draft is None, 'Draft was not cleaned up'
 
 
@@ -186,8 +188,8 @@ def test_approval_rolls_back_on_compliance_failure(app):
 
         # Everything rolled back, then marked 'failed'
         assert run.status == 'failed', f"Expected 'failed', got '{run.status}'"
-        assert Payslip.query.filter_by(payroll_run_id=run_id).count() == 0
-        assert PayrollDraft.query.filter_by(payroll_run_id=run_id).first() is not None
+        assert Payslip.query.filter_by(payroll_run_id=run_id, company_id=_company_id).count() == 0
+        assert PayrollDraft.query.filter_by(payroll_run_id=run_id, company_id=_company_id).first() is not None
 
 
 def test_approval_commits_atomically_on_success(app):
@@ -218,8 +220,8 @@ def test_approval_commits_atomically_on_success(app):
 
         # All success conditions
         assert run.status == 'completed'
-        assert Payslip.query.filter_by(payroll_run_id=run_id).count() == 1
-        assert PayrollDraft.query.filter_by(payroll_run_id=run_id).first() is None
+        assert Payslip.query.filter_by(payroll_run_id=run_id, company_id=company_id).count() == 1
+        assert PayrollDraft.query.filter_by(payroll_run_id=run_id, company_id=company_id).first() is None
 
         success_log = AuditLog.query.filter_by(company_id=company_id, action='payroll_run_completed').first()
         assert success_log is not None

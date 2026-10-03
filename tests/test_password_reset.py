@@ -45,7 +45,7 @@ def test_forgot_password_with_phone(client):
     db.session.add(user)
     db.session.commit()
 
-    with client.session_transaction() as sess:
+    with client.session_transaction() as _sess:
         pass  # Ensure clean session
 
     resp = client.post(
@@ -94,6 +94,7 @@ def test_reset_password_flow_integration(client):
     """Full integration test for password reset using the actual flow."""
     # Create user WITH a company to bypass progressive profiling redirect
     from payroll_engine.models import Company
+
     company = Company(name='Test Reset Company')
     db.session.add(company)
     db.session.flush()
@@ -144,7 +145,9 @@ def test_reset_password_flow_integration(client):
     assert resp.status_code == 200
     # After successful reset, user is redirected to main.index (dashboard)
     # since they already have a company
-    assert b'reset successfully' in resp.data.lower() or b'log in' in resp.data.lower() or b'welcome' in resp.data.lower()
+    assert (
+        b'reset successfully' in resp.data.lower() or b'log in' in resp.data.lower() or b'welcome' in resp.data.lower()
+    )
 
     # Verify password was changed
     refreshed = db.session.get(User, user.id)
@@ -160,7 +163,7 @@ def test_reset_password_weak_password_rejected(client):
     db.session.commit()
 
     # Get token
-    token = user.generate_reset_token()
+    _token = user.generate_reset_token()
     db.session.commit()
 
     # Set up session for verified user

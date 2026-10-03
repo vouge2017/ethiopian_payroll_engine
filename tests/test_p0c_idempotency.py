@@ -7,14 +7,13 @@ Verifies:
 - Cached response body and status are preserved
 - TTL expiry allows re-execution
 """
+
 import time
-from unittest.mock import patch
 
 import pytest
 
 from payroll_engine import create_app, db
 from payroll_engine.idempotency import _LOCAL_CACHE, _cache_key, _get_cached, _set_cached, idempotent
-from payroll_engine.models import Company, User
 
 
 @pytest.fixture
@@ -132,10 +131,12 @@ def test_ttl_expiry(app):
 
 def test_same_key_different_body_returns_422(app):
     """RFC idempotency draft 2.5: same key + different body -> 422, not stale body."""
+
     @app.route('/_test_idem6', methods=['POST'])
     @idempotent
     def view():
         from flask import request as _req
+
         return f'body={_req.get_data(as_text=True)}', 200
 
     client = app.test_client()
@@ -161,7 +162,7 @@ def test_same_key_different_body_returns_422(app):
 
 def test_idempotency_decorator_does_not_break_redirect(app):
     """PRG redirect responses (302) are also cached and replayed correctly."""
-    from flask import redirect, url_for
+    from flask import redirect
 
     @app.route('/_test_idem5', methods=['POST'])
     @idempotent

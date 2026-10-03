@@ -1,3 +1,5 @@
+from helpers import register_company
+
 """
 Tests for input validation on API endpoints.
 
@@ -46,11 +48,11 @@ def client(app):
 def seed_data(app, client):
     """Register company and create payroll."""
     with app.app_context():
-        client.post(
-            '/auth/register',
+        register_company(
+            client,
             data={
                 'company_name': 'Test PLC',
-                'phone': '0911123456',
+                'phone': '911123456',
                 'password': 'TestPass123!',
                 'password2': 'TestPass123!',
             },
@@ -58,7 +60,7 @@ def seed_data(app, client):
         )
 
         company = Company.query.filter_by(name='Test PLC').first()
-        user = User.query.filter_by(phone='0911123456').first()
+        user = User.query.filter_by(phone='911123456').first()
 
         emp = Employee(
             employee_id='EMP-001',
@@ -85,6 +87,7 @@ def seed_data(app, client):
 
         ps = Payslip(
             payroll_run_id=run.id,
+            company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=Decimal('15000'),
             tax=Decimal('2250'),
@@ -107,7 +110,7 @@ def login(client):
     return client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'TestPass123!',
         },
         follow_redirects=True,

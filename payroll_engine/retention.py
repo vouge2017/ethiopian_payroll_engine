@@ -138,8 +138,7 @@ def purge_expired_previews(app):
         from datetime import UTC
 
         from payroll_engine import db
-        from payroll_engine.models import PayrollPreview
-        from payroll_engine.models import TenantQuery
+        from payroll_engine.models import PayrollPreview, TenantQuery
 
         now = datetime.now(UTC).replace(tzinfo=None)
         # Cross-tenant purge: each company's previews are deleted in their

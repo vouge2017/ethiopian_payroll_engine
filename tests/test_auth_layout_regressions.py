@@ -10,8 +10,8 @@ These tests assert the rendered HTML structure of the auth pages
 relevant CSS rules in the design system. They are pure-HTML
 regressions — they don't exercise the full login flow.
 """
+
 import os
-import re
 
 import pytest
 
@@ -47,13 +47,12 @@ def _get_register_html(app):
 # Issue 1: auth layout shift on incorrect password (flash banner)
 # ──────────────────────────────────────────────────────────────────────
 
+
 def test_login_renders_form_area(app):
     """The auth page must contain the .onboarding-form-area wrapper."""
     html, status = _get_login_html(app)
     assert status == 200
-    assert 'onboarding-form-area' in html, (
-        'Login page must contain the .onboarding-form-area wrapper'
-    )
+    assert 'onboarding-form-area' in html, 'Login page must contain the .onboarding-form-area wrapper'
 
 
 def test_login_does_not_use_old_flash_container(app):
@@ -71,21 +70,18 @@ def test_flash_bar_present_in_base_template(app):
     """The new .onboarding-flash-bar wrapper is in the base template so
     any future auth page automatically gets the full-width flash layout.
     """
-    html, _ = _get_login_html(app)
+    _html, _ = _get_login_html(app)
     # It's only rendered when there are flash messages, but the CSS class
     # definition should be reachable from the static asset chain. We assert
     # the page loads cleanly without the old container wrapper above; for
     # a flash-rendering test we use a server-side flash via the session.
-    with app.test_client() as c:
-        with c.session_transaction():
-            pass  # placeholder
+    with app.test_client() as c, c.session_transaction():
+        pass  # placeholder
     # The CSS is served via /static/css/design-system.css
     css_resp = app.test_client().get('/static/css/design-system.css')
     assert css_resp.status_code == 200
     css_text = css_resp.get_data(as_text=True)
-    assert '.onboarding-flash-bar' in css_text, (
-        'design-system.css must define .onboarding-flash-bar'
-    )
+    assert '.onboarding-flash-bar' in css_text, 'design-system.css must define .onboarding-flash-bar'
     assert '.onboarding-flash-bar .alert' in css_text, (
         'design-system.css must scope .alert inside .onboarding-flash-bar'
     )
@@ -131,6 +127,7 @@ def test_form_area_css_hardened_against_extension_injection(app):
 # Issue 2: phone input — now uses intl-tel-input for country selection
 # ──────────────────────────────────────────────────────────────────────
 
+
 def test_login_phone_input_uses_intl_tel(app):
     """The login field accepts phone-or-email (`login_id`). For now we
     keep the static +251 hint because the field is dual-purpose; only
@@ -141,9 +138,7 @@ def test_login_phone_input_uses_intl_tel(app):
     that turn login into a phone-only field are picked up automatically.
     """
     html, _ = _get_login_html(app)
-    assert 'static/js/phone-input.js' in html, (
-        'Login page must load phone-input.js'
-    )
+    assert 'static/js/phone-input.js' in html, 'Login page must load phone-input.js'
 
 
 def test_register_phone_input_uses_intl_tel(app):
@@ -172,9 +167,7 @@ def test_phone_wrapper_css_handles_intl_tel(app):
     phone-prefix-box layout."""
     css_resp = app.test_client().get('/static/css/design-system.css')
     css_text = css_resp.get_data(as_text=True)
-    assert '.phone-prefix-box' in css_text, (
-        'CSS must include .phone-prefix-box rule for the fixed +251 prefix'
-    )
+    assert '.phone-prefix-box' in css_text, 'CSS must include .phone-prefix-box rule for the fixed +251 prefix'
 
 
 def test_static_251_prefix_is_removed_from_register(app):
@@ -212,9 +205,7 @@ def test_forgot_password_has_no_static_251_prefix(app):
     if r.status_code != 200:
         pytest.skip(f'forgot-password returned {r.status_code}; skipping')
     html = r.get_data(as_text=True)
-    assert 'class="onboarding-phone-prefix">+251' not in html, (
-        'forgot_password still has a hardcoded +251 prefix'
-    )
+    assert 'class="onboarding-phone-prefix">+251' not in html, 'forgot_password still has a hardcoded +251 prefix'
 
 
 def test_emergency_phone_uses_phone_prefix(app):
@@ -233,6 +224,7 @@ def test_emergency_phone_uses_phone_prefix(app):
 # ──────────────────────────────────────────────────────────────────────
 # CSS alignment for the phone prefix box
 # ──────────────────────────────────────────────────────────────────────
+
 
 def test_phone_prefix_box_height_matches_input(app):
     """The .phone-prefix-box must be 44px tall to match the input."""

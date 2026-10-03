@@ -1,4 +1,3 @@
-import hashlib
 import re
 from datetime import UTC, datetime, timedelta
 
@@ -10,6 +9,20 @@ from .models import Company, User, validate_ethiopian_phone
 from .security import safe_redirect_target
 
 auth = Blueprint('auth', __name__)
+
+
+def _login_phone(value):
+    """Accept legacy sign-in formats without relaxing new-registration rules."""
+    cleaned = value.replace(' ', '')
+    if re.fullmatch(r'0[79][0-9]{8}', cleaned):
+        cleaned = cleaned[1:]
+    valid, normalized, _ = validate_ethiopian_phone(cleaned)
+    return normalized if valid else None
+
+
+def _phone_user(phone):
+    matches = User.query.filter(User.phone.in_((phone, '0' + phone))).limit(2).all()
+    return matches[0] if len(matches) == 1 else None
 
 
 def _get_google_oauth():
@@ -59,21 +72,9 @@ def login():
 
         # Normalize identifier for lockout tracking
         # Must match the format used in DB lookup to prevent bypass via format variation
-        identifier = login_id.lower().strip() if login_id else ''
-        if identifier:
-            cleaned = identifier.replace(' ', '')
-            looks_like_phone = (
-                cleaned.startswith('09')
-                or cleaned.startswith('07')
-                or cleaned.startswith('+251')
-                or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
-            )
-            if looks_like_phone:
-                from payroll_engine.models import validate_ethiopian_phone
-
-                is_valid, normalized, _ = validate_ethiopian_phone(identifier)
-                if is_valid:
-                    identifier = normalized
+        phone = _login_phone(login_id)
+        looks_like_phone = phone is not None
+        identifier = phone or login_id.lower()
 
         # Check brute-force lockout BEFORE processing
         from payroll_engine.models import LoginAttempt
@@ -90,20 +91,10 @@ def login():
         # Try to find user by phone or email
         user = None
         if login_id:
-            # Check if it looks like a phone number
-            cleaned = login_id.replace(' ', '')
-            looks_like_phone = (
-                cleaned.startswith('09')
-                or cleaned.startswith('07')
-                or cleaned.startswith('+251')
-                or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
-            )
-            if looks_like_phone:
-                # Normalize phone and look up
-                is_valid, normalized, _ = validate_ethiopian_phone(login_id)
-                if is_valid:
-                    user = User.query.filter_by(phone=normalized).first()
-            if user is None:
+            if phone:
+                # Legacy and new spellings must not identify different accounts.
+                user = _phone_user(phone)
+            else:
                 # Try email
                 user = User.query.filter_by(email=login_id.lower()).first()
 
@@ -113,7 +104,7 @@ def login():
 
             # Audit: failed login attempt (tenant-scoped table requires a
             # company; skip for unknown identifiers — logged instead).
-            if user:
+            if user and user.company_id:
                 from payroll_engine.shared import create_audit_log
 
                 create_audit_log(
@@ -122,11 +113,9 @@ def login():
                     action='login_failed',
                     details={'attempted_id': login_id[:120], 'locked': is_locked},
                 )
-                db.session.commit()
             else:
-                current_app.logger.warning(
-                    'Login failed for unknown identifier (%s)', identifier
-                )
+                current_app.logger.warning('Login failed for unknown identifier (%s)', identifier)
+            db.session.commit()
 
             if is_locked:
                 minutes = max(1, remaining // 60)
@@ -153,7 +142,7 @@ def login():
                 action='login_success',
                 details={'method': 'phone' if looks_like_phone else 'email'},
             )
-            db.session.commit()
+        db.session.commit()
         if user.must_change_password:
             flash('Please set a new password to continue. Your temporary password needs to be changed.', 'warning')
             return redirect(url_for('auth.change_password'))
@@ -220,8 +209,14 @@ def change_password():
             flash('Password change failed. Please try again.', 'danger')
             return redirect(url_for('auth.change_password'))
 
-        flash('Password updated successfully.', 'success')
-        return redirect(url_for('main.index'))
+        # Invalidate current session and log out, forcing re-authentication
+        from flask_login import logout_user
+
+        logout_user()
+        session.clear()
+
+        flash('Password updated successfully. Please log in again with your new password.', 'success')
+        return redirect(url_for('auth.login'))
 
     return render_template(
         'auth/change_password.html',
@@ -252,7 +247,6 @@ def register():
     email = None
     password = ''
     password2 = ''
-    company_name = None
 
     if request.method == 'POST':
         phone = request.form.get('phone', '').strip()
@@ -307,7 +301,7 @@ def register():
             ), 400
 
         # Check duplicate phone
-        if User.query.filter_by(phone=normalized_phone).first():
+        if User.query.filter(User.phone.in_((normalized_phone, '0' + normalized_phone))).first():
             flash('Phone number already registered.', 'danger')
             return render_template(
                 'auth/register.html',
@@ -356,9 +350,14 @@ def register():
             current_app.logger.error(
                 'Register failed: phone=%s email=%s role=%s company_id=%s must_complete_profile=%s '
                 'pw_set=%s created_at=%s first_name=%s',
-                normalized_phone, email, user.role, user.company_id,
-                user.must_complete_profile, bool(user.password_hash),
-                user.created_at, user.first_name,
+                normalized_phone,
+                email,
+                user.role,
+                user.company_id,
+                user.must_complete_profile,
+                bool(user.password_hash),
+                user.created_at,
+                user.first_name,
             )
             err_msg = str(e).lower()
             if 'unique' in err_msg or 'duplicate' in err_msg:
@@ -478,6 +477,7 @@ def setup_profile():
             # Capture in Sentry with onboarding context
             try:
                 import sentry_sdk
+
                 sentry_sdk.capture_exception(e)
                 sentry_sdk.set_tag('onboarding_step', 'setup_profile')
                 sentry_sdk.set_tag('company_name_attempt', company_name)
@@ -530,6 +530,7 @@ def setup_profile_required():
         '/static/',
     )
     from flask import request as _req
+
     path = _req.path
     if any(path.startswith(p) for p in allowed):
         return None
@@ -622,7 +623,7 @@ def google_register():
             flash(phone_error, 'danger')
             return redirect(url_for('auth.google_register'))
 
-        if User.query.filter_by(phone=normalized_phone).first():
+        if User.query.filter(User.phone.in_((normalized_phone, '0' + normalized_phone))).first():
             flash('Phone number already registered.', 'danger')
             return redirect(url_for('auth.google_register'))
 
@@ -694,8 +695,8 @@ def forgot_password():
             or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
         )
         if looks_like_phone:
-            is_valid, normalized, _ = validate_ethiopian_phone(login_id)
-            if is_valid:
+            normalized = _login_phone(login_id)
+            if normalized:
                 identity_type = 'phone'
                 identity_value = normalized
         if identity_type is None and '@' in login_id:
@@ -708,7 +709,7 @@ def forgot_password():
 
         # Find user
         if identity_type == 'phone':
-            user = User.query.filter_by(phone=identity_value).first()
+            user = _phone_user(identity_value)
         else:
             user = User.query.filter_by(email=identity_value).first()
 
@@ -757,9 +758,8 @@ def reset_password_verify():
             flash('Too many attempts. Please start over.', 'danger')
             return redirect(url_for('auth.forgot_password'))
 
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
         if identity['type'] == 'phone':
-            user = User.query.filter_by(phone=identity['value']).first()
+            user = _phone_user(identity['value'])
         else:
             user = User.query.filter_by(email=identity['value']).first()
 
@@ -815,7 +815,7 @@ def reset_password_new():
 
         # Look up user by the preserved identity
         if identity['type'] == 'phone':
-            user = User.query.filter_by(phone=identity['value']).first()
+            user = _phone_user(identity['value'])
         else:
             user = User.query.filter_by(email=identity['value']).first()
 

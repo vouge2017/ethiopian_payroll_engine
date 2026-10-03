@@ -81,8 +81,8 @@ def _create_completed_run(app, company_id, user_id, approved_minutes_ago=30):
 
         ps = Payslip(
             payroll_run_id=run.id,
+            company_id=run.company_id,
             employee_id=1,  # doesn't need to exist for this test
-            company_id=company_id,  # P0-F: not-null constraint
             gross_salary=10000,
             tax=1000,
             employee_pension=700,

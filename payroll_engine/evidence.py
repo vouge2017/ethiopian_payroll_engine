@@ -143,7 +143,14 @@ def collect_evidence(current_run_id, company_id, db, models, change_summary=None
 
     # Check 1: All employees processed
     processed_ids = {ps.employee_id for ps in payslips}
-    active_ids = {e.id for e in employees}
+    employee_by_id = {employee.id: employee for employee in employees}
+    active_ids = set(employee_by_id)
+    # Reuse active employees and fetch other referenced IDs in one scoped read.
+    # Keep the model's existing soft-delete policy for this performance slice.
+    other_ids = processed_ids - active_ids
+    if other_ids:
+        others = Employee.query.filter_by(company_id=company_id).filter(Employee.id.in_(other_ids)).all()
+        employee_by_id.update((employee.id, employee) for employee in others)
     missing = active_ids - processed_ids
     extra = processed_ids - active_ids
 
@@ -183,7 +190,7 @@ def collect_evidence(current_run_id, company_id, db, models, change_summary=None
     # Check 2: No validation errors (payslip amounts make sense)
     validation_errors = []
     for ps in payslips:
-        emp = Employee.query.filter_by(id=ps.employee_id, company_id=company_id).first()
+        emp = employee_by_id.get(ps.employee_id)
         if not emp:
             continue
         if ps.net_pay and ps.net_pay < 0:

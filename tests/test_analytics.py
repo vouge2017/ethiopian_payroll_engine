@@ -102,6 +102,7 @@ def _setup(app, num_employees=3, departments=None):
 
         draft = PayrollDraft(
             payroll_run_id=run.id,
+            company_id=company.id,
             employee_data=employees_data,
         )
         db.session.add(draft)
@@ -200,7 +201,10 @@ class TestAnalyticsData:
             company = Company.query.first()
             runs = PayrollRun.query.filter_by(company_id=company.id, status='completed').all()
             run_ids = [r.id for r in runs]
-            payslips = Payslip.query.filter(Payslip.payroll_run_id.in_(run_ids)).all()
+            payslips = Payslip.query.filter(
+                Payslip.company_id == company.id,
+                Payslip.payroll_run_id.in_(run_ids),
+            ).all()
 
             dept_costs = {}
             for ps in payslips:

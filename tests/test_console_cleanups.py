@@ -4,6 +4,7 @@ The favicon was 404-ing in the console because no /favicon.ico file existed
 and no Flask route served it. Password fields lacked `autocomplete` attributes,
 producing a Chrome DevTools warning.
 """
+
 import os
 
 import pytest
@@ -42,11 +43,14 @@ def test_csrf_400_shows_friendly_page(app):
     app.config['WTF_CSRF_ENABLED'] = True
 
     client = app.test_client()
-    r = client.post('/auth/register', data={
-        'phone': '0911234567',
-        'password': 'TestPass#123',
-        'password2': 'TestPass#123',
-    })
+    r = client.post(
+        '/auth/register',
+        data={
+            'phone': '0911234567',
+            'password': 'TestPass#123',
+            'password2': 'TestPass#123',
+        },
+    )
     # Either: friendly page rendered (200), or redirected back to /auth/register
     # with a flash. In both cases the body must contain the friendly message
     # text — never the raw 400.
@@ -60,11 +64,7 @@ def test_csrf_400_shows_friendly_page(app):
         assert r.status_code == 200
     body = r.get_data(as_text=True).lower()
     # Must mention the friendly message OR a flash
-    assert (
-        'session expired' in body
-        or 'refresh' in body
-        or 'session_expired' in body
-    ), (
+    assert 'session expired' in body or 'refresh' in body or 'session_expired' in body, (
         f'CSRF 400 must be converted to a friendly page. Got body: {body[:300]!r}'
     )
 
@@ -87,8 +87,8 @@ PASSWORD_AUTOCOMPLETE_CASES = [
     ('/auth/register', 'password2', 'new-password'),
     ('/auth/accept-invite', 'password', 'new-password'),
     ('/auth/accept-invite', 'password2', 'new-password'),
-    ('/auth/reset-password', 'password', 'new-password'),
-    ('/auth/reset-password', 'password2', 'new-password'),
+    ('/auth/reset-password/new', 'password', 'new-password'),
+    ('/auth/reset-password/new', 'password2', 'new-password'),
 ]
 
 
@@ -97,17 +97,20 @@ def test_password_field_has_correct_autocomplete(app, path, field_name, expected
     """Every password input must declare the correct autocomplete token
     to silence Chrome's DOM warning."""
     client = app.test_client()
+    if path == '/auth/reset-password/new':
+        with client.session_transaction() as session:
+            session['reset_identity'] = {'verified': True, 'type': 'phone', 'value': '911234567'}
     r = client.get(path, follow_redirects=True)
     if r.status_code != 200:
         pytest.skip(f'{path} returned {r.status_code}; skipping')
     html = r.get_data(as_text=True)
     # Find the input with this name and assert its autocomplete attribute
     import re
+
     pattern = rf'<input[^>]+name="{field_name}"[^>]*>'
     m = re.search(pattern, html)
     assert m is not None, f'{path}: no <input name="{field_name}"> found'
     tag = m.group(0)
     assert f'autocomplete="{expected_autocomplete}"' in tag, (
-        f'{path}: <input name="{field_name}"> must have '
-        f'autocomplete="{expected_autocomplete}", got: {tag}'
+        f'{path}: <input name="{field_name}"> must have autocomplete="{expected_autocomplete}", got: {tag}'
     )

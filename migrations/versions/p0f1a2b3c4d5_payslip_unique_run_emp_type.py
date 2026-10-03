@@ -8,13 +8,13 @@ Revision ID: p0f1a2b3c4d5
 Revises: f4a5b6c7d8e9
 Create Date: 2026-08-30 22:00:00.000000
 """
-import sqlalchemy as sa
 from alembic import op
 
 revision = 'p0f1a2b3c4d5'
 down_revision = 'f4a5b6c7d8e9'
 branch_labels = None
-depends_on = None
+# This branch's parent predates the column used by the constraint.
+depends_on = 'r8s9t0u1v2w3'
 
 
 def upgrade():

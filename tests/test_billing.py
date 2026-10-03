@@ -114,9 +114,7 @@ def test_employee_slot_cap(app):
 
     c = _company(plan_code='free')  # max 5
     for i in range(5):
-        db.session.add(
-            Employee(company_id=c.id, name=f'E{i}', employee_id=f'EMP{i:03d}', basic_salary=100)
-        )
+        db.session.add(Employee(company_id=c.id, name=f'E{i}', employee_id=f'EMP{i:03d}', basic_salary=100))
     db.session.commit()
     ok, err = check_employee_slot(c)
     assert not ok and '5 employees' in err
@@ -141,9 +139,13 @@ def _login(client, user):
 
 
 def _owner(company_id=None, platform=False):
-    u = User(email=f'{"plat" if platform else "own"}{datetime.utcnow().timestamp()}@t.et',
-             password_hash='x', role='owner',
-             company_id=company_id, is_platform_admin=platform)
+    u = User(
+        email=f'{"plat" if platform else "own"}{datetime.utcnow().timestamp()}@t.et',
+        password_hash='x',
+        role='owner',
+        company_id=company_id,
+        is_platform_admin=platform,
+    )
     db.session.add(u)
     db.session.commit()
     return u
@@ -191,14 +193,19 @@ def test_tenant_can_submit_payment_reference(app):
     with app.app_context():
         c = _company(plan_code='free')
         owner = _owner(c.id)
-        uid, cid = owner.id, c.id
+        uid = owner.id
+
     def login(client, uid):
         with client.session_transaction() as sess:
-            sess['_user_id'] = str(uid); sess['_fresh'] = True
+            sess['_user_id'] = str(uid)
+            sess['_fresh'] = True
+
     login(client, uid)
-    resp = client.post('/billing/submit-payment',
+    resp = client.post(
+        '/billing/submit-payment',
         data={'period_month': '2026-09', 'plan_code': 'standard', 'reference': 'FT123'},
-        follow_redirects=True)
+        follow_redirects=True,
+    )
     assert resp.status_code == 200
     with app.app_context():
         p = BillingPayment.query.one()
@@ -211,20 +218,25 @@ def test_operator_confirm_activates_company(app):
     with app.app_context():
         c = _company(plan_code='free')
         opco = _company(name='Platform HQ')
-        operator = User(email='op@t.et', password_hash='x', role='owner',
-                        company_id=opco.id, is_platform_admin=True)
+        operator = User(email='op@t.et', password_hash='x', role='owner', company_id=opco.id, is_platform_admin=True)
         db.session.add(operator)
         db.session.flush()
-        pay = BillingPayment(company_id=c.id, plan_code='standard',
-                             amount_etb=500, period_month='2026-09',
-                             reference='FT-SEED', status='pending')
+        pay = BillingPayment(
+            company_id=c.id,
+            plan_code='standard',
+            amount_etb=500,
+            period_month='2026-09',
+            reference='FT-SEED',
+            status='pending',
+        )
         db.session.add(pay)
         db.session.commit()
         pid, oid, cid = pay.id, operator.id, c.id
 
     client = app.test_client()
     with client.session_transaction() as sess:
-        sess['_user_id'] = str(oid); sess['_fresh'] = True
+        sess['_user_id'] = str(oid)
+        sess['_fresh'] = True
     resp = client.post(f'/platform/payments/{pid}/confirm', follow_redirects=True)
     assert resp.status_code == 200
 
@@ -235,5 +247,3 @@ def test_operator_confirm_activates_company(app):
         assert company.plan_code == 'standard'
         assert str(company.paid_until) == '2026-09-30'
         assert BillingPayment.query.get(pid).status == 'confirmed'
-
-

@@ -12,18 +12,13 @@ the actual route handlers, Jinja templates, and database. No mocks.
 This is the closest test we can run without a live browser. A
 Playwright version is available in qa/ for visual verification.
 """
-import io
-import os
 
 import pytest
 
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
-    Employee,
-    EmployeeAllowance,
     PayrollRun,
-    Payslip,
     User,
 )
 
@@ -56,6 +51,7 @@ def owner_user(app):
         db.session.commit()
         # Bind user to company
         from payroll_engine.models import UserCompany
+
         uc = UserCompany(user_id=u.id, company_id=co.id, role='owner')
         db.session.add(uc)
         db.session.commit()
@@ -63,15 +59,19 @@ def owner_user(app):
 
 
 def _login(client, phone, password):
-    return client.post('/auth/login', data={
-        'login_id': phone,
-        'password': password,
-    }, follow_redirects=True)
+    return client.post(
+        '/auth/login',
+        data={
+            'login_id': phone,
+            'password': password,
+        },
+        follow_redirects=True,
+    )
 
 
 def test_accountant_login_renders_dashboard(client, owner_user):
     """P1-A: login → dashboard."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     r = _login(client, '0911111111', 'StrongPass!2026')
     # After login, dashboard or onboarding page
     assert r.status_code == 200
@@ -82,7 +82,7 @@ def test_accountant_login_renders_dashboard(client, owner_user):
 
 def test_employee_list_page_renders(client, owner_user):
     """P1-A: /employees page renders."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
     r = client.get('/employees', follow_redirects=True)
     assert r.status_code == 200
@@ -90,7 +90,7 @@ def test_employee_list_page_renders(client, owner_user):
 
 def test_payroll_upload_page_renders(client, owner_user):
     """P1-A: /payroll page (upload) renders."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
     r = client.get('/payroll', follow_redirects=True)
     assert r.status_code == 200
@@ -98,7 +98,7 @@ def test_payroll_upload_page_renders(client, owner_user):
 
 def test_payroll_cockpit_renders(client, owner_user):
     """P1-A: /payroll/cockpit renders."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
     r = client.get('/payroll/cockpit', follow_redirects=True)
     assert r.status_code == 200
@@ -106,20 +106,24 @@ def test_payroll_cockpit_renders(client, owner_user):
 
 def test_employee_create_then_listed(client, owner_user):
     """P1-A: add an employee via the form, then see them in the list."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
 
     # Submit add-employee form
-    r = client.post('/employees/add', data={
-        'first_name': 'Abebe',
-        'father_name': 'Kebede',
-        'grandfather_name': 'Tadesse',
-        'employee_id': 'E-001',
-        'basic_salary': '5000',
-        'employee_type': 'monthly',
-        'department': 'Engineering',
-        'position': 'Engineer',
-    }, follow_redirects=True)
+    r = client.post(
+        '/employees/add',
+        data={
+            'first_name': 'Abebe',
+            'father_name': 'Kebede',
+            'grandfather_name': 'Tadesse',
+            'employee_id': 'E-001',
+            'basic_salary': '5000',
+            'employee_type': 'monthly',
+            'department': 'Engineering',
+            'position': 'Engineer',
+        },
+        follow_redirects=True,
+    )
     assert r.status_code == 200
 
     # Check the list
@@ -131,26 +135,30 @@ def test_employee_create_then_listed(client, owner_user):
 
 def test_payroll_full_run_workflow(client, owner_user):
     """P1-A: complete payroll run via the upload + approve path."""
-    from payroll_engine.models import PayrollRun
-    u_id, co_id = owner_user
+    _u_id, co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
 
     # Add employee
-    client.post('/employees/add', data={
-        'first_name': 'Abebe',
-        'father_name': 'Kebede',
-        'grandfather_name': 'Tadesse',
-        'employee_id': 'E-001',
-        'basic_salary': '5000',
-        'employee_type': 'monthly',
-        'department': 'Engineering',
-        'position': 'Engineer',
-    }, follow_redirects=True)
+    client.post(
+        '/employees/add',
+        data={
+            'first_name': 'Abebe',
+            'father_name': 'Kebede',
+            'grandfather_name': 'Tadesse',
+            'employee_id': 'E-001',
+            'basic_salary': '5000',
+            'employee_type': 'monthly',
+            'department': 'Engineering',
+            'position': 'Engineer',
+        },
+        follow_redirects=True,
+    )
 
     # Create a payroll run via the form (payroll/upload is the entry point;
     # register is GET-only). Use the API to create one directly so the
     # workflow can continue.
     from datetime import date
+
     period = f'{date.today().year}-{date.today().month:02d}'
     r = client.get('/payroll/register', follow_redirects=True)
     assert r.status_code in (200, 302)
@@ -158,7 +166,10 @@ def test_payroll_full_run_workflow(client, owner_user):
     # Create a run directly via DB for the workflow test
     with client.application.app_context():
         run = PayrollRun(
-            company_id=co_id, period=period, status='review', source='test',
+            company_id=co_id,
+            period=period,
+            status='review',
+            source='test',
         )
         db.session.add(run)
         db.session.commit()
@@ -171,7 +182,7 @@ def test_payroll_full_run_workflow(client, owner_user):
 
 def test_payslip_view_renders(client, owner_user):
     """P1-A: /payslips/<id>/download returns 200 or 404 (not 500)."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
     # Try a non-existent payslip — should be 404, not 500
     r = client.get('/payslips/99999/download', follow_redirects=True)
@@ -188,7 +199,7 @@ def test_dashboard_redirects_when_not_logged_in(client):
 
 def test_reports_page_renders(client, owner_user):
     """P1-A: /reports renders."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
     r = client.get('/reports', follow_redirects=True)
     assert r.status_code == 200
@@ -196,7 +207,7 @@ def test_reports_page_renders(client, owner_user):
 
 def test_audit_log_renders(client, owner_user):
     """P1-A: /audit-log renders."""
-    u_id, co_id = owner_user
+    _u_id, _co_id = owner_user
     _login(client, '0911111111', 'StrongPass!2026')
     r = client.get('/audit-log', follow_redirects=True)
     assert r.status_code == 200

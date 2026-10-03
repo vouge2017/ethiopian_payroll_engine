@@ -35,7 +35,7 @@ def app():
         db.drop_all()
 
 
-def _login(client, app, plan='standard'):
+def _login(client, app, plan='pro'):
     """Login as owner. Uses standard plan to allow enough employees."""
     with app.app_context():
         company = Company(name='TestCo', plan_code=plan)
@@ -91,11 +91,11 @@ def test_employee_accepts_ethiopian_phone(app):
 def test_employee_accepts_international_phone(app):
     """Employee phone field accepts non-Ethiopian phone numbers."""
     test_phones = [
-        ('+254712345678', '+254712345678'),     # Kenya
-        ('+1 555 123 4567', '+15551234567'),    # US (spaces stripped)
+        ('+254712345678', '+254712345678'),  # Kenya
+        ('+1 555 123 4567', '+15551234567'),  # US (spaces stripped)
         ('+44 20 7946 0958', '+442079460958'),  # UK
-        ('+971501234567', '+971501234567'),     # UAE
-        ('+86 138 0013 8000', '+8613800138000'), # China
+        ('+971501234567', '+971501234567'),  # UAE
+        ('+86 138 0013 8000', '+8613800138000'),  # China
     ]
 
     with app.test_client() as client:

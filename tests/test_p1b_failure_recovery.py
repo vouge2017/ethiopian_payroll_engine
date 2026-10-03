@@ -12,6 +12,7 @@ without silent corruption:
 - Cron without secret → 401
 - Cron with wrong secret → 401
 """
+
 import pytest
 
 from payroll_engine import create_app, db
@@ -32,9 +33,8 @@ def app():
 
 def test_invalid_salary_rejected(app):
     """P1-B: negative salary raises ValueError, no row created."""
-    with app.app_context():
-        with pytest.raises(ValueError):
-            calculate_payroll(basic_salary=-1000, allowances=0)
+    with app.app_context(), pytest.raises(ValueError):
+        calculate_payroll(basic_salary=-1000, allowances=0)
 
 
 def test_invalid_employee_form_rejected(app):
@@ -50,29 +50,41 @@ def test_invalid_employee_form_rejected(app):
         db.session.add(u)
         db.session.commit()
         from payroll_engine.models import UserCompany
+
         db.session.add(UserCompany(user_id=u.id, company_id=co.id, role='owner'))
         db.session.commit()
         co_id = co.id
 
     # Login
-    r = client.post('/auth/login', data={
-        'login_id': '0911111111', 'password': 'StrongPass!2026',
-    }, follow_redirects=True)
+    r = client.post(
+        '/auth/login',
+        data={
+            'login_id': '0911111111',
+            'password': 'StrongPass!2026',
+        },
+        follow_redirects=True,
+    )
     # Submit empty form
-    r = client.post('/employees/add', data={
-        'first_name': '', 'employee_id': '', 'basic_salary': 'abc',
-    }, follow_redirects=True)
+    r = client.post(
+        '/employees/add',
+        data={
+            'first_name': '',
+            'employee_id': '',
+            'basic_salary': 'abc',
+        },
+        follow_redirects=True,
+    )
     # Should not 500; either 200 (with form error) or 400
     assert r.status_code in (200, 400, 302)
-    with app.app_context():
+    with app.app_context(), TenantQuery.tenant_context(co_id):
         # No employee should have been created
-        with TenantQuery.tenant_context(co_id):
-            assert Employee.query.count() == 0
+        assert Employee.query.count() == 0
 
 
 def test_payslip_uniqueness_via_db(app):
     """P1-B: duplicate (run, employee, type) is rejected by DB constraint."""
     from sqlalchemy.exc import IntegrityError
+
     from payroll_engine.models import PayrollRun
 
     with app.app_context():
@@ -83,21 +95,23 @@ def test_payslip_uniqueness_via_db(app):
         u.set_password('x' * 12)
         db.session.add(u)
         db.session.commit()
-        emp = Employee(company_id=co.id, employee_id='E1', name='A',
-                       basic_salary=1000)
+        emp = Employee(company_id=co.id, employee_id='E1', name='A', basic_salary=1000)
         db.session.add(emp)
         db.session.commit()
-        run = PayrollRun(company_id=co.id, period='2026-01',
-                         status='review', source='test')
+        run = PayrollRun(company_id=co.id, period='2026-01', status='review', source='test')
         db.session.add(run)
         db.session.commit()
 
         r = calculate_payroll(basic_salary=1000, allowances=0)
         ps1 = Payslip(
-            company_id=co.id, payroll_run_id=run.id, employee_id=emp.id,
-            gross_salary=r['gross'], tax=r['tax'],
+            company_id=co.id,
+            payroll_run_id=run.id,
+            employee_id=emp.id,
+            gross_salary=r['gross'],
+            tax=r['tax'],
             employee_pension=r['pension_employee'],
-            employer_pension=r['pension_employer'], net_pay=r['net'],
+            employer_pension=r['pension_employer'],
+            net_pay=r['net'],
             payslip_type='regular',
         )
         db.session.add(ps1)
@@ -105,10 +119,14 @@ def test_payslip_uniqueness_via_db(app):
 
         # Duplicate insert
         ps2 = Payslip(
-            company_id=co.id, payroll_run_id=run.id, employee_id=emp.id,
-            gross_salary=r['gross'], tax=r['tax'],
+            company_id=co.id,
+            payroll_run_id=run.id,
+            employee_id=emp.id,
+            gross_salary=r['gross'],
+            tax=r['tax'],
             employee_pension=r['pension_employee'],
-            employer_pension=r['pension_employer'], net_pay=r['net'],
+            employer_pension=r['pension_employer'],
+            net_pay=r['net'],
             payslip_type='regular',
         )
         db.session.add(ps2)
@@ -128,6 +146,7 @@ def test_healthz_returns_200(app):
 def test_idempotency_replay_no_double_execute(app):
     """P1-B: same Idempotency-Key twice → handler runs once."""
     from payroll_engine.idempotency import idempotent
+
     counter = {'n': 0}
 
     @app.route('/_test_fail', methods=['POST'])
@@ -137,7 +156,7 @@ def test_idempotency_replay_no_double_execute(app):
         return 'ok'
 
     client = app.test_client()
-    r1 = client.post('/_test_fail', headers={'Idempotency-Key': 'fail-1'})
+    _r1 = client.post('/_test_fail', headers={'Idempotency-Key': 'fail-1'})
     r2 = client.post('/_test_fail', headers={'Idempotency-Key': 'fail-1'})
     assert counter['n'] == 1
     assert r2.headers.get('Idempotent-Replay') == 'true'
@@ -151,10 +170,8 @@ def test_tenant_isolation_blocks_cross_tenant_lookup(app):
         db.session.add_all([co_a, co_b])
         db.session.commit()
 
-        emp_a = Employee(company_id=co_a.id, employee_id='E1', name='A',
-                         basic_salary=1000)
-        emp_b = Employee(company_id=co_b.id, employee_id='E1', name='B',
-                         basic_salary=1000)
+        emp_a = Employee(company_id=co_a.id, employee_id='E1', name='A', basic_salary=1000)
+        emp_b = Employee(company_id=co_b.id, employee_id='E1', name='B', basic_salary=1000)
         db.session.add_all([emp_a, emp_b])
         db.session.commit()
 

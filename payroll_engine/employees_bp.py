@@ -5,6 +5,7 @@ import io
 import os
 import uuid
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
@@ -20,9 +21,73 @@ from payroll_engine.models import (
     OvertimeEntry,
     Payslip,
 )
+from payroll_engine.models_payroll_elements import (
+    PayItemClassification,
+    PayItemType,
+    PayrollItemAssignment,
+)
 from payroll_engine.shared import _company_id, create_audit_log, create_notification, role_required
 
 employees_bp = Blueprint('employees', __name__)
+
+
+# ---------------------------------------------------------------------------
+# Pay item catalog helpers (elements architecture)
+#
+# Company catalogs are seeded by `flask migrate-pay-items`. These helpers read
+# the per-company PayItemType rows so routes never hardcode an allowance/deduction
+# type list or a regulatory rule.
+# ---------------------------------------------------------------------------
+
+#: Pay items the engine owns. Users may not create assignments for these
+#: (AC5) — the engine derives pension and tax from basic salary every period.
+SYSTEM_MANAGED_KEYS = frozenset({'income_tax', 'employee_pension', 'employer_pension'})
+
+
+def company_pay_items(classification=None, include_system=False):
+    """Active PayItemType rows for the current company, newest catalog first.
+
+    Args:
+        classification: optional PayItemClassification to filter by.
+        include_system: when True also returns the system catalog rows
+            (company_id IS NULL), e.g. for display. Assigning to them is
+            still rejected by assert_assignable_item.
+    """
+    company_id = _company_id()
+    q = PayItemType.query.filter(
+        PayItemType.is_active.is_(True),
+        db.or_(
+            PayItemType.company_id == company_id,
+            PayItemType.company_id.is_(None) if include_system else False,
+        ),
+    )
+    if classification is not None:
+        q = q.filter(PayItemType.classification == classification)
+    return q.order_by(PayItemType.sort_order, PayItemType.id).all()
+
+
+def assert_assignable_item(item_key):
+    """Return the PayItemType for item_key, or None after flashing why not.
+
+    Enforces that the key exists in the ACTIVE company catalog and that it is
+    not an engine-managed system item (AC5).
+    """
+    item = PayItemType.query.filter_by(company_id=_company_id(), key=item_key, is_active=True).first()
+    if item is None:
+        flash(
+            f'"{item_key}" is not a pay item in your company catalog. '
+            'Run "flask migrate-pay-items" or pick a different item.',
+            'danger',
+        )
+        return None
+    if item.key in SYSTEM_MANAGED_KEYS or item.is_system:
+        flash(
+            f'"{item.name_en}" is calculated by the system each period and cannot be '
+            'assigned manually. Remove the assignment from the pay item settings instead.',
+            'danger',
+        )
+        return None
+    return item
 
 
 @employees_bp.before_request
@@ -45,6 +110,7 @@ def list_employees():
     # Filter out soft-deleted employees by default
     show_archived = request.args.get('archived', '') == '1'
     from sqlalchemy.orm import defer
+
     query = Employee.query.options(
         defer(Employee.bank_account),
         defer(Employee.tin),
@@ -491,7 +557,7 @@ def employee_detail(emp_id):
             {
                 'entry': entry,
                 'pay': pay,
-                'rate': OVERTIME_RATES.get(entry.overtime_type, 1.0),
+                'rate': OVERTIME_RATES.get(entry.overtime_type, Decimal('1')),
             }
         )
         total_ot_hours += entry.hours
@@ -518,10 +584,13 @@ def employee_detail(emp_id):
         deductions=deductions,
         active_deductions=active_deductions,
         inactive_deductions=inactive_deductions,
-        deduction_types=EmployeeDeduction.DEDUCTION_TYPES,
+        deduction_types=[(i.key, i.name_en) for i in company_pay_items(PayItemClassification.DEDUCTION)],
         allowance_records=emp.allowance_records,
-        allowance_types=EmployeeAllowance.ALLOWANCE_TYPES,
-        tax_treatments=EmployeeAllowance.TAX_TREATMENTS,
+        # Per-company catalog drives the dropdowns. The legacy
+        # EmployeeAllowance.ALLOWANCE_TYPES / TAX_TREATMENTS class enums are no
+        # longer consulted; tax treatment now comes from the PayItemType row.
+        allowance_types=[(i.key, i.name_en) for i in company_pay_items(PayItemClassification.EARNING)],
+        tax_treatments=[],
     )
 
 
@@ -582,16 +651,14 @@ def add_allowance(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
 
     allowance_type = request.form.get('allowance_type', '').strip()
-    custom_type_name = request.form.get('custom_type_name', '').strip() or None
     amount_str = request.form.get('amount', '0').strip()
-    tax_treatment = request.form.get('tax_treatment', 'taxable').strip()
-    exempt_cap_str = request.form.get('exempt_cap_amount', '').strip()
-    regulation_ref = request.form.get('regulation_reference', '').strip() or None
 
-    # Validate
-    valid_types = [t[0] for t in EmployeeAllowance.ALLOWANCE_TYPES]
-    if allowance_type not in valid_types:
-        flash('Invalid allowance type.', 'danger')
+    # Validate against the COMPANY CATALOG, not a class-level enum.
+    item = assert_assignable_item(allowance_type)
+    if item is None:
+        return redirect(url_for('employees.employee_detail', emp_id=emp_id))
+    if item.classification != PayItemClassification.EARNING:
+        flash(f'"{item.name_en}" is not an earning and cannot be added as an allowance.', 'danger')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
     try:
@@ -603,43 +670,21 @@ def add_allowance(emp_id):
         flash('Amount must be positive.', 'danger')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
-    valid_treatments = [t[0] for t in EmployeeAllowance.TAX_TREATMENTS]
-    if tax_treatment not in valid_treatments:
-        flash('Invalid tax treatment.', 'danger')
-        return redirect(url_for('employees.employee_detail', emp_id=emp_id))
+    # Tax treatment and the exempt cap come from the catalog row. The route
+    # used to hardcode `transport -> min(2200, 25% of basic)` and
+    # `hardship -> partial`; both now live in catalog.COMPANY_TEMPLATE_ITEMS.
+    tax_treatment = item.tax_treatment
 
-    exempt_cap = None
-    if exempt_cap_str:
-        try:
-            exempt_cap = Decimal(exempt_cap_str)
-        except (InvalidOperation, ValueError):
-            flash('Invalid exempt cap amount.', 'danger')
-            return redirect(url_for('employees.employee_detail', emp_id=emp_id))
-
-    # Apply regulatory rules for known types
-    if allowance_type == 'transport':
-        # Transport: exempt up to ETB 2,200 or 25% of basic (whichever is lower)
-        cap = min(Decimal('2200'), emp.basic_salary * Decimal('0.25'))
-        tax_treatment = 'partial'
-        exempt_cap = cap
-        regulation_ref = regulation_ref or 'Income Tax Proclamation - Transport Allowance Exemption'
-    elif allowance_type == 'hardship':
-        # Hardship: zone-based, partial exemption
-        tax_treatment = 'partial'
-        regulation_ref = regulation_ref or 'Directive No. 21/2001, 102/2007'
-
-    allowance = EmployeeAllowance(
+    assignment = PayrollItemAssignment(
         company_id=_company_id(),
         employee_id=emp.id,
-        allowance_type=allowance_type,
-        custom_type_name=custom_type_name,
-        amount=amount,
-        tax_treatment=tax_treatment,
-        exempt_cap_amount=exempt_cap,
-        regulation_reference=regulation_ref,
+        pay_item_type_id=item.id,
+        fixed_amount=amount,
+        custom_label=None,
         is_active=True,
     )
-    db.session.add(allowance)
+    db.session.add(assignment)
+    db.session.flush()
 
     create_audit_log(
         company_id=_company_id(),
@@ -648,9 +693,10 @@ def add_allowance(emp_id):
         details={
             'employee_id': emp.employee_id,
             'employee_name': emp.name,
-            'allowance_type': allowance_type,
+            'item_key': item.key,
             'amount': str(amount),
             'tax_treatment': tax_treatment,
+            'assignment_id': assignment.id,
         },
     )
     db.session.commit()
@@ -658,7 +704,7 @@ def add_allowance(emp_id):
 
     trust_cache.invalidate_trust_cache(_company_id())
 
-    flash(f'{allowance.type_label} of ETB {amount:,.2f} added for {emp.name}.', 'success')
+    flash(f'{item.name_en} of ETB {amount:,.2f} added for {emp.name}.', 'success')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
 
@@ -699,18 +745,20 @@ def add_deduction(emp_id):
     end_date_str = request.form.get('end_date', '').strip()
     reference_number = request.form.get('reference_number', '').strip() or None
 
-    # Validate required fields
-    valid_types = [t[0] for t in EmployeeDeduction.DEDUCTION_TYPES]
-    if deduction_type not in valid_types:
-        flash('Invalid deduction type.', 'danger')
+    # Validate against the COMPANY CATALOG, not EmployeeDeduction.DEDUCTION_TYPES.
+    item = assert_assignable_item(deduction_type)
+    if item is None:
+        return redirect(url_for('employees.employee_detail', emp_id=emp_id))
+    if item.classification != PayItemClassification.DEDUCTION:
+        flash(f'"{item.name_en}" is not a deduction and cannot be added as a deduction.', 'danger')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
     if not label:
         flash('Label is required (e.g. "MoE Batch 2024-07").', 'danger')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
-    if amount_mode not in EmployeeDeduction.AMOUNT_MODES:
+    if amount_mode not in ('fixed', 'percentage'):
         flash('Invalid amount mode.', 'danger')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
-    if tracking_mode not in EmployeeDeduction.TRACKING_MODES:
+    if tracking_mode not in ('declining', 'date_bounded'):
         flash('Invalid tracking mode.', 'danger')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
@@ -784,32 +832,35 @@ def add_deduction(emp_id):
             document_path = os.path.join(upload_dir, filename)
             file.save(document_path)
 
-    # Court order cap validation
-    if deduction_type == 'court_order' and amount_mode == 'percentage' and amount > Decimal('50'):
+    # Legal ceiling, read from the catalog row (was hardcoded to
+    # `deduction_type == 'court_order' and amount > 50`).
+    max_pct = item.max_percent_of_net
+    if amount_mode == 'percentage' and max_pct is not None and amount > Decimal(max_pct):
         flash(
-            f'Warning: Court order deduction is {amount}% of net pay. '
-            f'Ethiopian labor law caps at 1/3 (33.33%) standard, 1/2 (50%) for child support.',
+            f'Warning: {item.name_en} is {amount}% of net pay. '
+            f'The catalog ceiling for this item is {max_pct}% '
+            f'({item.regulation_reference or "see pay item settings"}).',
             'warning',
         )
 
-    deduction = EmployeeDeduction(
+    assignment = PayrollItemAssignment(
         company_id=_company_id(),
         employee_id=emp.id,
-        deduction_type=deduction_type,
-        label=label,
-        amount_mode=amount_mode,
-        amount=amount,
+        pay_item_type_id=item.id,
+        fixed_amount=amount if amount_mode == 'fixed' else None,
+        percent_of_net=amount if amount_mode == 'percentage' else None,
+        custom_label=label,
+        reference_number=reference_number,
+        document_path=document_path,
         tracking_mode=tracking_mode,
         total_to_recover=total_to_recover,
         remaining_balance=remaining_balance,
-        start_date=start_date,
+        effective_date=start_date,
         end_date=end_date,
-        reference_number=reference_number,
-        document_path=document_path,
         is_active=True,
-        created_by=current_user.id,
     )
-    db.session.add(deduction)
+    db.session.add(assignment)
+    db.session.flush()
 
     create_audit_log(
         company_id=_company_id(),
@@ -818,12 +869,13 @@ def add_deduction(emp_id):
         details={
             'employee_id': emp.employee_id,
             'employee_name': emp.name,
-            'deduction_type': deduction_type,
+            'item_key': item.key,
             'label': label,
             'amount': str(amount),
             'amount_mode': amount_mode,
             'tracking_mode': tracking_mode,
             'reference_number': reference_number,
+            'assignment_id': assignment.id,
         },
     )
     db.session.commit()
@@ -1098,8 +1150,7 @@ def employee_leave_balance(emp_id):
 
     # Get leave history
     leaves = (
-        Leave.query
-        .filter_by(employee_id=emp.id, company_id=_company_id())
+        Leave.query.filter_by(employee_id=emp.id, company_id=_company_id())
         .order_by(Leave.applied_at.desc())
         .limit(20)
         .all()

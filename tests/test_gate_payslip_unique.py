@@ -10,6 +10,7 @@ Three things this test asserts:
   2. Inserting a duplicate (run, employee, 'regular') raises IntegrityError.
   3. A 'regular' + 'adjustment' pair for the same (run, employee) is allowed.
 """
+
 from datetime import date
 
 import pytest
@@ -62,8 +63,7 @@ def test_model_declares_unique_constraint():
     """The model must declare UNIQUE(payroll_run_id, employee_id, payslip_type)."""
     constraints = {c.name for c in Payslip.__table__.constraints if hasattr(c, 'name') and c.name}
     assert 'uq_payslip_run_emp_type' in constraints, (
-        f"Payslip model is missing 'uq_payslip_run_emp_type'. "
-        f"Found: {sorted(constraints)}"
+        f"Payslip model is missing 'uq_payslip_run_emp_type'. Found: {sorted(constraints)}"
     )
 
 
@@ -137,10 +137,5 @@ def test_regular_and_adjustment_can_coexist(app):
         db.session.add(adjustment)
         db.session.commit()
 
-        rows = (
-            db.session.query(Payslip)
-            .filter_by(payroll_run_id=run_id, employee_id=emp_id)
-            .order_by(Payslip.id)
-            .all()
-        )
+        rows = db.session.query(Payslip).filter_by(payroll_run_id=run_id, employee_id=emp_id).order_by(Payslip.id).all()
         assert [r.payslip_type for r in rows] == ['regular', 'adjustment']

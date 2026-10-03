@@ -5,10 +5,7 @@ Tests for P0 features:
 3. Concurrency and locking
 """
 
-from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-
-import pytest
 
 from payroll_engine.services.adjustment_service import (
     AdjustmentResult,
@@ -19,7 +16,6 @@ from payroll_engine.services.month_close import (
     CloseStep,
     MonthEndClose,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test: Adjustment Calculation
@@ -317,6 +313,7 @@ class TestConcurrencyPatterns:
     def test_with_for_update_pattern_exists(self):
         """The undo_approval route uses SELECT FOR UPDATE."""
         import inspect
+
         from payroll_engine.payroll_bp import undo_approval
 
         source = inspect.getsource(undo_approval)
@@ -325,6 +322,7 @@ class TestConcurrencyPatterns:
     def test_status_check_before_action(self):
         """Approval checks status before processing."""
         import inspect
+
         from payroll_engine.payroll_bp import undo_approval
 
         source = inspect.getsource(undo_approval)
@@ -333,6 +331,7 @@ class TestConcurrencyPatterns:
     def test_disbursement_check_before_undo(self):
         """Undo checks disbursement status before allowing undo."""
         import inspect
+
         from payroll_engine.payroll_bp import undo_approval
 
         source = inspect.getsource(undo_approval)
@@ -341,6 +340,7 @@ class TestConcurrencyPatterns:
     def test_time_window_check(self):
         """Undo has a 1-hour time window."""
         import inspect
+
         from payroll_engine.payroll_bp import undo_approval
 
         source = inspect.getsource(undo_approval)

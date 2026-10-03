@@ -3,12 +3,17 @@ Tests for Platform Admin Control Plane & Support Operations Engine.
 """
 
 from datetime import date, timedelta
+
 import pytest
-from flask import session
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
-    User, Company, UserCompany, SupportTicket,
-    SupportTicketMessage, PlatformAuditLog, ImpersonationSession
+    Company,
+    ImpersonationSession,
+    PlatformAuditLog,
+    SupportTicket,
+    User,
+    UserCompany,
 )
 
 
@@ -40,16 +45,13 @@ def super_admin_user(app):
             tin='9999999999',
             billing_status='active',
             plan_code='pro',
-            paid_until=date.today() + timedelta(days=365)
+            paid_until=date.today() + timedelta(days=365),
         )
         db.session.add(admin_company)
         db.session.flush()
 
         admin = User(
-            email='superadmin@ethiopayroll.com',
-            phone='911000111',
-            is_platform_admin=True,
-            company_id=admin_company.id
+            email='superadmin@ethiopayroll.com', phone='911000111', is_platform_admin=True, company_id=admin_company.id
         )
         admin.set_password('AdminPass123!')
         db.session.add(admin)
@@ -70,17 +72,12 @@ def regular_tenant_data(app):
             tin='0012345678',
             billing_status='active',
             plan_code='standard',
-            paid_until=date.today() + timedelta(days=30)
+            paid_until=date.today() + timedelta(days=30),
         )
         db.session.add(company)
         db.session.flush()
 
-        user = User(
-            email='owner@acme.et',
-            phone='911222333',
-            is_platform_admin=False,
-            company_id=company.id
-        )
+        user = User(email='owner@acme.et', phone='911222333', is_platform_admin=False, company_id=company.id)
         user.set_password('OwnerPass123!')
         db.session.add(user)
         db.session.flush()
@@ -94,10 +91,7 @@ def regular_tenant_data(app):
 
 def login_as(client, email, password='AdminPass123!'):
     """Helper to login a user."""
-    return client.post('/auth/login', data={
-        'login_id': email,
-        'password': password
-    }, follow_redirects=True)
+    return client.post('/auth/login', data={'login_id': email, 'password': password}, follow_redirects=True)
 
 
 class TestAdminAuthorization:
@@ -154,12 +148,16 @@ class TestSupportTicketWorkflow:
         # 1. Tenant logs in and creates ticket
         login_as(client, 'owner@acme.et', 'OwnerPass123!')
 
-        res = client.post('/support/tickets/new', data={
-            'subject': 'Pension rate inquiry for new hire',
-            'category': 'payroll',
-            'priority': 'high',
-            'message_text': 'Does Proclamation 1268/2022 apply at 7% employee rate?'
-        }, follow_redirects=True)
+        res = client.post(
+            '/support/tickets/new',
+            data={
+                'subject': 'Pension rate inquiry for new hire',
+                'category': 'payroll',
+                'priority': 'high',
+                'message_text': 'Does Proclamation 1268/2022 apply at 7% employee rate?',
+            },
+            follow_redirects=True,
+        )
         assert res.status_code == 200
 
         with app.app_context():
@@ -177,10 +175,14 @@ class TestSupportTicketWorkflow:
         assert b'Pension rate inquiry' in res.data
 
         # Reply to ticket
-        res = client.post(f'/admin/tickets/{ticket_id}/reply', data={
-            'message_text': 'Yes, Proclamation 1268/2022 specifies 7% employee and 11% employer rates.',
-            'is_internal_note': '0'
-        }, follow_redirects=True)
+        res = client.post(
+            f'/admin/tickets/{ticket_id}/reply',
+            data={
+                'message_text': 'Yes, Proclamation 1268/2022 specifies 7% employee and 11% employer rates.',
+                'is_internal_note': '0',
+            },
+            follow_redirects=True,
+        )
         assert res.status_code == 200
 
         with app.app_context():
@@ -203,11 +205,11 @@ class TestSupportAssistImpersonation:
         login_as(client, 'superadmin@ethiopayroll.com', 'AdminPass123!')
 
         # Start Support Assist
-        res = client.post('/admin/impersonate/start', data={
-            'target_user_id': target_uid,
-            'target_company_id': cid,
-            'reason': 'Debugging tax calculation issue'
-        }, follow_redirects=True)
+        res = client.post(
+            '/admin/impersonate/start',
+            data={'target_user_id': target_uid, 'target_company_id': cid, 'reason': 'Debugging tax calculation issue'},
+            follow_redirects=True,
+        )
         assert res.status_code == 200
 
         with client.session_transaction() as sess:

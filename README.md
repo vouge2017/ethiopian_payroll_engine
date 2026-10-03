@@ -10,7 +10,7 @@ git clone https://github.com/vouge2017/ethiopian_payroll_engine.git
 cd ethiopian_payroll_engine
 
 # 2. Install dependencies
-pip install -r requirements.txt
+pip install -r requirements-lock.txt
 
 # 3. Set environment variables
 export DATABASE_URL="sqlite:///app.db"
@@ -66,7 +66,10 @@ Required environment variables in Render dashboard:
 ## Testing
 
 ```bash
-# Run all tests
+# Install the runtime pins and test-only PDF reader
+pip install -r requirements-lock.txt -r requirements-test.txt
+
+# Run tests (native PostgreSQL cases skip without TEST_DATABASE_URL)
 pytest -q
 
 # Run with coverage

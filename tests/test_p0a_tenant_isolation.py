@@ -9,6 +9,7 @@ the explicit filter path.
 
 Run with: pytest tests/test_p0a_tenant_isolation.py -v
 """
+
 from datetime import date
 
 import pytest
@@ -89,18 +90,30 @@ def test_unfiltered_terminal_raises(app, model_class):
 
 
 def test_company_a_cannot_read_company_b_leave(app, two_companies):
-    a, b, ua, ub = two_companies
+    a, b, _ua, _ub = two_companies
     emp_a = Employee(company_id=a.id, employee_id='E001', name='Alice', basic_salary=5000)
     emp_b = Employee(company_id=b.id, employee_id='E001', name='Bob', basic_salary=5000)
     db.session.add_all([emp_a, emp_b])
     db.session.commit()
 
-    lv_a = Leave(company_id=a.id, employee_id=emp_a.id, leave_type='annual',
-                 start_date=date(2026, 1, 1), end_date=date(2026, 1, 5), days_requested=4,
-                 status='approved')
-    lv_b = Leave(company_id=b.id, employee_id=emp_b.id, leave_type='annual',
-                 start_date=date(2026, 1, 1), end_date=date(2026, 1, 5), days_requested=4,
-                 status='approved')
+    lv_a = Leave(
+        company_id=a.id,
+        employee_id=emp_a.id,
+        leave_type='annual',
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 1, 5),
+        days_requested=4,
+        status='approved',
+    )
+    lv_b = Leave(
+        company_id=b.id,
+        employee_id=emp_b.id,
+        leave_type='annual',
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 1, 5),
+        days_requested=4,
+        status='approved',
+    )
     db.session.add_all([lv_a, lv_b])
     db.session.commit()
 
@@ -113,13 +126,12 @@ def test_company_a_cannot_read_company_b_leave(app, two_companies):
 
 
 def test_company_a_cannot_read_company_b_leave_balance(app, two_companies):
-    a, b, ua, ub = two_companies
+    a, b, _ua, _ub = two_companies
     emp_a = Employee(company_id=a.id, employee_id='E001', name='Alice', basic_salary=5000)
     db.session.add(emp_a)
     db.session.commit()
 
-    bal = LeaveBalance(company_id=a.id, employee_id=emp_a.id,
-                       leave_type='annual', year=2026, entitled=16, taken=0)
+    bal = LeaveBalance(company_id=a.id, employee_id=emp_a.id, leave_type='annual', year=2026, entitled=16, taken=0)
     db.session.add(bal)
     db.session.commit()
 
@@ -138,10 +150,8 @@ def test_company_a_cannot_read_company_b_allowance(app, two_companies):
     db.session.add_all([emp_a, emp_b])
     db.session.commit()
 
-    al_a = EmployeeAllowance(company_id=a.id, employee_id=emp_a.id,
-                             allowance_type='transport', amount=600)
-    al_b = EmployeeAllowance(company_id=b.id, employee_id=emp_b.id,
-                             allowance_type='transport', amount=600)
+    al_a = EmployeeAllowance(company_id=a.id, employee_id=emp_a.id, allowance_type='transport', amount=600)
+    al_b = EmployeeAllowance(company_id=b.id, employee_id=emp_b.id, allowance_type='transport', amount=600)
     db.session.add_all([al_a, al_b])
     db.session.commit()
 
@@ -152,45 +162,45 @@ def test_company_a_cannot_read_company_b_allowance(app, two_companies):
 
 def test_payslip_acknowledgment_isolation(app, two_companies):
     """P0-A: PayslipAcknowledgment must reject unfiltered queries."""
-    a, b, _, _ = two_companies
+    a, _b, _, _ = two_companies
     with pytest.raises(RuntimeError):
         PayslipAcknowledgment.query.all()
     assert PayslipAcknowledgment.query.filter_by(company_id=a.id).all() == []
 
 
 def test_profile_change_request_isolation(app, two_companies):
-    a, b, _, _ = two_companies
+    a, _b, _, _ = two_companies
     with pytest.raises(RuntimeError):
         ProfileChangeRequest.query.all()
     assert ProfileChangeRequest.query.filter_by(company_id=a.id).all() == []
 
 
 def test_notification_isolation(app, two_companies):
-    a, b, _, _ = two_companies
+    _a, _b, _, _ = two_companies
     with pytest.raises(RuntimeError):
         Notification.query.all()
 
 
 def test_filing_record_isolation(app, two_companies):
-    a, b, _, _ = two_companies
+    _a, _b, _, _ = two_companies
     with pytest.raises(RuntimeError):
         FilingRecord.query.all()
 
 
 def test_payroll_generation_job_isolation(app, two_companies):
-    a, b, _, _ = two_companies
+    _a, _b, _, _ = two_companies
     with pytest.raises(RuntimeError):
         PayslipGenerationJob.query.all()
 
 
 def test_payroll_preview_isolation(app, two_companies):
-    a, b, _, _ = two_companies
+    _a, _b, _, _ = two_companies
     with pytest.raises(RuntimeError):
         PayrollPreview.query.all()
 
 
 def test_final_settlement_isolation(app, two_companies):
-    a, b, _, _ = two_companies
+    _a, _b, _, _ = two_companies
     with pytest.raises(RuntimeError):
         FinalSettlement.query.all()
 
@@ -198,12 +208,12 @@ def test_final_settlement_isolation(app, two_companies):
 def test_inventory_complete(app):
     """Sanity: every model with company_id (except Company, ApiKey, Holiday, BillingPayment)
     must be registered. This is the P0-A acceptance gate."""
-    from payroll_engine import models as M
+    from payroll_engine import models as models
 
     registered = set(TenantQuery._tenant_scoped_models)
     not_registered = []
-    for attr in dir(M):
-        obj = getattr(M, attr, None)
+    for attr in dir(models):
+        obj = getattr(models, attr, None)
         if not isinstance(obj, type):
             continue
         if not hasattr(obj, '__table__'):
@@ -222,6 +232,4 @@ def test_inventory_complete(app):
             continue
         if obj not in registered:
             not_registered.append(obj.__name__)
-    assert not not_registered, (
-        f'Residual tenant-scoped models not registered: {not_registered}'
-    )
+    assert not not_registered, f'Residual tenant-scoped models not registered: {not_registered}'

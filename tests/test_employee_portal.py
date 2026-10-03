@@ -168,7 +168,11 @@ def test_multiple_payslips_ordered(company_with_data):
     db.session.add(payslip2)
     db.session.commit()
 
-    payslips = Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id).order_by(Payslip.generated_at.desc()).all()
+    payslips = (
+        Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id)
+        .order_by(Payslip.generated_at.desc())
+        .all()
+    )
     assert len(payslips) == 2
     assert payslips[0].generated_at > payslips[1].generated_at
 

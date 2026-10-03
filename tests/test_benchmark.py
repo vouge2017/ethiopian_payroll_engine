@@ -1,3 +1,5 @@
+from helpers import register_company
+
 """
 Performance benchmarks — trust components and dashboard at realistic scale.
 
@@ -84,6 +86,7 @@ def _seed_payroll(company_id, employees, period='2018-10'):
         net = gross - tax - pension
         ps = Payslip(
             payroll_run_id=run.id,
+            company_id=run.company_id,
             employee_id=emp.id,
             gross_salary=gross,
             tax=tax,
@@ -267,11 +270,11 @@ class TestDashboardBenchmarks:
         """Dashboard API should respond within threshold."""
         with app.app_context():
             client = app.test_client()
-            client.post(
-                '/auth/register',
+            register_company(
+                client,
                 data={
                     'company_name': 'Benchmark PLC',
-                    'phone': '0911123456',
+                    'phone': '911123456',
                     'password': 'TestPass123!',
                     'password2': 'TestPass123!',
                 },
@@ -286,7 +289,7 @@ class TestDashboardBenchmarks:
             client.post(
                 '/auth/login',
                 data={
-                    'login_id': '0911123456',
+                    'login_id': '911123456',
                     'password': 'TestPass123!',
                 },
                 follow_redirects=True,
@@ -316,11 +319,11 @@ class TestFullCycleBenchmark:
         """Full review cycle (compute all + render) should complete in <10s."""
         with app.app_context():
             client = app.test_client()
-            client.post(
-                '/auth/register',
+            register_company(
+                client,
                 data={
                     'company_name': 'Benchmark PLC',
-                    'phone': '0911123456',
+                    'phone': '911123456',
                     'password': 'TestPass123!',
                     'password2': 'TestPass123!',
                 },
@@ -335,7 +338,7 @@ class TestFullCycleBenchmark:
             client.post(
                 '/auth/login',
                 data={
-                    'login_id': '0911123456',
+                    'login_id': '911123456',
                     'password': 'TestPass123!',
                 },
                 follow_redirects=True,

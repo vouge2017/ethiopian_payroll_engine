@@ -6,7 +6,6 @@ Verifies:
 - /internal/cron/health is publicly accessible
 - The endpoint is idempotent (safe to call multiple times)
 """
-import os
 
 import pytest
 
@@ -48,9 +47,7 @@ def test_cron_daily_rejects_get_method(app):
     """
     client = app.test_client()
     r = client.get('/internal/cron/daily', headers={'X-Cron-Secret': 'test-cron-secret-32-bytes-pad!'})
-    assert r.status_code == 405, (
-        f'GET on /internal/cron/daily must be 405 Method Not Allowed, got {r.status_code}'
-    )
+    assert r.status_code == 405, f'GET on /internal/cron/daily must be 405 Method Not Allowed, got {r.status_code}'
 
 
 def test_cron_daily_rejects_wrong_secret(app):

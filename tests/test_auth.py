@@ -16,7 +16,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
-from payroll_engine.models import Company, User
+from payroll_engine.models import User
 
 
 @pytest.fixture
@@ -52,6 +52,7 @@ def test_register_creates_new_company(client, app):
     if r.status_code != 302:
         body = r.get_data(as_text=True)
         import re
+
         flashes = re.findall(r'alert alert-(\w+)[^>]*>([^<]+)', body)
         pytest.fail(f'Expected 302, got {r.status_code}. Flashes: {flashes[:3]}')
     # After register, user is auto-logged-in and redirected to /auth/setup-profile

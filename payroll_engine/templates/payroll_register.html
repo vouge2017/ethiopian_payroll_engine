@@ -9,7 +9,7 @@
             <button onclick="window.print()" class="btn btn-primary btn-sm">
                 <i class="bi bi-printer"></i> Print
             </button>
-            <a href="{{ url_for('payroll.batch_payslips') }}" class="btn btn-outline-success btn-sm ms-2">
+            <a href="{{ url_for('payroll.download_all_payslips', run_id=run.id) }}" class="btn btn-outline-success btn-sm ms-2">
                 <i class="bi bi-file-earmark-zip"></i> Download All Payslips (ZIP)
             </a>
             <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-outline-secondary btn-sm ms-2">
@@ -19,6 +19,9 @@
     </div>
 
     <!-- Printable register -->
+    {% if legacy_identity %}
+    <div class="alert alert-warning">Amounts come from saved payroll. Older runs use current employee names where no identity snapshot exists; unavailable earnings breakdowns are left blank.</div>
+    {% endif %}
     <div class="register-page">
         <div class="text-center mb-3">
             <h5 class="mb-1">{{ company.name }}</h5>
@@ -35,7 +38,7 @@
                     <th style="width:80px">ID</th>
                     <th style="width:140px">Name</th>
                     <th class="text-end" style="width:80px">Basic</th>
-                    <th class="text-end" style="width:70px">Allow.</th>
+                    <th class="text-end" style="width:70px">Other earnings</th>
                     <th class="text-end" style="width:70px">Gross</th>
                     <th class="text-end" style="width:65px">Pension</th>
                     <th class="text-end" style="width:65px">Tax</th>
@@ -46,10 +49,10 @@
                 {% for row in rows %}
                 <tr>
                     <td class="text-center">{{ loop.index }}</td>
-                    <td>{{ row.emp.employee_id }}</td>
-                    <td>{{ row.emp.name }}</td>
-                    <td class="text-end">{{ "{:,.2f}".format(row.emp.basic_salary) }}</td>
-                    <td class="text-end">{{ "{:,.2f}".format(row.emp.allowances) }}</td>
+                    <td>{{ row.employee_id }}</td>
+                    <td>{{ row.name }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(row.basic) if row.basic is not none else '—' }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(row.other) if row.other is not none else '—' }}</td>
                     <td class="text-end">{{ "{:,.2f}".format(row.gross) }}</td>
                     <td class="text-end">{{ "{:,.2f}".format(row.pension) }}</td>
                     <td class="text-end">{{ "{:,.2f}".format(row.tax) }}</td>
@@ -60,8 +63,8 @@
             <tfoot>
                 <tr class="fw-bold">
                     <td colspan="3" class="text-end">TOTALS</td>
-                    <td class="text-end">{{ "{:,.2f}".format(total_basic) }}</td>
-                    <td class="text-end">{{ "{:,.2f}".format(total_allow) }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_basic) if total_basic is not none else '—' }}</td>
+                    <td class="text-end">{{ "{:,.2f}".format(total_allow) if total_allow is not none else '—' }}</td>
                     <td class="text-end">{{ "{:,.2f}".format(total_gross) }}</td>
                     <td class="text-end">{{ "{:,.2f}".format(total_pension) }}</td>
                     <td class="text-end">{{ "{:,.2f}".format(total_tax) }}</td>

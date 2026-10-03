@@ -1,0 +1,3 @@
+# Additional test-only dependencies; install alongside requirements-lock.txt.
+# PDF acceptance reads text back out of the actual rendered payslip.
+pypdf==6.19.0

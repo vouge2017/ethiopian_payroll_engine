@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>EthioPayroll — Excel Diff Check</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Ethiopic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #1a1a2e;
+            line-height: 1.5;
+        }
+        .page { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+        .header { margin-bottom: 24px; }
+        .header h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 4px; color: #1a2b4a; }
+        .header .sub { font-size: 0.9rem; color: #555; }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .card h3 { font-size: 1rem; font-weight: 600; margin: 0 0 8px; color: #1a2b4a; }
+        .card p { font-size: 0.88rem; color: #444; margin: 0 0 12px; }
+
+        .required-list { list-style: none; padding: 0; margin: 12px 0; }
+        .required-list li {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border-left: 3px solid #004bca;
+        }
+        .required-list li .req { font-weight: 600; color: #004bca; }
+        .required-list li .opt { font-weight: 600; color: #6c757d; }
+        .required-list li small { color: #666; display: block; margin-top: 2px; }
+
+        .format-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .format-table th, .format-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e8eaed; }
+        .format-table th { background: #f8f9fa; font-weight: 600; color: #1a2b4a; }
+        .format-table code { background: #e9ecef; padding: 1px 5px; border-radius: 3px; font-size: 0.8rem; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+        .form-control { display: block; width: 100%; padding: 10px 12px; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 6px; }
+        .form-control:focus { outline: none; border-color: #004bca; box-shadow: 0 0 0 3px rgba(0,75,202,0.1); }
+
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 18px; border-radius: 6px; text-decoration: none;
+            font-size: 0.9rem; font-weight: 500; border: none; cursor: pointer;
+            background: #004bca; color: #fff;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+
+        .alert-danger {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 0.88rem;
+        }
+
+        .example-box {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+        .example-box ul { margin: 6px 0 0; padding-left: 20px; }
+        .example-box li { margin-bottom: 3px; }
+
+        @media (max-width: 480px) {
+            .page { padding: 16px 12px; }
+            .header h1 { font-size: 1.3rem; }
+            .card { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="header">
+        <h1>Excel Diff Check</h1>
+        <p class="sub">Upload your payroll spreadsheet. We compare our engine's calculation against yours and explain every difference — with the law behind it.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <div class="card">
+        <h3>Upload your payroll spreadsheet</h3>
+        <p>We accept .xlsx, .xls, or .csv files. <strong>Read only</strong> — we never save or change your data.</p>
+        <form action="/diff/compare" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="file">Payroll spreadsheet:</label>
+                <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv" required>
+            </div>
+            <div class="form-group">
+                <label for="match_mode">Matching level:</label>
+                <select name="match_mode" id="match_mode" class="form-control">
+                    <option value="auto">Auto (best match)</option>
+                    <option value="strict">Strict (ID or name+contact required)</option>
+                    <option value="name">By name only</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="bi bi-arrow-repeat"></i> Compare with EthioPayroll engine
+            </button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>What we need from your spreadsheet</h3>
+        <ul class="required-list">
+            <li><span class="req">Employee name</span> <small>Any column named "name", "employee", "staff" — auto-detected</small></li>
+            <li><span class="req">Gross salary</span> <small>Total before deductions. If you only have basic salary, that works too</small></li>
+            <li><span class="opt">Tax (PAYE)</span> <small>If you report it — we compare and check against Proclamation 1395/2025</small></li>
+            <li><span class="opt">Employee pension</span> <small>If you report it — must be 7% of basic (Proclamation 1268/2022)</small></li>
+            <li><span class="opt">Net pay</span> <small>Take-home after all deductions</small></li>
+            <li><span class="opt">Basic salary</span> <small>If separate from gross — needed for precise pension/tax brackets</small></li>
+            <li><span class="opt">Allowances, overtime, employee ID, phone, TIN</span> <small>More columns = more precise comparison</small></li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>What we compare & the law behind it</h3>
+        <table class="format-table">
+            <thead><tr><th>Field</th><th>Rule</th></tr></thead>
+            <tbody>
+            <tr><td><strong>Gross salary</strong></td><td>Basic + allowances + overtime. Your sheet may combine what we separate.</td></tr>
+            <tr><td><strong>Tax (PAYE)</strong></td><td>Proclamation 1395/2025, Article 11. Pension (7%) is deducted <em>before</em> taxable income.</td></tr>
+            <tr><td><strong>Employee pension</strong></td><td>Proclamation 1268/2022, Article 12: 7% of basic salary, no ceiling.</td></tr>
+            <tr><td><strong>Net pay</strong></td><td>Gross − pension − tax. We trace which component caused the gap.</td></tr>
+            </tbody>
+        </table>
+        <div class="example-box">
+            <strong>Example:</strong> If your sheet shows <strong>net ETB 8,420</strong> and our engine calculates <strong>ETB 8,145</strong>:
+            <ul>
+                <li>Tax: Yours 2,580 vs Ours 2,955 — engine deducts pension first, saving ETB 105 tax</li>
+                <li>Pension: Yours 0 vs Ours 700 — 7% of basic required by Proclamation 1268/2022</li>
+                <li>Net diff: ETB 275 — caused by missing pension deduction</li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>

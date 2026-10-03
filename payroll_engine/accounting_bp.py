@@ -5,11 +5,13 @@ Generates journal entries for accounting software (Peachtree, QuickBooks, etc.)
 Exports payroll data as structured CSV that can be imported into accounting systems.
 
 Journal Entry Logic:
-    DEBIT:  Salary Expense (Gross)
+    DEBIT:  Salary Expense (Gross less unpaid/sick reductions)
     DEBIT:  Employer Pension Expense
     CREDIT: PAYE Tax Payable (Tax withheld)
     CREDIT: Pension Payable (Employee + Employer)
     CREDIT: Bank/Cash (Net pay)
+    CREDIT: Employee Receivables (loan/advance recoveries)
+    CREDIT: Other Payroll Deductions Payable
 
 Also exports as:
     - QuickBooks IIF format
@@ -19,20 +21,42 @@ Also exports as:
 
 import csv
 import io
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
-from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
+from flask_login import login_required
 
 from payroll_engine.models import Company, Employee, PayrollRun, Payslip
-from payroll_engine.shared import role_required, tenant_get
+from payroll_engine.shared import _company_id, role_required, tenant_get
 
 accounting_bp = Blueprint('accounting', __name__)
+
+
+def _journal_money(value):
+    """Reject invalid money instead of hiding it in a balancing entry."""
+    try:
+        amount = Decimal(str(value))
+        valid = amount.is_finite() and amount >= 0 and amount == amount.quantize(Decimal('0.01'))
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        raise ValueError('Payroll amounts do not reconcile: invalid money.') from exc
+    if not valid:
+        raise ValueError('Payroll amounts do not reconcile: invalid money.')
+    return amount
+
+
+def _require_balanced_journal(journal):
+    """Check actual lines at export time; never trust a cached balance flag."""
+    debits = sum((_journal_money(line['debit']) for line in journal['journal_lines']), Decimal('0'))
+    credits = sum((_journal_money(line['credit']) for line in journal['journal_lines']), Decimal('0'))
+    if debits != credits or journal.get('errors'):
+        raise ValueError('Payroll amounts do not reconcile. Review payroll deductions before exporting.')
 
 
 def _generate_journal_entries(run_id, company_id):
     """Generate journal entries for a payroll run."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=company_id).first_or_404()
+    if run.status not in ('completed', 'locked'):
+        abort(404)
     company = Company.query.get(company_id)
 
     payslips = Payslip.query.filter_by(payroll_run_id=run_id, company_id=company_id).all()
@@ -46,23 +70,79 @@ def _generate_journal_entries(run_id, company_id):
     total_pension_emp = Decimal('0')
     total_pension_empr = Decimal('0')
     total_net = Decimal('0')
+    total_reductions = Decimal('0')
+    total_recoveries = Decimal('0')
+    total_other_deductions = Decimal('0')
+    errors = []
 
     for ps in payslips:
         emp = tenant_get(Employee, ps.employee_id, company_id)
         if not emp:
-            continue
+            raise ValueError('Payroll amounts do not reconcile: an employee is unavailable.')
 
-        total_gross += ps.gross_salary or Decimal('0')
-        total_tax += ps.tax or Decimal('0')
-        total_pension_emp += ps.employee_pension or Decimal('0')
-        total_pension_empr += ps.employer_pension or Decimal('0')
-        total_net += ps.net_pay or Decimal('0')
+        snapshot = None
+        if run.source == 'spreadsheet':
+            from payroll_engine.services.worksheet_review import published_row
+
+            snapshot = published_row(ps)
+
+        gross = _journal_money(ps.gross_salary)
+        tax = _journal_money(ps.tax)
+        pension_emp = _journal_money(ps.employee_pension)
+        pension_empr = _journal_money(ps.employer_pension)
+        net = _journal_money(ps.net_pay)
+        reductions = _journal_money(ps.unpaid_leave_reduction or 0) + _journal_money(ps.sick_leave_reduction or 0)
+        recoveries = Decimal('0')
+        other_deductions = Decimal('0')
+        details = ps.deduction_details or []
+        if not isinstance(details, list):
+            raise ValueError('Payroll amounts do not reconcile: deduction details are invalid.')
+        for deduction in details:
+            if (
+                not isinstance(deduction, dict)
+                or 'amount' not in deduction
+                or not isinstance(deduction.get('type'), str)
+            ):
+                raise ValueError('Payroll amounts do not reconcile: deduction details are invalid.')
+            amount = _journal_money(deduction['amount'])
+            if deduction['type'] in ('loan', 'advance'):
+                recoveries += amount
+            else:
+                other_deductions += amount
+        if gross != tax + pension_emp + reductions + recoveries + other_deductions + net:
+            errors.append('An employee payroll does not reconcile with its saved deductions.')
+        if reductions > gross:
+            raise ValueError('Payroll amounts do not reconcile: reductions exceed gross pay.')
+        if snapshot and any(
+            _journal_money(snapshot[key]) != amount
+            for key, amount in (
+                ('gross', gross),
+                ('tax', tax),
+                ('pension_employee', pension_emp),
+                ('pension_employer', pension_empr),
+                ('net', net),
+                ('unpaid_leave_reduction', _journal_money(ps.unpaid_leave_reduction or 0)),
+                ('sick_leave_reduction', _journal_money(ps.sick_leave_reduction or 0)),
+            )
+        ):
+            errors.append('A payslip differs from its approved worksheet snapshot.')
+        if snapshot and details != snapshot['deduction_details']:
+            errors.append('Deductions differ from the approved worksheet snapshot.')
+
+        total_gross += gross
+        total_tax += tax
+        total_pension_emp += pension_emp
+        total_pension_empr += pension_empr
+        total_net += net
+        total_reductions += reductions
+        total_recoveries += recoveries
+        total_other_deductions += other_deductions
 
         entries.append(
             {
-                'employee_id': emp.employee_id,
-                'employee_name': emp.name,
-                'department': emp.department or '',
+                'employee_id': snapshot['id'] if snapshot else emp.employee_id,
+                'employee_name': snapshot['name'] if snapshot else emp.name,
+                'department': snapshot['department'] if snapshot else emp.department or '',
                 'gross': ps.gross_salary or Decimal('0'),
                 'tax': ps.tax or Decimal('0'),
                 'pension_employee': ps.employee_pension or Decimal('0'),
@@ -75,23 +155,28 @@ def _generate_journal_entries(run_id, company_id):
     ref = run.reference or f'PR-{period}'
 
     journal = {
+        'run_id': run.id,
         'reference': ref,
         'period': period,
         'date': run.run_date.strftime('%Y-%m-%d'),
         'company': company.name if company else 'Unknown',
         'entries': entries,
+        'errors': errors,
         'totals': {
             'gross': total_gross,
             'tax': total_tax,
             'pension_employee': total_pension_emp,
             'pension_employer': total_pension_empr,
             'net': total_net,
+            'salary_reductions': total_reductions,
+            'employee_recoveries': total_recoveries,
+            'other_deductions': total_other_deductions,
         },
         'journal_lines': [
             {
                 'account': '5100',
                 'name': 'Salary Expense',
-                'debit': total_gross,
+                'debit': total_gross - total_reductions,
                 'credit': Decimal('0'),
                 'type': 'expense',
             },
@@ -127,10 +212,21 @@ def _generate_journal_entries(run_id, company_id):
         ],
     }
 
+    # Explicit defaults for synthetic testing. Validate the company chart
+    # with its accountant before importing these files into live books.
+    for account, name, amount, account_type in (
+        ('1300', 'Employee Receivables (Loan/Advance Recovery)', total_recoveries, 'asset'),
+        ('2300', 'Other Payroll Deductions Payable', total_other_deductions, 'liability'),
+    ):
+        if amount:
+            journal['journal_lines'].append(
+                {'account': account, 'name': name, 'debit': Decimal('0'), 'credit': amount, 'type': account_type}
+            )
+
     # Verify balanced
     total_debits = sum(l['debit'] for l in journal['journal_lines'])
     total_credits = sum(l['credit'] for l in journal['journal_lines'])
-    journal['balanced'] = total_debits == total_credits
+    journal['balanced'] = total_debits == total_credits and not errors
     journal['total_debits'] = total_debits
     journal['total_credits'] = total_credits
 
@@ -143,7 +239,7 @@ def _generate_journal_entries(run_id, company_id):
 def accounting_home():
     """Accounting export home — list completed runs."""
     runs = (
-        PayrollRun.query.filter_by(company_id=current_user.company_id, status='completed')
+        PayrollRun.query.filter(PayrollRun.company_id == _company_id(), PayrollRun.status.in_(['completed', 'locked']))
         .order_by(PayrollRun.run_date.desc())
         .limit(12)
         .all()
@@ -157,7 +253,13 @@ def accounting_home():
 @role_required('owner', 'accountant')
 def export_journal(run_id):
     """Export journal entries as CSV."""
-    journal = _generate_journal_entries(run_id, current_user.company_id)
+    try:
+        journal = _generate_journal_entries(run_id, _company_id())
+        if journal:
+            _require_balanced_journal(journal)
+    except ValueError as exc:
+        flash(f'Accounting export blocked: {exc}', 'danger')
+        return redirect(url_for('accounting.preview_journal', run_id=run_id))
 
     if not journal:
         flash('No payslips found for this run.', 'warning')
@@ -177,6 +279,7 @@ def export_journal(run_id):
 
 def _export_generic_csv(journal):
     """Export as generic CSV with debit/credit columns."""
+    _require_balanced_journal(journal)
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -245,6 +348,7 @@ def _export_generic_csv(journal):
 
 def _export_quickbooks_iif(journal):
     """Export as QuickBooks IIF format."""
+    _require_balanced_journal(journal)
     output = io.StringIO()
 
     # IIF header
@@ -274,6 +378,7 @@ def _export_quickbooks_iif(journal):
 
 def _export_peachtree(journal):
     """Export as Peachtree-compatible CSV."""
+    _require_balanced_journal(journal)
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -307,6 +412,7 @@ def _export_xero(journal):
     Xero format: JournalDate, JournalNumber, AccountCode, AccountName,
                  Description, Debit, Credit, TaxType, TrackingName1, TrackingOption1
     """
+    _require_balanced_journal(journal)
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -356,7 +462,11 @@ def _export_xero(journal):
 @role_required('owner', 'accountant')
 def preview_journal(run_id):
     """Preview journal entries before export."""
-    journal = _generate_journal_entries(run_id, current_user.company_id)
+    try:
+        journal = _generate_journal_entries(run_id, _company_id())
+    except ValueError as exc:
+        flash(f'Accounting export blocked: {exc}', 'danger')
+        return redirect(url_for('accounting.accounting_home'))
 
     if not journal:
         flash('No payslips found for this run.', 'warning')

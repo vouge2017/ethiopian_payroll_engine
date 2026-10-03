@@ -31,6 +31,9 @@ def _make_payslip(gross=10000, tax=1500, pension_emp=700, pension_empr=1100, net
     ps.employee_pension = Decimal(str(pension_emp))
     ps.employer_pension = Decimal(str(pension_empr))
     ps.net_pay = Decimal(str(net))
+    ps.unpaid_leave_reduction = Decimal('0')
+    ps.sick_leave_reduction = Decimal('0')
+    ps.deduction_details = []
     return ps
 
 
@@ -48,6 +51,8 @@ def _make_run(run_id=1, period='2026-07', reference='PR-2026-07-001'):
     """Create a mock payroll run."""
     run = MagicMock()
     run.id = run_id
+    run.source = 'upload'
+    run.status = 'completed'
     run.period = period
     run.reference = reference
     run.run_date = MagicMock()
@@ -197,17 +202,18 @@ class TestGenerateJournalEntries:
 
         assert result is None
 
+    @patch('payroll_engine.accounting_bp.tenant_get')
     @patch('payroll_engine.accounting_bp.Company')
     @patch('payroll_engine.accounting_bp.Employee')
     @patch('payroll_engine.accounting_bp.Payslip')
     @patch('payroll_engine.accounting_bp.PayrollRun')
-    def test_employee_detail_entries(self, MockRun, MockPayslip, MockEmp, MockCompany):
+    def test_employee_detail_entries(self, MockRun, MockPayslip, MockEmp, MockCompany, MockTenantGet):
         func = self._import_func()
 
         MockRun.query.filter_by.return_value.first_or_404.return_value = _make_run()
         MockCompany.query.get.return_value = _make_company()
         MockPayslip.query.filter_by.return_value.all.return_value = [_make_payslip()]
-        MockEmp.query.get.return_value = _make_employee(emp_id=1, name='Dawit Kebede')
+        MockTenantGet.return_value = _make_employee(emp_id=1, name='Dawit Kebede')
 
         journal = func(1, 1)
 

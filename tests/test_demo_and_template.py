@@ -1,3 +1,5 @@
+from helpers import register_company
+
 """
 Tests for Demo Mode and CSV Template Download.
 """
@@ -81,14 +83,14 @@ def test_demo_creates_payroll_run(ctx):
     company, _user, _employees, run = create_demo_data()
     assert run.status == 'completed'
     assert run.company_id == company.id
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).all()
     assert len(payslips) == 5
 
 
 def test_demo_payslips_have_correct_amounts(ctx):
     """Demo payslips have non-zero amounts."""
     _company, _user, _employees, run = create_demo_data()
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id).all()
+    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=_company.id).all()
     for ps in payslips:
         assert ps.gross_salary > 0
         assert ps.tax >= 0
@@ -131,11 +133,11 @@ def test_demo_dashboard_shows_data(client, ctx):
 def test_csv_template_download(ctx, client):
     """CSV template download returns a valid CSV file."""
     # Register and login first
-    client.post(
-        '/auth/register',
+    register_company(
+        client,
         data={
             'company_name': 'TestCo',
-            'phone': '0911123456',
+            'phone': '911123456',
             'password': 'TestPass123!',
             'password2': 'TestPass123!',
         },
@@ -144,7 +146,7 @@ def test_csv_template_download(ctx, client):
     client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'TestPass123!',
         },
         follow_redirects=True,
@@ -158,11 +160,11 @@ def test_csv_template_download(ctx, client):
 
 def test_csv_template_has_headers(ctx, client):
     """CSV template contains correct headers."""
-    client.post(
-        '/auth/register',
+    register_company(
+        client,
         data={
             'company_name': 'TestCo',
-            'phone': '0911123456',
+            'phone': '911123456',
             'password': 'TestPass123!',
             'password2': 'TestPass123!',
         },
@@ -171,7 +173,7 @@ def test_csv_template_has_headers(ctx, client):
     client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'TestPass123!',
         },
         follow_redirects=True,
@@ -187,11 +189,11 @@ def test_csv_template_has_headers(ctx, client):
 
 def test_csv_template_has_example_data(ctx, client):
     """CSV template contains example employee data."""
-    client.post(
-        '/auth/register',
+    register_company(
+        client,
         data={
             'company_name': 'TestCo',
-            'phone': '0911123456',
+            'phone': '911123456',
             'password': 'TestPass123!',
             'password2': 'TestPass123!',
         },
@@ -200,7 +202,7 @@ def test_csv_template_has_example_data(ctx, client):
     client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'TestPass123!',
         },
         follow_redirects=True,
@@ -215,11 +217,11 @@ def test_csv_template_has_example_data(ctx, client):
 
 def test_csv_template_is_parseable(ctx, client):
     """CSV template can be parsed as valid CSV."""
-    client.post(
-        '/auth/register',
+    register_company(
+        client,
         data={
             'company_name': 'TestCo',
-            'phone': '0911123456',
+            'phone': '911123456',
             'password': 'TestPass123!',
             'password2': 'TestPass123!',
         },
@@ -228,7 +230,7 @@ def test_csv_template_is_parseable(ctx, client):
     client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'TestPass123!',
         },
         follow_redirects=True,
@@ -245,11 +247,11 @@ def test_csv_template_is_parseable(ctx, client):
 
 def test_csv_template_has_utf8_bom(ctx, client):
     """CSV template starts with UTF-8 BOM for Excel compatibility."""
-    client.post(
-        '/auth/register',
+    register_company(
+        client,
         data={
             'company_name': 'TestCo',
-            'phone': '0911123456',
+            'phone': '911123456',
             'password': 'TestPass123!',
             'password2': 'TestPass123!',
         },
@@ -258,7 +260,7 @@ def test_csv_template_has_utf8_bom(ctx, client):
     client.post(
         '/auth/login',
         data={
-            'login_id': '0911123456',
+            'login_id': '911123456',
             'password': 'TestPass123!',
         },
         follow_redirects=True,

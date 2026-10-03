@@ -13,6 +13,7 @@ Authentication: shared-secret header `X-Cron-Secret` matched against
 the `CRON_SECRET` env var. The endpoint is NOT exposed in any
 external route map (no nav link, no public access).
 """
+
 import hashlib
 import hmac
 import logging
@@ -54,9 +55,7 @@ def daily():
     surface. Render Cron Job uses POST.
     """
     if not _verify_cron_secret():
-        logger.warning(
-            'cron/daily called without valid secret from %s', request.remote_addr
-        )
+        logger.warning('cron/daily called without valid secret from %s', request.remote_addr)
         return jsonify({'ok': False, 'error': 'unauthorized'}), 401
 
     report = {
@@ -66,6 +65,8 @@ def daily():
 
     # 1. Retention purge
     try:
+        from flask import current_app
+
         from payroll_engine.retention import (
             purge_expired_drafts,
             purge_expired_payslip_pdfs,
@@ -73,7 +74,6 @@ def daily():
             purge_expired_uploads,
             purge_old_login_attempts,
         )
-        from flask import current_app
 
         with current_app.app_context():
             n_pdfs = purge_expired_payslip_pdfs(current_app._get_current_object())
@@ -95,6 +95,7 @@ def daily():
     # 2. Compliance deadline notifications
     try:
         from payroll_engine.scheduled import check_deadlines_and_notify
+
         check_deadlines_and_notify()
         report['tasks']['compliance'] = {'ok': True}
     except Exception as e:  # pragma: no cover
@@ -105,6 +106,7 @@ def daily():
     try:
         if datetime.utcnow().day == 20:
             from payroll_engine.scheduled import generate_monthly_erca_reminder
+
             generate_monthly_erca_reminder()
             report['tasks']['erca_reminder'] = {'ok': True, 'day': 20}
         else:
@@ -116,6 +118,7 @@ def daily():
     # 4. Worker heartbeat (force a write so /readyz reflects activity)
     try:
         from payroll_engine.worker_health import heartbeat
+
         heartbeat()
         report['tasks']['worker_heartbeat'] = {'ok': True}
     except Exception as e:  # pragma: no cover
@@ -130,7 +133,9 @@ def daily():
 @cron_bp.route('/health', methods=['GET'])
 def health():
     """Liveness probe for the cron endpoint (no secret required)."""
-    return jsonify({
-        'ok': True,
-        'secret_configured': bool(os.environ.get('CRON_SECRET')),
-    })
+    return jsonify(
+        {
+            'ok': True,
+            'secret_configured': bool(os.environ.get('CRON_SECRET')),
+        }
+    )

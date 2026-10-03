@@ -3,6 +3,7 @@
 Four related gate tests, all in one file for the strict-rule hardening
 session.
 """
+
 import os
 import re
 
@@ -12,10 +13,10 @@ from payroll_engine import create_app
 from payroll_engine.models import validate_ethiopian_phone
 from payroll_engine.password_policy import check_password_strength
 
-
 # ─────────────────────────────────────────────────────────────────────
 # 1. Phone validator — strict 9 digits, 7 or 9 prefix
 # ─────────────────────────────────────────────────────────────────────
+
 
 def test_phone_accepts_9_digit_national_format():
     """Valid: 911234567 (national, 9 digits, starts with 9)."""
@@ -53,7 +54,7 @@ def test_phone_rejects_leading_zero():
     """Leading 0 (10 digits) is no longer accepted. Type 9 digits only."""
     is_valid, _, err = validate_ethiopian_phone('0911234567')
     assert is_valid is False
-    assert err and 'leading 0' in err.lower() or 'do not include' in err.lower()
+    assert (err and 'leading 0' in err.lower()) or 'do not include' in err.lower()
 
 
 def test_phone_rejects_too_short():
@@ -81,7 +82,7 @@ def test_phone_rejects_e164_too_short():
 
 
 def test_phone_rejects_e164_too_long():
-    is_valid, _, err = validate_ethiopian_phone('+2519112345678')
+    is_valid, _, _err = validate_ethiopian_phone('+2519112345678')
     assert is_valid is False
 
 
@@ -98,13 +99,14 @@ def test_phone_rejects_empty():
 
 
 def test_phone_rejects_garbage():
-    is_valid, _, err = validate_ethiopian_phone('abc')
+    is_valid, _, _err = validate_ethiopian_phone('abc')
     assert is_valid is False
 
 
 # ─────────────────────────────────────────────────────────────────────
 # 2. Password strength — must require a symbol (matches UI)
 # ─────────────────────────────────────────────────────────────────────
+
 
 def test_password_accepts_strong_with_symbol():
     is_strong, err = check_password_strength('EthioPayroll@2026')
@@ -143,6 +145,7 @@ def test_password_rejects_too_short():
 # 3. Login page uses the country selector with phone-or-email mode
 # ─────────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def app():
     os.environ.setdefault('DB_ENCRYPTION_KEY', 'a-real-encryption-key-32-chars-minimum-here')
@@ -177,7 +180,7 @@ def test_login_helper_text_specifies_9_digits(app):
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
     assert '9 digits' in html
-    assert ('starting with' in html or 'starting' in html)
+    assert 'starting with' in html or 'starting' in html
 
 
 def test_login_loads_phone_input_script(app):
@@ -202,6 +205,7 @@ def test_forgot_password_also_has_phone_tabs(app):
 # ─────────────────────────────────────────────────────────────────────
 # 4. CSP-safe static assets
 # ─────────────────────────────────────────────────────────────────────
+
 
 def test_phone_input_js_is_loaded_locally(app):
     """The phone-input.js script must be served from /static/ (CSP)."""
@@ -253,16 +257,12 @@ def test_password_form_has_checklist_and_match(app, path, pw_field, confirm_fiel
     if r.status_code != 200:
         pytest.skip(f'{path} returned {r.status_code}; skipping')
     html = r.get_data(as_text=True)
-    assert 'class="pw-rules"' in html, (
-        f'{path} must include the live .pw-rules checklist'
-    )
+    assert 'class="pw-rules"' in html, f'{path} must include the live .pw-rules checklist'
     assert 'data-pw-rules' in html
     assert 'data-pw-match' in html
     # Five rules: length, upper, lower, digit, symbol
     for rule in ('length', 'upper', 'lower', 'digit', 'symbol'):
-        assert f'data-pw-rule="{rule}"' in html, (
-            f'{path} must include rule {rule!r} in the checklist'
-        )
+        assert f'data-pw-rule="{rule}"' in html, f'{path} must include rule {rule!r} in the checklist'
     # The strength script must be loaded on the page
     assert 'password-strength.js' in html
     # Submit button must be wired for gating

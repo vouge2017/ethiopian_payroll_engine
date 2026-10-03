@@ -29,9 +29,7 @@ def get_tenant_or_404(model, record_id, company_id=None):
         record_id: Primary key from the request.
         company_id: Defaults to the session's active company.
     """
-    return (
-        model.query.filter_by(id=record_id, company_id=company_id or _company_id()).first_or_404()
-    )
+    return model.query.filter_by(id=record_id, company_id=company_id or _company_id()).first_or_404()
 
 
 def tenant_get(model, record_id, company_id):

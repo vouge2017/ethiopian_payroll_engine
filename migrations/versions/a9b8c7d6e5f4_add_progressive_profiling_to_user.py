@@ -17,7 +17,8 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'a9b8c7d6e5f4'
-down_revision = ('z6a7b8c9d0e9', 'e9a0b1c2d3e4', 'p0f1a2b3c4d5')  # merge all 3 heads
+# e9 already descends from z6; listing both breaks Alembic head bookkeeping.
+down_revision = ('e9a0b1c2d3e4', 'p0f1a2b3c4d5')
 branch_labels = None
 depends_on = None
 

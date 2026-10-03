@@ -5,6 +5,7 @@ impossible. Real concurrency is covered by the version_id + for_update
 mechanism in the route; here we test the invariant: once a run is
 'completed', re-approval is rejected.
 """
+
 import pytest
 
 from payroll_engine import create_app, db
@@ -18,7 +19,14 @@ from payroll_engine.models import (
 
 
 @pytest.fixture
-def app():
+def app(tmp_path, monkeypatch):
+    from config import TestingConfig
+
+    # Separate thread connections require a real shared database, not the same
+    # in-memory SQLite connection. Configure it before SQLAlchemy binds engines.
+    monkeypatch.setattr(
+        TestingConfig, 'SQLALCHEMY_DATABASE_URI', 'sqlite:///' + (tmp_path / 'concurrency.db').as_posix()
+    )
     app = create_app()
     app.config['TESTING'] = True
     with app.app_context():
@@ -38,19 +46,17 @@ def seeded(app):
         u.set_password('x' * 12)
         db.session.add(u)
         db.session.commit()
-        emp = Employee(company_id=co.id, employee_id='E001', name='Alice',
-                       basic_salary=5000)
+        emp = Employee(company_id=co.id, employee_id='E001', name='Alice', basic_salary=5000)
         db.session.add(emp)
         db.session.commit()
-        run = PayrollRun(company_id=co.id, period='2026-01',
-                         status='review', source='test')
+        run = PayrollRun(company_id=co.id, period='2026-01', status='review', source='test')
         db.session.add(run)
         db.session.commit()
         return co.id, u.id, emp.id, run.id
 
 
 def test_approval_guard_rejects_completed_run(app, seeded):
-    co_id, u_id, emp_id, run_id = seeded
+    _co_id, u_id, _emp_id, run_id = seeded
     with app.app_context():
         # First approval
         run = db.session.get(PayrollRun, run_id)
@@ -66,10 +72,7 @@ def test_approval_guard_rejects_completed_run(app, seeded):
 
 def test_payslip_uniqueness_constraint_in_model(app, seeded):
     """P0-F: Payslip __table_args__ declares UNIQUE(run, employee, type)."""
-    declared = any(
-        c.name == 'uq_payslip_run_emp_type'
-        for c in Payslip.__table__.constraints
-    )
+    declared = any(c.name == 'uq_payslip_run_emp_type' for c in Payslip.__table__.constraints)
     assert declared, (
         "Payslip model must declare UniqueConstraint('payroll_run_id', "
         "'employee_id', 'payslip_type', name='uq_payslip_run_emp_type'). "
@@ -81,8 +84,7 @@ def test_payslip_uniqueness_constraint_in_model(app, seeded):
     insp = __import__('sqlalchemy').inspect(db.engine)
     uqs = insp.get_unique_constraints('payslip')
     assert any(u.get('name') == 'uq_payslip_run_emp_type' for u in uqs), (
-        f"DB-level UNIQUE constraint 'uq_payslip_run_emp_type' missing. "
-        f"Constraints found: {uqs}"
+        f"DB-level UNIQUE constraint 'uq_payslip_run_emp_type' missing. Constraints found: {uqs}"
     )
 
 
@@ -99,17 +101,29 @@ def test_duplicate_payslip_rejected_via_python_check(app, seeded):
     co_id, _u_id, emp_id, run_id = seeded
     with app.app_context():
         ps1 = Payslip(
-            company_id=co_id, payroll_run_id=run_id, employee_id=emp_id,
-            gross_salary=5000, tax=0, employee_pension=0, employer_pension=0,
-            net_pay=5000, payslip_type='regular',
+            company_id=co_id,
+            payroll_run_id=run_id,
+            employee_id=emp_id,
+            gross_salary=5000,
+            tax=0,
+            employee_pension=0,
+            employer_pension=0,
+            net_pay=5000,
+            payslip_type='regular',
         )
         db.session.add(ps1)
         db.session.commit()
 
         ps2 = Payslip(
-            company_id=co_id, payroll_run_id=run_id, employee_id=emp_id,
-            gross_salary=5000, tax=0, employee_pension=0, employer_pension=0,
-            net_pay=5000, payslip_type='regular',
+            company_id=co_id,
+            payroll_run_id=run_id,
+            employee_id=emp_id,
+            gross_salary=5000,
+            tax=0,
+            employee_pension=0,
+            employer_pension=0,
+            net_pay=5000,
+            payslip_type='regular',
         )
         db.session.add(ps2)
         with pytest.raises(IntegrityError):
@@ -126,6 +140,7 @@ def test_concurrent_duplicate_inserts_one_succeeds(app, seeded):
     same test exercises the row-level lock.
     """
     import threading
+
     from sqlalchemy.exc import IntegrityError
 
     co_id, _u_id, emp_id, run_id = seeded
@@ -146,10 +161,15 @@ def test_concurrent_duplicate_inserts_one_succeeds(app, seeded):
             barrier.wait()
             try:
                 ps = Payslip(
-                    company_id=co_id, payroll_run_id=run_id, employee_id=emp_id,
-                    gross_salary=5000, tax=0,
-                    employee_pension=0, employer_pension=0,
-                    net_pay=5000, payslip_type='regular',
+                    company_id=co_id,
+                    payroll_run_id=run_id,
+                    employee_id=emp_id,
+                    gross_salary=5000,
+                    tax=0,
+                    employee_pension=0,
+                    employer_pension=0,
+                    net_pay=5000,
+                    payslip_type='regular',
                 )
                 db.session.add(ps)
                 db.session.commit()
@@ -164,8 +184,10 @@ def test_concurrent_duplicate_inserts_one_succeeds(app, seeded):
 
     t1 = threading.Thread(target=attempt)
     t2 = threading.Thread(target=attempt)
-    t1.start(); t2.start()
-    t1.join(); t2.join()
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
 
     assert results['other'] == [], f'unexpected errors: {results["other"]}'
     assert results['success'] == 1, f'expected 1 success, got {results}'
@@ -176,28 +198,40 @@ def test_adjustment_payslip_coexists_with_regular(app, seeded):
     """Adjustment payslip (different payslip_type) must coexist with regular."""
     from payroll_engine.payroll import calculate_payroll
 
-    co_id, u_id, emp_id, run_id = seeded
+    co_id, _u_id, emp_id, run_id = seeded
     with app.app_context():
         result = calculate_payroll(basic_salary=5000, allowances=0)
         ps_reg = Payslip(
-            company_id=co_id, payroll_run_id=run_id, employee_id=emp_id,
-            gross_salary=result['gross'], tax=result['tax'],
+            company_id=co_id,
+            payroll_run_id=run_id,
+            employee_id=emp_id,
+            gross_salary=result['gross'],
+            tax=result['tax'],
             employee_pension=result['pension_employee'],
-            employer_pension=result['pension_employer'], net_pay=result['net'],
+            employer_pension=result['pension_employer'],
+            net_pay=result['net'],
             payslip_type='regular',
         )
         ps_adj = Payslip(
-            company_id=co_id, payroll_run_id=run_id, employee_id=emp_id,
-            gross_salary=result['gross'], tax=result['tax'],
+            company_id=co_id,
+            payroll_run_id=run_id,
+            employee_id=emp_id,
+            gross_salary=result['gross'],
+            tax=result['tax'],
             employee_pension=result['pension_employee'],
-            employer_pension=result['pension_employer'], net_pay=result['net'],
-            payslip_type='adjustment', reason='correction', original_payslip_id=None,
+            employer_pension=result['pension_employer'],
+            net_pay=result['net'],
+            payslip_type='adjustment',
+            reason='correction',
+            original_payslip_id=None,
         )
         db.session.add_all([ps_reg, ps_adj])
         db.session.commit()
 
         slips = Payslip.query.filter_by(
-            payroll_run_id=run_id, employee_id=emp_id, company_id=co_id,
+            payroll_run_id=run_id,
+            employee_id=emp_id,
+            company_id=co_id,
         ).all()
         assert len(slips) == 2
         assert {s.payslip_type for s in slips} == {'regular', 'adjustment'}
@@ -205,7 +239,7 @@ def test_adjustment_payslip_coexists_with_regular(app, seeded):
 
 def test_run_state_machine_transitions(app, seeded):
     """Verify the allowed transitions for PayrollRun.status."""
-    co_id, u_id, emp_id, run_id = seeded
+    _co_id, u_id, _emp_id, run_id = seeded
     with app.app_context():
         run = db.session.get(PayrollRun, run_id)
         assert run.status == 'review'

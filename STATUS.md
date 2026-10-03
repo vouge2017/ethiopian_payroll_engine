@@ -19,10 +19,11 @@
   classified Ignored / Test credential, with prior fresh success.
 - **Deployed:** no identified deployment or restore proof for this baseline.
 - **Practitioner verified:** founder/Tigist monthly trial not yet completed.
-- **Still open / authorized now:** repair the two stale CI test contracts;
-  close only the three known results/review controls; connect existing saved
-  review, previous approved comparison and deterministic checks. Then report
-  trial scripts and STOP before practitioner expansion or deployment.
+- **Completed on the review branch:** repaired the two stale CI test contracts;
+  closed the three known results/review controls; connected existing saved
+  review, previous approved comparison and deterministic checks. Founder/Tigist
+  scripts are prepared. **Still open:** review/merge, policy decisions,
+  practitioner acceptance and deployment evidence. STOP before further work.
 
 This section supersedes older pending/next-task statements below. Historical
 receipts remain unchanged. Working branch: `feature/monthly-payroll-journey`
@@ -41,7 +42,15 @@ Final recheck: `57 passed, 20 warnings in 20.60s`. Counts overlap.
 Ruff passes; `231 files already formatted`. CSRF-enabled accountant/owner browser
 journey verified on desktop and 390px; saved phone review width 384 <= 390.
 Downloaded PDF/bank both contain net 11,053.99; payment remains Pending.
-New-commit hosted CI remains a separate verification gate after push.
+Implementation `9f0f4a3e1613cb36a2eb14bced55915b8827982b` is pushed.
+Hosted PostgreSQL: `128 passed, 286 warnings in 69.69s (0:01:09)`; empty-database
+migration and rollback/rollforward passed. Hosted lint/format and strict security/
+tenant gates on both Python versions passed. Full Python 3.11 and 3.12 each:
+`TOTAL: 1561 passed, 0 failed, 0 errors, 124 skipped`.
+[All four branch CI jobs passed](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37130741492).
+No GitGuardian check is attached to this implementation SHA. These receipts
+belong to `9f0f4a3`; the later documentation-only receipt commit changes no
+tested source, tests, migrations or workflow and does not rerun the same CI.
 
 [Scope, receipts, policy/release limits and founder/Tigist scripts](docs/MONTHLY_PAYROLL_JOURNEY_2026-10-03.md).
 STOP after this slice; no further work order or practitioner expansion is started.

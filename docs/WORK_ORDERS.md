@@ -10,13 +10,13 @@ standalone migrations and lint/format pass; full Python 3.11 has
 GitGuardian passed on PR #10 head `90779cb`; merge SHA has no separate scan.
 Deployment/restore and founder/Tigist verification are open.
 
-12. Prepare the ordinary monthly payroll journey using existing comparison and checks, then STOP.
+12. Ordinary monthly payroll journey: implemented, locally and hosted-CI verified; review before continuing.
 
-First repair the two stale CI test contracts. Close the individual PDF control,
-unsupported worksheet Undo and completed-review label. Connect previous approved
-facts to saved-review changes and exceptions; exercise desktop/phone using
-synthetic data. Reuse existing services, keep statutory policy unchanged, expose
-threshold decisions, and report founder/Tigist trial scripts. No further
+Completed scope: repaired the two stale CI test contracts; closed the individual
+PDF control, unsupported worksheet Undo and completed-review label; connected
+previous approved facts to saved-review changes and exceptions; exercised
+desktop/phone using synthetic data. Existing services and statutory policy were
+preserved; threshold decisions and founder/Tigist trial scripts are recorded. No further
 correction categories, AI, bank execution, statutory submission, HRMS expansion
 or production deployment. The latest user instruction authorizes this bounded
 slice and supersedes the earlier reconciliation-only stop below.
@@ -33,8 +33,16 @@ existing frozen previous-period comparison, exceptions and saved checks.
 `57 passed, 20 warnings in 20.60s` final recheck (overlap). Ruff passes.
 Desktop/390px accountant-to-owner approval, PDF and bank download were exercised
 with synthetic data; outputs agree and payment stays Pending.
-Review branch hosted checks, merge, practitioner acceptance and deployment remain
-separate. [Report and trial scripts](MONTHLY_PAYROLL_JOURNEY_2026-10-03.md).
+Pushed implementation: `9f0f4a3e1613cb36a2eb14bced55915b8827982b`.
+Hosted PostgreSQL: `128 passed, 286 warnings in 69.69s (0:01:09)`; empty-database
+migration and rollback/rollforward pass, as do hosted lint/format and both strict
+security/tenant gates. Python 3.11 and 3.12 each passed:
+`TOTAL: 1561 passed, 0 failed, 0 errors, 124 skipped`.
+[All four CI jobs](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37130741492)
+passed on `9f0f4a3`; there is no attached GitGuardian check. The later receipt
+commit updates these documents only, leaving tested source unchanged.
+Merge, practitioner acceptance and deployment remain separate.
+[Report and trial scripts](MONTHLY_PAYROLL_JOURNEY_2026-10-03.md).
 **STOP:** no further work order begins automatically.
 
 We own the technical investigation and implementation. The product owner supplies

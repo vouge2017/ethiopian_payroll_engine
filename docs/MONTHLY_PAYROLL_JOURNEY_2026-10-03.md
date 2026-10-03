@@ -101,9 +101,25 @@ change should receive a company warning, and what evidence should accompany it?
 - Ruff: `ruff check payroll_engine/ tests/` passes;
   `ruff format --check payroll_engine/ tests/`: `231 files already formatted`.
 
-Selections overlap; do not add counts. These are local changed-path receipts,
-not claims that full hosted CI on the new implementation already passed.
-CI includes the new PostgreSQL file and runs on the review branch push.
+Selections overlap; do not add counts. These are local changed-path receipts.
+
+Pushed implementation: `9f0f4a3e1613cb36a2eb14bced55915b8827982b`.
+[Hosted branch CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37130741492)
+includes the new PostgreSQL file. PostgreSQL passed:
+`128 passed, 286 warnings in 69.69s (0:01:09)`, with empty-database migration
+and rollback/rollforward verified. Lint/format and strict security/tenant gates
+on Python 3.11/3.12 passed. Both full Python jobs completed successfully, each:
+`TOTAL: 1561 passed, 0 failed, 0 errors, 124 skipped`.
+All four hosted jobs are green on this exact implementation SHA.
+There is no attached GitGuardian check; the earlier PR #10 scan is separate.
+Hosted logs: `local-evidence/hosted-pg-9f0f4a3.log`,
+`local-evidence/hosted-python311-9f0f4a3.log`,
+`local-evidence/hosted-python312-9f0f4a3.log`.
+
+The follow-up receipt commit changes only this report, STATUS.md and WORK_ORDERS.md.
+Its `[skip ci]` marker avoids repeating completed suites for a documentation-only
+update. Source, tests, migrations and workflow are identical to tested `9f0f4a3`;
+there is no separate hosted run attributed to that documentation commit.
 
 ## Browser evidence
 

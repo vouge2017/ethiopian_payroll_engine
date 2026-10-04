@@ -15,9 +15,9 @@
   PostgreSQL `128 passed, 286 warnings in 66.04s (0:01:06)`;
   lint/format, strict tenant/security gates and both standalone migration jobs
   passed. [PR CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37202508112).
-- **Hosted CI on merge SHA:** PostgreSQL, lint/format and both standalone migration
-  jobs passed. Python 3.11/3.12 remain running at this receipt; do not substitute
-  PR-head results for final merge-job status.
+- **Hosted CI on merge SHA:** Python 3.11/3.12, PostgreSQL, lint/format and both
+  standalone migration jobs completed successfully on `2f6f4e6`. These are
+  completed merge-job results, distinct from the earlier PR-head receipt.
   [Merge CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37205352561).
 - **GitGuardian:** success on exact PR #11 head `6eb7fd1`, check `111436890883`;
   no separate GitGuardian check is attached to merge SHA `2f6f4e6`. Historical

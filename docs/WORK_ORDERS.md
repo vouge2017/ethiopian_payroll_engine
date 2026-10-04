@@ -8,8 +8,8 @@ Merge tree equals tested PR head `6eb7fd1`. On that head, Python 3.11/3.12 each:
 `TOTAL: 1563 passed, 0 failed, 0 errors, 124 skipped`;
 PostgreSQL: `128 passed, 286 warnings in 66.04s (0:01:06)`.
 Lint/format, both standalone migration jobs and GitGuardian passed.
-On merge SHA, PostgreSQL, lint/format and both migration jobs passed; full Python
-jobs are still running at this receipt. Deployment/restore and practitioner
+On merge SHA, Python 3.11/3.12, PostgreSQL, lint/format and both migration jobs
+completed successfully. Deployment/restore and practitioner
 verification are open. Historical pending statements below are superseded here.
 
 13. Close independently reproduced monthly-review messaging defects and prepare a reviewable handoff.

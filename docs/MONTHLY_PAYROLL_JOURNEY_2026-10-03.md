@@ -10,8 +10,8 @@ On that exact head, Python 3.11 and 3.12 each completed:
 PostgreSQL: `128 passed, 286 warnings in 66.04s (0:01:06)`.
 Lint/format, both standalone migration jobs and GitGuardian also passed.
 
-Merge-SHA PostgreSQL, lint/format and both standalone migration jobs passed;
-full Python merge jobs are running at this receipt. There is no separate
+Merge-SHA Python 3.11/3.12, PostgreSQL, lint/format and both standalone migration
+jobs completed successfully. There is no separate
 GitGuardian check on the merge object. No deployment or new feature began.
 This receipt is a documentation-only follow-up on the existing feature branch;
 remote main and tested source remain unchanged. Earlier unmerged/pending records

@@ -1,6 +1,24 @@
 # Ordinary monthly payroll journey - 2026-10-03
 
-## Scope and authoritative state
+## Current merge receipt - 2026-10-04
+
+PR #11 is merged with explicit user approval. Remote main is
+`2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`; its tree is identical to reviewed
+PR head `6eb7fd13037741b18b4dfa8d3ec7a9d24360abf9`.
+On that exact head, Python 3.11 and 3.12 each completed:
+`TOTAL: 1563 passed, 0 failed, 0 errors, 124 skipped`.
+PostgreSQL: `128 passed, 286 warnings in 66.04s (0:01:06)`.
+Lint/format, both standalone migration jobs and GitGuardian also passed.
+
+Merge-SHA PostgreSQL, lint/format and both standalone migration jobs passed;
+full Python merge jobs are running at this receipt. There is no separate
+GitGuardian check on the merge object. No deployment or new feature began.
+This receipt is a documentation-only follow-up on the existing feature branch;
+remote main and tested source remain unchanged. Earlier unmerged/pending records
+below are historical checkpoints. Founder/Tigist trial and release/policy limits
+remain open; the scripts below are the next preparation target.
+
+## Historical scope and authoritative state at implementation start
 
 Accepted remote main is `9670a92487c705a6614e3c6df67aff24d29c7bcf`.
 PR #8 recovery/hardening reconciliation and PR #10 overtime/bonus corrections

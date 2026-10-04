@@ -2,32 +2,54 @@
 
 ## CURRENT AUTHORITATIVE STATE - 2026-10-04
 
-- **Merged:** remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf` includes
-  accepted recovery/hardening PR #8 and approved overtime/bonus correction PR #10
-  (`90779cb`). No newer main commit was reported by today's remote read.
+- **Merged:** PR #11 was merged with explicit user approval at
+  `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110` on 2026-10-04, 13:21:46 UTC.
+  This is remote main and preserves accepted PR #8/#10 plus the monthly journey.
+  The merge tree is identical to reviewed/tested head
+  `6eb7fd13037741b18b4dfa8d3ec7a9d24360abf9` (no file differences).
 - **Schema:** 77 Alembic revisions, sole head `f4a5b6c7d8f3`; source graph checked.
 - **Locally verified:** reconciliation and correction PostgreSQL receipts below
   remain attributable to their tested slices; they are not full-main CI proof.
-- **Hosted CI on exact main:** PostgreSQL, standalone migrations Python 3.11/3.12,
-  lint and format passed. Full Python 3.11 failed:
-  `TOTAL: 1550 passed, 11 failed, 0 errors, 116 skipped`; Python 3.12 cancelled.
-  Failed files: `test_p0_features.py`, `test_p0d_concurrency.py`.
-  [Exact-main CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37105301824).
-- **GitGuardian:** success on merged PR #10 head `90779cb`, check `111152463105`;
-  no GitGuardian check is attached to merge SHA `9670a92`. Do not label main's
-  absent scan as a separately passed scan. Historical incident 37741140 is
-  classified Ignored / Test credential, with prior fresh success.
+- **Hosted CI on exact PR head:** Python 3.11 and 3.12 each
+  `TOTAL: 1563 passed, 0 failed, 0 errors, 124 skipped`;
+  PostgreSQL `128 passed, 286 warnings in 66.04s (0:01:06)`;
+  lint/format, strict tenant/security gates and both standalone migration jobs
+  passed. [PR CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37202508112).
+- **Hosted CI on merge SHA:** PostgreSQL, lint/format and both standalone migration
+  jobs passed. Python 3.11/3.12 remain running at this receipt; do not substitute
+  PR-head results for final merge-job status.
+  [Merge CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37205352561).
+- **GitGuardian:** success on exact PR #11 head `6eb7fd1`, check `111436890883`;
+  no separate GitGuardian check is attached to merge SHA `2f6f4e6`. Historical
+  incident 37741140 is classified Ignored / Test credential.
 - **Deployed:** no identified deployment or restore proof for this baseline.
 - **Practitioner verified:** founder/Tigist monthly trial not yet completed.
-- **Completed on the review branch:** repaired the two stale CI test contracts;
+- **Implemented, tested and merged:** repaired the two stale CI test contracts;
   closed the three known results/review controls; connected existing saved
   review, previous approved comparison and deterministic checks. Founder/Tigist
-  scripts are prepared. **Still open:** review/merge, policy decisions,
-  practitioner acceptance and deployment evidence. STOP before further work.
+  scripts are prepared. **Still open:** practitioner acceptance, unresolved policy
+  and deployment/recovery evidence. Next proposed task: prepare the isolated
+  synthetic trial environment. No deployment or new feature began during merge.
 
 This section supersedes older pending/next-task statements below. Historical
 receipts remain unchanged. Working branch: `feature/monthly-payroll-journey`
 in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
+
+### PR #11 merge receipt - 2026-10-04
+
+[PR #11](https://github.com/vouge2017/ethiopian_payroll_engine/pull/11) is merged.
+The clean working checkout was fast-forwarded to the verified merge object.
+An initial fetch updated FETCH_HEAD but left the old origin/main tracking ref;
+the exact fetched SHA was verified before fast-forward, then origin/main was
+explicitly refreshed. No old files were restored/deleted from the stale ref.
+Source tree equality against `6eb7fd1` was verified. No tests were rerun locally.
+Completed PR receipts are in `local-evidence/pr11-final-{python311,python312,postgres}.log`.
+
+This follow-up updates only the three status/report documents. It is published
+on the existing feature branch with `[skip ci]` to avoid repeating suites for
+documentation alone; it does not change remote main, tested source, schema or
+workflow. Historical unmerged/pending statements below describe their original
+checkpoint and are superseded by this current summary.
 
 ### Bounded review follow-up - 2026-10-04
 

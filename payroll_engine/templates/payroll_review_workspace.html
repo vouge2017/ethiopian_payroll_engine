@@ -5,6 +5,7 @@
 {% block title %}Payroll Review — {{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }}{% endblock %}
 
 {% block content %}
+{% set saved_blocks = validation_results|selectattr('severity', 'equalto', 'BLOCK')|rejectattr('overridden')|list %}
 <div class="p-4 p-md-5">
 
   {% if worksheet_rows %}
@@ -42,7 +43,13 @@
       <p class="text-muted mb-0">{{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }} · {{ run.reference or 'Run #' + run.id|string }}</p>
     </div>
     <div class="d-flex align-items-center gap-3">
-      {% if can_approve %}
+      {% if run.status in ('completed', 'locked') %}
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+          <i class="bi bi-check-circle me-1"></i> {{ 'Approved and locked' if run.status == 'locked' else 'Approved' }}
+        </span>
+      {% elif run.status == 'pending_approval' and can_approve %}
+        <span class="badge bg-warning-subtle text-dark px-3 py-2">Waiting for owner approval</span>
+      {% elif can_approve %}
         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
           <i class="bi bi-check-circle me-1"></i> Ready for Approval
         </span>
@@ -69,13 +76,27 @@
       <h5 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>What Happened</h5>
       <p class="text-body">{{ narrative }}</p>
 
+      {% if change_summary and change_summary.retained_comparison %}
+      <h6>What changed from previous approved payroll</h6>
+      <p class="small">Previous approved: {{ change_summary.previous_period or 'No earlier approved payroll' }}</p>
+      <p class="small">{{ change_summary.summary_text }} Net pay change: ETB {{ '{:+,.2f}'.format(change_summary.net_delta) }}.</p>
+      {% for note in change_summary.comparison_notes %}<p class="small text-muted">{{ note }}</p>{% endfor %}
+      {% if change_summary.changes %}
+      <ul class="list-unstyled">
+        {% for change in change_summary.changes %}
+        <li class="border-bottom py-2"><strong>{{ change.employee_name }} ({{ change.employee_id }})</strong><br>{{ change.description }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endif %}
+
       {% if change_summary and change_summary.changes %}
       <div class="row g-3 mt-2">
         {% if change_summary.new_hires %}
         <div class="col-6 col-md">
           <div class="text-center p-3 rounded-3" style="background: var(--color-success-light);">
             <div class="fs-3 fw-bold text-success">+{{ change_summary.new_hires|length }}</div>
-            <small class="text-success">New Hires</small>
+            <small class="text-success">{{ 'Added to payroll' if change_summary.retained_comparison else 'New Hires' }}</small>
           </div>
         </div>
         {% endif %}
@@ -83,7 +104,7 @@
         <div class="col-6 col-md">
           <div class="text-center p-3 rounded-3" style="background: var(--color-danger-light);">
             <div class="fs-3 fw-bold text-danger">-{{ change_summary.departures|length }}</div>
-            <small class="text-danger">Departures</small>
+            <small class="text-danger">{{ 'Absent from payroll' if change_summary.retained_comparison else 'Departures' }}</small>
           </div>
         </div>
         {% endif %}
@@ -164,6 +185,14 @@
   <!-- SECTION 3: ISSUES — Anything wrong? -->
   <!-- ═══════════════════════════════════════════ -->
 
+  {% if saved_blocks or component_errors or (run.status not in ('completed', 'locked') and not can_approve) %}
+  <div class="card mb-4 border-warning">
+    <div class="card-body">
+      <p class="fw-semibold mb-1">Review checks need attention</p>
+      <p class="small mb-0">Review the findings and any unavailable information before continuing.</p>
+    </div>
+  </div>
+  {% endif %}
   {% if component_errors and component_errors.exceptions %}
     {% set component_name = 'Issues & Exceptions' %}
     {% set error_message = component_errors.exceptions %}
@@ -251,21 +280,37 @@
       </div>
     </div>
   </div>
-  {% else %}
+  {% elif not saved_blocks and not component_errors and (run.status in ('completed', 'locked') or can_approve) %}
   <div class="card mb-4 border-success">
     <div class="card-body text-center py-4">
       <i class="bi bi-check-circle-fill text-success fs-3"></i>
       <p class="fw-semibold text-success mt-2 mb-0">No issues detected</p>
-      <p class="text-muted small">All checks passed. Ready for approval.</p>
+      <p class="text-muted small">{{ 'Approval is already recorded.' if run.status in ('completed', 'locked') else 'Review the amounts and warnings before continuing.' }}</p>
     </div>
   </div>
   {% endif %}
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- SECTION 4: APPROVAL — Ready? -->
+  {% if validation_results %}
+  <div class="card mb-4"><div class="card-body">
+    <h5>Saved validation checks</h5>
+    <ul class="list-unstyled">{% for finding in validation_results %}
+      <li class="border-bottom py-2"><strong>{{ finding.severity }} · {{ finding.rule_code }}</strong>: {{ finding.message }}
+      {% if finding.overridden %}<span class="badge bg-secondary">Override recorded</span>{% endif %}</li>
+    {% endfor %}</ul>
+    <p class="small text-muted">Resolve blocking findings and review flags on the approval screen.</p>
+  </div></div>
+  {% endif %}
   <!-- ═══════════════════════════════════════════ -->
 
-  {% if component_errors and component_errors.exceptions %}
+  {% if run.status in ('completed', 'locked') %}
+  <div class="card mb-4"><div class="card-body">
+    <h5>Approved payroll</h5>
+    <p>Approval is recorded. Downloading outputs does not mean salaries have been paid.</p>
+    <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">View approved payroll</a>
+  </div></div>
+  {% elif component_errors and component_errors.exceptions %}
   <div class="card mb-4">
     <div class="card-body">
       <h5 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-purple me-2"></i>Approval</h5>
@@ -312,8 +357,11 @@
       {% else %}
       <div class="d-flex align-items-center justify-content-between">
         <div>
-          <p class="text-danger fw-semibold small mb-1">Cannot approve — {{ exceptions.blocking_issues|length }} blocking issue(s).</p>
-          <p class="text-muted small mb-0">Resolve the critical issues above before approving.</p>
+          <p class="text-danger fw-semibold small mb-1">Approval is unavailable.</p>
+          {% if saved_blocks %}<p class="small mb-1">{{ saved_blocks|length }} saved blocking check(s). Resolve these findings before approval.</p>{% endif %}
+          {% if exceptions and exceptions.blocking_issues %}<p class="small mb-1">{{ exceptions.blocking_issues|length }} blocking payroll issue(s). Resolve the listed issues before approval.</p>{% endif %}
+          {% if component_errors %}<p class="small mb-1">Some review information could not be verified. Resolve the reported errors and reload the review.</p>{% endif %}
+          {% if not saved_blocks and not component_errors and not (exceptions and exceptions.blocking_issues) %}<p class="text-muted small mb-0">Check the saved payroll status and evidence above before continuing.</p>{% endif %}
         </div>
         <button disabled class="btn btn-secondary btn-lg" disabled>Approve Payroll</button>
       </div>

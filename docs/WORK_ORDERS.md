@@ -1,5 +1,63 @@
 # Focused delivery work orders
 
+## CURRENT AUTHORITATIVE STATE - 2026-10-04
+
+Accepted baseline: remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf`
+contains merged PR #8 and #10. Schema: 77 revisions, one head `f4a5b6c7d8f3`.
+Local PostgreSQL receipts remain slice-specific. Exact-main hosted PostgreSQL,
+standalone migrations and lint/format pass; full Python 3.11 has
+`TOTAL: 1550 passed, 11 failed, 0 errors, 116 skipped`, Python 3.12 cancelled.
+GitGuardian passed on PR #10 head `90779cb`; merge SHA has no separate scan.
+Deployment/restore and founder/Tigist verification are open.
+
+13. Close independently reproduced monthly-review messaging defects and prepare a reviewable handoff.
+
+Completed locally: truthful blocker/status messages, retained recovery narrative,
+neutral added/absent payroll labels, working-checkout guidance. Final focused
+receipt: `74 passed, 20 warnings in 47.54s`; Ruff passes, 231 files formatted;
+synthetic Playwright checks at 1440/390px passed with no page overflow.
+Independent fix review found no remaining blocker in the four changed source/test
+files. These new fixes need their own hosted receipt; prior `9f0f4a3` CI stays
+attributable to that earlier code. See STATUS.md for failure/recovery evidence.
+
+**Next decision:** authorize a monthly branch PR for review/GitGuardian evidence,
+then prepare the synthetic founder/Tigist trial. No automatic merge/deployment.
+
+12. Ordinary monthly payroll journey: prior implemented and hosted-CI-verified slice.
+
+Completed scope: repaired the two stale CI test contracts; closed the individual
+PDF control, unsupported worksheet Undo and completed-review label; connected
+previous approved facts to saved-review changes and exceptions; exercised
+desktop/phone using synthetic data. Existing services and statutory policy were
+preserved; threshold decisions and founder/Tigist trial scripts are recorded. No further
+correction categories, AI, bank execution, statutory submission, HRMS expansion
+or production deployment. The latest user instruction authorizes this bounded
+slice and supersedes the earlier reconciliation-only stop below.
+
+See STATUS.md for source/CI/deployment distinctions. Historical orders and
+receipts below are retained; stale pending instructions do not override this
+current section.
+
+### Order 12 local acceptance - 2026-10-03
+
+Delivered on `feature/monthly-payroll-journey`: three results/review control fixes,
+existing frozen previous-period comparison, exceptions and saved checks.
+`136 passed, 104 warnings in 80.49s (0:01:20)` affected cases;
+`57 passed, 20 warnings in 20.60s` final recheck (overlap). Ruff passes.
+Desktop/390px accountant-to-owner approval, PDF and bank download were exercised
+with synthetic data; outputs agree and payment stays Pending.
+Pushed implementation: `9f0f4a3e1613cb36a2eb14bced55915b8827982b`.
+Hosted PostgreSQL: `128 passed, 286 warnings in 69.69s (0:01:09)`; empty-database
+migration and rollback/rollforward pass, as do hosted lint/format and both strict
+security/tenant gates. Python 3.11 and 3.12 each passed:
+`TOTAL: 1561 passed, 0 failed, 0 errors, 124 skipped`.
+[All four CI jobs](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37130741492)
+passed on `9f0f4a3`; there is no attached GitGuardian check. The later receipt
+commit updates these documents only, leaving tested source unchanged.
+Merge, practitioner acceptance and deployment remain separate.
+[Report and trial scripts](MONTHLY_PAYROLL_JOURNEY_2026-10-03.md).
+**STOP:** no further work order begins automatically.
+
 We own the technical investigation and implementation. The product owner supplies
 the user problem, policy decisions and user feedback; expert prompting is not a
 prerequisite. STATUS.md remains the evidence record. Update this board when work
@@ -87,3 +145,17 @@ PR #8 reconciliation and GitGuardian are complete. This new branch still needs
 hosted checks and review; production deployment is separate.
 
 11. Finish the three existing results/review UI defects and run the synthetic practitioner journey.
+## Current Priority Override - 2026-10-03
+
+Reconcile recovery `c2b636f` with hardening `e1d5e37`, report verified evidence,
+then **STOP**. This latest user instruction overrides the reusable continuation
+instruction and any next-order suggestion below.
+
+Delivered in merged PR #8 at `9a46f2880188c7bb473bd3ac1c42fd89053bf839`.
+Both source inputs remain in its ancestry; hosted Python 3.11/3.12,
+PostgreSQL, standalone migrations and lint all passed at that SHA.
+See [acceptance receipts and exact checks](PR8_RECONCILIATION_2026-10-03.md#priority-override-review-and-stop-checkpoint---2026-10-03).
+
+Current main `9670a92` also includes subsequently merged correction PR #10;
+this review does not undo that merge or authorize further correction work.
+No later work order may begin until the reconciliation result is reviewed.

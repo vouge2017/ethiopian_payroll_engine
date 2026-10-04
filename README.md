@@ -2,6 +2,15 @@
 
 A web-based payroll system for Ethiopian SMEs. Calculates income tax (2025 brackets), POSSA pension, generates payslips, bank files, and ERCA/PSSA reports.
 
+Current development checkout on this machine: `D:\ethiopian_payroll_engine\payroll-pr8-integration`.
+Start with the current summary in [STATUS.md](STATUS.md) and the next bounded
+task in [WORK_ORDERS.md](docs/WORK_ORDERS.md). [AGENTS.md](AGENTS.md) records the
+working procedure for future sessions. Other payroll folders preserve earlier
+or unfinished work; do not delete them to simplify the layout.
+
+The monthly journey is a review branch. Tested, merged, deployed and practitioner
+accepted are separate states; consult STATUS.md before choosing a starting point.
+
 ## Quick Start (Local Development)
 
 ```bash

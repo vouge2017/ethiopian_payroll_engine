@@ -49,3 +49,7 @@ docs/migration-2026-08-31/
 /p1_push.txt
 /local-evidence/
 
+# Browser snapshots and temporary captures; selected evidence lives in docs.
+/.playwright-cli/
+/output/playwright/
+

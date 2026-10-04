@@ -1,5 +1,100 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT AUTHORITATIVE STATE - 2026-10-04
+
+- **Merged:** remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf` includes
+  accepted recovery/hardening PR #8 and approved overtime/bonus correction PR #10
+  (`90779cb`). No newer main commit was reported by today's remote read.
+- **Schema:** 77 Alembic revisions, sole head `f4a5b6c7d8f3`; source graph checked.
+- **Locally verified:** reconciliation and correction PostgreSQL receipts below
+  remain attributable to their tested slices; they are not full-main CI proof.
+- **Hosted CI on exact main:** PostgreSQL, standalone migrations Python 3.11/3.12,
+  lint and format passed. Full Python 3.11 failed:
+  `TOTAL: 1550 passed, 11 failed, 0 errors, 116 skipped`; Python 3.12 cancelled.
+  Failed files: `test_p0_features.py`, `test_p0d_concurrency.py`.
+  [Exact-main CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37105301824).
+- **GitGuardian:** success on merged PR #10 head `90779cb`, check `111152463105`;
+  no GitGuardian check is attached to merge SHA `9670a92`. Do not label main's
+  absent scan as a separately passed scan. Historical incident 37741140 is
+  classified Ignored / Test credential, with prior fresh success.
+- **Deployed:** no identified deployment or restore proof for this baseline.
+- **Practitioner verified:** founder/Tigist monthly trial not yet completed.
+- **Completed on the review branch:** repaired the two stale CI test contracts;
+  closed the three known results/review controls; connected existing saved
+  review, previous approved comparison and deterministic checks. Founder/Tigist
+  scripts are prepared. **Still open:** review/merge, policy decisions,
+  practitioner acceptance and deployment evidence. STOP before further work.
+
+This section supersedes older pending/next-task statements below. Historical
+receipts remain unchanged. Working branch: `feature/monthly-payroll-journey`
+in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
+
+### Bounded review follow-up - 2026-10-04
+
+Remote main is still `9670a92487c705a6614e3c6df67aff24d29c7bcf`. Existing CI on
+`9f0f4a3` remains green; no expensive local full-suite rerun was performed.
+No monthly PR is open; PR #7 is the separate unfinished mobile redesign.
+
+Independent review found misleading BLOCK/comparison-error success messages and
+retained recovery changes described as unchanged by the API/cockpit narrative.
+Both were reproduced and repaired; payroll absence now says Absent from payroll,
+not Departures. Pending approval is labeled Waiting for owner approval.
+No arithmetic, authorization, migration or approval-write behavior changed.
+
+Before fixes: `2 failed, 1 passed, 5 deselected, 10 warnings in 13.61s` (PG UI);
+`2 failed, 30 deselected, 4 warnings in 2.10s` (narrative).
+An intermediate run exposed that existing informational issues hid the attention
+banner: `2 failed, 72 passed, 20 warnings in 41.33s`; the banner is now independent.
+Final: `74 passed, 20 warnings in 47.54s` across `test_pg_monthly_journey`,
+`test_narrative`, `test_change_summary`, `test_error_boundaries`.
+Log: `local-evidence/integration-20261004-064246-831510.log`.
+Ruff passes; `231 files already formatted`. Independent fix review found no
+remaining blocker in the four changed source/test files; this is bounded review,
+not a fresh whole-repository security or statutory certification.
+
+Installed cached Playwright CLI verified the synthetic BLOCK page at 1440/390px:
+DOM/page width equaled viewport, approval unavailable, correct blocker count,
+no false all-checks-passed text or Continue control. Screenshots are in
+`docs/evidence/review-blocked-{desktop,phone}-2026-10-04.png`.
+The browser connector failed twice before page access; the first Python fallback
+had no installed Playwright package. Cached CLI worked without a new installation.
+Browser and loopback preview are stopped; the preview used its own disposable DB.
+
+Working guidance is now in AGENTS.md and linked from README.md. A local-only
+AGENTS.md at the outer workspace directs future sessions here and preserves
+unfinished mobile work. No user files were deleted or moved.
+
+**Next:** publish/read new-commit CI, obtain the missing PR/GitGuardian evidence,
+then prepare a stable synthetic founder/Tigist trial. Opening a PR, merging and
+deploying remain separate authorization steps. New follow-up hosted CI is not
+covered by the older `9f0f4a3` receipt above. Policy and release gates remain open.
+
+### Monthly slice completion - 2026-10-03
+
+Prepared on the review branch, unmerged and undeployed. Repaired the obsolete CI
+test contracts; closed individual PDF, worksheet Undo and completed-review label
+defects; connected existing change summary to frozen review and earlier approved
+regular payroll. Existing exceptions and saved checker findings are visible.
+No new policy thresholds, statutory math, migrations or correction categories.
+
+Affected result: `136 passed, 104 warnings in 80.49s (0:01:20)`.
+Final recheck: `57 passed, 20 warnings in 20.60s`. Counts overlap.
+Ruff passes; `231 files already formatted`. CSRF-enabled accountant/owner browser
+journey verified on desktop and 390px; saved phone review width 384 <= 390.
+Downloaded PDF/bank both contain net 11,053.99; payment remains Pending.
+Implementation `9f0f4a3e1613cb36a2eb14bced55915b8827982b` is pushed.
+Hosted PostgreSQL: `128 passed, 286 warnings in 69.69s (0:01:09)`; empty-database
+migration and rollback/rollforward passed. Hosted lint/format and strict security/
+tenant gates on both Python versions passed. Full Python 3.11 and 3.12 each:
+`TOTAL: 1561 passed, 0 failed, 0 errors, 124 skipped`.
+[All four branch CI jobs passed](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37130741492).
+No GitGuardian check is attached to this implementation SHA. These receipts
+belong to `9f0f4a3`; the later documentation-only receipt commit changes no
+tested source, tests, migrations or workflow and does not rerun the same CI.
+
+[Scope, receipts, policy/release limits and founder/Tigist scripts](docs/MONTHLY_PAYROLL_JOURNEY_2026-10-03.md).
+STOP after this slice; no further work order or practitioner expansion is started.
+
 ## Ruff gates and overtime page repair - 2026-10-02
 
 The existing pending cleanup was reviewed and completed on
@@ -945,3 +1040,31 @@ remain unchanged.
 
 Scope, logs and screenshots:
 [PAYROLL_CORRECTIONS_2026-10-03.md](docs/PAYROLL_CORRECTIONS_2026-10-03.md).
+## Priority Override review and stop - 2026-10-03
+
+The latest user instruction is reconciliation only, then STOP. This supersedes
+automatic continuation into later work orders. No new product code was changed
+in this review.
+
+Both `c2b636f` recovery and `e1d5e37` hardening are ancestors of merged PR #8
+`9a46f2880188c7bb473bd3ac1c42fd89053bf839` (ancestry commands exit 0).
+The reconciliation is complete and published; no repeat merge is required.
+Hosted checks re-read today at that SHA: lint, Python 3.11/3.12, PostgreSQL,
+standalone migrations 3.11/3.12 all success.
+
+Recorded local receipts, not rerun for this documentation-only review:
+`93 passed, 262 warnings in 186.20s (0:03:06)`;
+`173 passed, 1 skipped, 41 warnings in 205.76s (0:03:25)`;
+`TOTAL: 199 passed, 0 failed, 0 errors, 2 skipped` (repaired selection).
+Selections overlap. Reconciliation: 76 revisions, sole head `f4a5b6c7d8f2`.
+
+Actual remote main is `9670a92487c705a6614e3c6df67aff24d29c7bcf`, after PR #10
+merged later correction work `90779cb`. Its head is `f4a5b6c7d8f3` (77 revisions).
+Current main lint, PostgreSQL and both standalone migration checks pass; full
+Python 3.11/3.12 remain running at this checkpoint. These are separate from the
+fully passed reconciliation checks. No deployment was performed.
+
+Preservation, resolved conflicts, exact test selections, receipts and limits:
+[reconciliation review](docs/PR8_RECONCILIATION_2026-10-03.md#priority-override-review-and-stop-checkpoint---2026-10-03).
+Later work is on hold pending review; do not interpret previous next-order text
+as authorization to continue.

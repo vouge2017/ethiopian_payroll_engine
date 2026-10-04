@@ -149,3 +149,117 @@ This reconciliation does not close the previously documented payment/adjustment
 business gaps, finish the separate worksheet UI work, prove production deployment
 or restore readiness, or authorize merging PR #8 into main. Those are distinct
 from resolving its code conflicts and proving the combined migration graph.
+
+## Priority Override review and stop checkpoint - 2026-10-03
+
+The reconciliation requested between recovery `c2b636f` and hardening `e1d5e37`
+has already been delivered. Do not repeat the merge or start another work order.
+Earlier open-PR statements above are historical checkpoints, superseded here.
+
+### Source line and preservation
+
+`git merge-base --is-ancestor` returned exit 0 for both inputs against merged
+PR #8 commit `9a46f2880188c7bb473bd3ac1c42fd89053bf839`. Integration commit
+`110d67045bab85b60f4f3c45021070a6d2328fc6` has parents `e1d5e37` and restored
+main `facf818`; migration CI repair `c121558` and documentation `49abb22`
+followed. Both inputs remain available locally. No source deletion or force-push
+was performed. Dirty mobile/webhook work was not incorporated.
+
+| Area | Recovery capability retained | Hardening guarantee retained / resolution |
+|---|---|---|
+| Schema / models | Profiling, support/platform models, payslip uniqueness | Feature element/worksheet/encryption revisions retained; corrected dependencies, compliance ownership and convergence revisions; real branch-data upgrades |
+| Calculation / services | Restored payroll and employee services | Decimal calculation, period context, deduction identities and saved worksheet consumption retained; no statutory-policy redesign |
+| Approval / locking | Existing approval and immutable-payroll paths | Saved review approval, locks, atomic audits, loan single consumption, competing approval and rollback tests retained |
+| Tenant / authorization | Onboarding and membership discovery, support/admin access | Support and worksheet models registered with tenant guards; explicit authorized admin bypass; active-company and removed-membership protections, including Diff access |
+| Encryption | Main webhook signing-key behavior | Binary employee storage retained; webhook storage reconciled to restored model; logical key continuity, wrong-key refusal and rollback safeguards tested |
+| Corrections / month close | Adjustment service, routes/screens and month-close service retained | Reconciliation retained these capabilities without declaring their business policies safe; the later correction slice is separate evidence |
+| Excel / import | Main Excel-payroll workflow retained | Strict finite Decimal money and atomic invalid-import refusal retained; tenant-protected Diff and saved worksheet remain |
+| Outputs | Restored results and delivery routes retained | Approved accounting/register facts retained; legacy committed money survives delivery failure and retry |
+| Tests / startup | Main onboarding, recovery and platform tests retained | Assertions adapted to real contracts, not removed; actual PostgreSQL gates, strict security gate, locked migration dependencies, Ruff and fail-fast startup retained |
+
+The strategy was a history-preserving merge with conflict-specific decisions,
+not selecting either whole branch. Additional concrete conflicts resolved were
+duplicate app registration/fixture arguments, legacy phone aliases and lockout
+identity, unsupported startup options, and authenticated service-worker caching.
+Private HTML caching was removed to protect payroll data after logout; static
+caching remains. Restored screens were retained, not redesigned.
+
+### Acceptance receipts and exact checks
+
+The reconciliation graph at `9a46f28` has **76 revisions, one head
+`f4a5b6c7d8f2`**. Fresh PostgreSQL install, populated feature/main upgrades,
+financial-value preservation, empty full rollback/upgrade, shared compliance
+ownership, encryption continuity/refusal and populated-history downgrade refusal
+were exercised through Alembic, not `create_all()` or stamping.
+
+Recorded local results (not rerun during this documentation-only review):
+
+- `93 passed, 262 warnings in 186.20s (0:03:06)`;
+  receipt `local-evidence/integration-20261003-023319-018137.log`.
+- `173 passed, 1 skipped, 41 warnings in 205.76s (0:03:25)`;
+  receipt `local-evidence/integration-20261003-022651-508181.log`.
+- `TOTAL: 199 passed, 0 failed, 0 errors, 2 skipped`;
+  receipt `local-evidence/repaired-suite-summary.log`. This repaired selection
+  followed the initial failures documented above; it is not an independent
+  claim that the first broad local run passed. Counts overlap.
+
+Executed hosted commands are pinned in the reconciliation commit's workflows:
+
+```text
+ruff check payroll_engine/ tests/
+ruff format --check payroll_engine/ tests/
+python -m pytest tests/test_migration_chain.py -v
+python run_tests.py --continue
+```
+
+The strict fail-hard pytest gate selected `test_lockout`,
+`test_tenant_isolation`, `test_tenant_bypass_guards`, `test_billing`,
+`test_period_and_lock`, `test_usercompany_tenant`, `test_migration_chain`,
+`test_security_wave1`, and `test_security_regressions` under `tests/`, with `-q`.
+
+The PostgreSQL `pytest -q` selection was exactly these files under `tests/`:
+`test_migration_chain.py`, `test_pg_pr8_reconciliation.py`,
+`test_pg_catalog_types.py`, `test_pg_deduction_identity.py`,
+`test_pg_encrypted_employee.py`, `test_pg_report_queries.py`,
+`test_pg_spreadsheet_inputs.py`, `test_pg_period_absence.py`,
+`test_pg_worksheet_journey.py`, `test_pg_accounting_outputs.py`,
+`test_pg_published_register.py`, `test_pg_calculation_context.py`,
+`test_pg_legacy_delivery.py`, `test_pg_diff_access.py`, and
+`test_pg_import_money.py`. These cover worksheet save/review/approval/output,
+single-consumption loans, accounting/register integrity, strict imports,
+Diff access and delivery failure safety in addition to migrations.
+
+The repaired subprocess selection's saved file logs list: `test_benchmark`,
+`test_console_cleanups`, `test_demo_and_template`, `test_error_boundaries`,
+`test_impact_whatif`, `test_input_validation`, `test_p0a_tenant_isolation`,
+`test_p0d_concurrency`, `test_phone_auth`, `test_profile_changes`,
+`test_rate_limiting`, `test_rq_pdf`, `test_security_regressions`,
+`test_security_wave1`, `test_startup_gate`, and `test_verification`.
+
+GitHub checks re-read in this review confirm **all six checks success at
+`9a46f28`**: lint, Python 3.11/3.12, PostgreSQL, standalone migrations 3.11/3.12.
+[CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37096955402)
+and [migration checks](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37096955349).
+Fresh GitGuardian success at `49abb22` is a separate prior verified receipt;
+no new incident classification was performed in this review.
+
+### Actual current baseline and limits
+
+GitHub main is now `9670a92487c705a6614e3c6df67aff24d29c7bcf`: PR #10 merged
+the separately authorized correction commit `90779cb` onto `9a46f28`.
+The recovery/hardening reconciliation is therefore already in the authoritative
+main source line. Current main additionally contains that later correction
+work; it is not the reconciliation-only snapshot. Its graph now has 77 revisions
+and head `f4a5b6c7d8f3`. At this review, its hosted lint, PostgreSQL and both
+standalone migration jobs passed; full Python 3.11/3.12 jobs were still running.
+Do not substitute those incomplete current checks for the completed `9a46f28`
+reconciliation evidence.
+
+Production schema/duplicate inspection, deployment SHA, shared web/worker keys,
+durable artifacts and restore proof remain release limits. No production-ready
+claim follows from this integration. No deployment or rollback was performed.
+
+**STOP:** the user's latest Priority Override supersedes the board's reusable
+automatic-continuation instruction. Review this reconciliation result before
+starting corrections, late inputs, UI, AI, bank/tax integrations or any later
+work order. This checkpoint changes documentation only.

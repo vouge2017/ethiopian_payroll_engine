@@ -52,7 +52,7 @@
                 <i class="bi bi-download me-1"></i> {{ _('download') }} All (ZIP)
             </a>
             {% endif %}
-            {% if run.status == 'completed' and run.disbursement_status == 'pending' %}
+            {% if run.status == 'completed' and run.disbursement_status == 'pending' and run.source != 'spreadsheet' %}
             <form method="POST" action="{{ url_for('payroll.undo_approval', run_id=run.id) }}" class="d-inline"
                   onsubmit="return confirm('Undo this approval? This will delete all payslips and revert to review status.');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -186,9 +186,9 @@
                             <td data-label="Pension">{{ '%.2f'|format(p.employee_pension) }}</td>
                             <td data-label="Net Pay"><strong>{{ '%.2f'|format(p.net_pay) }}</strong></td>
                             <td data-label="Download">
-                                {% if p.pdf_file_path %}
+                                {% if run.status in ('completed', 'locked') %}
                                 <a href="{{ url_for('payroll.download_payslip', payslip_id=p.id) }}" class="btn btn-sm btn-outline-primary btn-approve-lg" onclick="event.stopPropagation()">
-                                    <i class="bi bi-download"></i> PDF
+                                    <i class="bi bi-download"></i> {{ 'Download PDF' if p.pdf_file_path else 'Generate PDF' }}
                                 </a>
                                 {% endif %}
                             </td>
@@ -270,47 +270,14 @@
     </div>
     {% endif %}
 
-    <!-- Create Adjustment Form -->
+    <!-- Use the existing evidenced correction workflow. -->
     <div class="card mt-4">
         <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create Adjustment</h5>
+            <h5 class="mb-0">Payroll corrections</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ url_for('payroll.create_adjustment', run_id=run.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Employee</label>
-                        <select name="employee_id" class="form-select" required>
-                            <option value="">Select employee...</option>
-                            {% for ps in run.payslips|selectattr('payslip_type', 'eq', 'regular')|list %}
-                            <option value="{{ ps.employee_id }}">{{ ps.employee.name if ps.employee else 'N/A' }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Type</label>
-                        <select name="adjustment_type" class="form-select">
-                            <option value="addition">Addition (gross)</option>
-                            <option value="deduction">Deduction (gross)</option>
-                            <option value="net_override">Net Override</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Amount (ETB)</label>
-                        <input type="number" name="amount" class="form-control" min="1" step="100" required placeholder="e.g. 2000">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Reason</label>
-                        <input type="text" name="reason" class="form-control" required placeholder="e.g. Overtime correction">
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-warning w-100">
-                            <i class="bi bi-plus-circle me-1"></i> Create
-                        </button>
-                    </div>
-                </div>
-            </form>
+            <p>Record additional approved overtime or bonus with its source, reason and owner approval. Original payslips remain unchanged.</p>
+            <a href="{{ url_for('payroll.adjustment_summary', run_id=run.id) }}" class="btn btn-outline-primary">Review payroll corrections</a>
         </div>
     </div>
     {% endif %}

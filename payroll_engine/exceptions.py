@@ -192,6 +192,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                         employee_pension=emp_data.get('pension_employee'),
                         employer_pension=emp_data.get('pension_employer'),
                         net_pay=emp_data.get('net'),
+                        payment_identity=emp_data.get('bank') if current_run.source == 'spreadsheet' else None,
                     )
                 )
         else:
@@ -286,7 +287,15 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
             )
 
         # HIGH: Missing bank account
-        if not emp.bank_or_telebirr or emp.bank_or_telebirr.strip() == '':
+        payment_identity = getattr(ps, 'payment_identity', None)
+        if current_run.source == 'spreadsheet' and current_run.status in ('completed', 'locked'):
+            from payroll_engine.services.worksheet_review import published_row
+
+            saved = published_row(ps)
+            payment_identity = saved['bank'] if saved else emp.bank_or_telebirr
+        elif current_run.source != 'spreadsheet' or payment_identity is None:
+            payment_identity = emp.bank_or_telebirr
+        if not payment_identity or payment_identity.strip() == '':
             report.issues.append(
                 Issue(
                     severity=HIGH,
@@ -378,7 +387,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
             )
 
     # MEDIUM: Large salary change (>20%)
-    if change_summary:
+    if change_summary and change_summary.variance_threshold_pct is not None:
         for sc in change_summary.salary_changes:
             if sc.delta_pct and abs(sc.delta_pct) > 20:
                 report.issues.append(

@@ -27,25 +27,105 @@
 - **GitGuardian:** success on exact PR #11 head `6eb7fd1`, check `111436890883`;
   no separate GitGuardian check is attached to merge SHA `2f6f4e6`. Historical
   incident 37741140 is classified Ignored / Test credential.
-- **Deployed:** no identified deployment or restore proof for this baseline.
-  **Active hosted incident:** user-supplied Render traceback at
-  2026-10-04 18:52:34 UTC shows login failing on missing `login_attempt`.
-  Migration startup at 19:00:57 UTC is not completion evidence. Deployed SHA,
-  recorded DB revisions, other missing structures and recovery remain open.
+- **Hosted recovery:** with explicit user approval, initialized the web service's
+  confirmed empty database using the existing 77 Alembic revisions. Completed
+  2026-10-04 20:37:03 UTC at sole head `f4a5b6c7d8f3`; no missing model tables or
+  columns. Hosted login GET 200, unknown-login POST 302 then GET 200 with
+  `Invalid credentials.`; registration GET 200. The reported table-missing
+  HTTP 500 is recovered. User confirmed this was only a new/test setup.
+- **Deployed:** this is a verified hosted schema change, not an identified
+  application release or restore drill. Deployed SHA/startup settings remain
+  unidentified. `/readyz` still reports migrations `unknown` while returning 200;
+  that source defect is not fixed. No hosted account or payroll was created.
 - **Practitioner verified:** founder/Tigist monthly trial not yet completed.
 - **Implemented, tested and merged:** repaired the two stale CI test contracts;
   closed the three known results/review controls; connected existing saved
   review, previous approved comparison and deterministic checks. Founder/Tigist
   scripts are prepared. **Still open:** practitioner acceptance, unresolved policy
   and deployment/recovery evidence. The isolated local synthetic trial is ready;
-  founder observation remains open. Active priority is read-only Render schema
-  diagnosis before login recovery. No production deployment began.
+  founder observation remains open. Hosted schema/login recovery is complete;
+  successful owner sign-in requires a hosted account. The synthetic trial owner
+  remains local. No new application deployment, PR or merge occurred.
 
 This section supersedes older pending/next-task statements below. Historical
 receipts remain unchanged. Working branch: `feature/founder-synthetic-trial`
 in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
 
-### Render login incident / read-only diagnosis - 2026-10-04
+### Approved Render schema initialization / login recovery - 2026-10-04
+
+User explicitly approved database initialization and asked to investigate older
+data first, then confirmed the website was only a new/test setup. Read-only
+catalog inspection found only the target `ethiopian_payroll_db_kn8y` and default
+`postgres` database on this server. The default has only `primarytable`, with
+`key`/`value` VARCHAR(20) columns; SELECT is not permitted. No payroll tables
+were found there. A count attempt was denied and is not recovery evidence;
+permission metadata was subsequently read without changing permissions/data.
+Other Render instances/backups cannot be enumerated without dashboard/API access.
+
+The bounded project-file search found local `instance/app.db` with 5 employees,
+1 payroll run and 5 payslips. Preserved a byte-identical SHA-256-verified copy in
+ignored `local-evidence/historical-candidates/app.db`; original untouched.
+Its provenance remains unidentified. It was not imported, upgraded or deleted.
+The other three inspected local SQLite files have no employee/payroll records.
+
+Immediately before applying migrations, reconfirmed matching private external
+and web-service connections, approved database identity, no non-system
+relations, no Alembic revision, and the tested source graph (77 revisions,
+sole head `f4a5b6c7d8f3`). Migration/application source has no differences from
+the accepted main schema. Executed ignored operator wrapper
+`python -X utf8 local-evidence/initialize_render_schema.py`: exit 0; used
+Flask-Migrate's existing upgrade, no stamping, create_all, reset or new revision.
+Completed 20:37:03 UTC. Post-upgrade read-only inventory: matching sole head,
+no missing model tables/columns; user/company/employee/payroll_run/payslip and
+login_attempt counts all zero before the hosted smoke check. Temporary local
+keys initialized model types only; Render keys/configuration were not changed.
+
+`python -X utf8 local-evidence/check_render_login.py`: initial sandbox URL error,
+then authorized external-network retry exit 0. Actual hosted HTTP evidence:
+login GET 200; one randomized nonexistent login with real CSRF/session POST 302
+to `/auth/login`, final GET 200 containing `Invalid credentials.`; registration
+GET 200. This creates one ordinary failed-login record, not an account or payroll.
+Successful owner authentication is not claimed: local trial credentials do not
+exist on Render. Use hosted registration for a separate test account, or the
+local trial URL for the already-tested synthetic account.
+
+Reused earlier focused disposable-PostgreSQL evidence:
+`3 passed, 6 warnings in 11.09s`; no expensive suite rerun. Ruff check/format and
+diff checks pass for the diagnostic/documents slice. Raw ignored evidence:
+`render-history-investigation.json`, `render-default-database.json`,
+`render-initialization-receipt.json`, `render-initialization-migrations.log`,
+`render-login-smoke.json`. Table/column inventory does not certify every type,
+constraint, encryption value or money path. Deployed SHA/startup verification,
+false-positive readiness, practitioner acceptance and release guarantees remain
+open; no app deployment, feature expansion, PR or merge in this recovery.
+
+### Render database identity / empty-schema receipt - 2026-10-04
+
+User saved the database External URL and web service DATABASE_URL in ignored
+local files. A private comparison returned true for database name, user, cluster
+host, port and password; neither URL nor password was printed or committed.
+Successful database-enforced read-only inspection of
+`ethiopian_payroll_db_kn8y` returned: schema `public`, search path `"$user", public`,
+no non-system tables, no recorded Alembic revisions, and all 38 registered model
+tables missing. Inventory exit 1 denotes this real schema mismatch, not a
+connection failure. Expanded CLI identity/catalog output confirms this is not
+only one missing login table or a table located in another schema.
+
+Existing source graph has 77 revisions and sole head `f4a5b6c7d8f3`. Its real
+empty-PostgreSQL upgrade is already exercised by the focused disposable-DB
+fixture: `3 passed, 6 warnings in 11.09s`. The local synthetic DB inventory
+matches that head with no missing model tables/columns. The separate first
+identity probe produced no result due to a native process exit; only the
+successful expanded inventory is used as identity evidence.
+
+Proposed repair: apply the existing Alembic upgrade to the confirmed empty
+Render target, then rerun the inventory and verify hosted login rejects unknown
+credentials normally. This initializes schema; it neither creates the local
+trial owner in Render nor restores historical records from an older database.
+No production writes have occurred. Await explicit approval for initialization;
+deployed commit, startup settings and the misleading readiness route remain open.
+
+### Render login incident / initial diagnosis - 2026-10-04
 
 Confirmed from user-provided traceback: `UndefinedTable: relation "login_attempt"
 does not exist` during the lockout query, before credential validation. Existing

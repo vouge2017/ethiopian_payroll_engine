@@ -48,6 +48,7 @@ def main():
         raise RuntimeError('Set the intended PostgreSQL DATABASE_URL. No database was changed.')
     from alembic.config import Config
     from alembic.script import ScriptDirectory
+    from sqlalchemy import text
 
     from payroll_engine import create_app, db
 
@@ -59,6 +60,23 @@ def main():
         # Database-enforced protection; inspection cannot write user or schema data.
         connection.exec_driver_sql('SET TRANSACTION READ ONLY')
         report = inspect_schema(connection, db.metadata, heads)
+        report['database_identity'] = dict(
+            connection.execute(
+                text(
+                    "SELECT current_database() AS database, current_schema() AS schema, current_setting('search_path') AS search_path"
+                )
+            )
+            .mappings()
+            .one()
+        )
+        report['non_system_tables'] = [
+            dict(row)
+            for row in connection.execute(
+                text(
+                    "SELECT schemaname, tablename FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema') ORDER BY schemaname,tablename"
+                )
+            ).mappings()
+        ]
     report['deployment_sha'] = os.environ.get('RENDER_GIT_COMMIT') or os.environ.get('GIT_COMMIT_SHA') or 'not supplied'
     report['limits'] = 'Revision/table/column inventory only; does not verify types, constraints, data or encryption.'
     print(json.dumps(report, indent=2))

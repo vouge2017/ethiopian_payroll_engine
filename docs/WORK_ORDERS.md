@@ -10,22 +10,31 @@ PostgreSQL: `128 passed, 286 warnings in 66.04s (0:01:06)`.
 Lint/format, both standalone migration jobs and GitGuardian passed.
 On merge SHA, Python 3.11/3.12, PostgreSQL, lint/format and both migration jobs
 completed successfully. Deployment/restore and practitioner
-verification are open. Historical pending statements below are superseded here.
+verification are open. Approved hosted schema initialization and login recovery
+are now verified separately; no application deployment SHA is identified.
+Historical pending statements below are superseded here.
 
 15. Diagnose and recover Render login from the verified missing `login_attempt` table.
 
-Active priority; hosted fix is not complete. Traceback confirms the missing
-relation before credentials are checked. Existing migration creates it; later
-startup lines do not prove migration completion. A related readiness defect
-accepts unknown migration state. Read-only schema inventory is prepared locally
-with PostgreSQL proof for healthy, missing-table and missing-column cases:
-`3 passed, 6 warnings in 11.09s`. Ruff check/format pass. No application or
-production database changes. Free Render has no Shell access; use the database's
-external URL, stored in an ignored local file, for the read-only inventory. Await
-that connection and
-deployment/migration completion evidence before selecting a data-preserving
-repair. Founder trial remains available locally. No broad redesign or statutory
-policy change is authorized by this incident.
+Hosted schema/login HTTP 500 recovery completed with explicit user approval.
+User confirmed only a new/test hosted setup. Investigated the server's other
+database read-only: default `postgres` has only a protected key/value table,
+no payroll tables. Preserved the local SQLite candidate (5 employees/5 payslips)
+byte-for-byte; provenance unidentified, no import or modification. Other Render
+instances/backups remain inaccessible without dashboard/API access.
+
+Reconfirmed the approved target was empty; applied the existing 77 Alembic
+revisions at 20:37:03 UTC to sole head `f4a5b6c7d8f3`. Read-only post-check:
+matching head, no missing model tables/columns. Hosted login GET 200,
+unknown-login POST 302 then GET 200 with `Invalid credentials.`; registration
+GET 200. No account/payroll created, one ordinary failed-login smoke record.
+Reused `3 passed, 6 warnings in 11.09s` disposable-PostgreSQL evidence; Ruff
+check/format pass. No source migration, statutory policy or app deployment changed.
+
+Successful hosted owner authentication still requires a hosted account; the
+synthetic owner belongs to the local trial. Deployed SHA/startup settings,
+false-positive `/readyz`, release recovery guarantees and practitioner acceptance
+remain open. STATUS.md distinguishes the verified DB/HTTP repair from those gaps.
 
 14. Prepare a persistent isolated synthetic founder/Tigist monthly trial.
 

@@ -10,6 +10,11 @@
 - **Schema:** 77 Alembic revisions, sole head `f4a5b6c7d8f3`; source graph checked.
 - **Locally verified:** reconciliation and correction PostgreSQL receipts below
   remain attributable to their tested slices; they are not full-main CI proof.
+  Persistent synthetic trial launcher is now verified locally on
+  `feature/founder-synthetic-trial`: empty-DB Alembic upgrade, normal sign-in,
+  CSRF rejection, encryption readback, non-destructive reinitialization and
+  saved-input/key persistence across app restart. Desktop/390px browser sign-in
+  and worksheet passed. This launcher is not merged or hosted-CI verified.
 - **Hosted CI on exact PR head:** Python 3.11 and 3.12 each
   `TOTAL: 1563 passed, 0 failed, 0 errors, 124 skipped`;
   PostgreSQL `128 passed, 286 warnings in 66.04s (0:01:06)`;
@@ -28,12 +33,50 @@
   closed the three known results/review controls; connected existing saved
   review, previous approved comparison and deterministic checks. Founder/Tigist
   scripts are prepared. **Still open:** practitioner acceptance, unresolved policy
-  and deployment/recovery evidence. Next proposed task: prepare the isolated
-  synthetic trial environment. No deployment or new feature began during merge.
+  and deployment/recovery evidence. The isolated local synthetic trial is ready;
+  next action is founder observation, then Tigist. No production deployment began.
 
 This section supersedes older pending/next-task statements below. Historical
-receipts remain unchanged. Working branch: `feature/monthly-payroll-journey`
+receipts remain unchanged. Working branch: `feature/founder-synthetic-trial`
 in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
+
+### Persistent founder trial receipt - 2026-10-04
+
+Scope: `scripts/founder_trial.py`, `START_FOUNDER_TRIAL.ps1`, the founder guide
+and evidence documents. No application, calculator, authorization, schema or CI
+workflow changed. Starts only on 127.0.0.1:5058, with a uniquely named/marked
+synthetic database on the existing local PostgreSQL instance. Inherited live
+integration settings are removed in this dedicated process. Generated account
+password, session/encryption keys and PDFs stay ignored in
+`local-evidence/founder-trial`. Restart never drops/reseeds or auto-migrates.
+
+Executed with the locked Python environment:
+
+- `python -X utf8 scripts/founder_trial.py init`: exit 0; real empty-PostgreSQL
+  upgrade to sole head `f4a5b6c7d8f3`. Repeated `init` preserved state and data.
+- `python -X utf8 local-evidence/check_founder_trial.py`: exit 0; normal owner
+  and accountant login, rejected CSRF-less login without an authenticated
+  session, encrypted bank readback, worksheet save/reload and unchanged keys
+  across a new app instance. Prior approved net 9,260.00; current estimate
+  11,053.99. Current month remains unapproved; payment pending. Existing friendly
+  CSRF handling redirects with 302; that response is not successful login.
+- Cached Playwright CLI: normal accountant login and worksheet at 1440x900 and
+  390x844. Phone page width 390 equals viewport. Screenshots in `docs/evidence`.
+  No new packages installed. Its first credential helper was incompatible;
+  successful replacement kept credentials/output in ignored local files.
+  A stale login form expired; refreshing it allowed normal browser sign-in.
+- Ruff check/format check on the launcher: pass. Source preflight: 77 revisions,
+  one head, no known source findings (not full security proof).
+- Independent narrow review caught HTTPS/cookie forcing in the local launcher;
+  browser reproduced it. Fixed only that loopback app's transport settings,
+  retaining login, CSRF, CSP and authorization. Re-review found no blocker.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File START_FOUNDER_TRIAL.ps1`
+  restarted the preserved trial. Full suites were not rerun: merged application
+  source is unchanged; exact-main hosted evidence remains above.
+
+This is a machine-local, current-month exercise, not deployment or practitioner
+acceptance. Incomplete setup stops for recovery; no destructive reset command
+exists. [Current founder guide](docs/FOUNDER_TRIAL.md) contains the next action.
 
 ### PR #11 merge receipt - 2026-10-04
 

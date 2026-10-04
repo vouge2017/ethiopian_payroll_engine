@@ -12,6 +12,22 @@ On merge SHA, Python 3.11/3.12, PostgreSQL, lint/format and both migration jobs
 completed successfully. Deployment/restore and practitioner
 verification are open. Historical pending statements below are superseded here.
 
+14. Prepare a persistent isolated synthetic founder/Tigist monthly trial.
+
+Verified locally on `feature/founder-synthetic-trial`: loopback launcher, real
+empty PostgreSQL migration to the sole head, normal owner/accountant login,
+CSRF rejection, encryption readback and saved-input/key persistence across app
+restart. Actual PowerShell start command works; repeated init preserves data.
+Desktop and 390px browser sign-in/worksheet pass. Independent launcher review
+caught and cleared an HTTP transport defect. Ruff check/format pass.
+App source and schema are unchanged from merged main; no full-suite rerun.
+Launcher hosted CI/merge, deployment and founder/Tigist acceptance are separate
+and open. Current instructions: [Founder trial](FOUNDER_TRIAL.md).
+
+**Next action:** founder completes and explains this synthetic month, records
+friction, then observes Tigist without coaching. No new feature or deployment
+starts automatically. Use those observations to choose the next bounded UI fix.
+
 13. Close independently reproduced monthly-review messaging defects and prepare a reviewable handoff.
 
 Completed locally: truthful blocker/status messages, retained recovery narrative,
@@ -22,7 +38,7 @@ Independent fix review found no remaining blocker in the four changed source/tes
 files. Their hosted receipt is now verified on `6eb7fd1`, and PR #11 was merged
 with user approval. See STATUS.md for failure/recovery and merge evidence.
 
-**Next proposed bounded task:** prepare an isolated synthetic founder/Tigist trial.
+That proposed trial preparation is completed locally in order 14 above.
 No deployment or new feature was started as part of the approved merge.
 
 12. Ordinary monthly payroll journey: prior implemented and hosted-CI-verified slice.

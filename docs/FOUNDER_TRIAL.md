@@ -1,5 +1,59 @@
 # Founder trial before Tigist
 
+## Current trial - 2026-10-04
+
+PR #11 is merged on main `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`.
+The local trial launcher is a separate feature-branch change, not deployed or
+merged. This section supersedes the old temporary demo and pending UI defects
+below; those older receipts are preserved as history.
+
+In PowerShell:
+
+```powershell
+cd D:\ethiopian_payroll_engine\payroll-pr8-integration
+powershell -NoProfile -ExecutionPolicy Bypass -File .\START_FOUNDER_TRIAL.ps1
+```
+
+Keep that terminal open. Visit http://127.0.0.1:5058/auth/login in Chrome on
+this computer. Choose **Email**. Account details are in
+`local-evidence\founder-trial\ACCOUNT_DETAILS.txt`; use the accountant first,
+then the owner. The script uses the existing locked Python environment and
+local PostgreSQL at 127.0.0.1:55439. It installs nothing. For another machine,
+the local PostgreSQL service/role and Python environment need setup first.
+
+The generated synthetic database, session/encryption keys and PDFs persist
+when you stop with Ctrl+C. Starting again preserves your edits and approvals;
+it does not reset data, recreate the database or migrate an existing trial.
+Never commit the ignored `local-evidence` folder or use real employee details.
+If the month changes or setup fails, preserve the files and request help.
+This fixture is a single current Gregorian month, not a shared online demo.
+
+### Your next action
+
+1. Sign in as accountant and open **Payroll Spreadsheet**. The synthetic prior
+   month is approved; basic salary was 10,000 and allowances 2,000. Current basic
+   is 12,000 and allowances remain 2,000. Enter **day overtime 4 hours**, **bonus
+   500**, **advance 100**, **additional unpaid days 0**. Save and recalculate.
+2. Review the saved payroll. Explain the salary, overtime, bonus, gross, net and
+   recovery differences. Submit to owner. Sign out and use the owner account to
+   review, confirm with password and approve once.
+3. Compare approved review/results, the individual PDF and bank download.
+   Expected current net for this scenario: **ETB 11,053.99**. Payment remains
+   pending; downloading a file does not execute a payment or statutory filing.
+   Record the first unclear label, missing explanation or difficult phone action.
+
+The prior approval is a synthetic fixture created through existing payroll
+services. It is not practitioner approval or evidence of statutory correctness.
+Do not reset the approved current month to repeat the exercise; ask for another
+isolated fixture. Founder/Tigist acceptance and production release remain open.
+
+For Tigist: give only the source notes above and ask her to prepare, explain,
+submit and reconcile the month without coaching. Record hesitation, missing
+office decisions, and whether she could identify the next action. Use the
+existing detailed scripts in `MONTHLY_PAYROLL_JOURNEY_2026-10-03.md`.
+
+## Historical temporary demo handoff
+
 Use synthetic data only. This is a local founder trial, not a deployed release.
 The current demo is at http://127.0.0.1:5057 on the development computer.
 The separate Chrome tab shows the completed QA example; a fresh founder company

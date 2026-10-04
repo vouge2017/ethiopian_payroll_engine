@@ -28,17 +28,56 @@
   no separate GitGuardian check is attached to merge SHA `2f6f4e6`. Historical
   incident 37741140 is classified Ignored / Test credential.
 - **Deployed:** no identified deployment or restore proof for this baseline.
+  **Active hosted incident:** user-supplied Render traceback at
+  2026-10-04 18:52:34 UTC shows login failing on missing `login_attempt`.
+  Migration startup at 19:00:57 UTC is not completion evidence. Deployed SHA,
+  recorded DB revisions, other missing structures and recovery remain open.
 - **Practitioner verified:** founder/Tigist monthly trial not yet completed.
 - **Implemented, tested and merged:** repaired the two stale CI test contracts;
   closed the three known results/review controls; connected existing saved
   review, previous approved comparison and deterministic checks. Founder/Tigist
   scripts are prepared. **Still open:** practitioner acceptance, unresolved policy
   and deployment/recovery evidence. The isolated local synthetic trial is ready;
-  next action is founder observation, then Tigist. No production deployment began.
+  founder observation remains open. Active priority is read-only Render schema
+  diagnosis before login recovery. No production deployment began.
 
 This section supersedes older pending/next-task statements below. Historical
 receipts remain unchanged. Working branch: `feature/founder-synthetic-trial`
 in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
+
+### Render login incident / read-only diagnosis - 2026-10-04
+
+Confirmed from user-provided traceback: `UndefinedTable: relation "login_attempt"
+does not exist` during the lockout query, before credential validation. Existing
+migration `b8c9d0e1f2b4` creates that table and its indexes. Missing schema,
+connection/schema selection or recorded-revision drift requires investigation;
+the exact deployment and historical cause are unidentified. Current Dockerfile
+stops on migration failure; this does not prove Render used that startup command.
+
+Related verified source defect: `/readyz` interprets Flask-Migrate's print-only
+`current()` result as migration evidence and still returns 200 for unknown state.
+The earlier observed hosted response was database up / migrations unknown.
+That is connectivity evidence, not complete schema readiness. This route has
+not been changed or deployed in this diagnostic slice.
+
+Prepared locally: `scripts/check_deployed_schema.py`, with real
+PostgreSQL regression cases in `tests/test_pg_schema_inventory.py`. The inventory
+uses a database-enforced read-only transaction, compares source/recorded heads
+and all registered model tables/columns, and prints no credentials or row data.
+It does not certify types, constraints, encryption or historical data.
+Local synthetic DB: sole head `f4a5b6c7d8f3`, no missing model tables/columns.
+Final focused PostgreSQL receipt: `3 passed, 6 warnings in 11.09s`; missing table and
+missing column were simulated only in a generated disposable DB and rolled back.
+Ruff check/format pass. Raw receipt: `local-evidence/schema-inventory-tests-final.log`.
+The browser connector cannot access Render due to a request-header-policy error;
+there is no configured Render API credential. User was given one read-only
+Render Shell command, but confirmed their Free service has no Shell access.
+Alternative: external PostgreSQL connection from this computer. Private URL
+will stay ignored in `local-evidence/render-database-url.txt`; local wrapper
+uses TLS, a connection timeout, temporary model-only keys and read-only SQL.
+No production encryption key or payroll row data is required. Await that URL
+and deployment/migration completion evidence. No production
+DDL, reset, stamp, credential rotation, merge or deployment was performed.
 
 ### Persistent founder trial receipt - 2026-10-04
 

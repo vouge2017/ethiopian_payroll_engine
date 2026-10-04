@@ -12,6 +12,21 @@ On merge SHA, Python 3.11/3.12, PostgreSQL, lint/format and both migration jobs
 completed successfully. Deployment/restore and practitioner
 verification are open. Historical pending statements below are superseded here.
 
+15. Diagnose and recover Render login from the verified missing `login_attempt` table.
+
+Active priority; hosted fix is not complete. Traceback confirms the missing
+relation before credentials are checked. Existing migration creates it; later
+startup lines do not prove migration completion. A related readiness defect
+accepts unknown migration state. Read-only schema inventory is prepared locally
+with PostgreSQL proof for healthy, missing-table and missing-column cases:
+`3 passed, 6 warnings in 11.09s`. Ruff check/format pass. No application or
+production database changes. Free Render has no Shell access; use the database's
+external URL, stored in an ignored local file, for the read-only inventory. Await
+that connection and
+deployment/migration completion evidence before selecting a data-preserving
+repair. Founder trial remains available locally. No broad redesign or statutory
+policy change is authorized by this incident.
+
 14. Prepare a persistent isolated synthetic founder/Tigist monthly trial.
 
 Verified locally on `feature/founder-synthetic-trial`: loopback launcher, real

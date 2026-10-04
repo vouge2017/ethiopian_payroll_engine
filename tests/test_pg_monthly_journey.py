@@ -171,6 +171,7 @@ def test_results_pdf_control_approved_label_and_no_worksheet_undo(worksheet, mon
     page = client.get(f'/payroll/runs/{rid}/review').get_data(as_text=True)
     assert 'View approved payroll' in page and '> Approved' in page
     assert 'Ready for Approval' not in page and 'Issues Must Be Resolved' not in page
+    assert 'Ready for approval.' not in page
     assert client.get(f'/payslips/{psid}/download').mimetype == 'application/pdf'
     assert 'Download PDF' in client.get(f'/payroll/runs/{rid}').get_data(as_text=True)
 
@@ -209,6 +210,10 @@ def test_saved_blocking_checker_result_prevents_continue(worksheet, monkeypatch)
     html = client.get(f'/payroll/runs/{rid}/review').get_data(as_text=True)
     assert 'Saved validation checks' in html and 'Synthetic missing required evidence' in html
     assert 'Continue to approval' not in html
+    assert 'All checks passed.' not in html
+    assert 'Review checks need attention' in html
+    assert '1 saved blocking check(s)' in html
+    assert '0 blocking issue(s)' not in html
     client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'})
     with app.app_context():
         assert db.session.get(PayrollRun, rid).status == 'review'
@@ -225,6 +230,10 @@ def test_missing_previous_snapshot_is_visible_and_blocks_continue(worksheet, mon
     html = client.get(f'/payroll/runs/{rid}/review').get_data(as_text=True)
     assert 'approved worksheet snapshot is missing' in html
     assert 'Continue to approval' not in html
+    assert 'All checks passed.' not in html
+    assert 'Review checks need attention' in html
+    assert 'Some review information could not be verified' in html
+    assert '0 blocking issue(s)' not in html
 
 
 def test_legacy_baseline_exposes_missing_detail_instead_of_inventing_it(worksheet, monkeypatch):

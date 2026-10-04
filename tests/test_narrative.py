@@ -15,6 +15,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from payroll_engine.change_summary import ChangeSummary, EmployeeChange
 from payroll_engine.narrative import generate_narrative
 
+
+def test_retained_recovery_change_is_not_described_as_unchanged():
+    summary = _make_summary(gross_delta_pct=0, headcount_change=0)
+    summary.retained_comparison = True
+    summary.variance_threshold_pct = None
+    summary.net_delta = Decimal('-100')
+    summary.changes = [_make_change('Dawit', 'deduction')]
+    text = generate_narrative(summary)
+    assert '1 exact change' in text
+    assert 'ETB -100.00' in text
+    assert 'No changes from last period' not in text
+    assert 'No unusual variances' not in text
+    assert 'unchanged' not in text
+
+
+def test_retained_first_baseline_does_not_claim_a_previous_comparison():
+    summary = _make_summary(previous_period=None)
+    summary.retained_comparison = True
+    summary.variance_threshold_pct = None
+    text = generate_narrative(summary)
+    assert 'No earlier approved payroll' in text
+    assert 'No unusual variances' not in text
+
+
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────

@@ -145,6 +145,36 @@ The preview is stopped and its successful generated database cleaned up.
 
 ## Remaining policy and release limits
 
+### Independent follow-up review - 2026-10-04
+
+The earlier hosted receipt belongs to implementation `9f0f4a3`. Today's bounded
+review found and repaired misleading success/blocker text on saved BLOCK or
+missing comparison data, and recovery-only changes described as unchanged by
+the API/cockpit narrative. Retained comparisons now use neutral Added to payroll /
+Absent from payroll labels. Pending owner approval has its own header label.
+Legacy narrative behavior and all money-writing services remain unchanged.
+
+Final focused regression: `74 passed, 20 warnings in 47.54s`, including all eight
+PostgreSQL monthly cases; Ruff passes with `231 files already formatted`.
+Independent review of the fixes found no remaining blocker within those four
+source/test files. New code needs its own hosted CI, distinct from earlier green.
+
+Cached Playwright CLI checked the synthetic blocked review at 1440px and 390px.
+The blocker count, disabled approval and lack of false success text agreed;
+page width matched viewport. The phone capture shows the checks list, with the
+approval section further down the page. No new packages were installed.
+
+![Desktop blocked review](evidence/review-blocked-desktop-2026-10-04.png)
+![Phone checks](evidence/review-blocked-phone-2026-10-04.png)
+
+**UI/UX assessment:** functional evidence is sufficient for continued bounded
+review, not proof of practitioner usability. The page is long, the saved payroll
+table needs horizontal scrolling on phones, employee change entries repeat names,
+and technical checker codes remain visible. Prioritize clearer exception/next
+action placement and plain wording using founder/Tigist observations; no broad
+redesign was performed. Amharic and keyboard/accessibility acceptance remain
+unverified in this slice. Current synthetic rendering is not a persistent demo.
+
 Practitioner acceptance remains necessary for exemption caps, joining/leaving
 and daily-worker/proration rules, account mappings, historical statutory
 identity/classification, bank/filing format acceptance and materiality warnings.

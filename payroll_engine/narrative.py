@@ -27,6 +27,22 @@ def generate_narrative(summary: ChangeSummary) -> str:
     if not summary:
         return 'Payroll data not available.'
 
+    if summary.retained_comparison:
+        opening = _employee_count_text(summary)
+        if not summary.previous_period:
+            return f'{opening} No earlier approved payroll is available for comparison.'
+        count = len(summary.changes)
+        comparison = (
+            f'{count} exact change{"s" if count != 1 else ""} from the previous approved payroll.'
+            if count
+            else 'No differences in the available retained payroll facts.'
+        )
+        return (
+            f'{opening} {comparison} '
+            f'Gross pay change: ETB {summary.gross_delta:+,.2f}; '
+            f'net pay change: ETB {summary.net_delta:+,.2f}. ' + ' '.join(summary.comparison_notes)
+        ).strip()
+
     parts = []
 
     # Opening sentence: employee count

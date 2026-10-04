@@ -1,6 +1,6 @@
 # Focused delivery work orders
 
-## CURRENT AUTHORITATIVE STATE - 2026-10-03
+## CURRENT AUTHORITATIVE STATE - 2026-10-04
 
 Accepted baseline: remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf`
 contains merged PR #8 and #10. Schema: 77 revisions, one head `f4a5b6c7d8f3`.
@@ -10,7 +10,20 @@ standalone migrations and lint/format pass; full Python 3.11 has
 GitGuardian passed on PR #10 head `90779cb`; merge SHA has no separate scan.
 Deployment/restore and founder/Tigist verification are open.
 
-12. Ordinary monthly payroll journey: implemented, locally and hosted-CI verified; review before continuing.
+13. Close independently reproduced monthly-review messaging defects and prepare a reviewable handoff.
+
+Completed locally: truthful blocker/status messages, retained recovery narrative,
+neutral added/absent payroll labels, working-checkout guidance. Final focused
+receipt: `74 passed, 20 warnings in 47.54s`; Ruff passes, 231 files formatted;
+synthetic Playwright checks at 1440/390px passed with no page overflow.
+Independent fix review found no remaining blocker in the four changed source/test
+files. These new fixes need their own hosted receipt; prior `9f0f4a3` CI stays
+attributable to that earlier code. See STATUS.md for failure/recovery evidence.
+
+**Next decision:** authorize a monthly branch PR for review/GitGuardian evidence,
+then prepare the synthetic founder/Tigist trial. No automatic merge/deployment.
+
+12. Ordinary monthly payroll journey: prior implemented and hosted-CI-verified slice.
 
 Completed scope: repaired the two stale CI test contracts; closed the individual
 PDF control, unsupported worksheet Undo and completed-review label; connected

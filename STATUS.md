@@ -1,6 +1,6 @@
 # STATUS.md — Command-Verified State
 
-## CURRENT AUTHORITATIVE STATE - 2026-10-03
+## CURRENT AUTHORITATIVE STATE - 2026-10-04
 
 - **Merged:** remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf` includes
   accepted recovery/hardening PR #8 and approved overtime/bonus correction PR #10
@@ -28,6 +28,46 @@
 This section supersedes older pending/next-task statements below. Historical
 receipts remain unchanged. Working branch: `feature/monthly-payroll-journey`
 in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
+
+### Bounded review follow-up - 2026-10-04
+
+Remote main is still `9670a92487c705a6614e3c6df67aff24d29c7bcf`. Existing CI on
+`9f0f4a3` remains green; no expensive local full-suite rerun was performed.
+No monthly PR is open; PR #7 is the separate unfinished mobile redesign.
+
+Independent review found misleading BLOCK/comparison-error success messages and
+retained recovery changes described as unchanged by the API/cockpit narrative.
+Both were reproduced and repaired; payroll absence now says Absent from payroll,
+not Departures. Pending approval is labeled Waiting for owner approval.
+No arithmetic, authorization, migration or approval-write behavior changed.
+
+Before fixes: `2 failed, 1 passed, 5 deselected, 10 warnings in 13.61s` (PG UI);
+`2 failed, 30 deselected, 4 warnings in 2.10s` (narrative).
+An intermediate run exposed that existing informational issues hid the attention
+banner: `2 failed, 72 passed, 20 warnings in 41.33s`; the banner is now independent.
+Final: `74 passed, 20 warnings in 47.54s` across `test_pg_monthly_journey`,
+`test_narrative`, `test_change_summary`, `test_error_boundaries`.
+Log: `local-evidence/integration-20261004-064246-831510.log`.
+Ruff passes; `231 files already formatted`. Independent fix review found no
+remaining blocker in the four changed source/test files; this is bounded review,
+not a fresh whole-repository security or statutory certification.
+
+Installed cached Playwright CLI verified the synthetic BLOCK page at 1440/390px:
+DOM/page width equaled viewport, approval unavailable, correct blocker count,
+no false all-checks-passed text or Continue control. Screenshots are in
+`docs/evidence/review-blocked-{desktop,phone}-2026-10-04.png`.
+The browser connector failed twice before page access; the first Python fallback
+had no installed Playwright package. Cached CLI worked without a new installation.
+Browser and loopback preview are stopped; the preview used its own disposable DB.
+
+Working guidance is now in AGENTS.md and linked from README.md. A local-only
+AGENTS.md at the outer workspace directs future sessions here and preserves
+unfinished mobile work. No user files were deleted or moved.
+
+**Next:** publish/read new-commit CI, obtain the missing PR/GitGuardian evidence,
+then prepare a stable synthetic founder/Tigist trial. Opening a PR, merging and
+deploying remain separate authorization steps. New follow-up hosted CI is not
+covered by the older `9f0f4a3` receipt above. Policy and release gates remain open.
 
 ### Monthly slice completion - 2026-10-03
 

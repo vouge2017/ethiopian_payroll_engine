@@ -1,33 +1,279 @@
 # STATUS.md — Command-Verified State
 
-## CURRENT AUTHORITATIVE STATE - 2026-10-04
+## CURRENT AUTHORITATIVE STATE - 2026-10-05
 
-- **Merged:** remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf` includes
-  accepted recovery/hardening PR #8 and approved overtime/bonus correction PR #10
-  (`90779cb`). No newer main commit was reported by today's remote read.
+- **Merged:** PR #11 was merged with explicit user approval at
+  `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110` on 2026-10-04, 13:21:46 UTC.
+  This is remote main and preserves accepted PR #8/#10 plus the monthly journey.
+  The merge tree is identical to reviewed/tested head
+  `6eb7fd13037741b18b4dfa8d3ec7a9d24360abf9` (no file differences).
 - **Schema:** 77 Alembic revisions, sole head `f4a5b6c7d8f3`; source graph checked.
+- **Implemented and locally tested, not merged/deployed:** readiness now checks
+  real revisions, model tables and columns and fails closed with HTTP 503.
+  Strict container probe handles internal HTTP/HTTPS correctly and refuses
+  redirects/unknown schema. Final focused receipt:
+  `22 passed, 18 warnings in 99.62s (0:01:39)`; independent review and Ruff pass.
+  Release branch `feature/render-readiness` starts from current main `2f6f4e6`.
 - **Locally verified:** reconciliation and correction PostgreSQL receipts below
   remain attributable to their tested slices; they are not full-main CI proof.
-- **Hosted CI on exact main:** PostgreSQL, standalone migrations Python 3.11/3.12,
-  lint and format passed. Full Python 3.11 failed:
-  `TOTAL: 1550 passed, 11 failed, 0 errors, 116 skipped`; Python 3.12 cancelled.
-  Failed files: `test_p0_features.py`, `test_p0d_concurrency.py`.
-  [Exact-main CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37105301824).
-- **GitGuardian:** success on merged PR #10 head `90779cb`, check `111152463105`;
-  no GitGuardian check is attached to merge SHA `9670a92`. Do not label main's
-  absent scan as a separately passed scan. Historical incident 37741140 is
-  classified Ignored / Test credential, with prior fresh success.
-- **Deployed:** no identified deployment or restore proof for this baseline.
+  Persistent synthetic trial launcher is now verified locally on
+  `feature/founder-synthetic-trial`: empty-DB Alembic upgrade, normal sign-in,
+  CSRF rejection, encryption readback, non-destructive reinitialization and
+  saved-input/key persistence across app restart. Desktop/390px browser sign-in
+  and worksheet passed. This launcher is not merged or hosted-CI verified.
+- **Hosted CI on exact PR head:** Python 3.11 and 3.12 each
+  `TOTAL: 1563 passed, 0 failed, 0 errors, 124 skipped`;
+  PostgreSQL `128 passed, 286 warnings in 66.04s (0:01:06)`;
+  lint/format, strict tenant/security gates and both standalone migration jobs
+  passed. [PR CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37202508112).
+- **Hosted CI on merge SHA:** Python 3.11/3.12, PostgreSQL, lint/format and both
+  standalone migration jobs completed successfully on `2f6f4e6`. These are
+  completed merge-job results, distinct from the earlier PR-head receipt.
+  [Merge CI](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/37205352561).
+- **GitGuardian:** success on exact PR #11 head `6eb7fd1`, check `111436890883`;
+  no separate GitGuardian check is attached to merge SHA `2f6f4e6`. Historical
+  incident 37741140 is classified Ignored / Test credential.
+- **Hosted recovery:** with explicit user approval, initialized the web service's
+  confirmed empty database using the existing 77 Alembic revisions. Completed
+  2026-10-04 20:37:03 UTC at sole head `f4a5b6c7d8f3`; no missing model tables or
+  columns. Hosted login GET 200, unknown-login POST 302 then GET 200 with
+  `Invalid credentials.`; registration GET 200. The reported table-missing
+  HTTP 500 is recovered. User confirmed this was only a new/test setup.
+- **Deployed:** this is a verified hosted schema change, not an identified
+  application release or restore drill. User-supplied Render Settings now identify
+  Docker on main, `./Dockerfile`, override `gunicorn -b 0.0.0.0:10000 wsgi:app`,
+  blank pre-deploy/health path and auto-deploy On Commit. Override bypasses the
+  source migration guard. Latest successful deployed SHA remains unidentified.
+  Readiness fix and settings correction are not deployed; earlier hosted probe
+  reported migrations `unknown` with 200. No hosted account/payroll was created.
 - **Practitioner verified:** founder/Tigist monthly trial not yet completed.
-- **Completed on the review branch:** repaired the two stale CI test contracts;
+- **Implemented, tested and merged:** repaired the two stale CI test contracts;
   closed the three known results/review controls; connected existing saved
   review, previous approved comparison and deterministic checks. Founder/Tigist
-  scripts are prepared. **Still open:** review/merge, policy decisions,
-  practitioner acceptance and deployment evidence. STOP before further work.
+  scripts are prepared. **Still open:** practitioner acceptance, unresolved policy
+  and deployment/recovery evidence. The isolated local synthetic trial is ready;
+  founder observation remains open. Hosted schema/login recovery is complete;
+  successful owner sign-in requires a hosted account. The synthetic trial owner
+  remains local. No new application deployment, PR or merge occurred.
 
 This section supersedes older pending/next-task statements below. Historical
-receipts remain unchanged. Working branch: `feature/monthly-payroll-journey`
-in `payroll-pr8-integration`; earlier dirty workspaces are preserved.
+receipts remain unchanged. Working branch: `feature/render-readiness`
+in `payroll-pr8-integration`; accepted main remains authoritative. Founder work
+is preserved on `feature/founder-synthetic-trial` (local checkpoint `9a22b6c`,
+remote receipt `ac04ecf`) and is excluded from the release source. No new folder.
+Earlier dirty workspaces are preserved.
+
+### Readiness / startup verification receipt - 2026-10-05
+
+Scope: shared revision/table/column inventory, readiness route and read-only
+operator CLI, strict container probe, health-path declarations, narrowly scoped
+health exemptions and regression tests. No migration, money/statutory policy,
+UI, worker-delivery policy or payroll data changed. Private `local-evidence/`
+is now excluded from Docker build context. Trial launcher/screenshots are not
+part of this release branch; their verified receipts below remain historical.
+
+Initial sandbox run failed on Windows temporary-directory permissions before
+behavior validation. Authorized disposable-PostgreSQL run reproduced the defect:
+`8 failed, 1 passed, 25 warnings in 51.93s`. First fix passed
+`14 passed, 14 warnings in 57.09s`. Independent review then reproduced a real
+production Talisman redirect: HTTP loopback 302 versus forwarded-HTTPS 200,
+with and without ProxyFix. Fixed probe uses loopback only, no HTTP proxy, no
+redirect following, a five-second timeout and explicit healthy JSON checks.
+
+Final executed targets: `tests/test_pg_readiness.py`,
+`tests/test_pg_schema_inventory.py`, `tests/test_startup_gate.py`,
+`tests/test_container_healthcheck.py` via ignored locked-environment wrapper.
+`22 passed, 18 warnings in 99.62s (0:01:39)`; exit 0. Every schema-damage case
+uses an owned UUID PostgreSQL database upgraded through existing Alembic; no
+production DDL or create_all. Checks cover healthy/missing/stale/multiple heads,
+missing table/column, dependency errors without secret disclosure, PostgreSQL
+read-only statements, more than the default rate limit, expired authenticated
+sessions/password/billing/maintenance, migration-failure startup and actual
+Docker shell probe against HTTP/Talisman (ready, 503, unknown and redirect).
+Ruff check/format pass; independent follow-up found no concrete issue. Source
+preflight has 77 revisions/one head/no source findings; it is not deployment proof.
+Raw ignored receipts: `readiness-before-authorized.log`, `readiness-after.log`,
+`readiness-reviewed.diff`. Release source/test files are byte-identical to the
+tested checkpoint payload; no duplicate expensive suite run for branch isolation.
+
+Current remote main was refreshed through GitHub API: exact `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`.
+User supplied Render Settings: source vouge2017/ethiopian_payroll_engine, main,
+Dockerfile `./Dockerfile`, context `.`, Docker Command
+`gunicorn -b 0.0.0.0:10000 wsgi:app`, blank pre-deploy and health-check path,
+On Commit auto-deploy. This override demonstrably skips the Dockerfile's existing
+`flask db upgrade` / failure-stop path; blank health path is only TCP evidence.
+Reference: [Docker command overrides](https://render.com/docs/docker),
+[Render HTTP health checks](https://render.com/docs/health-checks).
+
+Concrete pending release settings: leave Docker Command blank to use the tested
+Dockerfile startup; Health Check Path `/readyz` after promoting this fix. Saving
+settings/merging into main can deploy automatically, so PR/merge/deploy approval
+is still required. Actual latest deploy SHA and complete hosted owner sign-in
+remain unverified. No settings change, app deployment, PR or merge performed.
+Worker availability remains informational; this gate does not certify schema
+types/constraints/data, encryption keys, payroll outputs or production readiness.
+
+### Approved Render schema initialization / login recovery - 2026-10-04
+
+User explicitly approved database initialization and asked to investigate older
+data first, then confirmed the website was only a new/test setup. Read-only
+catalog inspection found only the target `ethiopian_payroll_db_kn8y` and default
+`postgres` database on this server. The default has only `primarytable`, with
+`key`/`value` VARCHAR(20) columns; SELECT is not permitted. No payroll tables
+were found there. A count attempt was denied and is not recovery evidence;
+permission metadata was subsequently read without changing permissions/data.
+Other Render instances/backups cannot be enumerated without dashboard/API access.
+
+The bounded project-file search found local `instance/app.db` with 5 employees,
+1 payroll run and 5 payslips. Preserved a byte-identical SHA-256-verified copy in
+ignored `local-evidence/historical-candidates/app.db`; original untouched.
+Its provenance remains unidentified. It was not imported, upgraded or deleted.
+The other three inspected local SQLite files have no employee/payroll records.
+
+Immediately before applying migrations, reconfirmed matching private external
+and web-service connections, approved database identity, no non-system
+relations, no Alembic revision, and the tested source graph (77 revisions,
+sole head `f4a5b6c7d8f3`). Migration/application source has no differences from
+the accepted main schema. Executed ignored operator wrapper
+`python -X utf8 local-evidence/initialize_render_schema.py`: exit 0; used
+Flask-Migrate's existing upgrade, no stamping, create_all, reset or new revision.
+Completed 20:37:03 UTC. Post-upgrade read-only inventory: matching sole head,
+no missing model tables/columns; user/company/employee/payroll_run/payslip and
+login_attempt counts all zero before the hosted smoke check. Temporary local
+keys initialized model types only; Render keys/configuration were not changed.
+
+`python -X utf8 local-evidence/check_render_login.py`: initial sandbox URL error,
+then authorized external-network retry exit 0. Actual hosted HTTP evidence:
+login GET 200; one randomized nonexistent login with real CSRF/session POST 302
+to `/auth/login`, final GET 200 containing `Invalid credentials.`; registration
+GET 200. This creates one ordinary failed-login record, not an account or payroll.
+Successful owner authentication is not claimed: local trial credentials do not
+exist on Render. Use hosted registration for a separate test account, or the
+local trial URL for the already-tested synthetic account.
+
+Reused earlier focused disposable-PostgreSQL evidence:
+`3 passed, 6 warnings in 11.09s`; no expensive suite rerun. Ruff check/format and
+diff checks pass for the diagnostic/documents slice. Raw ignored evidence:
+`render-history-investigation.json`, `render-default-database.json`,
+`render-initialization-receipt.json`, `render-initialization-migrations.log`,
+`render-login-smoke.json`. Table/column inventory does not certify every type,
+constraint, encryption value or money path. Deployed SHA/startup verification,
+false-positive readiness, practitioner acceptance and release guarantees remain
+open; no app deployment, feature expansion, PR or merge in this recovery.
+
+### Render database identity / empty-schema receipt - 2026-10-04
+
+User saved the database External URL and web service DATABASE_URL in ignored
+local files. A private comparison returned true for database name, user, cluster
+host, port and password; neither URL nor password was printed or committed.
+Successful database-enforced read-only inspection of
+`ethiopian_payroll_db_kn8y` returned: schema `public`, search path `"$user", public`,
+no non-system tables, no recorded Alembic revisions, and all 38 registered model
+tables missing. Inventory exit 1 denotes this real schema mismatch, not a
+connection failure. Expanded CLI identity/catalog output confirms this is not
+only one missing login table or a table located in another schema.
+
+Existing source graph has 77 revisions and sole head `f4a5b6c7d8f3`. Its real
+empty-PostgreSQL upgrade is already exercised by the focused disposable-DB
+fixture: `3 passed, 6 warnings in 11.09s`. The local synthetic DB inventory
+matches that head with no missing model tables/columns. The separate first
+identity probe produced no result due to a native process exit; only the
+successful expanded inventory is used as identity evidence.
+
+Proposed repair: apply the existing Alembic upgrade to the confirmed empty
+Render target, then rerun the inventory and verify hosted login rejects unknown
+credentials normally. This initializes schema; it neither creates the local
+trial owner in Render nor restores historical records from an older database.
+No production writes have occurred. Await explicit approval for initialization;
+deployed commit, startup settings and the misleading readiness route remain open.
+
+### Render login incident / initial diagnosis - 2026-10-04
+
+Confirmed from user-provided traceback: `UndefinedTable: relation "login_attempt"
+does not exist` during the lockout query, before credential validation. Existing
+migration `b8c9d0e1f2b4` creates that table and its indexes. Missing schema,
+connection/schema selection or recorded-revision drift requires investigation;
+the exact deployment and historical cause are unidentified. Current Dockerfile
+stops on migration failure; this does not prove Render used that startup command.
+
+Related verified source defect: `/readyz` interprets Flask-Migrate's print-only
+`current()` result as migration evidence and still returns 200 for unknown state.
+The earlier observed hosted response was database up / migrations unknown.
+That is connectivity evidence, not complete schema readiness. This route has
+not been changed or deployed in this diagnostic slice.
+
+Prepared locally: `scripts/check_deployed_schema.py`, with real
+PostgreSQL regression cases in `tests/test_pg_schema_inventory.py`. The inventory
+uses a database-enforced read-only transaction, compares source/recorded heads
+and all registered model tables/columns, and prints no credentials or row data.
+It does not certify types, constraints, encryption or historical data.
+Local synthetic DB: sole head `f4a5b6c7d8f3`, no missing model tables/columns.
+Final focused PostgreSQL receipt: `3 passed, 6 warnings in 11.09s`; missing table and
+missing column were simulated only in a generated disposable DB and rolled back.
+Ruff check/format pass. Raw receipt: `local-evidence/schema-inventory-tests-final.log`.
+The browser connector cannot access Render due to a request-header-policy error;
+there is no configured Render API credential. User was given one read-only
+Render Shell command, but confirmed their Free service has no Shell access.
+Alternative: external PostgreSQL connection from this computer. Private URL
+will stay ignored in `local-evidence/render-database-url.txt`; local wrapper
+uses TLS, a connection timeout, temporary model-only keys and read-only SQL.
+No production encryption key or payroll row data is required. Await that URL
+and deployment/migration completion evidence. No production
+DDL, reset, stamp, credential rotation, merge or deployment was performed.
+
+### Persistent founder trial receipt - 2026-10-04
+
+Scope: `scripts/founder_trial.py`, `START_FOUNDER_TRIAL.ps1`, the founder guide
+and evidence documents. No application, calculator, authorization, schema or CI
+workflow changed. Starts only on 127.0.0.1:5058, with a uniquely named/marked
+synthetic database on the existing local PostgreSQL instance. Inherited live
+integration settings are removed in this dedicated process. Generated account
+password, session/encryption keys and PDFs stay ignored in
+`local-evidence/founder-trial`. Restart never drops/reseeds or auto-migrates.
+
+Executed with the locked Python environment:
+
+- `python -X utf8 scripts/founder_trial.py init`: exit 0; real empty-PostgreSQL
+  upgrade to sole head `f4a5b6c7d8f3`. Repeated `init` preserved state and data.
+- `python -X utf8 local-evidence/check_founder_trial.py`: exit 0; normal owner
+  and accountant login, rejected CSRF-less login without an authenticated
+  session, encrypted bank readback, worksheet save/reload and unchanged keys
+  across a new app instance. Prior approved net 9,260.00; current estimate
+  11,053.99. Current month remains unapproved; payment pending. Existing friendly
+  CSRF handling redirects with 302; that response is not successful login.
+- Cached Playwright CLI: normal accountant login and worksheet at 1440x900 and
+  390x844. Phone page width 390 equals viewport. Screenshots in `docs/evidence`.
+  No new packages installed. Its first credential helper was incompatible;
+  successful replacement kept credentials/output in ignored local files.
+  A stale login form expired; refreshing it allowed normal browser sign-in.
+- Ruff check/format check on the launcher: pass. Source preflight: 77 revisions,
+  one head, no known source findings (not full security proof).
+- Independent narrow review caught HTTPS/cookie forcing in the local launcher;
+  browser reproduced it. Fixed only that loopback app's transport settings,
+  retaining login, CSRF, CSP and authorization. Re-review found no blocker.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File START_FOUNDER_TRIAL.ps1`
+  restarted the preserved trial. Full suites were not rerun: merged application
+  source is unchanged; exact-main hosted evidence remains above.
+
+This is a machine-local, current-month exercise, not deployment or practitioner
+acceptance. Incomplete setup stops for recovery; no destructive reset command
+exists. [Current founder guide](docs/FOUNDER_TRIAL.md) contains the next action.
+
+### PR #11 merge receipt - 2026-10-04
+
+[PR #11](https://github.com/vouge2017/ethiopian_payroll_engine/pull/11) is merged.
+The clean working checkout was fast-forwarded to the verified merge object.
+An initial fetch updated FETCH_HEAD but left the old origin/main tracking ref;
+the exact fetched SHA was verified before fast-forward, then origin/main was
+explicitly refreshed. No old files were restored/deleted from the stale ref.
+Source tree equality against `6eb7fd1` was verified. No tests were rerun locally.
+Completed PR receipts are in `local-evidence/pr11-final-{python311,python312,postgres}.log`.
+
+This follow-up updates only the three status/report documents. It is published
+on the existing feature branch with `[skip ci]` to avoid repeating suites for
+documentation alone; it does not change remote main, tested source, schema or
+workflow. Historical unmerged/pending statements below describe their original
+checkpoint and are superseded by this current summary.
 
 ### Bounded review follow-up - 2026-10-04
 

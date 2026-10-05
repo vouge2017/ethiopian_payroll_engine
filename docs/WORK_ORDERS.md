@@ -1,14 +1,75 @@
 # Focused delivery work orders
 
-## CURRENT AUTHORITATIVE STATE - 2026-10-04
+## CURRENT AUTHORITATIVE STATE - 2026-10-05
 
-Accepted baseline: remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf`
-contains merged PR #8 and #10. Schema: 77 revisions, one head `f4a5b6c7d8f3`.
-Local PostgreSQL receipts remain slice-specific. Exact-main hosted PostgreSQL,
-standalone migrations and lint/format pass; full Python 3.11 has
-`TOTAL: 1550 passed, 11 failed, 0 errors, 116 skipped`, Python 3.12 cancelled.
-GitGuardian passed on PR #10 head `90779cb`; merge SHA has no separate scan.
-Deployment/restore and founder/Tigist verification are open.
+Accepted baseline: remote main `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`
+contains merged PR #8, #10 and #11. Schema: 77 revisions, one head `f4a5b6c7d8f3`.
+Merge tree equals tested PR head `6eb7fd1`. On that head, Python 3.11/3.12 each:
+`TOTAL: 1563 passed, 0 failed, 0 errors, 124 skipped`;
+PostgreSQL: `128 passed, 286 warnings in 66.04s (0:01:06)`.
+Lint/format, both standalone migration jobs and GitGuardian passed.
+On merge SHA, Python 3.11/3.12, PostgreSQL, lint/format and both migration jobs
+completed successfully. Deployment/restore and practitioner
+verification are open. Approved hosted schema initialization and login recovery
+are now verified separately; no application deployment SHA is identified.
+Historical pending statements below are superseded here.
+
+16. Fail readiness on an incomplete database and verify Render startup configuration.
+
+Implemented and independently reviewed on `feature/render-readiness`, based on
+current remote main `2f6f4e6`. Real PostgreSQL HTTP probes fail on revision/table/
+column damage; read-only checks do not trigger maintenance, billing redirects,
+session expiry or request limits. Strict container probe refuses redirects and
+unknown state; source startup still blocks Gunicorn after migration failure.
+Final focused receipt: `22 passed, 18 warnings in 99.62s (0:01:39)`; Ruff passes.
+No new migration, money policy, UI or hosted data change. Founder source remains
+on its preserved branch; only byte-identical reviewed readiness files are ported.
+
+User's actual Render Settings: Docker/main, override
+`gunicorn -b 0.0.0.0:10000 wsgi:app`, blank pre-deploy and health path, auto-deploy
+On Commit. This command bypasses the tested source migration guard. Intended
+release configuration: blank Docker Command, `/readyz` Health Check Path.
+Latest successful deployed SHA remains unidentified. PR, merge and deployment
+approval/hosted CI and post-deploy verification are open. No hosted settings
+change or application deployment has happened. See STATUS.md for exact evidence.
+
+15. Diagnose and recover Render login from the verified missing `login_attempt` table.
+
+Hosted schema/login HTTP 500 recovery completed with explicit user approval.
+User confirmed only a new/test hosted setup. Investigated the server's other
+database read-only: default `postgres` has only a protected key/value table,
+no payroll tables. Preserved the local SQLite candidate (5 employees/5 payslips)
+byte-for-byte; provenance unidentified, no import or modification. Other Render
+instances/backups remain inaccessible without dashboard/API access.
+
+Reconfirmed the approved target was empty; applied the existing 77 Alembic
+revisions at 20:37:03 UTC to sole head `f4a5b6c7d8f3`. Read-only post-check:
+matching head, no missing model tables/columns. Hosted login GET 200,
+unknown-login POST 302 then GET 200 with `Invalid credentials.`; registration
+GET 200. No account/payroll created, one ordinary failed-login smoke record.
+Reused `3 passed, 6 warnings in 11.09s` disposable-PostgreSQL evidence; Ruff
+check/format pass. No source migration, statutory policy or app deployment changed.
+
+Successful hosted owner authentication still requires a hosted account; the
+synthetic owner belongs to the local trial. Deployed SHA/startup settings,
+false-positive `/readyz`, release recovery guarantees and practitioner acceptance
+remain open. STATUS.md distinguishes the verified DB/HTTP repair from those gaps.
+
+14. Prepare a persistent isolated synthetic founder/Tigist monthly trial.
+
+Verified locally on `feature/founder-synthetic-trial`: loopback launcher, real
+empty PostgreSQL migration to the sole head, normal owner/accountant login,
+CSRF rejection, encryption readback and saved-input/key persistence across app
+restart. Actual PowerShell start command works; repeated init preserves data.
+Desktop and 390px browser sign-in/worksheet pass. Independent launcher review
+caught and cleared an HTTP transport defect. Ruff check/format pass.
+App source and schema are unchanged from merged main; no full-suite rerun.
+Launcher hosted CI/merge, deployment and founder/Tigist acceptance are separate
+and open. Preserved instructions: [Founder trial](https://github.com/vouge2017/ethiopian_payroll_engine/blob/feature/founder-synthetic-trial/docs/FOUNDER_TRIAL.md).
+
+**Next action:** founder completes and explains this synthetic month, records
+friction, then observes Tigist without coaching. No new feature or deployment
+starts automatically. Use those observations to choose the next bounded UI fix.
 
 13. Close independently reproduced monthly-review messaging defects and prepare a reviewable handoff.
 
@@ -17,11 +78,11 @@ neutral added/absent payroll labels, working-checkout guidance. Final focused
 receipt: `74 passed, 20 warnings in 47.54s`; Ruff passes, 231 files formatted;
 synthetic Playwright checks at 1440/390px passed with no page overflow.
 Independent fix review found no remaining blocker in the four changed source/test
-files. These new fixes need their own hosted receipt; prior `9f0f4a3` CI stays
-attributable to that earlier code. See STATUS.md for failure/recovery evidence.
+files. Their hosted receipt is now verified on `6eb7fd1`, and PR #11 was merged
+with user approval. See STATUS.md for failure/recovery and merge evidence.
 
-**Next decision:** authorize a monthly branch PR for review/GitGuardian evidence,
-then prepare the synthetic founder/Tigist trial. No automatic merge/deployment.
+That proposed trial preparation is completed locally in order 14 above.
+No deployment or new feature was started as part of the approved merge.
 
 12. Ordinary monthly payroll journey: prior implemented and hosted-CI-verified slice.
 

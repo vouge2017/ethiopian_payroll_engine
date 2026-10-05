@@ -15,6 +15,8 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 
+from .schema_health import HEALTH_ENDPOINTS
+
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
@@ -343,6 +345,8 @@ def create_app():
         from flask import session as flask_session
         from flask_login import current_user
 
+        if request.endpoint in HEALTH_ENDPOINTS:
+            return
         # Skip for unauthenticated, static, and auth routes
         if not current_user.is_authenticated:
             return
@@ -403,6 +407,8 @@ def create_app():
         """Purge expired artifacts once per day."""
         from flask_login import current_user
 
+        if request.endpoint in HEALTH_ENDPOINTS:
+            return
         if not current_user.is_authenticated:
             return
         today = date.today().isoformat()
@@ -437,6 +443,8 @@ def create_app():
         """
         from flask_login import current_user
 
+        if request.endpoint in HEALTH_ENDPOINTS:
+            return
         if not current_user.is_authenticated:
             return
         company_id = current_user.company_id
@@ -741,32 +749,34 @@ def create_app():
         return {'error': 'No subscription data'}, 400
 
     @app.route('/healthz')
+    @limiter.exempt
     def healthz():
         return {'status': 'healthy', 'service': 'ethiopian-payroll-engine'}, 200
 
     @app.route('/readyz')
+    @limiter.exempt
     def readyz():
         from sqlalchemy import text
 
-        status = {'self': 'up'}
-        # Check DB connectivity
-        try:
-            db.session.execute(text('SELECT 1'))
-            status['database'] = 'up'
-        except Exception as e:
-            status['database'] = 'down'
-            current_app.logger.error('readyz DB check failed: %s', e)
-            return {'status': 'not_ready', 'checks': status}, 503
-        # Check migration status
-        try:
-            from flask_migrate import current as migration_current
+        from .schema_health import inspect_schema, source_heads
 
-            with app.app_context():
-                heads = migration_current()
-                status['migrations'] = 'current' if heads else 'unknown'
-        except Exception as e:
-            status['migrations'] = f'error: {e}'
-            current_app.logger.warning('readyz migration check failed: %s', e)
+        status = {'self': 'up', 'database': 'down', 'migrations': 'unknown', 'schema': 'unknown'}
+        try:
+            with db.engine.connect() as connection, connection.begin():
+                if connection.dialect.name == 'postgresql':
+                    connection.exec_driver_sql('SET TRANSACTION READ ONLY')
+                connection.execute(text('SELECT 1'))
+                status['database'] = 'up'
+                heads = source_heads(current_app.extensions['migrate'].directory)
+                report = inspect_schema(connection, db.metadata, heads)
+            status['migrations'] = 'current' if report['revisions_match'] else 'not_current'
+            status['schema'] = 'incomplete' if report['missing_tables'] or report['missing_columns'] else 'current'
+        except Exception as error:
+            # Health responses must not disclose SQL/connection details.
+            current_app.logger.error('readyz dependency check failed (%s)', type(error).__name__)
+            return {'status': 'not_ready', 'checks': status}, 503
+        if status['migrations'] != 'current' or status['schema'] != 'current':
+            return {'status': 'not_ready', 'checks': status}, 503
         # Background worker liveness (RQ heartbeat; non-fatal when unknown)
         try:
             from .worker_health import heartbeat_status

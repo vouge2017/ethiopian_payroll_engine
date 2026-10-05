@@ -14,6 +14,7 @@ services:
     name: ethiopian-payroll-web
     runtime: docker
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /readyz
     envVars:
       - key: SECRET_KEY
         generateValue: true

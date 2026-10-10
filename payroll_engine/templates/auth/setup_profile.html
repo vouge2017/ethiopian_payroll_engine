@@ -57,8 +57,9 @@
 
 <!-- Main Content: Profile Setup Form -->
 <div class="onboarding-form-area">
-    <h1 class="onboarding-form-title">Tell us about you</h1>
-    <p class="onboarding-form-subtitle">A few quick details so we can personalize your workspace.</p>
+    <p class="entry-step-label">STEP 2 OF 3 · YOUR COMPANY</p>
+    <h1 class="onboarding-form-title">Make this workspace yours.</h1>
+    <p class="onboarding-form-subtitle">Add your name and company. You’ll add employees after this step.</p>
 
     <!-- Identity chip: confirms which account we're setting up -->
     <div class="identity-chip" data-testid="identity-chip">
@@ -101,7 +102,7 @@
             <input type="text" id="companyName" name="company_name" required
                    placeholder="e.g. Acme Ethiopia Ltd" autocomplete="organization"
                    value="{{ form_data.company_name if form_data else '' }}">
-            <span class="field-hint">You can rename your company anytime from settings.</span>
+            <span class="field-hint">Use the company name you want to see in your payroll workspace.</span>
         </div>
 
         <!-- Actions -->
@@ -110,10 +111,11 @@
                 <i class="bi bi-arrow-right"></i> Skip for now
             </a>
             <button type="submit" class="onboarding-btn-next">
-                Continue
+                Set up my company
                 <span class="material-symbols-outlined">arrow_forward</span>
             </button>
         </div>
+        <p class="entry-next-note">Next: add your employees, then prepare your first monthly payroll. Setting up your company does not run payroll or send payments.</p>
     </form>
 </div>
 

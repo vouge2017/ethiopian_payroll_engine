@@ -1,0 +1,62 @@
+/* Familiar entry styling, scoped to the first employee and empty workspace. */
+.first-use {
+  --first-paper: #fffdfa;
+  --first-soft: #f0ede7;
+  --first-line: #dcd6cb;
+  --first-ink: #26221d;
+  --first-muted: #645e55;
+  --first-gold: #f5cf62;
+  --first-button: #26221d;
+  --first-button-text: #fcf9f1;
+  --first-focus: #8b5b00;
+  color: var(--first-ink);
+  font-family: "Noto Sans", "Noto Sans Ethiopic", sans-serif;
+}
+[data-theme="dark"] .first-use {
+  --first-paper: #292d27;
+  --first-soft: #33382f;
+  --first-line: #596050;
+  --first-ink: #f4eee2;
+  --first-muted: #c6c4b8;
+  --first-button: #f4eee2;
+  --first-button-text: #24271f;
+  --first-focus: #f5cf62;
+}
+[data-theme="dark"] .first-use .first-primary {
+  background: var(--first-button) !important;
+  border-color: var(--first-button) !important;
+  color: var(--first-button-text) !important;
+}
+[data-theme="dark"] .first-use .first-secondary-link { color: var(--first-ink) !important; }
+.first-use h1, .first-use h2 { font-family: "Noto Serif", "Noto Sans Ethiopic", Georgia, serif; font-weight: 500; letter-spacing: -.03em; }
+.first-use .first-eyebrow { font-size: .68rem; font-weight: 600; letter-spacing: .1em; color: var(--first-muted); margin-bottom: 18px; }
+.first-use a:focus-visible, .first-use summary:focus-visible, .first-use button:focus-visible { outline: 3px solid var(--first-focus); outline-offset: 4px; }
+.first-use .first-primary { background: var(--first-button); border: 1px solid var(--first-button); color: var(--first-button-text); min-height: 48px; padding: 12px 20px; border-radius: 5px; font-weight: 600; display: inline-flex; gap: 22px; align-items: center; justify-content: center; }
+.first-use .first-primary:hover { background: var(--first-button); color: var(--first-button-text); box-shadow: 0 3px 9px rgb(36 33 27 / 15%); }
+.first-use .first-secondary-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--first-ink); font-size: .8rem; text-decoration: underline; text-underline-offset: 4px; }
+.first-use .first-note { color: var(--first-muted); font-size: .78rem; line-height: 1.8; margin: 19px 0 8px; }
+.first-workspace { display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; border: 1px solid var(--first-line); border-radius: 8px; background: var(--first-paper); padding: 44px; }
+.first-workspace-copy { min-width: 0; }
+.first-use .first-workspace h2 { font-size: clamp(1.8rem, 2.8vw, 2.5rem); line-height: 1.35; margin-bottom: 20px; }
+.first-use .first-lead { color: var(--first-muted); font-size: .91rem; line-height: 1.85; max-width: 48ch; margin-bottom: 27px; }
+.first-workspace-progress { background: var(--first-soft); border: 1px solid var(--first-line); border-top: 3px solid var(--first-gold); padding: 26px; border-radius: 5px; min-width: 0; }
+.first-workspace-progress ol { list-style: none; margin: 0; padding: 0; }
+.first-workspace-progress li { display: flex; gap: 13px; padding-block: 15px; }
+.first-workspace-progress li + li { border-top: 1px solid var(--first-line); }
+.first-step-mark { flex-shrink: 0; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--first-line); border-radius: 50%; font-size: .8rem; color: var(--first-ink); background: var(--first-paper); }
+.first-workspace-progress [aria-current] .first-step-mark { background: var(--first-gold); color: var(--first-button); }
+[data-theme="dark"] .first-workspace-progress [aria-current] .first-step-mark { color: var(--first-button-text); }
+.first-workspace-progress strong { display: block; font-size: .82rem; line-height: 1.6; font-weight: 600; }
+.first-workspace-progress li p, .first-progress-foot { font-size: .75rem; line-height: 1.75; color: var(--first-muted); margin: 5px 0 0; }
+.first-progress-foot { border-top: 1px solid var(--first-line); padding-top: 18px; margin-top: 10px; }
+@media (width <= 1000px) {
+  .first-workspace { grid-template-columns: 1fr; gap: 30px; padding: 30px; }
+}
+@media (width <= 600px) {
+  .first-use { padding: 20px !important; }
+  .first-workspace { padding: 25px 21px; gap: 27px; }
+  .first-workspace-progress { padding: 20px; }
+  .first-use .first-workspace h2 { font-size: 1.9rem; }
+  .first-use .first-lead { font-size: .85rem; }
+  .first-use .first-primary { font-size: .82rem; gap: 15px; }
+}

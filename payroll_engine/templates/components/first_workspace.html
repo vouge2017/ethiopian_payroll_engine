@@ -1,0 +1,27 @@
+<section class="first-workspace" aria-labelledby="first-workspace-title" data-testid="first-workspace">
+    <div class="first-workspace-copy">
+        <p class="first-eyebrow">{{ _('first_company') }} · {{ workspace_company.name }}</p>
+        {% if employee_count == 0 %}
+        <h2 id="first-workspace-title">{{ _('first_start_title') }}</h2>
+        <p class="first-lead">{{ _('first_start_description') }}</p>
+        <a class="btn first-primary" href="{{ url_for('employees.add_employee') }}" data-testid="first-employee-action">{{ _('first_add_employee') }} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        <p class="first-note">{{ _('first_optional_details') }}<br>{{ _('first_save_notice') }}</p>
+        <a class="first-secondary-link" href="{{ url_for('wizard.quick_start') }}">{{ _('first_add_group') }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+        {% else %}
+        <h2 id="first-workspace-title">{{ _('first_team_title') }}</h2>
+        <p class="first-lead">{{ _('first_active_count') }}: {{ employee_count }}. {{ _('first_team_description') }}</p>
+        <a class="btn first-primary" href="{{ url_for('payroll.payroll_spreadsheet') }}" data-testid="first-payroll-action">{{ _('first_prepare_payroll') }} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        <p class="first-note">{{ _('first_review_notice') }}<br>{{ _('first_payment_notice') }}</p>
+        <a class="first-secondary-link" href="{{ url_for('employees.add_employee') }}">{{ _('first_add_another') }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+        {% endif %}
+    </div>
+    <aside class="first-workspace-progress" aria-label="{{ _('first_progress_label') }}">
+        <p class="first-eyebrow">{{ _('first_next_step') }}</p>
+        <ol>
+            <li><span class="first-step-mark" aria-hidden="true">✓</span><div><strong>{{ _('first_company_done') }}</strong><p>{{ _('first_workspace_ready') }}</p></div></li>
+            <li {{ 'aria-current="step"'|safe if employee_count == 0 else '' }}><span class="first-step-mark" aria-hidden="true">{{ '2' if employee_count == 0 else '✓' }}</span><div><strong>{{ _('first_add_employee') if employee_count == 0 else _('first_employees_done') }}</strong><p>{{ _('first_minimum_details') if employee_count == 0 else _('first_more_employees') }}</p></div></li>
+            <li {{ 'aria-current="step"'|safe if employee_count > 0 else '' }}><span class="first-step-mark" aria-hidden="true">3</span><div><strong>{{ _('first_monthly_payroll') }}</strong><p>{{ _('first_save_review') }}</p></div></li>
+        </ol>
+        <div class="first-progress-foot">{{ _('first_reports_notice') }}</div>
+    </aside>
+</section>

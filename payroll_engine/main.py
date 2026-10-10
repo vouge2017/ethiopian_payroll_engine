@@ -182,6 +182,14 @@ def demo_mode():
 # --- Dashboard ---
 
 
+@main.route('/welcome')
+def welcome():
+    """Public product introduction; the dashboard remains authenticated."""
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    return render_template('welcome.html')
+
+
 @main.route('/')
 @login_required
 def index():

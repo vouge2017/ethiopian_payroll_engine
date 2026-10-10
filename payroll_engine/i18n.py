@@ -7,6 +7,7 @@ Usage in templates:
     {{ _('dashboard') }}  → 'ዳሽቦርድ' (Amharic) or 'Dashboard' (English) or 'Daashboordii' (Afaan Oromoo)
 """
 
+from payroll_engine.i18n_first_use import FIRST_USE_COPY
 from payroll_engine.i18n_om import STRINGS_OM
 
 # Amharic strings — 164 keys
@@ -155,6 +156,9 @@ STRINGS = {
 }
 
 
+STRINGS.update({key: copy[1] for key, copy in FIRST_USE_COPY.items()})
+
+
 def get_string(key: str, language: str = 'en') -> str:
     """
     Get a translated string.
@@ -166,6 +170,8 @@ def get_string(key: str, language: str = 'en') -> str:
     Returns:
         Translated string, or key itself if not found
     """
+    if key in FIRST_USE_COPY:
+        return FIRST_USE_COPY[key][1 if language == 'am' else 0]
     if language == 'am':
         return STRINGS.get(key, key)
     if language == 'om':
@@ -178,5 +184,5 @@ def get_all_strings(language: str = 'en') -> dict:
     if language == 'am':
         return STRINGS.copy()
     if language == 'om':
-        return STRINGS_OM.copy()
-    return {k: k.replace('_', ' ').title() for k in STRINGS}
+        return {**{key: copy[0] for key, copy in FIRST_USE_COPY.items()}, **STRINGS_OM}
+    return {key: get_string(key, 'en') for key in STRINGS}

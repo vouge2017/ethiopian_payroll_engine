@@ -226,6 +226,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
 
         emp_id = emp.employee_id
         emp_name = emp.name
+        employee_url = f'/employees/{emp.id}'
 
         # CRITICAL: Negative net pay
         if ps.net_pay and ps.net_pay < 0:
@@ -242,7 +243,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     impact='Employee cannot receive a negative payment. Bank file will be incorrect.',
                     cause='Total deductions (tax + pension + loan + other) exceed gross salary.',
                     recommendation="Review the employee's deductions. If a loan deduction is too large, reduce it or split across months. Alternatively, create an adjustment payslip.",
-                    action_url=f'/employees/{emp_id}/deductions',
+                    action_url=employee_url,
                     estimated_time='3 minutes',
                 )
             )
@@ -262,7 +263,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     impact='This is a calculation error. The payslip numbers are incorrect.',
                     cause='Tax or pension calculation produced a negative deduction, or gross was entered incorrectly.',
                     recommendation="Verify the employee's basic salary and allowances. Check if tax rules are current. Re-run payroll if needed.",
-                    action_url=f'/employees/{emp_id}',
+                    action_url=employee_url,
                     estimated_time='5 minutes',
                 )
             )
@@ -281,7 +282,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     impact='Employee will receive no payment this period.',
                     cause='Basic salary is set to 0, or employee was not supposed to be in this run.',
                     recommendation='If employee is on unpaid leave, remove from this run. Otherwise, update their salary.',
-                    action_url=f'/employees/{emp_id}/edit',
+                    action_url=f'{employee_url}/edit',
                     estimated_time='2 minutes',
                 )
             )
@@ -308,7 +309,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     impact='Employee cannot receive salary via bank transfer. Bank file will skip this employee.',
                     cause='Bank account or Telebirr number was not entered in the employee profile.',
                     recommendation='Ask the employee for their bank account number or Telebirr ID, then update their profile.',
-                    action_url=f'/employees/{emp_id}/edit',
+                    action_url=f'{employee_url}/edit',
                     estimated_time='2 minutes',
                 )
             )
@@ -327,7 +328,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     impact='ERCA filing will be incomplete. The employee cannot be included in the tax report.',
                     cause='TIN was not entered when the employee was added, or the employee has not obtained one yet.',
                     recommendation="Ask the employee for their TIN. If they don't have one, they need to register at the nearest ERCA office.",
-                    action_url=f'/employees/{emp_id}/edit',
+                    action_url=f'{employee_url}/edit',
                     estimated_time='2 minutes',
                 )
             )
@@ -345,7 +346,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     impact='Employee will not receive WhatsApp/SMS notification when payslip is ready.',
                     cause='Phone number was not entered in the employee profile.',
                     recommendation='Ask the employee for their phone number and update their profile.',
-                    action_url=f'/employees/{emp_id}/edit',
+                    action_url=f'{employee_url}/edit',
                     estimated_time='1 minute',
                 )
             )
@@ -363,7 +364,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                     impact='No risk, but worth verifying since this is the first payment.',
                     cause='Employee was recently added to the system.',
                     recommendation='Confirm salary, bank account, and tax status are correct before approving.',
-                    action_url=f'/employees/{emp_id}',
+                    action_url=employee_url,
                     estimated_time='1 minute',
                 )
             )

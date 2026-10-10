@@ -4,43 +4,19 @@
 {% extends "base.html" %}
 {% block title %}Payroll Review — {{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }}{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/monthly-payroll.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
+{% import "components/monthly_payroll.html" as monthly with context %}
+{% set changed_ids = change_summary.changes|map(attribute='employee_id')|list if change_summary and change_summary.retained_comparison else [] %}
+{% set changed_count = changed_ids|unique(case_sensitive=true)|list|length %}
 {% set saved_blocks = validation_results|selectattr('severity', 'equalto', 'BLOCK')|rejectattr('overridden')|list %}
-<div class="p-4 p-md-5">
-
-  {% if worksheet_rows %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <h3 class="h5">Saved payroll for {{ run.run_date.strftime('%B %Y') }} (Gregorian)</h3>
-      <p class="small text-muted">These figures are preserved for approval. Later worksheet edits do not change them. Refresh before submission to include saved changes. Approval does not send payment.</p>
-      <div class="table-responsive">
-        <table class="table table-sm"><caption>Amounts preserved for approval, in ETB</caption>
-          <thead><tr><th scope="col">Employee</th><th scope="col">Bonus</th><th scope="col">Extra unpaid days</th><th scope="col">Gross</th><th scope="col">Tax</th><th scope="col">Pension</th><th scope="col">Leave deductions</th><th scope="col">Other deductions</th><th scope="col">Net pay</th></tr></thead>
-          <tbody>{% for row in worksheet_rows %}<tr>
-            <th scope="row">{{ row.name }}<br><small>{{ row.id }}</small></th>
-            <td>{{ row.worksheet_inputs.bonus }}</td><td>{{ row.worksheet_inputs.absence_days }}</td>
-            <td>{{ '{:,.2f}'.format(row.gross) }}</td><td>{{ '{:,.2f}'.format(row.tax) }}</td><td>{{ '{:,.2f}'.format(row.pension_employee) }}</td>
-            <td>{{ '{:,.2f}'.format(row.unpaid_leave_reduction + row.sick_leave_reduction) }}</td><td>{{ '{:,.2f}'.format(row.total_deductions) }}</td><td><strong>{{ '{:,.2f}'.format(row.net) }}</strong></td>
-          </tr>{% endfor %}</tbody>
-        </table>
-      </div>
-      {% if run.status == 'review' %}
-      <form method="POST" action="{{ url_for('payroll.worksheet_review') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="period_start" value="{{ run.run_date.isoformat() }}">
-        <input type="hidden" name="refresh_run_id" value="{{ run.id }}">
-        <button class="btn btn-outline-secondary" type="submit">Refresh from saved worksheet</button>
-      </form>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-
+<div class="monthly-payroll monthly-review">
   <!-- Header -->
-  <div class="d-flex align-items-center justify-content-between mb-4">
+  <div class="monthly-heading">
     <div>
-      <h2 class="fw-bold mb-1">Payroll Review</h2>
-      <p class="text-muted mb-0">{{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }} · {{ run.reference or 'Run #' + run.id|string }}</p>
+      <p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else "Monthly payroll" }}</p>
+      <h1>Review payroll</h1>
+      <p class="text-muted mb-0">{{ run.reference or 'Run #' + run.id|string }} · Check this month’s saved pay and the changes below.</p>
     </div>
     <div class="d-flex align-items-center gap-3">
       {% if run.status in ('completed', 'locked') %}
@@ -51,11 +27,11 @@
         <span class="badge bg-warning-subtle text-dark px-3 py-2">Waiting for owner approval</span>
       {% elif can_approve %}
         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
-          <i class="bi bi-check-circle me-1"></i> Ready for Approval
+          <i class="bi bi-check-circle me-1"></i> Ready for owner review
         </span>
       {% else %}
         <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
-          <i class="bi bi-x-circle me-1"></i> Issues Must Be Resolved
+          <i class="bi bi-x-circle me-1"></i> Resolve blocking issues
         </span>
       {% endif %}
       <a href="/payroll/runs/{{ run.id }}" class="btn btn-sm btn-ghost">View Details <i class="bi bi-arrow-right"></i></a>
@@ -66,126 +42,37 @@
   <!-- SECTION 1: STORY — What happened? -->
   <!-- ═══════════════════════════════════════════ -->
 
+{% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
+{{ monthly.steps(3 if run.status in ('pending_approval', 'completed', 'locked') else 2) }}
+{% if worksheet_rows %}{{ monthly.totals(worksheet_rows|length, worksheet_rows|sum(attribute='gross'), worksheet_rows|sum(attribute='tax'), worksheet_rows|sum(attribute='net'), 'Saved net pay', comparison=change_summary) }}{% endif %}
   {% if component_errors and component_errors.change_summary %}
     {% set component_name = 'Change Summary' %}
     {% set error_message = component_errors.change_summary %}
     {% include '_component_error.html' with context %}
   {% else %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>What Happened</h5>
-      <p class="text-body">{{ narrative }}</p>
+  <section class="monthly-change-context">
+      <h2 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>What to check this month</h2>
+      <p>These are the saved figures for this review. New preparation edits are included only when you explicitly refresh the review.</p>
 
       {% if change_summary and change_summary.retained_comparison %}
-      <h6>What changed from previous approved payroll</h6>
-      <p class="small">Previous approved: {{ change_summary.previous_period or 'No earlier approved payroll' }}</p>
-      <p class="small">{{ change_summary.summary_text }} Net pay change: ETB {{ '{:+,.2f}'.format(change_summary.net_delta) }}.</p>
-      {% for note in change_summary.comparison_notes %}<p class="small text-muted">{{ note }}</p>{% endfor %}
+      {% if change_summary.previous_period %}<p class="monthly-comparison-summary"><strong>{{ changed_count }} {{ 'employee' if changed_count == 1 else 'employees' }} changed</strong> compared with {{ change_summary.previous_period }}. Open an employee row or the full change record to understand the changes.</p>{% else %}<p>No earlier approved payroll is available for comparison. Check each employee’s pay before continuing.</p>{% endif %}
+      {% if change_summary.comparison_notes %}<details class="monthly-notes"><summary>About this comparison</summary>{% for note in change_summary.comparison_notes %}<p>{{ note }}</p>{% endfor %}</details>{% endif %}
       {% if change_summary.changes %}
+      <details class="monthly-notes"><summary>Full change record · {{ change_summary.changes|length }} updates</summary>
       <ul class="list-unstyled">
-        {% for change in change_summary.changes %}
-        <li class="border-bottom py-2"><strong>{{ change.employee_name }} ({{ change.employee_id }})</strong><br>{{ change.description }}</li>
+        {% for employee_id, changes in change_summary.changes|groupby('employee_id', case_sensitive=true) %}
+        <li class="border-bottom py-2"><strong>{{ changes[0].employee_name }} ({{ employee_id }})</strong><ul class="mt-2 ps-3">{% for change in changes %}<li>{{ change.description }}</li>{% endfor %}</ul></li>
         {% endfor %}
       </ul>
+      </details>
       {% endif %}
       {% endif %}
 
-      {% if change_summary and change_summary.changes %}
-      <div class="row g-3 mt-2">
-        {% if change_summary.new_hires %}
-        <div class="col-6 col-md">
-          <div class="text-center p-3 rounded-3" style="background: var(--color-success-light);">
-            <div class="fs-3 fw-bold text-success">+{{ change_summary.new_hires|length }}</div>
-            <small class="text-success">{{ 'Added to payroll' if change_summary.retained_comparison else 'New Hires' }}</small>
-          </div>
-        </div>
-        {% endif %}
-        {% if change_summary.departures %}
-        <div class="col-6 col-md">
-          <div class="text-center p-3 rounded-3" style="background: var(--color-danger-light);">
-            <div class="fs-3 fw-bold text-danger">-{{ change_summary.departures|length }}</div>
-            <small class="text-danger">{{ 'Absent from payroll' if change_summary.retained_comparison else 'Departures' }}</small>
-          </div>
-        </div>
-        {% endif %}
-        {% if change_summary.salary_changes %}
-        <div class="col-6 col-md">
-          <div class="text-center p-3 rounded-3" style="background: var(--color-warning-light);">
-            <div class="fs-3 fw-bold text-warning">{{ change_summary.salary_changes|length }}</div>
-            <small class="text-warning">Salary Changes</small>
-          </div>
-        </div>
-        {% endif %}
-        {% if change_summary.overtime_entries %}
-        <div class="col-6 col-md">
-          <div class="text-center p-3 rounded-3" style="background: var(--color-info-light);">
-            <div class="fs-3 fw-bold text-primary">{{ change_summary.overtime_entries|length }}</div>
-            <small class="text-primary">Overtime</small>
-          </div>
-        </div>
-        {% endif %}
-        {% if change_summary.adjustments %}
-        <div class="col-6 col-md">
-          <div class="text-center p-3 rounded-3" style="background: #f3e8ff;">
-            <div class="fs-3 fw-bold" style="color: #8b5cf6;">{{ change_summary.adjustments|length }}</div>
-            <small style="color: #8b5cf6;">Adjustments</small>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-      {% endif %}
-    </div>
-  </div>
+  </section>
   {% endif %}
 
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SECTION 2: EVIDENCE — Why should I trust this? -->
-  <!-- ═══════════════════════════════════════════ -->
 
-  {% if component_errors and component_errors.evidence %}
-    {% set component_name = 'Trust Evidence' %}
-    {% set error_message = component_errors.evidence %}
-    {% include '_component_error.html' with context %}
-  {% elif evidence %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="fw-semibold mb-3">
-        <i class="bi bi-shield-check text-success me-2"></i>Trust Evidence
-        <small class="text-muted fw-normal">({{ evidence.passed|length }}/{{ evidence.total }} passed)</small>
-      </h5>
-
-      <div class="d-flex flex-column gap-1">
-        {% for signal in evidence.signals %}
-        <div class="d-flex align-items-start gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
-          {% if signal.status == 'pass' %}
-            <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
-          {% elif signal.status == 'fail' %}
-            <i class="bi bi-x-circle-fill text-danger mt-1 flex-shrink-0"></i>
-          {% else %}
-            <i class="bi bi-exclamation-triangle-fill text-warning mt-1 flex-shrink-0"></i>
-          {% endif %}
-          <div class="flex-grow-1 min-w-0">
-            <div class="fw-semibold small">{{ signal.name }}</div>
-            <div class="text-muted small">{{ signal.explanation }}</div>
-            {% if signal.detail %}
-              <div class="text-muted small opacity-75">{{ signal.detail }}</div>
-            {% endif %}
-            {% if signal.source %}
-              <div class="text-primary small">Source: {{ signal.source }}</div>
-            {% endif %}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SECTION 3: ISSUES — Anything wrong? -->
-  <!-- ═══════════════════════════════════════════ -->
-
-  {% if saved_blocks or component_errors or (run.status not in ('completed', 'locked') and not can_approve) %}
+<div class="monthly-review-grid"><div>  {% if saved_blocks or component_errors or (run.status not in ('completed', 'locked') and not can_approve) %}
   <div class="card mb-4 border-warning">
     <div class="card-body">
       <p class="fw-semibold mb-1">Review checks need attention</p>
@@ -198,135 +85,95 @@
     {% set error_message = component_errors.exceptions %}
     {% include '_component_error.html' with context %}
   {% elif sorted_issues %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="fw-semibold mb-3">
-        <i class="bi bi-exclamation-triangle text-danger me-2"></i>Issues
-        <small class="text-muted fw-normal">
-          ({{ exceptions.critical|length }} critical, {{ exceptions.high|length }} high, {{ exceptions.medium|length }} medium, {{ exceptions.low|length }} low)
-        </small>
-      </h5>
-
-      <div class="d-flex flex-column gap-3">
-        {% for issue in sorted_issues %}
-        <div class="card border
-          {% if issue.severity == 'critical' %}border-danger
-          {% elif issue.severity == 'high' %}border-warning
-          {% elif issue.severity == 'medium' %}border-warning-subtle
-          {% else %}border-secondary-subtle{% endif %}">
-          <div class="card-body p-3">
-
-            <!-- Header -->
-            <div class="d-flex align-items-start justify-content-between">
-              <div>
-                <span class="badge
-                  {% if issue.severity == 'critical' %}bg-danger
-                  {% elif issue.severity == 'high' %}bg-warning text-dark
-                  {% elif issue.severity == 'medium' %}bg-warning-subtle text-dark
-                  {% else %}bg-secondary{% endif %}">
-                  {{ issue.severity|upper }}
-                </span>
-                <span class="fw-semibold ms-2">{{ issue.title }}</span>
-                {% if issue.employee_name %}
-                  <span class="text-muted ms-2">— {{ issue.employee_name }}</span>
-                {% endif %}
-              </div>
-              {% if issue.estimated_time %}
-                <small class="text-muted flex-shrink-0"><i class="bi bi-clock me-1"></i>{{ issue.estimated_time }}</small>
-              {% endif %}
-            </div>
-
-            <!-- Description -->
-            <p class="text-muted small mt-2 mb-0">{{ issue.description }}</p>
-
-            <!-- Resolution -->
-            {% if issue.impact or issue.cause or issue.recommendation %}
-            <div class="mt-2 small">
-              {% if issue.impact %}
-              <div class="d-flex gap-2 mb-1">
-                <span class="text-muted fw-semibold" style="width:60px">Impact</span>
-                <span>{{ issue.impact }}</span>
-              </div>
-              {% endif %}
-              {% if issue.cause %}
-              <div class="d-flex gap-2 mb-1">
-                <span class="text-muted fw-semibold" style="width:60px">Cause</span>
-                <span>{{ issue.cause }}</span>
-              </div>
-              {% endif %}
-              {% if issue.recommendation %}
-              <div class="d-flex gap-2 mb-1">
-                <span class="text-muted fw-semibold" style="width:60px">Fix</span>
-                <span>{{ issue.recommendation }}</span>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Action button -->
-            {% if issue.action_url %}
-            <div class="mt-2">
-              <a href="{{ issue.action_url }}" class="btn btn-sm
-                {% if issue.severity == 'critical' %}btn-danger
-                {% elif issue.severity == 'high' %}btn-warning
-                {% else %}btn-secondary{% endif %}">
-                Fix This <i class="bi bi-arrow-right"></i>
-              </a>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-        {% endfor %}
+  <section class="card mb-4" id="monthly-findings"><div class="card-body">
+    <h2>Review notes · {{ sorted_issues|length }}</h2>
+    <p class="small text-muted mt-2">Blocking findings must be resolved. Other notes explain what deserves a check.</p>
+    {% for issue in sorted_issues %}
+    <details class="monthly-finding"{% if issue.blocking or issue.severity in ('critical', 'high') %} open{% endif %}>
+      <summary><span><strong>{{ issue.title }}</strong>{% if issue.employee_name %}<span class="monthly-finding-person">{{ issue.employee_name }}</span>{% endif %}</span><span class="monthly-finding-level">{{ 'Blocking' if issue.blocking else 'Review' }}</span></summary>
+      <div class="monthly-finding-body">
+        <p>{{ issue.impact or issue.description }}</p>
+        {% if issue.cause %}<p><strong>Why:</strong> {{ issue.cause }}</p>{% endif %}
+        {% if issue.recommendation %}<p><strong>What to do:</strong> {{ issue.recommendation }}</p>{% endif %}
+        {% if issue.action_url %}<a href="{{ issue.action_url }}" class="btn btn-outline-secondary">{{ 'Add phone number' if issue.code == 'MISSING_PHONE' else (issue.action_required or 'Open employee details') }}</a>{% endif %}
       </div>
-    </div>
-  </div>
-  {% elif not saved_blocks and not component_errors and (run.status in ('completed', 'locked') or can_approve) %}
-  <div class="card mb-4 border-success">
-    <div class="card-body text-center py-4">
-      <i class="bi bi-check-circle-fill text-success fs-3"></i>
-      <p class="fw-semibold text-success mt-2 mb-0">No issues detected</p>
-      <p class="text-muted small">{{ 'Approval is already recorded.' if run.status in ('completed', 'locked') else 'Review the amounts and warnings before continuing.' }}</p>
-    </div>
-  </div>
+    </details>
+    {% endfor %}
+  </div></section>
   {% endif %}
 
   <!-- ═══════════════════════════════════════════ -->
   <!-- SECTION 4: APPROVAL — Ready? -->
   {% if validation_results %}
   <div class="card mb-4"><div class="card-body">
-    <h5>Saved validation checks</h5>
-    <ul class="list-unstyled">{% for finding in validation_results %}
-      <li class="border-bottom py-2"><strong>{{ finding.severity }} · {{ finding.rule_code }}</strong>: {{ finding.message }}
-      {% if finding.overridden %}<span class="badge bg-secondary">Override recorded</span>{% endif %}</li>
+    <h2>Saved validation checks</h2>
+    <ul class="list-unstyled">{% for finding in validation_results if finding.severity != 'HINT' %}
+      <li class="border-bottom py-2"><strong>{{ finding.severity }} · {{ finding.rule_code }}</strong>: {{ finding.message }}{% if finding.overridden %}<span class="badge bg-secondary">Override recorded</span>{% endif %}</li>
     {% endfor %}</ul>
+    {% set hints = validation_results|selectattr('severity', 'equalto', 'HINT')|list %}
+    {% if hints %}<details class="monthly-notes"><summary>Additional check notes · {{ hints|length }}</summary><ul class="list-unstyled">{% for finding in hints %}<li class="border-bottom py-2"><strong>{{ finding.rule_code }}</strong>: {{ finding.message }}</li>{% endfor %}</ul></details>{% endif %}
     <p class="small text-muted">Resolve blocking findings and review flags on the approval screen.</p>
   </div></div>
   {% endif %}
   <!-- ═══════════════════════════════════════════ -->
 
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 2: EVIDENCE — Why should I trust this? -->
+  <!-- ═══════════════════════════════════════════ -->
+
+</div><div class="monthly-review-amounts">{% if worksheet_rows %}
+  <section class="card mb-4"><div class="card-body">
+    <h2>Employee pay · ETB</h2>
+    <p class="small text-muted mt-2">Saved payroll for {{ run.run_date.strftime('%B %Y') }} (Gregorian). Later worksheet edits do not change these figures. Approval does not send payment.</p>
+    {% set issue_ids = (sorted_issues or [])|map(attribute='employee_id')|list %}
+    {% set finding_ids = (validation_results or [])|rejectattr('overridden')|rejectattr('severity', 'equalto', 'HINT')|map(attribute='employee_id')|list %}
+    <div class="monthly-review-tools" id="review-employee-tools" hidden>
+      <label for="review-employee-search">Find an employee in this review</label>
+      <input type="search" id="review-employee-search" class="form-control" placeholder="Name or employee ID" autocomplete="off" aria-controls="review-employee-ledger">
+      <div class="monthly-review-filters" role="group" aria-label="Filter preserved employee amounts"><button type="button" class="btn btn-outline-secondary" data-review-filter="all" aria-pressed="true">All employees</button><button type="button" class="btn btn-outline-secondary" data-review-filter="issues" aria-pressed="false">With review issues</button>{% if change_summary and change_summary.retained_comparison %}<button type="button" class="btn btn-outline-secondary" data-review-filter="changed" aria-pressed="false">Changed</button>{% endif %}</div>
+      <p id="review-employee-count" role="status"></p>
+    </div>
+    <div class="monthly-ledger" id="review-employee-ledger">
+    {% for row in worksheet_rows %}{% set has_issue = row.id in issue_ids or row.employee_pk in finding_ids %}<details class="monthly-review-row" data-review-employee data-review-search="{{ (row.name ~ ' ' ~ row.id)|lower }}" data-review-changed="{{ 'true' if row.id in changed_ids else 'false' }}" data-review-issues="{{ 'true' if has_issue else 'false' }}">
+      <summary><span class="monthly-row-identity"><strong>{{ row.name }}</strong><span>{{ row.id }} · Gross ETB {{ '{:,.2f}'.format(row.gross) }}</span>{% if has_issue %}<span class="monthly-row-issue">Review issue</span>{% elif row.id in changed_ids %}<span class="monthly-row-change">Changed</span>{% endif %}</span><span class="monthly-row-net"><span>Net pay · ETB</span><strong>{{ '{:,.2f}'.format(row.net) }}</strong></span><span class="monthly-expand-icon" aria-hidden="true"></span></summary>
+      <div class="monthly-breakdown">
+      {% set employee_changes = change_summary.changes|selectattr('employee_id', 'equalto', row.id)|list if change_summary and change_summary.retained_comparison else [] %}
+      {% if employee_changes %}<div class="monthly-row-changes"><h3>Why this pay changed</h3><ul>{% for change in employee_changes %}<li>{{ change.description }}</li>{% endfor %}</ul></div>{% endif %}
+      <p class="small text-muted">Bonus ETB {{ row.worksheet_inputs.bonus }} · Extra unpaid days {{ row.worksheet_inputs.absence_days }}</p>
+      <dl class="monthly-amounts"><div><dt>Gross</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>Income tax</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>Pension</dt><dd>{{ '{:,.2f}'.format(row.pension_employee) }}</dd></div><div><dt>Leave deductions</dt><dd>{{ '{:,.2f}'.format(row.unpaid_leave_reduction + row.sick_leave_reduction) }}</dd></div><div><dt>Other deductions</dt><dd>{{ '{:,.2f}'.format(row.total_deductions) }}</dd></div><div class="monthly-net"><dt>Net pay</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
+      </div></details>{% endfor %}</div>
+    <div class="monthly-no-match" id="review-no-match" hidden><p>No employees match these filters. All preserved payroll amounts remain included.</p><button type="button" class="btn btn-outline-secondary" id="review-clear-filters">Clear employee filters</button></div>
+    {% if run.status == 'review' %}
+    <details class="monthly-notes"><summary>Include newer worksheet changes</summary><p>First save your changes in preparation. Refresh explicitly to replace the preserved review with the saved worksheet.</p>
+      <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-outline-secondary mb-2">Return to preparation</a>
+      <form method="POST" action="{{ url_for('payroll.worksheet_review') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period_start" value="{{ run.run_date.isoformat() }}"><input type="hidden" name="refresh_run_id" value="{{ run.id }}"><button class="btn btn-outline-secondary" type="submit">Refresh from saved worksheet</button></form>
+    </details>{% endif %}
+  </div></section>{% endif %}
+</div></div>
+<section class="monthly-decision" aria-label="Next payroll action">
   {% if run.status in ('completed', 'locked') %}
   <div class="card mb-4"><div class="card-body">
-    <h5>Approved payroll</h5>
+    <h2>Approved payroll</h2>
     <p>Approval is recorded. Downloading outputs does not mean salaries have been paid.</p>
     <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">View approved payroll</a>
   </div></div>
   {% elif component_errors and component_errors.exceptions %}
   <div class="card mb-4">
     <div class="card-body">
-      <h5 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-purple me-2"></i>Approval</h5>
+      <h2 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-purple me-2"></i>Next step</h2>
       <div class="d-flex align-items-center justify-content-between">
         <div>
           <p class="text-warning fw-semibold small mb-1">Cannot verify payroll safety — exception checks failed.</p>
           <p class="text-muted small mb-0">Review payroll manually before approving.</p>
         </div>
-        <button disabled class="btn btn-secondary btn-lg" disabled>Approve Payroll</button>
+        <button disabled class="btn btn-secondary btn-lg">Approve Payroll</button>
       </div>
     </div>
   </div>
   {% else %}
   <div class="card mb-4">
     <div class="card-body">
-      <h5 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-primary me-2"></i>Approval</h5>
+      <h2 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-primary me-2"></i>Next step</h2>
 
       {% if can_approve %}
       <div class="d-flex align-items-center justify-content-between">
@@ -363,12 +210,56 @@
           {% if component_errors %}<p class="small mb-1">Some review information could not be verified. Resolve the reported errors and reload the review.</p>{% endif %}
           {% if not saved_blocks and not component_errors and not (exceptions and exceptions.blocking_issues) %}<p class="text-muted small mb-0">Check the saved payroll status and evidence above before continuing.</p>{% endif %}
         </div>
-        <button disabled class="btn btn-secondary btn-lg" disabled>Approve Payroll</button>
+        <button disabled class="btn btn-secondary btn-lg">Approve Payroll</button>
       </div>
       {% endif %}
     </div>
   </div>
   {% endif %}
+
+</section>
+  {% if component_errors and component_errors.evidence %}
+    {% set component_name = 'Trust Evidence' %}
+    {% set error_message = component_errors.evidence %}
+    {% include '_component_error.html' with context %}
+  {% elif evidence %}
+  <details class="card mb-4 monthly-evidence" {% if not evidence.ready_for_approval %}open{% endif %}><summary class="card-header">Payroll evidence · {{ evidence.passed|length }}/{{ evidence.total }} checks passed</summary>
+    <div class="card-body">
+      <h2 class="fw-semibold mb-3">
+        <i class="bi bi-shield-check text-success me-2"></i>Trust Evidence
+        <small class="text-muted fw-normal">({{ evidence.passed|length }}/{{ evidence.total }} passed)</small>
+      </h2>
+
+      <div class="d-flex flex-column gap-1">
+        {% for signal in evidence.signals %}
+        <div class="d-flex align-items-start gap-3 py-2 {% if not loop.last %}border-bottom{% endif %}">
+          {% if signal.status == 'pass' %}
+            <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
+          {% elif signal.status == 'fail' %}
+            <i class="bi bi-x-circle-fill text-danger mt-1 flex-shrink-0"></i>
+          {% else %}
+            <i class="bi bi-exclamation-triangle-fill text-warning mt-1 flex-shrink-0"></i>
+          {% endif %}
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold small">{{ signal.name }}</div>
+            <div class="text-muted small">{{ signal.explanation }}</div>
+            {% if signal.detail %}
+              <div class="text-muted small opacity-75">{{ signal.detail }}</div>
+            {% endif %}
+            {% if signal.source %}
+              <div class="text-primary small">Source: {{ signal.source }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </details>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 3: ISSUES — Anything wrong? -->
+  <!-- ═══════════════════════════════════════════ -->
 
   <!-- Navigation -->
   <div class="d-flex justify-content-between text-muted small">
@@ -378,3 +269,4 @@
 
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/monthly-payroll.js') }}?v={{ static_version }}" defer></script>{% endblock %}

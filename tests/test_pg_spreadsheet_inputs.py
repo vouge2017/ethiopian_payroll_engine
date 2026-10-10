@@ -149,7 +149,9 @@ def test_save_recalculate_applies_bonus_absences_and_survives_reload(worksheet):
     assert Decimal(inputs[f'emp_{ids["employee"]}_bonus']) == Decimal('900.50')
     assert Decimal(inputs[f'emp_{ids["employee"]}_absences']) == 2
     expected = calculate_payroll(10000, Decimal('2900.50'), sick_leave_reduction=Decimal('800'))
-    row = next(row for row in re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.S) if 'Synthetic monthly' in row)
+    # The same canonical employee inputs now live in a responsive ledger card.
+    cards = re.findall(r'<section class="monthly-employee"[^>]*>(.*?)</section>', html, re.S)
+    row = next(card for card in cards if 'Synthetic monthly' in card)
     for key in ('gross', 'tax', 'net'):
         assert f'{expected[key]:,.2f}' in row
     reloaded = Inputs(client.get('/payroll/spreadsheet').get_data(as_text=True)).values

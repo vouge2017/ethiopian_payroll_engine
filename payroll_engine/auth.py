@@ -844,7 +844,7 @@ def reset_password_new():
         session.permanent = True
         session.pop('reset_identity', None)
 
-        flash('Password updated! You are now signed in.', 'success')
+        flash('Password reset successfully. You are now signed in.', 'success')
         return redirect(url_for('main.index'))
 
     return render_template(

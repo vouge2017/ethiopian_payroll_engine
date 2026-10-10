@@ -5,7 +5,7 @@
 {% block title %}Dashboard — {{ dashboard.company_name }}{% endblock %}
 
 {% block content %}
-<div class="p-4 p-md-5">
+<div class="p-4 p-md-5 role-dashboard">
 
   <!-- Header -->
   <div class="d-flex align-items-center justify-content-between mb-4">
@@ -44,7 +44,7 @@
     <div class="row g-3 mb-3">
       <!-- Total Payroll Cost -->
       <div class="col-md-4">
-        <div class="card metric-card" style="cursor:pointer" data-drill-down="/payroll/runs/1/review">
+        <div class="card metric-card" style="cursor:pointer" data-drill-down="{{ url_for('payroll.payroll_runs') }}">
           <div class="card-body">
             <div class="text-muted small">Total Payroll</div>
             <div class="fs-3 fw-bold" data-metric="Total Payroll Cost">ETB {{ "{:,.0f}".format(dashboard.owner.total_payroll_cost) }}</div>
@@ -440,7 +440,7 @@
   <!-- Quick Actions -->
   <div class="d-flex justify-content-center gap-3 mt-4">
     {% if 'owner' in dashboard.user_roles or 'accountant' in dashboard.user_roles %}
-    <a href="/payroll/upload" class="btn btn-primary">
+    <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">
       <i class="bi bi-cloud-upload me-1"></i>Create Payroll
     </a>
     {% endif %}

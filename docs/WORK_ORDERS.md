@@ -1,5 +1,85 @@
 # Focused delivery work orders
 
+## Current invitation and critical-language continuity — 2026-10-11
+
+23. Make employee invitation recovery honest, scoped and responsive; continue critical English/Amharic first-use copy through the employee handoff.
+
+Delivered locally/uncommitted; [UI_INVITATION_LANGUAGE_DELIVERY.md](UI_INVITATION_LANGUAGE_DELIVERY.md) records the 25-layout/13-interaction browser receipt. The expanded focused PostgreSQL selection passed: `49 passed, 55 warnings in 57.00s` on disposable PostgreSQL 16 migrated from empty through Alembic head. Independent review found and the patch fixed selected-company context on employee pages; a migrated-PG regression covers selected-company data and owner/accountant action visibility in both default-role directions. Fresh Stylelint passed on all changed CSS. Hosted checks and real-phone/practitioner acceptance remain open.
+
+## Current first-use continuation — 2026-10-08
+
+22. Continue the welcome design into an honest initial workspace and first-employee-to-payroll path, preserve invalid entries, and verify desktop/phone and PostgreSQL behavior.
+
+Delivered locally/uncommitted; [UI_FIRST_USE_DELIVERY.md](UI_FIRST_USE_DELIVERY.md) records 22 layouts, nine browser interactions and `11 passed, 19 warnings in 21.34s`. Concurrent employee repairs were preserved and verified, not attributed to this slice. Real-phone/practitioner and hosted acceptance remain open.
+
+## Current employee workspace slice — 2026-10-08
+
+21. Complete consistent employee editing, validation recovery, role-aware actions and archived-list/ID recovery with focused first-user verification.
+
+Implemented and locally tested; [UI_EMPLOYEE_WORKSPACE_DELIVERY.md](UI_EMPLOYEE_WORKSPACE_DELIVERY.md) records receipts and remaining independent-review/real-device acceptance.
+
+## Current entry design slice — 2026-10-08
+
+20. Adapt supplied Stitch styling into truthful responsive welcome and account/company onboarding and verify real actions and validation recovery.
+
+Delivered locally/uncommitted; [UI_ENTRY_STITCH_ADAPTATION.md](UI_ENTRY_STITCH_ADAPTATION.md)
+records seven product files, 20 layouts, nine browser interactions and auth/profile
+regressions. Hosted and real-phone/practitioner acceptance remain open; the
+separate monthly correction and its receipts below are preserved.
+
+## Current monthly workspace correction — 2026-10-08
+
+19. Deliver dual-calendar context, working collapsible navigation, readable phone rows, factual review comparisons and repaired issue actions with focused evidence.
+
+Delivered locally and uncommitted; [UI_WORKSPACE_DELIVERY.md](UI_WORKSPACE_DELIVERY.md) records checks, limits and the next first-use/dashboard/employee slice.
+
+## Current product UX re-review — 2026-10-07
+
+18. Review the delivered experience against Ethiopian SME tasks and Stitch and identify concrete tester-facing gaps.
+
+Review delivered; [UI_MARKET_FIT_REVIEW_2026_10_07.md](UI_MARKET_FIT_REVIEW_2026_10_07.md)
+records nine fresh rendered views, the actual 404 issue-resolution link and the
+correction direction. No new product implementation is claimed in this review.
+
+## Current core design blend — 2026-10-07
+
+17. Integrate useful Stitch visual and compact-ledger patterns into the working payroll journey and verify saving, roles and phone accessibility.
+
+Delivered locally and uncommitted; [UI_STITCH_BLEND_DELIVERY.md](UI_STITCH_BLEND_DELIVERY.md)
+records the matching before/after measurements, focused checks and remaining
+first-use/recovery and real-device acceptance work.
+
+## Current responsive verification slice — 2026-10-06
+
+16. Verify responsive core journeys and repair tablet navigation, dark contrast and keyboard focus before a first-user walkthrough.
+
+Delivered locally and uncommitted; [UI_RESPONSIVE_FOLLOWUP.md](UI_RESPONSIVE_FOLLOWUP.md)
+records the responsive evidence, tool decisions and remaining physical-device/user
+acceptance. Long phone preparation and complete first-run recovery are next;
+earlier work-order receipts are preserved.
+
+## Current local visual system slice — 2026-10-06
+
+15. Polish and verify the actual entry/preparation/review/approval/employee journey and deliver a before/after UI/UX report.
+
+Implemented locally, uncommitted on `codex/monthly-payroll-ui` at HEAD `2f6f4e6`.
+See [UI_POLISH_HANDOFF.md](UI_POLISH_HANDOFF.md). Shared visual system, functional
+search/feedback, accessibility repairs, browser/database receipts and independent
+review are recorded. The broader platform and a 90-level usability claim still
+require the explicit next slices and practitioner evidence described there.
+Order 14 receipts and unrelated work are preserved.
+
+## Current local UI slice — 2026-10-05
+
+14. Implement and verify the desktop/phone preparation-to-review journey, then observe founder/Tigist before rollout.
+
+Implementation and local checks are complete on the uncommitted
+`codex/monthly-payroll-ui` patch based on `2f6f4e6`; see
+[UI_JOURNEY_HANDOFF.md](UI_JOURNEY_HANDOFF.md) for exact receipts and limits.
+Founder/Tigist observation, real-phone acceptance, an identified reviewed build,
+hosted checks and deployment remain open. Earlier work-order receipts below
+remain attributable to their original branches/SHAs.
+
 ## CURRENT AUTHORITATIVE STATE - 2026-10-04
 
 Accepted baseline: remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf`

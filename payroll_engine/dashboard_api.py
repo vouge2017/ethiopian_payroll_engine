@@ -122,7 +122,7 @@ def get_dashboard_data(user, company_id, db, models, role_filter=None):
                 'priority': 'urgent',
                 'title': 'No payroll runs',
                 'description': 'Create your first payroll to get started.',
-                'action_url': '/payroll/upload',
+                'action_url': '/payroll/spreadsheet',
             }
         )
         return result

@@ -242,7 +242,7 @@ def _build_owner_view(company_id, company, latest_run, db, models):
                 priority='urgent',
                 title='No payroll runs',
                 description='Create your first payroll to get started.',
-                action_url='/payroll/upload',
+                action_url='/payroll/spreadsheet',
                 action_label='Create Payroll',
                 key='no_payroll',
                 score=200,

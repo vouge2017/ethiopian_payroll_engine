@@ -1,25 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — EthioPayroll{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v={{ static_version }}">{% include 'components/first_use_styles.html' %}{% endblock %}
 {% block content %}
-<div class="container-xxl py-4 px-3 px-md-4 px-lg-5">
+{% set first_visit = completed_runs_count == 0 and not recent_runs %}
+<div class="container-xxl py-4 px-3 px-md-4 px-lg-5 {{ 'first-use' if first_visit else '' }}">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h2 class="fw-bold mb-1">Dashboard</h2>
-            <p class="text-muted mb-0">{{ today_eth }}</p>
+            <h1 class="fw-bold mb-1 h2">{{ _('first_workspace_title') if first_visit else _('dashboard') }}</h1>
+            {% if not first_visit %}<p class="text-muted mb-0">{{ today_eth }}</p>{% endif %}
         </div>
-        <div class="d-flex gap-2">
+        {% if not first_visit %}
+        <div class="d-flex gap-2 flex-wrap">
             <button onclick="window.print()" class="btn btn-ghost no-print">
                 <i class="bi bi-printer me-1"></i>Print
             </button>
             <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost no-print">
                 <i class="bi bi-person-plus me-1"></i>Add Employee
             </a>
-            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary no-print">
+            {% if employee_count > 0 %}<a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary no-print">
                 <i class="bi bi-cloud-upload me-1"></i>{{ _('run_payroll') }}
-            </a>
+            </a>{% endif %}
         </div>
+        {% endif %}
     </div>
+
+    {% if first_visit %}
+    {% include 'components/first_workspace.html' %}
+    {% else %}
+    {% if completed_runs_count == 0 %}
+    <section class="card workspace-next mb-4"><div class="card-body">
+      <p class="workspace-eyebrow">Your next step</p>
+      {% if employee_count == 0 %}
+      <h2>Add your first employee</h2><p>Your company is ready. Start with one employee’s name and monthly salary, or use Quick Start to add a group.</p>
+      <div class="workspace-actions"><a class="btn btn-primary" href="{{ url_for('employees.add_employee') }}">Add first employee</a><a class="btn btn-outline-secondary" href="{{ url_for('wizard.quick_start') }}">Add a group with Quick Start</a></div>
+      {% else %}
+      <h2>Prepare your first payroll</h2><p>{{ employee_count }} {{ 'employee is' if employee_count == 1 else 'employees are' }} ready for preparation. Save the inputs, review the amounts, then continue to owner approval. Approval does not send payment.</p>
+      <a class="btn btn-primary" href="{{ url_for('payroll.payroll_spreadsheet') }}">Prepare payroll</a>
+      {% endif %}
+    </div></section>
+    {% endif %}
 
     <!-- Metric Cards — label + number only, no icon badges -->
     <div class="row g-3 mb-4">
@@ -37,7 +57,7 @@
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-label">Payroll Runs</div>
+                <div class="metric-label">Recent payroll runs</div>
                 <div class="metric-value">{{ recent_runs|length }}</div>
             </div>
         </div>
@@ -218,7 +238,7 @@
                         </div>
                         <div class="col-4">
                             <div class="text-center">
-                                <div class="text-muted small mb-1">Net Paid</div>
+                                <div class="text-muted small mb-1">Net pay</div>
                                 <div class="fw-bold text-success">ETB {{ "{:,.0f}".format(last_month_summary.total_net) }}</div>
                             </div>
                         </div>
@@ -245,61 +265,6 @@
                         <canvas id="deductionsChart"></canvas>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if completed_runs_count == 0 %}
-    <!-- First-Run Wizard -->
-    <div class="card border-0 mb-4" style="background: linear-gradient(135deg, var(--brand-primary-soft) 0%, #f0f9ff 100%); border: 2px solid var(--brand-primary-light) !important;">
-        <div class="card-body p-4 p-md-5">
-            <div class="text-center mb-4">
-                <div class="d-inline-flex align-items-center justify-content-center rounded-3 mb-3" style="width: 64px; height: 64px; background: var(--brand-primary); box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);">
-                    <i class="bi bi-lightning-charge text-white fs-3"></i>
-                </div>
-                <h3 class="fw-bold">Welcome! Let's run your first payroll</h3>
-                <p class="text-muted mb-0">Follow these steps to get started.</p>
-            </div>
-
-            <!-- Onboarding Progress -->
-            <div class="d-flex justify-content-center mb-4">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-1">
-                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>Company Created</span>
-                    </div>
-                    <i class="bi bi-arrow-right text-muted"></i>
-                    <div class="d-flex align-items-center gap-1">
-                        {% if employee_count > 0 %}
-                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>{{ employee_count }} Employees</span>
-                        {% else %}
-                        <span class="badge rounded-pill bg-primary px-3 py-2">2. Add Employees</span>
-                        {% endif %}
-                    </div>
-                    <i class="bi bi-arrow-right text-muted"></i>
-                    <div class="d-flex align-items-center gap-1">
-                        {% if recent_runs|length > 0 %}
-                        <span class="badge rounded-pill bg-success px-3 py-2"><i class="bi bi-check-lg me-1"></i>Payroll Run</span>
-                        {% else %}
-                        <span class="badge rounded-pill bg-secondary px-3 py-2">3. Run Payroll</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-center">
-                {% if employee_count == 0 %}
-                <a href="{{ url_for('wizard.quick_start') }}" class="btn btn-primary btn-lg me-2" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
-                    <i class="bi bi-lightning me-2"></i>Quick Start
-                </a>
-                <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost btn-lg" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
-                    <i class="bi bi-person-plus me-2"></i>Add One by One
-                </a>
-                {% else %}
-                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary btn-lg" style="border-radius: var(--radius-lg); height: 52px; padding: 0 32px;">
-                    <i class="bi bi-cloud-upload me-2"></i>Run Your First Payroll
-                </a>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -428,13 +393,14 @@
                 <div class="empty-icon"><i class="bi bi-inbox"></i></div>
                 <h4>No payroll runs yet</h4>
                 <p>Run your first payroll to see it here.</p>
-                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
+                <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">
                     <i class="bi bi-cloud-upload me-1"></i>Run Payroll
                 </a>
             </div>
             {% endif %}
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
 

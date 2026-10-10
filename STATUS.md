@@ -1,5 +1,139 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT LOCAL INVITATION AND LANGUAGE CONTINUITY — 2026-10-11
+
+- Local/uncommitted on `codex/monthly-payroll-ui`, HEAD `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`: the public employee invitation is now restricted to a valid token and creates an employee-scoped account once; normal employee management remains protected. It preserves phone recovery, clears passwords, and ignores forged company/role submissions.
+- English and critical Amharic now continue through invitation, first workspace and saved-employee guidance. At 320px the language control stays available; keyboard password visibility and dark-mode contrast are verified. Oromo uses English fallback for this new copy pending reviewed Oromo text.
+- Final local Chrome receipt: 25 layouts/13 real interactions, no detected overflow, checked Axe violation or page error. Invitation-focused non-PostgreSQL tests: `65 passed, 4 skipped, 4 warnings in 7.07s`; final recovery/language/layout rerun: `44 passed, 3 skipped, 4 warnings in 15.65s`. Python compilation and whitespace checks pass. Fresh Stylelint passed on all six changed CSS files plus `design-system.css`.
+- Focused migrated-PostgreSQL integration selection: `49 passed, 55 warnings in 57.00s` across employee workspace, first-use, invitation, monthly UI, and workspace context on disposable PostgreSQL 16 upgraded from empty through Alembic head. It includes the initial red regression (`1 failed, 24 passed, 6 warnings in 28.92s`): an invited employee could open a coworker management detail page. Adjacent overtime, leave-management and settlement-detail routes were also gated to owner/accountant. Independent review then found employee pages could show default-company context while querying the selected company; the context and two-role-pairing regression are fixed and passed. Python compilation and `git diff --check` pass. These are local checks, not hosted CI or deployment.
+- Next: package and run hosted checks on the reviewed patch, then observe one uncoached owner/invitee journey on a real phone and review Oromo copy. No current practitioner acceptance or production readiness evidence.
+
+## CURRENT LOCAL FIRST-USE JOURNEY — 2026-10-08
+
+- Local/uncommitted on `codex/monthly-payroll-ui`, HEAD `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`. Initial dashboard guides company → employee → preparation; the first saved employee list links directly to payroll. Earlier and concurrent changes preserved.
+- Final PostgreSQL receipt: `11 passed, 19 warnings in 21.34s`. Chrome: 22 layouts/nine real interactions, no detected overflow, checked axe violations or page errors; signup, retained invalid entries, corrected save and preparation verified. Ruff, CSS lint and whitespace pass.
+- Earlier failed assertions, contrast receipts and resumed sandbox access errors are retained and superseded by the final focused reruns. This is local evidence, not hosted/deployed or practitioner acceptance. [UI_FIRST_USE_DELIVERY.md](docs/UI_FIRST_USE_DELIVERY.md) records scope, ownership and limits.
+- Next: an uncoached real-phone first-use/payroll walkthrough, then critical language/recovery and invitation consistency.
+
+## CURRENT EMPLOYEE WORKSPACE — 2026-10-08
+
+- Local/uncommitted on `codex/monthly-payroll-ui`, HEAD `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`: consistent employee forms/list, retained invalid entries, safe legacy-name editing, owner-only recoverable deactivation, archived pagination and preserved-ID creation recovery. Prior/concurrent work preserved.
+- Final selected receipt: `11 passed, 14 warnings in 17.02s` (seven new migrated-PG cases plus four existing phone fixtures). Browser: 16 layouts/10 interactions, no detected overflow, checked axe findings or JS errors. Initial failed receipts retained; Python/CSS/JS/whitespace checks pass.
+- Independent review could not finish because the reviewer hit usage limits. No hosted check, commit, deployment, whole-platform score or practitioner acceptance. Next: complete review, then uncoached real-phone walkthrough. [UI_EMPLOYEE_WORKSPACE_DELIVERY.md](docs/UI_EMPLOYEE_WORKSPACE_DELIVERY.md) records exact evidence and shared-file limits.
+
+## CURRENT LOCAL ENTRY DESIGN — 2026-10-08
+
+- Adapted supplied Stitch styling into real `/welcome`, sign-in, registration and
+  company setup with consistent appearance and real actions. Unsupported claims
+  and the source calculator excluded. Seven product files; unrelated work preserved.
+- Local/uncommitted on `codex/monthly-payroll-ui`, baseline HEAD
+  `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`, no upstream. Auth/profile regression:
+  `19 passed, 5 warnings in 45.03s` (existing SQLite fixtures). Separately, actual
+  CSRF signup/company browser flow used generated Alembic-migrated PostgreSQL.
+  Final Chrome: 20 layouts/nine interactions; no detected overflow, checked axe
+  findings, dead placeholder links or page errors. Earlier failed receipts retained.
+- CSS lint, JS/Python syntax and whitespace checked; Ruff unavailable. Previous
+  approval-review usage-limit block cleared and final browser run completed.
+  No hosted checks, release or practitioner acceptance.
+- [UI_ENTRY_STITCH_ADAPTATION.md](docs/UI_ENTRY_STITCH_ADAPTATION.md) records scope
+  and evidence. Next: first-employee/dashboard/invitation consistency, critical
+  language/recovery and an uncoached real-phone walkthrough. Separate monthly
+  correction receipts below remain unchanged and are not credited to this slice.
+
+## CURRENT MONTHLY WORKSPACE CORRECTION — 2026-10-08
+
+- Local, uncommitted on `codex/monthly-payroll-ui`, HEAD `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`: dual-calendar periods/today, working desktop collapse, readable phone identity/Edit, factual change context and corrected employee issue links. Earlier dirty work preserved.
+- PostgreSQL receipt: `2 failed, 43 passed, 96 warnings in 93.52s (0:01:33)`; the two edit-form test assertions were corrected, then `2 passed, 3 deselected, 4 warnings in 9.44s`. Existing calendar tests: `15 passed, 4 warnings in 3.97s`. Passing selected cases are evidenced across runs, not one final whole-suite run.
+- Browser: 19 layouts/14 interaction groups plus collapsed-sidebar state; final six-layout recapture completed after resuming the prior usage-limit block. No detected overflow, checked axe violations or page errors. Source whitespace passes; implementation-pass Python/CSS checks retained.
+- Shared monthly UI improved; whole-platform score, translation/recovery, physical-device and practitioner acceptance remain open. Next: uncoached phone walkthrough, then first-use/dashboard/employee editing consistency. [UI_WORKSPACE_DELIVERY.md](docs/UI_WORKSPACE_DELIVERY.md) records changes, receipts and limits.
+
+## CURRENT PRODUCT UX RE-REVIEW — 2026-10-07
+
+- User requested a stricter target-market/Stitch review. Nine fresh synthetic
+  rendered views inspected; core Amharic copy, narrow-phone identity, decision
+  context and cross-screen composition remain incomplete. Prior ~80 was a limited
+  provisional judgment, not whole-platform or tester acceptance.
+- Confirmed actual navigation failure: missing-phone Fix This links to
+  `/employees/SHEET1/edit` and returns HTTP 404; the edit route expects an integer
+  primary key. This inherited issue was missed by preceding happy-path checks.
+- No product code changed in this re-review. Next: fix issue resolution, reflow
+  phone identity and integrate evidenced comparisons before the review action;
+  then complete critical first-use/recovery/language and real-device acceptance.
+  [UI_MARKET_FIT_REVIEW_2026_10_07.md](docs/UI_MARKET_FIT_REVIEW_2026_10_07.md).
+- The prior localhost preview has stopped; saved screenshots are not a stable
+  tester environment. Release/deployment and practitioner acceptance remain open.
+
+## CURRENT LOCAL DESIGN BLEND — 2026-10-07
+
+- `codex/monthly-payroll-ui`, baseline HEAD `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`,
+  uncommitted. Shared warm surfaces, clearer steps/net summary, compact phone
+  preparation and preserved review rows/search/issue/change filters. Six UI source
+  files changed; existing dirty work and payroll/authorization behavior preserved.
+- Matching six-employee phone fixture: preparation 5,073 → 1,934px, save position
+  4,654 → 1,516px. Review 4,337 → 3,282px; review action 668 → 735px. Approval
+  2,301 → 2,368px. Reduced scrolling is not measured task-completion speed.
+- Focused migrated PostgreSQL: `43 passed, 92 warnings in 60.19s (0:01:00)`.
+  Final targeted browser pass: 13 views/10 interaction groups, no detected
+  overflow/axe violations/page errors; earlier 19-view and 12-view stress receipts
+  retained. CSS Stylelint, JS syntax and whitespace checks pass.
+- Fresh synthetic local preview verified; no raw template text. No new commit,
+  hosted check, deployment or real-user acceptance. Next: first-use/recovery
+  verification, then uncoached real-device walkthrough and observed-friction fixes.
+  [UI_STITCH_BLEND_DELIVERY.md](docs/UI_STITCH_BLEND_DELIVERY.md) records limits.
+
+## CURRENT LOCAL UI POLISH — 2026-10-06
+
+- Responsive follow-up: broad nine-width sweep (320–1920px), targeted 17-layout
+  dark/large-text/landscape confirmation, 47-control Tab traversal and separate
+  final expanded-menu check. Tablet label access, dark contrast, focus visibility
+  and bottom-bar/menu overlap repaired. Final targeted receipts must be read
+  together; the earlier failed menu scan is preserved. Navigation/template PG
+  receipt: `13 passed, 26 warnings in 20.61s`. See
+  [UI_RESPONSIVE_FOLLOWUP.md](docs/UI_RESPONSIVE_FOLLOWUP.md).
+- `codex/monthly-payroll-ui`, HEAD `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`,
+  uncommitted. Shared preparation/review/approval components, neutral/blue visual
+  finish, employee search, dirty/busy/recovery feedback, entry/portal accessibility
+  and effective-role presentation on audited flows. Existing dirty work preserved.
+- Final Chrome/axe: 12 layouts, no detected overflow/violations/page errors;
+  11 real interaction checks pass. Final confirmation density separately checked
+  at 1440/390px. Mobile review action moves from 4,649px to 681px.
+- Disposable PostgreSQL/Alembic: 24 passed / 1 stale display assertion failed;
+  updated comma-format assertion, affected approval/PDF/bank test then 1 passed.
+  All 25 selected cases have passing receipts across these runs. Changed Python
+  Ruff/format, CSS Stylelint, JS syntax and whitespace checks pass.
+- Independent peer review confirmed search-validation, Back/busy and mobile
+  priority fixes. Provisional inspected-journey score ~80/100; visual ~8/10.
+- No hosted check, commit, PR, deployment or practitioner receipt for this patch.
+  Manual accessibility, language/real-device/network checks and long phone flow
+  refinement remain open. [UI_POLISH_HANDOFF.md](docs/UI_POLISH_HANDOFF.md) contains
+  changes, evidence, scorecard and next delivery direction.
+
+## CURRENT LOCAL UI WORK — 2026-10-05
+
+- `codex/monthly-payroll-ui`, baseline HEAD `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`:
+  uncommitted preparation-to-review UI patch, with phone layouts, explicit saving,
+  preserved-review refresh, Help/link/mobile-list/status repairs and shared
+  navigation accessibility fixes. Separate readiness/mobile work is preserved.
+- Disposable PostgreSQL/Alembic focused receipts:
+  `40 passed, 86 warnings in 79.01s (0:01:19)`;
+  follow-up `11 passed, 22 warnings in 39.23s`;
+  case-distinct employee regression `3 passed, 6 warnings in 10.63s`.
+  These overlap; they do not replace earlier full-suite or hosted receipts.
+- Playwright: 23 layouts, no overflow/checked-area axe violations/page errors;
+  actual synthetic save → preserved review → refresh → accountant submit → owner
+  approval → PDF/CSV downloads. Separate BLOCK fixture denies both actions.
+  Phone confirmation and full-page preparation axe checks also pass.
+- Changed CSS Stylelint, changed Python Ruff/format, JS syntax and source preflight
+  pass. Authenticated local Lighthouse accessibility/best-practices: 100 on both
+  screens/form factors; performance 78–100, with remaining CDN/rendering costs.
+- No new commit, PR, merge, deployment or founder/Tigist observation. Next:
+  practitioner/real-phone acceptance, then identified build and rollout decision.
+  Full receipt and limits: [UI_JOURNEY_HANDOFF.md](docs/UI_JOURNEY_HANDOFF.md).
+
+This local receipt supersedes older next-work statements for the explicitly
+requested UI slice; historical release evidence below remains attributable to
+its original SHA. The deployed build remains unidentified.
+
 ## CURRENT AUTHORITATIVE STATE - 2026-10-04
 
 - **Merged:** remote main `9670a92487c705a6614e3c6df67aff24d29c7bcf` includes

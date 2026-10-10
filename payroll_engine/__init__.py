@@ -815,6 +815,8 @@ def create_app():
         ), 200
 
     # Make Ethiopian calendar available in all templates
+    from calendar import monthrange
+
     from payroll_engine.ethiopian_calendar import format_dual_date, format_ethiopian_date
     from payroll_engine.i18n import get_string
 
@@ -863,9 +865,32 @@ def create_app():
             'eth_date': _safe_dual_date,
             'eth_only': _safe_eth_date,
             'today_eth': format_dual_date(date.today()),
+            'payroll_month_end': lambda d: d.replace(day=monthrange(d.year, d.month)[1]),
             '_': lambda key: get_string(key, lang),
             'current_language': lang,
         }
+
+    @app.context_processor
+    def inject_workspace_context():
+        """Use active context on audited flows without relabeling legacy data."""
+        from flask_login import current_user
+
+        from payroll_engine.models import Company
+        from payroll_engine.shared import _company_id
+
+        company = None
+        role = None
+        if current_user.is_authenticated:
+            # Legacy dashboard/billing/reporting still read the default company.
+            # Keep their labels truthful until those data paths are migrated.
+            if request.blueprint not in ('payroll', 'portal', 'help', 'employees'):
+                return {'workspace_company': current_user.company, 'workspace_role': current_user.role}
+            company_id = _company_id()
+            if company_id is not None:
+                role = current_user.get_role_for_company(company_id)
+                if role is not None:
+                    company = db.session.get(Company, company_id)
+        return {'workspace_company': company, 'workspace_role': role}
 
     @app.context_processor
     def inject_deadline_alerts():

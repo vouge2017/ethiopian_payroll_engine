@@ -47,10 +47,10 @@
     if (!target) return;
     var strongId = block.getAttribute('data-pw-strong');
     var strong = strongId ? document.getElementById(strongId) : null;
-    var matchEl = block.querySelector('[data-pw-match]');
+    var form = target.form;
+    var matchEl = form && form.querySelector('[data-pw-match]');
     var rules = block.querySelectorAll('[data-pw-rule]');
     // Optional: gate the form submit button until all checks pass.
-    var form = target.form;
     var submitBtn = form && form.querySelector('[data-pw-submit]');
     if (submitBtn) submitBtn.disabled = true;
 
@@ -83,15 +83,15 @@
           matchEl.className = '';
           matchState = 'empty';
         } else if (c === p && allMet) {
-          matchEl.textContent = '\u2713 Passwords match and meet all requirements';
+          matchEl.textContent = '\u2713 ' + (block.getAttribute('data-pw-match-ok') || 'Passwords match and meet all requirements');
           matchEl.className = 'pw-match-ok';
           matchState = 'ok';
         } else if (c === p) {
-          matchEl.textContent = '\u2713 Passwords match, but still need to meet the rules above';
+          matchEl.textContent = '\u2713 ' + (block.getAttribute('data-pw-match-warn') || 'Passwords match, but still need to meet the rules above');
           matchEl.className = 'pw-match-warn';
           matchState = 'warn';
         } else {
-          matchEl.textContent = '\u2717 Passwords do not match';
+          matchEl.textContent = '\u2717 ' + (block.getAttribute('data-pw-match-bad') || 'Passwords do not match');
           matchEl.className = 'pw-match-bad';
           matchState = 'bad';
         }

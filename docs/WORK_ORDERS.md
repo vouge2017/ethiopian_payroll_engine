@@ -4,7 +4,7 @@
 
 23. Make employee invitation recovery honest, scoped and responsive; continue critical English/Amharic first-use copy through the employee handoff.
 
-Delivered locally/uncommitted; [UI_INVITATION_LANGUAGE_DELIVERY.md](UI_INVITATION_LANGUAGE_DELIVERY.md) records the 25-layout/13-interaction browser receipt. The expanded focused PostgreSQL selection passed: `49 passed, 55 warnings in 57.00s` on disposable PostgreSQL 16 migrated from empty through Alembic head. Independent review found and the patch fixed selected-company context on employee pages; a migrated-PG regression covers selected-company data and owner/accountant action visibility in both default-role directions. Fresh Stylelint passed on all changed CSS. Hosted checks and real-phone/practitioner acceptance remain open.
+Committed/pushed as `8485132fed4ee39eaf0e36c784d78386ddc1d2bd` on `codex/monthly-payroll-ui`; [UI_INVITATION_LANGUAGE_DELIVERY.md](UI_INVITATION_LANGUAGE_DELIVERY.md) records the 25-layout/13-interaction browser receipt. The expanded focused PostgreSQL selection passed: `49 passed, 55 warnings in 57.00s` on disposable PostgreSQL 16 migrated from empty through Alembic head. Independent review found and the patch fixed selected-company context on employee pages; a migrated-PG regression covers selected-company data and owner/accountant action visibility in both default-role directions. Fresh Stylelint passed on all changed CSS. GitHub CSS lint passed on the pushed SHA; Python CI and migration tests need a pull request to run. Real-phone/practitioner acceptance remains open.
 
 ## Current first-use continuation — 2026-10-08
 

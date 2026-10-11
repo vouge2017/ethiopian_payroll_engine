@@ -1,72 +1,18 @@
 {% extends "base.html" %}
 {% block title %}{{ _('confirm_payroll_processing') }} - Ethiopian Payroll Engine{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/monthly-payroll.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
+{% import "components/monthly_payroll.html" as monthly with context %}
+{% set approval_role = current_user.get_role_for_company(run.company_id) %}
 
-<!-- Payroll Wizard Stepper -->
-<div class="wizard-stepper">
-    <div class="wizard-step completed">
-        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
-        <span class="wizard-step-label">{{ "Worksheet" if run.source == "spreadsheet" else "Upload" }}</span>
-    </div>
-    <div class="wizard-step-connector completed"></div>
-    <div class="wizard-step completed">
-        <div class="wizard-step-number"><i class="bi bi-check"></i></div>
-        <span class="wizard-step-label">Review</span>
-    </div>
-    <div class="wizard-step-connector completed"></div>
-    <div class="wizard-step active">
-        <div class="wizard-step-number">3</div>
-        <span class="wizard-step-label">Confirm</span>
-    </div>
-    <div class="wizard-step-connector"></div>
-    <div class="wizard-step">
-        <div class="wizard-step-number">4</div>
-        <span class="wizard-step-label">Done</span>
-    </div>
-</div>
-
-<div class="p-4 p-md-5">
+<div class="monthly-payroll monthly-confirm">
+<header class="monthly-heading"><div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p><h1>Approve payroll</h1><p>Confirm the reviewed amounts. Approval does not send payment.</p></div><a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary">Back to review</a></header>
+{{ monthly.steps(3) }}
+{% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
+{{ monthly.totals(employee_count, total_gross, total_tax, total_net, 'Preserved net pay') }}
+<p class="monthly-pension">Employee pension · ETB {{ '{:,.2f}'.format(total_pension) }} · already included in deductions</p>
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="d-flex align-items-center mb-4">
-                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="text-decoration-none text-muted me-2">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <h3 class="mb-0">
-                    {{ _('confirm_payroll_processing') }}
-                    {% if run.period %}
-                        <small class="text-muted ms-2">{{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if run.source == 'spreadsheet' else run.period }}</small>
-                    {% endif %}
-                </h3>
-            </div>
-
-            <!-- Summary -->
-            <div class="card mb-4">
-                <div class="card-header bg-transparent">
-                    <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>{{ _('payroll_summary') }}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-3">
-                            <h6 class="text-muted">{{ _('total_employees') }}</h6>
-                            <h4>{{ employee_count }}</h4>
-                        </div>
-                        <div class="col-3">
-                            <h6 class="text-muted">{{ _('total_gross') }}</h6>
-                            <h4>ETB {{ '%.2f'|format(total_gross) }}</h4>
-                        </div>
-                        <div class="col-3">
-                            <h6 class="text-muted">{{ _('total_tax') }} + Pension</h6>
-                            <h4>ETB {{ '%.2f'|format(total_tax + total_pension) }}</h4>
-                        </div>
-                        <div class="col-3">
-                            <h6 class="text-muted">{{ _('total_net') }}</h6>
-                            <h4 class="text-success">ETB {{ '%.2f'|format(total_net) }}</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+        <div class="col-12">
             <!-- Validation Status -->
             {% if blocks %}
             <div class="alert alert-danger mb-4">
@@ -102,7 +48,7 @@
                                 <small class="text-muted ms-2">{{ emp.id }}</small>
                             </div>
                             <div class="text-end">
-                                <span class="text-success fw-bold">ETB {{ '%.2f'|format(emp.net) }}</span>
+                                <span class="text-success fw-bold">ETB {{ '{:,.2f}'.format(emp.net) }}</span>
                                 <small class="text-muted ms-1">net</small>
                             </div>
                         </summary>
@@ -114,16 +60,16 @@
                                     <table class="table table-sm table-borderless mb-0">
                                         {% if run.source == 'spreadsheet' %}
                                         {% for li in emp.line_items if li.classification == 'earning' and li.earned_amount %}
-                                        <tr><td class="text-muted">{{ li.item_label }}</td><td class="text-end">ETB {{ '%.2f'|format(li.earned_amount) }}</td></tr>
+                                        <tr><td class="text-muted">{{ li.item_label }}</td><td class="text-end">ETB {{ '{:,.2f}'.format(li.earned_amount) }}</td></tr>
                                         {% endfor %}
                                         {% else %}
-                                        <tr><td class="text-muted">{{ _('basic_salary') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.basic) }}</td></tr>
-                                        <tr><td class="text-muted">{{ _('allowances') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.allowances) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('basic_salary') }}</td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.basic) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('allowances') }}</td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.allowances) }}</td></tr>
                                         {% if emp.get('overtime_pay', 0) > 0 %}
-                                        <tr><td class="text-muted">{{ _('overtime') }}</td><td class="text-end">ETB {{ '%.2f'|format(emp.overtime_pay) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('overtime') }}</td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.overtime_pay) }}</td></tr>
                                         {% endif %}
                                         {% endif %}
-                                        <tr class="table-light"><td><strong>{{ _('gross') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.gross) }}</strong></td></tr>
+                                        <tr class="table-light"><td><strong>{{ _('gross') }}</strong></td><td class="text-end"><strong>ETB {{ '{:,.2f}'.format(emp.gross) }}</strong></td></tr>
                                     </table>
 </div>
                                 </div>
@@ -131,8 +77,8 @@
                                     <h6 class="text-danger">{{ _('deductions') }}</h6>
                                     <div class="table-responsive">
                                     <table class="table table-sm table-borderless mb-0">
-                                        <tr><td class="text-muted">{{ _('employee_pension') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="7% of basic salary per Proclamation No. 1268/2022. Employer contributes 11%. No statutory ceiling."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span> (7%)</td><td class="text-end">ETB {{ '%.2f'|format(emp.pension_employee) }}</td></tr>
-                                        <tr><td class="text-muted">{{ _('income_tax') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="PAYE tax calculated on taxable income (gross − pension). Brackets: 0-2000=0%, 2001-4000=15%, 4001-7000=20%, 7001-10000=25%, 10001-14000=30%, 14001+=35%. Per Proclamation No. 1395/2025."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span></td><td class="text-end">ETB {{ '%.2f'|format(emp.tax) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('employee_pension') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="7% of basic salary per Proclamation No. 1268/2022. Employer contributes 11%. No statutory ceiling."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span> (7%)</td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.pension_employee) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('income_tax') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="PAYE tax calculated on taxable income (gross − pension). Brackets: 0-2000=0%, 2001-4000=15%, 4001-7000=20%, 7001-10000=25%, 10001-14000=30%, 14001+=35%. Per Proclamation No. 1395/2025."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span></td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.tax) }}</td></tr>
                                         {% if emp.tax_breakdown and emp.tax_breakdown.brackets %}
                                         <tr><td colspan="2">
                                             <details>
@@ -155,10 +101,10 @@
                                         {% endif %}
                                         {% if run.source == 'spreadsheet' %}
                                         {% for li in emp.line_items if li.classification == 'deduction' and not li.is_system %}
-                                        <tr><td class="text-muted">{{ li.item_label }}</td><td class="text-end">ETB {{ '%.2f'|format(li.earned_amount) }}</td></tr>
+                                        <tr><td class="text-muted">{{ li.item_label }}</td><td class="text-end">ETB {{ '{:,.2f}'.format(li.earned_amount) }}</td></tr>
                                         {% endfor %}
                                         {% endif %}
-                                        <tr class="table-light"><td><strong>{{ _('total_deductions') }}</strong></td><td class="text-end"><strong>ETB {{ '%.2f'|format(emp.gross - emp.net) }}</strong></td></tr>
+                                        <tr class="table-light"><td><strong>{{ _('total_deductions') }}</strong></td><td class="text-end"><strong>ETB {{ '{:,.2f}'.format(emp.gross - emp.net) }}</strong></td></tr>
                                     </table>
 </div>
                                 </div>
@@ -167,7 +113,7 @@
                             {% include '_calculation_flow.html' ignore missing %}
                             <div class="text-center mt-2 pt-2 border-top">
                                 <strong>{{ _('net_pay') }}:</strong>
-                                <span class="text-success fw-bold fs-5 ms-2">ETB {{ '%.2f'|format(emp.net) }}</span>
+                                <span class="text-success fw-bold fs-5 ms-2">ETB {{ '{:,.2f}'.format(emp.net) }}</span>
                             </div>
                         </div>
                     </details>
@@ -185,7 +131,7 @@
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-md-4">
-                            <label class="form-label fw-bold">Your bank balance (ETB)</label>
+                            <label class="form-label fw-bold" for="bankBalance">Your bank balance (ETB)</label>
                             <input type="number" inputmode="decimal" class="form-control form-control-lg" id="bankBalance"
                                    placeholder="e.g. 150000" min="0" step="1000"
                                    oninput="checkCashFlow()">
@@ -199,7 +145,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-bold">Status</label>
-                            <div id="cashFlowStatus" class="form-control form-control-lg bg-light">
+                            <div id="cashFlowStatus" class="form-control form-control-lg bg-light" role="status">
                                 <span class="text-muted">Enter your balance above</span>
                             </div>
                         </div>
@@ -215,15 +161,15 @@
             <!-- Approval Form -->
             {% if not blocks %}
             <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{{ _('confirm_approve') }}</h5>
+                <div class="card-header bg-transparent">
+                    <h2 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Owner approval</h2>
                 </div>
                 <div class="card-body p-4">
                     {% if run.source == 'spreadsheet' %}
-                    <div class="alert alert-info mb-4">
+                    <div class="monthly-approval-note mb-4">
                         <strong>Approval preserves the reviewed payroll amounts.</strong>
                         <p class="mb-1">Payslips and a bank file can be downloaded afterwards. No bank transfer, wallet payment or tax submission is sent.</p>
-                        <p class="mb-0">Worksheet approval cannot be undone. Check every amount before approving. Later overtime or bonus corrections require separate evidence and owner approval.</p>
+                        <p class="monthly-consequence mb-0">Worksheet approval cannot be undone. Check every amount before approving. Later overtime or bonus corrections require separate evidence and owner approval.</p>
                     </div>
                     {% else %}
                     <div class="d-flex flex-wrap gap-2 mb-4">
@@ -249,14 +195,15 @@
 
                     {% endif %}
 
+                    {% if approval_role == 'owner' %}
                     <form method="POST" action="{{ url_for('payroll.approve_payroll') }}" id="approve-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="run_id" value="{{ run.id }}">
 
                         <div class="mb-4">
-                            <label for="password" class="form-label fw-bold">{{ _('enter_password_confirm') }}</label>
+                            <label for="password" class="form-label fw-bold">Enter your password to approve</label>
                             <input type="password" class="form-control form-control-lg" id="password"
-                                   name="password" required autocomplete="current-password" autofocus placeholder="{{ _('your_login_password') }}">
+                                   name="password" required autocomplete="current-password" placeholder="{{ _('your_login_password') }}">
                             <div class="form-text">Re-authentication required for security.</div>
                         </div>
 
@@ -278,28 +225,26 @@
                         </div>
 
                         <div class="d-flex gap-2">
-                            <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}"
+                            <a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}"
                                class="btn btn-outline-secondary btn-lg flex-grow-1">
                                 <i class="bi bi-arrow-left me-1"></i>{{ _('cancel') }}
                             </a>
-                            {% if current_user.role == 'owner' %}
                             <button type="submit" class="btn btn-primary btn-lg flex-grow-1"
                                     {% if blocks %}disabled{% endif %}>
-                                <i class="bi bi-check-circle me-1"></i>{{ _('confirm_approve') }}
+                                <i class="bi bi-check-circle me-1"></i>Approve payroll
                             </button>
-                            {% elif current_user.role == 'accountant' %}
-                            <button type="submit" class="btn btn-warning btn-lg flex-grow-1"
-                                    {% if blocks %}disabled{% endif %}>
-                                <i class="bi bi-send me-1"></i>Submit for Approval
-                            </button>
-                            {% endif %}
                         </div>
                     </form>
+                    {% elif approval_role == 'accountant' %}
+                    <p class="fw-semibold">Only the owner can approve this payroll.</p>
+                    <p class="text-muted">{% if run.status == 'pending_approval' %}Waiting for owner approval.{% elif run.source == 'spreadsheet' %}Return to review to submit the saved payroll to the owner.{% else %}Ask the owner to review and approve the payroll.{% endif %}</p>
+                    <a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-primary">Return to review</a>
+                    {% endif %}
                 </div>
             </div>
             {% else %}
             <div class="text-center">
-                <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-secondary btn-lg">
+                <a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-secondary btn-lg">
                     <i class="bi bi-arrow-left me-1"></i>Back to Review
                 </a>
             </div>

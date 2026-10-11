@@ -3,7 +3,7 @@
 {% block breadcrumb %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb breadcrumb-sm mb-0">
-        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none" aria-label="Home"><i class="bi bi-house" aria-hidden="true"></i></a></li>
         {% block breadcrumb_items %}
         <li class="breadcrumb-item"><a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none">Employees</a></li>
         <li class="breadcrumb-item active">Add Employee</li>
@@ -11,40 +11,46 @@
     </ol>
 </nav>
 {% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
-<div class="p-4 p-md-5">
+<div class="workspace-page employee-form-page">
+    <header class="workspace-heading"><div><p class="workspace-eyebrow">{{ workspace_company.name if workspace_company else "Employees" }}</p><h1>Add an employee</h1><p>Start with their name and monthly pay. You can complete other details later.</p></div><a class="btn btn-outline-secondary" href="{{ url_for('employees.list_employees') }}">Back to employees</a></header>
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
+        <div class="col-lg-9 col-xl-8">
             <div class="card">
                 <div class="card-header bg-transparent">
                     <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>{{ _('add_employee') }}</h5>
                 </div>
                 <div class="card-body p-4">
-                    <form method="POST" action="{{ url_for('employees.add_employee') }}">
+                    <p class="small text-muted">Required fields are marked *. Amounts are in ETB.</p>
+                    <form data-employee-form method="POST" action="{{ url_for('employees.add_employee') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <!-- Step 1: Required fields -->
                         <!-- Ethiopian Name Structure: First + Father + Grandfather -->
                         <div class="mb-3">
-                            <label class="form-label fw-bold">ስም / Name *</label>
+                            <p class="form-label fw-bold">ስም / Name · First name required</p>
                             <div class="row g-2">
                                 <div class="col-md-4">
+                                    <label class="form-label" for="first_name">ስም / First name</label>
                                     <input type="text" class="form-control form-control-lg" id="first_name" name="first_name"
-                                           required placeholder="ስም / First Name" autofocus>
+                                           required placeholder="ስም / First Name" autofocus value="{{ request.form.get('first_name', '') }}">
                                     <div class="form-text">ስም / First Name</div>
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="form-label" for="father_name">የአባት ስም / Father’s name</label>
                                     <input type="text" class="form-control form-control-lg" id="father_name" name="father_name"
-                                   placeholder="የአባት ስም / Father's Name">
+                                   placeholder="የአባት ስም / Father's Name" value="{{ request.form.get('father_name', '') }}">
                                     <div class="form-text">የአባት ስም / Father's Name</div>
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="form-label" for="grandfather_name">የአያት ስም / Grandfather’s name</label>
                                     <input type="text" class="form-control form-control-lg" id="grandfather_name" name="grandfather_name"
-                                           placeholder="የአያት ስም / Grandfather's Name">
+                                           placeholder="የአያት ስም / Grandfather's Name" value="{{ request.form.get('grandfather_name', '') }}">
                                     <div class="form-text">የአያት ስም / Grandfather's Name</div>
                                 </div>
                             </div>
-                            <input type="hidden" id="name" name="name" value="">
+                            <input type="hidden" id="name" name="name" value="{{ request.form.get('name', '') }}">
                         </div>
 
                         <div class="row mb-3">
@@ -56,7 +62,7 @@
                                         <input type="tel" class="form-control form-control-lg" id="phone" name="phone"
                                                data-intl-tel-name="phone_full"
                                                placeholder="91 234 5678" inputmode="tel" maxlength="9"
-                                               title="Enter 9 digits starting with 9 or 7">
+                                               title="Enter 9 digits starting with 9 or 7" value="{{ request.form.get('phone', '') }}">
                                     </div>
                                 </div>
                                 <div class="form-text">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</div>
@@ -64,18 +70,18 @@
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>
                                 <input type="number" class="form-control form-control-lg" id="basic_salary"
-                                       name="basic_salary" step="0.01" min="0" required placeholder="10000">
+                                       name="basic_salary" step="0.01" min="0" required placeholder="10000" value="{{ request.form.get('basic_salary', '') }}">
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="allowances" class="form-label">{{ _('allowances') }} (ETB)</label>
                             <input type="number" class="form-control" id="allowances" name="allowances"
-                                   step="0.01" min="0" value="0" placeholder="0">
+                                   step="0.01" min="0" value="{{ request.form.get('allowances', '0') }}" placeholder="0">
                         </div>
 
                         <!-- Step 2: Optional fields (collapsed) -->
-                        <details class="mb-4">
+                        <details class="mb-4"{% if request.method == "POST" %} open{% endif %}>
                             <summary class="text-muted fw-bold" style="cursor: pointer;">
                                 <i class="bi bi-chevron-down me-1"></i>More details (optional)
                             </summary>
@@ -84,13 +90,13 @@
                                     <div class="col-md-6">
                                         <label for="employee_id" class="form-label">{{ _('employee_id') }}</label>
                                         <input type="text" class="form-control" id="employee_id" name="employee_id"
-                                               placeholder="Auto-generated if empty">
+                                               placeholder="Auto-generated if empty" value="{{ request.form.get('employee_id', '') }}">
                                         <div class="form-text">Leave empty to auto-generate (EMP001, EMP002...)</div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="tin" class="form-label">TIN</label>
                                         <input type="text" class="form-control" id="tin" name="tin"
-                                               placeholder="1234567890">
+                                               placeholder="1234567890" value="{{ request.form.get('tin', '') }}">
                                         <div class="form-text">For ERCA tax filing</div>
                                     </div>
                                 </div>
@@ -100,8 +106,8 @@
                                         <label for="fayda_fin" class="form-label">Fayda Digital ID (FIN)</label>
                                         <input type="text" class="form-control" id="fayda_fin" name="fayda_fin"
                                                placeholder="123456789012" maxlength="12"
-                                               pattern="\d{12}" title="Exactly 12 digits">
-                                        <div class="form-text">12-digit Fayda ID from <a href="https://id.gov.et" target="_blank">id.gov.et</a>. Validates TIN/FIN before ERCA filing.</div>
+                                               pattern="\d{12}" title="Exactly 12 digits" value="{{ request.form.get('fayda_fin', '') }}">
+                                        <div class="form-text">12-digit Fayda ID from <a href="https://id.gov.et" target="_blank">id.gov.et</a>. Used with filing details; entering it does not verify identity.</div>
                                     </div>
                                     <div class="col-md-6"></div>
                                 </div>
@@ -110,30 +116,31 @@
                                     <div class="col-md-6">
                                         <label for="department" class="form-label">{{ _('department') }}</label>
                                         <input type="text" class="form-control" id="department" name="department"
-                                               placeholder="Sales, Factory, Finance...">
+                                               placeholder="Sales, Factory, Finance..." value="{{ request.form.get('department', '') }}">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="position" class="form-label">{{ _('position') }}</label>
                                         <input type="text" class="form-control" id="position" name="position"
-                                               placeholder="Manager, Worker, Accountant...">
+                                               placeholder="Manager, Worker, Accountant..." value="{{ request.form.get('position', '') }}">
                                     </div>
                                 </div>
 
                                 <div class="row mb-3">
                                     <div class="col-md-6">
                                         <label for="start_date" class="form-label">{{ _('start_date') }}</label>
-                                        <input type="date" class="form-control" id="start_date" name="start_date">
+                                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.form.get('start_date', '') }}">
                                     </div>
                                     <div class="col-md-6">
                                         <label for="bank_account" class="form-label">{{ _('bank_account') }}</label>
                                         <input type="text" class="form-control" id="bank_account" name="bank_account"
-                                               placeholder="cbe:1000123456789">
+                                               placeholder="cbe:1000123456789" value="{{ request.form.get('bank_account', '') }}">
                                         <div class="form-text">bank_name:account_number</div>
                                     </div>
                                 </div>
                             </div>
                         </details>
 
+                        <p class="employee-form-feedback small" role="status" aria-live="polite" data-form-feedback>Review the details, then save.</p>
                         <div class="d-grid gap-2 d-md-flex">
                             <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
                                 <i class="bi bi-save me-1"></i>{{ _('save_employee') }}
@@ -160,5 +167,8 @@ function updateNameField() {
 document.getElementById('first_name').addEventListener('input', updateNameField);
 document.getElementById('father_name').addEventListener('input', updateNameField);
 document.getElementById('grandfather_name').addEventListener('input', updateNameField);
+updateNameField();
 </script>
 {% endblock %}
+
+{% block extra_js %}<script src="{{ url_for('static', filename='js/employee-form.js') }}?v={{ static_version }}" defer></script>{% endblock %}

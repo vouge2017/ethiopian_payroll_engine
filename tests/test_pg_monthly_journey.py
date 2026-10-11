@@ -75,7 +75,8 @@ def test_current_saved_review_compares_prior_approved_facts(worksheet, monkeypat
     assert after.current_total_gross == result.current_total_gross
     html = client.get(f'/payroll/runs/{rid}/review').get_data(as_text=True)
     for text in (
-        'What changed from previous approved payroll',
+        'What to check this month',
+        'Full change record',
         'Basic salary',
         'Overtime pay',
         'Bonus',

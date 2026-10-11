@@ -109,7 +109,7 @@ def generate_monthly_erca_reminder():
                     user_id=owner.id,
                     title='ERCA Filing Due',
                     body=f'Run payroll for {today.strftime("%B %Y")} — ERCA filing due on the 25th.',
-                    url='/payroll/upload',
+                    url='/payroll/spreadsheet',
                     notif_type='deadline',
                 )
 

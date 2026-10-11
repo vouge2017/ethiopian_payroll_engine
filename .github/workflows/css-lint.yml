@@ -5,10 +5,12 @@ on:
     paths:
       - 'payroll_engine/static/css/**'
       - 'stylelint.config.json'
+      - 'qa/package.json'
   pull_request:
     paths:
       - 'payroll_engine/static/css/**'
       - 'stylelint.config.json'
+      - 'qa/package.json'
 
 jobs:
   stylelint:
@@ -24,6 +26,6 @@ jobs:
         working-directory: qa
         run: npm install --no-fund --no-audit
 
-      - name: Lint design system CSS
+      - name: Lint application CSS
         working-directory: qa
         run: npm run lint:css

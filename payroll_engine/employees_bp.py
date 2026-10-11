@@ -9,8 +9,9 @@ from decimal import Decimal
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 
-from payroll_engine import db
+from payroll_engine import db, limiter
 from payroll_engine.models import (
     Employee,
     EmployeeAllowance,
@@ -91,10 +92,11 @@ def assert_assignable_item(item_key):
 
 
 @employees_bp.before_request
-@login_required
 def _require_login():
-    """All employee routes require login."""
-    pass
+    """Only the token-based employee invitation is public."""
+    if request.endpoint == 'employees.accept_invite':
+        return None
+    return login_required(lambda: None)()
 
 
 # --- Employees ---
@@ -111,13 +113,13 @@ def list_employees():
     show_archived = request.args.get('archived', '') == '1'
     from sqlalchemy.orm import defer
 
-    query = Employee.query.options(
+    employee_query = Employee.query.with_deleted() if show_archived else Employee.query
+    query = employee_query.options(
         defer(Employee.bank_account),
         defer(Employee.tin),
         defer(Employee.fayda_fin),
     ).filter_by(company_id=_company_id())
-    if not show_archived:
-        query = query.filter_by(is_deleted=False)
+    query = query.filter_by(is_deleted=show_archived)
     if search:
         query = query.filter(db.or_(Employee.name.ilike(f'%{search}%'), Employee.employee_id.ilike(f'%{search}%')))
     if selected_dept:
@@ -126,10 +128,10 @@ def list_employees():
     # Get all departments for the filter dropdown
     departments = [
         r[0]
-        for r in db.session.query(Employee.department)
+        for r in employee_query.with_entities(Employee.department)
         .filter(
             Employee.company_id == _company_id(),
-            Employee.is_deleted == False,
+            Employee.is_deleted == show_archived,
             Employee.department.isnot(None),
             Employee.department != '',
         )
@@ -238,22 +240,34 @@ def generate_invite(emp_id):
 
 
 @employees_bp.route('/employees/accept-invite/<token>', methods=['GET', 'POST'])
+@limiter.limit('10 per minute')
 def accept_invite(token):
     """Employee accepts invite and creates their account."""
+    from flask import session
+
+    from payroll_engine.i18n import get_string
     from payroll_engine.models import User
     from payroll_engine.password_policy import check_password_strength
 
-    emp = Employee.query.filter_by(invite_token=token, is_deleted=False).first()
+    def message(key):
+        return get_string(key, session.get('language', 'en'))
+
+    # A public invitation is scoped by its secret capability, not a signed-in
+    # company's context. Lock POSTs so concurrent attempts consume it once.
+    invitation = db.select(Employee).where(Employee.invite_token == token, Employee.is_deleted.is_(False))
+    if request.method == 'POST':
+        invitation = invitation.with_for_update()
+    emp = db.session.execute(invitation).scalar_one_or_none()
     if not emp or not emp.invite_expires:
-        flash('Invalid or expired invite link.', 'danger')
+        flash(message('invite_invalid'), 'danger')
         return redirect(url_for('auth.login'))
 
     if datetime.now(UTC).replace(tzinfo=None) > emp.invite_expires:
-        flash('This invite link has expired. Ask your admin for a new one.', 'danger')
+        flash(message('invite_expired'), 'danger')
         return redirect(url_for('auth.login'))
 
     if emp.user_id:
-        flash('This employee already has an account.', 'info')
+        flash(message('invite_already_linked'), 'info')
         return redirect(url_for('auth.login'))
 
     if request.method == 'POST':
@@ -262,29 +276,38 @@ def accept_invite(token):
         password2 = request.form.get('password2', '')
 
         if not phone or not password:
-            flash('Phone and password are required.', 'danger')
+            flash(message('invite_required'), 'danger')
             return render_template('auth/accept_invite.html', token=token, emp=emp)
 
         if password != password2:
-            flash('Passwords do not match.', 'danger')
+            flash(message('invite_match_bad'), 'danger')
             return render_template('auth/accept_invite.html', token=token, emp=emp)
 
         is_strong, error = check_password_strength(password)
         if not is_strong:
-            flash(error, 'danger')
+            basic_errors = {
+                'Password must be at least 8 characters.': 'invite_password_short',
+                'Password is too long (max 128 characters).': 'invite_password_long',
+                'Password must contain at least one uppercase letter.': 'invite_password_upper',
+                'Password must contain at least one lowercase letter.': 'invite_password_lower',
+                'Password must contain at least one digit.': 'invite_password_digit',
+                'Password must contain at least one symbol (e.g. @#$%!&*).': 'invite_password_symbol',
+            }
+            localized_error = message(basic_errors.get(error, 'invite_password_predictable'))
+            flash(localized_error if session.get('language') == 'am' else error, 'danger')
             return render_template('auth/accept_invite.html', token=token, emp=emp)
 
         # Validate phone format
         from payroll_engine.models import validate_ethiopian_phone
 
-        is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
+        is_valid, normalized_phone, _ = validate_ethiopian_phone(phone)
         if not is_valid:
-            flash(phone_error, 'danger')
+            flash(message('invite_phone_hint'), 'danger')
             return render_template('auth/accept_invite.html', token=token, emp=emp)
 
         # Check duplicate phone
         if User.query.filter_by(phone=normalized_phone).first():
-            flash('This phone number is already registered.', 'danger')
+            flash(message('invite_duplicate_phone'), 'danger')
             return render_template('auth/accept_invite.html', token=token, emp=emp)
 
         # Create user account
@@ -295,15 +318,23 @@ def accept_invite(token):
         )
         user.set_password(password)
         db.session.add(user)
-        db.session.flush()
+        try:
+            db.session.flush()
+            # Account creation and invitation consumption are one transaction.
+            emp.user_id = user.id
+            emp.invite_token = None
+            emp.invite_expires = None
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            # Different invitations can race after the phone precheck. Only
+            # recover a duplicate phone; unrelated database errors must surface.
+            if not User.query.filter_by(phone=normalized_phone).first():
+                raise
+            flash(message('invite_duplicate_phone'), 'danger')
+            return render_template('auth/accept_invite.html', token=token, emp=emp)
 
-        # Link to employee
-        emp.user_id = user.id
-        emp.invite_token = None
-        emp.invite_expires = None
-        db.session.commit()
-
-        flash('Account created! You can now log in.', 'success')
+        flash(message('invite_created'), 'success')
         return redirect(url_for('auth.login'))
 
     return render_template('auth/accept_invite.html', token=token, emp=emp)
@@ -319,12 +350,12 @@ def add_employee():
         data, error = parse_employee_form(request.form)
         if error:
             flash(error, 'danger')
-            return redirect(url_for('employees.add_employee'))
+            return render_template('add_employee.html', year=date.today().year), 400
 
         result = create_employee(data, _company_id(), current_user.id)
         if not result.success:
             flash(result.error, 'danger')
-            return redirect(url_for('employees.add_employee'))
+            return render_template('add_employee.html', year=date.today().year), 400
 
         name = data['name']
 
@@ -398,13 +429,13 @@ def edit_employee(emp_id):
                     phone = cleaned
                 else:
                     flash('Employee phone: invalid format. Enter 7-20 digits.', 'danger')
-                    return redirect(url_for('employees.edit_employee', emp_id=emp_id))
+                    return render_template('edit_employee.html', employee=emp, year=date.today().year), 400
         else:
             phone = None
 
         if not name:
             flash('Employee name is required.', 'danger')
-            return redirect(url_for('employees.edit_employee', emp_id=emp_id))
+            return render_template('edit_employee.html', employee=emp, year=date.today().year), 400
 
         # Track changes for audit log
         changes = {}
@@ -449,7 +480,7 @@ def edit_employee(emp_id):
                 is_valid_fin, normalized_fin, fin_error = validate_fayda_fin(fayda_fin)
                 if not is_valid_fin:
                     flash(f'Fayda FIN: {fin_error}', 'danger')
-                    return redirect(url_for('employees.edit_employee', emp_id=emp_id))
+                    return render_template('edit_employee.html', employee=emp, year=date.today().year), 400
                 fayda_fin = normalized_fin
                 new_fin = fayda_fin
             changes['fayda_fin_changed'] = {
@@ -525,6 +556,7 @@ def edit_employee(emp_id):
 
 
 @employees_bp.route('/employees/<int:emp_id>')
+@role_required('owner', 'accountant')
 def employee_detail(emp_id):
     """Show employee details."""
     from payroll_engine.overtime import DEFAULT_OVERTIME_RATES as OVERTIME_RATES
@@ -595,6 +627,7 @@ def employee_detail(emp_id):
 
 
 @employees_bp.route('/employees/<int:emp_id>/overtime', methods=['POST'])
+@role_required('owner', 'accountant')
 def add_overtime(emp_id):
     """Add overtime entry for an employee."""
     emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
@@ -624,6 +657,7 @@ def add_overtime(emp_id):
 
 
 @employees_bp.route('/overtime/<int:entry_id>/delete', methods=['POST'])
+@role_required('owner', 'accountant')
 def delete_overtime(entry_id):
     """Delete an overtime entry."""
     entry = OvertimeEntry.query.filter_by(id=entry_id, company_id=_company_id()).first_or_404()
@@ -1105,6 +1139,7 @@ def terminate_employee(emp_id):
 
 
 @employees_bp.route('/settlements/<int:settlement_id>')
+@role_required('owner', 'accountant')
 def settlement_detail(settlement_id):
     """Show final settlement details."""
     settlement = FinalSettlement.query.filter_by(id=settlement_id, company_id=_company_id()).first_or_404()
@@ -1117,6 +1152,7 @@ def settlement_detail(settlement_id):
 
 
 @employees_bp.route('/employees/<int:emp_id>/leave')
+@role_required('owner', 'accountant')
 def employee_leave_balance(emp_id):
     """Show leave balances for an employee."""
     from payroll_engine.leave import LeaveType, calculate_leave_balance
@@ -1162,6 +1198,7 @@ def employee_leave_balance(emp_id):
 
 
 @employees_bp.route('/employees/<int:emp_id>/leave/request', methods=['POST'])
+@role_required('owner', 'accountant')
 def request_leave(emp_id):
     """Request leave for an employee."""
     from datetime import datetime as dt

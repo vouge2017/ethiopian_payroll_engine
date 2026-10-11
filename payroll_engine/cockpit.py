@@ -124,7 +124,7 @@ def build_cockpit(company_id, db, models):
                 key='no_payroll',
                 score=200,
                 description='Create your first payroll run to start using the system.',
-                action_url='/payroll/upload',
+                action_url='/payroll/spreadsheet',
                 action_label='Create Payroll',
             )
         )

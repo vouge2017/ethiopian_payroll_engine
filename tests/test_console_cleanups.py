@@ -69,6 +69,20 @@ def test_csrf_400_shows_friendly_page(app):
     )
 
 
+def test_public_employee_invitation_requires_csrf_before_lookup(app):
+    """The public capability URL must not weaken the global CSRF gate."""
+    app.config['WTF_CSRF_ENABLED'] = True
+    client = app.test_client()
+    response = client.post(
+        '/employees/accept-invite/not-a-real-token',
+        data={'phone': '911234567', 'password': 'SecurePass123!', 'password2': 'SecurePass123!'},
+    )
+    assert response.status_code == 302
+    with client.session_transaction() as session:
+        flashes = session.get('_flashes', [])
+    assert any('session expired' in text.lower() for _, text in flashes)
+
+
 def test_login_html_has_favicon_link(app):
     """The login page must declare a <link rel='icon'> so browsers don't
     fall back to /favicon.ico and trigger a 404 in the console."""

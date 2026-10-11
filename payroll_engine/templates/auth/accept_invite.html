@@ -1,148 +1,79 @@
-﻿{% extends "auth/onboarding-base.html" %}
-{% block title %}Accept Invite — EthioPayroll{% endblock %}
-
+{% extends "auth/onboarding-base.html" %}
+{% block title %}{{ _('invite_title') }} — EthioPayroll{% endblock %}
 {% block content %}
-<!-- Left: Stepper -->
-<aside class="onboarding-stepper" aria-label="Quick start steps">
+<aside class="onboarding-stepper" aria-label="{{ _('invite_progress') }}">
     <div class="onboarding-stepper-card">
-        <h2 class="onboarding-stepper-title">Join Team</h2>
-        <ul class="onboarding-stepper-list">
-            <li class="onboarding-step active">
-                <div class="onboarding-step-dot">
-                    <span class="step-number">1</span>
-                </div>
-                <div>
-                    <div class="onboarding-step-label">Create Account</div>
-                    <div class="onboarding-step-desc">Set your credentials</div>
-                </div>
+        <p class="entry-step-label">{{ _('invite_access') }}</p>
+        <h2 class="onboarding-stepper-title">{{ emp.company.name }}</h2>
+        <ol class="onboarding-stepper-list">
+            <li class="onboarding-step active" aria-current="step">
+                <span class="onboarding-step-dot" aria-hidden="true">1</span>
+                <h3 class="onboarding-step-label">{{ _('invite_create') }}</h3>
+                <p class="onboarding-step-desc">{{ _('invite_credentials') }}</p>
             </li>
             <li class="onboarding-step">
-                <div class="onboarding-step-dot">2</div>
-                <div>
-                    <div class="onboarding-step-label">Access Granted</div>
-                    <div class="onboarding-step-desc">Enter the workspace</div>
-                </div>
+                <span class="onboarding-step-dot" aria-hidden="true">2</span>
+                <h3 class="onboarding-step-label">{{ _('entry_sign_in') }}</h3>
+                <p class="onboarding-step-desc">{{ _('invite_signin_step') }}</p>
             </li>
-        </ul>
+        </ol>
     </div>
 </aside>
-
-<!-- Main Content -->
 <div class="onboarding-form-area">
-    <h1 class="onboarding-form-title">Create your account</h1>
-    <p class="onboarding-form-subtitle">You've been invited to join <strong>{{ emp.name }}</strong>'s payroll account. Create your login below.</p>
-
-    <form method="POST" id="inviteForm">
+    <p class="entry-step-label">{{ _('invite_step') }}</p>
+    <h1 class="onboarding-form-title">{{ _('invite_title') }}</h1>
+    <p class="onboarding-form-subtitle"><strong>{{ emp.name }} · {{ emp.company.name }}</strong><br>{{ _('invite_description') }}</p>
+    <form method="POST" action="{{ url_for('employees.accept_invite', token=token) }}" id="inviteForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
         <div class="onboarding-field">
-            <label for="phone">Phone Number</label>
-            <div class="onboarding-phone-wrapper">
-                <div class="phone-input-with-prefix">
-                    <span class="phone-prefix-box">+251</span>
-                    <input type="tel" id="phone" name="phone"
-                           data-intl-tel-name="phone_full"
-                           required placeholder="91 234 5678"
-                           inputmode="tel"
-                           maxlength="9"
-                           title="Enter 9 digits starting with 9 or 7">
-                </div>
+            <label for="phone">{{ _('phone') }}</label>
+            <div class="phone-input-with-prefix">
+                <span class="phone-prefix-box">+251</span>
+                <input type="tel" id="phone" name="phone" data-intl-tel-name="phone_full"
+                       required placeholder="912345678" inputmode="tel" maxlength="9" autocomplete="tel-national"
+                       value="{{ request.form.get('phone', '') }}" aria-describedby="invitePhoneHint"
+                       title="{{ _('invite_phone_hint') }}">
             </div>
-            <span class="field-hint">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</span>
+            <span class="field-hint" id="invitePhoneHint">{{ _('invite_phone_hint') }}</span>
         </div>
-
         <div class="onboarding-field">
-            <label for="password">Password</label>
+            <label for="password">{{ _('password') }}</label>
             <div class="onboarding-field-wrapper">
-                <input type="password" id="password" name="password"
-                       required minlength="8" autocomplete="new-password" placeholder="Min 8 characters">
-                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
-                    <span class="material-symbols-outlined">visibility_off</span>
-                </button>
+                <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password" aria-describedby="invitePasswordHint">
+                <button type="button" class="password-toggle" aria-label="{{ _('entry_show_password') }}" aria-pressed="false"><span class="material-symbols-outlined" aria-hidden="true">visibility_off</span></button>
             </div>
-            <span class="field-hint">Must be at least 8 characters with a number and symbol.</span>
-            <ul class="pw-rules" data-pw-rules data-pw-target="password" data-pw-confirm="password2" data-pw-strong="pwStrong">
-                <li class="pw-rule" data-pw-rule="length"><span data-pw-dot>&middot;</span> At least 8 characters</li>
-                <li class="pw-rule" data-pw-rule="upper"><span data-pw-dot>&middot;</span> One uppercase letter (A&ndash;Z)</li>
-                <li class="pw-rule" data-pw-rule="lower"><span data-pw-dot>&middot;</span> One lowercase letter (a&ndash;z)</li>
-                <li class="pw-rule" data-pw-rule="digit"><span data-pw-dot>&middot;</span> One number (0&ndash;9)</li>
-                <li class="pw-rule" data-pw-rule="symbol"><span data-pw-dot>&middot;</span> One symbol (@#$%!&amp;* etc.)</li>
+            <span class="field-hint" id="invitePasswordHint">{{ _('invite_password_hint') }}</span>
+            <ul class="pw-rules" data-pw-rules data-pw-target="password" data-pw-confirm="password2" data-pw-strong="pwStrong"
+                data-pw-match-ok="{{ _('invite_match_ok') }}" data-pw-match-warn="{{ _('invite_match_warn') }}" data-pw-match-bad="{{ _('invite_match_bad') }}">
+                <li class="pw-rule" data-pw-rule="length"><span data-pw-dot aria-hidden="true">·</span> {{ _('invite_rule_length') }}</li>
+                <li class="pw-rule" data-pw-rule="upper"><span data-pw-dot aria-hidden="true">·</span> {{ _('invite_rule_upper') }}</li>
+                <li class="pw-rule" data-pw-rule="lower"><span data-pw-dot aria-hidden="true">·</span> {{ _('invite_rule_lower') }}</li>
+                <li class="pw-rule" data-pw-rule="digit"><span data-pw-dot aria-hidden="true">·</span> {{ _('invite_rule_digit') }}</li>
+                <li class="pw-rule" data-pw-rule="symbol"><span data-pw-dot aria-hidden="true">·</span> {{ _('invite_rule_symbol') }}</li>
             </ul>
-            <div id="pwStrong" class="pw-strong">
-                <span class="material-symbols-outlined">verified</span> Strong password
-            </div>
+            <div id="pwStrong" class="pw-strong">{{ _('invite_strong') }}</div>
         </div>
-
         <div class="onboarding-field">
-            <label for="password2">Confirm Password</label>
+            <label for="password2">{{ _('invite_confirm') }}</label>
             <div class="onboarding-field-wrapper">
-                <input type="password" id="password2" name="password2"
-                       required minlength="8" autocomplete="new-password" placeholder="Type it again">
-                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
-                    <span class="material-symbols-outlined">visibility_off</span>
-                </button>
+                <input type="password" id="password2" name="password2" required minlength="8" autocomplete="new-password" aria-describedby="inviteMatch">
+                <button type="button" class="password-toggle" aria-label="{{ _('entry_show_password') }}" aria-pressed="false"><span class="material-symbols-outlined" aria-hidden="true">visibility_off</span></button>
             </div>
-            <span data-pw-match></span>
+            <span id="inviteMatch" data-pw-match role="status" aria-live="polite"></span>
         </div>
-
-        <script src="{{ url_for('static', filename='js/password-strength.js') }}?v={{ static_version }}"></script>
-
         <div class="onboarding-actions">
-            <span></span>
-            <button type="submit" class="onboarding-btn-next" data-pw-submit>
-                Create Account
-                <span class="material-symbols-outlined">person_add</span>
-            </button>
+            <button type="submit" class="onboarding-btn-next" data-pw-submit>{{ _('invite_create') }} <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span></button>
         </div>
     </form>
-
-    <div style="margin-top: var(--space-6); text-align: center;">
-        <span style="font-size: 14px; color: var(--text-secondary);">Already have an account? <a href="{{ url_for('auth.login') }}" style="font-weight: 600; color: var(--brand-primary); text-decoration: none;">Log in</a></span>
-    </div>
+    <p class="field-hint mt-4">{{ _('invite_existing') }} <a class="onboarding-btn-back" href="{{ url_for('auth.login') }}">{{ _('entry_sign_in') }}</a></p>
 </div>
-
-<!-- Right Sidebar -->
-<aside class="onboarding-sidebar">
+<aside class="onboarding-sidebar" aria-labelledby="inviteAfterTitle">
     <div class="onboarding-checklist">
-        <div class="onboarding-checklist-header">
-            <span class="material-symbols-outlined">verified_user</span>
-            <h2>What's Next?</h2>
-        </div>
-        <p class="onboarding-checklist-desc">After creating your account, you'll have access to:</p>
-        <ul class="onboarding-checklist-items">
-            <li class="onboarding-checklist-item">
-                <span class="material-symbols-outlined">receipt_long</span>
-                <div>
-                    <span class="onboarding-checklist-item-label">View Payslips</span>
-                    <span class="onboarding-checklist-item-desc">Download your monthly payslips</span>
-                </div>
-            </li>
-            <li class="onboarding-checklist-item">
-                <span class="material-symbols-outlined">event_available</span>
-                <div>
-                    <span class="onboarding-checklist-item-label">Request Leave</span>
-                    <span class="onboarding-checklist-item-desc">Submit leave requests online</span>
-                </div>
-            </li>
-            <li class="onboarding-checklist-item">
-                <span class="material-symbols-outlined">badge</span>
-                <div>
-                    <span class="onboarding-checklist-item-label">Update Profile</span>
-                    <span class="onboarding-checklist-item-desc">Keep your details current</span>
-                </div>
-            </li>
-        </ul>
-    </div>
-
-    <div class="onboarding-help-card">
-        <div class="onboarding-help-header">
-            <span class="material-symbols-outlined">support_agent</span>
-            <h3>Need Help?</h3>
-        </div>
-        <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
-        <a href="/help" class="onboarding-help-link">
-            Contact Support <span class="material-symbols-outlined">open_in_new</span>
-        </a>
+        <div class="onboarding-checklist-header"><h2 id="inviteAfterTitle">{{ _('invite_after_title') }}</h2></div>
+        <p class="onboarding-checklist-desc">{{ _('invite_after_description') }}</p>
+        <p class="onboarding-help-text">{{ _('invite_expiry_help') }}</p>
+        <a class="onboarding-btn-back" href="{{ url_for('auth.forgot_password') }}">{{ _('entry_recovery') }}</a>
     </div>
 </aside>
 {% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/password-strength.js') }}?v={{ static_version }}"></script>{% endblock %}

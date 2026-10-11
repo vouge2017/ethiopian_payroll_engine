@@ -3,29 +3,32 @@
 {% block breadcrumb %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb breadcrumb-sm mb-0">
-        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none" aria-label="Home"><i class="bi bi-house" aria-hidden="true"></i></a></li>
         {% block breadcrumb_items %}
         <li class="breadcrumb-item active">Employees</li>
     {% endblock %}
     </ol>
 </nav>
 {% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
-<div class="p-4 p-md-5">
+{% set first_employee_next = pagination.total == 1 and employees and not show_archived and not search and not selected_dept %}
+<div class="workspace-page">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="workspace-heading">
         <div>
-            <h2 class="fw-bold mb-1">{% if show_archived %}Archived Employees{% else %}Employees{% endif %}</h2>
-            <p class="text-muted mb-0">{{ employees|length }} {{ 'archived' if show_archived else 'active' }} employees</p>
+            <p class="workspace-eyebrow">{{ workspace_company.name if workspace_company else 'Your team' }}</p>
+            <h1>{% if show_archived %}Archived employees{% else %}Employees{% endif %}</h1>
+            <p>{{ pagination.total }} {{ 'archived' if show_archived else 'active' }} {{ 'employee' if pagination.total == 1 else 'employees' }}{% if search or selected_dept %} matching your filters{% endif %}. Manage details before preparing payroll.</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="workspace-actions">
             {% if show_archived %}
             <a href="{{ url_for('employees.list_employees') }}" class="btn btn-ghost">
                 <i class="bi bi-arrow-left me-1"></i>Active
             </a>
             {% else %}
-            <a href="{{ url_for('employees.list_employees', archived='1') }}" class="btn btn-ghost">
-                <i class="bi bi-archive me-1"></i>Archived
+            <a href="{{ url_for('employees.list_employees', archived='1') }}" class="btn btn-ghost" aria-label="Archived employees">
+                <i class="bi bi-archive me-1" aria-hidden="true"></i>Archived
             </a>
             {% endif %}
             <a href="{{ url_for('employees.export_employees') }}" class="btn btn-ghost">
@@ -34,13 +37,23 @@
             <button onclick="window.print()" class="btn btn-ghost no-print">
                 <i class="bi bi-printer me-1"></i>Print
             </button>
-            <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
+            <a href="{{ url_for('employees.add_employee') }}" class="btn {{ 'btn-ghost' if first_employee_next else 'btn-primary' }}">
                 <i class="bi bi-person-plus me-1"></i>{{ _('add_employee') }}
             </a>
         </div>
     </div>
 
     <!-- Search & Filter -->
+    {% if first_employee_next %}
+    <section class="card workspace-next mb-4" aria-labelledby="firstEmployeeNext" data-testid="first-employee-next">
+        <div class="card-body">
+            <p class="workspace-eyebrow">{{ _('first_next_step') }}</p>
+            <h2 id="firstEmployeeNext">{{ _('first_prepare_month') }}</h2>
+            <p>{{ _('first_saved_next') }}</p>
+            <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">{{ _('first_prepare_action') }} <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        </div>
+    </section>
+    {% endif %}
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" action="{{ url_for('employees.list_employees') }}" class="row g-2 align-items-end">
@@ -48,15 +61,15 @@
                 <input type="hidden" name="archived" value="1">
                 {% endif %}
                 <div class="col-md-4">
-                    <label class="form-label">Search</label>
+                    <label class="form-label" for="employee-search">Search</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" name="q" placeholder="Name or employee ID..." value="{{ search }}">
+                        <input type="text" id="employee-search" class="form-control" name="q" placeholder="Name or employee ID..." value="{{ search }}">
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Department</label>
-                    <select name="dept" class="form-select">
+                    <label class="form-label" for="employee-department">Department</label>
+                    <select id="employee-department" name="dept" class="form-select">
                         <option value="">All Departments</option>
                         {% for dept in departments %}
                         <option value="{{ dept }}" {% if dept == selected_dept %}selected{% endif %}>{{ dept }}</option>
@@ -68,6 +81,7 @@
                         <i class="bi bi-funnel me-1"></i>Filter
                     </button>
                 </div>
+                {% if search or selected_dept %}<div class="col-md-2"><a class="btn btn-outline-secondary w-100" href="{{ url_for('employees.list_employees', archived='1') if show_archived else url_for('employees.list_employees') }}">Clear filters</a></div>{% endif %}
             </form>
         </div>
     </div>
@@ -77,7 +91,7 @@
         <div class="card-body p-0">
             {% if employees %}
             <div class="table-responsive">
-                <table class="table table-hover table-sticky mb-0 responsive-card sortable filterable">
+                <table class="table table-hover table-sticky mb-0 responsive-card">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -98,7 +112,7 @@
                                     <div class="user-avatar me-2" style="width: 32px; height: 32px; font-size: 0.75rem; background: var(--brand-primary-light); color: var(--brand-primary);">
                                         {{ emp.display_name[0]|upper }}
                                     </div>
-                                    <strong>{{ emp.display_name }}</strong>
+                                    <strong class="employee-list-name">{{ emp.display_name }}</strong>
                                 </div>
                             </td>
                             <td data-label="Department">{{ emp.department or '—' }}</td>
@@ -106,17 +120,17 @@
                             <td data-label="Basic Salary" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.basic_salary) }}</td>
                             <td data-label="Gross" class="fw-semibold">ETB {{ '{:,.2f}'.format(emp.gross_salary) }}</td>
                             <td data-label="Actions">
-                                <div class="d-flex gap-1">
-                                    <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" title="View">
-                                        <i class="bi bi-eye"></i>
+                                <div class="d-flex gap-1 employee-list-actions">
+                                    {% if show_archived %}<span class="text-muted">Archived</span>{% else %}
+                                    <a href="{{ url_for('employees.employee_detail', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" aria-label="View {{ emp.display_name }}">
+                                        <i class="bi bi-eye" aria-hidden="true"></i> View
                                     </a>
-                                    <a href="{{ url_for('employees.edit_employee', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" title="Edit">
-                                        <i class="bi bi-pencil"></i>
+                                    <a href="{{ url_for('employees.edit_employee', emp_id=emp.id) }}" class="btn btn-sm btn-ghost" aria-label="Edit {{ emp.display_name }}">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i> Edit
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-ghost text-danger" title="Deactivate"
-                                            onclick="deactivateEmployee({{ emp.id }}, '{{ emp.display_name|e }}')">
-                                        <i class="bi bi-person-dash"></i>
-                                    </button>
+                                    {% if workspace_role == 'owner' %}<button type="button" class="btn btn-sm btn-ghost text-danger" data-deactivate-id="{{ emp.id }}" data-employee-name="{{ emp.display_name }}" aria-label="Deactivate {{ emp.display_name }}">
+                                        <i class="bi bi-person-dash" aria-hidden="true"></i> Deactivate
+                                    </button>{% endif %}{% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -127,9 +141,9 @@
             {% else %}
             <div class="empty-state">
                 <div class="empty-icon"><i class="bi bi-people"></i></div>
-                <h4>{% if search %}No employees found{% else %}No employees yet{% endif %}</h4>
-                <p>{% if search %}Try a different search term.{% else %}Add your first employee to get started with payroll.{% endif %}</p>
-                {% if not search %}
+                <h2>{% if search or selected_dept %}No matching employees{% elif show_archived %}No archived employees{% else %}Add your first employee{% endif %}</h2>
+                <p>{% if search or selected_dept %}Try another name or department, or clear the filters above.{% elif show_archived %}Deactivated employees will appear here. Their payroll history is preserved.{% else %}Start with their name and monthly pay. Then prepare and review payroll.{% endif %}</p>
+                {% if not search and not selected_dept and not show_archived %}
                 <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
                     <i class="bi bi-person-plus me-1"></i>Add Employee
                 </a>
@@ -140,19 +154,20 @@
     </div>
 
     <!-- Pagination -->
-    {% if total_pages and total_pages > 1 %}
+    {% if pagination.pages > 1 %}
     <nav class="mt-4" aria-label="Employee pagination">
         <ul class="pagination justify-content-center">
-            {% if page > 1 %}
-            <li class="page-item"><a class="page-link" href="?page={{ page - 1 }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">Previous</a></li>
+            {% if pagination.has_prev %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('employees.list_employees', page=pagination.prev_num, q=search, dept=selected_dept, archived='1' if show_archived else '') }}">Previous</a></li>
             {% endif %}
-            {% for p in range(1, total_pages + 1) %}
-            <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link" href="?page={{ p }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">{{ p }}</a>
+            {% for p in pagination.iter_pages() %}
+            {% if p %}<li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link"{% if p == pagination.page %} aria-current="page"{% endif %} href="{{ url_for('employees.list_employees', page=p, q=search, dept=selected_dept, archived='1' if show_archived else '') }}">{{ p }}</a>
             </li>
+            {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
             {% endfor %}
-            {% if page < total_pages %}
-            <li class="page-item"><a class="page-link" href="?page={{ page + 1 }}{% if search %}&q={{ search }}{% endif %}{% if selected_dept %}&dept={{ selected_dept }}{% endif %}">Next</a></li>
+            {% if pagination.has_next %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('employees.list_employees', page=pagination.next_num, q=search, dept=selected_dept, archived='1' if show_archived else '') }}">Next</a></li>
             {% endif %}
         </ul>
     </nav>
@@ -162,8 +177,17 @@
 
 {% block extra_js %}
 <script nonce="{{ csp_nonce }}">
-async function deactivateEmployee(empId, empName) {
-    if (!confirm(`Deactivate ${empName}? Their payroll history will be preserved.`)) return;
+document.querySelectorAll('[data-deactivate-id]').forEach(button => {
+    button.addEventListener('click', () => deactivateEmployee(button));
+});
+async function deactivateEmployee(button) {
+    if (button.disabled) return;
+    const empId = button.dataset.deactivateId;
+    const empName = button.dataset.employeeName;
+    if (!confirm(`Deactivate ${empName}? They will leave the active employee list. Their payroll history will be preserved.`)) return;
+    button.disabled = true;
+    const label = button.textContent;
+    button.textContent = 'Deactivating…';
 
     try {
         const data = await EthioPayroll.ajax(`/employees/${empId}/deactivate`, {
@@ -171,23 +195,15 @@ async function deactivateEmployee(empId, empName) {
         });
         if (data.success) {
             EthioPayroll.toast(data.message, 'success');
-            // Remove the row from the table with fade-out
-            const rows = document.querySelectorAll('tr');
-            let row = null;
-            for (const r of rows) {
-                const btn = r.querySelector(`button[onclick*="deactivateEmployee(${empId},"]`);
-                if (btn) { row = r; break; }
-            }
-            if (row) {
-                row.style.transition = 'opacity 0.3s ease';
-                row.style.opacity = '0';
-                setTimeout(() => row.remove(), 300);
-            }
+            window.location.reload();
         } else {
             EthioPayroll.toast(data.error || 'Failed to deactivate', 'error');
         }
     } catch (err) {
         EthioPayroll.toast(err.message || 'Network error', 'error');
+    } finally {
+        button.disabled = false;
+        button.textContent = label;
     }
 }
 </script>

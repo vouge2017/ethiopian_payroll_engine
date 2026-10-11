@@ -111,12 +111,14 @@ class TestSidebarAdaptation:
         assert b'impact_calculator' in resp.data or b'Impact Calculator' in resp.data
 
     def test_reports_label_small_company(self, app):
-        """Small company: 'Compliance & Reports' label."""
+        """Small companies retain a labeled Reports navigation link."""
         _cid, _oid = _setup(app, num_employees=3)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
-        assert b'Compliance' in resp.data
+        reports_link = re.search(rb'<a[^>]*href="/reports"[^>]*>(.*?)</a>', resp.data, re.DOTALL)
+        assert reports_link is not None
+        assert b'Reports' in reports_link.group(1)
 
     def test_reports_label_large_company(self, app):
         """Large company: 'Reports' label."""
@@ -131,21 +133,22 @@ class TestSidebarAdaptation:
 # ─── Quick Start as Primary ───
 
 
-class TestQuickStartPrimary:
-    """Test that Quick Start is the primary onboarding path."""
+class TestFirstUsePrimary:
+    """First-use onboarding prioritizes one employee; group entry remains available."""
 
-    def test_quick_start_button_visible(self, app):
-        """Dashboard should show Quick Start prominently."""
+    def test_first_employee_button_visible(self, app):
+        """Dashboard gives a new owner a labeled first-employee action."""
         _cid, _oid = _setup(app, num_employees=0)
         client = app.test_client()
         client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
         resp = client.get('/')
         assert resp.status_code == 200
         primary_link = re.search(
-            rb'<a[^>]*href="/quick-start"[^>]*class="[^"]*btn-primary[^"]*"[^>]*>(.*?)</a>', resp.data, re.DOTALL
+            rb'<a[^>]*class="[^"]*first-primary[^"]*"[^>]*href="/employees/add"[^>]*>(.*?)</a>', resp.data, re.DOTALL
         )
         assert primary_link is not None
-        assert b'Quick Start' in primary_link.group(1)
+        assert b'Add your first employee' in primary_link.group(1)
+        assert b'href="/quick-start"' in resp.data
 
     def test_quick_start_link_works(self, app):
         """Quick Start page should load."""

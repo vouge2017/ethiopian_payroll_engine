@@ -5,25 +5,48 @@
  */
 
 /* ============================================
-   MOBILE: Screens under 768px
+   COMPACT NAVIGATION: Phones and tablets through 1024px
    ============================================ */
-@media (max-width: 767.98px) {
+.sidebar .brand-company,
+.sidebar .nav-link,
+.sidebar .user-role,
+.sidebar .nav-section-label,
+.sidebar .nav-section-toggle,
+.sidebar .sidebar-footer,
+.sidebar .sidebar-footer a {
+    color: var(--gray-300);
+}
+
+[data-theme="dark"] .sidebar .nav-link,
+[data-theme="dark"] .sidebar .nav-section-label,
+[data-theme="dark"] .sidebar .nav-section-toggle,
+[data-theme="dark"] .sidebar .sidebar-footer,
+[data-theme="dark"] .sidebar .sidebar-footer a {
+    color: var(--gray-300);
+}
+[data-theme="dark"] .sidebar .nav-link.active { color: var(--text-inverse); }
+
+@media (max-width: 1024px) {
+    .app-layout { flex-direction: column; }
     /* Sidebar → collapsed top bar */
     .sidebar {
-        position: fixed;
+        position: sticky;
         top: 0;
         left: 0;
         width: 100% !important;
         height: auto;
         min-height: auto;
+        max-height: calc(100dvh - 5rem - env(safe-area-inset-bottom, 0px));
         z-index: var(--z-sidebar);
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
     }
 
     .sidebar .sidebar-nav,
     .sidebar .sidebar-footer {
         display: none;
         width: 100%;
+        flex: 0 0 auto;
     }
 
     .sidebar .sidebar-nav.show,
@@ -41,7 +64,7 @@
 
     .main-content {
         margin-left: 0 !important;
-        margin-top: 60px;
+        margin-top: 0;
     }
 
     /* Metric cards: 2-column */
@@ -139,44 +162,14 @@
 }
 
 /* ============================================
-   TABLETS: 768px - 1024px
+   DESKTOP: above 1024px
    ============================================ */
-@media (min-width: 768px) and (max-width: 1024px) {
-    .sidebar {
-        width: 72px !important;
-    }
-
-    .sidebar .brand-text,
-    .sidebar .nav-section-label,
-    .sidebar .nav-link span,
-    .sidebar .nav-badge,
-    .sidebar .user-details,
-    .sidebar .lang-switcher {
-        display: none;
-    }
-
-    .sidebar .nav-link {
-        justify-content: center;
-        padding: var(--space-3);
-    }
-
-    .sidebar .nav-link i {
-        font-size: 1.25rem;
-    }
-
-    .sidebar .nav-link.active::before {
-        left: -12px;
-    }
-
-    .main-content {
-        margin-left: 72px !important;
-    }
-}
-
-/* ============================================
-   DESKTOP: above 768px
-   ============================================ */
-@media (min-width: 768px) {
+@media (min-width: 1024.01px) {
+    .sidebar-collapse-toggle { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--gray-300); }
+    .sidebar-collapse-toggle:focus-visible { outline: 3px solid var(--border-focus); outline-offset: -3px; }
+    .sidebar.collapsed ~ .main-content { margin-left: var(--sidebar-collapsed-width); }
+    .sidebar.collapsed .sidebar-brand { flex-direction: column; gap: 8px; padding: 12px 8px; }
+    .sidebar.collapsed .nav-section-items { display: block !important; }
     .sidebar-toggle {
         display: none !important;
     }
@@ -203,11 +196,48 @@
         font-size: 1.25rem;
     }
 }
+.sidebar-collapse-toggle[hidden] { display: none !important; }
+@media (max-width: 1024px) {
+    .sidebar-collapse-toggle { display: none; }
+}
 
 /* ============================================
    RESPONSIVE CARD TABLES
    ============================================ */
 @media (max-width: 600px) {
+    .role-dashboard > .d-flex.justify-content-center {
+        flex-wrap: wrap;
+    }
+
+    .role-dashboard > .d-flex > div {
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    .role-dashboard .badge.text-success {
+        color: var(--color-success-text) !important;
+    }
+
+    /* Card tables must fit the phone, rather than inherit the ledger minimum. */
+    table.responsive-card,
+    table.sortable,
+    table.filterable {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+
+    table.responsive-card td,
+    table.sortable tbody td,
+    table.filterable tbody td {
+        min-width: 0;
+        flex-wrap: wrap;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        gap: var(--space-2);
+    }
+
     table.responsive-card thead {
         display: none;
     }
@@ -297,7 +327,7 @@
     opacity: 0.7;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 1024px) {
     .bottom-nav {
         display: block;
     }
@@ -313,10 +343,10 @@
    Collapsible sections in mobile hamburger menu.
    ============================================ */
 
-@media (max-width: 767.98px) {
+@media (max-width: 1024px) {
     .sidebar .sidebar-nav {
-        max-height: 70vh;
-        overflow-y: auto;
+        max-height: none;
+        overflow-y: visible;
         -webkit-overflow-scrolling: touch;
     }
 
@@ -324,7 +354,7 @@
         font-size: var(--text-xs);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--gray-400);
+        color: var(--gray-300);
         padding: var(--space-2) var(--space-4);
         font-weight: 600;
     }
@@ -464,7 +494,7 @@
 
     .metric-card .metric-label {
         font-size: 8pt;
-        color: #666;
+        color: var(--text-secondary);
     }
 
     .metric-card .metric-value {
@@ -563,7 +593,7 @@
     @bottom-center {
         content: "Page " counter(page) " of " counter(pages);
         font-size: 8pt;
-        color: #999;
+        color: var(--text-tertiary);
     }
 
     /* ── Payslip ── */

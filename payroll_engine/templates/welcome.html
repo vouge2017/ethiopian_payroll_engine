@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#fbf9f6">
+    <meta name="description" content="Prepare monthly payroll, review employee pay and deductions, and keep owner approval clear. EthioPayroll is built for Ethiopian businesses.">
+    <title>Payroll with a clear next step — EthioPayroll</title>
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/entry-experience.css') }}?v={{ static_version }}">
+</head>
+<body class="welcome-page">
+    <a class="entry-skip" href="#mainContent">Skip to main content</a>
+    <header class="welcome-header">
+        <div class="entry-container welcome-header-inner">
+            <a class="entry-brand" href="{{ url_for('main.welcome') }}" aria-label="EthioPayroll home"><span class="entry-mark" aria-hidden="true">E<span>:</span></span><span>EthioPayroll<small>BUILT FOR ETHIOPIA</small></span></a>
+            <nav class="welcome-nav" aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#questions">Questions</a><a class="welcome-signin" href="{{ url_for('auth.login') }}">Sign in</a><a class="entry-button entry-button-small" href="{{ url_for('auth.register') }}">Create account <span aria-hidden="true">↗</span></a></nav>
+        </div>
+    </header>
+    <main id="mainContent" tabindex="-1">
+        <section class="entry-container welcome-hero" aria-labelledby="welcome-title">
+            <div class="welcome-hero-copy">
+                <p class="entry-eyebrow"><span aria-hidden="true"></span> FOR ETHIOPIAN BUSINESS OWNERS & PAYROLL TEAMS</p>
+                <h1 id="welcome-title">A clearer month-end.<br><em>A payroll you understand.</em></h1>
+                <p class="welcome-lead">Prepare this month’s changes, check each employee’s pay, and send the saved amounts to your owner for approval.</p>
+                <div class="welcome-actions"><a class="entry-button" href="{{ url_for('auth.register') }}">Create your account <span aria-hidden="true">→</span></a><a class="entry-text-link" href="#payroll-example">See a payroll example <span aria-hidden="true">↓</span></a></div>
+                <p class="welcome-start-note">Start with your phone and a password.<br>Your company and employees come next.</p>
+                <div class="welcome-principles" aria-label="Product principles"><span>Amounts in Ethiopian birr</span><span>Employee-level deductions</span><span>Separate owner approval</span></div>
+            </div>
+            <figure class="welcome-preview" id="payroll-example" aria-labelledby="example-title">
+                <div class="preview-heading"><div><p class="entry-eyebrow">EXAMPLE PAYROLL</p><h2 id="example-title">October 2026</h2><span>Gregorian calendar · Synthetic company</span></div><span class="preview-status">Saved for review</span></div>
+                <div class="preview-total"><span>Saved net pay · ETB</span><strong>57,353<span>.99</span></strong><p>6 employees in this example</p></div>
+                <dl class="preview-summary"><div><dt>Gross pay · ETB</dt><dd>74,846.14</dd></div><div><dt>Income tax · ETB</dt><dd>13,052.15</dd></div></dl>
+                <div class="preview-register"><div class="preview-register-heading"><span>Employee</span><span>Net pay · ETB</span></div><div><span><i aria-hidden="true">TA</i> Tigist Alemu</span><b>11,053.99</b></div><div><span><i aria-hidden="true">DB</i> Dawit Bekele</span><b>9,260.00</b></div><div><span><i aria-hidden="true">HT</i> Hana Tesfaye</span><b>9,260.00</b></div><small>Showing 3 of 6 employees · Sample amounts</small></div>
+                <div class="preview-handover"><span aria-hidden="true">↗</span><div><b>Next: owner approval</b><p>Review and approval do not send money.</p></div></div>
+                <figcaption>An illustration of the review workflow. These are not your payroll figures.</figcaption>
+            </figure>
+        </section>
+        <section class="welcome-reassurance entry-container" aria-label="What the workspace helps you do"><p>One month. One saved review. A clear handover.</p><span>Prepare <b aria-hidden="true">→</b> Review <b aria-hidden="true">→</b> Owner approval</span></section>
+        <section class="entry-container welcome-features" aria-labelledby="features-title">
+            <div class="welcome-section-heading"><p class="entry-eyebrow">LESS TO FIGURE OUT</p><h2 id="features-title">Keep the work familiar.<br>Make the next step clear.</h2><p>A focused workspace for the monthly payroll tasks your team already knows.</p></div>
+            <div class="welcome-feature-grid"><article><span class="feature-symbol" aria-hidden="true">01</span><h3>Prepare the month’s changes</h3><p>Add employee details, then enter changes such as bonuses and unpaid days. Save before reviewing the recalculated amounts.</p><span class="feature-foot">Your inputs, in one place</span></article><article><span class="feature-symbol" aria-hidden="true">02</span><h3>Understand the take-home pay</h3><p>Review gross pay, income tax, pension and other deductions. Open an employee’s breakdown when you need the detail.</p><span class="feature-foot">Numbers you can inspect</span></article><article><span class="feature-symbol" aria-hidden="true">03</span><h3>Keep approval deliberate</h3><p>Send the saved payroll to the owner. After approval, obtain payslips and bank files through the supported payroll workflow.</p><span class="feature-foot">Approval is separate from payment</span></article></div>
+        </section>
+        <section class="welcome-flow" id="how-it-works" aria-labelledby="flow-title"><div class="entry-container"><div class="welcome-section-heading"><p class="entry-eyebrow">YOUR FIRST VISIT</p><h2 id="flow-title">Start small. Build your payroll workspace.</h2><p>You don’t need to have every employee detail ready to create an account.</p></div><ol class="welcome-flow-grid"><li><span>1</span><h3>Create your account</h3><p>Use your Ethiopian phone number and a password. An email address is optional.</p></li><li><span>2</span><h3>Set up your company</h3><p>Add your name and company name so you know whose payroll you’re working on.</p></li><li><span>3</span><h3>Add your first employees</h3><p>Enter employee details, then prepare and review your first monthly payroll.</p></li></ol></div></section>
+        <section class="entry-container welcome-faq" id="questions" aria-labelledby="faq-title"><div><p class="entry-eyebrow">BEFORE YOU BEGIN</p><h2 id="faq-title">A few useful answers.</h2><p>Clear expectations from the first click.</p></div><div class="welcome-faq-list"><details><summary>What do I need to get started?</summary><p>An Ethiopian phone number and a password. Registration accepts 9 digits starting with 7 or 9, with +251 shown separately. You’ll add your name and company in the next step.</p></details><details><summary>Does approval pay my employees?</summary><p>No. Approval preserves the reviewed payroll amounts. Payment is a separate step; downloading a bank file does not itself transfer money.</p></details><details><summary>Can I use it on my phone?</summary><p>The workspace includes responsive phone layouts for preparation, review and approval. Detailed employee information opens when you need it.</p></details><details><summary>Where do employees find their payslips?</summary><p>Employees with an existing account can sign in to their employee workspace to view available payslips. If your company has given you an account, use Sign in rather than creating another company.</p></details><details><summary>Is the payroll example a live calculation?</summary><p>No. The example shows synthetic saved amounts to explain the review layout. Your actual payroll is calculated from your company’s saved employee details and monthly inputs.</p></details></div></section>
+        <section class="entry-container welcome-final" aria-labelledby="final-title"><div><p class="entry-eyebrow">YOUR NEXT STEP</p><h2 id="final-title">Give your month-end<br>a clearer starting point.</h2><p>Create an account, set up your company, and take it one step at a time.</p></div><div><a class="entry-button entry-button-gold" href="{{ url_for('auth.register') }}">Create your account <span aria-hidden="true">→</span></a><p>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p></div></section>
+    </main>
+    <footer class="entry-container welcome-footer"><a class="entry-brand" href="{{ url_for('main.welcome') }}"><span class="entry-mark" aria-hidden="true">E<span>:</span></span><span>EthioPayroll<small>BUILT FOR ETHIOPIA</small></span></a><p>Payroll preparation, review and owner approval.<br>&copy; {{ now.year if now else '2026' }} EthioPayroll</p><a href="{{ url_for('auth.login') }}">Sign in to your workspace <span aria-hidden="true">↗</span></a></footer>
+</body>
+</html>

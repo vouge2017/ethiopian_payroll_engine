@@ -55,8 +55,9 @@
 
 <!-- Main Content: Registration Form (Step 1: minimum viable) -->
 <div class="onboarding-form-area">
-    <h1 class="onboarding-form-title">Create Account</h1>
-    <p class="onboarding-form-subtitle">Quick setup — just your phone and a password to get started. We&apos;ll collect the rest after.</p>
+    <p class="entry-step-label">STEP 1 OF 3 · YOUR ACCOUNT</p>
+    <h1 class="onboarding-form-title">Your payroll workspace starts here.</h1>
+    <p class="onboarding-form-subtitle">Create an account with your phone and a password. Next, you’ll add your name and company.</p>
 
     <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" style="max-width: 480px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -96,7 +97,7 @@
                 <input type="password" id="password" name="password"
                        required minlength="8" autocomplete="new-password"
                        placeholder="••••••••">
-                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
                     <span class="material-symbols-outlined">visibility_off</span>
                 </button>
             </div>
@@ -119,7 +120,7 @@
             <div class="onboarding-field-wrapper">
                 <input type="password" id="password2" name="password2"
                        required autocomplete="new-password" placeholder="••••••••">
-                <button type="button" class="password-toggle" aria-label="Show password" tabindex="-1">
+                <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
                     <span class="material-symbols-outlined">visibility_off</span>
                 </button>
             </div>
@@ -131,13 +132,15 @@
         <!-- Actions -->
         <div class="onboarding-actions">
             <a href="{{ url_for('auth.login') }}" class="onboarding-btn-back">
-                <i class="bi bi-arrow-left"></i> Back
+                <i class="bi bi-arrow-left" aria-hidden="true"></i> Sign in instead
             </a>
             <button type="submit" class="onboarding-btn-next" data-pw-submit>
-                Create Account
+                Create account
                 <span class="material-symbols-outlined">arrow_forward</span>
             </button>
         </div>
+
+        <p class="entry-form-note">Already have an employee account? <a href="{{ url_for('auth.login') }}">Sign in to your payslips</a>.</p>
 
         <!-- Google Sign-In -->
         {% if google_enabled %}
@@ -195,9 +198,9 @@
             <span class="material-symbols-outlined">support_agent</span>
             <h3>Need Help?</h3>
         </div>
-        <p class="onboarding-help-text">Our compliance experts are available to assist you.</p>
-        <a href="/help" class="onboarding-help-link">
-            Contact Support <span class="material-symbols-outlined">open_in_new</span>
+        <p class="onboarding-help-text">Not sure what comes next? See the account, company and employee setup steps before you begin.</p>
+        <a href="{{ url_for('main.welcome') }}#how-it-works" class="onboarding-help-link">
+            See the setup steps <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
         </a>
     </div>
 </aside>

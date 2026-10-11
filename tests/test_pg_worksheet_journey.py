@@ -85,7 +85,7 @@ def test_saved_worksheet_review_approval_pdf_and_bank_agree(worksheet, monkeypat
     assert '0/1 employees' not in review_page and 'No data available.' not in review_page
     confirmation = client.get(f'/payroll/{rid}/confirm')
     assert confirmation.status_code == 200 and b'8,590.35' in confirmation.data
-    assert b'4310.15' in confirmation.data and b'Monthly Bonus' in confirmation.data
+    assert b'4,310.15' in confirmation.data and b'Monthly Bonus' in confirmation.data
     assert b'Can be undone within 1 hour' not in confirmation.data
     approved = client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'})
     assert approved.status_code == 302

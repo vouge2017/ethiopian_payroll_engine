@@ -1,287 +1,66 @@
 {% extends "base.html" %}
-{% block title %}Payroll Spreadsheet — Ethiopian Payroll Engine{% endblock %}
+{% block title %}Prepare payroll — Ethiopian Payroll Engine{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/monthly-payroll.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
-
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h4 class="mb-0"><i class="bi bi-table"></i> Payroll Spreadsheet</h4>
-            <small class="text-muted">Monthly worksheet for {{ period_start.strftime("%B %Y") }} (Gregorian). Save edits to update the estimate.</small>
+{% import "components/monthly_payroll.html" as monthly with context %}
+<div class="monthly-payroll">
+  <header class="monthly-heading">
+    <div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p>
+      <h1>Prepare payroll</h1><p>Enter this month’s changes, save, then review the preserved amounts.</p></div>
+    <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary">Import CSV instead</a>
+  </header>
+  {{ monthly.period(period_start) }}
+  {{ monthly.steps(1) }}
+  {% if review_error %}<div class="alert alert-warning" role="alert">{{ review_error }}</div>{% endif %}
+  {% if rows %}
+  {{ monthly.totals(rows|length, total_gross, total_tax, total_net, 'Estimated net pay', 'saved-estimates') }}
+  <div class="monthly-toolbar"><h2>This month’s inputs</h2><span id="worksheet-state" role="status">Saved inputs · estimates shown below</span></div>
+  <div class="monthly-search"><label for="employee-search">Find an employee</label><input type="search" id="employee-search" class="form-control" placeholder="Name or employee ID" autocomplete="off" aria-controls="employee-ledger"><span id="employee-search-count" role="status"></span></div>
+  <form method="POST" action="{{ url_for('payroll.payroll_spreadsheet') }}" id="spreadsheet-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
+    <div class="monthly-ledger" id="employee-ledger">
+    {% for row in rows %}
+      <section class="monthly-employee" aria-labelledby="employee-{{ row.emp.id }}" data-employee-search="{{ (row.emp.name ~ ' ' ~ row.emp.employee_id)|lower }}">
+        <input type="hidden" name="emp_id" value="{{ row.emp.id }}">
+        <details class="monthly-editor" open{% if row.exceeds_ot_limit %} data-input-warning="true"{% endif %}>
+        <summary>
+          <span class="monthly-row-identity"><strong id="employee-{{ row.emp.id }}">{{ row.emp.name }}</strong><span>{{ row.emp.employee_id }}</span><span class="monthly-edit-state" hidden>Unsaved edits</span></span>
+          <span class="monthly-row-net"><span class="monthly-estimate-label">Estimated net · ETB</span><strong>{{ '{:,.2f}'.format(row.net) }}</strong></span>
+          <span class="monthly-expand-label">Edit inputs<span class="monthly-expand-icon" aria-hidden="true"></span></span>
+        </summary>
+        <div class="monthly-editor-body">
+        <div class="monthly-inputs">
+          <p class="monthly-input-note">Basic salary ETB {{ '{:,.2f}'.format(row.emp.basic_salary) }} · Allowances ETB {{ '{:,.2f}'.format(row.emp.allowances) }}</p>
+          {% if row.emp.employee_type == 'daily' %}<p class="monthly-input-note">Daily employee · monthly bonus and extra unpaid days are read-only here.</p>{% endif %}
+          {% for key, label, value, maximum, step in [('bonus', 'Bonus · ETB', row.bonus, none, '0.01'), ('absences', 'Extra unpaid days', row.absence_days, 30, '1'), ('advance', 'Advance · ETB', row.advance, none, '0.01')] %}
+          <div><label for="emp-{{ row.emp.id }}-{{ key }}">{{ label }}</label>
+            <input id="emp-{{ row.emp.id }}-{{ key }}" type="number" name="emp_{{ row.emp.id }}_{{ key }}" aria-label="{{ label }} for {{ row.emp.name }}" value="{{ value }}" min="0" {% if maximum %}max="{{ maximum }}"{% endif %} step="{{ step }}" class="form-control" {% if key in ('bonus', 'absences') and row.emp.employee_type == 'daily' %}readonly title="Monthly employees only"{% endif %}>
+          </div>{% endfor %}
+          <fieldset class="monthly-overtime"><legend>Overtime · hours</legend><div class="monthly-ot-fields">
+            {% for key, label, value in [('ot_day', 'Day', row.ot_day), ('ot_night', 'Night', row.ot_night), ('ot_holiday', 'Holiday', row.ot_holiday), ('ot_rest', 'Rest + holiday', row.ot_rest)] %}
+            <div><label for="emp-{{ row.emp.id }}-{{ key }}">{{ label }}</label>
+              <input id="emp-{{ row.emp.id }}-{{ key }}" type="number" name="emp_{{ row.emp.id }}_{{ key }}" aria-label="{{ label }} overtime hours for {{ row.emp.name }}" value="{{ value }}" min="0" max="200" step="0.5" class="form-control">
+            </div>{% endfor %}
+          </div></fieldset>
+          {% if row.exceeds_ot_limit %}<p class="monthly-input-warning" role="alert">Overtime exceeds the monthly limit. Resolve this before approval.</p>{% endif %}
         </div>
-        <div>
-            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-upload"></i> CSV Upload
-            </a>
-        </div>
+        <dl class="monthly-amounts"><div><dt>Gross</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>Tax</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>Pension</dt><dd>{{ '{:,.2f}'.format(row.pension) }}</dd></div><div class="monthly-net"><dt>Estimated net · ETB</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
+        </div></details>
+      </section>
+    {% endfor %}
     </div>
-
-    <div class="alert alert-info small">
-        Additional unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30.
-        Bonus is taxable and applies only to the month shown. Saved estimates include payroll deductions. Review freezes these figures; approval still requires the owner. No payment is sent.
-    </div>
-    {% if review_error %}<div class="alert alert-warning" role="alert">{{ review_error }}</div>{% endif %}
-    {% if rows %}
-    <form method="POST" action="{{ url_for('payroll.payroll_spreadsheet') }}" id="spreadsheet-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
-        <p class="small text-muted mb-2">Swipe or scroll sideways to see all inputs and totals.</p>
-        <div class="table-responsive">
-            <table class="table table-bordered table-sm table-hover" id="payroll-table">
-                <thead class="table-dark">
-                    <tr>
-                        <th class="sticky-col" style="min-width:120px">Employee</th>
-                        <th class="text-end" style="min-width:90px">Basic Salary</th>
-                        <th class="text-end" style="min-width:80px">Allowances</th>
-                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Regular day OT (1.25x)">OT Day</th>
-                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Night OT (1.5x)">OT Night</th>
-                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Holiday OT (2x)">OT Hol.</th>
-                        <th class="text-center bg-warning text-dark" style="min-width:70px" title="Rest+Holiday OT (2.5x)">OT Rest</th>
-                        <th class="text-center bg-info text-dark" style="min-width:70px">Extra unpaid days</th>
-                        <th class="text-center bg-success text-dark" style="min-width:90px">Advance</th>
-                        <th class="text-center bg-success text-dark" style="min-width:80px">Bonus</th>
-                        <th class="text-end" style="min-width:100px">Gross</th>
-                        <th class="text-end" style="min-width:80px">Pension 7%</th>
-                        <th class="text-end" style="min-width:80px">Tax</th>
-                        <th class="text-end bg-light" style="min-width:100px"><strong>Estimated Net</strong></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in rows %}
-                    <tr {% if row.exceeds_ot_limit %}class="table-danger"{% endif %}>
-                        <td class="sticky-col">
-                            <input type="hidden" name="emp_id" value="{{ row.emp.id }}">
-                            <strong>{{ row.emp.name }}</strong><br>
-                            <small class="text-muted">{{ row.emp.employee_id }}</small>
-                        </td>
-                        <td class="text-end">{{ "{:,.2f}".format(row.emp.basic_salary) }}</td>
-                        <td class="text-end">{{ "{:,.2f}".format(row.emp.allowances) }}</td>
-
-                        <!-- Editable: Overtime hours -->
-                        <td class="text-center">
-                            <input type="number" name="emp_{{ row.emp.id }}_ot_day"
-                                   value="{{ row.ot_day }}" min="0" max="200" step="0.5"
-                                   class="form-control form-control-sm text-center ot-input"
-                                   data-emp="{{ row.emp.id }}">
-                        </td>
-                        <td class="text-center">
-                            <input type="number" name="emp_{{ row.emp.id }}_ot_night"
-                                   value="{{ row.ot_night }}" min="0" max="200" step="0.5"
-                                   class="form-control form-control-sm text-center ot-input"
-                                   data-emp="{{ row.emp.id }}">
-                        </td>
-                        <td class="text-center">
-                            <input type="number" name="emp_{{ row.emp.id }}_ot_holiday"
-                                   value="{{ row.ot_holiday }}" min="0" max="200" step="0.5"
-                                   class="form-control form-control-sm text-center ot-input"
-                                   data-emp="{{ row.emp.id }}">
-                        </td>
-                        <td class="text-center">
-                            <input type="number" name="emp_{{ row.emp.id }}_ot_rest"
-                                   value="{{ row.ot_rest }}" min="0" max="200" step="0.5"
-                                   class="form-control form-control-sm text-center ot-input"
-                                   data-emp="{{ row.emp.id }}">
-                        </td>
-
-                        <!-- Editable: Absences -->
-                        <td class="text-center">
-                            <input type="number" name="emp_{{ row.emp.id }}_absences"
-                                   aria-label="Additional unpaid days for {{ row.emp.name }}"
-                                   value="{{ row.absence_days }}" min="0" max="30" step="1"
-                                   {% if row.emp.employee_type == "daily" %}readonly title="Monthly employees only"{% endif %}
-                                   class="form-control form-control-sm text-center">
-                        </td>
-
-                        <!-- Editable: Advance -->
-                        <td class="text-center">
-                            <input type="number" name="emp_{{ row.emp.id }}_advance"
-                                   value="{{ row.advance }}" min="0" step="100"
-                                   class="form-control form-control-sm text-center advance-input"
-                                   data-emp="{{ row.emp.id }}">
-                        </td>
-
-                        <!-- Editable: Bonus -->
-                        <td class="text-center">
-                            <input type="number" name="emp_{{ row.emp.id }}_bonus"
-                                   aria-label="Bonus for {{ row.emp.name }}"
-                                   value="{{ row.bonus }}" min="0" step="0.01"
-                                   {% if row.emp.employee_type == "daily" %}readonly title="Monthly employees only"{% endif %}
-                                   class="form-control form-control-sm text-center">
-                        </td>
-
-                        <!-- Calculated fields -->
-                        <td class="text-end calculated">{{ "{:,.2f}".format(row.gross) }}</td>
-                        <td class="text-end calculated">{{ "{:,.2f}".format(row.pension) }}</td>
-                        <td class="text-end calculated">{{ "{:,.2f}".format(row.tax) }}</td>
-                        <td class="text-end bg-light calculated"><strong>{{ "{:,.2f}".format(row.net) }}</strong></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-                <tfoot class="table-light">
-                    <tr class="fw-bold">
-                        <td colspan="10" class="text-end">TOTALS:</td>
-                        <td class="text-end">{{ "{:,.2f}".format(total_gross) }}</td>
-                        <td class="text-end"></td>
-                        <td class="text-end">{{ "{:,.2f}".format(total_tax) }}</td>
-                        <td class="text-end bg-light">{{ "{:,.2f}".format(total_net) }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mt-3 mb-4">
-            <div>
-                <span class="badge bg-warning text-dark">OT columns</span> = auto-saved as you type
-                <span class="badge bg-success text-dark ms-1">Advances</span> = auto-saved as you type
-                <span class="badge bg-info text-dark ms-1">Absences/Bonus</span> = require "Save & Recalculate"
-                <span class="badge bg-secondary ms-2">Grey columns</span> = auto-calculated
-            </div>
-            <div>
-                <button type="submit" name="action" value="save" class="btn btn-primary">
-                    <i class="bi bi-save"></i> Save All Changes
-                </button>
-                <button type="submit" name="action" value="calculate" class="btn btn-outline-success ms-2">
-                    <i class="bi bi-calculator"></i> Save & Recalculate
-                </button>
-            </div>
-        </div>
-    </form>
-    <form method="POST" action="{{ url_for('payroll.worksheet_review') }}" class="border rounded p-3 mb-4">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
-        <p class="small mb-2">Next: save your changes above, then review the saved payroll. Unsaved edits are not included. An existing review opens with its preserved amounts.</p>
-        <button type="submit" class="btn btn-success">Review saved payroll</button>
-    </form>
-
-    {% else %}
-    <div class="text-center py-5">
-        <i class="bi bi-people" style="font-size:3rem;color:#ccc"></i>
-        <h5 class="mt-3 text-muted">{{ "Worksheet review unavailable" if review_error else "No employees yet" }}</h5>
-        <p class="text-muted">Add employees first, then use this spreadsheet to process payroll.</p>
-        <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">
-            <i class="bi bi-person-plus"></i> Add First Employee
-        </a>
-    </div>
-    {% endif %}
+    <p id="employee-no-match" class="monthly-no-match" hidden>No matching employees. Try another name or ID. All employee inputs will still be saved.</p>
+    <div class="monthly-actions"><p id="save-guidance">Save all inputs together. The server recalculates the estimates.</p><button type="submit" name="action" value="calculate" class="btn btn-primary" id="worksheet-save">Save &amp; recalculate</button></div>
+  </form>
+  <form method="POST" action="{{ url_for('payroll.worksheet_review') }}" id="worksheet-review" class="monthly-review-next">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
+    <div><h2>Ready to check the amounts?</h2><p id="review-guidance">Review uses saved inputs. An existing review keeps its preserved amounts until you explicitly refresh it.</p></div><button type="submit" class="btn btn-outline-primary" id="worksheet-review-button" aria-describedby="review-guidance">Review saved payroll</button>
+  </form>
+  <details class="monthly-notes"><summary>How these inputs affect payroll</summary><p>Extra unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30. Bonus is taxable and applies only to this month. Bonus and extra unpaid days are available for monthly employees. Estimates include deductions. Owner approval is a separate step; no payment is sent.</p></details>
+  {% else %}
+  <section class="monthly-empty"><h2>{{ 'Worksheet review unavailable' if review_error else 'Add your first employee' }}</h2>{% if review_error %}<p>Reload preparation to try again. Your saved inputs are preserved.</p><a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">Retry preparation</a>{% else %}<p>Add employees before preparing monthly payroll.</p><a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">Add First Employee</a>{% endif %}</section>
+  {% endif %}
 </div>
-
-<style>
-.sticky-col {
-    position: sticky;
-    left: 0;
-    background: white;
-    z-index: 1;
-    border-right: 2px solid #dee2e6;
-}
-.table-dark .sticky-col {
-    background: #212529;
-    color: #fff;
-}
-#payroll-table input[type="number"] {
-    width: 70px;
-    padding: 2px 4px;
-    font-size: 0.85rem;
-}
-#payroll-table td {
-    vertical-align: middle;
-    font-size: 0.9rem;
-}
-#payroll-table .calculated {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-}
-.table-responsive {
-    max-height: 70vh;
-    overflow-y: auto;
-}
-</style>
-
-<script nonce="{{ csp_nonce }}">
-// Auto-save indicator
-const autoSaveIndicator = document.createElement('div');
-autoSaveIndicator.id = 'autosave-indicator';
-autoSaveIndicator.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;padding:6px 14px;border-radius:6px;font-size:0.85rem;display:none;';
-document.body.appendChild(autoSaveIndicator);
-
-function showAutoSaveStatus(status, message) {
-    autoSaveIndicator.textContent = message;
-    autoSaveIndicator.style.display = 'block';
-    if (status === 'saving') {
-        autoSaveIndicator.style.background = '#fff3cd';
-        autoSaveIndicator.style.color = '#856404';
-        autoSaveIndicator.style.border = '1px solid #ffc107';
-    } else if (status === 'saved') {
-        autoSaveIndicator.style.background = '#d4edda';
-        autoSaveIndicator.style.color = '#155724';
-        autoSaveIndicator.style.border = '1px solid #28a745';
-    } else {
-        autoSaveIndicator.style.background = '#f8d7da';
-        autoSaveIndicator.style.color = '#721c24';
-        autoSaveIndicator.style.border = '1px solid #dc3545';
-    }
-    setTimeout(() => { autoSaveIndicator.style.display = 'none'; }, 3000);
-}
-
-let autoSaveTimer = null;
-const AUTOSAVE_DELAY = 2000; // 2 seconds debounce
-
-function triggerAutoSave() {
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(doAutoSave, AUTOSAVE_DELAY);
-}
-
-async function doAutoSave() {
-    const form = document.getElementById('spreadsheet-form');
-    if (!form) return;
-
-    showAutoSaveStatus('saving', '⏳ Saving draft...');
-
-    try {
-        const formData = new FormData(form);
-        const resp = await fetch('{{ url_for("payroll.payroll_spreadsheet_autosave") }}', {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Requested-With': 'XMLHttpRequest'},
-        });
-        const data = await resp.json();
-        if (data.status === 'ok') {
-            showAutoSaveStatus('saved', '✅ OT & advances saved');
-        } else {
-            showAutoSaveStatus('error', data.message || '❌ Save failed');
-        }
-    } catch (e) {
-        showAutoSaveStatus('error', '❌ Connection lost — draft not saved');
-    }
-}
-
-// Attach auto-save to all editable inputs
-document.querySelectorAll('#payroll-table input[type="number"]').forEach(input => {
-    input.addEventListener('input', triggerAutoSave);
-    // Existing keyboard navigation
-    input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const inputs = Array.from(document.querySelectorAll('#payroll-table input[type="number"]'));
-            const idx = inputs.indexOf(this);
-            if (idx < inputs.length - 1) {
-                inputs[idx + 1].focus();
-                inputs[idx + 1].select();
-            }
-        }
-        // Arrow key navigation
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            const inputs = Array.from(document.querySelectorAll('#payroll-table input[type="number"]'));
-            const idx = inputs.indexOf(this);
-            const cols = 7; // number of editable columns per row
-            const target = e.key === 'ArrowDown' ? idx + cols : idx - cols;
-            if (target >= 0 && target < inputs.length) {
-                inputs[target].focus();
-                inputs[target].select();
-            }
-        }
-    });
-    // Select all on focus
-    input.addEventListener('focus', function() { this.select(); });
-});
-</script>
 {% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/monthly-payroll.js') }}?v={{ static_version }}" defer></script>{% endblock %}

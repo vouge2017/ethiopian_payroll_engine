@@ -15,7 +15,7 @@
                 <div class="card-body">
                     <div class="input-group input-group-lg">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" id="helpSearch" class="form-control"
+                        <input type="text" id="helpSearch" class="form-control" aria-label="Search help articles"
                                placeholder="Search... e.g. 'tax brackets', 'pension', 'overtime'"
                                autocomplete="off">
                     </div>
@@ -54,12 +54,12 @@
                         <div class="accordion-item">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ cat.id }}{{ loop.index }}">
-                                    {{ q.q }}
+                                    {{ q.question }}
                                 </button>
                             </h2>
                             <div id="faq{{ cat.id }}{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#faq{{ cat.id }}">
                                 <div class="accordion-body text-muted">
-                                    {{ q.a }}
+                                    {{ q.answer }}
                                 </div>
                             </div>
                         </div>
@@ -91,7 +91,7 @@ const resultsDiv = document.getElementById('searchResults');
 const allQuestions = [
     {% for cat in faq_data %}
     {% for q in cat.questions %}
-    { q: "{{ q.q }}", a: `{{ q.a }}`, cat: "{{ cat.title }}", id: "{{ cat.id }}" },
+    { q: {{ q.question|tojson }}, a: {{ q.answer|tojson }}, cat: {{ cat.title|tojson }}, id: {{ cat.id|tojson }} },
     {% endfor %}
     {% endfor %}
 ];

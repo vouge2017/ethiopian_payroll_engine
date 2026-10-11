@@ -1,11 +1,13 @@
 """Employee form recovery and list navigation on migrated PostgreSQL."""
 
-from test_pg_spreadsheet_inputs import Inputs
-
-pytest_plugins = ['test_pg_spreadsheet_inputs']
+import pytest
+from test_pg_spreadsheet_inputs import PG_URL, Inputs
 
 from payroll_engine import db
 from payroll_engine.models import Employee, User, UserCompany
+
+pytest_plugins = ['test_pg_spreadsheet_inputs']
+pytestmark = pytest.mark.skipif(not PG_URL.startswith('postgresql'), reason='Requires disposable TEST_DATABASE_URL')
 
 
 def test_add_error_retains_entered_fields_without_creating_employee(worksheet):

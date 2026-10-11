@@ -4,12 +4,14 @@ from html.parser import HTMLParser
 
 import pytest
 from test_pg_monthly_journey import prior_approval
+from test_pg_spreadsheet_inputs import PG_URL
 from test_pg_worksheet_journey import saved_review
 
 from payroll_engine import db
 from payroll_engine.models import Employee
 
 pytest_plugins = ('test_pg_spreadsheet_inputs',)
+pytestmark = pytest.mark.skipif(not PG_URL.startswith('postgresql'), reason='Requires disposable TEST_DATABASE_URL')
 
 
 class PayrollLink(HTMLParser):

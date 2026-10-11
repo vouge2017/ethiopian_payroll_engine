@@ -122,7 +122,7 @@ class TestNoPayroll:
         item = cockpit.attention_items[0]
         assert item.priority == 'urgent'
         assert 'No payroll runs' in item.title
-        assert item.action_url == '/payroll/upload'
+        assert item.action_url == '/payroll/spreadsheet'
 
 
 # ─────────────────────────────────────────────

@@ -9,7 +9,7 @@
     "audit:responsive": "node responsive-check.mjs",
     "audit:pwa": "node pwa-check.mjs",
     "audit:lighthouse": "node lighthouse-audit.mjs",
-    "lint:css": "stylelint --config ../stylelint.config.json \"../payroll_engine/static/css/design-system.css\"",
+    "lint:css": "stylelint --config ../stylelint.config.json \"../payroll_engine/static/css/*.css\"",
     "audit:all": "npm run lint:css && node axe-audit.mjs && node responsive-check.mjs && node pwa-check.mjs && node lighthouse-audit.mjs"
   },
   "devDependencies": {

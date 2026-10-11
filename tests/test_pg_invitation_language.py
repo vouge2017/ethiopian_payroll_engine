@@ -128,14 +128,19 @@ def test_anonymous_employee_management_remains_protected(invitation):
 
 def test_invited_employee_cannot_open_management_details_of_coworker(invitation):
     app, client, employee_id, path = invitation
-    assert client.post(path, data={'phone': '912345688', 'password': 'EmployeeInvite9!',
-                                  'password2': 'EmployeeInvite9!'}).status_code == 302
+    assert (
+        client.post(
+            path, data={'phone': '912345688', 'password': 'EmployeeInvite9!', 'password2': 'EmployeeInvite9!'}
+        ).status_code
+        == 302
+    )
     with app.app_context():
         employee = db.session.get(Employee, employee_id)
         company_id, user_id = employee.company_id, employee.user_id
         owner_id = User.query.filter_by(company_id=company_id, role='owner').first().id
-        coworker = Employee(company_id=company_id, employee_id='PRIVATE', name='Private coworker',
-                            basic_salary=23123, allowances=0)
+        coworker = Employee(
+            company_id=company_id, employee_id='PRIVATE', name='Private coworker', basic_salary=23123, allowances=0
+        )
         db.session.add(coworker)
         db.session.commit()
         coworker_id = coworker.id

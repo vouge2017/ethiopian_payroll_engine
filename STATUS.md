@@ -4,8 +4,9 @@
 
 - Local, uncommitted follow-up on `codex/synthetic-preview` at baseline `e0aab59c36fa6fd34191bdf4149ba238f118e520`: added signed-out account recovery guidance, localized the registration journey in English/Amharic, unified phone/email sign-in and recovery input, and changed profile requirements to first + second/father name with optional third/grandfather name.
 - Focused auth/progressive-profile/phone suite: `34 passed, 5 warnings in 82.65s`. Ruff passed. Chrome verified the Amharic registration, single sign-in field and anonymous Amharic `/account-help`; evidence screenshot: [account-help-amharic.png](local-evidence/auth-entry-20261012/account-help-amharic.png). Independent review found no concrete security or regression defects.
-- User confirmed `support@ethiopayroll.com` is monitored; configured as the app default and in `.env.example`, with environment override supported. Changes are local only until pushed. Existing `uv.lock` stub remains preserved and unrelated.
-- Next: publish this reviewed patch for hosted CI, then verify the deployed staging SHA and phone-accessible flow. Real-phone/practitioner acceptance and public-production recovery/restore checks remain open.
+- User confirmed `support@ethiopayroll.com` is monitored; configured as the app default and in `.env.example`, with environment override supported. Published commit `bdcd5b164a1427f597d315d0d728a83accf8975f` to `codex/synthetic-preview`. Hosted [Synthetic Preview run 38218687373](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/38218687373) passed, including the auth/profile/phone suite, disposable-PostgreSQL readiness tests, web/worker image builds and synthetic container provisioning.
+- Render staging is not yet verified or deployed at this commit: the connected Chrome profile is signed out at Render. The active staging blueprint has manual deploy disabled for auto-trigger; authenticated dashboard access is needed to trigger and verify the deployment. Existing `uv.lock` stub remains preserved and unrelated.
+- Next: sign in to Render in the connected Chrome profile; then verify the exact deployed SHA and phone-accessible flow. Real-phone/practitioner acceptance and public-production recovery/restore checks remain open.
 
 ## CURRENT SYNTHETIC PREVIEW PREPARATION — 2026-10-12
 

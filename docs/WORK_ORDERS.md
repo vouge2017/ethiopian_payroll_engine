@@ -4,7 +4,7 @@
 
 25. Repair the signed-out recovery loop, finish Amharic registration guidance, accept either phone or email in one sign-in/recovery field, and require first + second/father names while keeping third/grandfather name optional.
 
-Implemented locally on `codex/synthetic-preview` at baseline `e0aab59c36fa6fd34191bdf4149ba238f118e520`; focused auth/profile/phone tests: `34 passed, 5 warnings`; Ruff passed; Chrome confirmed public Amharic account-help, Amharic registration and unified sign-in field. Independent review found no concrete defect. User confirmed `support@ethiopayroll.com` is monitored; configured as default and in `.env.example`. See [STATUS.md](../STATUS.md) and [account-help-amharic.png](../local-evidence/auth-entry-20261012/account-help-amharic.png).
+Published as `bdcd5b164a1427f597d315d0d728a83accf8975f` to `codex/synthetic-preview`. Local auth/profile/phone tests: `34 passed, 5 warnings`; Ruff passed; independent review found no remaining concrete issue. User confirmed `support@ethiopayroll.com` is monitored and it is configured as the default. Hosted [run 38218687373](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/38218687373) passed the auth/profile/phone suite, PostgreSQL readiness, web/worker builds and synthetic container provisioning. Render still requires sign-in in the connected Chrome profile; no staging deploy or real-phone/practitioner acceptance is claimed. See [STATUS.md](../STATUS.md), [account-help-amharic.png](../local-evidence/auth-entry-20261012/account-help-amharic.png), and [render-signin-required.png](../local-evidence/auth-entry-20261012/render-signin-required.png).
 
 ## Current synthetic preview preparation — 2026-10-12
 

@@ -1,5 +1,11 @@
 # Focused delivery work orders
 
+## Current synthetic preview preparation — 2026-10-12
+
+24. Prepare and validate an isolated synthetic preview on existing Render staging, then verify its phone-accessible URL.
+
+PR #12 is merged at main `f27d5af04313a4ec3bf9133a7635fedbb131631a`; hosted checks passed. Candidate `codex/synthetic-preview` prepares guarded provisioning, readiness and shared staging keys. Final local receipt: `31 passed, 31 warnings in 137.15s (0:02:17)`. Independent review permits hosted code validation. [SYNTHETIC_PREVIEW.md](SYNTHETIC_PREVIEW.md) records requirements. User identified dedicated staging `ethiopian_payroll_engine`; authenticated access/effective configuration remain to be inspected. No deployment/phone acceptance claimed. Unrelated work is preserved.
+
 ## Current invitation and critical-language continuity — 2026-10-11
 
 23. Make employee invitation recovery honest, scoped and responsive; continue critical English/Amharic first-use copy through the employee handoff.

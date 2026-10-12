@@ -1,248 +1,164 @@
-"""Seed staging database with realistic test data.
+"""Create a small synthetic trial on an explicitly identified staging database.
 
-Run with: flask seed-staging  (after registering the command below)
-Or:       python3 seed_staging.py
+Run after migrations:
+    python seed_staging.py --database-name ethiopayroll_staging --database-host <confirmed-host>
 
-Creates:
-- 2 demo companies (one small, one medium)
-- Owner + accountant users for each
-- Employees with realistic Ethiopian names, salaries, departments
-- Sample payroll run with payslips
-- Tax rules (standard brackets)
-- Leave requests (mix of statuses)
+Set ENABLE_SYNTHETIC_PREVIEW=true and unique PREVIEW_OWNER_PASSWORD and
+PREVIEW_ACCOUNTANT_PASSWORD secrets first. Existing data is never reset.
 """
 
-import random
-import sys
-from datetime import date, timedelta
+import argparse
+import json
+import os
 from decimal import Decimal
 
-# Ensure we can import the app
-sys.path.insert(0, '.')
+WORKSPACES = ('Synthetic first-use preview', 'Synthetic payroll preview')
+LOGINS = {'first_use_owner': '900000101', 'payroll_owner': '900000102', 'accountant': '900000103'}
+SEED_ACTION = 'synthetic_preview_seeded'
 
 
-def seed():
-    from payroll_engine import create_app, db
-    from payroll_engine.catalog import seed_company_templates, seed_system_items
-    from payroll_engine.models import (
-        AuditLog,
-        Company,
-        Employee,
-        Leave,
-        TaxRule,
-        User,
+class PreviewSeedError(RuntimeError):
+    """A safe, actionable refusal without connection or credential details."""
+
+
+def check_environment(database_name):
+    if os.environ.get('FLASK_ENV') != 'staging':
+        raise PreviewSeedError('Seeding requires FLASK_ENV=staging.')
+    if os.environ.get('ENABLE_SYNTHETIC_PREVIEW', '').lower() != 'true':
+        raise PreviewSeedError('Set ENABLE_SYNTHETIC_PREVIEW=true for this isolated trial.')
+    if not database_name or not (database_name.endswith('_staging') or database_name.startswith('synthetic_preview_')):
+        raise PreviewSeedError('Identify a staging database or a synthetic_preview_ test database.')
+
+
+def seed_preview(app, *, database_name, database_host, owner_password, accountant_password):
+    """Seed once under a database lock; refuse other environments and existing data."""
+    check_environment(database_name)
+    if not owner_password or not accountant_password or min(len(owner_password), len(accountant_password)) < 16:
+        raise PreviewSeedError(
+            'Provide unique preview passwords of at least 16 characters through environment secrets.'
+        )
+    if owner_password == accountant_password:
+        raise PreviewSeedError('Owner and accountant passwords must be different.')
+
+    from sqlalchemy import select, text
+
+    from payroll_engine import db
+    from payroll_engine.models import AuditLog, Company, Employee, User, UserCompany
+    from payroll_engine.schema_health import inspect_schema, source_heads
+
+    with app.app_context():
+        if db.engine.dialect.name != 'postgresql' or db.engine.url.database != database_name:
+            raise PreviewSeedError('The connected PostgreSQL database must match --database-name exactly.')
+        if not database_host or db.engine.url.host != database_host:
+            raise PreviewSeedError('The connected PostgreSQL host must match --database-host exactly.')
+        with db.engine.connect() as connection, connection.begin():
+            connection.exec_driver_sql('SET TRANSACTION READ ONLY')
+            report = inspect_schema(connection, db.metadata, source_heads(app.extensions['migrate'].directory))
+        if not report['revisions_match'] or report['missing_tables'] or report['missing_columns']:
+            raise PreviewSeedError('Apply the real Alembic migrations before seeding.')
+        try:
+            # Serialize competing seed attempts without creating another control table.
+            db.session.execute(text('SELECT pg_advisory_xact_lock(:key)'), {'key': 6260051393})
+            companies = Company.query.all()
+            if companies:
+                if {company.name for company in companies} == set(WORKSPACES) and len(companies) == 2:
+                    markers = [
+                        AuditLog.query.filter_by(company_id=company.id, action=SEED_ACTION).first()
+                        for company in companies
+                    ]
+                    if all(marker and marker.details.get('version') == 1 for marker in markers):
+                        db.session.rollback()
+                        return {'status': 'already_seeded', 'logins': LOGINS}
+                raise PreviewSeedError('Database already contains company data. It will not be changed.')
+            if db.session.execute(select(User.id).limit(1)).first():
+                raise PreviewSeedError('Database already contains user data. It will not be changed.')
+
+            first_use, payroll = [Company(name=name) for name in WORKSPACES]
+            db.session.add_all([first_use, payroll])
+            db.session.flush()
+            users = []
+            for identity, company, role, password in (
+                ('first_use_owner', first_use, 'owner', owner_password),
+                ('payroll_owner', payroll, 'owner', owner_password),
+                ('accountant', payroll, 'accountant', accountant_password),
+            ):
+                user = User(
+                    phone=LOGINS[identity],
+                    email=f'{identity}@example.invalid',
+                    company_id=company.id,
+                    role=role,
+                    first_name='Synthetic',
+                    last_name=identity.replace('_', ' ').title(),
+                )
+                user.set_password(password)
+                db.session.add(user)
+                db.session.flush()
+                db.session.add(UserCompany(user_id=user.id, company_id=company.id, role=role))
+                users.append(user)
+            for number, salary, allowance in (
+                (1, '10000.00', '2000.00'),
+                (2, '7000.00', '0.00'),
+                (3, '12000.00', '500.00'),
+            ):
+                db.session.add(
+                    Employee(
+                        company_id=payroll.id,
+                        employee_id=f'SYN{number:03d}',
+                        name=f'Synthetic Employee {number}',
+                        phone=f'90000020{number}',
+                        basic_salary=Decimal(salary),
+                        allowances=Decimal(allowance),
+                        bank_or_telebirr=f'cbe:000000000000{number}',
+                        tin=f'000000000{number}',
+                    )
+                )
+            for company, user in ((first_use, users[0]), (payroll, users[1])):
+                db.session.add(
+                    AuditLog(
+                        company_id=company.id,
+                        user_id=user.id,
+                        action=SEED_ACTION,
+                        details={'version': 1, 'synthetic': True},
+                    )
+                )
+            db.session.commit()
+            return {'status': 'seeded', 'companies': 2, 'employees': 3, 'logins': LOGINS}
+        except Exception:
+            db.session.rollback()
+            raise
+
+
+def seed(*, database_name, database_host, owner_password, accountant_password):
+    check_environment(database_name)
+    from payroll_engine import create_app
+
+    return seed_preview(
+        create_app(),
+        database_name=database_name,
+        database_host=database_host,
+        owner_password=owner_password,
+        accountant_password=accountant_password,
     )
 
-    app = create_app()
-    with app.app_context():
-        # Check if data already exists
-        if Company.query.first():
-            print('Database already has data. Skipping seed.')
-            print('To re-seed, drop tables first: flask db downgrade base && flask db upgrade')
-            return
 
-        print('Seeding staging database...')
-
-        # ── Tax Rules ──────────────────────────────────────────────
-        brackets = [
-            (0, 2000, 0),
-            (2001, 4000, 15),
-            (4001, 7000, 20),
-            (7001, 10000, 25),
-            (10001, 14000, 30),
-            (14001, None, 35),
-        ]
-        for i, (lower, upper, rate) in enumerate(brackets):
-            rule = TaxRule(
-                rule_type='tax_bracket',
-                version_name=f'v{i+1}',
-                value=str(rate),
-                effective_date=date(2025, 1, 1),
-                status='active',
-                description=f'ETB {lower:,}–{upper or "∞"} @ {rate}%',
-                source='Proclamation No. 1395/2025, Art. 36(1)',
-            )
-            db.session.add(rule)
-
-        # Pension rules
-        for rule_type, value, desc in [
-            ('pension_employee', '7', 'Employee pension 7%'),
-            ('pension_employer', '11', 'Employer pension 11%'),
-            ('personal_relief', '150', 'Monthly personal relief ETB 150'),
-        ]:
-            rule = TaxRule(
-                rule_type=rule_type,
-                version_name='v1',
-                value=value,
-                effective_date=date(2025, 1, 1),
-                status='active',
-                description=desc,
-            )
-            db.session.add(rule)
-
-        # ── Ethiopian Names ────────────────────────────────────────
-        first_names_m = ['Abebe', 'Bekele', 'Dawit', 'Ephrem', 'Fasil', 'Girma',
-                         'Haile', 'Israel', 'Jemal', 'Kaleb', 'Lemma', 'Mulugeta',
-                         'Nebiyu', 'Osman', 'Petros', 'Redwan', 'Samuel', 'Tadesse',
-                         'Wondemu', 'Yonas', 'Zerihun']
-        first_names_f = ['Almaz', 'Birtukan', 'Chaltu', 'Dagmawit', 'Eyerusalem',
-                         'Fantaye', 'Genet', 'Hana', 'Iman', 'Jember', 'Kedija',
-                         'Lemlem', 'Meron', 'Netsanet', 'Rahel', 'Saba', 'Tigist',
-                         'Wubit', 'Yordanos', 'Zinash']
-        last_names = ['Kebede', 'Tesfaye', 'Mulugeta', 'Hassan', 'Daniel',
-                      'Tadesse', 'Girma', 'Bekele', 'Alemayehu', 'Worku',
-                      'Desta', 'Negash', 'Abdella', 'Mohammed', 'Berhanu',
-                      'Getachew', 'Hailu', 'Yilma', 'Tekle', 'Asfaw']
-
-        departments = ['Finance', 'Operations', 'HR', 'IT', 'Marketing',
-                       'Sales', 'Legal', 'Administration', 'Logistics']
-        positions = ['Manager', 'Senior Officer', 'Officer', 'Junior Officer',
-                     'Assistant', 'Coordinator', 'Specialist', 'Director']
-
-        # ── Company 1: Small Trading ──────────────────────────────
-        company1 = Company(
-            name='Addis Global Trading PLC',
-            tin='1234567890',
-            address='Bole, Addis Ababa',
-            phone='+251911234567',
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--database-name', required=True)
+    parser.add_argument('--database-host', required=True)
+    arguments = parser.parse_args()
+    try:
+        result = seed(
+            database_name=arguments.database_name,
+            database_host=arguments.database_host,
+            owner_password=os.environ.get('PREVIEW_OWNER_PASSWORD'),
+            accountant_password=os.environ.get('PREVIEW_ACCOUNTANT_PASSWORD'),
         )
-        db.session.add(company1)
-        db.session.flush()
-
-        owner1 = User(
-            phone='+251911000001',
-            company_id=company1.id,
-            role='owner',
-        )
-        owner1.set_password('Staging@123')
-        db.session.add(owner1)
-
-        accountant1 = User(
-            phone='+251911000002',
-            company_id=company1.id,
-            role='accountant',
-        )
-        accountant1.set_password('Staging@123')
-        db.session.add(accountant1)
-        db.session.flush()
-
-        # 15 employees for company 1
-        employees1 = []
-        for i in range(15):
-            gender = random.choice(['M', 'F'])
-            fnames = first_names_m if gender == 'M' else first_names_f
-            fname = random.choice(fnames)
-            lname = random.choice(last_names)
-            dept = random.choice(departments)
-            pos = random.choice(positions)
-            basic = Decimal(str(random.choice([3500, 5000, 7000, 8500, 10000, 12000, 15000, 18000])))
-            allow = Decimal(str(random.choice([0, 500, 1000, 1500, 2000])))
-
-            emp = Employee(
-                company_id=company1.id,
-                employee_id=f'AGT-{i+1:03d}',
-                name=f'{fname} {lname}',
-                phone=f'+25191{random.randint(1000000, 9999999)}',
-                department=dept,
-                position=pos,
-                basic_salary=basic,
-                allowances=allow,
-                tin=f'{random.randint(1000000000, 9999999999)}',
-                bank_account=f'{random.randint(1000000000000, 9999999999999)}',
-                hire_date=date(2023, random.randint(1, 12), random.randint(1, 28)),
-            )
-            db.session.add(emp)
-            employees1.append(emp)
-
-        # ── Company 2: Medium Tech ────────────────────────────────
-        company2 = Company(
-            name='Habesha Tech Solutions',
-            tin='0987654321',
-            address='Kazanchis, Addis Ababa',
-            phone='+251922334455',
-        )
-        db.session.add(company2)
-        db.session.flush()
-
-        owner2 = User(
-            phone='+251922000001',
-            company_id=company2.id,
-            role='owner',
-        )
-        owner2.set_password('Staging@123')
-        db.session.add(owner2)
-        db.session.flush()
-
-        # 30 employees for company 2
-        employees2 = []
-        for i in range(30):
-            gender = random.choice(['M', 'F'])
-            fnames = first_names_m if gender == 'M' else first_names_f
-            fname = random.choice(fnames)
-            lname = random.choice(last_names)
-            dept = random.choice(departments)
-            pos = random.choice(positions)
-            basic = Decimal(str(random.choice([5000, 7500, 10000, 15000, 20000, 25000])))
-            allow = Decimal(str(random.choice([0, 1000, 2000, 3000, 5000])))
-
-            emp = Employee(
-                company_id=company2.id,
-                employee_id=f'HTS-{i+1:03d}',
-                name=f'{fname} {lname}',
-                phone=f'+25192{random.randint(1000000, 9999999)}',
-                department=dept,
-                position=pos,
-                basic_salary=basic,
-                allowances=allow,
-                tin=f'{random.randint(1000000000, 9999999999)}',
-                bank_account=f'{random.randint(1000000000000, 9999999999999)}',
-                hire_date=date(2024, random.randint(1, 12), random.randint(1, 28)),
-            )
-            db.session.add(emp)
-            employees2.append(emp)
-
-        # Seed the pay-item catalog: system items + company templates.
-        seed_system_items()
-        for company in [company1, company2]:
-            seed_company_templates(company.id)
-
-        # ── Sample Leave Requests ─────────────────────────────────
-        leave_types = ['annual', 'sick', 'maternity', 'paternity', 'special']
-        statuses = ['pending', 'approved', 'rejected']
-
-        for emp in random.sample(employees1, min(5, len(employees1))):
-            start = date.today() + timedelta(days=random.randint(-30, 30))
-            days = random.randint(1, 14)
-            leave = Leave(
-                company_id=company1.id,
-                employee_id=emp.id,
-                leave_type=random.choice(leave_types),
-                start_date=start,
-                end_date=start + timedelta(days=days),
-                days_requested=days,
-                reason='Staging test data',
-                status=random.choice(statuses),
-            )
-            db.session.add(leave)
-
-        # ── Audit log entry ───────────────────────────────────────
-        log = AuditLog(
-            company_id=company1.id,
-            user_id=owner1.id,
-            action='staging_seeded',
-            details={'employees': len(employees1), 'source': 'seed_staging.py'},
-        )
-        db.session.add(log)
-
-        db.session.commit()
-
-        print('✅ Seeded successfully!')
-        print(f'   Company 1: {company1.name} — {len(employees1)} employees')
-        print(f'   Company 2: {company2.name} — {len(employees2)} employees')
-        print(f'   Users: owner1={owner1.phone}, accountant1={accountant1.phone}, owner2={owner2.phone}')
-        print('   Password for all: Staging@123')
-        print(f'   Tax rules: {len(brackets)} brackets + 3 pension/relief rules')
+    except PreviewSeedError as error:
+        parser.exit(1, f'Preview seed refused: {error}\n')
+    except Exception as error:
+        parser.exit(1, f'Preview seed failed ({type(error).__name__}). Existing data was not reset.\n')
+    print(json.dumps(result, sort_keys=True))
 
 
 if __name__ == '__main__':
-    seed()
+    main()

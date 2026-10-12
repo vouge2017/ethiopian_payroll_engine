@@ -1,19 +1,18 @@
-# Render Blueprint — STAGING environment
-# Deploy with: render blueprint launch --blueprint render-staging.yaml
-#
-# This creates a separate staging deployment with its own database.
-# It does NOT share any data with production.
-#
-# After deploying:
-#   1. Set DB_ENCRYPTION_KEY in Render dashboard (generate: python3 -c "import secrets; print(secrets.token_hex(32))")
-#   2. Run seed script: flask seed-staging
-#   3. Test at the staging URL before promoting to production
+# Existing Render staging resources only. Verify every resource name before syncing.
+# Do not apply to a new workspace or change production services.
+# Preserve existing plans, credentials and datastore contents.
+# After schema readiness passes, provision once:
+# python seed_staging.py --database-name <confirmed-name> --database-host <confirmed-host>
+# New secrets marked sync:false must be added manually to an existing service.
 
 services:
   - type: web
     name: ethiopayroll-staging
     runtime: docker
+    branch: codex/synthetic-preview
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /readyz
+    autoDeployTrigger: off
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -28,26 +27,47 @@ services:
       - key: DB_ENCRYPTION_KEY
         generateValue: true
       - key: ENABLE_DEMO_MODE
+        value: "false"
+      - key: ENABLE_SYNTHETIC_PREVIEW
         value: "true"
-      - key: GOOGLE_CLIENT_ID
-        value: ""
-      - key: GOOGLE_CLIENT_SECRET
-        value: ""
+      - key: PREVIEW_OWNER_PASSWORD
+        sync: false
+      - key: PREVIEW_ACCOUNTANT_PASSWORD
+        sync: false
       - key: REDIS_URL
         fromService:
           name: ethiopayroll-staging-redis
+          type: keyvalue
           property: connectionString
       - key: RATELIMIT_STORAGE_URI
         fromService:
           name: ethiopayroll-staging-redis
+          type: keyvalue
           property: connectionString
-    autoDeploy: true
 
   - type: worker
     name: ethiopayroll-staging-worker
     runtime: docker
+    branch: codex/synthetic-preview
     dockerfilePath: ./Dockerfile.worker
+    autoDeployTrigger: off
     envVars:
+      - key: FLASK_ENV
+        value: staging
+      - key: FLASK_APP
+        value: wsgi:app
+      - key: ENABLE_DEMO_MODE
+        value: "false"
+      - key: SECRET_KEY
+        fromService:
+          name: ethiopayroll-staging
+          type: web
+          envVarKey: SECRET_KEY
+      - key: DB_ENCRYPTION_KEY
+        fromService:
+          name: ethiopayroll-staging
+          type: web
+          envVarKey: DB_ENCRYPTION_KEY
       - key: DATABASE_URL
         fromDatabase:
           name: ethiopayroll-staging-db
@@ -55,20 +75,14 @@ services:
       - key: REDIS_URL
         fromService:
           name: ethiopayroll-staging-redis
+          type: keyvalue
           property: connectionString
-      - key: FLASK_APP
-        value: wsgi:app
-      - key: DB_ENCRYPTION_KEY
-        generateValue: true
-    autoDeploy: true
+
+  - type: keyvalue
+    name: ethiopayroll-staging-redis
+    ipAllowList: []
 
 databases:
   - name: ethiopayroll-staging-db
-    plan: starter
     databaseName: ethiopayroll_staging
-    ipAllowList: []
-
-redis:
-  - name: ethiopayroll-staging-redis
-    plan: starter
     ipAllowList: []

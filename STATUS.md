@@ -1,5 +1,15 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT SYNTHETIC PREVIEW PREPARATION — 2026-10-12
+
+- PR #12 is merged at main `f27d5af04313a4ec3bf9133a7635fedbb131631a`. Its source head `94e4c8db303f7899aaacccb1261778459ac348c8` passed hosted Python 3.11/3.12 (`TOTAL: 1564 passed, 0 failed, 0 errors, 173 skipped` each) and PostgreSQL (`177 passed, 336 warnings in 66.32s (0:01:06)`); main CI/CSS/migration also succeeded. Older receipts below are historical.
+- Candidate `codex/synthetic-preview` adds guarded fake data, strict read-only readiness, a container probe, shared staging key references and hosted container validation. Bounded readiness source/probe/tests were reused from published `7f080cd`, without merging its historical branch.
+- Local receipt before the additional host guard: `29 passed, 29 warnings in 21913.59s (6:05:13)`. Initial `1 failed, 26 passed, 27 warnings in 123.53s (0:02:03)` was an incorrect invite response assertion; fixed and extended into the invitee portal. Two password guards explain the count increase. No performance claim. Source preflight has zero findings.
+- Final local selection with two host-identity guards: `31 passed, 31 warnings in 137.15s (0:02:17)`. Independent review found no remaining concrete blocker for publishing to hosted CI; Ruff lint/format, YAML/schema and Bash syntax checks pass. Live deployment remains separate.
+- Existing Render staging is authorized. User identified `ethiopian_payroll_engine` / `https://ethiopian-payroll-engine.onrender.com`; read-only `/readyz` returned HTTP 200 with migrations unknown. Isolation and deployed SHA remain unverified. Render sign-in and browser extension update are needed for authenticated inspection. No deployment or physical-phone outcome. [SYNTHETIC_PREVIEW.md](docs/SYNTHETIC_PREVIEW.md) records acceptance; public file/job recovery, backup/key restore and support remain open.
+- Local audit: outer mobile checkout remains dirty on `feature/mobile-ui-redesign`; `payroll-production-work` has unfinished status/work-order/test/addendum changes. Correction/recovery checkouts were clean. Active untracked `uv.lock` is an unused three-line stub, preserved outside this slice. Unrelated work has not been staged or merged.
+- Outer mobile HEAD `259ef1e` is five commits ahead of its current GitHub branch head `d5cd096`, with no commits behind; these older commits require a separate review before any push. No unrelated branch was changed.
+
 ## CURRENT LOCAL INVITATION AND LANGUAGE CONTINUITY — 2026-10-11
 
 - Committed and pushed on `codex/monthly-payroll-ui` as `8485132fed4ee39eaf0e36c784d78386ddc1d2bd` (baseline `2f6f4e6c66726bbe5fbcd8a5bc6f51fe8fdc6110`): the public employee invitation is restricted to a valid token and creates an employee-scoped account once; normal employee management remains protected. It preserves phone recovery, clears passwords, and ignores forged company/role submissions.

@@ -29,6 +29,7 @@ from flask_login import current_user
 
 from payroll_engine import db
 from payroll_engine.models import Company
+from payroll_engine.schema_health import HEALTH_ENDPOINTS
 
 Q = None  # placeholder to keep Decimal import local where used
 
@@ -155,7 +156,7 @@ def company_for_request():
 
 def enforce_billing_gate():
     """Flask before_request hook: turn billing state into access control."""
-    if request.endpoint in ALWAYS_EXEMPT or request.endpoint is None:
+    if request.endpoint in HEALTH_ENDPOINTS or request.endpoint in ALWAYS_EXEMPT or request.endpoint is None:
         return None
     if not current_user.is_authenticated:
         return None

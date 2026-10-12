@@ -6,6 +6,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from . import db, limiter
 from .models import Company, User, validate_ethiopian_phone
+from .schema_health import HEALTH_ENDPOINTS
 from .security import safe_redirect_target
 
 auth = Blueprint('auth', __name__)
@@ -48,6 +49,8 @@ _PASSWORD_CHANGE_ALLOWED = frozenset(
 @auth.before_app_request
 def enforce_password_change():
     """Invited users must set their own password before using the app."""
+    if request.endpoint in HEALTH_ENDPOINTS:
+        return None
     if not current_user.is_authenticated:
         return None
     if not getattr(current_user, 'must_change_password', False):

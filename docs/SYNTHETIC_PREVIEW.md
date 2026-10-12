@@ -3,8 +3,8 @@
 ## State — 2026-10-12
 
 Baseline: merged main `f27d5af04313a4ec3bf9133a7635fedbb131631a` (PR #12).
-Candidate branch: `codex/synthetic-preview`. This package does not establish that
-a staging URL exists or that a physical phone has been tested.
+Candidate branch: `codex/synthetic-preview`. CI evidence in this package alone
+does not establish a deployment or a physical-phone walkthrough.
 
 Final local PostgreSQL 16/Alembic and container-probe receipt, including host guards:
 `31 passed, 31 warnings in 137.15s (0:02:17)`.
@@ -86,13 +86,16 @@ Check a web/worker restart and database continuity. Shared durable files,
 recoverable jobs, a backup restore including keys and named incident/support
 ownership remain public-production gates; this blueprint does not prove them.
 
-## Current access blocker
+## Current deployment and acceptance
 
-The user supplied service `ethiopian_payroll_engine` and URL
-`https://ethiopian-payroll-engine.onrender.com`. Read-only inspection returned
-HTTP 200 with status ready but migrations unknown; that is insufficient readiness
-evidence. The user confirms dedicated staging with a separate database; effective
-service configuration and deployed SHA remain to be inspected.
-Render opened at sign-in, then browser control required an extension update.
-Authenticated dashboard/API access remains missing. No phone or practitioner
-acceptance is claimed; do not change or seed this service until isolation is proven.
+The user confirmed the existing database contains test data only. Render's UI
+labels the service environment `Production`; treat the deployed preview as a
+test-only use of that service, not proof of a dedicated isolated staging
+environment. Web service `ethiopian_payroll_engine` now runs
+`02b84268527ce4793b4d37b0fb6a4f7c0618ea7f` at
+`https://ethiopian-payroll-engine.onrender.com`. The Render deployment succeeded;
+`/readyz` returned HTTP 200 with database, migrations and schema current. The
+account-help page, Amharic help, combined phone/email sign-in and Amharic
+registration loaded in browser. No registration or payroll was submitted. Worker
+health is unknown. Free database expiration is 30 October 2026. An uncoached
+physical-phone owner/practitioner walkthrough remains open.

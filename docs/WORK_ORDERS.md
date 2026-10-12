@@ -1,5 +1,11 @@
 # Focused delivery work orders
 
+## Current auth recovery and Amharic entry fixes — 2026-10-12
+
+25. Repair the signed-out recovery loop, finish Amharic registration guidance, accept either phone or email in one sign-in/recovery field, and require first + second/father names while keeping third/grandfather name optional.
+
+Implemented locally on `codex/synthetic-preview` at baseline `e0aab59c36fa6fd34191bdf4149ba238f118e520`; focused auth/profile/phone tests: `34 passed, 5 warnings`; Ruff passed; Chrome confirmed public Amharic account-help, Amharic registration and unified sign-in field. Independent review found no concrete defect. User confirmed `support@ethiopayroll.com` is monitored; configured as default and in `.env.example`. See [STATUS.md](../STATUS.md) and [account-help-amharic.png](../local-evidence/auth-entry-20261012/account-help-amharic.png).
+
 ## Current synthetic preview preparation — 2026-10-12
 
 24. Prepare and validate an isolated synthetic preview on existing Render staging, then verify its phone-accessible URL.

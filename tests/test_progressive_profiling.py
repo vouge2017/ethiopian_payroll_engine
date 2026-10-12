@@ -166,8 +166,8 @@ def test_setup_profile_completes_registration(client, app):
         assert company.name == 'Acme Ethiopia'
 
 
-def test_setup_profile_requires_first_and_last_name(client, app):
-    """Missing first/last name should be rejected."""
+def test_setup_profile_requires_first_and_second_name(client, app):
+    """Missing first/second name should be rejected."""
     client.post(
         '/auth/register',
         data={
@@ -187,7 +187,7 @@ def test_setup_profile_requires_first_and_last_name(client, app):
     )
     assert r.status_code == 400
     body = r.get_data(as_text=True)
-    assert 'First name and last name are required' in body
+    assert 'First name and second name are required' in body
 
 
 def test_setup_profile_requires_company_name(client, app):
@@ -204,6 +204,7 @@ def test_setup_profile_requires_company_name(client, app):
         '/auth/setup-profile',
         data={
             'first_name': 'Abebe',
+            'middle_name': 'Bekele',
             'last_name': 'Kebede',
             'company_name': '',
         },
@@ -233,6 +234,7 @@ def test_setup_profile_rejects_duplicate_company_name(client, app):
         '/auth/setup-profile',
         data={
             'first_name': 'Abebe',
+            'middle_name': 'Bekele',
             'last_name': 'Kebede',
             'company_name': 'Existing Co',
         },
@@ -315,6 +317,7 @@ def test_completed_profile_does_not_redirect(client, app):
         '/auth/setup-profile',
         data={
             'first_name': 'Abebe',
+            'middle_name': 'Bekele',
             'last_name': 'Kebede',
             'company_name': 'Acme',
         },

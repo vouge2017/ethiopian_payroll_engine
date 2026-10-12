@@ -1,5 +1,12 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT AUTHENTICATION AND AMHARIC ENTRY FIXES — 2026-10-12
+
+- Local, uncommitted follow-up on `codex/synthetic-preview` at baseline `e0aab59c36fa6fd34191bdf4149ba238f118e520`: added signed-out account recovery guidance, localized the registration journey in English/Amharic, unified phone/email sign-in and recovery input, and changed profile requirements to first + second/father name with optional third/grandfather name.
+- Focused auth/progressive-profile/phone suite: `34 passed, 5 warnings in 82.65s`. Ruff passed. Chrome verified the Amharic registration, single sign-in field and anonymous Amharic `/account-help`; evidence screenshot: [account-help-amharic.png](local-evidence/auth-entry-20261012/account-help-amharic.png). Independent review found no concrete security or regression defects.
+- User confirmed `support@ethiopayroll.com` is monitored; configured as the app default and in `.env.example`, with environment override supported. Changes are local only until pushed. Existing `uv.lock` stub remains preserved and unrelated.
+- Next: publish this reviewed patch for hosted CI, then verify the deployed staging SHA and phone-accessible flow. Real-phone/practitioner acceptance and public-production recovery/restore checks remain open.
+
 ## CURRENT SYNTHETIC PREVIEW PREPARATION — 2026-10-12
 
 - PR #12 is merged at main `f27d5af04313a4ec3bf9133a7635fedbb131631a`. Its source head `94e4c8db303f7899aaacccb1261778459ac348c8` passed hosted Python 3.11/3.12 (`TOTAL: 1564 passed, 0 failed, 0 errors, 173 skipped` each) and PostgreSQL (`177 passed, 336 warnings in 66.32s (0:01:06)`); main CI/CSS/migration also succeeded. Older receipts below are historical.

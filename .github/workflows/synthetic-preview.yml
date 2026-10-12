@@ -19,6 +19,9 @@ on:
       - 'tests/test_pg_synthetic_preview.py'
       - 'tests/test_pg_readiness.py'
       - 'tests/test_container_healthcheck.py'
+      - 'tests/test_auth_entry_recovery.py'
+      - 'tests/test_progressive_profiling.py'
+      - 'tests/test_phone_auth.py'
       - '.github/workflows/synthetic-preview.yml'
   workflow_dispatch:
 
@@ -50,7 +53,7 @@ jobs:
             requirements-test.txt
       - name: Install test dependencies
         run: pip install -r requirements-lock.txt -r requirements-test.txt
-      - name: Check guards and schema readiness on disposable PostgreSQL
+      - name: Check auth recovery, profile names and preview readiness
         env:
           FLASK_ENV: testing
           DATABASE_URL: 'sqlite:///:memory:'
@@ -58,7 +61,7 @@ jobs:
           SECRET_KEY: test-secret-key-for-ci-only
           DB_ENCRYPTION_KEY: test-encryption-key-for-ci-only-32b!
           CELERY_BROKER_URL: 'memory://'
-        run: python -m pytest tests/test_pg_synthetic_preview.py tests/test_pg_readiness.py tests/test_container_healthcheck.py -q
+        run: python -m pytest tests/test_auth_entry_recovery.py tests/test_progressive_profiling.py tests/test_phone_auth.py tests/test_pg_synthetic_preview.py tests/test_pg_readiness.py tests/test_container_healthcheck.py -q
       - name: Build web and worker images
         run: |
           docker build -t payroll-preview-web .

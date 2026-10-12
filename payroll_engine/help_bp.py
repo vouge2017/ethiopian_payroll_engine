@@ -1,9 +1,15 @@
 """Help & Support blueprint — in-app FAQ and contextual guidance."""
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_login import login_required
 
 help_bp = Blueprint('help', __name__)
+
+
+@help_bp.route('/account-help')
+def account_help():
+    """Public account recovery guidance, without tenant or user lookup."""
+    return render_template('auth/account_help.html', support_email=current_app.config.get('SUPPORT_EMAIL', ''))
 
 
 @help_bp.route('/help')

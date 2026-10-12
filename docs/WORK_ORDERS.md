@@ -4,6 +4,8 @@
 
 24. Prepare and validate an isolated synthetic preview on existing Render staging, then verify its phone-accessible URL.
 
+Published source `9e2c7549bb4f31aa31a62a2dc3accf1c3b3fdc11` passed hosted preview validation: `31 passed, 31 warnings in 57.19s`; both images built and real staging web startup/migrations/readiness/repeat provisioning passed. Owned local test cluster and temporary paths were removed. Only the preserved unused `uv.lock` stub is untracked in the active checkout. Deployment/phone verification remains open pending authenticated Render access.
+
 PR #12 is merged at main `f27d5af04313a4ec3bf9133a7635fedbb131631a`; hosted checks passed. Candidate `codex/synthetic-preview` prepares guarded provisioning, readiness and shared staging keys. Final local receipt: `31 passed, 31 warnings in 137.15s (0:02:17)`. Independent review permits hosted code validation. [SYNTHETIC_PREVIEW.md](SYNTHETIC_PREVIEW.md) records requirements. User identified dedicated staging `ethiopian_payroll_engine`; authenticated access/effective configuration remain to be inspected. No deployment/phone acceptance claimed. Unrelated work is preserved.
 
 ## Current invitation and critical-language continuity — 2026-10-11

@@ -12,7 +12,15 @@ Earlier `29 passed, 29 warnings in 21913.59s (6:05:13)` is retained in STATUS
 without a performance claim. Source
 preflight reports zero findings. Independent review corrected the Docker startup
 command, staging CLI and obsolete reset instructions, and requested host identity
-confirmation. Hosted image build/startup is required before deployment.
+confirmation.
+
+Hosted source `9e2c7549bb4f31aa31a62a2dc3accf1c3b3fdc11` passed:
+`31 passed, 31 warnings in 57.19s`.
+[Run 38195675615](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/38195675615)
+built web and worker images, booted the staging web container through migrations,
+strict readiness/probe, first provisioning, repeat Flask CLI provisioning and
+login-page CSRF checks. This is isolated CI evidence, not a Render deployment or
+physical-phone walkthrough.
 
 ## Verify existing Render resources
 

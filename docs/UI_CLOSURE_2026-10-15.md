@@ -1,0 +1,23 @@
+# UI closure and remaining acceptance — 2026-10-15
+
+Checkout: `codex/synthetic-preview`, HEAD `3ead9754945be9c30bb816fab459fe61a9abe9d9`; the worktree remains dirty and this receipt covers the current local edits, not a commit or deployment.
+
+Focused auth/profile/layout regressions now pass: `40 passed, 4 warnings in 69.73s`. The old 404 skip was a broken test URL/setup: it called `/employee/profile/edit`; the actual authenticated route is `/my/profile/edit`. The test now authenticates a real employee, verifies that route, and confirms anonymous access redirects to login. A separate page test checks the `+251` phone-prefix guidance. No test remains skipped in this selection. The four warnings are model `EncryptedType` deprecations for `webhook_secret` (models.py:408), `bank_account` (:697), `tin` (:698), and `fayda_fin` (:699).
+
+Chrome completed the synthetic first-use journey at 390px and 1440px before the final text-only review-copy correction. It clicked the language toggle English ? Amharic ? English ? Amharic on the same login route and verified the 390px long employee form clears the fixed navigation: both nav height and content bottom padding measured 60px, with no horizontal overflow or JavaScript errors. After the final copy correction, a repeat run verified the language-toggle round trip but stopped at the synthetic sign-in step (`waitForURL` timed out while still on `/auth/login`), so a full browser rerun for that last wording change is incomplete. The repeat-run sign-in timeout is retained in local test artifacts; generated screenshots and browser logs are not part of the source patch.
+
+The historical UX findings are addressed in this local slice:
+
+- A dashboard with no completed payroll run says “Not assessed” and does not show a compliance percentage. It explains that configured dates do not confirm filing or payment; calculator/statutory arithmetic is untouched.
+- No tested screen has complete Amharic copy. Amharic is present for login/recovery, first-use dashboard actions, employee add/edit labels and bank-account format guidance, and a few review-helper strings. Payroll preparation and the payroll review workspace remain predominantly English; login, dashboard and employee forms also retain mixed English labels/placeholders. The exact screens exercised are login/recovery, dashboard, employee add, employee edit, payroll spreadsheet, and payroll review. Oromo fallback has not been reviewed.
+- Saved worksheet edits and autosaves now refresh an unsubmitted review automatically. Once the review is submitted, worksheet edits are rejected and the approved snapshot remains unchanged. Explicit refresh remains available for changes made outside the worksheet and asks before replacing review amounts. On a fresh local PostgreSQL 16 database migrated through the test fixture, the focused review-refresh selection passed: `3 passed, 10 warnings in 10.66s` (four model `EncryptedType` warnings plus six repeated Alembic `get_engine` warnings from migrations/env.py:22).
+
+## Acceptance still open
+
+- **Founder then Tigist phone trial:** use the existing test-only preview recorded in `SYNTHETIC_PREVIEW.md`, first have the founder complete the fake-data setup-to-outputs path, then have Tigist repeat it as practitioner. Record device/browser, deployed SHA, each observed outcome, and practitioner acceptance. Do not enter real payroll data. The local browser receipt is not a physical-phone trial.
+- **Worker/jobs:** the last recorded hosted `/readyz` result had worker status `unknown`. The blueprint gives the web and worker independently generated `DB_ENCRYPTION_KEY` values (`render.yaml`), while the worker health probe looks for `RQ_REDIS_URL` or `CELERY_BROKER_URL` and does not read the RQ `REDIS_URL` used by the job worker (`payroll_engine/worker_health.py`, `payroll_engine/tasks.py`). Current service values and live job processing need operator verification.
+- **Durable files:** app upload storage defaults to `/tmp/uploads` in `payroll_engine/__init__.py`; no shared persistent file store or restart-survival receipt was established.
+- **Backup and key restore:** no current physical restore drill including encryption keys was run. Verify backup contents, key custody, and restored decryption in an isolated test environment before calling recovery proven.
+- **Support:** `support@ethiopayroll.com` was previously confirmed monitored and configured. Named incident owner, escalation path, and recovery responsibilities still need to be documented and rehearsed.
+
+No hosted deployment, real-phone test, production-setting change, backup restore, commit, or push occurred in this slice. This remains local evidence only.

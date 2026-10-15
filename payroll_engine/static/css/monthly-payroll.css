@@ -171,6 +171,8 @@ details[open] > summary .monthly-expand-icon::after { content: "−"; }
 }
 
 .monthly-period { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0 0 20px; padding: 12px 0; border-block: 1px solid var(--border-light); font-size: .8125rem; }
+.monthly-heading-actions { display: flex; align-items: flex-start; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }
+.monthly-import-help { max-width: 240px; margin: 6px 0 0; color: var(--text-secondary); font-size: .75rem; }
 .monthly-period > div { display: grid; gap: 4px; }
 .monthly-period dt { font-weight: 600; color: var(--text-secondary); }
 .monthly-period dd { margin: 0; overflow-wrap: anywhere; }
@@ -188,6 +190,8 @@ details[open] > summary .monthly-expand-icon::after { content: "−"; }
 .monthly-row-changes h3 { font-size: .875rem; margin-bottom: 8px; }
 .monthly-row-changes ul { padding-left: 20px; font-size: .8125rem; }
 @media (max-width: 800px) {
+  .monthly-heading-actions { justify-content: flex-start; }
+  .monthly-heading-actions > div { max-width: 100%; }
   .monthly-period { display: grid; gap: 8px; }
   .monthly-editor > summary { grid-template-columns: minmax(0, 1fr) auto; }
   .monthly-editor > summary .monthly-row-identity { grid-column: 1 / -1; }

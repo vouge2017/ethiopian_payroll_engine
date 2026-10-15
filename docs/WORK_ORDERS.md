@@ -1,5 +1,11 @@
 # Focused delivery work orders
 
+## Current local UI closure — 2026-10-15
+
+26. Close misleading compliance, first-use language gaps and review-refresh wording, then verify the founder-to-practitioner phone journey and operations evidence.
+
+Implemented and locally verified on dirty HEAD `3ead9754945be9c30bb816fab459fe61a9abe9d9`: focused UI/auth tests `40 passed, 4 warnings in 69.73s` (no skips; all four are model deprecations); PostgreSQL 16 review-refresh tests `3 passed, 10 warnings in 10.66s`; Chrome confirmed toggle round-trip and 390px fixed-nav clearance. Full Amharic localization is incomplete. The local synthetic journey does not complete either real-phone trial. Worker/job reliability, durable files, backup/key restoration and incident ownership remain open pending suitable service access and an operator drill. Full local patch awaits user review before commit/deploy. See [UI_CLOSURE_2026-10-15.md](UI_CLOSURE_2026-10-15.md).
+
 ## Current auth recovery and Amharic entry fixes — 2026-10-12
 
 25. Repair the signed-out recovery loop, finish Amharic registration guidance, accept either phone or email in one sign-in/recovery field, and require first + second/father names while keeping third/grandfather name optional.

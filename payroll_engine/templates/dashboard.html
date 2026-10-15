@@ -51,8 +51,14 @@
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-label">Compliance</div>
+                <div class="metric-label">{{ _('compliance_timing_label') }}</div>
+                {% if completed_runs_count %}
                 <div class="metric-value">{{ compliance_score|round(0)|int }}%</div>
+                {% else %}
+                <div class="metric-value">{{ _('compliance_not_assessed') }}</div>
+                <p class="small text-muted mb-0">{{ _('compliance_needs_run') }}</p>
+                {% endif %}
+                <p class="small text-muted mb-0 mt-2">{{ _('compliance_evidence_help') }}</p>
             </div>
         </div>
         <div class="col-md-3 col-6">

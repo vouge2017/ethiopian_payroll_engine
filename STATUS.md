@@ -1,5 +1,10 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT LOCAL UI CLOSURE — 2026-10-15
+
+- Dirty worktree at `codex/synthetic-preview`, HEAD `3ead9754945be9c30bb816fab459fe61a9abe9d9`. Focused auth/profile/layout tests: `40 passed, 4 warnings in 69.73s` (no skips); the four are `EncryptedType` deprecations for webhook_secret, bank_account, tin and fayda_fin. Migrated PostgreSQL 16 review-refresh tests: `3 passed, 10 warnings in 10.66s` (four model and six migration deprecations). Chrome previously clicked the language toggle both ways, checked long content at 390px (60px nav and matching content padding; final content clears the fixed nav), and exercised the synthetic journey at 390px/1440px. After the last copy-only correction, a full replay stopped at synthetic sign-in (`waitForURL` timeout); this remaining browser rerun is recorded in the handoff. See [UI_CLOSURE_2026-10-15.md](docs/UI_CLOSURE_2026-10-15.md). Local edits are not committed, pushed or deployed; live SHA was not freshly checked.
+- No screen has complete Amharic copy; login/recovery, first-use dashboard and employee forms are partial, while payroll prep/review remain mostly English. The old employee-profile 404 was a broken test path; coverage now targets authenticated `/my/profile/edit`. Worksheet changes refresh an unsubmitted review automatically; submitted review edits are rejected. Founder phone trial comes first, then Tigist; both remain unrecorded. Worker/job, durable-file, backup/key-restore and named incident-response evidence remain open. Preserve historical receipts below.
+
 ## CURRENT AUTHENTICATION AND AMHARIC ENTRY FIXES — 2026-10-12
 
 - Published on `codex/synthetic-preview` as `bdcd5b164a1427f597d315d0d728a83accf8975f`, with Render startup fix `02b84268527ce4793b4d37b0fb6a4f7c0618ea7f`: signed-out account recovery guidance, Amharic registration, one phone/email sign-in and recovery input, first + second/father name required, and third/grandfather name optional.

@@ -284,6 +284,7 @@
     z-index: var(--z-sidebar, 1040);
     padding: var(--space-1) 0;
     padding-bottom: env(safe-area-inset-bottom, 0);
+    box-sizing: border-box;
     box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
 }
 
@@ -328,13 +329,18 @@
 }
 
 @media (max-width: 1024px) {
-    .bottom-nav {
-        display: block;
+    :root {
+        --mobile-bottom-nav-height: 60px;
     }
 
-    /* Add padding to main content so it doesn't hide behind bottom nav */
+    .bottom-nav {
+        display: block;
+        height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Keep the final content line clear of the fixed bar, including device safe area. */
     .main-content {
-        padding-bottom: 70px !important;
+        padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
 

@@ -1,5 +1,6 @@
 import re
 from datetime import UTC, datetime, timedelta
+from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
@@ -238,7 +239,10 @@ def set_language(lang):
 
     session['language'] = lang
     # referrer can be attacker-controlled; only follow safe same-host targets
-    target = safe_redirect_target(request.referrer)
+    target = request.args.get('next') or request.referrer
+    if target and urlparse(target).path == request.path:
+        target = None
+    target = safe_redirect_target(target)
     return redirect(target)
 
 

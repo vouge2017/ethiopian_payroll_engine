@@ -6,8 +6,11 @@
 <div class="monthly-payroll">
   <header class="monthly-heading">
     <div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p>
-      <h1>Prepare payroll</h1><p>Enter this month’s changes, save, then review the preserved amounts.</p></div>
-    <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary">Import CSV instead</a>
+      <h1>{{ _('prepare_payroll') }}</h1><p>{% if rows %}{{ _('monthly_enter_changes') }}{% elif review_error %}{{ _('monthly_review_unavailable') }}{% else %}{{ _('monthly_empty_intro') }}{% endif %}</p></div>
+    <div class="monthly-heading-actions">
+      {% if not rows and not review_error %}<a id="monthly-add-first-employee" href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">{{ _('monthly_add_first_employee') }}</a>{% endif %}
+      {% if not review_error %}<div><a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary">{{ _('monthly_import_file') }}</a>{% if not rows %}<p class="monthly-import-help">{{ _('monthly_import_help') }}</p>{% endif %}</div>{% endif %}
+    </div>
   </header>
   {{ monthly.period(period_start) }}
   {{ monthly.steps(1) }}
@@ -55,11 +58,11 @@
   </form>
   <form method="POST" action="{{ url_for('payroll.worksheet_review') }}" id="worksheet-review" class="monthly-review-next">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
-    <div><h2>Ready to check the amounts?</h2><p id="review-guidance">Review uses saved inputs. An existing review keeps its preserved amounts until you explicitly refresh it.</p></div><button type="submit" class="btn btn-outline-primary" id="worksheet-review-button" aria-describedby="review-guidance">Review saved payroll</button>
+    <div><h2>Ready to check the amounts?</h2><p id="review-guidance">Review uses saved inputs. Saving updates an existing unsubmitted review automatically.</p></div><button type="submit" class="btn btn-outline-primary" id="worksheet-review-button" aria-describedby="review-guidance">Review saved payroll</button>
   </form>
   <details class="monthly-notes"><summary>How these inputs affect payroll</summary><p>Extra unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30. Bonus is taxable and applies only to this month. Bonus and extra unpaid days are available for monthly employees. Estimates include deductions. Owner approval is a separate step; no payment is sent.</p></details>
   {% else %}
-  <section class="monthly-empty"><h2>{{ 'Worksheet review unavailable' if review_error else 'Add your first employee' }}</h2>{% if review_error %}<p>Reload preparation to try again. Your saved inputs are preserved.</p><a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">Retry preparation</a>{% else %}<p>Add employees before preparing monthly payroll.</p><a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">Add First Employee</a>{% endif %}</section>
+  <section class="monthly-empty"><h2>{{ _('monthly_review_unavailable_title') if review_error else _('monthly_empty_title') }}</h2>{% if review_error %}<p>{{ _('monthly_retry_help') }}</p><a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">{{ _('monthly_retry_preparation') }}</a>{% else %}<p>{{ _('monthly_empty_intro') }}</p>{% endif %}</section>
   {% endif %}
 </div>
 {% endblock %}

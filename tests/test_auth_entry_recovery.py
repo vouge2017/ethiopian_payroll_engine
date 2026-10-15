@@ -58,6 +58,25 @@ def test_anonymous_recovery_support_is_public_without_exposing_workspace(app):
     assert b'operator%40example.invalid' in response.data
 
 
+def test_language_switcher_keeps_returning_to_the_current_page(app):
+    client = app.test_client()
+    response = client.get(
+        '/auth/language/am?next=%2Fauth%2Flogin',
+        headers={'Referer': 'http://localhost/auth/language/en'},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b'<html lang="am"' in response.data
+
+    response = client.get(
+        '/auth/language/en?next=%2Fauth%2Flogin',
+        headers={'Referer': 'http://localhost/auth/language/am'},
+        follow_redirects=True,
+    )
+    assert response.status_code == 200
+    assert b'<html lang="en"' in response.data
+
+
 def test_invited_user_can_open_help_while_password_change_is_required(app):
     with app.app_context():
         company = Company(name='Synthetic invited account')
@@ -86,6 +105,22 @@ def test_identifier_field_accepts_both_formats_without_tabs_or_digit_filter(app,
     assert b'data-phone-tabs' not in response.data
     assert b'phone-prefix-box' not in response.data
     assert soup.find('span', id=field['aria-describedby']) is not None
+
+
+def test_login_shows_create_account_next_to_sign_in_in_main_form(app):
+    html = app.test_client().get('/auth/login').get_data(as_text=True)
+    soup = Page(html)
+    form = soup.find('form', id='loginForm')
+    assert form is not None
+    create_account = soup.find('a', href='/auth/register')
+    sign_in = soup.find('button', id='reviewBtn')
+    assert create_account is not None
+    assert sign_in is not None
+    assert 'onboarding-btn-create' in create_account['class']
+    action_row = html.split('<div class="onboarding-actions">', 1)[1].split('</div>', 1)[0]
+    assert create_account['href'] in action_row
+    assert 'id="reviewBtn"' in action_row
+    assert '+251 912345678 or name@company.com' in html
 
 
 @pytest.mark.parametrize(

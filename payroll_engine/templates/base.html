@@ -206,9 +206,9 @@
         <div class="sidebar-footer">
             <!-- Language Switcher -->
             <div class="lang-switcher">
-                <a href="{{ url_for('auth.set_language', lang='en') }}" class="{% if current_language == 'en' %}active{% endif %}">EN</a>
-                <a href="{{ url_for('auth.set_language', lang='am') }}" class="{% if current_language == 'am' %}active{% endif %}">አማ</a>
-                <a href="{{ url_for('auth.set_language', lang='om') }}" class="{% if current_language == 'om' %}active{% endif %}">OM</a>
+                <a href="{{ url_for('auth.set_language', lang='en', next=request.full_path) }}" class="{% if current_language == 'en' %}active{% endif %}">EN</a>
+                <a href="{{ url_for('auth.set_language', lang='am', next=request.full_path) }}" class="{% if current_language == 'am' %}active{% endif %}">አማ</a>
+                <a href="{{ url_for('auth.set_language', lang='om', next=request.full_path) }}" class="{% if current_language == 'om' %}active{% endif %}">OM</a>
             </div>
 
             <!-- Dark Mode Toggle -->

@@ -5,7 +5,7 @@
     <ol class="breadcrumb breadcrumb-sm mb-0">
         <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none" aria-label="Home"><i class="bi bi-house" aria-hidden="true"></i></a></li>
         {% block breadcrumb_items %}
-        <li class="breadcrumb-item"><a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none">Employees</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('employees.list_employees') }}" class="text-decoration-none">{{ _('employees') }}</a></li>
         <li class="breadcrumb-item active">Edit {{ employee.display_name }}</li>
     {% endblock %}
     </ol>
@@ -14,7 +14,7 @@
 {% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
 <div class="workspace-page employee-form-page">
-    <header class="workspace-heading"><div><p class="workspace-eyebrow">{{ workspace_company.name if workspace_company else "Employees" }}</p><h1>Edit employee</h1><p>Update this employee’s details. Existing approved payroll stays unchanged.</p></div><a class="btn btn-outline-secondary" href="{{ url_for('employees.list_employees') }}">Back to employees</a></header>
+    <header class="workspace-heading"><div><p class="workspace-eyebrow">{{ workspace_company.name if workspace_company else _('employees') }}</p><h1>{{ _('edit_employee') }}</h1><p>{{ _('employee_edit_intro') }}</p></div><a class="btn btn-outline-secondary" href="{{ url_for('employees.list_employees') }}">{{ _('employee_back_to_list') }}</a></header>
     <div class="row justify-content-center">
         <div class="col-lg-9 col-xl-8">
             <div class="card">
@@ -23,36 +23,32 @@
                         <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="text-decoration-none me-2" aria-label="Back to employee">
                             <i class="bi bi-arrow-left"></i>
                         </a>
-                        <i class="bi bi-pencil me-2"></i>Edit {{ employee.name }}
+                        <i class="bi bi-pencil me-2"></i>{{ _('employee_edit_heading') }}
                     </h5>
                 </div>
                 <div class="card-body p-4">
-                    <p class="small text-muted">Required fields are marked *. Amounts are in ETB.</p>
+                    <p class="small text-muted">{{ _('employee_required_note') }}</p>
                     <form data-employee-form method="POST" action="{{ url_for('employees.edit_employee', emp_id=employee.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <!-- Ethiopian Name Structure -->
                         <div class="mb-3">
                             {% if employee.first_name or request.form.get('first_name') %}
-                            <p class="form-label fw-bold">ስም / Name · First name required</p>
                             <div class="row g-2">
                                 <div class="col-md-4">
-                                    <label class="form-label" for="first_name">ስም / First name</label>
+                                    <label class="form-label" for="first_name">{{ _('employee_first_name') }} *</label>
                                     <input type="text" class="form-control" id="first_name" name="first_name"
                                            value="{{ request.form.get('first_name', employee.first_name or '') }}" required>
-                                    <div class="form-text">ስም / First Name</div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label" for="father_name">የአባት ስም / Father’s name</label>
+                                    <label class="form-label" for="father_name">{{ _('employee_father_name') }}</label>
                                     <input type="text" class="form-control" id="father_name" name="father_name"
                                            value="{{ request.form.get('father_name', employee.father_name or '') }}">
-                                    <div class="form-text">የአባት ስም / Father's Name</div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label" for="grandfather_name">የአያት ስም / Grandfather’s name</label>
+                                    <label class="form-label" for="grandfather_name">{{ _('employee_grandfather_name') }}</label>
                                     <input type="text" class="form-control" id="grandfather_name" name="grandfather_name"
                                            value="{{ request.form.get('grandfather_name', employee.grandfather_name or '') }}">
-                                    <div class="form-text">የአያት ስም / Grandfather's Name</div>
                                 </div>
                             </div>
                             <input type="hidden" id="name" name="name" value="{{ request.form.get('name', employee.name) }}">
@@ -79,7 +75,7 @@
                                                title="Enter 9 digits starting with 9 or 7">
                                     </div>
                                 </div>
-                                <div class="form-text">Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).</div>
+                                <div class="form-text">{{ _('employee_phone_hint') }}</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="basic_salary" class="form-label fw-bold">{{ _('basic_salary') }} (ETB) *</label>
@@ -113,14 +109,14 @@
                                 <label for="tin" class="form-label">TIN</label>
                                 <input type="text" class="form-control" id="tin" name="tin"
                                        value="{{ request.form.get('tin', employee.tin or '') }}" placeholder="1234567890">
-                                <div class="form-text">For ERCA tax filing</div>
+                                <div class="form-text">{{ _('employee_tin_help') }}</div>
                             </div>
                             <div class="col-md-6">
-                                <label for="fayda_fin" class="form-label">Fayda Digital ID (FIN)</label>
+                                <label for="fayda_fin" class="form-label">{{ _('employee_fayda_label') }}</label>
                                 <input type="text" class="form-control" id="fayda_fin" name="fayda_fin"
                                        value="{{ request.form.get('fayda_fin', employee.fayda_fin or '') }}" placeholder="123456789012"
                                        maxlength="12" pattern="\d{12}" title="Exactly 12 digits">
-                                <div class="form-text">12-digit Fayda ID from <a href="https://id.gov.et" target="_blank">id.gov.et</a></div>
+                                <div class="form-text">{{ _('employee_fayda_fin_help') }} <a href="https://id.gov.et" target="_blank" rel="noopener noreferrer">id.gov.et</a></div>
                             </div>
                         </div>
 
@@ -129,15 +125,15 @@
                                 <label for="bank_account" class="form-label">{{ _('bank_account') }}</label>
                                 <input type="text" class="form-control" id="bank_account" name="bank_account"
                                        value="{{ request.form.get('bank_account', employee.bank_account or '') }}"
-                                       placeholder="cbe:1000123456789">
-                                <div class="form-text">bank_name:account_number or Telebirr: 0911234567</div>
+                                               placeholder="{{ _('employee_bank_placeholder') }}">
+                                <div class="form-text">{{ _('employee_bank_help') }}</div>
                             </div>
                         </div>
 
-                        <p class="employee-form-feedback small" role="status" aria-live="polite" data-form-feedback>Review the details, then save.</p>
+                        <p class="employee-form-feedback small" role="status" aria-live="polite" data-form-feedback>{{ _('employee_review_changes') }}</p>
                         <div class="d-grid gap-2 d-md-flex">
                             <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
-                                <i class="bi bi-save me-1"></i>Save Changes
+                                <i class="bi bi-save me-1"></i>{{ _('employee_save_changes') }}
                             </button>
                             <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary btn-lg">
                                 {{ _('cancel') }}

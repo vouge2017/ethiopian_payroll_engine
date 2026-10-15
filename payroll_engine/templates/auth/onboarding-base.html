@@ -50,9 +50,9 @@
         <nav class="onboarding-header-nav" aria-label="{{ _('entry_navigation') }}">
             <div class="onboarding-lang-switcher">
                 <span class="material-symbols-outlined" style="font-size: 18px;">language</span>
-                <a href="{{ url_for('auth.set_language', lang='en') }}" class="{% if current_language == 'en' %}active{% endif %}">EN</a>
+                <a href="{{ url_for('auth.set_language', lang='en', next=request.full_path) }}" class="{% if current_language == 'en' %}active{% endif %}">EN</a>
                 <span class="text-muted">/</span>
-                <a href="{{ url_for('auth.set_language', lang='am') }}" class="{% if current_language == 'am' %}active{% endif %}">አማርኛ</a>
+                <a href="{{ url_for('auth.set_language', lang='am', next=request.full_path) }}" class="{% if current_language == 'am' %}active{% endif %}">አማርኛ</a>
             </div>
             <a href="{{ url_for('auth.forgot_password') }}" class="onboarding-header-link">
                 <span class="material-symbols-outlined" style="font-size: 16px;">support_agent</span>

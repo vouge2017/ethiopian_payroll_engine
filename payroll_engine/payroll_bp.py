@@ -1701,7 +1701,7 @@ def payroll_spreadsheet():
 
     from payroll_engine.overtime import DEFAULT_MAX_HOURS_MONTH as MAX_OVERTIME_HOURS_MONTH
     from payroll_engine.services.worksheet import parse_changes, save_inputs
-    from payroll_engine.services.worksheet_review import month_end
+    from payroll_engine.services.worksheet_review import lock_active_worksheet_run, month_end, refresh_open_review
 
     if request.method == 'POST':
         action = request.form.get('action', 'save')
@@ -1713,6 +1713,10 @@ def payroll_spreadsheet():
             flash(str(error), 'danger')
             return render_template('worksheet_error.html'), 400
         today = date.today()
+        active_run = lock_active_worksheet_run(_company_id(), month_start)
+        if active_run and active_run.status != 'review':
+            flash('This payroll has already been submitted or completed. No worksheet changes were saved.', 'warning')
+            return render_template('worksheet_error.html'), 409
 
         for change in changes:
             emp = Employee.query.filter_by(id=change['emp_id'], company_id=_company_id(), is_deleted=False).first()
@@ -1779,6 +1783,8 @@ def payroll_spreadsheet():
                 },
             )
 
+        if changes:
+            refresh_open_review(_company_id(), current_user.id, month_start)
         db.session.commit()
         trust_cache.invalidate_trust_cache(_company_id())
 
@@ -1890,7 +1896,7 @@ def payroll_spreadsheet_autosave():
     from decimal import Decimal, InvalidOperation
 
     from payroll_engine.services.worksheet import parse_changes
-    from payroll_engine.services.worksheet_review import month_end
+    from payroll_engine.services.worksheet_review import lock_active_worksheet_run, month_end, refresh_open_review
 
     try:
         month_start, changes = parse_changes(request.form, _company_id())
@@ -1899,6 +1905,11 @@ def payroll_spreadsheet_autosave():
         return jsonify({'status': 'error', 'message': str(error)}), 400
     today = date.today()
     saved = 0
+    active_run = lock_active_worksheet_run(_company_id(), month_start)
+    if active_run and active_run.status != 'review':
+        return jsonify(
+            {'status': 'error', 'message': 'This payroll was submitted or completed. Worksheet changes were not saved.'}
+        ), 409
 
     for change in changes:
         emp = change['employee']
@@ -1965,6 +1976,8 @@ def payroll_spreadsheet_autosave():
 
         saved += 1
 
+    if saved:
+        refresh_open_review(_company_id(), current_user.id, month_start)
     db.session.commit()
     return jsonify(
         {

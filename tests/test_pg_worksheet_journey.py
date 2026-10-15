@@ -312,10 +312,10 @@ def test_accountant_submits_and_owner_approves_preserved_amounts(worksheet, monk
         ).scalar_one() == Decimal('9890.35')
 
 
-def test_explicit_refresh_changes_only_unapproved_review(worksheet, monkeypatch):
+def test_saved_worksheet_changes_refresh_open_review_automatically(worksheet, monkeypatch):
     _app, client, ids, engine, rid = saved_review(worksheet, monkeypatch, bonus='900.50')
     assert client.post('/payroll/spreadsheet', data=form(ids, bonus='0')).status_code == 302
-    assert b'9,890.35' in client.get(f'/payroll/runs/{rid}/review').data
+    assert b'9,260.00' in client.get(f'/payroll/runs/{rid}/review').data
     assert run_id(review(client, refresh_run_id=rid)) == rid
     assert b'9,260.00' in client.get(f'/payroll/runs/{rid}/review').data
     assert client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'}).status_code == 302
@@ -324,6 +324,28 @@ def test_explicit_refresh_changes_only_unapproved_review(worksheet, monkeypatch)
         assert conn.execute(
             text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': rid}
         ).scalar_one() == Decimal('9260')
+
+
+def test_autosave_refreshes_review_but_submitted_review_rejects_edits(worksheet, monkeypatch):
+    _app, client, ids, engine, rid = saved_review(worksheet, monkeypatch, bonus='900.50')
+    before = client.get(f'/payroll/runs/{rid}/review').data
+    response = client.post('/payroll/spreadsheet/autosave', data=form(ids, ot_day='2'))
+    assert response.status_code == 200
+    assert response.get_json()['status'] == 'ok'
+    after = client.get(f'/payroll/runs/{rid}/review').data
+    assert before != after
+    with engine.connect() as conn:
+        submitted_snapshot = conn.execute(
+            text('SELECT employee_data FROM payroll_draft WHERE payroll_run_id=:id'), {'id': rid}
+        ).scalar_one()
+
+    assert client.post(f'/payroll/runs/{rid}/submit').status_code == 302
+    rejected = client.post('/payroll/spreadsheet', data=form(ids, bonus='0'))
+    assert rejected.status_code == 409
+    with engine.connect() as conn:
+        assert conn.execute(
+            text('SELECT employee_data FROM payroll_draft WHERE payroll_run_id=:id'), {'id': rid}
+        ).scalar_one() == submitted_snapshot
 
 
 def test_approval_audit_failure_rolls_back_money_and_retry_recovers(worksheet, monkeypatch):

@@ -37,8 +37,8 @@
 <!-- Main Content: Login Form -->
 <div class="onboarding-form-area">
     <p class="entry-step-label">YOUR PAYROLL WORKSPACE</p>
-    <h1 class="onboarding-form-title">Welcome back</h1>
-    <p class="onboarding-form-subtitle">Sign in to your payroll workspace.</p>
+    <h1 class="onboarding-form-title">{{ _('entry_login_title') }}</h1>
+    <p class="onboarding-form-subtitle">{{ _('entry_login_subtitle') }}</p>
 
     <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -47,7 +47,7 @@
         <div class="onboarding-field" id="loginIdField">
             <label for="login_id">{{ _('auth_identifier') }}</label>
             <input type="text" id="login_id" name="login_id" required autofocus
-                   placeholder="912345678 / name@company.com" maxlength="254"
+                   placeholder="+251 912345678 or name@company.com" maxlength="254"
                    autocomplete="username" autocapitalize="none" spellcheck="false"
                    aria-describedby="identifierHint">
             <span class="field-hint" id="identifierHint">{{ _('auth_identifier_hint') }}</span>
@@ -64,7 +64,7 @@
                 </button>
             </div>
             <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
-                <a href="{{ url_for('auth.forgot_password') }}" style="font-size: 14px; font-weight: 600; color: var(--brand-primary); text-decoration: none;">Forgot password?</a>
+                <a href="{{ url_for('auth.forgot_password') }}" style="font-size: 14px; font-weight: 600; color: var(--brand-primary); text-decoration: none;">{{ _('entry_forgot_password') }}</a>
             </div>
         </div>
 
@@ -76,9 +76,11 @@
 
         <!-- Actions -->
         <div class="onboarding-actions">
-            <span></span>
+            <a href="{{ url_for('auth.register') }}" class="onboarding-btn-create">
+                {{ _('register') }}
+            </a>
             <button type="submit" class="onboarding-btn-next" id="reviewBtn" data-pw-submit>
-                Sign In
+                {{ _('entry_sign_in_button') }}
                 <span class="material-symbols-outlined">arrow_forward</span>
             </button>
         </div>
@@ -115,24 +117,13 @@
     <div class="onboarding-help-card">
         <div class="onboarding-help-header">
             <span class="material-symbols-outlined">support_agent</span>
-            <h2>Need Help?</h2>
+            <h2>{{ _('entry_login_help_title') }}</h2>
         </div>
-        <p class="onboarding-help-text">Forgot your password? Start account recovery to regain access.</p>
+        <p class="onboarding-help-text">{{ _('entry_login_help_text') }}</p>
         <a href="{{ url_for('auth.forgot_password') }}" class="onboarding-help-link">
-            Recover account <span class="material-symbols-outlined">arrow_forward</span>
+            {{ _('entry_login_help_action') }} <span class="material-symbols-outlined">arrow_forward</span>
         </a>
     </div>
 
-    <div class="onboarding-checklist">
-        <div class="onboarding-checklist-header">
-            <span class="material-symbols-outlined">rocket_launch</span>
-            <h2>New Here?</h2>
-        </div>
-        <p class="onboarding-checklist-desc">Create an account to start running compliant payroll for your Ethiopian business.</p>
-        <a href="{{ url_for('auth.register') }}" class="onboarding-btn-next" style="text-decoration: none; width: 100%; justify-content: center;">
-            Create Account
-            <span class="material-symbols-outlined">arrow_forward</span>
-        </a>
-    </div>
 </aside>
 {% endblock %}

@@ -6,7 +6,7 @@
 {% set approval_role = current_user.get_role_for_company(run.company_id) %}
 
 <div class="monthly-payroll monthly-confirm">
-<header class="monthly-heading"><div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p><h1>Approve payroll</h1><p>Confirm the reviewed amounts. Approval does not send payment.</p></div><a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary">Back to review</a></header>
+<header class="monthly-heading"><div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p><h1>{{ _('approve_payroll') }}</h1><p>Confirm the reviewed amounts. Approval does not send payment.</p></div><a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary">Back to review</a></header>
 {{ monthly.steps(3) }}
 {% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
 {{ monthly.totals(employee_count, total_gross, total_tax, total_net, 'Preserved net pay') }}
@@ -162,7 +162,7 @@
             {% if not blocks %}
             <div class="card">
                 <div class="card-header bg-transparent">
-                    <h2 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Owner approval</h2>
+                    <h2 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{{ _('step_approve') }}</h2>
                 </div>
                 <div class="card-body p-4">
                     {% if run.source == 'spreadsheet' %}

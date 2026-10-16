@@ -74,7 +74,7 @@ class TestSidebarAdaptation:
 
         # Core items present
         assert b'Employees' in resp.data
-        assert b'Run Payroll' in resp.data or b'run_payroll' in resp.data
+        assert b'Prepare Payroll' in resp.data or b'prepare_payroll' in resp.data
         assert b'Payroll Runs' in resp.data or b'payroll_runs' in resp.data
 
         # Leave should NOT appear (<=5 employees)

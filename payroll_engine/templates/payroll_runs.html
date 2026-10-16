@@ -1,38 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Payroll History - Ethiopian Payroll Engine{% endblock %}
+{% block title %}{{ _('payroll_runs') }} — EthioPayroll{% endblock %}
 {% block breadcrumb %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb breadcrumb-sm mb-0">
         <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
         {% block breadcrumb_items %}
-        <li class="breadcrumb-item active">Payroll Runs</li>
+        <li class="breadcrumb-item active">{{ _('payroll_runs') }}</li>
     {% endblock %}
     </ol>
 </nav>
 {% endblock %}
 {% block content %}
 <div class="p-4 p-md-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('payroll_history') }}</h3>
-        <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
-            <i class="bi bi-cloud-upload me-1"></i> New Run
-        </a>
-        <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-outline-success ms-2">
-            <i class="bi bi-table me-1"></i> Spreadsheet
-        </a>
-        <a href="{{ url_for('payroll.payroll_register') }}" class="btn btn-outline-secondary ms-2">
-            <i class="bi bi-printer me-1"></i> Register
-        </a>
-        <a href="{{ url_for('payroll.batch_payslips') }}" class="btn btn-outline-info ms-2">
-            <i class="bi bi-file-earmark-zip me-1"></i> ZIP
-        </a>
-        <a href="{{ url_for('payroll.historical_import') }}" class="btn btn-outline-warning ms-2">
-            <i class="bi bi-clock-history me-1"></i> Import History
-        </a>
-        <a href="{{ url_for('payroll.export_payroll_history') }}" class="btn btn-outline-success ms-2">
-            <i class="bi bi-download me-1"></i> Export CSV
-        </a>
-    </div>
+    <header id="payroll-runs-header" class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <h3 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('payroll_runs') }}</h3>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>{{ _('new_run') }}</a>
+            <a href="{{ url_for('payroll.export_payroll_history') }}" class="btn btn-outline-primary"><i class="bi bi-download me-1" aria-hidden="true"></i>{{ _('export_csv') }}</a>
+            <div class="dropdown">
+                <button class="btn btn-ghost dropdown-toggle" type="button" id="payroll-more-actions" data-bs-toggle="dropdown" aria-expanded="false">{{ _('more_actions') }}</button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="payroll-more-actions">
+                    <li><a class="dropdown-item" href="{{ url_for('payroll.payroll_upload') }}">{{ _('monthly_import_file') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('payroll.payroll_register') }}">{{ _('payroll_register') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('payroll.batch_payslips') }}">{{ _('download_payslips') }}</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('payroll.historical_import') }}">{{ _('import_history') }}</a></li>
+                </ul>
+            </div>
+        </div>
+    </header>
 
     <div class="card">
         <div class="card-body p-0">
@@ -80,8 +75,8 @@
                                     <i class="bi bi-eye"></i> View
                                 </a>
                                 {% if run.payslips %}
-                                <a href="{{ url_for('payroll.download_all_payslips', run_id=run.id) }}" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-download"></i> ZIP
+                                <a href="{{ url_for('payroll.download_all_payslips', run_id=run.id) }}" class="btn btn-sm btn-ghost">
+                                    <i class="bi bi-download"></i> {{ _('download_payslips') }}
                                 </a>
                                 {% endif %}
                             </td>
@@ -94,10 +89,7 @@
             <div class="empty-state">
                 <div class="empty-icon"><i class="bi bi-inbox"></i></div>
                 <h4>{{ _('no_runs') }}</h4>
-                <p>Run your first payroll to get started. The system will calculate tax, pension, and net pay for each employee.</p>
-                <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
-                    <i class="bi bi-cloud-upload me-1"></i>{{ _('run_payroll') }}
-                </a>
+                <p>{{ _('runs_empty_help') }}</p>
             </div>
             {% endif %}
         </div>

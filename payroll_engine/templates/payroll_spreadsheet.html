@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Prepare payroll — Ethiopian Payroll Engine{% endblock %}
+{% block title %}{{ _('prepare_payroll') }} — EthioPayroll{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/monthly-payroll.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
 {% import "components/monthly_payroll.html" as monthly with context %}
@@ -60,7 +60,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
     <div><h2>Ready to check the amounts?</h2><p id="review-guidance">Review uses saved inputs. Saving updates an existing unsubmitted review automatically.</p></div><button type="submit" class="btn btn-outline-primary" id="worksheet-review-button" aria-describedby="review-guidance">Review saved payroll</button>
   </form>
-  <details class="monthly-notes"><summary>How these inputs affect payroll</summary><p>Extra unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30. Bonus is taxable and applies only to this month. Bonus and extra unpaid days are available for monthly employees. Estimates include deductions. Owner approval is a separate step; no payment is sent.</p></details>
+  <details class="monthly-notes"><summary>How these inputs affect payroll</summary><p>Extra unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30. Bonus is taxable and applies only to this month. Bonus and extra unpaid days are available for monthly employees. Estimates include deductions. {{ _('approval_separate_step') }}</p></details>
   {% else %}
   <section class="monthly-empty"><h2>{{ _('monthly_review_unavailable_title') if review_error else _('monthly_empty_title') }}</h2>{% if review_error %}<p>{{ _('monthly_retry_help') }}</p><a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">{{ _('monthly_retry_preparation') }}</a>{% else %}<p>{{ _('monthly_empty_intro') }}</p>{% endif %}</section>
   {% endif %}

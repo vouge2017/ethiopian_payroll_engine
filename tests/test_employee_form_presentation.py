@@ -186,3 +186,58 @@ def test_empty_dashboard_does_not_claim_compliance_without_a_completed_payroll(o
     assert 'Not assessed' in html
     assert 'Complete a payroll run to assess compliance dates.' in html
     assert '>100%</div>' not in html
+
+
+@pytest.mark.parametrize('language', ['en', 'am'])
+@pytest.mark.parametrize('status', [None, 'review', 'failed', 'completed'])
+def test_reports_and_reuse_require_a_completed_company_run(owner_app, language, status):
+    app, ids = owner_app
+    with app.app_context():
+        other = Company(name='Other synthetic company')
+        db.session.add(other)
+        db.session.flush()
+        db.session.add(PayrollRun(company_id=other.id, run_date=date.today(), status='completed'))
+        if status:
+            db.session.add(PayrollRun(company_id=ids[1], run_date=date.today(), status=status))
+        db.session.commit()
+    client = signed_in_client(app, ids, language)
+    reports = client.get('/reports')
+    upload = client.get('/payroll')
+    assert reports.status_code == upload.status_code == 200
+    report_html = reports.get_data(as_text=True)
+    upload_html = upload.get_data(as_text=True)
+    if status == 'completed':
+        assert 'id="btnUseLast"' in upload_html
+        assert 'Not assessed' not in report_html
+        assert 'አልተገመገመም' not in report_html
+    else:
+        assert 'id="btnUseLast"' not in upload_html
+        assert '>100%</div>' not in report_html
+        assert ('Not assessed' if language == 'en' else 'አልተገመገመም') in report_html
+
+
+@pytest.mark.parametrize('language', ['en', 'am'])
+def test_payroll_starts_and_history_actions_are_consistent(owner_app, language):
+    import re
+
+    app, ids = owner_app
+    client = signed_in_client(app, ids, language)
+    response = client.get('/payroll/runs')
+    assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    header = page.split('<header id="payroll-runs-header"', 1)[1].split('</header>', 1)[0]
+    primary = re.findall(r'<a href="([^"]+)" class="btn btn-primary"', header)
+    assert len(primary) == 1
+    assert primary[0] == '/payroll/spreadsheet'
+    assert header.count('class="btn btn-outline-primary"') == 1
+    assert header.count('class="dropdown-item"') == 4
+    assert 'class="btn btn-ghost dropdown-toggle"' in header
+    assert 'aria-expanded="false"' in header
+    assert not any(style in header for style in ('btn-success', 'btn-outline-success', 'btn-outline-info', 'btn-outline-warning'))
+    for href, content in re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>', page, re.S):
+        label = re.sub('<[^>]+>', '', content).strip()
+        if label in ('Prepare Payroll', 'New Run', 'ደመወዝ ያዘጋጁ', 'አዲስ ደመወዝ'):
+            assert href == '/payroll/spreadsheet'
+    if language == 'am':
+        assert 'New Run' not in header
+        assert 'Download Payslips' not in header

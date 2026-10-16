@@ -872,7 +872,8 @@ def payroll_upload():
             )
             return redirect(request.url)
 
-    return render_template('payroll_upload.html', year=date.today().year)
+    has_completed_run = PayrollRun.query.filter_by(company_id=_company_id(), status='completed').first() is not None
+    return render_template('payroll_upload.html', year=date.today().year, has_completed_run=has_completed_run)
 
 
 @payroll_bp.route('/payroll/<int:run_id>/confirm')

@@ -59,8 +59,8 @@
             <div class="empty-icon"><i class="bi bi-journal-text"></i></div>
             <h4>No completed payroll runs</h4>
             <p>Complete a payroll run to generate journal entries.</p>
-            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
-                <i class="bi bi-cloud-upload me-1"></i>Run Payroll
+            <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">
+                <i class="bi bi-cloud-upload me-1"></i>{{ _('prepare_payroll') }}
             </a>
         </div>
     </div>

@@ -1,6 +1,14 @@
 """Plain first-use copy. Oromo falls back to English until reviewed translation."""
 
 FIRST_USE_COPY = {
+    'date_picker_show': ('Show date picker', 'ቀን መምረጫ አሳይ'),
+    'date_picker_hide': ('Hide date picker', 'ቀን መምረጫ ደብቅ'),
+    'date_year': ('Year', 'ዓመት'),
+    'date_month': ('Month', 'ወር'),
+    'date_day': ('Day', 'ቀን'),
+    'date_gregorian': ('Gregorian date', 'የጎርጎርዮስ ቀን'),
+    'date_format': ('Gregorian: year-month-day (2026-10-16)', 'ጎርጎርዮስ፦ ዓመት-ወር-ቀን (2026-10-16)'),
+    'date_invalid': ('Enter a valid date within the allowed range: year-month-day.', 'በተፈቀደው ጊዜ ውስጥ ትክክለኛ ቀን ያስገቡ፦ ዓመት-ወር-ቀን።'),
     'invite_invalid': (
         'Invalid or expired invite link. Ask your administrator for a new invitation.',
         'የግብዣ አገናኙ ትክክል አይደለም ወይም ጊዜው አልፏል። አዲስ ግብዣ እንዲሰጡዎት አስተዳዳሪዎን ይጠይቁ።',
@@ -161,7 +169,7 @@ FIRST_USE_COPY.update(
         'employee_add_save': ('Save employee', 'ሰራተኛውን ያስቀምጡ'),
         'monthly_empty_title': ('Start with your employees', 'በሰራተኞችዎ ይጀምሩ'),
         'monthly_empty_intro': ('Add employees first. Then enter monthly changes and review the saved amounts.', 'መጀመሪያ ሰራተኞችን ይጨምሩ። ከዚያ የወሩን ለውጦች አስገብተው የተቀመጡትን መጠኖች ይከልሱ።'),
-        'prepare_payroll': ('Prepare payroll', 'ደመወዝ ያዘጋጁ'),
+        'prepare_payroll': ('Prepare Payroll', 'ደመወዝ ያዘጋጁ'),
         'monthly_enter_changes': ('Enter this month’s changes, save, then review the saved amounts.', 'የዚህን ወር ለውጦች ያስገቡና ያስቀምጡ፤ ከዚያ መጠኖቹን ይከልሱ።'),
         'monthly_review_unavailable': ('Payroll estimates are unavailable right now. Reload to retry; your saved information is preserved.', 'የደመወዝ ግምቶች አሁን አይገኙም። የተቀመጠው መረጃዎ ሳይጠፋ እንደገና ለመሞከር ያድሱ።'),
         'monthly_review_unavailable_title': ('Worksheet review unavailable', 'የዝግጅት ሰንጠረዡ ግምገማ አይገኝም'),
@@ -293,3 +301,44 @@ FIRST_USE_COPY.update(
         'reg_match_bad': ('Passwords do not match', 'የይለፍ ቃሎቹ አይመሳሰሉም'),
     }
 )
+
+
+# Shared payroll navigation and actions; English and Amharic ship together.
+PAYROLL_COPY = {
+    'home': ('Home', 'መነሻ'),
+    'step_prepare': ('Prepare', 'ያዘጋጁ'),
+    'step_review': ('Review', 'ይገምግሙ'),
+    'step_approve': ('Approve', 'ያጽድቁ'),
+    'payroll_steps': ('Payroll steps', 'የደመወዝ ዝግጅት ደረጃዎች'),
+    'new_run': ('New Run', 'አዲስ ደመወዝ'),
+    'export_csv': ('Export CSV', 'CSV ያውርዱ'),
+    'more_actions': ('More actions', 'ተጨማሪ እርምጃዎች'),
+    'payroll_register': ('Payroll Register', 'የደመወዝ መዝገብ'),
+    'download_payslips': ('Download Payslips', 'የደመወዝ ወረቀቶችን ያውርዱ'),
+    'import_history': ('Import History', 'የቀድሞ ደመወዝ መረጃ ያስገቡ'),
+    'runs_empty_help': (
+        'Prepare your first payroll, then review the amounts before approval.',
+        'የመጀመሪያውን ደመወዝ ያዘጋጁ፤ ከማጽደቅዎ በፊት መጠኖቹን ይገምግሙ።',
+    ),
+    'load_last_payroll': ('Load Last Payroll', 'የመጨረሻውን ደመወዝ ይጫኑ'),
+    'last_payroll_help': (
+        'Pre-fill from your most recent completed run. Update salaries before processing.',
+        'ከመጨረሻው የተጠናቀቀ ደመወዝ መረጃ ይሙሉ። ከማስላትዎ በፊት ደመወዞችን ያዘምኑ።',
+    ),
+    'upload_payroll_help': (
+        'Import an employee payroll file to prepare the amounts for review.',
+        'መጠኖቹን ለግምገማ ለማዘጋጀት የሰራተኞች ደመወዝ ፋይል ያስገቡ።',
+    ),
+    'or_upload_file': ('or upload a new file', 'ወይም አዲስ ፋይል ይጫኑ'),
+    'review_checks': ('Review checks', 'የማረጋገጫ ውጤቶችን ይገምግሙ'),
+    'continue_approval': ('Continue to approval', 'ወደ ማጽደቅ ይቀጥሉ'),
+    'loading_payroll': ('Loading…', 'በመጫን ላይ…'),
+    'filing_history': ('Filing History', 'የማስረከቢያ ታሪክ'),
+    'approve_payroll': ('Approve payroll', 'ደመወዝ ያጽድቁ'),
+    'approval_separate_step': (
+        'Approval is a separate step; no payment is sent.',
+        'ማጽደቅ የተለየ ደረጃ ነው፤ ክፍያ አይላክም።',
+    ),
+    'back_to_prepare': ('Back to Prepare', 'ወደ ዝግጅት ይመለሱ'),
+}
+FIRST_USE_COPY.update(PAYROLL_COPY)

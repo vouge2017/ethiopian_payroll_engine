@@ -1258,3 +1258,17 @@ New pins in `tests/test_pension_before_tax_rc38000_01.py` (4 tests, exact legacy
 Excel numbers, flip effect per path, gate switch). Focused suites all pass record:
 73 + 131 passed on local run; two existing tests refreshed their wording only.
 No merge, no deploy.
+
+## RC-38000-01 on codex/pension-assumption-isolation - 2026-10-18 (2)
+
+Branch `codex/pension-assumption-isolation` off `10b4b3b` carries the RC-38000-01
+work in two commits: `1f1922b` (isolation + honest wording + gated notice) and
+`03d8a5b` (second labelling pass: tax.py 'Verified by EY…' line removed, bracket
+cite corrected to Art. 11 after checking the Federal Negarit Gazette scan;
+seed_tax_rules notes reworded with the already-seeded-rows caveat; Amharic/Oromo
+draft translations flagged for native review; documented constant
+PENDING_CONFIRMATION_NOTICE with env override). Flip test now hard-asserts tax
+11,250 / net 24,090. Focused suites: 192 passed. Full suite: 1525 passed, 201
+skipped; 19 failed + 37 errors + 3 benchmark failures ALL re-verified identical
+on base `10b4b3b` (login-helper root cause; no payroll/tax failures). Branch
+pushed only; do not merge.

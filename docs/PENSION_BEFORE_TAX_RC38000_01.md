@@ -287,3 +287,30 @@ tests/test_calculation_flow.py tests/test_excel_payroll.py tests/test_elements_e
 tests/test_tax.py tests/test_tax_breakdown.py tests/test_services.py
 tests/test_deductions.py tests/test_bugfixes.py tests/test_diff_check_e2e.py
 tests/test_verification.py` → all pass.
+
+## 7. Full-suite run (branch, local machine)
+
+Command: `pytest tests -q` — completed in chunks (first `-x` pass: 273 passed
+before hitting the known benchmark failure):
+- **1525 passed, 201 skipped, 4 warnings** for everything except the two files
+  below.
+- The run was completed as: full suite minus `tests/test_benchmark.py` and
+  `tests/test_p0d_concurrency.py`, then both of those verified separately.
+- `tests/test_p0d_concurrency.py` — **6 passed in isolation** (11.48s); it does
+  not hang, it is thread/SQLite-WAL heavy inside the full run.
+- Failures, ALL VERIFIED PRE-EXISTING on base `10b4b3b` (re-ran identical
+  sets on the detached base commit to classify):
+  - `test_benchmark.py::test_dashboard_api_performance` [50/200/500] — 3,
+    same result on base.
+  - `19 failed + 37 errors` across `test_demo_and_template`,
+    `test_e2e_full::test_full_payroll_flow`, `test_phone_password_strict`,
+    `test_security_wave1` (login-redirect/suite-startup dependent),
+    `test_error_boundaries`, `test_input_validation`, `test_rate_limiting`.
+    Root cause of the 37 errors and most failures: the shared login helper
+    at `tests/helpers.py:29` (POST-login follow-up fails), identical on
+    base. Zero payroll/tax/deduction/flow tests are among them; no failure
+    is attributable to this change.
+- Honest machine caveat: local numbers are SQLite-app-context; hosted
+  PostgreSQL runs are the CI record, and `test_pg_monthly_journey` is skipped
+  locally without a disposable PostgreSQL TEST_DATABASE_URL (201 local skips
+  include it).

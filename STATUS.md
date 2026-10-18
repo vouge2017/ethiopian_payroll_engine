@@ -1272,3 +1272,16 @@ PENDING_CONFIRMATION_NOTICE with env override). Flip test now hard-asserts tax
 skipped; 19 failed + 37 errors + 3 benchmark failures ALL re-verified identical
 on base `10b4b3b` (login-helper root cause; no payroll/tax failures). Branch
 pushed only; do not merge.
+
+### Base comparison + gazette wording fix - 2026-10-18 (3)
+
+Reviewer-requested checks recorded: full suite re-run on detached base `10b4b3b`
+(same exclusions) — 19 failed + 37 errors identical test-for-test (1522 passed vs
+1525 on branch; delta = the 4 new tests, one flaky phone-tab variant). In-code
+"checked against the Federal Negarit Gazette" phrasing removed from tax.py and
+seed_tax_rules.py (no verification-style claim in product); the article-number
+evidence trail (two Gazette scans with links, Chambers, KPMG, page 19145, item 6/
+replacing Article 11) is documented in the deliverable doc for reviewer checking,
+with "source to be confirmed" as the fallback wording. seed personal_relief 150
+vs code default 0 confirmed still-open; rule_source wording audited — no
+user-facing badge renders it.

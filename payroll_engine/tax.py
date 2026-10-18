@@ -13,12 +13,14 @@ No personal relief — not provided under Proclamation 979/2016 or 1395/2025.
 Article 10(3) of 979/2016 prohibits deductions from employment income.
 
 Bracket schedule: Proclamation No. 1395/2025, Article 11 (Employment Income
-Tax Rates) — the monthly table (0–2,000: 0%; 2,001–4,000: 15%; 4,001–7,000:
-20%; 7,001–10,000: 25%; 10,001–14,000: 30%; above 14,000: 35%) was checked
-against the Federal Negarit Gazette text of the amendment. The effective
-dates of individual amendment items are listed differently across public
-sources (1–8 July 2025 vs 1 September 2025); effective-date applicability
-is to be confirmed by the accountant.
+Tax Rates). Supporting evidence for the article number and the exact table
+text is documented in docs/PENSION_BEFORE_TAX_RC38000_01.md (external
+scans + an independent legal summary); a reviewer who cannot obtain the
+Federal Negarit Gazette should treat the article number as
+"source to be confirmed" until matched against the official text.
+The effective dates of individual amendment items are listed differently
+across public sources (1–8 July 2025 vs 1 September 2025); effective-date
+applicability is to be confirmed by the accountant.
 
 The order in which the employee pension contribution enters the PAYE
 taxable base is current practice pending accountant confirmation
@@ -35,9 +37,9 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 Q = Decimal('0.01')
 
 # Default fallback brackets
-# Source: Ethiopian Income Tax (Amendment) Proclamation No. 1395/2025
-# Article 11 (Employment Income Tax Rates) — checked against the Federal
-# Negarit Gazette text of the amendment
+# Source: Ethiopian Income Tax (Amendment) Proclamation No. 1395/2025,
+# Article 11 (Employment Income Tax Rates). Evidence trail for the article
+# number: docs/PENSION_BEFORE_TAX_RC38000_01.md
 # https://lawethiopia.com/images/proc1395-2025.pdf
 # Used only when no TaxRule exists in the database
 DEFAULT_BRACKETS: list[tuple[Decimal, Decimal]] = [

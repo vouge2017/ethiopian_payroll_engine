@@ -225,14 +225,27 @@ so they carry the same gate.
 
 ### 5b. Could not verify (stated plainly)
 
-- **Article number for the bracket schedule** — NOW VERIFIED: Proclamation
-  1395/2025, Article 11 "Employment Income Tax Rates", carrying the exact
-  monthly table applied in `DEFAULT_BRACKETS`, per the Federal Negarit
-  Gazette scan of the amendment. Two notes: (a) the previous in-repo cite
-  "Article 36(1)" was wrong and has been corrected; (b) the effective dates
-  of individual amendment items differ across public sources (1–8 July 2025
-  vs 1 September 2025 Gazette publication date) and are reported to the
-  accountant as to be confirmed, not asserted.
+- **Article number for the bracket schedule** — Article 11 ("Employment
+  Income Tax Rates") carrying the exact monthly table applied in
+  `DEFAULT_BRACKETS`. In-code wording deliberately makes NO "verified"/
+  "checked" claim; the article digits come from the public evidence below
+  and any reviewer who cannot obtain the Gazette should treat the number
+  as "source to be confirmed" until matched to the official text.
+  Reviewer-checkable evidence trail (fetched 2026-10-18):
+  - Federal Negarit Gazette scan (justice.gov.et):
+    https://justice.gov.et/wp-content/uploads/2025/12/%E1%8A%A0%E1%8B%8B%E1%8C%85-%E1%89%81%E1%8C%A5%E1%88%AD-1395-2017.pdf
+    — amendment item 6/ deletes and replaces Article 11 with
+    "Employment Income Tax Rates", followed by the table
+    `0–2,000: 0%; 2,001–4,000: 15%; 4,001–7,000: 20%; 7,001–10,000: 25%;
+    10,001–14,000: 30%; over 14,000: 35%` (Gazette page 19145).
+  - Mirrored scan: https://ethiolex.com/wp-content/uploads/2026/04/Proclamation-No.1395-2025.pdf
+    — same item 6/ wording and table.
+  - Independent summary agreeing on the table (Chambers):
+    https://chambers.com/articles/what-s-changed-under-ethiopia-s-new-income-tax-amendment-proclamation-no-1395-2025
+    plus KPMG's PDF copy of the amendment text:
+    https://assets.kpmg.com/content/dam/kpmg/ke/pdf/tax/2025/Income_Tax_(Amendment)_Proclamation.pdf
+  - The previously cited "Article 36(1)" is not the employment schedule;
+    it was wrong in the repo comment and was corrected to Article 11.
 - **Who the accountant on RC-38000-01 is** — NOT VERIFIED: no name exists in
   the repo; the sign-off person must be named by the founder.
 - **Is `settlement_service.py:146/151` monthly PAYE?** — ANSWERED: it is the
@@ -314,3 +327,30 @@ before hitting the known benchmark failure):
   PostgreSQL runs are the CI record, and `test_pg_monthly_journey` is skipped
   locally without a disposable PostgreSQL TEST_DATABASE_URL (201 local skips
   include it).
+- **Base-vs-branch full-suite comparison (reviewer's requested check):**
+  same command and same exclusions (`test_benchmark.py`,
+  `test_p0d_concurrency.py`) run on detached base `10b4b3b`:
+
+  | Metric | Base 10b4b3b | Branch c905916 |
+  |--------|--------------|----------------|
+  | passed | 1522 | 1525 |
+  | failed / errors | 19 / 37 | 19 / 37 (+1 flaky phone-tab variant passed on re-run) |
+  | failed/errored test IDs | identical set | identical set |
+  | skipped | 201 | 201 |
+
+  Delta = exactly the 4 new RC-38000-01 tests; failure sets byte-identical.
+  The failures share one root cause (`tests/helpers.py:29` POST-login
+  follow-up broken locally; identical on base) plus the pre-existing
+  benchmark timing thresholds. The base is indeed not healthy locally —
+  documented as a separate pre-existing finding, NOT fixed here, and not
+  concealed: reviewers should not rely on the local suite to prove the base
+  healthy; hosted CI (PostgreSQL) remains the authoritative check record.
+- **Personal-relief sanity check on this branch:** `seed_tax_rules.py:26`
+  still seeds `"personal_relief": 150` while `tax.py` enforces
+  `DEFAULT_PERSONAL_RELIEF = 0` ("No personal relief"). Confirmed on the
+  branch, unchanged here, tracked as the separate pre-existing finding.
+- **`rule_source.py` wording audit:** the "legal source"/"verified" field
+  names live in `rule_source.py` (developer-facing strings, docstrings and
+  the accountant's own verify workflow) and are NOT rendered as user-facing
+  badges by any live template (template-wide grep for "Legal source"/
+  "Verified" returns no product surface). No user-facing change required.

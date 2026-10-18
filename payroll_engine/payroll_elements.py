@@ -16,6 +16,7 @@ Spec (Phase 2 section 2d):
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from payroll_engine import constants as _constants
 from payroll_engine import db
 from payroll_engine.models import (
     PayItemCalcMethod,
@@ -252,12 +253,14 @@ def calculate_payroll_from_assignments(
 
     gross = total_earnings  # base_gross + overtime_pay (overtime already added above)
 
-    # Pension (employee + employer) — BEFORE tax, on basic ONLY
+    # Pension (employee + employer) — on basic ONLY. Its pre-tax timing is
+    # controlled by PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01).
     emp_pen = _employee_pension(basic_salary, for_date)
     empr_pen = _employer_pension(basic_salary, for_date)
 
-    # Taxable = gross - employee pension (pre-tax) - other pre-tax deductions - exempt allowances
-    taxable = gross - emp_pen - total_deductions_pre_tax - exempt_allowances
+    # Taxable = gross − pension (pre-tax per RC-38000-01 switch) − other pre-tax deductions − exempt allowances
+    pension_tax_adjustment = emp_pen if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
+    taxable = gross - pension_tax_adjustment - total_deductions_pre_tax - exempt_allowances
     taxable = max(Decimal('0'), taxable)
 
     # Tax (calculated by the existing tax module)

@@ -1,4 +1,4 @@
-# STATUS.md — Command-Verified State
+﻿# STATUS.md — Command-Verified State
 
 ## CURRENT LOCAL UI CLOSURE — 2026-10-15
 
@@ -1229,3 +1229,32 @@ Preservation, resolved conflicts, exact test selections, receipts and limits:
 [reconciliation review](docs/PR8_RECONCILIATION_2026-10-03.md#priority-override-review-and-stop-checkpoint---2026-10-03).
 Later work is on hold pending review; do not interpret previous next-order text
 as authorization to continue.
+
+## Pension-before-PAYE isolation (RC-38000-01) - 2026-10-18
+
+Branch `feature/pension-before-tax-rc38000-01` off `codex/synthetic-preview` at
+`10b4b3b`; work order delivered, unmerged.
+
+`PENSION_DEDUCTED_BEFORE_TAX = True` (with the pending accountant-confirmation
+comment) added in `payroll_engine/constants.py`; the flag now gates the
+pension-before-tax taxable-income math in `payroll.py` (~249), `excel_payroll.py`
+(~482), `payroll_elements.py` (~267, found as well), `impact.py` preview paths
+(~329 / ~442) and `services/settlement_service.py`. All monthly PAYE paths flip
+together; daily-worker and comparison paths stay as historical behaviour.
+Unwired `TaxRule.pension_deduction_order` knob remains untouched. No arithmetic
+change: 38k/2k employee keeps tax 10,319 / net 25,021 (test-pinned).
+
+All statute citation/badge for the pension-before-tax timing removed from the
+`excel_payroll.py` step, `diff_check.py` wording, help answers and live templates;
+pending-confirmation wording added across the 6 live user-visible paths (results,
+confirm, flow, payslip, settlement, PDF) gated behind documented env
+`PAYROLL_PENDING_TAX_NOTICE` (default on) via Jinja global
+`pending_paye_notice()`. Bank CSV and ERCA filing stay data-only (no caveat inside
+official exchange formats; the notice is visible on the screens they are exported
+from). Dead/duplicate template copies left untouched and flagged. Details:
+[PENSION_BEFORE_TAX_RC38000_01.md](docs/PENSION_BEFORE_TAX_RC38000_01.md).
+
+New pins in `tests/test_pension_before_tax_rc38000_01.py` (4 tests, exact legacy and
+Excel numbers, flip effect per path, gate switch). Focused suites all pass record:
+73 + 131 passed on local run; two existing tests refreshed their wording only.
+No merge, no deploy.

@@ -112,8 +112,10 @@ def calculate_tax(gross_salary, for_date=None) -> Decimal:
     """
     Calculate monthly income tax on taxable salary using progressive brackets.
 
-    Note: gross_salary here should be the TAXABLE amount (after pension deduction).
-    The deduction order (pension before tax) is enforced by the calling code.
+    Note: gross_salary here should be the TAXABLE amount. Whether the 7%
+    employee pension reduces taxable income is decided by
+    constants.PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01) and is applied by
+    the calling code, not in this module.
 
     Args:
         gross_salary: Monthly taxable salary in ETB (must be >= 0)

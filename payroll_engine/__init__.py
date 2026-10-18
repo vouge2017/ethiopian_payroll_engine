@@ -838,6 +838,15 @@ def create_app():
     app.jinja_env.globals['int'] = int
     app.jinja_env.globals['float'] = float
 
+    # RC-38000-01 pending-confirmation notice (single documented switch in
+    # constants.pending_paye_notice_enabled, default on). Notice text only;
+    # controls no calculation.
+    from payroll_engine.constants import PENDING_PAYE_NOTICE_TEXT as _pending_paye_notice_text
+    from payroll_engine.constants import pending_paye_notice_enabled as _pending_paye_notice
+
+    app.jinja_env.globals['pending_paye_notice'] = _pending_paye_notice
+    app.jinja_env.globals['pending_paye_notice_text'] = _pending_paye_notice_text
+
     @app.context_processor
     def inject_ethiopian_calendar():
         # Get language from session or default to English

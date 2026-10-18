@@ -5,10 +5,10 @@ This is THE ONLY ALLOWED WAY to calculate payroll.
 It enforces the deduction order: Gross → Pension → Taxable → Tax → Net.
 
 Why this exists:
-    The deduction order (pension before tax) is a legal requirement.
-    If any code path calls calculate_tax(gross) instead of
-    calculate_tax(gross - pension), employees are overtaxed.
-    This function makes that mistake structurally impossible.
+    The deduction order (pension deducted before tax) is app-enforced so all
+    monthly paths tax the same way. This ordering is current payroll practice
+    pending accountant sign-off (ref RC-38000-01); it is controlled by
+    constants.PENSION_DEDUCTED_BEFORE_TAX, not independently hard-coded here.
 
 Usage:
     from payroll_engine.payroll import calculate_payroll
@@ -20,6 +20,8 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from payroll_engine.overtime import calculate_total_overtime
 from payroll_engine.pension import employee_pension, employer_pension
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
+
+from payroll_engine import constants as _constants
 
 Q = Decimal('0.01')
 
@@ -115,7 +117,9 @@ def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
     emp_pen = Decimal('0')
     empr_pen = Decimal('0')
 
-    # Tax on full gross (no pension deduction)
+    # Tax on full gross — INTENTIONAL EXCEPTION, not controlled by
+    # PENSION_DEDUCTED_BEFORE_TAX: daily workers have no pension deduction,
+    # so there is nothing to subtract (this is not the RC-38000-01 rule).
     taxable = gross
     tax = calculate_tax(taxable)
 
@@ -236,13 +240,17 @@ def calculate_payroll(
     # Step 4: Total gross (including overtime)
     gross = base_gross + overtime_pay
 
-    # Step 5: Pension (BEFORE tax — legal requirement)
+    # Step 5: Pension (BEFORE tax — current practice, RC-38000-01)
     # Pension is on basic salary ONLY, not affected by overtime or allowances
     emp_pen = employee_pension(basic_salary, for_date)
     empr_pen = employer_pension(basic_salary, for_date)
 
-    # Step 6: Taxable = Gross - Pension - Exempt Allowances
-    taxable = gross - emp_pen - exempt_allowances
+    # Step 6: Taxable = Gross − Pension − Exempt Allowances.
+    # Timing controlled by PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01):
+    # when the constant is False, pension no longer reduces taxable income
+    # (it is still deducted from pay).
+    pension_tax_adjustment = emp_pen if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
+    taxable = gross - pension_tax_adjustment - exempt_allowances
     taxable = max(Decimal('0'), taxable)  # Cannot be negative
 
     # Step 7: Tax on taxable amount
@@ -326,6 +334,10 @@ def generate_calculation_flow(result: dict) -> dict:
     # Calculate savings from pension-before-tax rule
     # Without pension deduction, tax would be on (gross - exempt)
     # With pension deduction, tax is on (gross - pension - exempt)
+    # --- INTENTIONAL EXCEPTION, not controlled by PENSION_DEDUCTED_BEFORE_TAX:
+    # this branch deliberately computes the tax WITHOUT the pension deduction
+    # on both sides to explain the tax saving; when the constant is False the
+    # savings are shown as zero, which stays consistent.
     from datetime import date
 
     rule_date = date.fromisoformat(result['calculation_date']) if result.get('calculation_date') else None
@@ -343,7 +355,8 @@ def generate_calculation_flow(result: dict) -> dict:
         {
             'label': 'Employee Pension (7%)',
             'amount': pension,
-            'note': '7% of basic salary — deducted before tax',
+            'note': '7% of basic salary, deducted before PAYE — current practice, '
+            'pending accountant confirmation (RC-38000-01)',
             'is_deduction': True,
             'icon': '🏦',
         },
@@ -387,8 +400,9 @@ def generate_calculation_flow(result: dict) -> dict:
             {
                 'label': 'Pension Tax Savings',
                 'amount': pension_savings,
-                'note': f'You save this much because pension is deducted before tax. '
-                f'Without this rule, tax would be ETB {tax_without_pension:,.2f}',
+                'note': f'You save this much because pension is deducted before PAYE — '
+                f'current practice, pending accountant confirmation (RC-38000-01). '
+                f'Without it, tax would be ETB {tax_without_pension:,.2f}',
                 'is_deduction': False,
                 'icon': '💡',
                 'is_highlight': True,
@@ -431,7 +445,7 @@ def generate_calculation_flow(result: dict) -> dict:
         f'ETB {gross:,.2f} gross → Pension {pension:,.2f} → Taxable {taxable:,.2f} → Tax {tax:,.2f} → Net {net:,.2f}'
     )
     if pension_savings > 0:
-        summary += f' (Pension saves you ETB {pension_savings:,.2f}/month in tax)'
+        summary += f' (Pension saves ETB {pension_savings:,.2f}/month in tax — current practice, pending confirmation)'
 
     return {
         'steps': steps,

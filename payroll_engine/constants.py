@@ -12,6 +12,36 @@ the codebase.
 """
 
 import enum
+import os
+
+# --- PAYE timing assumption -------------------------------------------------
+# Pending accountant sign-off, RC-38000-01. Flipping this changes PAYE for
+# every employee with pension.
+# True  = PAYE is calculated on (gross − 7% employee pension) — current
+#         practice in this app; not expressly traced to a statute article.
+# False = pension is deducted after PAYE: taxable = gross − exempt allowances.
+# Every monthly PAYE calculation must route its taxable-income step through
+# this constant. Intentional exceptions that are NOT controlled by it:
+#   - daily workers (no pension deduction at all, tax on full gross);
+#   - comparison explanations that deliberately compute tax WITHOUT the
+#     deduction to show the pension tax saving.
+PENSION_DEDUCTED_BEFORE_TAX = True
+
+# Single documented switch for the pending-confirmation notice (RC-38000-01).
+# Default ON: set PAYROLL_PENDING_TAX_NOTICE=0 to hide the notice everywhere it
+# is wired up (payslip PDFs, payslip portal page, results/confirm screens,
+# settlement detail, Excel Diff screens) once the accountant signs off.
+# It controls notice wording only — it never changes any calculation.
+PENDING_PAYE_NOTICE_TEXT = (
+    'PAYE note: employee pension (7%) is deducted before income tax. '
+    'This is current practice in EthioPayroll, pending accountant confirmation '
+    '(ref RC-38000-01).'
+)
+
+
+def pending_paye_notice_enabled() -> bool:
+    """Whether the RC-38000-01 pending-confirmation notice is shown (default on)."""
+    return os.environ.get('PAYROLL_PENDING_TAX_NOTICE', '1') != '0'
 
 
 class SystemItemKey(enum.Enum):

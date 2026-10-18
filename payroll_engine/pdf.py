@@ -514,6 +514,10 @@ def generate_payslip(
         'Footer', parent=styles['Normal'], fontName=FONT, fontSize=7, textColor=HexColor('#888888'), alignment=TA_CENTER
     )
     elements.append(_paragraph('This is a computer-generated document. / ይህ ሰነድ በኮምፒውተር የተመረተ ነው።', footer_style))
+    from payroll_engine.constants import PENDING_PAYE_NOTICE_TEXT, pending_paye_notice_enabled
+
+    if pending_paye_notice_enabled():
+        elements.append(_paragraph(f'<font size="6">{PENDING_PAYE_NOTICE_TEXT}</font>', footer_style))
     if company_tin:
         elements.append(_paragraph(f'{company_name} — TIN: {company_tin}', footer_style))
 

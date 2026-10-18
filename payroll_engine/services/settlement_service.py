@@ -12,6 +12,7 @@ import calendar
 from datetime import date
 from decimal import Decimal
 
+from payroll_engine import constants as _constants
 from payroll_engine.leave import LeaveType
 from payroll_engine.models import Employee, EmployeeDeduction, FinalSettlement, LeaveBalance
 from payroll_engine.pension import employee_pension
@@ -140,8 +141,12 @@ def calculate_settlement(
     # 4. Pension deduction on outstanding salary
     pension_ded = employee_pension(employee.basic_salary)
 
-    # 5. Tax on outstanding salary (after pension deduction)
-    taxable_salary = outstanding_salary - pension_ded
+    # 5. Tax on outstanding salary. Timing controlled by
+    # PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01): when False, pension no
+    # longer reduces taxable income (it is still deducted from pay).
+    taxable_salary = outstanding_salary - (
+        pension_ded if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
+    )
     taxable_salary = max(Decimal('0'), taxable_salary)
     tax_on_salary = calculate_tax(taxable_salary)
 

@@ -36,8 +36,13 @@ VERIFICATION_STEPS = [
         'id': 'paye_method',
         'title': 'PAYE Calculation Method',
         'section': 2,
-        'description': 'Verify the order of deductions from gross salary',
-        'what_to_check': 'Is pension deducted before tax? Are there other pre-tax deductions?',
+        'description': 'Verify the order of deductions from gross salary — the '
+        'pension-first PAYE order is current practice, pending accountant confirmation (RC-38000-01)',
+        'what_to_check': (
+            'Our PAYE timing deducts the 7% pension before tax — current practice, '
+            'pending accountant confirmation (ref RC-38000-01). Check whether any '
+            'additional pre-tax deductions should apply.'
+        ),
         'impact': 'HIGH — wrong order = wrong tax for every employee',
         'fields': [
             '1. Start with gross salary',

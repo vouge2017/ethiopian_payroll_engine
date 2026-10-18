@@ -467,7 +467,8 @@ def compare_spreadsheet(
                 their_tax,
                 e_tax,
                 _explain_tax(theirs=their_tax, ours=e_tax, engine=engine, basic=basic),
-                law='Proclamation 1395/2025, Art. 11',
+                law='Brackets: Proclamation 1395/2025, Art. 11 — '
+                'pension-first timing: current practice, pending confirmation (RC-38000-01)',
             )
             _diff(
                 'Employee pension (7%)',
@@ -558,7 +559,11 @@ def _explain_gross(
 
 def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str, Any], basic: Decimal) -> str:
     if theirs is None:
-        return 'Your spreadsheet does not include a Tax (PAYE) column. Our engine computed the tax based on Proclamation 1395/2025 brackets after deducting 7% pension.'
+        return (
+            'Your spreadsheet does not include a Tax (PAYE) column. Our engine computed the tax on income '
+            'after deducting the 7% employee pension first. This timing is current practice in EthioPayroll, '
+            'pending accountant confirmation (ref RC-38000-01).'
+        )
     if ours is None:
         return 'Value missing on one side — cannot compare.'
     gross = engine.get('gross', Decimal('0'))
@@ -567,7 +572,8 @@ def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str,
     psav = engine.get('pension_savings', Decimal('0'))
     pn = (
         f'Our engine deducts pension ({pension:,.2f}, 7% of basic {basic:,.2f}) '
-        f'before calculating tax, saving ETB {psav:,.2f} in tax. '
+        f'before calculating tax, saving ETB {psav:,.2f} in tax — current practice, '
+        f'pending accountant confirmation (RC-38000-01). '
         if pension > 0 and psav > 0
         else ''
     )
@@ -581,9 +587,9 @@ def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str,
     if ours > theirs:
         return (
             f'Their tax ({theirs:,.2f}) < ours ({ours:,.2f}). '
-            f'Possible: (1) personal relief not in Proclamation 1395/2025, '
-            f'(2) outdated tax bracket, (3) pension deducted >7%. '
-            f'Verify against Proclamation 1395/2025, Article 11.'
+            f'Possible: (1) personal relief, '
+            f'(2) outdated tax bracket, (3) pension deduction differs from ours (we deduct 7% of basic). '
+            f'Verify the bracket amounts against the current income-tax schedule.'
         )
     return f'Tax matches: {theirs:,.2f}'
 

@@ -357,18 +357,21 @@ class TestCalculationFlow:
             assert step.step_number == i + 1
 
     def test_legal_references(self, engine):
-        """Key steps must have legal references."""
+        """Key steps must have correct reference treatment (RC-38000-01)."""
         result = engine.calculate_employee(
             employee_id='E001',
             name='Test',
             basic_salary=Decimal('10000'),
         )
 
-        # Pension step should reference the proclamation
+        # RC-38000-01: the pension-before-tax step must NOT present a statute
+        # article as its legal basis — it is current practice pending
+        # accountant confirmation, so no legal_reference badge is allowed.
         pension_steps = [s for s in result.steps if 'Pension' in s.label]
-        assert any(s.legal_reference for s in pension_steps)
+        assert all(not s.legal_reference for s in pension_steps)
+        assert any('pending accountant confirmation' in (s.note or '').lower() for s in pension_steps)
 
-        # Tax step should reference the proclamation
+        # Tax step should reference the proclamation (bracket schedule)
         tax_steps = [s for s in result.steps if 'Income Tax' in s.label]
         assert any(s.legal_reference for s in tax_steps)
 

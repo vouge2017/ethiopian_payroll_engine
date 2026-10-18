@@ -28,10 +28,11 @@ import os
 PENSION_DEDUCTED_BEFORE_TAX = True
 
 # Single documented switch for the pending-confirmation notice (RC-38000-01).
-# Default ON: set PAYROLL_PENDING_TAX_NOTICE=0 to hide the notice everywhere it
-# is wired up (payslip PDFs, payslip portal page, results/confirm screens,
-# settlement detail, Excel Diff screens) once the accountant signs off.
-# It controls notice wording only — it never changes any calculation.
+# Default ON. Deployment override via env PAYROLL_PENDING_TAX_NOTICE (0 hides
+# the notice) without a code change; the env override is read by
+# pending_paye_notice_enabled() below. It controls notice wording only — it
+# never changes any calculation, and it never hard-blocks a path.
+PENDING_CONFIRMATION_NOTICE = True
 PENDING_PAYE_NOTICE_TEXT = (
     'PAYE note: employee pension (7%) is deducted before income tax. '
     'This is current practice in EthioPayroll, pending accountant confirmation '
@@ -40,8 +41,17 @@ PENDING_PAYE_NOTICE_TEXT = (
 
 
 def pending_paye_notice_enabled() -> bool:
-    """Whether the RC-38000-01 pending-confirmation notice is shown (default on)."""
-    return os.environ.get('PAYROLL_PENDING_TAX_NOTICE', '1') != '0'
+    """Whether the RC-38000-01 pending-confirmation notice is shown.
+
+    Default follows PENDING_CONFIRMATION_NOTICE (True). The env variable
+    PAYROLL_PENDING_TAX_NOTICE=0 overrides and hides the notice everywhere
+    it is wired up (payslip PDFs, payslip portal page, results/confirm
+    screens, settlement detail, Excel Diff screens) — e.g. after the
+    accountant signs off (RC-38000-01).
+    """
+    if 'PAYROLL_PENDING_TAX_NOTICE' in os.environ:
+        return os.environ['PAYROLL_PENDING_TAX_NOTICE'] != '0'
+    return PENDING_CONFIRMATION_NOTICE
 
 
 class SystemItemKey(enum.Enum):

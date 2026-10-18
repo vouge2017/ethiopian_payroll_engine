@@ -12,8 +12,18 @@ Progressive tax brackets on monthly taxable salary (ETB):
 No personal relief — not provided under Proclamation 979/2016 or 1395/2025.
 Article 10(3) of 979/2016 prohibits deductions from employment income.
 
-Source: Proclamation No. 1395/2025, effective September 1, 2025.
-Verified by: EY, PwC, DABLO Law, Liku Worku Law Office.
+Bracket schedule: Proclamation No. 1395/2025, Article 11 (Employment Income
+Tax Rates) — the monthly table (0–2,000: 0%; 2,001–4,000: 15%; 4,001–7,000:
+20%; 7,001–10,000: 25%; 10,001–14,000: 30%; above 14,000: 35%) was checked
+against the Federal Negarit Gazette text of the amendment. The effective
+dates of individual amendment items are listed differently across public
+sources (1–8 July 2025 vs 1 September 2025); effective-date applicability
+is to be confirmed by the accountant.
+
+The order in which the employee pension contribution enters the PAYE
+taxable base is current practice pending accountant confirmation
+(constants.PENSION_DEDUCTED_BEFORE_TAX, RC-38000-01) and is NOT attributed
+to any statute article here.
 
 Rules are configurable via the TaxRule database model.
 When no database rule exists, falls back to hardcoded defaults.
@@ -26,7 +36,8 @@ Q = Decimal('0.01')
 
 # Default fallback brackets
 # Source: Ethiopian Income Tax (Amendment) Proclamation No. 1395/2025
-# Article 36(1) — Rates of Income Tax
+# Article 11 (Employment Income Tax Rates) — checked against the Federal
+# Negarit Gazette text of the amendment
 # https://lawethiopia.com/images/proc1395-2025.pdf
 # Used only when no TaxRule exists in the database
 DEFAULT_BRACKETS: list[tuple[Decimal, Decimal]] = [

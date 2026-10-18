@@ -136,6 +136,12 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
     legacy_false = calculate_payroll(basic_salary=RC_BASIC)
     assert legacy_false['taxable'] == RC_BASIC
     assert legacy_false['tax'] == tax_on_full_gross
+    # Hard literals (RC-38000-01): flipped taxable 38,000 → tax 11,250.00 and
+    # net 24,090.00. Derived from the live bracket table today; hard-coding
+    # them here also guards against silent bracket-table drift.
+    assert tax_on_full_gross == Decimal('11250.00')
+    assert legacy_false['tax'] == Decimal('11250.00')
+    assert legacy_false['net'] == Decimal('24090.00')
     assert legacy_false['pension_employee'] == Decimal('2660.00')  # still deducted from pay
     assert legacy_false['tax'] != legacy_true['tax']
 
@@ -205,6 +211,7 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
 def test_notice_switch_defaults_on_and_can_be_disabled(monkeypatch):
     """Single documented switch for the RC-38000-01 notice (default on)."""
     monkeypatch.delenv('PAYROLL_PENDING_TAX_NOTICE', raising=False)
+    assert constants.PENDING_CONFIRMATION_NOTICE is True
     assert constants.pending_paye_notice_enabled() is True
 
     monkeypatch.setenv('PAYROLL_PENDING_TAX_NOTICE', '0')
@@ -212,6 +219,13 @@ def test_notice_switch_defaults_on_and_can_be_disabled(monkeypatch):
 
     monkeypatch.setenv('PAYROLL_PENDING_TAX_NOTICE', '1')
     assert constants.pending_paye_notice_enabled() is True
+
+    # Deployment override wins over the constant while it is set.
+    monkeypatch.setattr(constants, 'PENDING_CONFIRMATION_NOTICE', False)
+    assert constants.pending_paye_notice_enabled() is True  # env '1' overrides constant
+    monkeypatch.delenv('PAYROLL_PENDING_TAX_NOTICE')
+    assert constants.pending_paye_notice_enabled() is False  # constant False with no env
+    monkeypatch.setattr(constants, 'PENDING_CONFIRMATION_NOTICE', True)
 
     text = constants.PENDING_PAYE_NOTICE_TEXT
     assert 'RC-38000-01' in text

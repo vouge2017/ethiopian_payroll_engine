@@ -10,8 +10,9 @@ Or with Flask CLI:
 
 from datetime import date
 
-# Proclamation No. 1395/2025 — effective July 7, 2025
-# Verified by: EY, PwC, DABLO Law, Liku Worku Law Office
+# Proclamation No. 1395/2025 — effective July 7, 2025 (effective date to be
+# confirmed by the accountant; public sources list different item dates)
+# Bracket schedule checked against the Federal Negarit Gazette (Article 11).
 RULES_2025 = {
     "version": "2025-v1",
     "effective_date": "2025-07-07",
@@ -78,8 +79,11 @@ def seed():
             effective_date=date(2025, 7, 7),
             rules_json=RULES_2025,
             status='active',
-            notes='Initial 2025 tax brackets per Proclamation No. 1395/2025. '
-                  'Verified by EY, PwC, DABLO Law, Liku Worku Law Office.'
+            notes='Initial 2025 tax brackets per Proclamation No. 1395/2025, '
+                  'Article 11 (Employment Income Tax Rates), checked against the '
+                  'Federal Negarit Gazette. Bracket schedule only; the '
+                  'pension-before-PAYE timing is current practice pending '
+                  'accountant confirmation (RC-38000-01).'
         )
         db.session.add(rule)
         db.session.commit()

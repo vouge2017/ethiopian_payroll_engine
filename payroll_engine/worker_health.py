@@ -24,7 +24,12 @@ HEARTBEAT_TTL_SECONDS = 180  # 3x the expected idle poll interval
 
 def _redis_client():
     """Best-effort redis client from the broker URL; None if unavailable."""
-    url = os.environ.get('RQ_REDIS_URL') or os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/0'
+    url = (
+        os.environ.get('RQ_REDIS_URL')
+        or os.environ.get('REDIS_URL')
+        or os.environ.get('CELERY_BROKER_URL')
+        or 'redis://localhost:6379/0'
+    )
     if not url.startswith('redis'):
         return None  # memory:// in tests/CI — no persistence to watch
     try:

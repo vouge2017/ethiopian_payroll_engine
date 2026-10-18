@@ -7,17 +7,17 @@
 {%- endmacro %}
 
 {% macro period(start) -%}
-<dl class="monthly-period" aria-label="Payroll period in both calendars">
-  <div><dt>Gregorian</dt><dd>{{ start.strftime('%b %d, %Y') }} – {{ payroll_month_end(start).strftime('%b %d, %Y') }}</dd></div>
-  <div><dt>Ethiopian</dt><dd>{{ eth_only(start) }} – {{ eth_only(payroll_month_end(start)) }}</dd></div>
+<dl class="monthly-period" aria-label="{{ _('monthly_period_aria') }}">
+  <div><dt>{{ _('monthly_period_gregorian') }}</dt><dd>{{ start.strftime('%b %d, %Y') }} – {{ payroll_month_end(start).strftime('%b %d, %Y') }}</dd></div>
+  <div><dt>{{ _('monthly_period_ethiopian') }}</dt><dd>{{ eth_only(start) }} – {{ eth_only(payroll_month_end(start)) }}</dd></div>
 </dl>
 {%- endmacro %}
 
 {% macro totals(count, gross, tax, net, net_label='Net pay', identifier='', comparison=none) -%}
-<section class="monthly-totals" aria-label="{{ net_label }} and payroll totals in ETB"{% if identifier %} id="{{ identifier }}"{% endif %}>
-  <div><span>Employees</span><strong>{{ count }}</strong></div>
-  <div><span>Gross · ETB</span><strong>{{ '{:,.2f}'.format(gross) }}</strong>{% if comparison and comparison.retained_comparison and comparison.previous_period %}<small>{{ '{:+,.2f}'.format(comparison.gross_delta) }} vs previous approval</small>{% endif %}</div>
-  <div><span>Income tax · ETB</span><strong>{{ '{:,.2f}'.format(tax) }}</strong></div>
-  <div class="monthly-net"><span>{{ net_label }} · ETB</span><strong>{{ '{:,.2f}'.format(net) }}</strong>{% if comparison and comparison.retained_comparison and comparison.previous_period %}<small>{{ '{:+,.2f}'.format(comparison.net_delta) }} vs previous approval</small>{% endif %}</div>
+<section class="monthly-totals" aria-label="{{ net_label }} {{ _('monthly_aria_totals') }}"{% if identifier %} id="{{ identifier }}"{% endif %}>
+  <div><span>{{ _('monthly_employees_count') }}</span><strong>{{ count }}</strong></div>
+  <div><span>{{ _('monthly_gross_etb') }}</span><strong>{{ '{:,.2f}'.format(gross) }}</strong>{% if comparison and comparison.retained_comparison and comparison.previous_period %}<small>{{ '{:+,.2f}'.format(comparison.gross_delta) }} {{ _('monthly_vs_previous') }}</small>{% endif %}</div>
+  <div><span>{{ _('monthly_income_tax_etb') }}</span><strong>{{ '{:,.2f}'.format(tax) }}</strong></div>
+  <div class="monthly-net"><span>{{ net_label }} · ETB</span><strong>{{ '{:,.2f}'.format(net) }}</strong>{% if comparison and comparison.retained_comparison and comparison.previous_period %}<small>{{ '{:+,.2f}'.format(comparison.net_delta) }} {{ _('monthly_vs_previous') }}</small>{% endif %}</div>
 </section>
 {%- endmacro %}

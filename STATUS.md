@@ -1229,3 +1229,25 @@ Preservation, resolved conflicts, exact test selections, receipts and limits:
 [reconciliation review](docs/PR8_RECONCILIATION_2026-10-03.md#priority-override-review-and-stop-checkpoint---2026-10-03).
 Later work is on hold pending review; do not interpret previous next-order text
 as authorization to continue.
+
+## 2026-10-18 — Amharic prep/review drafts + ops slice
+
+Branch `feature/amharic-prep-review-and-ops` @ `02985ab`, worktree isolated from
+the concurrently active main checkout (`codex/pension-assumption-isolation`
+session). Scope: monthly preparation and review screens drafted in Amharic
+(English byte-identical), monthly period/totals macros, JS strings injected via
+`window.PAYROLL_I18N`; worker heartbeat now accepts `REDIS_URL`
+(`Dockerfile.worker` parity) — `/readyz` previously could never connect in
+production; production startup warns when `UPLOAD_FOLDER` is under `/tmp`;
+`.env.example` documents durable storage and Redis parity; staged rollout
+checklist appended to `docs/SYNTHETIC_PREVIEW.md`; draft review package in
+`docs/NATIVE_REVIEW_PACKAGE_20261018.md`.
+
+Local receipts: `tests/test_i18n.py`+`tests/test_worker_health.py`+
+`tests/test_file_storage_warning.py`+`tests/test_diff_check_e2e.py` →
+`26 passed, 4 warnings in 4.45s`; all four touched templates parse via
+`app.jinja_env.get_template`; `node --check monthly-payroll.js` OK; 148 `_()`
+keys used by the edited templates all resolve. Limits: no local Ruff (CI runs
+it), `test_pg_worksheet_journey`/`test_pg_monthly_journey` need PostgreSQL and
+were not run locally. Amharic strings are drafts pending native-speaker
+sign-off (see package doc).

@@ -1285,3 +1285,14 @@ replacing Article 11) is documented in the deliverable doc for reviewer checking
 with "source to be confirmed" as the fallback wording. seed personal_relief 150
 vs code default 0 confirmed still-open; rule_source wording audited — no
 user-facing badge renders it.
+
+### Doc correction - 2026-10-18 (4)
+
+Reviewer caught a stale before/after table: §2b still listed the removed
+"checked against the Federal Negarit Gazette" phrasing as the NEW code state.
+Table and lead-in now match the actual `tax.py` / `seed_tax_rules.py` strings
+(no verification-class claim in code; evidence trail only in this doc's §5b).
+Scope figure corrected and anchored: 27 files, 969 insertions(+), 70
+deletions(-) vs `10b4b3b` at `9e2edd7` (old 912-line count superseded).
+PR target remains `codex/synthetic-preview`; merge still held on RC-38000-01
+sign-off, personal-relief decision and the login-helper failure cluster.

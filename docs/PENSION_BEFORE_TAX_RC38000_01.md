@@ -18,6 +18,17 @@ explicitly mandate the treatment direction, so we:
 
 No arithmetic was changed. Any flag=True path produces byte-identical numbers.
 
+## Scope of this branch (verified)
+
+- Diff vs base `10b4b3b` (`codex/synthetic-preview`) measured at `9e2edd7`:
+  **27 files, 969 insertions(+), 70 deletions(−)**. The documentation-only
+  follow-up commit adds no product lines. (An earlier figure of 912 lines was
+  the count before `9e2edd7` and is superseded.)
+- Diff vs `main` (`f27d5af`) is much larger (~94 files) because this work
+  order was scoped to `codex/synthetic-preview`, not main. Recommended PR
+  target: **`codex/synthetic-preview`**. Whether `synthetic-preview` merges to
+  main first is a sequencing decision outside this work order.
+
 ## 1. Named constant and notice switch
 
 `payroll_engine/constants.py`:
@@ -115,19 +126,20 @@ Strings deliberately NOT changed:
 ### 2b. Second-round string changes (same work order, follow-up commit)
 
 These remove the remaining "verified"-class claims found by the second audit
-pass. Rule applied: no "legal requirement" / "Verified by" claim anywhere in
-the product; bracket citations live only where the article was checked
-against the proclamation text (Article 11 confirmed via the Federal Negarit
-Gazette scan of Proclamation 1395/2025 — the exact monthly bracket table
-appears under "Employment Income Tax Rates").
+pass. Rule applied: no "legal requirement" / "Verified by" / "checked
+against the Gazette" claim anywhere in the product. Bracket citations name
+the proclamation and article only; the evidence trail for the article number
+lives in this document (§5b), not in code, and code comments explicitly fall
+back to "source to be confirmed" if a reviewer cannot match the official
+text.
 
 | Location | Old | New |
 |----------|-----|-----|
 | `payroll_engine/tax.py:16` | "Verified by: EY, PwC, DABLO Law, Liku Worku Law Office." | removed (no replacement claim) |
-| `payroll_engine/tax.py` docstring source block | "Source: Proclamation No. 1395/2025, effective September 1, 2025." | "Art. 11 (Employment Income Tax Rates), checked against the Federal Negarit Gazette; effective dates of amendment items to be confirmed (public sources list 1–8 July vs 1 Sept 2025)" |
-| `payroll_engine/tax.py` brackets comment | "Article 36(1) — Rates of Income Tax" | "Article 11 (Employment Income Tax Rates)" — the old 36(1) cite was wrong; the Gazette scan shows the table under Art. 11 |
-| `seed_tax_rules.py:14` | "# Verified by: EY, PwC, DABLO Law, Liku Worku Law Office" | "# Bracket schedule checked against the Federal Negarit Gazette (Article 11); effective date to be confirmed" |
-| `seed_tax_rules.py:82` (`TaxRule.notes` → database) | "'Initial 2025 tax brackets per Proclamation No. 1395/2025. Verified by EY, PwC, DABLO Law, Liku Worku Law Office.'" | "'Initial 2025 tax brackets per Proclamation No. 1395/2025, Article 11 (Employment Income Tax Rates), checked against the Federal Negarit Gazette. Bracket schedule only; the pension-before-PAYE timing is current practice pending accountant confirmation (RC-38000-01).'" |
+| `payroll_engine/tax.py` docstring source block | "Source: Proclamation No. 1395/2025, effective September 1, 2025." | "Bracket schedule: Proclamation No. 1395/2025, Article 11 (Employment Income Tax Rates). Supporting evidence … documented in docs/PENSION_BEFORE_TAX_RC38000_01.md; treat the article number as 'source to be confirmed' until matched against the official text. Effective dates … to be confirmed by the accountant." |
+| `payroll_engine/tax.py` brackets comment | "Article 36(1) — Rates of Income Tax" | "Article 11 (Employment Income Tax Rates). Evidence trail for the article number: docs/PENSION_BEFORE_TAX_RC38000_01.md" — the old 36(1) cite was wrong |
+| `seed_tax_rules.py:14` | "# Verified by: EY, PwC, DABLO Law, Liku Worku Law Office" | "# Brackets: Proclamation No. 1395/2025, Article 11 (Employment Income Tax Rates). Evidence trail for the article number: docs/PENSION_BEFORE_TAX_RC38000_01.md" |
+| `seed_tax_rules.py:82` (`TaxRule.notes` → database) | "'Initial 2025 tax brackets per Proclamation No. 1395/2025. Verified by EY, PwC, DABLO Law, Liku Worku Law Office.'" | "'Initial 2025 tax brackets per Proclamation No. 1395/2025, Article 11 (Employment Income Tax Rates). Bracket schedule only; the pension-before-PAYE timing is current practice pending accountant confirmation (RC-38000-01).'" |
 | `payroll_engine/i18n.py:147` (`tax_explainer_intro`, Amharic) | "…ጡረታ ከግብር በፊት ይቀነሳል፣ የሚተካ ገቢዎን ይቀንሳል።" | "…ጡረታ ከግብር በፊት መቀነስ የተለመደው ተግባር ሲሆን፣ እስኪረጋገጥ ዝግጁ አይደለም (RC-38000-01)…" — DRAFT Amharic, flagged in code for native-speaker review |
 | `payroll_engine/i18n.py:153` (`pension_before_tax`, Amharic) | "ጡረታ ከግብር በፊት ይቀነሳል" | "ጡረታ ከግብር በፊት ይቀነሳል — የተለመደው ተግባር፣ እስኪረጋገጥ ይጠበቃል (RC-38000-01)።" — DRAFT, native review pending |
 | `payroll_engine/i18n_om.py:143` (`tax_explainer_intro`, Oromo) | "…Haqni guutuu dura caasaa irraa ni haqama, lixuu kee ni hir'isa." | "…akkaataa ammaa jiruudha; mirkanaa'iin hooersaalaan eegama (RC-38000-01)…" — DRAFT Oromo, flagged for native-speaker review |

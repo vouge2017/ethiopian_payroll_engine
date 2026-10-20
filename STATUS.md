@@ -1,4 +1,4 @@
-# STATUS.md — Command-Verified State
+﻿# STATUS.md — Command-Verified State
 
 ## CURRENT LOCAL UI CLOSURE — 2026-10-15
 
@@ -1230,39 +1230,129 @@ Preservation, resolved conflicts, exact test selections, receipts and limits:
 Later work is on hold pending review; do not interpret previous next-order text
 as authorization to continue.
 
-## 2026-10-18 — Amharic prep/review drafts + ops slice
+## Pension-before-PAYE isolation (RC-38000-01) - 2026-10-18
 
-Branch `feature/amharic-prep-review-and-ops` @ `02985ab`, worktree isolated from
-the concurrently active main checkout (`codex/pension-assumption-isolation`
-session). Scope: monthly preparation and review screens drafted in Amharic
-(English byte-identical), monthly period/totals macros, JS strings injected via
-`window.PAYROLL_I18N`; worker heartbeat now accepts `REDIS_URL`
-(`Dockerfile.worker` parity) — `/readyz` previously could never connect in
-production; production startup warns when `UPLOAD_FOLDER` is under `/tmp`;
-`.env.example` documents durable storage and Redis parity; staged rollout
-checklist appended to `docs/SYNTHETIC_PREVIEW.md`; draft review package in
+Branch `feature/pension-before-tax-rc38000-01` off `codex/synthetic-preview` at
+`10b4b3b`; work order delivered, unmerged.
+
+`PENSION_DEDUCTED_BEFORE_TAX = True` (with the pending accountant-confirmation
+comment) added in `payroll_engine/constants.py`; the flag now gates the
+pension-before-tax taxable-income math in `payroll.py` (~249), `excel_payroll.py`
+(~482), `payroll_elements.py` (~267, found as well), `impact.py` preview paths
+(~329 / ~442) and `services/settlement_service.py`. All monthly PAYE paths flip
+together; daily-worker and comparison paths stay as historical behaviour.
+Unwired `TaxRule.pension_deduction_order` knob remains untouched. No arithmetic
+change: 38k/2k employee keeps tax 10,319 / net 25,021 (test-pinned).
+
+All statute citation/badge for the pension-before-tax timing removed from the
+`excel_payroll.py` step, `diff_check.py` wording, help answers and live templates;
+pending-confirmation wording added across the 6 live user-visible paths (results,
+confirm, flow, payslip, settlement, PDF) gated behind documented env
+`PAYROLL_PENDING_TAX_NOTICE` (default on) via Jinja global
+`pending_paye_notice()`. Bank CSV and ERCA filing stay data-only (no caveat inside
+official exchange formats; the notice is visible on the screens they are exported
+from). Dead/duplicate template copies left untouched and flagged. Details:
+[PENSION_BEFORE_TAX_RC38000_01.md](docs/PENSION_BEFORE_TAX_RC38000_01.md).
+
+New pins in `tests/test_pension_before_tax_rc38000_01.py` (4 tests, exact legacy and
+Excel numbers, flip effect per path, gate switch). Focused suites all pass record:
+73 + 131 passed on local run; two existing tests refreshed their wording only.
+No merge, no deploy.
+
+## RC-38000-01 on codex/pension-assumption-isolation - 2026-10-18 (2)
+
+Branch `codex/pension-assumption-isolation` off `10b4b3b` carries the RC-38000-01
+work in two commits: `1f1922b` (isolation + honest wording + gated notice) and
+`03d8a5b` (second labelling pass: tax.py 'Verified by EY…' line removed, bracket
+cite corrected to Art. 11 after checking the Federal Negarit Gazette scan;
+seed_tax_rules notes reworded with the already-seeded-rows caveat; Amharic/Oromo
+draft translations flagged for native review; documented constant
+PENDING_CONFIRMATION_NOTICE with env override). Flip test now hard-asserts tax
+11,250 / net 24,090. Focused suites: 192 passed. Full suite: 1525 passed, 201
+skipped; 19 failed + 37 errors + 3 benchmark failures ALL re-verified identical
+on base `10b4b3b` (login-helper root cause; no payroll/tax failures). Branch
+pushed only; do not merge.
+
+### Base comparison + gazette wording fix - 2026-10-18 (3)
+
+Reviewer-requested checks recorded: full suite re-run on detached base `10b4b3b`
+(same exclusions) — 19 failed + 37 errors identical test-for-test (1522 passed vs
+1525 on branch; delta = the 4 new tests, one flaky phone-tab variant). In-code
+"checked against the Federal Negarit Gazette" phrasing removed from tax.py and
+seed_tax_rules.py (no verification-style claim in product); the article-number
+evidence trail (two Gazette scans with links, Chambers, KPMG, page 19145, item 6/
+replacing Article 11) is documented in the deliverable doc for reviewer checking,
+with "source to be confirmed" as the fallback wording. seed personal_relief 150
+vs code default 0 confirmed still-open; rule_source wording audited — no
+user-facing badge renders it.
+
+### Doc correction - 2026-10-18 (4)
+
+Reviewer caught a stale before/after table: §2b still listed the removed
+"checked against the Federal Negarit Gazette" phrasing as the NEW code state.
+Table and lead-in now match the actual `tax.py` / `seed_tax_rules.py` strings
+(no verification-class claim in code; evidence trail only in this doc's §5b).
+Scope figure corrected and anchored: 27 files, 969 insertions(+), 70
+deletions(-) vs `10b4b3b` at `9e2edd7` (old 912-line count superseded).
+PR target remains `codex/synthetic-preview`; merge still held on RC-38000-01
+sign-off, personal-relief decision and the login-helper failure cluster.
+
+## CI blockers fixed - 2026-10-19
+
+- `tests/helpers.py` now sends the required `middle_name`; the
+  `test_e2e_full` setup-profile payload does too (the template marks it
+  required). This clears the strict security/tenancy gate failures (10 hosted,
+  previously attributed to a stale login helper). Local gate + RC file:
+  **107 passed, 2 skipped** in 185.56s.
+- Three stale login-tab assertions in `tests/test_phone_password_strict.py`
+  now assert the shipped single phone-or-email identifier UI. Focused local
+  subset (phone/password, e2e, i18n, auth-entry recovery, RC): **60 passed,
+  1 skipped**.
+- Lint fixed: constant import alias N811 (`payroll_engine/__init__.py`),
+  import order in `payroll_engine/payroll.py` and the RC test, unused `app`
+  in `tests/test_pg_monthly_ui.py`. Repo-wide `ruff format` applied (7 files,
+  no content changes) so the hosted format gate passes. `uvx ruff@0.17.1
+  check payroll_engine/ tests/` reports all checks passed and
+  `format --check` reports 244 files already formatted.
+- `test_pg_worksheet_journey` expectation corrected 9,090.35 -> 9,260.00 to
+  match the documented prep-save review auto-refresh; no arithmetic change.
+- Not locally runnable: `test_pg_*` (no disposable PostgreSQL); hosted CI is
+  the record. Merge still held on RC-38000-01 sign-off, personal-relief
+  decision and native Amharic review.
+
+## Amharic prep/review drafts + ops slice - 2026-10-18
+
+Branch `feature/amharic-prep-review-and-ops` @ `02985ab`, worktree isolated
+from the concurrently active main checkout. Scope: monthly preparation and
+review screens drafted in Amharic (English byte-identical), monthly
+period/totals macros, JS strings injected via `window.PAYROLL_I18N`; worker
+heartbeat now accepts `REDIS_URL` (`Dockerfile.worker` parity) so
+`/readyz` can connect in production; production startup warns when
+`UPLOAD_FOLDER` is under `/tmp`; `.env.example` documents durable storage
+and Redis parity; staged rollout checklist appended to
+`docs/SYNTHETIC_PREVIEW.md`; draft review package in
 `docs/NATIVE_REVIEW_PACKAGE_20261018.md`.
 
-Local receipts: `tests/test_i18n.py`+`tests/test_worker_health.py`+
-`tests/test_file_storage_warning.py`+`tests/test_diff_check_e2e.py` →
-`26 passed, 4 warnings in 4.45s`; all four touched templates parse via
-`app.jinja_env.get_template`; `node --check monthly-payroll.js` OK; 148 `_()`
-keys used by the edited templates all resolve. Limits: no local Ruff (CI runs
-it), `test_pg_worksheet_journey`/`test_pg_monthly_journey` need PostgreSQL and
-were not run locally. Amharic strings are drafts pending native-speaker
-sign-off (see package doc).
+Pre-merge local receipts: `26 passed, 4 warnings in 4.45s` for i18n, worker
+health, storage warning and diff-check e2e; all four touched templates parse;
+`node --check monthly-payroll.js` OK; 148 `_()` keys resolve. Amharic
+strings are drafts pending native-speaker sign-off.
 
-## Pre-PR CI hygiene - 2026-10-19
+## Amharic PR #15 base merge and CI hygiene - 2026-10-20
 
-- Stacked on `codex/synthetic-preview` (`10b4b3b`). Before opening the PR,
-  applied the shared CI fixes: required `middle_name` in `tests/helpers.py`
-  and `test_e2e_full`; stale login-tab assertions updated to the shipped
-  single phone-or-email identifier UI; unused variable in
-  `test_pg_monthly_ui`; `test_pg_worksheet_journey` 9,090.35 -> 9,260.00
-  for the documented prep-save auto-refresh; repo-wide `ruff format`.
-- Local gate + focused i18n/ops subset: **159 passed, 3 skipped** in 298.72s
-  (strict security/tenancy gate, phone login, e2e, i18n, worker health,
-  storage warning, diff-check e2e).
-- Ruff 0.17.1: check clean; 245 files already formatted.
-- Hosted CI is authoritative; native Amharic/Oromo review remains a human
-  gate, as does accounting sign-off.
+- PR #15 (draft, base `codex/synthetic-preview`) opened. RC-38000-01 then
+  merged into the base as `982f374`, so the base was merged into this branch.
+  Only `STATUS.md` conflicted; both receipt sets are retained.
+- Shared CI hygiene: required `middle_name` in test fixtures; stale login-tab
+  assertions updated to the single identifier UI; `test_pg_monthly_ui` unused
+  variable; `test_pg_worksheet_journey` 9,090.35 -> 9,260.00 for the
+  documented prep-save auto-refresh; repo-wide `ruff format`.
+- Post-merge focused local suite: **108 passed, 1 skipped** in 46.00s (i18n,
+  worker health, storage warning, diff-check e2e, phone login, e2e, security
+  gate, RC tests, auth-entry recovery, employee form).
+- Ruff 0.17.1: check clean; 246 files already formatted.
+- Hosted CI does not run for PRs targeting `codex/synthetic-preview` (workflow
+  triggers only PRs to `main`); validation is the local receipts plus the
+  eventual preview-to-main promotion run.
+- Native Amharic/Oromo review, staged rollout and accounting sign-off remain
+  human gates.

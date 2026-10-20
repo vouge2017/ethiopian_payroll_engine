@@ -13,6 +13,7 @@ Simple, clear, actionable. No jargon. Just numbers.
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
+from payroll_engine import constants as _constants
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.pension import employee_pension
 from payroll_engine.services.allowance_service import calculate_transport_exempt_amount
@@ -322,7 +323,11 @@ def preview_termination(
 
     pension = employee_pension(basic_salary)
     outstanding = monthly_salary  # Assume full month
-    taxable = outstanding - pension
+    # Timing controlled by PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01):
+    # when False, pension no longer reduces taxable income (still deducted from pay).
+    pension_tax_adjustment = pension if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
+    taxable = outstanding - pension_tax_adjustment
+    taxable = max(Decimal('0'), taxable)
     tax = calculate_tax(taxable)
 
     total_cost = outstanding + sev['final_amount'] + leave_encashment
@@ -435,8 +440,10 @@ def preview_allowance_change(
     new_taxable_allowance = new_amount - new_exempt
 
     pension = employee_pension(basic_salary)
-    current_taxable = basic_salary + current_taxable_allowance - pension
-    new_taxable = basic_salary + new_taxable_allowance - pension
+    # Timing controlled by PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01).
+    pension_tax_adjustment = pension if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
+    current_taxable = basic_salary + current_taxable_allowance - pension_tax_adjustment
+    new_taxable = basic_salary + new_taxable_allowance - pension_tax_adjustment
 
     current_tax = calculate_tax(max(Decimal('0'), current_taxable))
     new_tax = calculate_tax(max(Decimal('0'), new_taxable))

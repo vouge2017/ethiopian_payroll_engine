@@ -75,10 +75,10 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
     """Flipping the constant must change PAYE on every monthly path, and never
     change the daily-worker exception or the comparison explanation."""
     from payroll_engine.excel_payroll import ExcelPayrollEngine
+    from payroll_engine.impact import preview_allowance_change, preview_termination
     from payroll_engine.models import Employee
     from payroll_engine.payroll import generate_calculation_flow
     from payroll_engine.services.settlement_service import calculate_settlement
-    from payroll_engine.impact import preview_allowance_change, preview_termination
 
     tax_on_full_gross = _tax_from_default_brackets(RC_BASIC)  # 11,250.00 for 38,000
 

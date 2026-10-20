@@ -841,11 +841,10 @@ def create_app():
     # RC-38000-01 pending-confirmation notice (single documented switch in
     # constants.pending_paye_notice_enabled, default on). Notice text only;
     # controls no calculation.
-    from payroll_engine.constants import PENDING_PAYE_NOTICE_TEXT as _pending_paye_notice_text
-    from payroll_engine.constants import pending_paye_notice_enabled as _pending_paye_notice
+    from payroll_engine.constants import PENDING_PAYE_NOTICE_TEXT, pending_paye_notice_enabled
 
-    app.jinja_env.globals['pending_paye_notice'] = _pending_paye_notice
-    app.jinja_env.globals['pending_paye_notice_text'] = _pending_paye_notice_text
+    app.jinja_env.globals['pending_paye_notice'] = pending_paye_notice_enabled
+    app.jinja_env.globals['pending_paye_notice_text'] = PENDING_PAYE_NOTICE_TEXT
 
     @app.context_processor
     def inject_ethiopian_calendar():

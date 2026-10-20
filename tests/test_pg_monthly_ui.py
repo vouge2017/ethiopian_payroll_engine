@@ -53,7 +53,7 @@ def test_dashboard_preparation_link_resolves(worksheet):
 
 
 def test_review_refresh_copy_explains_automatic_updates_and_manual_replacement(worksheet, monkeypatch):
-    app, client, _ids, _engine, rid = saved_review(worksheet, monkeypatch)
+    _app, client, _ids, _engine, rid = saved_review(worksheet, monkeypatch)
     path = f'/payroll/runs/{rid}/review'
 
     english = client.get(path).get_data(as_text=True)

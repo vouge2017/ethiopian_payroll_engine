@@ -175,7 +175,10 @@ def test_later_approval_keeps_reviewed_month_amounts_and_identity(worksheet, mon
     assert client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'}).status_code == 302
     with engine.connect() as conn:
         ps = conn.execute(text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one()
-        assert ps == Decimal('9090.35')
+        # The prep save above auto-refreshes this unsubmitted review (documented
+        # in the review UI), so approval preserves the refreshed 9,260.00
+        # snapshot, not the pre-save 9,090.35.
+        assert ps == Decimal('9260.00')
     bank = client.get(f'/reports/bank/{rid}?format=csv&bank=cbe')
     assert bank.status_code == 200
     assert 'Synthetic monthly' in bank.get_data(as_text=True)

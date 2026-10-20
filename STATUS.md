@@ -1296,3 +1296,19 @@ Scope figure corrected and anchored: 27 files, 969 insertions(+), 70
 deletions(-) vs `10b4b3b` at `9e2edd7` (old 912-line count superseded).
 PR target remains `codex/synthetic-preview`; merge still held on RC-38000-01
 sign-off, personal-relief decision and the login-helper failure cluster.
+
+## CI blockers fixed - 2026-10-19
+
+- `tests/helpers.py` now sends the required `middle_name`; this clears the
+  strict security/tenancy gate failures (10 hosted, previously attributed to a
+  stale login helper). Local gate + RC file: **107 passed, 2 skipped** in
+  185.56s.
+- Lint fixed: constant import alias N811 (`payroll_engine/__init__.py`),
+  import order in `payroll_engine/payroll.py` and the RC test, unused `app`
+  in `tests/test_pg_monthly_ui.py`. `uvx ruff@0.17.1 check payroll_engine/
+  tests/` reports all checks passed.
+- `test_pg_worksheet_journey` expectation corrected 9,090.35 -> 9,260.00 to
+  match the documented prep-save review auto-refresh; no arithmetic change.
+- Not locally runnable: `test_pg_*` (no disposable PostgreSQL); hosted CI is
+  the record. Merge still held on RC-38000-01 sign-off, personal-relief
+  decision and native Amharic review.

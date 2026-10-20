@@ -1299,14 +1299,21 @@ sign-off, personal-relief decision and the login-helper failure cluster.
 
 ## CI blockers fixed - 2026-10-19
 
-- `tests/helpers.py` now sends the required `middle_name`; this clears the
-  strict security/tenancy gate failures (10 hosted, previously attributed to a
-  stale login helper). Local gate + RC file: **107 passed, 2 skipped** in
-  185.56s.
+- `tests/helpers.py` now sends the required `middle_name`; the
+  `test_e2e_full` setup-profile payload does too (the template marks it
+  required). This clears the strict security/tenancy gate failures (10 hosted,
+  previously attributed to a stale login helper). Local gate + RC file:
+  **107 passed, 2 skipped** in 185.56s.
+- Three stale login-tab assertions in `tests/test_phone_password_strict.py`
+  now assert the shipped single phone-or-email identifier UI. Focused local
+  subset (phone/password, e2e, i18n, auth-entry recovery, RC): **60 passed,
+  1 skipped**.
 - Lint fixed: constant import alias N811 (`payroll_engine/__init__.py`),
   import order in `payroll_engine/payroll.py` and the RC test, unused `app`
-  in `tests/test_pg_monthly_ui.py`. `uvx ruff@0.17.1 check payroll_engine/
-  tests/` reports all checks passed.
+  in `tests/test_pg_monthly_ui.py`. Repo-wide `ruff format` applied (7 files,
+  no content changes) so the hosted format gate passes. `uvx ruff@0.17.1
+  check payroll_engine/ tests/` reports all checks passed and
+  `format --check` reports 244 files already formatted.
 - `test_pg_worksheet_journey` expectation corrected 9,090.35 -> 9,260.00 to
   match the documented prep-save review auto-refresh; no arithmetic change.
 - Not locally runnable: `test_pg_*` (no disposable PostgreSQL); hosted CI is

@@ -149,7 +149,7 @@ STRINGS_OM = {
     'personal_relief': 'Dhoomsoo Dhuunfaa',
     'per_month': "ji'a tokkootti",
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review.
-    'pension_before_tax': 'Haqni guutuu dura caasaa irraa ni haqama — akkaataa ammaa jiru; mirkanaa\'insa eegaala (RC-38000-01)',
+    'pension_before_tax': "Haqni guutuu dura caasaa irraa ni haqama — akkaataa ammaa jiru; mirkanaa'insa eegaala (RC-38000-01)",
     'of_basic_salary': "lixuu bu'uura",
     'then_tax': 'sana booda caasni ni shallagama',
 }

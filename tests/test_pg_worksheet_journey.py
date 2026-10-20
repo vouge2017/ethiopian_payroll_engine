@@ -346,9 +346,12 @@ def test_autosave_refreshes_review_but_submitted_review_rejects_edits(worksheet,
     rejected = client.post('/payroll/spreadsheet', data=form(ids, bonus='0'))
     assert rejected.status_code == 409
     with engine.connect() as conn:
-        assert conn.execute(
-            text('SELECT employee_data FROM payroll_draft WHERE payroll_run_id=:id'), {'id': rid}
-        ).scalar_one() == submitted_snapshot
+        assert (
+            conn.execute(
+                text('SELECT employee_data FROM payroll_draft WHERE payroll_run_id=:id'), {'id': rid}
+            ).scalar_one()
+            == submitted_snapshot
+        )
 
 
 def test_approval_audit_failure_rolls_back_money_and_retry_recovers(worksheet, monkeypatch):

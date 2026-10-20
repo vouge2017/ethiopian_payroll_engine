@@ -359,14 +359,18 @@ before hitting the known benchmark failure):
   the local suite to prove the base healthy; hosted CI (PostgreSQL) remains
   the authoritative check record.
 - **Follow-up (2026-10-19): CI blockers fixed on this branch.** The
-  `setup_profile` route requires `middle_name`, but `tests/helpers.py` omitted
-  it, which produced the 10 hosted and 19/37 local failures. The helper now
-  sends it; the strict security/tenancy gate plus the RC test file pass
-  locally (**107 passed, 2 skipped**), and Ruff 0.17.1 is clean. The hosted
-  `test_pg_worksheet_journey` failure was a stale expectation for the
-  prep-save review auto-refresh, not an arithmetic change: approval preserves
-  the refreshed 9,260.00 snapshot, so the assertion now expects 9,260.00
-  (was 9,090.35). Hosted CI remains the authoritative record.
+  `setup_profile` route requires `middle_name`, but `tests/helpers.py` and the
+  `test_e2e_full` fixture omitted it, which produced the 10 hosted and 19/37
+  local failures. Both now send it. Three stale login-tab assertions now
+  assert the shipped single phone-or-email identifier UI. The strict
+  security/tenancy gate plus the RC test file pass locally (**107 passed, 2
+  skipped**); the focused phone/e2e/i18n/auth subset is **60 passed, 1
+  skipped**. Repo-wide `ruff format` was applied (7 files, no content changes),
+  Ruff 0.17.1 `check` is clean and `format --check` reports 244 files already
+  formatted. The hosted `test_pg_worksheet_journey` failure was a stale
+  expectation for the prep-save review auto-refresh, not an arithmetic change:
+  approval preserves the refreshed 9,260.00 snapshot, so the assertion now
+  expects 9,260.00 (was 9,090.35). Hosted CI remains the authoritative record.
 - **Personal-relief sanity check on this branch:** `seed_tax_rules.py:26`
   still seeds `"personal_relief": 150` while `tax.py` enforces
   `DEFAULT_PERSONAL_RELIEF = 0` ("No personal relief"). Confirmed on the

@@ -110,7 +110,7 @@ def test_full_payroll_flow(ctx, client):
         '/auth/setup-profile',
         data={
             'first_name': 'Test',
-            'middle_name': '',
+            'middle_name': 'Test',
             'last_name': 'Owner',
             'company_name': 'Tigist Trading PLC',
         },

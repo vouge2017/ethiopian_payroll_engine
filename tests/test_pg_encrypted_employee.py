@@ -1,6 +1,10 @@
 """Employee encrypted fields must round-trip on the migrated PostgreSQL schema."""
 
+import json
 import os
+import secrets
+import subprocess
+import sys
 from pathlib import Path
 from uuid import uuid4
 
@@ -82,6 +86,57 @@ def test_encrypted_employee_field_round_trip(encrypted_employee_db, field, value
         stored = bytes(stored)
         assert stored and stored != value.encode()
         assert value.encode() not in stored
+
+
+def test_shared_key_decrypts_all_fields_across_fresh_processes(encrypted_employee_db, tmp_path):
+    """Cross-process decryption only: no claim about RQ execution or live keys."""
+    _, company_id, _, _ = encrypted_employee_db
+    repo = Path(__file__).resolve().parents[1]
+    # Do not inherit database URLs, keys, cloud credentials, .env overrides or
+    # external integrations. Keep only OS variables needed to launch Python.
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key.upper() in {'SYSTEMROOT', 'WINDIR', 'PATH', 'TEMP', 'TMP', 'HOME', 'USERPROFILE', 'LANG'}
+    }
+    shared_key = secrets.token_hex(32)
+    env.update(
+        FLASK_ENV='staging',
+        DATABASE_URL=PG_URL,
+        SECRET_KEY=secrets.token_hex(32),
+        DB_ENCRYPTION_KEY=shared_key,
+        RATELIMIT_STORAGE_URI='memory://',
+        ENABLE_DEMO_MODE='false',
+        UPLOAD_FOLDER=str(tmp_path / 'uploads'),
+        PYTHONDONTWRITEBYTECODE='1',
+    )
+
+    def probe(mode, *args, key=shared_key):
+        result = subprocess.run(
+            [sys.executable, str(repo / 'tests/encryption_process_probe.py'), mode, str(company_id), *map(str, args)],
+            cwd=repo,
+            env={**env, 'DB_ENCRYPTION_KEY': key},
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        # Probe output contains only field names/row IDs, never keys or values.
+        assert result.returncode == 0, f'{mode} probe failed:\n{result.stderr}'
+        return json.loads(result.stdout.strip())
+
+    expected_fields = ['bank_account', 'tin', 'fayda_fin', 'webhook_secret']
+    written = probe('write')
+    assert written['ciphertext_fields'] == expected_fields
+    employee_id = written['employee_id']
+    assert probe('read', employee_id)['decrypted_fields'] == expected_fields
+    wrong_key = secrets.token_hex(32)
+    for field in expected_fields:
+        rejected = probe('wrong-key', employee_id, field, key=wrong_key)
+        assert rejected['rejected_field'] == field
+        assert rejected['decryption_error'] in {'InvalidPaddingError', 'Invalid decryption key'}
+    # Negative reads must not damage the original data.
+    assert probe('read', employee_id)['decrypted_fields'] == expected_fields
 
 
 def test_existing_bank_ciphertext_survives_upgrade_and_rollback(encrypted_employee_db):

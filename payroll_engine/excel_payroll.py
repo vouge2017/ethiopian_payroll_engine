@@ -428,7 +428,7 @@ class ExcelPayrollEngine:
             )
         )
 
-        # Step 5: Pension (BEFORE tax — legal requirement)
+        # Step 5: Pension (BEFORE tax — current practice, RC-38000-01)
         rates = self.pension_rates
         emp_rate = Decimal(str(rates['employee']))
         empr_rate = Decimal(str(rates['employer']))
@@ -449,14 +449,17 @@ class ExcelPayrollEngine:
                 formula=f'{emp_rate * 100:.0f}% of basic salary',
                 inputs={'basic_salary': result.basic_salary, 'rate': emp_rate, 'ceiling': ceiling},
                 result=pension_emp,
-                note='Deducted BEFORE tax (legal requirement)',
+                note='Deducted before PAYE — current practice, pending accountant confirmation (RC-38000-01)',
                 is_deduction=True,
-                legal_reference='Proclamation No. 1268/2022, Article 10',
             )
         )
 
-        # Step 6: Taxable income
-        taxable = gross - pension_emp - exempt_total
+        # Step 6: Taxable income.
+        # Timing controlled by PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01).
+        from payroll_engine import constants as _constants
+
+        pension_tax_adjustment = pension_emp if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
+        taxable = gross - pension_tax_adjustment - exempt_total
         taxable = max(Decimal('0'), taxable)
         result.taxable = taxable.quantize(Q, rounding=ROUND_HALF_UP)
 
@@ -496,7 +499,10 @@ class ExcelPayrollEngine:
             )
         )
 
-        # Step 8: Pension tax savings
+        # Step 8: Pension tax savings — INTENTIONAL EXCEPTION, not controlled by
+        # PENSION_DEDUCTED_BEFORE_TAX (deliberately computed without the
+        # deduction to explain the saving). Shows zero savings when the
+        # constant is False, which stays consistent.
         from payroll_engine.tax import calculate_tax as calc_tax
 
         tax_without_pension = calc_tax(gross - exempt_total, self.for_date)
@@ -515,7 +521,8 @@ class ExcelPayrollEngine:
                         'tax_with_pension': tax,
                     },
                     result=pension_savings,
-                    note=f'You save ETB {pension_savings:,.2f}/month because pension is deducted before tax',
+                    note=f'You save ETB {pension_savings:,.2f}/month because pension is deducted before PAYE '
+                    f'— current practice, pending accountant confirmation (RC-38000-01)',
                 )
             )
 

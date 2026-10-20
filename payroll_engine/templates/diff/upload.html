@@ -95,7 +95,7 @@
 <div class="page">
     <div class="header">
         <h1>Excel Diff Check</h1>
-        <p class="sub">Upload your payroll spreadsheet. We compare our engine's calculation against yours and explain every difference — with the law behind it.</p>
+        <p class="sub">Upload your payroll spreadsheet. We compare our engine's calculation against yours and explain every difference.</p>
     </div>
 
     {% if error %}
@@ -130,7 +130,7 @@
         <ul class="required-list">
             <li><span class="req">Employee name</span> <small>Any column named "name", "employee", "staff" — auto-detected</small></li>
             <li><span class="req">Gross salary</span> <small>Total before deductions. If you only have basic salary, that works too</small></li>
-            <li><span class="opt">Tax (PAYE)</span> <small>If you report it — we compare and check against Proclamation 1395/2025</small></li>
+            <li><span class="opt">Tax (PAYE)</span> <small>If you report it — we compare our computed tax against yours</small></li>
             <li><span class="opt">Employee pension</span> <small>If you report it — must be 7% of basic (Proclamation 1268/2022)</small></li>
             <li><span class="opt">Net pay</span> <small>Take-home after all deductions</small></li>
             <li><span class="opt">Basic salary</span> <small>If separate from gross — needed for precise pension/tax brackets</small></li>
@@ -139,13 +139,13 @@
     </div>
 
     <div class="card">
-        <h3>What we compare & the law behind it</h3>
+        <h3>What we compare</h3>
         <table class="format-table">
-            <thead><tr><th>Field</th><th>Rule</th></tr></thead>
+            <thead><tr><th>Field</th><th>Our method</th></tr></thead>
             <tbody>
             <tr><td><strong>Gross salary</strong></td><td>Basic + allowances + overtime. Your sheet may combine what we separate.</td></tr>
-            <tr><td><strong>Tax (PAYE)</strong></td><td>Proclamation 1395/2025, Article 11. Pension (7%) is deducted <em>before</em> taxable income.</td></tr>
-            <tr><td><strong>Employee pension</strong></td><td>Proclamation 1268/2022, Article 12: 7% of basic salary, no ceiling.</td></tr>
+            <tr><td><strong>Tax (PAYE)</strong></td><td>Progressive brackets. Pension (7%) is deducted <em>before</em> taxable income — current practice in EthioPayroll, accountant confirmation pending (ref RC-38000-01).</td></tr>
+            <tr><td><strong>Employee pension</strong></td><td>7% of basic salary, no ceiling (Proclamation 1268/2022).</td></tr>
             <tr><td><strong>Net pay</strong></td><td>Gross − pension − tax. We trace which component caused the gap.</td></tr>
             </tbody>
         </table>
@@ -153,7 +153,7 @@
             <strong>Example:</strong> If your sheet shows <strong>net ETB 8,420</strong> and our engine calculates <strong>ETB 8,145</strong>:
             <ul>
                 <li>Tax: Yours 2,580 vs Ours 2,955 — engine deducts pension first, saving ETB 105 tax</li>
-                <li>Pension: Yours 0 vs Ours 700 — 7% of basic required by Proclamation 1268/2022</li>
+                <li>Pension: Yours 0 vs Ours 700 — 7% of basic (Proclamation 1268/2022)</li>
                 <li>Net diff: ETB 275 — caused by missing pension deduction</li>
             </ul>
         </div>

@@ -1356,3 +1356,20 @@ strings are drafts pending native-speaker sign-off.
   eventual preview-to-main promotion run.
 - Native Amharic/Oromo review, staged rollout and accounting sign-off remain
   human gates.
+
+## Translation review export - 2026-10-20
+
+- Added `scripts/export_i18n_review.py` plus generated
+  `docs/i18n_review/2026-10-20/` (workbook, flat CSV, per-language correction
+  CSVs, README, ZIP) and a stable index at `docs/i18n_review/README.md`.
+- Scope: 481 dictionary keys; Amharic 477 translated / 4 missing; Oromo 130
+  translated / 347 English fallback / 4 missing; 418 keys with direct
+  references, 63 dictionary-only; 1,049 hardcoded template candidates.
+- Gaps surfaced: `generated`, `of`, `per`, `total_overtime` have no Amharic or
+  Oromo entry (employee payslip shows raw keys); `tax_explainer_intro` has no
+  stored English and renders title-cased. Oromo still falls back to English
+  for 347 first-use keys.
+- Draft keys from the 2026-10-18 native package and RC-38000-01 are flagged
+  for review. Corrections go into suggested columns; existing English bytes
+  are unchanged.
+- Artifacts are linked from PR #15 for native-speaker review.

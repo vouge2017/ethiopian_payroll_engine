@@ -155,32 +155,28 @@ def app():
         yield app
 
 
-def test_login_has_phone_and_email_tabs(app):
-    """The login field must have tab switching (Phone / Email) so users
-    can choose to enter a phone number or an email address."""
+def test_login_has_phone_or_email_identifier(app):
+    """One identifier field accepts either a phone number or an email."""
     client = app.test_client()
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
-    # Tab buttons present
-    assert 'phone-input-tabs' in html
-    assert 'data-phone-tab="phone"' in html
-    assert 'data-phone-tab="email"' in html
-    # Phone prefix box present
-    assert 'phone-prefix-box' in html
-    assert '+251' in html
-    # login_id field present
+    assert 'phone-input-tabs' not in html
     m = re.search(r'<input[^>]+id="login_id"[^>]*>', html)
     assert m is not None
-    assert 'loginPhoneWrapper' in html
+    assert 'name="login_id"' in m.group(0)
+    assert '+251' in html
+    assert 'name@company.com' in html
+    assert 'loginPhoneWrapper' not in html
 
 
-def test_login_helper_text_specifies_9_digits(app):
-    """Helper text must specify the 9-digit requirement and starting digit."""
+def test_login_helper_text_explains_identifier(app):
+    """The hint must name both accepted identifier forms."""
     client = app.test_client()
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
-    assert '9 digits' in html
-    assert 'starting with' in html or 'starting' in html
+    assert 'Enter your phone number' in html
+    assert 'email address' in html
+    assert '912345678' in html
 
 
 def test_login_loads_phone_input_script(app):
@@ -191,15 +187,16 @@ def test_login_loads_phone_input_script(app):
     assert 'static/js/phone-input.js' in html
 
 
-def test_forgot_password_also_has_phone_tabs(app):
-    """Same pattern on the password-reset page."""
+def test_forgot_password_has_identifier_field(app):
+    """Same single identifier field on the password-reset page."""
     client = app.test_client()
     r = client.get('/auth/forgot-password', follow_redirects=True)
     if r.status_code != 200:
         pytest.skip(f'forgot-password returned {r.status_code}')
     html = r.get_data(as_text=True)
-    assert 'phone-input-tabs' in html
-    assert 'phone-prefix-box' in html
+    assert 'phone-input-tabs' not in html
+    assert 'id="login_id"' in html
+    assert 'name@company.com' in html
 
 
 # ─────────────────────────────────────────────────────────────────────

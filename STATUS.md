@@ -1251,3 +1251,18 @@ keys used by the edited templates all resolve. Limits: no local Ruff (CI runs
 it), `test_pg_worksheet_journey`/`test_pg_monthly_journey` need PostgreSQL and
 were not run locally. Amharic strings are drafts pending native-speaker
 sign-off (see package doc).
+
+## Pre-PR CI hygiene - 2026-10-19
+
+- Stacked on `codex/synthetic-preview` (`10b4b3b`). Before opening the PR,
+  applied the shared CI fixes: required `middle_name` in `tests/helpers.py`
+  and `test_e2e_full`; stale login-tab assertions updated to the shipped
+  single phone-or-email identifier UI; unused variable in
+  `test_pg_monthly_ui`; `test_pg_worksheet_journey` 9,090.35 -> 9,260.00
+  for the documented prep-save auto-refresh; repo-wide `ruff format`.
+- Local gate + focused i18n/ops subset: **159 passed, 3 skipped** in 298.72s
+  (strict security/tenancy gate, phone login, e2e, i18n, worker health,
+  storage warning, diff-check e2e).
+- Ruff 0.17.1: check clean; 245 files already formatted.
+- Hosted CI is authoritative; native Amharic/Oromo review remains a human
+  gate, as does accounting sign-off.

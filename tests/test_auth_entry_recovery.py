@@ -87,7 +87,9 @@ def test_invited_user_can_open_help_while_password_change_is_required(app):
         db.session.add(user)
         db.session.commit()
     client = app.test_client()
-    assert client.post('/auth/login', data={'login_id': '900000504', 'password': 'SyntheticOwner38!'}).status_code == 302
+    assert (
+        client.post('/auth/login', data={'login_id': '900000504', 'password': 'SyntheticOwner38!'}).status_code == 302
+    )
     page = Page(client.get('/auth/change-password').data)
     assert page.find('a', href='/account-help') is not None
     assert client.get('/account-help').status_code == 200

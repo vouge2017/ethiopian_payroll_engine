@@ -83,7 +83,7 @@ def test_add_employee_form_has_one_localized_label_per_name_and_clear_bank_help(
     assert 'required' in fields.inputs['first_name']
     assert not fields.inputs['father_name'].get('required')
     assert not fields.inputs['grandfather_name'].get('required')
-    assert "First Name" not in html
+    assert 'First Name' not in html
     assert "Father's Name" not in html
     assert "Grandfather's Name" not in html
     assert 'For bank payment, enter the provider, a colon, and account number' in html
@@ -113,8 +113,12 @@ def test_edit_employee_form_uses_the_same_single_name_labels(owner_app):
     app, ids = owner_app
     with app.app_context():
         employee = Employee(
-            company_id=ids[1], employee_id='SYN701', name='Synthetic Employee',
-            first_name='Synthetic', father_name='Employee', basic_salary=10000,
+            company_id=ids[1],
+            employee_id='SYN701',
+            name='Synthetic Employee',
+            first_name='Synthetic',
+            father_name='Employee',
+            basic_salary=10000,
         )
         db.session.add(employee)
         db.session.commit()
@@ -233,7 +237,9 @@ def test_payroll_starts_and_history_actions_are_consistent(owner_app, language):
     assert header.count('class="dropdown-item"') == 4
     assert 'class="btn btn-ghost dropdown-toggle"' in header
     assert 'aria-expanded="false"' in header
-    assert not any(style in header for style in ('btn-success', 'btn-outline-success', 'btn-outline-info', 'btn-outline-warning'))
+    assert not any(
+        style in header for style in ('btn-success', 'btn-outline-success', 'btn-outline-info', 'btn-outline-warning')
+    )
     for href, content in re.findall(r'<a\b[^>]*href="([^"]+)"[^>]*>(.*?)</a>', page, re.S):
         label = re.sub('<[^>]+>', '', content).strip()
         if label in ('Prepare Payroll', 'New Run', 'ደመወዝ ያዘጋጁ', 'አዲስ ደመወዝ'):

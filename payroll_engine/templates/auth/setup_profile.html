@@ -77,20 +77,20 @@
         <!-- Name fields -->
         <div class="onboarding-field-grid">
             <div class="onboarding-field">
-                <label for="firstName">First Name <span style="color: var(--color-danger);">*</span></label>
+                <label for="firstName">{{ _('profile_first_name') }} <span style="color: var(--color-danger);">*</span></label>
                 <input type="text" id="firstName" name="first_name" required
                        placeholder="e.g. Abebe" autocomplete="given-name"
                        value="{{ form_data.first_name if form_data else '' }}">
             </div>
             <div class="onboarding-field">
-                <label for="middleName">Middle Name</label>
-                <input type="text" id="middleName" name="middle_name"
+                <label for="middleName">{{ _('profile_second_name') }} <span style="color: var(--color-danger);">*</span></label>
+                <input type="text" id="middleName" name="middle_name" required
                        placeholder="e.g. Bekele" autocomplete="additional-name"
                        value="{{ form_data.middle_name if form_data else '' }}">
             </div>
             <div class="onboarding-field">
-                <label for="lastName">Last Name <span style="color: var(--color-danger);">*</span></label>
-                <input type="text" id="lastName" name="last_name" required
+                <label for="lastName">{{ _('profile_third_name') }}</label>
+                <input type="text" id="lastName" name="last_name"
                        placeholder="e.g. Kebede" autocomplete="family-name"
                        value="{{ form_data.last_name if form_data else '' }}">
             </div>

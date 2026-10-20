@@ -357,6 +357,37 @@ def create_review(company_id, user_id, start, refresh_run_id=None):
     return run
 
 
+def refresh_open_review(company_id, user_id, start):
+    """Keep an unsubmitted worksheet review aligned with saved preparation inputs."""
+    run = (
+        PayrollRun.query.filter_by(
+            company_id=company_id,
+            run_date=start,
+            source='spreadsheet',
+            status='review',
+        )
+        .with_for_update()
+        .first()
+    )
+    if run is None:
+        return None
+    return create_review(company_id, user_id, start, refresh_run_id=run.id)
+
+
+def lock_active_worksheet_run(company_id, start):
+    """Serialize worksheet saves with approval and return the active run, if any."""
+    return (
+        PayrollRun.query.filter(
+            PayrollRun.company_id == company_id,
+            PayrollRun.run_date == start,
+            PayrollRun.source == 'spreadsheet',
+            PayrollRun.status.notin_(['failed', 'rejected']),
+        )
+        .with_for_update()
+        .first()
+    )
+
+
 def apply_approved_rows(run, company_id, rows):
     """Persist frozen figures; balance locks and checks precede any writes."""
     if run.company_id != company_id or not rows:

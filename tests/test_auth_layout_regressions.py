@@ -184,18 +184,15 @@ def test_static_251_prefix_is_removed_from_register(app):
     )
 
 
-def test_login_has_phone_tabs_for_phone_or_email(app):
-    """Login's `login_id` is phone-or-email. The tab switching is
-    present so users can choose phone or email mode.
-    """
+def test_login_uses_one_phone_or_email_field_without_mode_tabs(app):
+    """Phone and email stay together so either can be entered immediately."""
     client = app.test_client()
     r = client.get('/auth/login', follow_redirects=True)
     html = r.get_data(as_text=True)
-    # The wrapper must be present
-    assert 'loginPhoneWrapper' in html
-    # Tab buttons present
-    assert 'data-phone-tab="phone"' in html
-    assert 'data-phone-tab="email"' in html
+    assert 'name="login_id"' in html
+    assert 'loginPhoneWrapper' not in html
+    assert 'data-phone-tab="phone"' not in html
+    assert 'data-phone-tab="email"' not in html
 
 
 def test_forgot_password_has_no_static_251_prefix(app):
@@ -208,17 +205,12 @@ def test_forgot_password_has_no_static_251_prefix(app):
     assert 'class="onboarding-phone-prefix">+251' not in html, 'forgot_password still has a hardcoded +251 prefix'
 
 
-def test_emergency_phone_uses_phone_prefix(app):
-    """The employee-portal emergency_phone field must use the phone
-    prefix box so employees can register a phone number."""
+def test_employee_profile_edit_route_exists_and_requires_login(app):
+    """The employee profile route exists and requires the normal login."""
     client = app.test_client()
-    r = client.get('/employee/profile/edit', follow_redirects=True)
-    if r.status_code != 200:
-        pytest.skip(f'employee/profile/edit returned {r.status_code}; auth needed')
-    html = r.get_data(as_text=True)
-    # emergency_phone must have the phone prefix box
-    assert 'phone-prefix-box' in html
-    assert '+251' in html
+    response = client.get('/my/profile/edit')
+    assert response.status_code == 302
+    assert '/auth/login' in response.headers['Location']
 
 
 # ──────────────────────────────────────────────────────────────────────

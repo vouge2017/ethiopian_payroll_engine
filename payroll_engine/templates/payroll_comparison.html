@@ -13,8 +13,8 @@
             <div class="empty-icon"><i class="bi bi-bar-chart-steps"></i></div>
             <h4>Need at least 2 payroll runs</h4>
             <p>Complete two payroll runs to compare them.</p>
-            <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-primary">
-                <i class="bi bi-cloud-upload me-1"></i>Run Payroll
+            <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">
+                <i class="bi bi-cloud-upload me-1"></i>{{ _('prepare_payroll') }}
             </a>
         </div>
     </div>

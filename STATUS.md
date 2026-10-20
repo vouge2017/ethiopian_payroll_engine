@@ -1,4 +1,29 @@
-# STATUS.md — Command-Verified State
+﻿# STATUS.md — Command-Verified State
+
+## CURRENT LOCAL UI CLOSURE — 2026-10-15
+
+- Dirty worktree at `codex/synthetic-preview`, HEAD `3ead9754945be9c30bb816fab459fe61a9abe9d9`. Focused auth/profile/layout tests: `40 passed, 4 warnings in 69.73s` (no skips); the four are `EncryptedType` deprecations for webhook_secret, bank_account, tin and fayda_fin. Migrated PostgreSQL 16 review-refresh tests: `3 passed, 10 warnings in 10.66s` (four model and six migration deprecations). Chrome previously clicked the language toggle both ways, checked long content at 390px (60px nav and matching content padding; final content clears the fixed nav), and exercised the synthetic journey at 390px/1440px. After the last copy-only correction, a full replay stopped at synthetic sign-in (`waitForURL` timeout); this remaining browser rerun is recorded in the handoff. See [UI_CLOSURE_2026-10-15.md](docs/UI_CLOSURE_2026-10-15.md). Local edits are not committed, pushed or deployed; live SHA was not freshly checked.
+- No screen has complete Amharic copy; login/recovery, first-use dashboard and employee forms are partial, while payroll prep/review remain mostly English. The old employee-profile 404 was a broken test path; coverage now targets authenticated `/my/profile/edit`. Worksheet changes refresh an unsubmitted review automatically; submitted review edits are rejected. Founder phone trial comes first, then Tigist; both remain unrecorded. Worker/job, durable-file, backup/key-restore and named incident-response evidence remain open. Preserve historical receipts below.
+
+## CURRENT AUTHENTICATION AND AMHARIC ENTRY FIXES — 2026-10-12
+
+- Published on `codex/synthetic-preview` as `bdcd5b164a1427f597d315d0d728a83accf8975f`, with Render startup fix `02b84268527ce4793b4d37b0fb6a4f7c0618ea7f`: signed-out account recovery guidance, Amharic registration, one phone/email sign-in and recovery input, first + second/father name required, and third/grandfather name optional.
+- Focused auth/progressive-profile/phone suite: `34 passed, 5 warnings in 82.65s`. Ruff passed. Chrome verified the Amharic registration, single sign-in field and anonymous Amharic `/account-help`; evidence screenshot: [account-help-amharic.png](local-evidence/auth-entry-20261012/account-help-amharic.png). Independent review found no concrete security or regression defects.
+- User confirmed `support@ethiopayroll.com` is monitored; configured as the app default and in `.env.example`, with environment override supported. Published commit `bdcd5b164a1427f597d315d0d728a83accf8975f` to `codex/synthetic-preview`. Hosted [Synthetic Preview run 38218687373](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/38218687373) passed, including the auth/profile/phone suite, disposable-PostgreSQL readiness tests, web/worker image builds and synthetic container provisioning.
+- Render service `ethiopian_payroll_engine` now serves preview commit `02b84268527ce4793b4d37b0fb6a4f7c0618ea7f` at [https://ethiopian-payroll-engine.onrender.com](https://ethiopian-payroll-engine.onrender.com). The user confirmed its database contains test data only. Render labels the environment `Production`, so this is a phone-accessible test preview on the existing service, not proof of isolated staging or production approval. We matched its configured database connection to the inspected Render PostgreSQL service without exposing credentials. `/readyz` returned HTTP 200 with database, migrations and schema current; worker status is unknown. Browser confirmed signed-out English/Amharic `/account-help`, one phone-or-email sign-in field, and Amharic registration. No registration or payroll was submitted. The free database expires 30 Oct 2026 and the free web service can sleep.
+- Hosted [Synthetic Preview run 38297437086](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/38297437086) passed on `02b8426`. It adds runtime creation of Gunicorn temporary directories after Render exposed that startup failure. Earlier deploy attempts failed and left the last successful code serving; the temporary command override was removed. The current deploy succeeded as Render deployment `dep-db6j9hqvcj2c7385qiog`.
+- Next: owner/practitioner must try the URL on a real phone and confirm the registration/profile experience; do not enter real payroll data. Public-production recovery, file/job durability, backup/key restore and support checks remain open. Existing `uv.lock` stub remains preserved and unrelated.
+
+## CURRENT SYNTHETIC PREVIEW PREPARATION — 2026-10-12
+
+- PR #12 is merged at main `f27d5af04313a4ec3bf9133a7635fedbb131631a`. Its source head `94e4c8db303f7899aaacccb1261778459ac348c8` passed hosted Python 3.11/3.12 (`TOTAL: 1564 passed, 0 failed, 0 errors, 173 skipped` each) and PostgreSQL (`177 passed, 336 warnings in 66.32s (0:01:06)`); main CI/CSS/migration also succeeded. Older receipts below are historical.
+- Candidate `codex/synthetic-preview` adds guarded fake data, strict read-only readiness, a container probe, shared staging key references and hosted container validation. Bounded readiness source/probe/tests were reused from published `7f080cd`, without merging its historical branch.
+- Local receipt before the additional host guard: `29 passed, 29 warnings in 21913.59s (6:05:13)`. Initial `1 failed, 26 passed, 27 warnings in 123.53s (0:02:03)` was an incorrect invite response assertion; fixed and extended into the invitee portal. Two password guards explain the count increase. No performance claim. Source preflight has zero findings.
+- Final local selection with two host-identity guards: `31 passed, 31 warnings in 137.15s (0:02:17)`. Independent review found no remaining concrete blocker for publishing to hosted CI; Ruff lint/format, YAML/schema and Bash syntax checks pass. Live deployment remains separate.
+- Published source `9e2c7549bb4f31aa31a62a2dc3accf1c3b3fdc11` passed [hosted preview run 38195675615](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/38195675615): `31 passed, 31 warnings in 57.19s`, both Docker builds, migrated staging-container readiness/probe, first seed, repeat Flask CLI seed and login-page CSRF. This focused run is not a full-suite rerun or live Render deployment.
+- Existing Render staging is authorized. User identified `ethiopian_payroll_engine` / `https://ethiopian-payroll-engine.onrender.com`; read-only `/readyz` returned HTTP 200 with migrations unknown. Isolation and deployed SHA remain unverified. Render sign-in and browser extension update are needed for authenticated inspection. No deployment or physical-phone outcome. [SYNTHETIC_PREVIEW.md](docs/SYNTHETIC_PREVIEW.md) records acceptance; public file/job recovery, backup/key restore and support remain open.
+- Local audit: outer mobile checkout remains dirty on `feature/mobile-ui-redesign`; `payroll-production-work` has unfinished status/work-order/test/addendum changes. Correction/recovery checkouts were clean. Active untracked `uv.lock` is an unused three-line stub, preserved outside this slice. Unrelated work has not been staged or merged.
+- Outer mobile HEAD `259ef1e` is five commits ahead of its current GitHub branch head `d5cd096`, with no commits behind; these older commits require a separate review before any push. No unrelated branch was changed.
 
 ## CURRENT LOCAL INVITATION AND LANGUAGE CONTINUITY — 2026-10-11
 
@@ -1204,3 +1229,93 @@ Preservation, resolved conflicts, exact test selections, receipts and limits:
 [reconciliation review](docs/PR8_RECONCILIATION_2026-10-03.md#priority-override-review-and-stop-checkpoint---2026-10-03).
 Later work is on hold pending review; do not interpret previous next-order text
 as authorization to continue.
+
+## Pension-before-PAYE isolation (RC-38000-01) - 2026-10-18
+
+Branch `feature/pension-before-tax-rc38000-01` off `codex/synthetic-preview` at
+`10b4b3b`; work order delivered, unmerged.
+
+`PENSION_DEDUCTED_BEFORE_TAX = True` (with the pending accountant-confirmation
+comment) added in `payroll_engine/constants.py`; the flag now gates the
+pension-before-tax taxable-income math in `payroll.py` (~249), `excel_payroll.py`
+(~482), `payroll_elements.py` (~267, found as well), `impact.py` preview paths
+(~329 / ~442) and `services/settlement_service.py`. All monthly PAYE paths flip
+together; daily-worker and comparison paths stay as historical behaviour.
+Unwired `TaxRule.pension_deduction_order` knob remains untouched. No arithmetic
+change: 38k/2k employee keeps tax 10,319 / net 25,021 (test-pinned).
+
+All statute citation/badge for the pension-before-tax timing removed from the
+`excel_payroll.py` step, `diff_check.py` wording, help answers and live templates;
+pending-confirmation wording added across the 6 live user-visible paths (results,
+confirm, flow, payslip, settlement, PDF) gated behind documented env
+`PAYROLL_PENDING_TAX_NOTICE` (default on) via Jinja global
+`pending_paye_notice()`. Bank CSV and ERCA filing stay data-only (no caveat inside
+official exchange formats; the notice is visible on the screens they are exported
+from). Dead/duplicate template copies left untouched and flagged. Details:
+[PENSION_BEFORE_TAX_RC38000_01.md](docs/PENSION_BEFORE_TAX_RC38000_01.md).
+
+New pins in `tests/test_pension_before_tax_rc38000_01.py` (4 tests, exact legacy and
+Excel numbers, flip effect per path, gate switch). Focused suites all pass record:
+73 + 131 passed on local run; two existing tests refreshed their wording only.
+No merge, no deploy.
+
+## RC-38000-01 on codex/pension-assumption-isolation - 2026-10-18 (2)
+
+Branch `codex/pension-assumption-isolation` off `10b4b3b` carries the RC-38000-01
+work in two commits: `1f1922b` (isolation + honest wording + gated notice) and
+`03d8a5b` (second labelling pass: tax.py 'Verified by EY…' line removed, bracket
+cite corrected to Art. 11 after checking the Federal Negarit Gazette scan;
+seed_tax_rules notes reworded with the already-seeded-rows caveat; Amharic/Oromo
+draft translations flagged for native review; documented constant
+PENDING_CONFIRMATION_NOTICE with env override). Flip test now hard-asserts tax
+11,250 / net 24,090. Focused suites: 192 passed. Full suite: 1525 passed, 201
+skipped; 19 failed + 37 errors + 3 benchmark failures ALL re-verified identical
+on base `10b4b3b` (login-helper root cause; no payroll/tax failures). Branch
+pushed only; do not merge.
+
+### Base comparison + gazette wording fix - 2026-10-18 (3)
+
+Reviewer-requested checks recorded: full suite re-run on detached base `10b4b3b`
+(same exclusions) — 19 failed + 37 errors identical test-for-test (1522 passed vs
+1525 on branch; delta = the 4 new tests, one flaky phone-tab variant). In-code
+"checked against the Federal Negarit Gazette" phrasing removed from tax.py and
+seed_tax_rules.py (no verification-style claim in product); the article-number
+evidence trail (two Gazette scans with links, Chambers, KPMG, page 19145, item 6/
+replacing Article 11) is documented in the deliverable doc for reviewer checking,
+with "source to be confirmed" as the fallback wording. seed personal_relief 150
+vs code default 0 confirmed still-open; rule_source wording audited — no
+user-facing badge renders it.
+
+### Doc correction - 2026-10-18 (4)
+
+Reviewer caught a stale before/after table: §2b still listed the removed
+"checked against the Federal Negarit Gazette" phrasing as the NEW code state.
+Table and lead-in now match the actual `tax.py` / `seed_tax_rules.py` strings
+(no verification-class claim in code; evidence trail only in this doc's §5b).
+Scope figure corrected and anchored: 27 files, 969 insertions(+), 70
+deletions(-) vs `10b4b3b` at `9e2edd7` (old 912-line count superseded).
+PR target remains `codex/synthetic-preview`; merge still held on RC-38000-01
+sign-off, personal-relief decision and the login-helper failure cluster.
+
+## CI blockers fixed - 2026-10-19
+
+- `tests/helpers.py` now sends the required `middle_name`; the
+  `test_e2e_full` setup-profile payload does too (the template marks it
+  required). This clears the strict security/tenancy gate failures (10 hosted,
+  previously attributed to a stale login helper). Local gate + RC file:
+  **107 passed, 2 skipped** in 185.56s.
+- Three stale login-tab assertions in `tests/test_phone_password_strict.py`
+  now assert the shipped single phone-or-email identifier UI. Focused local
+  subset (phone/password, e2e, i18n, auth-entry recovery, RC): **60 passed,
+  1 skipped**.
+- Lint fixed: constant import alias N811 (`payroll_engine/__init__.py`),
+  import order in `payroll_engine/payroll.py` and the RC test, unused `app`
+  in `tests/test_pg_monthly_ui.py`. Repo-wide `ruff format` applied (7 files,
+  no content changes) so the hosted format gate passes. `uvx ruff@0.17.1
+  check payroll_engine/ tests/` reports all checks passed and
+  `format --check` reports 244 files already formatted.
+- `test_pg_worksheet_journey` expectation corrected 9,090.35 -> 9,260.00 to
+  match the documented prep-save review auto-refresh; no arithmetic change.
+- Not locally runnable: `test_pg_*` (no disposable PostgreSQL); hosted CI is
+  the record. Merge still held on RC-38000-01 sign-off, personal-relief
+  decision and native Amharic review.

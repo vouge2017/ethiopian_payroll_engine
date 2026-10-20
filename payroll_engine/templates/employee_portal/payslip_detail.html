@@ -2,6 +2,9 @@
 {% block title %}Payslip - Ethiopian Payroll Engine{% endblock %}
 {% block content %}
 <div class="p-4 p-md-5">
+    {% if pending_paye_notice() %}
+    <div class="alert alert-warning py-2 small">{{ pending_paye_notice_text }}</div>
+    {% endif %}
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -130,7 +133,7 @@
                             <!-- Tax with bracket breakdown -->
                             <tr>
                                 <td>
-                                    {{ _('income_tax') }} <span class="text-muted small">({{ _('per') }} Proclamation 1395/2025)</span> <span data-bs-toggle="tooltip" title="PAYE tax on taxable income (gross minus pension). Brackets: 0%, 15%, 20%, 25%, 30%, 35%."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
+                                    {{ _('income_tax') }} <span class="text-muted small">({{ _('per') }} current income-tax schedule)</span> <span data-bs-toggle="tooltip" title="PAYE tax on taxable income (gross minus pension). Brackets: 0%, 15%, 20%, 25%, 30%, 35%. Pension-before-tax timing is current practice, pending accountant confirmation (RC-38000-01)."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
                                     <details class="mt-1">
                                         <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small">

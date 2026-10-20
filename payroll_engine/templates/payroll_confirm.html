@@ -6,11 +6,14 @@
 {% set approval_role = current_user.get_role_for_company(run.company_id) %}
 
 <div class="monthly-payroll monthly-confirm">
-<header class="monthly-heading"><div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p><h1>Approve payroll</h1><p>Confirm the reviewed amounts. Approval does not send payment.</p></div><a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary">Back to review</a></header>
+<header class="monthly-heading"><div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p><h1>{{ _('approve_payroll') }}</h1><p>Confirm the reviewed amounts. Approval does not send payment.</p></div><a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary">Back to review</a></header>
 {{ monthly.steps(3) }}
 {% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
 {{ monthly.totals(employee_count, total_gross, total_tax, total_net, 'Preserved net pay') }}
 <p class="monthly-pension">Employee pension · ETB {{ '{:,.2f}'.format(total_pension) }} · already included in deductions</p>
+{% if pending_paye_notice() %}
+<div class="alert alert-warning py-2 small mb-3">{{ pending_paye_notice_text }}</div>
+{% endif %}
     <div class="row justify-content-center">
         <div class="col-12">
             <!-- Validation Status -->
@@ -78,7 +81,7 @@
                                     <div class="table-responsive">
                                     <table class="table table-sm table-borderless mb-0">
                                         <tr><td class="text-muted">{{ _('employee_pension') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="7% of basic salary per Proclamation No. 1268/2022. Employer contributes 11%. No statutory ceiling."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span> (7%)</td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.pension_employee) }}</td></tr>
-                                        <tr><td class="text-muted">{{ _('income_tax') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="PAYE tax calculated on taxable income (gross − pension). Brackets: 0-2000=0%, 2001-4000=15%, 4001-7000=20%, 7001-10000=25%, 10001-14000=30%, 14001+=35%. Per Proclamation No. 1395/2025."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span></td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.tax) }}</td></tr>
+                                        <tr><td class="text-muted">{{ _('income_tax') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="PAYE tax on taxable income (gross − pension). Brackets: 0-2000=0%, 2001-4000=15%, 4001-7000=20%, 7001-10000=25%, 10001-14000=30%, 14001+=35%. Pension-before-tax timing is current practice, pending accountant confirmation (RC-38000-01)."><i class="bi bi-info-circle text-primary" style="font-size:0.75em;cursor:help"></i></span></td><td class="text-end">ETB {{ '{:,.2f}'.format(emp.tax) }}</td></tr>
                                         {% if emp.tax_breakdown and emp.tax_breakdown.brackets %}
                                         <tr><td colspan="2">
                                             <details>
@@ -162,7 +165,7 @@
             {% if not blocks %}
             <div class="card">
                 <div class="card-header bg-transparent">
-                    <h2 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Owner approval</h2>
+                    <h2 class="mb-0"><i class="bi bi-shield-lock me-2"></i>{{ _('step_approve') }}</h2>
                 </div>
                 <div class="card-body p-4">
                     {% if run.source == 'spreadsheet' %}

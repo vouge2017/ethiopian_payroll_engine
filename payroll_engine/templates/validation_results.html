@@ -196,11 +196,11 @@
     <!-- Action Buttons -->
     <div class="d-flex gap-2">
         <a href="{{ url_for('payroll.payroll_upload') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Back to Upload
+            <i class="bi bi-arrow-left me-1"></i> {{ _('back_to_prepare') }}
         </a>
         {% if summary.can_proceed and not summary.blocks %}
         <a href="{{ url_for('payroll.payroll_confirm', run_id=run_id) }}" class="btn btn-primary btn-lg">
-            <i class="bi bi-shield-lock me-1"></i> Review & Confirm
+            <i class="bi bi-shield-lock me-1"></i> {{ _('continue_approval') }}
         </a>
         {% elif summary.blocks %}
         <button class="btn btn-secondary btn-lg" disabled>

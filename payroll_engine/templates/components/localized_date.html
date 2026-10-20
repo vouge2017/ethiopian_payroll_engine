@@ -1,0 +1,7 @@
+<script type="application/json" id="localized-date-copy" nonce="{{ csp_nonce }}">{{ {
+    'show': _('date_picker_show'), 'hide': _('date_picker_hide'),
+    'year': _('date_year'), 'month': _('date_month'), 'day': _('date_day'),
+    'gregorian': _('date_gregorian'), 'format': _('date_format'),
+    'example': '2026-10-16', 'invalid': _('date_invalid')
+}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/localized-date.js') }}?v={{ static_version }}" defer></script>

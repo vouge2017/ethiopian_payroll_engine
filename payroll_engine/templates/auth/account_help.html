@@ -1,0 +1,20 @@
+{% extends "auth/onboarding-base.html" %}
+{% block title %}{{ _('account_help_title') }} — EthioPayroll{% endblock %}
+{% block content %}
+<section class="onboarding-form-area">
+    <h1 class="onboarding-form-title">{{ _('account_help_title') }}</h1>
+    <p class="onboarding-form-subtitle">{{ _('account_help_intro') }}</p>
+    <h2>{{ _('account_help_can_access') }}</h2>
+    <p>{{ _('account_help_reset') }}</p>
+    <a class="onboarding-btn-next" href="{{ url_for('auth.forgot_password') }}">{{ _('entry_recovery') }}</a>
+    <h2>{{ _('account_help_cannot_access') }}</h2>
+    <p>{{ _('account_help_owner') }}</p>
+    {% if support_email %}
+    <p><a href="mailto:{{ support_email|urlencode }}">{{ _('account_help_contact') }}: {{ support_email }}</a></p>
+    {% else %}
+    <p>{{ _('account_help_contact_pending') }}</p>
+    {% endif %}
+    <p>{{ _('account_help_private') }}</p>
+    <a class="onboarding-btn-back" href="{{ url_for('auth.login') }}">{{ _('entry_sign_in') }}</a>
+</section>
+{% endblock %}

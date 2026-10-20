@@ -19,7 +19,7 @@
                 <i class="bi bi-person-plus me-1"></i>Add Employee
             </a>
             {% if employee_count > 0 %}<a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary no-print">
-                <i class="bi bi-cloud-upload me-1"></i>{{ _('run_payroll') }}
+                <i class="bi bi-cloud-upload me-1"></i>{{ _('prepare_payroll') }}
             </a>{% endif %}
         </div>
         {% endif %}
@@ -36,7 +36,7 @@
       <div class="workspace-actions"><a class="btn btn-primary" href="{{ url_for('employees.add_employee') }}">Add first employee</a><a class="btn btn-outline-secondary" href="{{ url_for('wizard.quick_start') }}">Add a group with Quick Start</a></div>
       {% else %}
       <h2>Prepare your first payroll</h2><p>{{ employee_count }} {{ 'employee is' if employee_count == 1 else 'employees are' }} ready for preparation. Save the inputs, review the amounts, then continue to owner approval. Approval does not send payment.</p>
-      <a class="btn btn-primary" href="{{ url_for('payroll.payroll_spreadsheet') }}">Prepare payroll</a>
+      <a class="btn btn-primary" href="{{ url_for('payroll.payroll_spreadsheet') }}">{{ _('prepare_payroll') }}</a>
       {% endif %}
     </div></section>
     {% endif %}
@@ -51,8 +51,14 @@
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-label">Compliance</div>
+                <div class="metric-label">{{ _('compliance_timing_label') }}</div>
+                {% if completed_runs_count %}
                 <div class="metric-value">{{ compliance_score|round(0)|int }}%</div>
+                {% else %}
+                <div class="metric-value">{{ _('compliance_not_assessed') }}</div>
+                <p class="small text-muted mb-0">{{ _('compliance_needs_run') }}</p>
+                {% endif %}
+                <p class="small text-muted mb-0 mt-2">{{ _('compliance_evidence_help') }}</p>
             </div>
         </div>
         <div class="col-md-3 col-6">
@@ -394,7 +400,7 @@
                 <h4>No payroll runs yet</h4>
                 <p>Run your first payroll to see it here.</p>
                 <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">
-                    <i class="bi bi-cloud-upload me-1"></i>Run Payroll
+                    <i class="bi bi-cloud-upload me-1"></i>{{ _('prepare_payroll') }}
                 </a>
             </div>
             {% endif %}

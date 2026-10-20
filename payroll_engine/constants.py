@@ -12,6 +12,46 @@ the codebase.
 """
 
 import enum
+import os
+
+# --- PAYE timing assumption -------------------------------------------------
+# Pending accountant sign-off, RC-38000-01. Flipping this changes PAYE for
+# every employee with pension.
+# True  = PAYE is calculated on (gross − 7% employee pension) — current
+#         practice in this app; not expressly traced to a statute article.
+# False = pension is deducted after PAYE: taxable = gross − exempt allowances.
+# Every monthly PAYE calculation must route its taxable-income step through
+# this constant. Intentional exceptions that are NOT controlled by it:
+#   - daily workers (no pension deduction at all, tax on full gross);
+#   - comparison explanations that deliberately compute tax WITHOUT the
+#     deduction to show the pension tax saving.
+PENSION_DEDUCTED_BEFORE_TAX = True
+
+# Single documented switch for the pending-confirmation notice (RC-38000-01).
+# Default ON. Deployment override via env PAYROLL_PENDING_TAX_NOTICE (0 hides
+# the notice) without a code change; the env override is read by
+# pending_paye_notice_enabled() below. It controls notice wording only — it
+# never changes any calculation, and it never hard-blocks a path.
+PENDING_CONFIRMATION_NOTICE = True
+PENDING_PAYE_NOTICE_TEXT = (
+    'PAYE note: employee pension (7%) is deducted before income tax. '
+    'This is current practice in EthioPayroll, pending accountant confirmation '
+    '(ref RC-38000-01).'
+)
+
+
+def pending_paye_notice_enabled() -> bool:
+    """Whether the RC-38000-01 pending-confirmation notice is shown.
+
+    Default follows PENDING_CONFIRMATION_NOTICE (True). The env variable
+    PAYROLL_PENDING_TAX_NOTICE=0 overrides and hides the notice everywhere
+    it is wired up (payslip PDFs, payslip portal page, results/confirm
+    screens, settlement detail, Excel Diff screens) — e.g. after the
+    accountant signs off (RC-38000-01).
+    """
+    if 'PAYROLL_PENDING_TAX_NOTICE' in os.environ:
+        return os.environ['PAYROLL_PENDING_TAX_NOTICE'] != '0'
+    return PENDING_CONFIRMATION_NOTICE
 
 
 class SystemItemKey(enum.Enum):

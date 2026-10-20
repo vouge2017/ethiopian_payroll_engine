@@ -12,8 +12,20 @@ Progressive tax brackets on monthly taxable salary (ETB):
 No personal relief — not provided under Proclamation 979/2016 or 1395/2025.
 Article 10(3) of 979/2016 prohibits deductions from employment income.
 
-Source: Proclamation No. 1395/2025, effective September 1, 2025.
-Verified by: EY, PwC, DABLO Law, Liku Worku Law Office.
+Bracket schedule: Proclamation No. 1395/2025, Article 11 (Employment Income
+Tax Rates). Supporting evidence for the article number and the exact table
+text is documented in docs/PENSION_BEFORE_TAX_RC38000_01.md (external
+scans + an independent legal summary); a reviewer who cannot obtain the
+Federal Negarit Gazette should treat the article number as
+"source to be confirmed" until matched against the official text.
+The effective dates of individual amendment items are listed differently
+across public sources (1–8 July 2025 vs 1 September 2025); effective-date
+applicability is to be confirmed by the accountant.
+
+The order in which the employee pension contribution enters the PAYE
+taxable base is current practice pending accountant confirmation
+(constants.PENSION_DEDUCTED_BEFORE_TAX, RC-38000-01) and is NOT attributed
+to any statute article here.
 
 Rules are configurable via the TaxRule database model.
 When no database rule exists, falls back to hardcoded defaults.
@@ -25,8 +37,9 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 Q = Decimal('0.01')
 
 # Default fallback brackets
-# Source: Ethiopian Income Tax (Amendment) Proclamation No. 1395/2025
-# Article 36(1) — Rates of Income Tax
+# Source: Ethiopian Income Tax (Amendment) Proclamation No. 1395/2025,
+# Article 11 (Employment Income Tax Rates). Evidence trail for the article
+# number: docs/PENSION_BEFORE_TAX_RC38000_01.md
 # https://lawethiopia.com/images/proc1395-2025.pdf
 # Used only when no TaxRule exists in the database
 DEFAULT_BRACKETS: list[tuple[Decimal, Decimal]] = [
@@ -112,8 +125,10 @@ def calculate_tax(gross_salary, for_date=None) -> Decimal:
     """
     Calculate monthly income tax on taxable salary using progressive brackets.
 
-    Note: gross_salary here should be the TAXABLE amount (after pension deduction).
-    The deduction order (pension before tax) is enforced by the calling code.
+    Note: gross_salary here should be the TAXABLE amount. Whether the 7%
+    employee pension reduces taxable income is decided by
+    constants.PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01) and is applied by
+    the calling code, not in this module.
 
     Args:
         gross_salary: Monthly taxable salary in ETB (must be >= 0)

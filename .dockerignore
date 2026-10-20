@@ -2,6 +2,10 @@ __pycache__
 *.pyc
 *.pyo
 .env
+.env.*
+.venv/
+.tmp-*/
+.tmp-*.log
 .git
 .gitignore
 .pytest_cache
@@ -10,5 +14,9 @@ __pycache__
 .vscode
 .idea
 tests/
+local-evidence/
+qa/node_modules/
+output/
+test-results/
 coverage/
 *.egg-info/

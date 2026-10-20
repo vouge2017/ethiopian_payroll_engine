@@ -8,6 +8,7 @@ from test_pg_spreadsheet_inputs import PG_URL
 from test_pg_worksheet_journey import saved_review
 
 from payroll_engine import db
+from payroll_engine.i18n_first_use import FIRST_USE_COPY
 from payroll_engine.models import Employee
 
 pytest_plugins = ('test_pg_spreadsheet_inputs',)
@@ -49,6 +50,25 @@ def test_dashboard_preparation_link_resolves(worksheet):
     assert '/payroll/upload' not in links
     assert '/payroll/spreadsheet' in links
     assert client.get('/payroll/spreadsheet').status_code == 200
+
+
+def test_review_refresh_copy_explains_automatic_updates_and_manual_replacement(worksheet, monkeypatch):
+    _app, client, _ids, _engine, rid = saved_review(worksheet, monkeypatch)
+    path = f'/payroll/runs/{rid}/review'
+
+    english = client.get(path).get_data(as_text=True)
+    assert 'How this review stays current' in english
+    assert 'Saving payroll preparation updates this unsubmitted review automatically.' in english
+    assert 'Refresh review from current payroll details' in english
+    assert 'data-confirm="This replaces the current review' in english
+    assert 'onsubmit="return window.confirm' not in english
+    assert PayrollLink(english).inputs['refresh_run_id'] == str(rid)
+
+    with client.session_transaction() as session:
+        session['language'] = 'am'
+    amharic = client.get(path).get_data(as_text=True)
+    assert FIRST_USE_COPY['review_newer_changes'][1] in amharic
+    assert FIRST_USE_COPY['review_newer_changes_help'][1] in amharic
 
 
 def test_review_keeps_case_distinct_employee_changes_separate(worksheet, monkeypatch):

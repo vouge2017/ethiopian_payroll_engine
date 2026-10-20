@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Run Payroll — EthioPayroll{% endblock %}
+{% block title %}{{ _('monthly_import_file') }} — EthioPayroll{% endblock %}
 {% block breadcrumb %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb breadcrumb-sm mb-0">
         <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
-        <li class="breadcrumb-item active">Run Payroll</li>
+        <li class="breadcrumb-item active">{{ _('monthly_import_file') }}</li>
     </ol>
 </nav>
 {% endblock %}
@@ -14,22 +14,17 @@
 <div class="wizard-stepper">
     <div class="wizard-step active" id="stepper-upload">
         <div class="wizard-step-number">1</div>
-        <span class="wizard-step-label">Upload</span>
+        <span class="wizard-step-label">{{ _('step_prepare') }}</span>
     </div>
     <div class="wizard-step-connector" id="conn-upload"></div>
     <div class="wizard-step" id="stepper-preview">
         <div class="wizard-step-number">2</div>
-        <span class="wizard-step-label">Review</span>
+        <span class="wizard-step-label">{{ _('step_review') }}</span>
     </div>
     <div class="wizard-step-connector" id="conn-preview"></div>
-    <div class="wizard-step" id="stepper-validate">
-        <div class="wizard-step-number">3</div>
-        <span class="wizard-step-label">Validate</span>
-    </div>
-    <div class="wizard-step-connector" id="conn-validate"></div>
     <div class="wizard-step" id="stepper-confirm">
-        <div class="wizard-step-number">4</div>
-        <span class="wizard-step-label">Confirm</span>
+        <div class="wizard-step-number">3</div>
+        <span class="wizard-step-label">{{ _('step_approve') }}</span>
     </div>
 </div>
 
@@ -41,21 +36,22 @@
         <div class="row justify-content-center">
             <div class="col-md-7 col-lg-6">
                 <div class="mb-4">
-                    <h2 class="fw-bold mb-1">Run Payroll</h2>
-                    <p class="text-muted mb-0">Upload your employee data or use last month's payroll as a starting point</p>
+                    <h2 class="fw-bold mb-1">{{ _('monthly_import_file') }}</h2>
+                    <p class="text-muted mb-0">{{ _('upload_payroll_help') }}</p>
                 </div>
 
-                <!-- Quick Start: Use Last Payroll -->
+                {% if has_completed_run %}
+                <!-- Reuse only after a completed company payroll. -->
                 <div class="card mb-4 border-primary" id="lastPayrollCard">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="flex-shrink-0">
                             <i class="bi bi-arrow-repeat text-primary" style="font-size: 2rem;"></i>
                         </div>
                         <div class="flex-grow-1">
-                            <h6 class="mb-1">Use Last Payroll</h6>
-                            <p class="text-muted small mb-2">Pre-fill from your most recent completed run. Update salaries before processing.</p>
+                            <h6 class="mb-1">{{ _('load_last_payroll') }}</h6>
+                            <p class="text-muted small mb-2">{{ _('last_payroll_help') }}</p>
                             <button type="button" class="btn btn-primary btn-sm" id="btnUseLast" onclick="loadLastPayroll()">
-                                <i class="bi bi-lightning me-1"></i> Load Last Payroll
+                                <i class="bi bi-lightning me-1"></i> {{ _('load_last_payroll') }}
                             </button>
                         </div>
                         <div id="lastRunInfo" class="text-muted small d-none">
@@ -64,7 +60,8 @@
                     </div>
                 </div>
 
-                <div class="text-center text-muted small mb-3">— or upload a new file —</div>
+                <div class="text-center text-muted small mb-3">— {{ _('or_upload_file') }} —</div>
+                {% endif %}
 
                 <!-- CSV Format -->
                 <div class="card mb-4">
@@ -217,7 +214,7 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
             </button>
             <div class="flex-grow-1"></div>
             <button type="button" class="btn btn-primary btn-lg" id="btnValidate" onclick="runValidation()">
-                <i class="bi bi-shield-check me-1"></i> Validate & Process
+                <i class="bi bi-shield-check me-1"></i> {{ _('review_checks') }}
             </button>
         </div>
     </div>
@@ -329,11 +326,11 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
         <!-- Actions -->
         <div id="vr-actions" class="d-flex gap-2 d-none">
             <button type="button" class="btn btn-outline-secondary" onclick="goToStep('preview')">
-                <i class="bi bi-arrow-left me-1"></i> Back to Data
+                <i class="bi bi-arrow-left me-1"></i> {{ _('back_to_prepare') }}
             </button>
             <div class="flex-grow-1"></div>
             <button type="button" class="btn btn-primary btn-lg" id="btnConfirm" onclick="goToConfirm()">
-                <i class="bi bi-shield-lock me-1"></i> Review & Confirm
+                <i class="bi bi-shield-lock me-1"></i> {{ _('continue_approval') }}
             </button>
         </div>
     </div>
@@ -357,8 +354,8 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
         document.getElementById('step-' + step).classList.remove('d-none');
 
         // Update stepper
-        const steps = ['upload', 'preview', 'validate', 'confirm'];
-        const idx = steps.indexOf(step);
+        const steps = ['upload', 'preview', 'confirm'];
+        const idx = steps.indexOf(step === 'validate' ? 'preview' : step);
         steps.forEach((s, i) => {
             const stepper = document.getElementById('stepper-' + s);
             const conn = document.getElementById('conn-' + s);
@@ -478,14 +475,14 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
     window.loadLastPayroll = function() {
         const btn = document.getElementById('btnUseLast');
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Loading...';
+        btn.textContent = {{ _('loading_payroll')|tojson }};
         clearError();
 
         fetch('{{ url_for("payroll.api_last_run") }}')
         .then(r => r.json())
         .then(data => {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-lightning me-1"></i> Load Last Payroll';
+            btn.textContent = {{ _('load_last_payroll')|tojson }};
             if (!data.ok) {
                 showError(data.error || 'No previous payroll found.');
                 return;
@@ -524,7 +521,7 @@ EMP001,Dawit Mekonnen,1234567890,10000,2000,cbe:1000123456789,Sales,Sales Manage
         })
         .catch(err => {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-lightning me-1"></i> Load Last Payroll';
+            btn.textContent = {{ _('load_last_payroll')|tojson }};
             showError('Network error: ' + err.message);
         });
     };

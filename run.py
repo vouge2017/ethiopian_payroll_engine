@@ -1,3 +1,6 @@
+import os
+
+import click
 from flask_migrate import upgrade
 
 from payroll_engine import create_app, db
@@ -43,10 +46,24 @@ def seed_db():
     print(f"  Employees: {len(employees)}")
 
 @app.cli.command("seed-staging")
-def seed_staging_cmd():
-    """Seed staging database with realistic test data (2 companies, 45 employees)."""
-    from seed_staging import seed
-    seed()
+@click.option("--database-name", required=True)
+@click.option("--database-host", required=True)
+def seed_staging_cmd(database_name, database_host):
+    """Provision the explicitly selected synthetic preview database."""
+    from seed_staging import PreviewSeedError, seed
+
+    try:
+        result = seed(
+            database_name=database_name,
+            database_host=database_host,
+            owner_password=os.environ.get("PREVIEW_OWNER_PASSWORD"),
+            accountant_password=os.environ.get("PREVIEW_ACCOUNTANT_PASSWORD"),
+        )
+    except PreviewSeedError as error:
+        raise click.ClickException(str(error)) from None
+    except Exception as error:
+        raise click.ClickException(f"Preview seed failed ({type(error).__name__}).") from None
+    click.echo(result["status"])
 
 
 if __name__ == "__main__":

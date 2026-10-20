@@ -1,6 +1,17 @@
 """Plain first-use copy. Oromo falls back to English until reviewed translation."""
 
 FIRST_USE_COPY = {
+    'date_picker_show': ('Show date picker', 'ቀን መምረጫ አሳይ'),
+    'date_picker_hide': ('Hide date picker', 'ቀን መምረጫ ደብቅ'),
+    'date_year': ('Year', 'ዓመት'),
+    'date_month': ('Month', 'ወር'),
+    'date_day': ('Day', 'ቀን'),
+    'date_gregorian': ('Gregorian date', 'የጎርጎርዮስ ቀን'),
+    'date_format': ('Gregorian: year-month-day (2026-10-16)', 'ጎርጎርዮስ፦ ዓመት-ወር-ቀን (2026-10-16)'),
+    'date_invalid': (
+        'Enter a valid date within the allowed range: year-month-day.',
+        'በተፈቀደው ጊዜ ውስጥ ትክክለኛ ቀን ያስገቡ፦ ዓመት-ወር-ቀን።',
+    ),
     'invite_invalid': (
         'Invalid or expired invite link. Ask your administrator for a new invitation.',
         'የግብዣ አገናኙ ትክክል አይደለም ወይም ጊዜው አልፏል። አዲስ ግብዣ እንዲሰጡዎት አስተዳዳሪዎን ይጠይቁ።',
@@ -139,3 +150,264 @@ FIRST_USE_COPY = {
         'ግብዣው ጊዜው ካለፈ ወይም የሰራተኛው ዝርዝሮች የተሳሳቱ ከሆኑ፣ አዲስ ግብዣ እንዲሰጡዎት የድርጅትዎን አስተዳዳሪ ይጠይቁ።',
     ),
 }
+
+
+FIRST_USE_COPY.update(
+    {
+        'entry_login_title': ('Welcome back', 'እንኳን ደህና መጡ'),
+        'entry_login_subtitle': ('Sign in to your payroll workspace.', 'ወደ የደመወዝ ስራ ቦታዎ ይግቡ።'),
+        'entry_login_help_title': ('Need help signing in?', 'መለያዎን ለመክፈት እርዳታ ይፈልጋሉ?'),
+        'entry_login_help_text': (
+            'Forgot your password? Start account recovery to regain access.',
+            'የይለፍ ቃልዎን ረሱ? ወደ መለያዎ ለመመለስ መለያ መልሶ ማግኘትን ይጀምሩ።',
+        ),
+        'entry_login_help_action': ('Recover account', 'መለያዎን መልሰው ያግኙ'),
+        'entry_forgot_password': ('Forgot password?', 'የይለፍ ቃልዎን ረሱ?'),
+        'entry_sign_in_button': ('Sign In', 'ይግቡ'),
+        'employee_details_heading': (
+            'Employee details',
+            '\u12e8\u1230\u122b\u1270\u129b \u12dd\u122d\u12dd\u122e\u127d',
+        ),
+        'employee_back_to_list': ('Back to employees', 'ወደ ሰራተኞች ዝርዝር ይመለሱ'),
+        'employee_edit_heading': ('Edit employee details', 'የሰራተኛ ዝርዝሮችን ያርሙ'),
+        'edit_employee': ('Edit employee', 'የሰራተኛ ዝርዝር ያርሙ'),
+        'employee_bank_placeholder': (
+            'CBE: account number or Telebirr: phone number',
+            'CBE: የመለያ ቁጥር ወይም Telebirr: ስልክ ቁጥር',
+        ),
+        'employee_review_changes': ('Review the details, then save.', 'ዝርዝሮቹን ይከልሱና ያስቀምጡ።'),
+        'employee_code_help': (
+            'Leave empty to create an employee ID automatically.',
+            'የሰራተኛ መለያ ቁጥር በራስ-ሰር እንዲፈጠር ባዶ ይተዉ።',
+        ),
+        'employee_save_changes': ('Save changes', 'ለውጦቹን ያስቀምጡ'),
+        'employee_add_save': ('Save employee', 'ሰራተኛውን ያስቀምጡ'),
+        'monthly_empty_title': ('Start with your employees', 'በሰራተኞችዎ ይጀምሩ'),
+        'monthly_empty_intro': (
+            'Add employees first. Then enter monthly changes and review the saved amounts.',
+            'መጀመሪያ ሰራተኞችን ይጨምሩ። ከዚያ የወሩን ለውጦች አስገብተው የተቀመጡትን መጠኖች ይከልሱ።',
+        ),
+        'prepare_payroll': ('Prepare Payroll', 'ደመወዝ ያዘጋጁ'),
+        'monthly_enter_changes': (
+            'Enter this month’s changes, save, then review the saved amounts.',
+            'የዚህን ወር ለውጦች ያስገቡና ያስቀምጡ፤ ከዚያ መጠኖቹን ይከልሱ።',
+        ),
+        'monthly_review_unavailable': (
+            'Payroll estimates are unavailable right now. Reload to retry; your saved information is preserved.',
+            'የደመወዝ ግምቶች አሁን አይገኙም። የተቀመጠው መረጃዎ ሳይጠፋ እንደገና ለመሞከር ያድሱ።',
+        ),
+        'monthly_review_unavailable_title': ('Worksheet review unavailable', 'የዝግጅት ሰንጠረዡ ግምገማ አይገኝም'),
+        'monthly_retry_help': (
+            'Reload preparation to try again. Your saved inputs are preserved.',
+            'የተቀመጡት መረጃዎችዎ ሳይጠፉ ዝግጅቱን ለመሞከር ያድሱ።',
+        ),
+        'monthly_retry_preparation': ('Retry preparation', 'ዝግጅቱን እንደገና ይሞክሩ'),
+        'monthly_add_first_employee': ('Add first employee', 'የመጀመሪያውን ሰራተኛ ይጨምሩ'),
+        'monthly_import_file': ('Import payroll file', 'የደመወዝ ፋይል ያስገቡ'),
+        'monthly_import_help': (
+            'Use an existing payroll CSV or Excel file to create a payroll draft.',
+            'ረቂቅ ደመወዝ ለመፍጠር ያለዎትን CSV ወይም Excel ፋይል ይጠቀሙ።',
+        ),
+        'review_newer_changes': ('How this review stays current', 'ይህ ግምገማ እንዴት ወቅታዊ እንደሚሆን'),
+        'review_newer_changes_help': (
+            'Saving payroll preparation updates this unsubmitted review automatically. Use refresh after employee or payroll setup details change.',
+            'የደመወዝ ዝግጅትን ሲያስቀምጡ ይህ ያልቀረበ ግምገማ በራስ-ሰር ይዘምናል። የሰራተኛ ወይም የደመወዝ ቅንብር ዝርዝሮች ሲቀየሩ ብቻ ያድሱ።',
+        ),
+        'review_return_preparation': ('Return to preparation', 'ወደ ዝግጅት ይመለሱ'),
+        'review_refresh_saved': ('Refresh review from current payroll details', 'ግምገማውን ከአሁኑ የደመወዝ ዝርዝሮች ጋር ያድሱ'),
+        'review_refresh_confirm': (
+            'This replaces the current review with your saved preparation. Continue?',
+            'ይህ ያለውን ግምገማ በተቀመጠው ዝግጅት ይተካል። ይቀጥሉ?',
+        ),
+        'compliance_timing_label': ('Deadline timing', 'የቀነ-ገደብ ሁኔታ'),
+        'compliance_not_assessed': ('Not assessed', 'አልተገመገመም'),
+        'compliance_evidence_help': (
+            'Based on configured deadlines; filing and payment are not confirmed here.',
+            'በተዋቀሩ የቀነ-ገደብ ቀናት ላይ የተመሰረተ ነው፤ ግብር መክፈል ወይም ማስገባት እዚህ አልተረጋገጠም።',
+        ),
+        'compliance_needs_run': (
+            'Complete a payroll run to assess compliance dates.',
+            'የቀነ-ገደብ ቀኖችን ለመገምገም የደመወዝ ዝግጅትን ያጠናቅቁ።',
+        ),
+        'employee_first_name': ('First name', '\u1235\u121d'),
+        'employee_father_name': ("Father's name", '\u12e8\u12a0\u1263\u1275 \u1235\u121d'),
+        'employee_grandfather_name': (
+            "Grandfather's name (optional)",
+            '\u12e8\u12a0\u12eb\u1275 \u1235\u121d (\u12a0\u121b\u122b\u132d)',
+        ),
+        'employee_add_intro': (
+            'Start with their name and monthly pay. You can complete other details later.',
+            '\u1260\u1230\u122b\u1270\u129b\u12cd \u1235\u121d \u12a5\u1293 \u12c8\u12f0 \u12c8\u122d \u12ad\u134d\u12eb \u12ed\u1300\u121d\u1229\u1362 \u120c\u120e\u1279\u1295 \u12dd\u122d\u12dd\u122e\u127d \u1260\u1290\u12cd \u1218\u1328\u1218\u122d \u12ed\u1243\u1209\u1362',
+        ),
+        'employee_edit_intro': (
+            "Update this employee's details. Existing approved payroll stays unchanged.",
+            '\u12e8\u1230\u122b\u1270\u129b\u12cd\u1295 \u12dd\u122d\u12dd\u122e\u127d \u12eb\u12d8\u121d\u1291\u1362 \u12a0\u1235\u1240\u12f5\u121e \u12e8\u1338\u12f0\u1240 \u12e8\u12f0\u1218\u12c8\u12dd \u1241\u1325\u122e\u127d \u12a0\u12ed\u1218\u1208\u12c8\u1321\u121d\u1362',
+        ),
+        'employee_required_note': (
+            'Fields marked * are required. Amounts are in ETB.',
+            '* \u12e8\u1270\u1218\u1208\u12a8\u1271 \u1218\u1235\u1348\u122e\u127d \u12eb\u1235\u1348\u120d\u130b\u1209\u1362 \u1218\u1320\u1295\u12ce\u127d \u1260ETB \u1293\u1278\u12cd\u1362',
+        ),
+        'employee_optional_details': (
+            'More details (optional)',
+            '\u1260\u1270\u1328\u121b\u122a \u12dd\u122d\u12dd\u122e\u127d (\u12a0\u121b\u122b\u132d)',
+        ),
+        'employee_phone_hint': (
+            'Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).',
+            '\u12607 \u12c8\u12ed\u121d \u12609 \u12e8\u121a\u1300\u121d\u1229 9 \u12a0\u122b\u1265 \u12a0\u121d\u12dd\u130d\u1261 (91 234 5678)\u1362',
+        ),
+        'employee_tin_help': (
+            'Used for tax filing.',
+            '\u1208\u1325\u124b\u122d \u1218\u1348\u1228\u1303 \u12eb\u1308\u1208\u130d\u120b\u120d\u1362',
+        ),
+        'employee_fayda_label': (
+            'Fayda Digital ID (FIN)',
+            '\u12e8Fayda \u12f2\u1302\u1273\u120d \u1218\u1208\u12eb \u1241\u1325\u122d (FIN)',
+        ),
+        'employee_fayda_fin_help': (
+            'Enter the 12-digit Fayda ID. This does not verify identity.',
+            '12 \u12a0\u122b\u1265 \u12e8Fayda \u1218\u1208\u12eb \u1241\u1325\u122d \u12eb\u1235\u1308\u1261\u1362 \u12ed\u1205 \u1218\u1263\u1228\u1275 \u1218\u1208\u12eb\u1290\u1275\u1295 \u12a0\u12eb\u1228\u130b\u130d\u1325\u121d\u1362',
+        ),
+        'employee_bank_help': (
+            'For bank payment, enter the provider, a colon, and account number (for example, CBE: 1000123456789). For Telebirr, enter Telebirr, a colon, and the employee phone number.',
+            'በባንክ ክፍያ የባንኩን ስም እና የመለያ ቁጥር በሁለት ነጥብ ለይተው ያስገቡ (ምሳሌ፦ CBE: 1000123456789)። ለTelebirr ደግሞ Telebirr፣ ሁለት ነጥብ፣ የሰራተኛው ስልክ ቁጥር ያስገቡ።',
+        ),
+        'reg_invalid_phone': ('Enter 9 digits starting with 7 or 9.', 'በ7 ወይም በ9 የሚጀምር 9 አሃዝ ያስገቡ።'),
+        'reg_duplicate_phone': ('Phone number already registered.', 'ይህ ስልክ ቁጥር አስቀድሞ ተመዝግቧል።'),
+        'reg_duplicate_email': ('Email already registered.', 'ይህ ኢሜይል አስቀድሞ ተመዝግቧል።'),
+        'auth_identifier': ('Phone number or email', 'ስልክ ቁጥር ወይም ኢሜይል'),
+        'auth_identifier_hint': (
+            'Enter your phone number (e.g. 912345678 or +251912345678) or email address.',
+            'ስልክ ቁጥርዎን (ለምሳሌ 912345678 ወይም +251912345678) ወይም ኢሜይልዎን ያስገቡ።',
+        ),
+        'profile_first_name': ('First name', 'ስም'),
+        'profile_second_name': ('Second name (father’s name)', 'ሁለተኛ ስም (የአባት ስም)'),
+        'profile_third_name': ('Third name (grandfather’s name, optional)', 'ሦስተኛ ስም (የአያት ስም፣ አማራጭ)'),
+        'profile_names_required': ('First name and second name are required.', 'ስምና ሁለተኛ ስም ያስፈልጋሉ።'),
+        'account_help_title': ('Account recovery help', 'መለያን መልሶ ለማግኘት እርዳታ'),
+        'account_help_intro': ('You can use this page without signing in.', 'ወደ መለያዎ ሳይገቡ ይህን ገጽ መጠቀም ይችላሉ።'),
+        'account_help_can_access': ('Can you access your phone or email?', 'ስልክዎን ወይም ኢሜይልዎን መጠቀም ይችላሉ?'),
+        'account_help_reset': (
+            'Start account recovery with the phone number or email linked to your account.',
+            'ከመለያዎ ጋር በተያያዘው ስልክ ቁጥር ወይም ኢሜይል መለያዎን መልሶ ማግኘት ይጀምሩ።',
+        ),
+        'account_help_cannot_access': ('Lost access to both?', 'ሁለቱንም መጠቀም አልቻሉም?'),
+        'account_help_owner': (
+            'Contact your company owner or the person who invited you. Ask for help verifying your identity and restoring account access.',
+            'የድርጅትዎን ባለቤት ወይም የጋበዘዎትን ሰው ያነጋግሩ። ማንነትዎን በማረጋገጥ ወደ መለያዎ መመለስ እንዲችሉ እርዳታ ይጠይቁ።',
+        ),
+        'account_help_contact': ('Email support', 'ለእርዳታ ኢሜይል ይላኩ'),
+        'account_help_contact_pending': (
+            'If you are the company owner, contact your EthioPayroll service operator for identity verification.',
+            'የድርጅቱ ባለቤት ከሆኑ፣ ማንነትዎን ለማረጋገጥ የEthioPayroll አገልግሎት አስተዳዳሪዎን ያነጋግሩ።',
+        ),
+        'account_help_private': (
+            'Never share your password or reset code. Support must verify your identity before changing account access.',
+            'የይለፍ ቃልዎን ወይም የማስመለሻ ኮድዎን ለማንም አይስጡ። የመለያ መዳረሻዎ ከመቀየሩ በፊት ማንነትዎ መረጋገጥ አለበት።',
+        ),
+        'reg_title': ('Register', 'ይመዝገቡ'),
+        'reg_steps': ('Quick start steps', 'የመጀመሪያ ደረጃዎች'),
+        'reg_start': ('Get Started', 'ይጀምሩ'),
+        'reg_account': ('Account', 'መለያ'),
+        'reg_phone_password': ('Phone + password', 'ስልክና የይለፍ ቃል'),
+        'reg_profile': ('Profile', 'መገለጫ'),
+        'reg_name_company': ('Your name + company', 'ስምዎና ድርጅትዎ'),
+        'reg_first_payroll': ('First Payroll', 'የመጀመሪያ ደመወዝ'),
+        'reg_add_employees': ('Add employees', 'ሰራተኞችን ይመዝግቡ'),
+        'reg_payroll': ('Payroll', 'ደመወዝ'),
+        'reg_step': ('STEP 1 OF 3 · YOUR ACCOUNT', 'ደረጃ 1 ከ3 · የእርስዎ መለያ'),
+        'reg_heading': ('Your payroll workspace starts here.', 'የደመወዝ የስራ ቦታዎ እዚህ ይጀምራል።'),
+        'reg_intro': (
+            'Create an account with your phone and a password. Next, you’ll add your name and company.',
+            'በስልክዎና በይለፍ ቃል መለያ ይፍጠሩ። በመቀጠል ስምዎንና ድርጅትዎን ያስገባሉ።',
+        ),
+        'reg_phone': ('Phone Number', 'ስልክ ቁጥር'),
+        'reg_phone_hint': (
+            'Enter 9 digits starting with 7 or 9 (e.g., 91 234 5678).',
+            'በ7 ወይም በ9 የሚጀምር 9 አሃዝ ያስገቡ (ለምሳሌ 91 234 5678)።',
+        ),
+        'reg_phone_title': ('Enter 9 digits starting with 9 or 7', 'በ9 ወይም በ7 የሚጀምር 9 አሃዝ ያስገቡ'),
+        'reg_optional': ('(optional)', '(አማራጭ)'),
+        'reg_email_hint': ('For password recovery and security alerts.', 'የይለፍ ቃልን ለማስመለስና ለደህንነት ማሳወቂያዎች።'),
+        'reg_password_hint': (
+            'Use at least 8 characters, with uppercase and lowercase Latin letters, a number and a symbol.',
+            'ቢያንስ 8 ቁምፊዎች፣ አቢይና ንዑስ የላቲን ፊደላት፣ ቁጥርና ምልክት ይጠቀሙ።',
+        ),
+        'reg_pw_length': ('At least 8 characters', 'ቢያንስ 8 ቁምፊዎች'),
+        'reg_pw_upper': ('One uppercase letter (A–Z)', 'አንድ አቢይ ፊደል (A–Z)'),
+        'reg_pw_lower': ('One lowercase letter (a–z)', 'አንድ ንዑስ ፊደል (a–z)'),
+        'reg_pw_digit': ('One number (0–9)', 'አንድ ቁጥር (0–9)'),
+        'reg_pw_symbol': ('One symbol (@#$%!&* etc.)', 'አንድ ምልክት (@#$%!&* ወዘተ)'),
+        'reg_pw_strong': ('Strong password', 'ጠንካራ የይለፍ ቃል'),
+        'reg_confirm': ('Confirm Password', 'የይለፍ ቃል ያረጋግጡ'),
+        'reg_sign_in': ('Sign in instead', 'በምትኩ ይግቡ'),
+        'reg_create': ('Create account', 'መለያ ይፍጠሩ'),
+        'reg_employee': ('Already have an employee account?', 'የሰራተኛ መለያ አለዎት?'),
+        'reg_payslips': ('Sign in to your payslips', 'የደመወዝ ወረቀቶችዎን ለማየት ይግቡ'),
+        'reg_social': ('Or continue with', 'ወይም በዚህ ይቀጥሉ'),
+        'reg_google': ('Sign in with Google', 'በGoogle ይግቡ'),
+        'reg_later': ("What you'll need later", 'በኋላ የሚያስፈልጉዎት'),
+        'reg_later_intro': (
+            "Just your phone and a password to start. We'll ask for the rest in the next step:",
+            'ለመጀመር ስልክና የይለፍ ቃል ብቻ ያስፈልጋሉ። ቀሪውን መረጃ በሚቀጥለው ደረጃ እንጠይቃለን፦',
+        ),
+        'reg_your_name': ('Your Name', 'ስምዎ'),
+        'reg_for_profile': ('For your profile', 'ለመገለጫዎ'),
+        'reg_company': ('Company Name', 'የድርጅት ስም'),
+        'reg_for_company': ('For your business account', 'ለድርጅት መለያዎ'),
+        'reg_employee_list': ('Employee List', 'የሰራተኞች ዝርዝር'),
+        'reg_after_setup': ('Add after setup', 'ከዝግጅቱ በኋላ ይጨምሩ'),
+        'reg_help': ('Need Help?', 'እርዳታ ይፈልጋሉ?'),
+        'reg_help_intro': (
+            'Not sure what comes next? See the account, company and employee setup steps before you begin.',
+            'ቀጣዩን ደረጃ አላወቁም? ከመጀመርዎ በፊት የመለያ፣ የድርጅትና የሰራተኛ ዝግጅት ደረጃዎችን ይመልከቱ።',
+        ),
+        'reg_see_steps': ('See the setup steps', 'የዝግጅት ደረጃዎችን ይመልከቱ'),
+        'reg_match_ok': ('Passwords match and meet all requirements', 'የይለፍ ቃሎቹ ተመሳስለዋል፤ ሁሉንም መስፈርቶች አሟልተዋል'),
+        'reg_match_warn': (
+            'Passwords match, but still need to meet the rules above',
+            'የይለፍ ቃሎቹ ተመሳስለዋል፤ ግን ከላይ ያሉትን መስፈርቶች ማሟላት አለባቸው',
+        ),
+        'reg_match_bad': ('Passwords do not match', 'የይለፍ ቃሎቹ አይመሳሰሉም'),
+    }
+)
+
+
+# Shared payroll navigation and actions; English and Amharic ship together.
+PAYROLL_COPY = {
+    'home': ('Home', 'መነሻ'),
+    'step_prepare': ('Prepare', 'ያዘጋጁ'),
+    'step_review': ('Review', 'ይገምግሙ'),
+    'step_approve': ('Approve', 'ያጽድቁ'),
+    'payroll_steps': ('Payroll steps', 'የደመወዝ ዝግጅት ደረጃዎች'),
+    'new_run': ('New Run', 'አዲስ ደመወዝ'),
+    'export_csv': ('Export CSV', 'CSV ያውርዱ'),
+    'more_actions': ('More actions', 'ተጨማሪ እርምጃዎች'),
+    'payroll_register': ('Payroll Register', 'የደመወዝ መዝገብ'),
+    'download_payslips': ('Download Payslips', 'የደመወዝ ወረቀቶችን ያውርዱ'),
+    'import_history': ('Import History', 'የቀድሞ ደመወዝ መረጃ ያስገቡ'),
+    'runs_empty_help': (
+        'Prepare your first payroll, then review the amounts before approval.',
+        'የመጀመሪያውን ደመወዝ ያዘጋጁ፤ ከማጽደቅዎ በፊት መጠኖቹን ይገምግሙ።',
+    ),
+    'load_last_payroll': ('Load Last Payroll', 'የመጨረሻውን ደመወዝ ይጫኑ'),
+    'last_payroll_help': (
+        'Pre-fill from your most recent completed run. Update salaries before processing.',
+        'ከመጨረሻው የተጠናቀቀ ደመወዝ መረጃ ይሙሉ። ከማስላትዎ በፊት ደመወዞችን ያዘምኑ።',
+    ),
+    'upload_payroll_help': (
+        'Import an employee payroll file to prepare the amounts for review.',
+        'መጠኖቹን ለግምገማ ለማዘጋጀት የሰራተኞች ደመወዝ ፋይል ያስገቡ።',
+    ),
+    'or_upload_file': ('or upload a new file', 'ወይም አዲስ ፋይል ይጫኑ'),
+    'review_checks': ('Review checks', 'የማረጋገጫ ውጤቶችን ይገምግሙ'),
+    'continue_approval': ('Continue to approval', 'ወደ ማጽደቅ ይቀጥሉ'),
+    'loading_payroll': ('Loading…', 'በመጫን ላይ…'),
+    'filing_history': ('Filing History', 'የማስረከቢያ ታሪክ'),
+    'approve_payroll': ('Approve payroll', 'ደመወዝ ያጽድቁ'),
+    'approval_separate_step': (
+        'Approval is a separate step; no payment is sent.',
+        'ማጽደቅ የተለየ ደረጃ ነው፤ ክፍያ አይላክም።',
+    ),
+    'back_to_prepare': ('Back to Prepare', 'ወደ ዝግጅት ይመለሱ'),
+}
+FIRST_USE_COPY.update(PAYROLL_COPY)

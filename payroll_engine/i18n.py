@@ -144,13 +144,16 @@ STRINGS = {
     'bank_telebirr': 'ባንክ / ቴሌብር',
     # Flash Messages
     'how_tax_calculated': 'ግብር እንዴት ይሰላል?',
-    'tax_explainer_intro': 'የኢትዮጵያ ገቢ ግብር ተከታታይ ደረጃዎችን ይጠቀማል (ህግ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነሳል፣ የሚተካ ገቢዎን ይቀንሳል።',
+    # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review:
+    # the pension-before-tax statement now carries the pending-confirmation wording.
+    'tax_explainer_intro': 'የኢትዮጵያ ገቢ ግብር ተከታታይ ደረጃዎችን ይጠቀማል (ህግ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት መቀነስ የተለመደው ተግባር ሲሆን፣ እስኪረጋገጥ ዝግጁ አይደለም (RC-38000-01)። የሚተካ ገቢዎን ይቀንሳል።',
     'bracket': 'ደረጃ',
     'taxable_range': 'የሚተካ ገቢ ክልል',
     'tax_rate': 'መጠን',
     'personal_relief': 'የግል ማስታገሻ',
     'per_month': 'በወር',
-    'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነሳል',
+    # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review.
+    'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነሳል — የተለመደው ተግባር፣ እስኪረጋገጥ ይጠበቃል (RC-38000-01)።',
     'of_basic_salary': 'የመነሻ ደመወዝ',
     'then_tax': 'ከዚያ ግብር ይሰላል',
 }

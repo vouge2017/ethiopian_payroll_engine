@@ -69,7 +69,7 @@
         review.disabled = dirty;
         document.getElementById('review-guidance').textContent = dirty
             ? 'Save & recalculate before reviewing. Your edits are not yet included in the estimates.'
-            : 'Review uses saved inputs. An existing review keeps its preserved amounts until you explicitly refresh it.';
+            : 'Review uses saved inputs. Saving updates an existing unsubmitted review automatically.';
         document.getElementById('saved-estimates').classList.toggle('monthly-stale', dirty);
     };
     form.addEventListener('input', update);

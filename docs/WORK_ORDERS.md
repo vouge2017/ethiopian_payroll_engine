@@ -1,5 +1,25 @@
 # Focused delivery work orders
 
+## Current local UI closure — 2026-10-15
+
+26. Close misleading compliance, first-use language gaps and review-refresh wording, then verify the founder-to-practitioner phone journey and operations evidence.
+
+Implemented and locally verified on dirty HEAD `3ead9754945be9c30bb816fab459fe61a9abe9d9`: focused UI/auth tests `40 passed, 4 warnings in 69.73s` (no skips; all four are model deprecations); PostgreSQL 16 review-refresh tests `3 passed, 10 warnings in 10.66s`; Chrome confirmed toggle round-trip and 390px fixed-nav clearance. Full Amharic localization is incomplete. The local synthetic journey does not complete either real-phone trial. Worker/job reliability, durable files, backup/key restoration and incident ownership remain open pending suitable service access and an operator drill. Full local patch awaits user review before commit/deploy. See [UI_CLOSURE_2026-10-15.md](UI_CLOSURE_2026-10-15.md).
+
+## Current auth recovery and Amharic entry fixes — 2026-10-12
+
+25. Repair the signed-out recovery loop, finish Amharic registration guidance, accept either phone or email in one sign-in/recovery field, and require first + second/father names while keeping third/grandfather name optional.
+
+Published as `bdcd5b164a1427f597d315d0d728a83accf8975f` to `codex/synthetic-preview`. Local auth/profile/phone tests: `34 passed, 5 warnings`; Ruff passed; independent review found no remaining concrete issue. User confirmed `support@ethiopayroll.com` is monitored and it is configured as the default. Hosted [run 38218687373](https://github.com/vouge2017/ethiopian_payroll_engine/actions/runs/38218687373) passed the auth/profile/phone suite, PostgreSQL readiness, web/worker builds and synthetic container provisioning. Render dashboard now shows only a Production environment: `ethiopian_payroll_engine` is on `main` at `f27d5af` with `ethiopian-payroll-db` in the same environment. This contradicts the earlier assumption it is isolated staging; no deploy was attempted. Identify the actual separate staging service/database before deploying. See [STATUS.md](../STATUS.md) and [render-production-target.png](../local-evidence/auth-entry-20261012/render-production-target.png).
+
+## Current synthetic preview preparation — 2026-10-12
+
+24. Prepare and validate an isolated synthetic preview on existing Render staging, then verify its phone-accessible URL.
+
+Published source `9e2c7549bb4f31aa31a62a2dc3accf1c3b3fdc11` passed hosted preview validation: `31 passed, 31 warnings in 57.19s`; both images built and real staging web startup/migrations/readiness/repeat provisioning passed. Owned local test cluster and temporary paths were removed. Only the preserved unused `uv.lock` stub is untracked in the active checkout. Deployment/phone verification remains open pending authenticated Render access.
+
+PR #12 is merged at main `f27d5af04313a4ec3bf9133a7635fedbb131631a`. Preview deployed as Render deployment `dep-db6j9hqvcj2c7385qiog`, SHA `02b84268527ce4793b4d37b0fb6a4f7c0618ea7f`; hosted run `38297437086` passed. `/readyz` reports database/schema/migrations current; public English/Amharic help, login and Amharic registration were checked in browser. Render labels its environment Production; this does not prove a dedicated isolated staging service. The database expires 30 Oct 2026. Real-phone practitioner acceptance, durable files/jobs, restore and production support evidence remain open. See [SYNTHETIC_PREVIEW.md](SYNTHETIC_PREVIEW.md).
+
 ## Current invitation and critical-language continuity — 2026-10-11
 
 23. Make employee invitation recovery honest, scoped and responsive; continue critical English/Amharic first-use copy through the employee handoff.

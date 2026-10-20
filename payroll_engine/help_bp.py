@@ -1,9 +1,15 @@
 """Help & Support blueprint — in-app FAQ and contextual guidance."""
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_login import login_required
 
 help_bp = Blueprint('help', __name__)
+
+
+@help_bp.route('/account-help')
+def account_help():
+    """Public account recovery guidance, without tenant or user lookup."""
+    return render_template('auth/account_help.html', support_email=current_app.config.get('SUPPORT_EMAIL', ''))
 
 
 @help_bp.route('/help')
@@ -56,14 +62,17 @@ FAQ_DATA = [
                 '- 7,001–10,000 ETB: 25%\n'
                 '- 10,001–14,000 ETB: 30%\n'
                 '- 14,001+ ETB: 35%\n\n'
-                'These brackets apply to your **taxable income** (gross salary minus pension contribution). '
-                'Source: Proclamation No. 1395/2025, Article 36(1).',
+                'These brackets apply to your **taxable income**. Our engine deducts the 7% pension '
+                'contribution before tax — current practice in EthioPayroll, pending accountant '
+                'confirmation (ref RC-38000-01). '
+                'Bracket rates: Proclamation No. 1395/2025, Article 36(1).',
             },
             {
                 'anchor': 'tax-calculation',
                 'question': 'How is my income tax calculated step by step?',
                 'answer': '1. Start with your gross salary\n'
-                '2. Subtract 7% pension → this gives taxable income\n'
+                '2. Subtract 7% pension → this gives taxable income '
+                '(current practice, pending accountant confirmation, ref RC-38000-01)\n'
                 '3. Apply each tax bracket to portions of taxable income\n'
                 '4. Add up the tax from each bracket → total tax\n\n'
                 'Example: Gross 10,000 ETB\n'
@@ -228,7 +237,8 @@ FAQ_DATA = [
                 'answer': 'Each payslip shows a **step-by-step calculation flow**:\n'
                 '1. Gross Salary (basic + allowances)\n'
                 '2. Pension deduction (7% of basic)\n'
-                '3. Taxable income (gross − pension)\n'
+                '3. Taxable income (gross − pension) — current practice, pending accountant '
+                'confirmation (ref RC-38000-01)\n'
                 '4. Tax calculation by bracket\n'
                 '5. Personal relief applied\n'
                 '6. Net pay (gross − pension − tax − other deductions)\n\n'

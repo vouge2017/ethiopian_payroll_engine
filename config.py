@@ -13,6 +13,7 @@ def _env_bool(name: str, default: bool = False) -> bool:
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-change-in-production')
     ENABLE_DEMO_MODE = _env_bool('ENABLE_DEMO_MODE', default=False)
+    SUPPORT_EMAIL = os.environ.get('SUPPORT_EMAIL', 'support@ethiopayroll.com').strip()
     _db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'app.db'))
     # Fix postgres:// → postgresql:// for SQLAlchemy 2.x
     if _db_url.startswith('postgres://'):

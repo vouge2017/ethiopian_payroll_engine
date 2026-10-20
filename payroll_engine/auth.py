@@ -1,11 +1,14 @@
 import re
 from datetime import UTC, datetime, timedelta
+from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from . import db, limiter
+from .i18n import get_string
 from .models import Company, User, validate_ethiopian_phone
+from .schema_health import HEALTH_ENDPOINTS
 from .security import safe_redirect_target
 
 auth = Blueprint('auth', __name__)
@@ -39,6 +42,7 @@ _PASSWORD_CHANGE_ALLOWED = frozenset(
         'auth.change_password',
         'auth.logout',
         'auth.set_language',
+        'help.account_help',
         'static',
         'health',
     }
@@ -48,6 +52,8 @@ _PASSWORD_CHANGE_ALLOWED = frozenset(
 @auth.before_app_request
 def enforce_password_change():
     """Invited users must set their own password before using the app."""
+    if request.endpoint in HEALTH_ENDPOINTS:
+        return None
     if not current_user.is_authenticated:
         return None
     if not getattr(current_user, 'must_change_password', False):
@@ -233,7 +239,10 @@ def set_language(lang):
 
     session['language'] = lang
     # referrer can be attacker-controlled; only follow safe same-host targets
-    target = safe_redirect_target(request.referrer)
+    target = request.args.get('next') or request.referrer
+    if target and urlparse(target).path == request.path:
+        target = None
+    target = safe_redirect_target(target)
     return redirect(target)
 
 
@@ -248,6 +257,9 @@ def register():
     password = ''
     password2 = ''
 
+    def message(key):
+        return get_string(key, session.get('language', 'en'))
+
     if request.method == 'POST':
         phone = request.form.get('phone', '').strip()
         email = request.form.get('email', '').strip().lower() or None
@@ -256,7 +268,7 @@ def register():
 
         # Validate required fields (progressive: only phone + password)
         if not phone or not password:
-            flash('Phone and password are required.', 'danger')
+            flash(message('invite_required'), 'danger')
             return render_template(
                 'auth/register.html',
                 form_data={
@@ -268,7 +280,7 @@ def register():
         # Validate phone format
         is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone)
         if not is_valid:
-            flash(phone_error, 'danger')
+            flash(message('reg_invalid_phone') if session.get('language') == 'am' else phone_error, 'danger')
             return render_template(
                 'auth/register.html',
                 form_data={
@@ -279,7 +291,7 @@ def register():
 
         # Validate password
         if password != password2:
-            flash('Passwords do not match.', 'danger')
+            flash(message('invite_match_bad'), 'danger')
             return render_template(
                 'auth/register.html',
                 form_data={
@@ -291,7 +303,16 @@ def register():
 
         is_strong, pw_error = check_password_strength(password)
         if not is_strong:
-            flash(pw_error, 'danger')
+            basic_errors = {
+                'Password must be at least 8 characters.': 'invite_password_short',
+                'Password is too long (max 128 characters).': 'invite_password_long',
+                'Password must contain at least one uppercase letter.': 'invite_password_upper',
+                'Password must contain at least one lowercase letter.': 'invite_password_lower',
+                'Password must contain at least one digit.': 'invite_password_digit',
+                'Password must contain at least one symbol (e.g. @#$%!&*).': 'invite_password_symbol',
+            }
+            localized = message(basic_errors.get(pw_error, 'invite_password_predictable'))
+            flash(localized if session.get('language') == 'am' else pw_error, 'danger')
             return render_template(
                 'auth/register.html',
                 form_data={
@@ -302,7 +323,7 @@ def register():
 
         # Check duplicate phone
         if User.query.filter(User.phone.in_((normalized_phone, '0' + normalized_phone))).first():
-            flash('Phone number already registered.', 'danger')
+            flash(message('reg_duplicate_phone'), 'danger')
             return render_template(
                 'auth/register.html',
                 form_data={
@@ -313,7 +334,7 @@ def register():
 
         # Check duplicate email (if provided)
         if email and User.query.filter_by(email=email).first():
-            flash('Email already registered.', 'danger')
+            flash(message('reg_duplicate_email'), 'danger')
             return render_template(
                 'auth/register.html',
                 form_data={
@@ -416,8 +437,8 @@ def setup_profile():
         company_name = request.form.get('company_name', '').strip()
 
         # Validate required fields
-        if not first_name or not last_name:
-            flash('First name and last name are required.', 'danger')
+        if not first_name or not middle_name:
+            flash(get_string('profile_names_required', session.get('language', 'en')), 'danger')
             return render_template(
                 'auth/setup_profile.html',
                 form_data={

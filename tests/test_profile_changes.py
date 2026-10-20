@@ -146,6 +146,8 @@ class TestEmployeeProfileEdit:
         resp = client.get('/my/profile/edit')
         assert resp.status_code == 200
         assert b'Edit My Profile' in resp.data
+        assert b'phone-prefix-box' in resp.data
+        assert b'+251' in resp.data
 
     def test_safe_field_updates_immediately(self, app):
         _company_id, _admin_id, _emp_user_id, emp_id = _setup(app)

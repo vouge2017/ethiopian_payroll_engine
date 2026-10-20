@@ -52,7 +52,7 @@
   {% else %}
   <section class="monthly-change-context">
       <h2 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>What to check this month</h2>
-      <p>These are the saved figures for this review. New preparation edits are included only when you explicitly refresh the review.</p>
+      <p>These are the saved figures for this review. Saving preparation updates this unsubmitted review automatically; submitted reviews keep their approved figures.</p>
 
       {% if change_summary and change_summary.retained_comparison %}
       {% if change_summary.previous_period %}<p class="monthly-comparison-summary"><strong>{{ changed_count }} {{ 'employee' if changed_count == 1 else 'employees' }} changed</strong> compared with {{ change_summary.previous_period }}. Open an employee row or the full change record to understand the changes.</p>{% else %}<p>No earlier approved payroll is available for comparison. Check each employee’s pay before continuing.</p>{% endif %}
@@ -144,9 +144,9 @@
       </div></details>{% endfor %}</div>
     <div class="monthly-no-match" id="review-no-match" hidden><p>No employees match these filters. All preserved payroll amounts remain included.</p><button type="button" class="btn btn-outline-secondary" id="review-clear-filters">Clear employee filters</button></div>
     {% if run.status == 'review' %}
-    <details class="monthly-notes"><summary>Include newer worksheet changes</summary><p>First save your changes in preparation. Refresh explicitly to replace the preserved review with the saved worksheet.</p>
-      <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-outline-secondary mb-2">Return to preparation</a>
-      <form method="POST" action="{{ url_for('payroll.worksheet_review') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period_start" value="{{ run.run_date.isoformat() }}"><input type="hidden" name="refresh_run_id" value="{{ run.id }}"><button class="btn btn-outline-secondary" type="submit">Refresh from saved worksheet</button></form>
+    <details class="monthly-notes"><summary>{{ _('review_newer_changes') }}</summary><p>{{ _('review_newer_changes_help') }}</p>
+      <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-outline-secondary mb-2">{{ _('review_return_preparation') }}</a>
+      <form method="POST" action="{{ url_for('payroll.worksheet_review') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period_start" value="{{ run.run_date.isoformat() }}"><input type="hidden" name="refresh_run_id" value="{{ run.id }}"><button class="btn btn-outline-secondary" type="submit" data-confirm="{{ _('review_refresh_confirm') }}">{{ _('review_refresh_saved') }}</button></form>
     </details>{% endif %}
   </div></section>{% endif %}
 </div></div>

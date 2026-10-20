@@ -1,6 +1,6 @@
 {% macro steps(current) -%}
-<ol class="monthly-steps" aria-label="Payroll steps">
-  {% for number, label in [(1, 'Prepare'), (2, 'Review'), (3, 'Owner approval')] %}
+<ol class="monthly-steps" aria-label="{{ _('payroll_steps') }}">
+  {% for number, label in [(1, _('step_prepare')), (2, _('step_review')), (3, _('step_approve'))] %}
   <li{% if number == current %} aria-current="step"{% endif %}{% if number < current %} class="monthly-step-complete"{% endif %}><span class="monthly-step-number" aria-hidden="true">{{ '✓' if number < current else number }}</span><span>{{ label }}</span></li>
   {% endfor %}
 </ol>

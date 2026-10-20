@@ -310,6 +310,65 @@ class TestMediumIssues:
         assert any(i.code == 'LARGE_SALARY_CHANGE' for i in report.issues)
 
 
+class TestLargeSalaryChangeLinks:
+    """The employee edit link must use the integer primary key, never the free-form reference."""
+
+    @staticmethod
+    def _raise_summary(reference):
+        return _make_change_summary(
+            salary_changes=[
+                EmployeeChange(
+                    reference,
+                    'Dawit',
+                    'salary_change',
+                    'raise',
+                    old_value=Decimal('10000'),
+                    new_value=Decimal('15000'),
+                    delta=Decimal('5000'),
+                    delta_pct=50.0,
+                ),
+            ]
+        )
+
+    @staticmethod
+    def _link(employees, reference=None):
+        run = _make_run()
+        payslips = [_make_payslip(employees[0].id)]
+        mock_db, mock_models = _setup_db(run, payslips, employees)
+        report = classify_exceptions(
+            1,
+            1,
+            mock_db,
+            mock_models,
+            change_summary=TestLargeSalaryChangeLinks._raise_summary(reference or employees[0].employee_id),
+        )
+        issue = next(i for i in report.issues if i.code == 'LARGE_SALARY_CHANGE')
+        return issue.action_url
+
+    def test_nonnumeric_reference_links_to_integer_primary_key(self):
+        emp = _make_employee(57, 'Dawit', employee_id_str='SHEET1')
+        assert self._link([emp]) == '/employees/57/edit'
+
+    def test_numeric_reference_cannot_open_a_co_workers_primary_key(self):
+        raised = _make_employee(57, 'Salary raised', employee_id_str='7')
+        hostage = _make_employee(7, 'Unrelated worker')
+        url = self._link([raised, hostage])
+        assert url == '/employees/57/edit'
+        assert url != '/employees/7/edit'
+
+    def test_reference_outside_the_tenant_read_falls_back_to_review(self):
+        emp = _make_employee(57, 'Dawit')
+        assert self._link([emp], reference='GHOST') == '/payroll/runs/1/review'
+
+    def test_same_reference_in_another_company_cannot_be_linked(self):
+        raised = _make_employee(57, 'Dawit', employee_id_str='SHARED-REF')
+        foreign = _make_employee(58, 'Other company worker', employee_id_str='SHARED-REF')
+        foreign.company_id = 2
+        url = self._link([raised, foreign])
+        assert url == '/employees/57/edit'
+        assert '/employees/58/' not in url
+
+
 # ─────────────────────────────────────────────
 # Tests: Low issues
 # ─────────────────────────────────────────────

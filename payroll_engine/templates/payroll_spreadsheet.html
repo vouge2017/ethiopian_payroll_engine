@@ -5,7 +5,7 @@
 {% import "components/monthly_payroll.html" as monthly with context %}
 <div class="monthly-payroll">
   <header class="monthly-heading">
-    <div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p>
+    <div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else _('monthly_default_workspace') }}</p>
       <h1>{{ _('prepare_payroll') }}</h1><p>{% if rows %}{{ _('monthly_enter_changes') }}{% elif review_error %}{{ _('monthly_review_unavailable') }}{% else %}{{ _('monthly_empty_intro') }}{% endif %}</p></div>
     <div class="monthly-heading-actions">
       {% if not rows and not review_error %}<a id="monthly-add-first-employee" href="{{ url_for('employees.add_employee') }}" class="btn btn-primary">{{ _('monthly_add_first_employee') }}</a>{% endif %}
@@ -16,9 +16,9 @@
   {{ monthly.steps(1) }}
   {% if review_error %}<div class="alert alert-warning" role="alert">{{ review_error }}</div>{% endif %}
   {% if rows %}
-  {{ monthly.totals(rows|length, total_gross, total_tax, total_net, 'Estimated net pay', 'saved-estimates') }}
-  <div class="monthly-toolbar"><h2>This month’s inputs</h2><span id="worksheet-state" role="status">Saved inputs · estimates shown below</span></div>
-  <div class="monthly-search"><label for="employee-search">Find an employee</label><input type="search" id="employee-search" class="form-control" placeholder="Name or employee ID" autocomplete="off" aria-controls="employee-ledger"><span id="employee-search-count" role="status"></span></div>
+  {{ monthly.totals(rows|length, total_gross, total_tax, total_net, _('monthly_estimated_net_label'), 'saved-estimates') }}
+  <div class="monthly-toolbar"><h2>{{ _('monthly_this_month_inputs') }}</h2><span id="worksheet-state" role="status">{{ _('monthly_state_saved') }}</span></div>
+  <div class="monthly-search"><label for="employee-search">{{ _('monthly_find_employee') }}</label><input type="search" id="employee-search" class="form-control" placeholder="{{ _('monthly_search_placeholder') }}" autocomplete="off" aria-controls="employee-ledger"><span id="employee-search-count" role="status"></span></div>
   <form method="POST" action="{{ url_for('payroll.payroll_spreadsheet') }}" id="spreadsheet-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
@@ -28,42 +28,46 @@
         <input type="hidden" name="emp_id" value="{{ row.emp.id }}">
         <details class="monthly-editor" open{% if row.exceeds_ot_limit %} data-input-warning="true"{% endif %}>
         <summary>
-          <span class="monthly-row-identity"><strong id="employee-{{ row.emp.id }}">{{ row.emp.name }}</strong><span>{{ row.emp.employee_id }}</span><span class="monthly-edit-state" hidden>Unsaved edits</span></span>
-          <span class="monthly-row-net"><span class="monthly-estimate-label">Estimated net · ETB</span><strong>{{ '{:,.2f}'.format(row.net) }}</strong></span>
-          <span class="monthly-expand-label">Edit inputs<span class="monthly-expand-icon" aria-hidden="true"></span></span>
+          <span class="monthly-row-identity"><strong id="employee-{{ row.emp.id }}">{{ row.emp.name }}</strong><span>{{ row.emp.employee_id }}</span><span class="monthly-edit-state" hidden>{{ _('monthly_unsaved_edits') }}</span></span>
+          <span class="monthly-row-net"><span class="monthly-estimate-label">{{ _('monthly_estimate_label') }}</span><strong>{{ '{:,.2f}'.format(row.net) }}</strong></span>
+          <span class="monthly-expand-label">{{ _('monthly_edit_inputs') }}<span class="monthly-expand-icon" aria-hidden="true"></span></span>
         </summary>
         <div class="monthly-editor-body">
         <div class="monthly-inputs">
-          <p class="monthly-input-note">Basic salary ETB {{ '{:,.2f}'.format(row.emp.basic_salary) }} · Allowances ETB {{ '{:,.2f}'.format(row.emp.allowances) }}</p>
-          {% if row.emp.employee_type == 'daily' %}<p class="monthly-input-note">Daily employee · monthly bonus and extra unpaid days are read-only here.</p>{% endif %}
-          {% for key, label, value, maximum, step in [('bonus', 'Bonus · ETB', row.bonus, none, '0.01'), ('absences', 'Extra unpaid days', row.absence_days, 30, '1'), ('advance', 'Advance · ETB', row.advance, none, '0.01')] %}
+          <p class="monthly-input-note">{{ _('monthly_basic_note') }} ETB {{ '{:,.2f}'.format(row.emp.basic_salary) }} · {{ _('allowances') }} ETB {{ '{:,.2f}'.format(row.emp.allowances) }}</p>
+          {% if row.emp.employee_type == 'daily' %}<p class="monthly-input-note">{{ _('monthly_daily_note') }}</p>{% endif %}
+          {% for key, label, value, maximum, step in [('bonus', _('monthly_bonus_etb'), row.bonus, none, '0.01'), ('absences', _('monthly_extra_unpaid_days'), row.absence_days, 30, '1'), ('advance', _('monthly_advance_etb'), row.advance, none, '0.01')] %}
           <div><label for="emp-{{ row.emp.id }}-{{ key }}">{{ label }}</label>
-            <input id="emp-{{ row.emp.id }}-{{ key }}" type="number" name="emp_{{ row.emp.id }}_{{ key }}" aria-label="{{ label }} for {{ row.emp.name }}" value="{{ value }}" min="0" {% if maximum %}max="{{ maximum }}"{% endif %} step="{{ step }}" class="form-control" {% if key in ('bonus', 'absences') and row.emp.employee_type == 'daily' %}readonly title="Monthly employees only"{% endif %}>
+            <input id="emp-{{ row.emp.id }}-{{ key }}" type="number" name="emp_{{ row.emp.id }}_{{ key }}" aria-label="{{ label }} {{ _('monthly_aria_for') }} {{ row.emp.name }}" value="{{ value }}" min="0" {% if maximum %}max="{{ maximum }}"{% endif %} step="{{ step }}" class="form-control" {% if key in ('bonus', 'absences') and row.emp.employee_type == 'daily' %}readonly title="{{ _('monthly_only_title') }}"{% endif %}>
           </div>{% endfor %}
-          <fieldset class="monthly-overtime"><legend>Overtime · hours</legend><div class="monthly-ot-fields">
-            {% for key, label, value in [('ot_day', 'Day', row.ot_day), ('ot_night', 'Night', row.ot_night), ('ot_holiday', 'Holiday', row.ot_holiday), ('ot_rest', 'Rest + holiday', row.ot_rest)] %}
+          <fieldset class="monthly-overtime"><legend>{{ _('monthly_overtime_hours') }}</legend><div class="monthly-ot-fields">
+            {% for key, label, value in [('ot_day', _('monthly_ot_day'), row.ot_day), ('ot_night', _('monthly_ot_night'), row.ot_night), ('ot_holiday', _('monthly_ot_holiday'), row.ot_holiday), ('ot_rest', _('monthly_ot_rest'), row.ot_rest)] %}
             <div><label for="emp-{{ row.emp.id }}-{{ key }}">{{ label }}</label>
-              <input id="emp-{{ row.emp.id }}-{{ key }}" type="number" name="emp_{{ row.emp.id }}_{{ key }}" aria-label="{{ label }} overtime hours for {{ row.emp.name }}" value="{{ value }}" min="0" max="200" step="0.5" class="form-control">
+              <input id="emp-{{ row.emp.id }}-{{ key }}" type="number" name="emp_{{ row.emp.id }}_{{ key }}" aria-label="{{ label }} {{ _('monthly_aria_overtime_hours_for') }} {{ row.emp.name }}" value="{{ value }}" min="0" max="200" step="0.5" class="form-control">
             </div>{% endfor %}
           </div></fieldset>
-          {% if row.exceeds_ot_limit %}<p class="monthly-input-warning" role="alert">Overtime exceeds the monthly limit. Resolve this before approval.</p>{% endif %}
+          {% if row.exceeds_ot_limit %}<p class="monthly-input-warning" role="alert">{{ _('monthly_ot_limit_warning') }}</p>{% endif %}
         </div>
-        <dl class="monthly-amounts"><div><dt>Gross</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>Tax</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>Pension</dt><dd>{{ '{:,.2f}'.format(row.pension) }}</dd></div><div class="monthly-net"><dt>Estimated net · ETB</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
+        <dl class="monthly-amounts"><div><dt>{{ _('gross') }}</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>{{ _('monthly_tax_short') }}</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>{{ _('monthly_pension_label') }}</dt><dd>{{ '{:,.2f}'.format(row.pension) }}</dd></div><div class="monthly-net"><dt>{{ _('monthly_estimate_label') }}</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
         </div></details>
       </section>
     {% endfor %}
     </div>
-    <p id="employee-no-match" class="monthly-no-match" hidden>No matching employees. Try another name or ID. All employee inputs will still be saved.</p>
-    <div class="monthly-actions"><p id="save-guidance">Save all inputs together. The server recalculates the estimates.</p><button type="submit" name="action" value="calculate" class="btn btn-primary" id="worksheet-save">Save &amp; recalculate</button></div>
+    <p id="employee-no-match" class="monthly-no-match" hidden>{{ _('monthly_employee_no_match') }}</p>
+    <div class="monthly-actions"><p id="save-guidance">{{ _('monthly_save_all_note') }}</p><button type="submit" name="action" value="calculate" class="btn btn-primary" id="worksheet-save">{{ _('monthly_save_recalculate') }}</button></div>
   </form>
   <form method="POST" action="{{ url_for('payroll.worksheet_review') }}" id="worksheet-review" class="monthly-review-next">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period_start" value="{{ period_start.isoformat() }}">
-    <div><h2>Ready to check the amounts?</h2><p id="review-guidance">Review uses saved inputs. Saving updates an existing unsubmitted review automatically.</p></div><button type="submit" class="btn btn-outline-primary" id="worksheet-review-button" aria-describedby="review-guidance">Review saved payroll</button>
+    <div><h2>{{ _('monthly_ready_to_check') }}</h2><p id="review-guidance">{{ _('monthly_review_uses_saved') }}</p></div><button type="submit" class="btn btn-outline-primary" id="worksheet-review-button" aria-describedby="review-guidance">{{ _('monthly_review_saved_payroll') }}</button>
   </form>
-  <details class="monthly-notes"><summary>How these inputs affect payroll</summary><p>Extra unpaid days exclude approved leave already recorded. Each day deducts (basic salary + allowances) ÷ 30. Bonus is taxable and applies only to this month. Bonus and extra unpaid days are available for monthly employees. Estimates include deductions. {{ _('approval_separate_step') }}</p></details>
+  <details class="monthly-notes"><summary>{{ _('monthly_inputs_effect_title') }}</summary><p>{{ _('monthly_inputs_effect_body') }} {{ _('approval_separate_step') }}</p></details>
   {% else %}
   <section class="monthly-empty"><h2>{{ _('monthly_review_unavailable_title') if review_error else _('monthly_empty_title') }}</h2>{% if review_error %}<p>{{ _('monthly_retry_help') }}</p><a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary">{{ _('monthly_retry_preparation') }}</a>{% else %}<p>{{ _('monthly_empty_intro') }}</p>{% endif %}</section>
   {% endif %}
 </div>
 {% endblock %}
-{% block extra_js %}<script src="{{ url_for('static', filename='js/monthly-payroll.js') }}?v={{ static_version }}" defer></script>{% endblock %}
+{% block extra_js %}
+{% set ui = {'stateDirty': _('monthly_state_dirty'), 'stateSaved': _('monthly_state_saved'), 'estimate': _('monthly_estimate_label'), 'lastSaved': _('monthly_last_saved_label'), 'saveBusy': _('monthly_busy_saving'), 'reviewBusy': _('monthly_busy_opening'), 'guidanceDirty': _('monthly_save_first_help'), 'guidanceClean': _('monthly_review_uses_saved'), 'countPattern': _('monthly_js_count_pattern'), 'reviewCountPattern': _('monthly_js_review_count_pattern')} %}
+<script>window.PAYROLL_I18N = {{ ui|tojson }};</script>
+<script src="{{ url_for('static', filename='js/monthly-payroll.js') }}?v={{ static_version }}" defer></script>
+{% endblock %}

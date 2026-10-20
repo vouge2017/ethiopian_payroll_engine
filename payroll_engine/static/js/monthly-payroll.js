@@ -1,4 +1,5 @@
 (() => {
+    const I = window.PAYROLL_I18N || {};
     const reviewTools = document.getElementById('review-employee-tools');
     if (reviewTools) {
         const search = document.getElementById('review-employee-search');
@@ -15,7 +16,9 @@
                 if (matches) count++;
             });
             buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.reviewFilter === selected)));
-            document.getElementById('review-employee-count').textContent = `${count} of ${employees.length} employees shown · totals include everyone`;
+            document.getElementById('review-employee-count').textContent =
+                (I.reviewCountPattern || '{0} of {1} employees shown · totals include everyone')
+                    .replace('{0}', count).replace('{1}', employees.length);
             document.getElementById('review-no-match').hidden = count !== 0;
         };
         buttons.forEach(button => button.addEventListener('click', () => { selected = button.dataset.reviewFilter; filter(); }));
@@ -63,13 +66,13 @@
             const edited = fields.some((field, index) => editor.contains(field) && field.value !== saved[index]);
             editor.classList.toggle('monthly-editor-edited', edited);
             editor.querySelector('.monthly-edit-state').hidden = !edited;
-            editor.querySelector('.monthly-estimate-label').textContent = edited ? 'Last saved net · ETB' : 'Estimated net · ETB';
+            editor.querySelector('.monthly-estimate-label').textContent = edited ? (I.lastSaved || 'Last saved net · ETB') : (I.estimate || 'Estimated net · ETB');
         });
-        state.textContent = dirty ? 'Unsaved changes · estimates reflect the last save' : 'Saved inputs · estimates shown below';
+        state.textContent = dirty ? (I.stateDirty || 'Unsaved changes · estimates reflect the last save') : (I.stateSaved || 'Saved inputs · estimates shown below');
         review.disabled = dirty;
         document.getElementById('review-guidance').textContent = dirty
-            ? 'Save & recalculate before reviewing. Your edits are not yet included in the estimates.'
-            : 'Review uses saved inputs. Saving updates an existing unsubmitted review automatically.';
+            ? (I.guidanceDirty || 'Save & recalculate before reviewing. Your edits are not yet included in the estimates.')
+            : (I.guidanceClean || 'Review uses saved inputs. Saving updates an existing unsubmitted review automatically.');
         document.getElementById('saved-estimates').classList.toggle('monthly-stale', dirty);
     };
     form.addEventListener('input', update);
@@ -92,11 +95,11 @@
         event.currentTarget.setAttribute('aria-busy', 'true');
         // Keep the named save button enabled so its action value reaches the server.
     };
-    form.addEventListener('submit', event => beginSubmit(event, save, 'Saving & recalculating…'));
+    form.addEventListener('submit', event => beginSubmit(event, save, I.saveBusy || 'Saving & recalculating…'));
     document.getElementById('worksheet-review').addEventListener('submit', event => {
         update();
         if (dirty) { event.preventDefault(); document.getElementById('worksheet-save').focus(); }
-        else beginSubmit(event, review, 'Opening saved review…');
+        else beginSubmit(event, review, I.reviewBusy || 'Opening saved review…');
     });
     const search = document.getElementById('employee-search');
     const employees = [...form.querySelectorAll('[data-employee-search]')];
@@ -106,7 +109,9 @@
         const count = employees.filter(employee => !employee.hidden).length;
         if (query && count === 1) employees.find(employee => !employee.hidden).querySelector('.monthly-editor').open = true;
         document.getElementById('employee-no-match').hidden = count !== 0;
-        document.getElementById('employee-search-count').textContent = query ? `${count} of ${employees.length} employees shown` : '';
+        document.getElementById('employee-search-count').textContent = query
+            ? (I.countPattern || '{0} of {1} employees shown').replace('{0}', count).replace('{1}', employees.length)
+            : '';
     };
     search.addEventListener('input', filter);
     form.addEventListener('invalid', event => {

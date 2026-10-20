@@ -1319,3 +1319,57 @@ sign-off, personal-relief decision and the login-helper failure cluster.
 - Not locally runnable: `test_pg_*` (no disposable PostgreSQL); hosted CI is
   the record. Merge still held on RC-38000-01 sign-off, personal-relief
   decision and native Amharic review.
+
+## Amharic prep/review drafts + ops slice - 2026-10-18
+
+Branch `feature/amharic-prep-review-and-ops` @ `02985ab`, worktree isolated
+from the concurrently active main checkout. Scope: monthly preparation and
+review screens drafted in Amharic (English byte-identical), monthly
+period/totals macros, JS strings injected via `window.PAYROLL_I18N`; worker
+heartbeat now accepts `REDIS_URL` (`Dockerfile.worker` parity) so
+`/readyz` can connect in production; production startup warns when
+`UPLOAD_FOLDER` is under `/tmp`; `.env.example` documents durable storage
+and Redis parity; staged rollout checklist appended to
+`docs/SYNTHETIC_PREVIEW.md`; draft review package in
+`docs/NATIVE_REVIEW_PACKAGE_20261018.md`.
+
+Pre-merge local receipts: `26 passed, 4 warnings in 4.45s` for i18n, worker
+health, storage warning and diff-check e2e; all four touched templates parse;
+`node --check monthly-payroll.js` OK; 148 `_()` keys resolve. Amharic
+strings are drafts pending native-speaker sign-off.
+
+## Amharic PR #15 base merge and CI hygiene - 2026-10-20
+
+- PR #15 (draft, base `codex/synthetic-preview`) opened. RC-38000-01 then
+  merged into the base as `982f374`, so the base was merged into this branch.
+  Only `STATUS.md` conflicted; both receipt sets are retained.
+- Shared CI hygiene: required `middle_name` in test fixtures; stale login-tab
+  assertions updated to the single identifier UI; `test_pg_monthly_ui` unused
+  variable; `test_pg_worksheet_journey` 9,090.35 -> 9,260.00 for the
+  documented prep-save auto-refresh; repo-wide `ruff format`.
+- Post-merge focused local suite: **108 passed, 1 skipped** in 46.00s (i18n,
+  worker health, storage warning, diff-check e2e, phone login, e2e, security
+  gate, RC tests, auth-entry recovery, employee form).
+- Ruff 0.17.1: check clean; 246 files already formatted.
+- Hosted CI does not run for PRs targeting `codex/synthetic-preview` (workflow
+  triggers only PRs to `main`); validation is the local receipts plus the
+  eventual preview-to-main promotion run.
+- Native Amharic/Oromo review, staged rollout and accounting sign-off remain
+  human gates.
+
+## Translation review export - 2026-10-20
+
+- Added `scripts/export_i18n_review.py` plus generated
+  `docs/i18n_review/2026-10-20/` (workbook, flat CSV, per-language correction
+  CSVs, README, ZIP) and a stable index at `docs/i18n_review/README.md`.
+- Scope: 481 dictionary keys; Amharic 477 translated / 4 missing; Oromo 130
+  translated / 347 English fallback / 4 missing; 418 keys with direct
+  references, 63 dictionary-only; 1,049 hardcoded template candidates.
+- Gaps surfaced: `generated`, `of`, `per`, `total_overtime` have no Amharic or
+  Oromo entry (employee payslip shows raw keys); `tax_explainer_intro` has no
+  stored English and renders title-cased. Oromo still falls back to English
+  for 347 first-use keys.
+- Draft keys from the 2026-10-18 native package and RC-38000-01 are flagged
+  for review. Corrections go into suggested columns; existing English bytes
+  are unchanged.
+- Artifacts are linked from PR #15 for native-speaker review.

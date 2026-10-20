@@ -1,3 +1,5 @@
 # Additional test-only dependencies; install alongside requirements-lock.txt.
 # PDF acceptance reads text back out of the actual rendered payslip.
 pypdf==6.19.0
+# Parse deployment configuration in the shared-encryption-key regression.
+PyYAML==6.0.3

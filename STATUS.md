@@ -37,7 +37,14 @@
   tests/test_excel_money_validation.py` → `31 passed, 4 warnings in 29.05s`
   (final run); `test_e2e_full.py test_smoke_e2e.py
   test_integration_payroll_flow.py` → `5 passed, 5 warnings in 13.55s`; ruff
-  check/format pass on both changed files.
+  check/format pass on both changed files. PostgreSQL proof (disposable PG16
+  at 127.0.0.1:55439, Alembic-migrated generated databases, password held
+  outside the repo): `tests/test_pg_spreadsheet_inputs.py
+  tests/test_pg_worksheet_journey.py tests/test_pg_corrections.py` →
+  `48 passed, 74 warnings in 159.43s (0:02:39)` — this is the
+  money/concurrency/tenant approval proof at the real database level for the
+  money-math branch, satisfying the standing "PostgreSQL/Alembic proof"
+  requirement for the covered guarantees.
 
 ## CURRENT MONEY-MATH EDGE GUARDS — 2026-10-21
 

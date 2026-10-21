@@ -1,5 +1,44 @@
 ﻿# STATUS.md — Command-Verified State
 
+## CURRENT CSV IMPORT ROUND-TRIP REPAIR — 2026-10-21
+
+- Same worktree/branch as the money-math slice (`feature/money-math-gaps`,
+  previous commit `d5163ca`). `payroll_engine/services/payroll_workflow.py`
+  (the `/payroll` upload path) previously read CSVs with plain `utf-8`, while
+  the shipped template (`/payroll/template`) explicitly writes a UTF-8 BOM and
+  leads with two `#` comment rows and blank lines: `csv.DictReader` then
+  treated the first comment as the header row, so re-uploading the app's own
+  template failed with "Missing required columns" — the exact
+  download-in-Excel, fill-Amharic-names, re-upload journey broke by design.
+- Fix: read with `utf-8-sig` (BOM stripped) and a
+  `_template_comment_or_blank()` pre-scan that skips blank, whitespace and
+  `#`/quoted-`#` lines before `DictReader`. The quoted case matters because
+  the template's second comment contains commas, so `csv.writer` emits it
+  quoted (`"# supported banks: cbe, dashen, awash, telebirr"`); a plain
+  `startswith('#')` test missed it (interactive repro recorded this).
+  `/payroll/import` (utf-8-sig already) and Excel paths were untouched.
+- New focused tests in `tests/test_payroll_workflow.py`: shipped-template
+  round-trip (byte-faithful reconstruction of the route's own content),
+  Amharic names pass through unchanged, `"6,000"` comma salary is an explicit
+  row error rather than a silent skip, blank/comment/whitespace lines
+  anywhere are skipped, header-only file, extra columns pass through.
+- Review ask "double-tap approve = one payroll" and "two admins editing the
+  same payroll" were found ALREADY covered by existing suites — recorded as
+  receipts, not re-tests: `tests/test_pg_worksheet_journey.py` (approve retry
+  after success → 302 with exactly one payslip row and exactly one
+  `payroll_run_completed` audit row) and `tests/test_pg_spreadsheet_inputs.py`
+  (concurrent saves produce one input+change audit, foreign-employee batch
+  rejected without writes, tenant ownership enforced, submitted worksheet
+  refuses changes, autosave preserves saved adjustments). Tenant
+  cross-access: `tests/test_p0a_tenant_isolation.py` covers real
+  cross-company read attempts at model+route level.
+- Verbatim receipts this slice: tests
+  `test_payroll_workflow.py test_csv_upload_hardening.py
+  tests/test_excel_money_validation.py` → `31 passed, 4 warnings in 29.05s`
+  (final run); `test_e2e_full.py test_smoke_e2e.py
+  test_integration_payroll_flow.py` → `5 passed, 5 warnings in 13.55s`; ruff
+  check/format pass on both changed files.
+
 ## CURRENT MONEY-MATH EDGE GUARDS — 2026-10-21
 
 - Worktree `C:\Users\25191\AppData\Local\Temp\opencode\payroll-money-gaps`, branch

@@ -1,6 +1,5 @@
 """In-process RQ worker bootstrap guards."""
 import importlib
-import os
 import threading
 
 import pytest
@@ -41,7 +40,6 @@ def test_starts_thread_when_enabled(monkeypatch):
     import payroll_engine.inprocess_worker as iw
 
     started = {}
-    outer = threading.Lock()
 
     class _StubThread(threading.Thread):
         def __init__(self, target=None, args=None, daemon=None, name=None):
@@ -118,6 +116,6 @@ def test_module_importable_and_wired_in_app_factory():
     """create_app must reference the bootstrap so prod picks it up."""
     src = importlib.import_module("payroll_engine")
     factory_src = src.__file__
-    with open(factory_src, "r", encoding="utf-8") as fh:
+    with open(factory_src, encoding="utf-8") as fh:
         text = fh.read()
     assert "maybe_start_inprocess_worker" in text

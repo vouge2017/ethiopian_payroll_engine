@@ -42,7 +42,7 @@ def _outstanding_breakdown(employee: Employee, end_date: date) -> dict:
         return {'basic': basic, 'allowances': allowances, 'total': gross, 'days_worked': 30}
 
     period_start = end_date.replace(day=1)
-    start = employee.start_date
+    start = getattr(employee, 'start_date', None)
     if start is not None and start > period_start:
         period_start = start
     days_worked = (end_date - period_start).days + 1

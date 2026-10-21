@@ -1,5 +1,70 @@
 ﻿# STATUS.md — Command-Verified State
 
+## CURRENT ETHIOPIAN-CALENDAR-FIRST — 2026-10-21
+
+Branch `feature/ethiopian-calendar-first` off `origin/main` `27539f1` (separate
+worktree; the money-math branch stays untouched in PR #22).
+
+- **Shipping calendar-converter bug found and fixed.** The user request was
+  "make sure we are using the Ethiopian calendar first, not Gregorian". While
+  auditing, the shipped `payroll_engine/ethiopian_calendar.py` converter was
+  found wrong: its 1461-day cycle indexing placed the 366-day year on
+  years ≡ 0 (mod 4) instead of the true leap years ≡ 3 (mod 4), which shifted
+  day labels for extended windows. Cross-checked against the classic Ethiopic
+  JDN formula over a 2020-01-01→2035-12-31 sweep: 1,460 of 5,844 sampled days
+  mismatched (≈25%), including every day in Jan 2020 (one-day shift). The old
+  `test_leap_year_2015` encoded the wrong belief ("Sep 11, 2023 = Meskerem 1,
+  2016"); world-verified reality is the opposite: Meskerem 1, 2016 EC fell on
+  **September 12, 2023** (Ethiopian News Agency: "the 2016 Ethiopian New Year
+  that started on the 12th of September"; Wikipedia Enkutatash: Sep 12 after
+  each Ethiopian leap year; timeanddate concurs). Converter rewritten with the
+  classic JDN formula (epoch 1723856); all world anchors verified: Sep 11,
+  2025 = Meskerem 1, 2018; Sep 11, 2026 = Meskerem 1, 2019; Sep 11, 2023 =
+  Pagume 6, 2015; Sep 12, 2023 = Meskerem 1, 2016; Sep 11, 2027 = Pagume 6,
+  2019; Sep 12, 2027 = Meskerem 1, 2020.
+- **Test rewrite**: `tests/test_ethiopian_calendar.py` corrected
+  (`test_leap_year_2015` now asserts Pagume 6 on Sep 11, 2023 and New Year on
+  Sep 12, 2023, citing ENA) and extended: 2019 leap boundary (Sep 11/12,
+  2027), the 2019 New-Year anchor, a collision-free whole-years property
+  sweep (EC 2012-2027: every year exactly 365/366 days, months 1-12 always
+  30 days, Pagume 5-or-6 shape) and preserved mid-year anchors (Jul 7, 2026 =
+  Sene 30, 2018; Jan 1, 2026 = Tahsas 23, 2018).
+- **Ethiopian-first everywhere it was Gregorian-first/dead-Gregorian.** The
+  app already had dual-calendar context helpers (`eth_date` renders
+  "Amharic ETH (Gregorian MM DD, YYYY)") used by most money/employee pages.
+  Remaining Gregorian-only/Gregorian-first sites were converted:
+  `components/monthly_payroll.html` (journey period dl now Ethiopian row
+  first), `payroll_review_workspace.html` (page title + "Saved payroll for"
+  sentence now use `eth_period` = "MONTH YYYY ዓ.ም. · Gregorian Month YYYY"),
+  `payroll_comparison.html` (4 run comparisons incl. chart labels),
+  `historical_import.html` (period fallback + created date),
+  `settlement_detail.html` (termination/worked dates, outstanding-salary
+  month header, created/paid dates), `leave_management.html` (leave range +
+  applied date), `billing.html` (trial end), `welcome.html` (example card now
+  titled "Tikimt 2019 ዓ.ም." with Gregorian fallback), Python producers:
+  `change_summary.py` retained-comparison period labels, `pdf.py` payslip
+  period label (replacing "(Gregorian)" suffix with the same dual label),
+  `payroll_bp.py` approval narrative (+ :2321 spreadsheet period context).
+  New context helper `eth_period` in `app/__init__.py` built on the shared
+  `format_ethiopian_period`. Admin/support audit timestamps keep Gregorian
+  date+time on purpose (ops metadata, time-of-day relevant); bank/ERCA
+  export files stay Gregorian on purpose (legal filings are Gregorian) —
+  recorded as deliberate, not omissions.
+- **Receipts**: `tests/test_ethiopian_calendar.py tests/
+  test_ethiopian_first_ui.py` → `22 passed in 5.43s`; change/narrative/pdf/
+  period/e2e SQLite batch → `87 passed, then 25 passed`; full review-page
+  ordering is pinned at HTTP level in
+  `tests/test_pg_worksheet_journey.py` (asserts `Saved payroll for {eth
+  period}` and absence of the old " (Gregorian)" suffix); PostgreSQL proof
+  (disposable PG16 at 127.0.0.1:55439): `test_pg_worksheet_journey.py
+  test_pg_monthly_journey.py test_pg_monthly_ui.py` → `32 passed, 68
+  warnings in 118.06s`, plus the rerun single journey after the new
+  assertion → `1 passed in 10.00s`. ruff check/format clean on all changed
+  files. BOM hygiene note: a template edit via PowerShell `Set-Content`
+  briefly introduced a UTF-8 BOM + mojibake into `leave_management.html`;
+  caught, reverted and redone with byte-clean edits (verified first bytes
+  `7B 25 20` `{% ` — no BOM, matching sibling templates).
+
 ## CURRENT RECOVERY DRILL (ACTIVITY 4) — 2026-10-20
 
 - Physical backup/restore of the live production database was executed for the first time (UI closure honestly recorded none as of 2026-10-15; `docs/UI_CLOSURE_2026-10-15.md` limit stands closed for the restore half). Backup: local `pg_dump` is client 16 and refuses the PostgreSQL 18 live server, so a version-independent logical dump was produced over psycopg2 (`COPY (SELECT * FROM <table>) TO STDOUT` per table + sequence `setval` replay + row-count report), saved to a protected local directory outside any repository (`C:\Users\25191\.ethiopayroll-secrets\backups\prod_logical_dump_20261020.sql`, 90,719 bytes) with a machine-readable report `prod_backup_report_20261020.json`. Production facts: 39 public tables, 173 total rows, Alembic head `f4a5b6c7d8f3`, live server PostgreSQL 18.

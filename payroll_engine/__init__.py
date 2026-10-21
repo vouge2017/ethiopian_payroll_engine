@@ -879,9 +879,25 @@ def create_app():
                     return d
             return format_ethiopian_date(d)
 
+        def _safe_eth_period(d):
+            """Ethiopian-first period label, e.g. 'ጥቅምት 2019 ዓ.ም. · Gregorian October 2026'."""
+            if not d:
+                return ''
+            if isinstance(d, str):
+                from datetime import datetime as dt
+
+                try:
+                    d = dt.strptime(d[:10], '%Y-%m-%d').date()
+                except (ValueError, IndexError):
+                    return d
+            from payroll_engine.ethiopian_calendar import format_ethiopian_period
+
+            return format_ethiopian_period(d)
+
         return {
             'eth_date': _safe_dual_date,
             'eth_only': _safe_eth_date,
+            'eth_period': _safe_eth_period,
             'today_eth': format_dual_date(date.today()),
             'payroll_month_end': lambda d: d.replace(day=monthrange(d.year, d.month)[1]),
             '_': lambda key: get_string(key, lang),

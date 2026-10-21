@@ -33,6 +33,7 @@ from payroll_engine.change_summary import compute_change_summary
 from payroll_engine.cockpit import build_cockpit
 from payroll_engine.cockpits import build_role_cockpit
 from payroll_engine.dashboard_api import get_dashboard_data
+from payroll_engine.ethiopian_calendar import format_ethiopian_period
 from payroll_engine.evidence import collect_evidence
 from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
@@ -2318,7 +2319,7 @@ def payroll_register():
         total_pension=totals['pension'],
         total_tax=totals['tax'],
         total_net=totals['net'],
-        period=run.run_date.strftime('%B %Y'),
+        period=format_ethiopian_period(run.run_date),
         year=run.run_date.year,
     )
 
@@ -2629,7 +2630,9 @@ def payroll_review_workspace(run_id):
 
         evidence = review_evidence(run, worksheet_rows)
         total_net = sum((row['net'] for row in worksheet_rows), Decimal('0'))
-        narrative = f'Saved {run.run_date.strftime("%B %Y")} (Gregorian) payroll includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
+        from payroll_engine.ethiopian_calendar import format_ethiopian_period
+
+        narrative = f'Saved {format_ethiopian_period(run.run_date)} payroll includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
         can_approve = can_approve and evidence.ready_for_approval
     validation_results = PayrollValidationResult.query.filter_by(payroll_run_id=run.id).all()
     can_approve = (

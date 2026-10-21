@@ -11,8 +11,20 @@ Ethiopian Calendar:
 - Months: Meskerem, Tikimt, Hidar, Tahsas, Ter, Yekatit, Megabit,
   Miyazia, Ginbot, Sene, Hamle, Nehase, Pagume
 
-Reference: Ethiopian calendar epoch = Meskerem 1, 1 AD = August 29, 8 CE (Julian)
-           JDN of epoch = 1724273
+Leap-year rule (verified against real-world anchors, 2026-10-21):
+- Ethiopian years with year % 4 == 3 (e.g. 2011, 2015, 2019) are leap years
+  and have 6 Pagume days.
+- Meskerem 1 therefore falls on September 11 in Gregorian years, EXCEPT the
+  day after a Pagume 6, when New Year falls on September 12.
+- World-verified anchor: Meskerem 1, 2016 EC = September 12, 2023
+  (Ethiopian News Agency, "Ethiopians ... celebrating the 2016 Ethiopian New
+  Year that started on the 12th of September", ena.et, 2023-09-12).
+
+Implementation uses the classic Ethiopic JDN formula (epoch JDN 1723856),
+which reproduces every real-world anchor above and a 2020-2035 sweep:
+Sep 11, 2025 = Meskerem 1, 2018; Sep 11, 2026 = Meskerem 1, 2019;
+Sep 11, 2023 = Pagume 6, 2015; Sep 12, 2023 = Meskerem 1, 2016;
+Sep 11, 2027 = Pagume 6, 2019; Sep 12, 2027 = Meskerem 1, 2020.
 """
 
 from datetime import date
@@ -51,12 +63,8 @@ ETHIOPIAN_MONTHS_EN = [
     'Pagume',
 ]
 
-# JDN of Ethiopian epoch (Meskerem 1, year 1)
-# Derived from: Sep 11, 2025 = Meskerem 1, 2018
-#   JDN(Sep 11, 2025) = 2460930
-#   Days from epoch = 504*1461 + 365 = 736709
-#   Epoch = 2460930 - 736709 = 1724221
-_ETH_EPOCH_JDN = 1724221
+# Epoch used by the classic Ethiopic JDN formula (see module docstring).
+_ETH_JDN_EPOCH = 1723856
 
 
 def _gregorian_to_jdn(greg_date: date) -> int:
@@ -75,8 +83,9 @@ def gregorian_to_ethiopian(greg_date: date) -> tuple[int, int, int]:
     """
     Convert a Gregorian date to Ethiopian calendar (year, month, day).
 
-    Uses Julian Day Number arithmetic for correctness across all dates,
-    including leap years and year boundaries.
+    Uses the classic Ethiopic Julian Day Number formula for correctness
+    across all dates, including Pagume 6 after Ethiopian leap years
+    (year % 4 == 3) and the September 12 New-Year boundaries that follow.
 
     Args:
         greg_date: Gregorian date object
@@ -85,32 +94,13 @@ def gregorian_to_ethiopian(greg_date: date) -> tuple[int, int, int]:
         Tuple of (ethiopian_year, ethiopian_month, ethiopian_day)
         Month is 1-indexed (1=Meskerem, 13=Pagume)
     """
-    jdn = _gregorian_to_jdn(greg_date)
-    days_since_epoch = jdn - _ETH_EPOCH_JDN
+    jd = _gregorian_to_jdn(greg_date) - _ETH_JDN_EPOCH
+    r = jd % 1461
+    # Day within the Ethiopian year (0-indexed); leap-day years (Pagume 6)
+    # keep 366 days through the (r % 365) + 365 * (r // 1460) term.
+    day_in_year = (r % 365) + 365 * (r // 1460)
+    eth_year = 4 * (jd // 1461) + (r // 365) - (r // 1460)
 
-    # Ethiopian year (4-year cycle of 1461 days = 3*365 + 1*366)
-    # Plus remainder to find exact year within cycle
-    cycles = days_since_epoch // 1461
-    remainder = days_since_epoch % 1461
-
-    # Year within the 4-year cycle
-    # Years 0,1,2 in cycle have 365 days; year 3 has 366 days
-    if remainder >= 1095:  # year 3 of cycle (365+365+365 = 1095)
-        year_in_cycle = 3
-    elif remainder >= 730:
-        year_in_cycle = 2
-    elif remainder >= 365:
-        year_in_cycle = 1
-    else:
-        year_in_cycle = 0
-
-    eth_year = cycles * 4 + year_in_cycle + 1  # 1-indexed
-
-    # Day within the year (0-indexed)
-    year_starts = [0, 365, 730, 1095]
-    day_in_year = days_since_epoch - (cycles * 1461) - year_starts[year_in_cycle]
-
-    # Month and day
     is_leap = eth_year % 4 == 3
     if day_in_year >= 360:
         # Pagume (month 13)
@@ -163,6 +153,24 @@ def format_dual_date(greg_date: date, language: str = 'am') -> str:
     eth_str = format_ethiopian_date(greg_date, language='am')
     greg_str = greg_date.strftime('%b %d, %Y')
     return f'{eth_str} ({greg_str})'
+
+
+def format_ethiopian_period(greg_date: date, include_gregorian: bool = True) -> str:
+    """
+    Ethiopian-first period (month/year) label.
+
+    Args:
+        greg_date: Gregorian date object (any day of the month)
+        include_gregorian: append the Gregorian month/year fallback
+
+    Returns:
+        Formatted string like 'ጥቅምት 2019 · Gregorian October 2026'
+    """
+    eth_year, eth_month, _ = gregorian_to_ethiopian(greg_date)
+    eth_str = f'{ETHIOPIAN_MONTHS[eth_month - 1]} {eth_year} ዓ.ም.'
+    if include_gregorian:
+        return f'{eth_str} · Gregorian {greg_date.strftime("%B %Y")}'
+    return eth_str
 
 
 def get_ethiopian_month_name(month: int, language: str = 'am') -> str:

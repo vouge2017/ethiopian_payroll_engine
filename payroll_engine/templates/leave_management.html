@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Leave Management — Ethiopian Payroll Engine{% endblock %}
+{% block title %}Leave Management â€” Ethiopian Payroll Engine{% endblock %}
 {% block content %}
 <div class="p-4 p-md-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -109,7 +109,7 @@
                                 </span>
                             </td>
                             <td data-label="Dates">
-                                {{ leave.start_date.strftime('%d %b') }} — {{ leave.end_date.strftime('%d %b %Y') }}
+                                {{ eth_date(leave.start_date) }} — {{ eth_date(leave.end_date) }}
                             </td>
                             <td data-label="Days" class="text-center">{{ leave.days_requested }}</td>
                             <td data-label="Status">
@@ -117,7 +117,7 @@
                                     {{ leave.status|title }}
                                 </span>
                             </td>
-                            <td data-label="Applied"><small>{{ leave.applied_at.strftime('%d %b %Y') if leave.applied_at else '-' }}</small></td>
+                            <td data-label="Applied"><small>{{ eth_date(leave.applied_at) if leave.applied_at else '-' }}</small></td>
                             <td data-label="Reason"><small class="text-muted">{{ leave.reason[:50] if leave.reason else '-' }}</small></td>
                             <td data-label="Actions">
                                 {% if leave.status == 'pending' %}
@@ -132,7 +132,7 @@
                                     </button>
                                 </div>
                                 {% else %}
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">â€”</span>
                                 {% endif %}
                             </td>
                         </tr>

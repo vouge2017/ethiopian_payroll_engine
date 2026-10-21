@@ -24,6 +24,8 @@ from reportlab.platypus import Image, SimpleDocTemplate, Spacer, TableStyle
 from reportlab.platypus import Paragraph as _Paragraph
 from reportlab.platypus import Table as _Table
 
+from payroll_engine.ethiopian_calendar import format_ethiopian_period
+
 # Register NotoSansEthiopic font
 _FONT_DIR = os.path.join(os.path.dirname(__file__), 'fonts')
 _FONT_PATH = os.path.join(_FONT_DIR, 'NotoSansEthiopic-Regular.ttf')
@@ -122,9 +124,7 @@ def _ensure_pdf(payslip, emp, company_info=None):
         snapshot = published_row(payslip)
         if snapshot:
             emp_data.update(snapshot)
-            emp_data['period'] = (
-                date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
-            )
+            emp_data['period'] = format_ethiopian_period(date.fromisoformat(snapshot['worksheet_period_start']))
         emp_data['calc_flow'] = None if emp_data.get('correction_note') else generate_calculation_flow(emp_data)
 
         # Get period from the payroll run
@@ -132,7 +132,7 @@ def _ensure_pdf(payslip, emp, company_info=None):
 
         run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=payslip.company_id).first()
         if run and not snapshot:
-            emp_data['period'] = run.period or (run.run_date.strftime('%B %Y') if run.run_date else '')
+            emp_data['period'] = run.period or (format_ethiopian_period(run.run_date) if run.run_date else '')
 
         if company_info is None:
             from payroll_engine.models import Company

@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from types import SimpleNamespace
 
+from payroll_engine.ethiopian_calendar import format_ethiopian_period as ethiopian_period_label
+
 
 @dataclass
 class EmployeeChange:
@@ -262,8 +264,8 @@ def _build_summary(current_run, previous_run, current_payslips, company_id, db, 
     if retained:
         summary.retained_comparison = True
         summary.variance_threshold_pct = None
-        summary.current_period = current_run.run_date.strftime('%B %Y') + ' (Gregorian)'
-        summary.previous_period = previous_run.run_date.strftime('%B %Y') + ' (Gregorian)' if previous_run else None
+        summary.current_period = ethiopian_period_label(current_run.run_date)
+        summary.previous_period = ethiopian_period_label(previous_run.run_date) if previous_run else None
         summary.comparison_notes.append('Regular payroll is compared. Supplemental corrections remain separate.')
         summary.comparison_notes.append(
             'All exact amount changes are shown. A company materiality threshold still needs agreement; '

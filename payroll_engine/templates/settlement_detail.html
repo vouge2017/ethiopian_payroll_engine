@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}Final Settlement - {{ employee.name }}{% endblock %}
 {% block content %}
 <div class="p-4 p-md-5">
@@ -33,12 +33,12 @@
                                 <div class="col-md-6">
                                     <small class="text-muted">Employee</small>
                                     <div class="fw-bold">{{ employee.name }}</div>
-                                    <div>{{ employee.employee_id }} · {{ employee.department or 'No department' }}</div>
+                                    <div>{{ employee.employee_id }} Â· {{ employee.department or 'No department' }}</div>
                                 </div>
                                 <div class="col-md-6 text-md-end">
                                     <small class="text-muted">Termination</small>
                                     <div class="fw-bold">{{ settlement.termination_reason|replace('_', ' ')|title }}</div>
-                                    <div>{{ settlement.end_date.strftime('%d %B %Y') }}</div>
+                                    <div>{{ eth_date(settlement.end_date) }}</div>
                                 </div>
                             </div>
 
@@ -47,11 +47,11 @@
                                 <div class="row">
                                     <div class="col-4">
                                         <small class="text-muted">Start Date</small>
-                                        <div>{{ settlement.start_date.strftime('%d %B %Y') }}</div>
+                                        <div>{{ eth_date(settlement.start_date) }}</div>
                                     </div>
                                     <div class="col-4">
                                         <small class="text-muted">End Date</small>
-                                        <div>{{ settlement.end_date.strftime('%d %B %Y') }}</div>
+                                        <div>{{ eth_date(settlement.end_date) }}</div>
                                     </div>
                                     <div class="col-4">
                                         <small class="text-muted">Years of Service</small>
@@ -66,14 +66,14 @@
                             <table class="table table-sm responsive-card">
                                 <tbody>
                                     <tr>
-                                        <td>Outstanding Salary ({{ settlement.end_date.strftime('%B %Y') }})</td>
+                                        <td>Outstanding Salary ({{ eth_period(settlement.end_date) }})</td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.outstanding_salary) }}</td>
                                     </tr>
                                     {% if settlement.severance_pay > 0 %}
                                     <tr>
                                         <td>
                                             Severance Pay
-                                            <small class="text-muted d-block">Monthly salary × {{ settlement.years_of_service }} years (capped at 12 months)</small>
+                                            <small class="text-muted d-block">Monthly salary Ã— {{ settlement.years_of_service }} years (capped at 12 months)</small>
                                         </td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.severance_pay) }}</td>
                                     </tr>
@@ -152,7 +152,7 @@
                                 Severance calculation per <strong>Labor Proclamation No. 1156/2019, Articles 40-42</strong>:
                             </p>
                             <ul class="text-muted small mb-0">
-                                <li>Severance = monthly salary × years of service</li>
+                                <li>Severance = monthly salary Ã— years of service</li>
                                 <li>Maximum cap: 12 months of salary</li>
                                 <li>Applies to: redundancy, mutual agreement</li>
                                 <li>Does not apply to: resignation, termination for cause</li>
@@ -181,12 +181,12 @@
                             {% endif %}
                             <div class="mb-3">
                                 <small class="text-muted">Settlement Created</small>
-                                <div>{{ settlement.created_at.strftime('%d %B %Y at %H:%M') }}</div>
+                                <div>{{ eth_date(settlement.created_at) }} {{ settlement.created_at.strftime('at %H:%M') }}</div>
                             </div>
                             {% if settlement.paid_at %}
                             <div class="mb-3">
                                 <small class="text-muted">Paid On</small>
-                                <div class="text-success fw-bold">{{ settlement.paid_at.strftime('%d %B %Y') }}</div>
+                                <div class="text-success fw-bold">{{ eth_date(settlement.paid_at) }}</div>
                             </div>
                             {% else %}
                             <div class="alert alert-warning mb-0">

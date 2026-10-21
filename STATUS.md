@@ -1,5 +1,54 @@
 ﻿# STATUS.md — Command-Verified State
 
+## CURRENT MONEY-MATH EDGE GUARDS — 2026-10-21
+
+- Worktree `C:\Users\25191\AppData\Local\Temp\opencode\payroll-money-gaps`, branch
+  `feature/money-math-gaps` @ `27539f1` (origin/main, recovery-drill receipt).
+  Derived from the launch-readiness review's money-math list. Settlement
+  prorating: `calculate_outstanding_salary` now counts days from the hire date
+  when the employee joined inside the final month (was calendar
+  `end_date.day`, which paid 26/30 for a 20th-of-month hire terminated on the
+  26th), splits basic vs allowances so pension is taken on the PRORATED basic
+  share instead of full-month basic, and the statutory leave-encashment
+  fallback now uses `leave.calculate_annual_entitlement` (Art. 77: 16 days,
+  +1 per 2 years, capped) instead of the divergent `14 + years`. The dead
+  `calculate_prorated_salary` (zero callers) now treats a fully worked
+  February (28/29 days) as a full pay month instead of 28/30.
+- Non-finite guards: `_D()` in `payroll.py`, `tax.py`, `overtime.py`,
+  `pension.py`, `severance.py` now raises `ValueError` on NaN/Infinity
+  instead of silently producing NaN/Infinity money amounts.
+- New tests: `tests/test_money_guards.py` (non-finite rejects, 0/500/500k
+  salaries, net never negative, determinism, daily-worker, full-Feb prorata)
+  and `tests/test_settlement_edges.py` (last-day Feb/leap Feb/31st/Dec full
+  salary, hire-relative proration, prorated pension, Art. 77 fallback +
+  LeaveBalance precedence, settlement determinism). Verbatim:
+  `42 passed, 4 warnings in 15.43s`.
+- Regression selections (verbatim): `tests/test_tax.py tests/test_payroll.py
+  tests/test_overtime.py tests/test_overtime_integration.py
+  tests/test_severance.py tests/test_services.py tests/test_deductions.py
+  tests/test_adjustment.py tests/test_calculation_flow.py
+  tests/test_configurable_rules.py` → `158 passed, 4 warnings in 121.60s
+  (0:02:01)`; `test_input_validation.py test_validation_phase2.py
+  test_p0a_tenant_isolation.py test_payroll_draft.py test_period_and_lock.py`
+  → `72 passed, 4 warnings in 89.14s (0:01:29)`; `test_payroll_workflow.py
+  test_integration_payroll_flow.py test_p0c_idempotency.py
+  test_gate_payroll_immutability.py test_undo_approval.py` → `28 passed,
+  5 warnings in 21.82s`. Stale comment in `tests/test_services.py` updated to
+  Art. 77 counts (assertion unchanged).
+- Ruff 0.17.1 check and format --check pass for all changed/new files.
+- Limits and open findings (not fixed, require practitioner decision): (1)
+  SQLite-focused; PostgreSQL/Alembic proof for the money paths is still owed
+  before any merge claim (hosted CI only runs for PRs to main); (2) net pay
+  can go negative from post-tax deductions inside `calculate_payroll`, but
+  every approval path BLOCKs via `validation.py` — capping imports
+  court-order policy, so left to the owner; (3) adjustment bonus tax treats
+  the bonus as standalone monthly income (`calculate_tax(amount)`) instead of
+  marginal tax on the month's combined income — needs accountant sign-off;
+  (4) overtime hourly rate is quantized to 2dp before multiplication
+  (`72.115… → 72.12`), a small systematic rounding bias; (5) settlement
+  `net_final_payment` is not floored at zero when pending deductions exceed
+  earnings; (6) no hosted run: feature branches receive no CI.
+
 ## CURRENT RECOVERY DRILL (ACTIVITY 4) — 2026-10-20
 
 - Physical backup/restore of the live production database was executed for the first time (UI closure honestly recorded none as of 2026-10-15; `docs/UI_CLOSURE_2026-10-15.md` limit stands closed for the restore half). Backup: local `pg_dump` is client 16 and refuses the PostgreSQL 18 live server, so a version-independent logical dump was produced over psycopg2 (`COPY (SELECT * FROM <table>) TO STDOUT` per table + sequence `setval` replay + row-count report), saved to a protected local directory outside any repository (`C:\Users\25191\.ethiopayroll-secrets\backups\prod_logical_dump_20261020.sql`, 90,719 bytes) with a machine-readable report `prod_backup_report_20261020.json`. Production facts: 39 public tables, 173 total rows, Alembic head `f4a5b6c7d8f3`, live server PostgreSQL 18.

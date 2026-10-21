@@ -135,7 +135,7 @@ def test_leave_annual_balance(app, ids):
     with app.app_context():
         emp = db.session.get(Employee, eid)
         b = get_leave_balance(emp, cid, 'annual', 2026, db.session)
-        assert b['entitled'] >= 17  # 14 + ~3 years
+        assert b['entitled'] >= 17  # Art. 77: 16 base + 1 increment (3 years)
         assert b['taken'] == 0
         assert b['remaining'] >= 17
 

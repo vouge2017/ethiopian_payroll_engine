@@ -11,6 +11,20 @@ from payroll_engine.payroll import calculate_payroll
 from payroll_engine.tax import calculate_tax_breakdown
 
 
+def _template_comment_or_blank(line: str) -> bool:
+    """True for lines shipped by the CSV template that carry no data.
+
+    Handles blank lines, '#' comments, and quoted comments like
+    '"# supported banks: cbe, dashen, awash, telebirr"'.
+    """
+    s = line.strip()
+    if not s:
+        return True
+    if s.startswith('"'):
+        s = s.lstrip('"').lstrip().rstrip('"')
+    return s.startswith('#')
+
+
 def parse_and_calculate_payroll(filepath: str) -> tuple[list[dict], list[str]]:
     """Parse a CSV or Excel file and calculate payroll for each row.
 
@@ -40,8 +54,14 @@ def parse_and_calculate_payroll(filepath: str) -> tuple[list[dict], list[str]]:
     else:
         import csv as csv_module
 
-        f_handle = open(filepath, newline='', encoding='utf-8')
-        reader = csv_module.DictReader(f_handle)
+        # utf-8-sig: the shipped template and Excel round-trips carry a BOM;
+        # plain utf-8 would leave \ufeff fused into the first header key.
+        f_handle = open(filepath, newline='', encoding='utf-8-sig')
+        # The shipped template leads with '#' comment rows and blank lines;
+        # DictReader would treat the first comment as the header row, so
+        # strip those lines before reading.
+        csv_lines = [line for line in f_handle if not _template_comment_or_blank(line)]
+        reader = csv_module.DictReader(csv_lines)
         if not reader.fieldnames:
             f_handle.close()
             raise ValueError('CSV file is empty or has no headers')

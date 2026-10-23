@@ -64,6 +64,22 @@ worktree; the money-math branch stays untouched in PR #22).
   briefly introduced a UTF-8 BOM + mojibake into `leave_management.html`;
   caught, reverted and redone with byte-clean edits (verified first bytes
   `7B 25 20` `{% ` — no BOM, matching sibling templates).
+- **Review pass 2 (remaining Gregorian fallbacks).** Three more period labels
+  were still Gregorian-only and are now Ethiopian-first with Gregorian
+  fallback text supplied by `format_ethiopian_period`: `main.py` dashboard
+  "last month" summary, `selfservice_bp.py` employee-portal YTD rows, and the
+  `pdf.py` payslip period default (`emp.get('period') or
+  format_ethiopian_period(date.today())`). A stray UTF-8 BOM left in
+  `settlement_detail.html` by the earlier PowerShell edit was removed
+  (first bytes verified `7B 25 20`).
+- **Review pass 2 receipts**: `tests/test_employee_portal.py
+  tests/test_dashboard_api.py` → `14 passed in 33.07s`; broader SQLite batch
+  incl. `test_ac10_pdf.py` → `60 passed in 72.37s`; ruff check/format clean
+  on `payroll_engine` (85 files). PostgreSQL re-proof after a local PG outage
+  (cluster restored on the disposable port; UTF-8 database `payroll_test`):
+  `test_pg_worksheet_journey.py test_pg_monthly_journey.py
+  test_pg_monthly_ui.py` → `32 passed, 69 warnings in 137.56s`;
+  `test_pg_import_money.py` → `8 passed, 20 warnings in 27.68s`.
 
 ## CURRENT RECOVERY DRILL (ACTIVITY 4) — 2026-10-20
 

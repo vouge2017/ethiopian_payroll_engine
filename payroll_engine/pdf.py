@@ -242,7 +242,7 @@ def generate_payslip(
     # Employee defaults
     department = emp.get('department', '')
     position = emp.get('position', '')
-    period = emp.get('period', date.today().strftime('%B %Y'))
+    period = emp.get('period') or format_ethiopian_period(date.today())
 
     doc = SimpleDocTemplate(
         filepath,

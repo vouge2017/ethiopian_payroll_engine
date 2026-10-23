@@ -43,10 +43,20 @@ def _redis_connection():
         return None
 
 
-def _run_worker_once(conn):
+def _thread_worker_class():
+    """SimpleWorker subclass that never touches signal handlers.
+
+    RQ installs SIGINT/SIGTERM handlers in work(); signal.signal only works
+    in the main interpreter thread, so an in-thread worker must override it.
+    """
     from rq import SimpleWorker
 
-    worker = SimpleWorker(['pdf_generation'], connection=conn)
+    return type('ThreadWorker', (SimpleWorker,), {'_install_signal_handlers': lambda self: None})
+
+
+def _run_worker_thread(conn):
+    """Long-lived work loop for the daemon thread."""
+    worker = _thread_worker_class()(['pdf_generation'], connection=conn)
     try:
         worker.work(burst=False)
     except Exception as e:  # pragma: no cover - long-lived loop guard
@@ -70,7 +80,7 @@ def maybe_start_inprocess_worker(app=None):
             return False
         try:
             logger.info('in-process worker starting on queue pdf_generation (pid=%s)', os.getpid())
-            thread = threading.Thread(target=_run_worker_once, args=(conn,), daemon=True, name='rq-inprocess')
+            thread = threading.Thread(target=_run_worker_thread, args=(conn,), daemon=True, name='rq-inprocess')
             thread.start()
             _started = True
             if app is not None:

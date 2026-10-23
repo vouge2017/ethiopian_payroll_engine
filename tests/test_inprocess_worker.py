@@ -60,7 +60,7 @@ def test_starts_thread_when_enabled(monkeypatch):
 
     # stub the long-lived work loop so the thread, if ever really started,
     # exits immediately
-    monkeypatch.setattr(iw, '_run_worker_once', lambda conn: None)
+    monkeypatch.setattr(iw, '_run_worker_thread', lambda conn: None)
 
     assert iw.maybe_start_inprocess_worker(None) is True
     assert started['name'] == 'rq-inprocess'
@@ -68,27 +68,36 @@ def test_starts_thread_when_enabled(monkeypatch):
     assert isinstance(started['args'][0], _StubConn)
 
 
-def test_run_worker_once_uses_simple_worker(monkeypatch):
-    """Guard against switching to forking Worker: threads cannot fork."""
+def test_thread_worker_subclasses_simple_worker_and_neutralizes_signals(monkeypatch):
+    """Guard: thread mode must not install signal handlers (illegal off main thread)."""
     import payroll_engine.inprocess_worker as iw
 
-    called = {}
+    cls = iw._thread_worker_class()
+    assert cls.__mro__[1].__name__ == 'SimpleWorker', f'base is {cls.__mro__[1].__name__}'
+    stub = cls.__new__(cls)
+    assert stub._install_signal_handlers() is None
+
+
+def test_run_worker_thread_builds_worker_with_queue(monkeypatch):
+    import payroll_engine.inprocess_worker as iw
+
+    made = []
     calls = []
 
     class _StubWorker:
         def __init__(self, queues, connection=None):
-            called['queues'] = queues
-            called['connection'] = connection
+            made.append((queues, connection))
 
         def work(self, burst=False):
             calls.append({'burst': burst})
 
-    import rq
+    def fake_cls(queues, connection=None):
+        return _StubWorker(queues, connection)
 
-    monkeypatch.setattr(rq, 'SimpleWorker', _StubWorker)
-    iw._run_worker_once('conn')
-    assert called['queues'] == ['pdf_generation']
-    assert called['connection'] == 'conn'
+    monkeypatch.setattr(iw, '_thread_worker_class', lambda: fake_cls)
+    iw._run_worker_thread('conn')
+    assert made[0][0] == ['pdf_generation']
+    assert made[0][1] == 'conn'
     assert calls == [{'burst': False}]
 
 

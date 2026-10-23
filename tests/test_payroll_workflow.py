@@ -105,6 +105,128 @@ def test_parse_csv_invalid_numeric(app):
         os.unlink(fname)
 
 
+def test_parse_shipped_template_round_trip(app):
+    """The exact bytes download_csv_template writes must re-upload cleanly.
+
+    The template carries a UTF-8 BOM and leading '#' comment rows; a byte copy
+    of what users download is the realistic Amharic Excel round-trip case.
+    """
+    import io
+
+    from payroll_engine.security import prevent_csv_injection
+
+    output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM, as the route does
+    writer = csv.writer(output)
+    writer.writerow(['# bank_account format: bank_name:account_number'])
+    writer.writerow(['# supported banks: cbe, dashen, awash, telebirr'])
+    writer.writerow([])
+    writer.writerow(['employee_id', 'name', 'tin', 'basic_salary', 'allowances', 'bank_account', 'department'])
+    writer.writerow(
+        [
+            prevent_csv_injection('EMP001'),
+            prevent_csv_injection('Dawit Mekonnen'),
+            '1234567890',
+            '10000',
+            '2000',
+            'cbe:1000123456789',
+            'Sales',
+        ]
+    )
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
+        f.write(output.getvalue())
+        fname = f.name
+    try:
+        data, errors = parse_and_calculate_payroll(fname)
+        assert errors == []
+        assert len(data) == 1
+        assert data[0]['id'] == 'EMP001'
+        assert data[0]['name'] == 'Dawit Mekonnen'
+        assert data[0]['basic'] == 10000.0
+        assert data[0]['net'] > 0
+    finally:
+        os.unlink(fname)
+
+
+def test_parse_amharic_names(app):
+    """Amharic names round-trip unchanged (UTF-8 preserved)."""
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
+        f.write('employee_id,name,basic_salary,allowances\n')
+        f.write('E001,ደሳለኝ ከበደ,10000,2000\n')
+        f.write('E002,Bontu Bekele,8000,1500\n')
+        fname = f.name
+    try:
+        data, errors = parse_and_calculate_payroll(fname)
+        assert errors == []
+        assert data[0]['name'] == 'ደሳለኝ ከበደ'
+        assert data[1]['name'] == 'Bontu Bekele'
+    finally:
+        os.unlink(fname)
+
+
+def test_parse_comma_formatted_salary_is_rejected_not_skipped(app):
+    """'6,000' must surface as an explicit row error, never a silent skip."""
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
+        f.write('employee_id,name,basic_salary,allowances\n')
+        f.write('E001,Good,5000,1000\n')
+        f.write('E002,Bad,"6,000",1000\n')
+        fname = f.name
+    try:
+        data, errors = parse_and_calculate_payroll(fname)
+        assert len(data) == 1  # nothing silently counted
+        assert len(errors) == 1
+        assert "basic_salary='6,000'" in errors[0]
+    finally:
+        os.unlink(fname)
+
+
+def test_parse_blank_and_comment_lines_skipped(app):
+    """Blank/whitespace/comment lines anywhere in the file are skipped."""
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
+        f.write('# Manual note comment before headers\n')
+        f.write('\n')
+        f.write('employee_id,name,basic_salary,allowances\n')
+        f.write('   \n')
+        f.write('E001,First,5000,1000\n')
+        f.write('# A comment between rows\n')
+        f.write('E002,Second,8000,1500\n')
+        f.write('\n')
+        fname = f.name
+    try:
+        data, errors = parse_and_calculate_payroll(fname)
+        assert errors == []
+        assert [e['id'] for e in data] == ['E001', 'E002']
+    finally:
+        os.unlink(fname)
+
+
+def test_parse_header_only_csv(app):
+    """A well-formed file with headers but no data rows yields no employees."""
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
+        f.write('employee_id,name,basic_salary,allowances\n')
+        fname = f.name
+    try:
+        data, errors = parse_and_calculate_payroll(fname)
+        assert data == []
+        assert errors == []
+    finally:
+        os.unlink(fname)
+
+
+def test_parse_extra_columns_pass_through(app):
+    """Schema-relevant search: bank/fayda columns pass through untouched."""
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
+        f.write('employee_id,name,basic_salary,allowances,fayda_fin\n')
+        f.write('E001,Abebe Kebede,10000,2000,FIN1234567\n')
+        fname = f.name
+    try:
+        data, errors = parse_and_calculate_payroll(fname)
+        assert errors == []
+        assert data[0]['fayda_fin'] == 'FIN1234567'
+    finally:
+        os.unlink(fname)
+
+
 def test_check_csv_row_limit_ok(app):
     assert check_csv_row_limit([1, 2, 3], max_rows=5) is None
 

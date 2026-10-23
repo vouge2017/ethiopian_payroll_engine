@@ -74,6 +74,9 @@ def test_thread_worker_subclasses_simple_worker_and_neutralizes_signals(monkeypa
 
     cls = iw._thread_worker_class()
     assert cls.__mro__[1].__name__ == 'SimpleWorker', f'base is {cls.__mro__[1].__name__}'
+    from rq.timeouts import TimerDeathPenalty
+
+    assert cls.death_penalty_class is TimerDeathPenalty
     stub = cls.__new__(cls)
     assert stub._install_signal_handlers() is None
 

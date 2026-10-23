@@ -33,7 +33,7 @@
                                 <div class="col-md-6">
                                     <small class="text-muted">Employee</small>
                                     <div class="fw-bold">{{ employee.name }}</div>
-                                    <div>{{ employee.employee_id }} Â· {{ employee.department or 'No department' }}</div>
+                                    <div>{{ employee.employee_id }} · {{ employee.department or 'No department' }}</div>
                                 </div>
                                 <div class="col-md-6 text-md-end">
                                     <small class="text-muted">Termination</small>
@@ -73,7 +73,7 @@
                                     <tr>
                                         <td>
                                             Severance Pay
-                                            <small class="text-muted d-block">Monthly salary Ã— {{ settlement.years_of_service }} years (capped at 12 months)</small>
+                                            <small class="text-muted d-block">Monthly salary × {{ settlement.years_of_service }} years (capped at 12 months)</small>
                                         </td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.severance_pay) }}</td>
                                     </tr>
@@ -152,7 +152,7 @@
                                 Severance calculation per <strong>Labor Proclamation No. 1156/2019, Articles 40-42</strong>:
                             </p>
                             <ul class="text-muted small mb-0">
-                                <li>Severance = monthly salary Ã— years of service</li>
+                                <li>Severance = monthly salary × years of service</li>
                                 <li>Maximum cap: 12 months of salary</li>
                                 <li>Applies to: redundancy, mutual agreement</li>
                                 <li>Does not apply to: resignation, termination for cause</li>

@@ -53,6 +53,7 @@ def generate_payslip_pdf(job_id):
         job_id: PayslipGenerationJob.id
     """
     from payroll_engine import create_app, db
+    from payroll_engine.ethiopian_calendar import format_ethiopian_period
     from payroll_engine.models import Company, PayrollRun, Payslip, PayslipGenerationJob
     from payroll_engine.pdf import generate_payslip
 
@@ -114,7 +115,7 @@ def generate_payslip_pdf(job_id):
                 'bank': emp.bank_or_telebirr or '',
                 'department': emp.department or '',
                 'position': emp.position or '',
-                'period': run.period or (run.run_date.strftime('%B %Y') if run.run_date else ''),
+                'period': format_ethiopian_period(run.run_date) if run.run_date else (run.period or ''),
                 'tax_explanation': '',
                 # Earnings/deduction lines snapshotted by the elements engine
                 # at approval time. The PDF renders these rather than
@@ -128,9 +129,7 @@ def generate_payslip_pdf(job_id):
             snapshot = published_row(payslip)
             if snapshot:
                 emp_data.update(snapshot)
-                emp_data['period'] = (
-                    date.fromisoformat(snapshot['worksheet_period_start']).strftime('%B %Y') + ' (Gregorian)'
-                )
+                emp_data['period'] = format_ethiopian_period(date.fromisoformat(snapshot['worksheet_period_start']))
             emp_data['calc_flow'] = None if emp_data.get('correction_note') else generate_calculation_flow(emp_data)
 
             from flask import current_app

@@ -28,7 +28,7 @@ def prepare_monthly_draft(company_id):
     Returns:
         dict with 'status' and 'message', or None if skipped
     """
-    from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
+    from payroll_engine.ethiopian_calendar import format_ethiopian_period, gregorian_to_ethiopian
     from payroll_engine.models import (
         Employee,
         PayrollDraft,
@@ -132,7 +132,7 @@ def prepare_monthly_draft(company_id):
         total_net = sum(e['net'] for e in employees_data)
         issue_text = f' ({len(issues)} issues)' if issues else ''
         message = (
-            f'Draft payroll for {period_str} is ready! '
+            f'Draft payroll for {format_ethiopian_period(today)} is ready! '
             f'{len(employees_data)} employees{issue_text}. '
             f'Total: ETB {total_net:,.0f}. '
             f'Review and approve.'

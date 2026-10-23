@@ -80,6 +80,31 @@ worktree; the money-math branch stays untouched in PR #22).
   `test_pg_worksheet_journey.py test_pg_monthly_journey.py
   test_pg_monthly_ui.py` → `32 passed, 69 warnings in 137.56s`;
   `test_pg_import_money.py` → `8 passed, 20 warnings in 27.68s`.
+- **Review pass 3 (self-review of the branch diff).** Found and fixed four
+  real gaps in the earlier passes: (1) `tasks.py` overwrote the payslip PDF
+  period with `'%B %Y (Gregorian)'` whenever a published worksheet snapshot
+  existed, silently undoing the `pdf.py` fix — now
+  `format_ethiopian_period(period_start)`; (2) the ERCA-deadline push body
+  and the payroll-summary email (`scheduled.py`) still printed Gregorian
+  months — both now Ethiopian-first; (3) `tasks.py` snapshot fallback and
+  `proactive.py` "Draft payroll for 2019-02 is ready!" exposed the machine
+  period key to users — now the Ethiopian-first label (the DB key is
+  unchanged); (4) the earlier "BOM fix" had left real mojibake committed in
+  `leave_management.html` (`â€”`) and `settlement_detail.html` (`Â·`, `Ã—`) —
+  all five spots corrected to `—`, `·`, `×`, files re-verified byte-clean
+  (first bytes `7B 25 20`). Approval narrative reworded to "Saved payroll
+  for <period> includes ...". Receipts after fixes: `test_proactive.py
+  test_change_summary.py test_ac10_pdf.py test_pdf_failure.py
+  test_rq_pdf.py test_notifications_webhooks.py` → `85 passed in 72.01s`;
+  PG16 `test_pg_worksheet_journey.py test_pg_monthly_journey.py` → `23
+  passed, 50 warnings in 54.62s`; `test_ac10_pdf.py
+  test_ethiopian_calendar.py test_ethiopian_first_ui.py` → `23 passed`.
+  Known remaining (deliberate): bank/ERCA export files and admin audit
+  timestamps stay Gregorian; `payroll_register.html` "Generated:" renders
+  empty because `now` is not in the template context (pre-existing, not a
+  calendar issue); `tests/test_profile_changes.py`, `test_rate_limiting.py`
+  and `test_security_wave1.py` contain pre-existing mojibake from main,
+  untouched.
 
 ## CURRENT RECOVERY DRILL (ACTIVITY 4) — 2026-10-20
 

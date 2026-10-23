@@ -2632,7 +2632,7 @@ def payroll_review_workspace(run_id):
         total_net = sum((row['net'] for row in worksheet_rows), Decimal('0'))
         from payroll_engine.ethiopian_calendar import format_ethiopian_period
 
-        narrative = f'Saved {format_ethiopian_period(run.run_date)} payroll includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
+        narrative = f'Saved payroll for {format_ethiopian_period(run.run_date)} includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
         can_approve = can_approve and evidence.ready_for_approval
     validation_results = PayrollValidationResult.query.filter_by(payroll_run_id=run.id).all()
     can_approve = (

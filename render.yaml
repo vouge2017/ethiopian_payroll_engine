@@ -57,7 +57,10 @@ services:
       - key: FLASK_APP
         value: wsgi:app
       - key: DB_ENCRYPTION_KEY
-        generateValue: true
+        fromService:
+          name: ethiopian-payroll-web
+          type: web
+          envVarKey: DB_ENCRYPTION_KEY
     autoDeploy: true
 
   # P0-E: Render Cron Job -- runs /internal/cron/daily once per day at 06:00 UTC.

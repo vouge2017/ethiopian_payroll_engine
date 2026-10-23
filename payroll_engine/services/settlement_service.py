@@ -144,9 +144,7 @@ def calculate_settlement(
     # 5. Tax on outstanding salary. Timing controlled by
     # PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01): when False, pension no
     # longer reduces taxable income (it is still deducted from pay).
-    taxable_salary = outstanding_salary - (
-        pension_ded if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
-    )
+    taxable_salary = outstanding_salary - (pension_ded if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0'))
     taxable_salary = max(Decimal('0'), taxable_salary)
     tax_on_salary = calculate_tax(taxable_salary)
 

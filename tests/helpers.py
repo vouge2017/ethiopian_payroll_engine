@@ -21,6 +21,7 @@ def register_company(client, data, follow_redirects=True):
         '/auth/setup-profile',
         data={
             'first_name': 'Synthetic',
+            'middle_name': 'Synthetic',
             'last_name': 'Owner',
             'company_name': data['company_name'],
         },

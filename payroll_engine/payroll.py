@@ -17,11 +17,10 @@ Usage:
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from payroll_engine import constants as _constants
 from payroll_engine.overtime import calculate_total_overtime
 from payroll_engine.pension import employee_pension, employer_pension
 from payroll_engine.tax import calculate_tax, explain_tax_amharic
-
-from payroll_engine import constants as _constants
 
 Q = Decimal('0.01')
 

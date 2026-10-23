@@ -217,6 +217,7 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
     employee_ids = {ps.employee_id for ps in payslips if ps.employee_id is not None}
     employees = Employee.query.filter_by(company_id=company_id).filter(Employee.id.in_(employee_ids)).all()
     employee_by_id = {employee.id: employee for employee in employees}
+    employee_by_reference = {employee.employee_id: employee for employee in employees}
 
     # Check each payslip for issues
     for ps in payslips:
@@ -391,6 +392,11 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
     if change_summary and change_summary.variance_threshold_pct is not None:
         for sc in change_summary.salary_changes:
             if sc.delta_pct and abs(sc.delta_pct) > 20:
+                # Resolve the employee primary key from the tenant-scoped read
+                # above. The external reference is not route-safe: nonnumeric
+                # values 404 on the edit route and numeric-looking values can
+                # collide with a co-worker's primary key in the same company.
+                target = employee_by_reference.get(sc.employee_id)
                 report.issues.append(
                     Issue(
                         severity=MEDIUM,
@@ -403,7 +409,9 @@ def classify_exceptions(current_run_id, company_id, db, models, change_summary=N
                         impact=f'Salary changed by {abs(sc.delta_pct):.0f}%. If not approved, this could be a data entry error.',
                         cause="Employee's gross salary changed by more than 20% from last period.",
                         recommendation='Confirm this salary change was approved by HR. Check the audit log for who made the change.',
-                        action_url=f'/employees/{sc.employee_id}/edit',
+                        action_url=f'/employees/{target.id}/edit'
+                        if target
+                        else f'/payroll/runs/{current_run_id}/review',
                         estimated_time='2 minutes',
                     )
                 )

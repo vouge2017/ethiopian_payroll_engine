@@ -75,10 +75,10 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
     """Flipping the constant must change PAYE on every monthly path, and never
     change the daily-worker exception or the comparison explanation."""
     from payroll_engine.excel_payroll import ExcelPayrollEngine
+    from payroll_engine.impact import preview_allowance_change, preview_termination
     from payroll_engine.models import Employee
     from payroll_engine.payroll import generate_calculation_flow
     from payroll_engine.services.settlement_service import calculate_settlement
-    from payroll_engine.impact import preview_allowance_change, preview_termination
 
     tax_on_full_gross = _tax_from_default_brackets(RC_BASIC)  # 11,250.00 for 38,000
 
@@ -97,12 +97,8 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
     elements_true = _render_elements_result(system_catalog_for_elements)
     assert elements_true['taxable'] == Decimal('35340.00')
 
-    settlement_employee = Employee(
-        basic_salary=RC_BASIC, allowances=Decimal('0'), start_date=date(2025, 1, 1)
-    )
-    settlement_true = calculate_settlement(
-        settlement_employee, 'resignation', date(2026, 9, 30), 1, db_session=None
-    )
+    settlement_employee = Employee(basic_salary=RC_BASIC, allowances=Decimal('0'), start_date=date(2025, 1, 1))
+    settlement_true = calculate_settlement(settlement_employee, 'resignation', date(2026, 9, 30), 1, db_session=None)
     assert settlement_true['tax_on_salary'] == Decimal('10319.00')
 
     termination_true = preview_termination(
@@ -160,9 +156,7 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
     assert elements_false['tax'] != elements_true['tax']
 
     # Settlement path.
-    settlement_false = calculate_settlement(
-        settlement_employee, 'resignation', date(2026, 9, 30), 1, db_session=None
-    )
+    settlement_false = calculate_settlement(settlement_employee, 'resignation', date(2026, 9, 30), 1, db_session=None)
     assert settlement_false['tax_on_salary'] == tax_on_full_gross
     assert settlement_false['tax_on_salary'] != settlement_true['tax_on_salary']
 

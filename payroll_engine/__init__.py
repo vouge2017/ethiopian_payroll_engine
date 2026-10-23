@@ -1050,4 +1050,10 @@ def create_app():
         db.session.rollback()
         return render_template('errors/500.html'), 500
 
+    # Optional in-process RQ worker (single-service deployments). Opt-in via
+    # RUN_INPROCESS_WORKER=1; fails closed when Redis is unavailable.
+    from payroll_engine.inprocess_worker import maybe_start_inprocess_worker
+
+    maybe_start_inprocess_worker(app)
+
     return app

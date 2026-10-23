@@ -77,6 +77,7 @@ def generate_monthly_erca_reminder():
     Called by cron or heartbeat on the 20th.
     """
     from payroll_engine import db
+    from payroll_engine.ethiopian_calendar import format_ethiopian_period
     from payroll_engine.models import Company, PayrollRun, User
     from payroll_engine.push import send_push_notification
 
@@ -108,7 +109,7 @@ def generate_monthly_erca_reminder():
                 send_push_notification(
                     user_id=owner.id,
                     title='ERCA Filing Due',
-                    body=f'Run payroll for {today.strftime("%B %Y")} — ERCA filing due on the 25th.',
+                    body=f'Run payroll for {format_ethiopian_period(today)} — ERCA filing due on the 25th.',
                     url='/payroll/spreadsheet',
                     notif_type='deadline',
                 )
@@ -119,6 +120,7 @@ def generate_payroll_summary_email(company_id, run_id):
 
     Can be sent via email service or WhatsApp.
     """
+    from payroll_engine.ethiopian_calendar import format_ethiopian_period
     from payroll_engine.models import Company, Employee, PayrollRun, Payslip
 
     run = PayrollRun.query.filter_by(id=run_id, company_id=company_id).first()
@@ -134,7 +136,7 @@ def generate_payroll_summary_email(company_id, run_id):
     total_pension = sum(ps.employee_pension or 0 for ps in payslips)
     total_net = sum(ps.net_pay or 0 for ps in payslips)
 
-    period = run.period or run.run_date.strftime('%B %Y')
+    period = format_ethiopian_period(run.run_date) if run.run_date else (run.period or '')
 
     lines = [
         f'Payroll Summary — {company.name}',

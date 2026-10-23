@@ -104,6 +104,113 @@
   `net_final_payment` is not floored at zero when pending deductions exceed
   earnings; (6) no hosted run: feature branches receive no CI.
 
+## CURRENT ETHIOPIAN-CALENDAR-FIRST — 2026-10-21
+
+Branch `feature/ethiopian-calendar-first` off `origin/main` `27539f1` (separate
+worktree; the money-math branch stays untouched in PR #22).
+
+- **Shipping calendar-converter bug found and fixed.** The user request was
+  "make sure we are using the Ethiopian calendar first, not Gregorian". While
+  auditing, the shipped `payroll_engine/ethiopian_calendar.py` converter was
+  found wrong: its 1461-day cycle indexing placed the 366-day year on
+  years ≡ 0 (mod 4) instead of the true leap years ≡ 3 (mod 4), which shifted
+  day labels for extended windows. Cross-checked against the classic Ethiopic
+  JDN formula over a 2020-01-01→2035-12-31 sweep: 1,460 of 5,844 sampled days
+  mismatched (≈25%), including every day in Jan 2020 (one-day shift). The old
+  `test_leap_year_2015` encoded the wrong belief ("Sep 11, 2023 = Meskerem 1,
+  2016"); world-verified reality is the opposite: Meskerem 1, 2016 EC fell on
+  **September 12, 2023** (Ethiopian News Agency: "the 2016 Ethiopian New Year
+  that started on the 12th of September"; Wikipedia Enkutatash: Sep 12 after
+  each Ethiopian leap year; timeanddate concurs). Converter rewritten with the
+  classic JDN formula (epoch 1723856); all world anchors verified: Sep 11,
+  2025 = Meskerem 1, 2018; Sep 11, 2026 = Meskerem 1, 2019; Sep 11, 2023 =
+  Pagume 6, 2015; Sep 12, 2023 = Meskerem 1, 2016; Sep 11, 2027 = Pagume 6,
+  2019; Sep 12, 2027 = Meskerem 1, 2020.
+- **Test rewrite**: `tests/test_ethiopian_calendar.py` corrected
+  (`test_leap_year_2015` now asserts Pagume 6 on Sep 11, 2023 and New Year on
+  Sep 12, 2023, citing ENA) and extended: 2019 leap boundary (Sep 11/12,
+  2027), the 2019 New-Year anchor, a collision-free whole-years property
+  sweep (EC 2012-2027: every year exactly 365/366 days, months 1-12 always
+  30 days, Pagume 5-or-6 shape) and preserved mid-year anchors (Jul 7, 2026 =
+  Sene 30, 2018; Jan 1, 2026 = Tahsas 23, 2018).
+- **Ethiopian-first everywhere it was Gregorian-first/dead-Gregorian.** The
+  app already had dual-calendar context helpers (`eth_date` renders
+  "Amharic ETH (Gregorian MM DD, YYYY)") used by most money/employee pages.
+  Remaining Gregorian-only/Gregorian-first sites were converted:
+  `components/monthly_payroll.html` (journey period dl now Ethiopian row
+  first), `payroll_review_workspace.html` (page title + "Saved payroll for"
+  sentence now use `eth_period` = "MONTH YYYY ዓ.ም. · Gregorian Month YYYY"),
+  `payroll_comparison.html` (4 run comparisons incl. chart labels),
+  `historical_import.html` (period fallback + created date),
+  `settlement_detail.html` (termination/worked dates, outstanding-salary
+  month header, created/paid dates), `leave_management.html` (leave range +
+  applied date), `billing.html` (trial end), `welcome.html` (example card now
+  titled "Tikimt 2019 ዓ.ም." with Gregorian fallback), Python producers:
+  `change_summary.py` retained-comparison period labels, `pdf.py` payslip
+  period label (replacing "(Gregorian)" suffix with the same dual label),
+  `payroll_bp.py` approval narrative (+ :2321 spreadsheet period context).
+  New context helper `eth_period` in `app/__init__.py` built on the shared
+  `format_ethiopian_period`. Admin/support audit timestamps keep Gregorian
+  date+time on purpose (ops metadata, time-of-day relevant); bank/ERCA
+  export files stay Gregorian on purpose (legal filings are Gregorian) —
+  recorded as deliberate, not omissions.
+- **Receipts**: `tests/test_ethiopian_calendar.py tests/
+  test_ethiopian_first_ui.py` → `22 passed in 5.43s`; change/narrative/pdf/
+  period/e2e SQLite batch → `87 passed, then 25 passed`; full review-page
+  ordering is pinned at HTTP level in
+  `tests/test_pg_worksheet_journey.py` (asserts `Saved payroll for {eth
+  period}` and absence of the old " (Gregorian)" suffix); PostgreSQL proof
+  (disposable PG16 at 127.0.0.1:55439): `test_pg_worksheet_journey.py
+  test_pg_monthly_journey.py test_pg_monthly_ui.py` → `32 passed, 68
+  warnings in 118.06s`, plus the rerun single journey after the new
+  assertion → `1 passed in 10.00s`. ruff check/format clean on all changed
+  files. BOM hygiene note: a template edit via PowerShell `Set-Content`
+  briefly introduced a UTF-8 BOM + mojibake into `leave_management.html`;
+  caught, reverted and redone with byte-clean edits (verified first bytes
+  `7B 25 20` `{% ` — no BOM, matching sibling templates).
+- **Review pass 2 (remaining Gregorian fallbacks).** Three more period labels
+  were still Gregorian-only and are now Ethiopian-first with Gregorian
+  fallback text supplied by `format_ethiopian_period`: `main.py` dashboard
+  "last month" summary, `selfservice_bp.py` employee-portal YTD rows, and the
+  `pdf.py` payslip period default (`emp.get('period') or
+  format_ethiopian_period(date.today())`). A stray UTF-8 BOM left in
+  `settlement_detail.html` by the earlier PowerShell edit was removed
+  (first bytes verified `7B 25 20`).
+- **Review pass 2 receipts**: `tests/test_employee_portal.py
+  tests/test_dashboard_api.py` → `14 passed in 33.07s`; broader SQLite batch
+  incl. `test_ac10_pdf.py` → `60 passed in 72.37s`; ruff check/format clean
+  on `payroll_engine` (85 files). PostgreSQL re-proof after a local PG outage
+  (cluster restored on the disposable port; UTF-8 database `payroll_test`):
+  `test_pg_worksheet_journey.py test_pg_monthly_journey.py
+  test_pg_monthly_ui.py` → `32 passed, 69 warnings in 137.56s`;
+  `test_pg_import_money.py` → `8 passed, 20 warnings in 27.68s`.
+- **Review pass 3 (self-review of the branch diff).** Found and fixed four
+  real gaps in the earlier passes: (1) `tasks.py` overwrote the payslip PDF
+  period with `'%B %Y (Gregorian)'` whenever a published worksheet snapshot
+  existed, silently undoing the `pdf.py` fix — now
+  `format_ethiopian_period(period_start)`; (2) the ERCA-deadline push body
+  and the payroll-summary email (`scheduled.py`) still printed Gregorian
+  months — both now Ethiopian-first; (3) `tasks.py` snapshot fallback and
+  `proactive.py` "Draft payroll for 2019-02 is ready!" exposed the machine
+  period key to users — now the Ethiopian-first label (the DB key is
+  unchanged); (4) the earlier "BOM fix" had left real mojibake committed in
+  `leave_management.html` (`â€”`) and `settlement_detail.html` (`Â·`, `Ã—`) —
+  all five spots corrected to `—`, `·`, `×`, files re-verified byte-clean
+  (first bytes `7B 25 20`). Approval narrative reworded to "Saved payroll
+  for <period> includes ...". Receipts after fixes: `test_proactive.py
+  test_change_summary.py test_ac10_pdf.py test_pdf_failure.py
+  test_rq_pdf.py test_notifications_webhooks.py` → `85 passed in 72.01s`;
+  PG16 `test_pg_worksheet_journey.py test_pg_monthly_journey.py` → `23
+  passed, 50 warnings in 54.62s`; `test_ac10_pdf.py
+  test_ethiopian_calendar.py test_ethiopian_first_ui.py` → `23 passed`.
+  Known remaining (deliberate): bank/ERCA export files and admin audit
+  timestamps stay Gregorian; `payroll_register.html` "Generated:" renders
+  empty because `now` is not in the template context (pre-existing, not a
+  calendar issue); `tests/test_profile_changes.py`, `test_rate_limiting.py`
+  and `test_security_wave1.py` contain pre-existing mojibake from main,
+  untouched.
+
+
 
 ## CURRENT RECOVERY DRILL (ACTIVITY 4) — 2026-10-20
 

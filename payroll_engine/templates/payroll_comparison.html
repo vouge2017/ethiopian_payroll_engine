@@ -29,7 +29,7 @@
                     <select name="run_a" class="form-select">
                         {% for r in runs %}
                         <option value="{{ r.id }}" {% if r.id == run_a.id %}selected{% endif %}>
-                            {{ r.period or r.run_date.strftime('%B %Y') }} — {{ r.payslips|length }} employees
+                            {{ r.period or eth_period(r.run_date) }} — {{ r.payslips|length }} employees
                         </option>
                         {% endfor %}
                     </select>
@@ -42,7 +42,7 @@
                     <select name="run_b" class="form-select">
                         {% for r in runs %}
                         <option value="{{ r.id }}" {% if r.id == run_b.id %}selected{% endif %}>
-                            {{ r.period or r.run_date.strftime('%B %Y') }} — {{ r.payslips|length }} employees
+                            {{ r.period or eth_period(r.run_date) }} — {{ r.payslips|length }} employees
                         </option>
                         {% endfor %}
                     </select>
@@ -191,13 +191,13 @@ new Chart(document.getElementById('comparisonChart'), {
         labels: ['Gross', 'Tax', 'Pension', 'Net'],
         datasets: [
             {
-                label: '{{ run_a.period or run_a.run_date.strftime("%b %Y") }}',
+                label: '{{ run_a.period or eth_period(run_a.run_date) }}',
                 data: [{{ totals.a_gross }}, {{ totals.a_tax }}, {{ totals.a_pension }}, {{ totals.a_net }}],
                 backgroundColor: '#94a3b8',
                 borderRadius: 6
             },
             {
-                label: '{{ run_b.period or run_b.run_date.strftime("%b %Y") }}',
+                label: '{{ run_b.period or eth_period(run_b.run_date) }}',
                 data: [{{ totals.b_gross }}, {{ totals.b_tax }}, {{ totals.b_pension }}, {{ totals.b_net }}],
                 backgroundColor: '#2563eb',
                 borderRadius: 6

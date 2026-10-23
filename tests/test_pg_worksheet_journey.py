@@ -81,6 +81,11 @@ def test_saved_worksheet_review_approval_pdf_and_bank_agree(worksheet, monkeypat
         assert snapshot['worksheet_inputs']['bonus'] == '900.50'
     review_page = client.get(f'/payroll/runs/{rid}/review').get_data(as_text=True)
     assert '8,590.35' in review_page and '900.50' in review_page and 'Gregorian' in review_page
+    from payroll_engine.ethiopian_calendar import format_ethiopian_period
+
+    expected_period = format_ethiopian_period(date.today().replace(day=1))
+    assert f'Saved payroll for {expected_period}' in review_page
+    assert ' (Gregorian)' not in review_page
     assert 'Gross ETB 12,900.50 = total deductions ETB 4,310.15 + net ETB 8,590.35' in review_page
     assert '0/1 employees' not in review_page and 'No data available.' not in review_page
     confirmation = client.get(f'/payroll/{rid}/confirm')

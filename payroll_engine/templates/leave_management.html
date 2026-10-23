@@ -109,7 +109,7 @@
                                 </span>
                             </td>
                             <td data-label="Dates">
-                                {{ leave.start_date.strftime('%d %b') }} — {{ leave.end_date.strftime('%d %b %Y') }}
+                                {{ eth_date(leave.start_date) }} — {{ eth_date(leave.end_date) }}
                             </td>
                             <td data-label="Days" class="text-center">{{ leave.days_requested }}</td>
                             <td data-label="Status">
@@ -117,7 +117,7 @@
                                     {{ leave.status|title }}
                                 </span>
                             </td>
-                            <td data-label="Applied"><small>{{ leave.applied_at.strftime('%d %b %Y') if leave.applied_at else '-' }}</small></td>
+                            <td data-label="Applied"><small>{{ eth_date(leave.applied_at) if leave.applied_at else '-' }}</small></td>
                             <td data-label="Reason"><small class="text-muted">{{ leave.reason[:50] if leave.reason else '-' }}</small></td>
                             <td data-label="Actions">
                                 {% if leave.status == 'pending' %}

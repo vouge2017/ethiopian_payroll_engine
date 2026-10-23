@@ -79,9 +79,9 @@
                             <tbody>
                                 {% for run in historical_runs %}
                                 <tr>
-                                    <td><strong>{{ run.period or run.run_date.strftime('%B %Y') }}</strong></td>
+                                    <td><strong>{{ run.period or eth_period(run.run_date) }}</strong></td>
                                     <td class="text-center">{{ run.payslips|length }}</td>
-                                    <td><small>{{ run.created_at.strftime('%d %b %Y') }}</small></td>
+                                    <td><small>{{ eth_date(run.created_at) }}</small></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

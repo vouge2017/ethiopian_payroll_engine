@@ -18,7 +18,7 @@
                 <p class="display-6 fw-bold mb-1">{{ plan.name }}</p>
                 <p class="text-muted mb-0">ETB {{ '%d'|format(plan.monthly_etb) }}/month · up to {{ plan.max_employees }} employees</p>
                 {% if status == 'active' and company.paid_until %}<p class="small text-success mt-2 mb-0">Paid through {{ company.paid_until }}</p>{% endif %}
-                {% if status == 'trialing' and company.trial_ends_at %}<p class="small text-info mt-2 mb-0">Trial ends {{ company.trial_ends_at.strftime('%Y-%m-%d') }}</p>{% endif %}
+                {% if status == 'trialing' and company.trial_ends_at %}<p class="small text-info mt-2 mb-0">Trial ends {{ eth_date(company.trial_ends_at) }}</p>{% endif %}
                 <p class="small text-muted mt-2 mb-0">{{ employees_used }} / {{ plan.max_employees }} employees used</p>
             </div></div>
         </div>

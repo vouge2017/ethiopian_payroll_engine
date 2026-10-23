@@ -8,6 +8,7 @@ from flask_login import current_user, login_required
 
 from payroll_engine import db
 from payroll_engine.compliance import compute_compliance_score, get_status_message
+from payroll_engine.ethiopian_calendar import format_ethiopian_period
 from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, Payslip, User
 
 main = Blueprint('main', __name__)
@@ -274,7 +275,7 @@ def index():
             total_tax = sum(p.tax for p in payslips)
             avg_salary = total_net / len(payslips) if payslips else 0
             last_month_summary = {
-                'period': selected_run.reference or selected_run.run_date.strftime('%B %Y'),
+                'period': selected_run.reference or format_ethiopian_period(selected_run.run_date),
                 'employee_count': len(payslips),
                 'total_net': total_net,
                 'total_gross': total_gross,

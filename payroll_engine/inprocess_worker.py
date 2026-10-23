@@ -13,6 +13,7 @@ plain RQ semantics mean additional workers stay safe.
 Fails closed: any startup problem (missing redis, ping failure) logs a warning
 and leaves the queue to the inline fallback in tasks._get_queue callers.
 """
+
 import logging
 import os
 import threading
@@ -68,9 +69,7 @@ def maybe_start_inprocess_worker(app=None):
         if conn is None:
             return False
         try:
-            logger.info(
-                'in-process worker starting on queue pdf_generation (pid=%s)', os.getpid()
-            )
+            logger.info('in-process worker starting on queue pdf_generation (pid=%s)', os.getpid())
             thread = threading.Thread(target=_run_worker_once, args=(conn,), daemon=True, name='rq-inprocess')
             thread.start()
             _started = True

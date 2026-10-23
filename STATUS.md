@@ -1,4 +1,13 @@
-﻿# STATUS.md — Command-Verified State
+# STATUS.md — Command-Verified State
+
+## CURRENT NEON DATABASE MIGRATION (PRODUCTION DB CUTOVER) — 2026-10-21
+
+- The live production service no longer uses the expiring Render free PostgreSQL. The web service `srv-d91t12u7r5hc738taug0` now connects to a **Neon** Free-plan Postgres project `EthioPayroll` (branch `production`, database `neondb`, AWS US West 2/Oregon — co-located with the Render web service region; user chose the region explicitly). Neon Free has no expiry clause and does not delete data, replacing the Render free DB that was set to expire 30 Oct 2026 (`+14-day` grace). The old Render PostgreSQL (`dpg-daufdenlot8c73auad8g-a`) is left untouched as a frozen fallback until it lapses.
+- Migration used the same version-independent path proven in the recovery drill: fresh production dump (39 tables, 177 rows, 91,392 bytes, Alembic head `f4a5b6c7d8f3`), now emitted in **FK-topological COPY order** so the restore loads without `session_replication_role` (Neon users are not superuser). Neon schema was created by running Alembic from zero to head `f4a5b6c7d8f3`, then the dump was loaded table-by-table over psycopg2 (COPY blocks + `setval` replay), then verified on Neon: 39/39 tables with **0 row-count mismatches**, ciphertext-vs-plaintext check passed, and the production `DB_ENCRYPTION_KEY` decrypted an employee `bank_account` correctly through the ORM (`InvalidPaddingError` negative already proven in the drill). The leakage-free scripts live in the protected local secrets directory and were not committed.
+- Render env change authorized by the user ("Go"): `DATABASE_URL` was flipped to the Neon **pooled** connection string and **`EMERGENCY_DISABLE_CSRF_AUTH` was deleted** (verified dead valve in code since 2026-08-29 — value was truthy `"1"` but no code reads it; removal closes the audit-trail confusion). Applied via the dashboard split-button "Save and deploy" (two env saves; see password rotation below). App is confirmed serving from Neon by a transaction-counter discriminator: `pg_stat_database.xact_commit` on Neon jumped by 12 within 6 `/readyz` probes (~1 committed transaction per probe) while the app and its pooled endpoint sat between the counter samples; my own connections account for ~2 of the 12.
+- **Password hygiene**: the first Neon connection password became visible in the agent tool transcript during capture, so it was rotated via the Neon console role action (uploaded `.env` receipt used to rebuild the secret locally, never printed in-repo), and `DATABASE_URL` was updated again on the web service and redeployed. Direct-connect and pooled variants are saved only under the protected local secrets directory.
+- Production proofs after cutover: `/readyz` HTTP 200 `{"checks":{"database":"up","migrations":"current","schema":"current","self":"up"},"status":"ready"}`; mobile-format browser session (same CDP profile as the October trial) signed in with the synthetic trial account — dashboard shows `Rc Trial Company`, 2 employees, run `PR-2019-01-005` with gross 20,680 / tax 3,202 / net 16,044, and the Ethiopian/Gregorian date header renders — full read path (auth, tenant scoping, dashboards) works against Neon.
+- Limits / open items: the Oct-3-updated Neon Free plan gives 1 GB per-project storage (current usage ≈ 0.1 GB), 100 CU-hours per month per project at 0.25 CU (scale-to-zero after 5 minutes idle adds a few-hundred-ms cold connection after idle), 6-hour instant-restore history and 1 manual snapshot — so automated dumps remain the backup story (weekly Task-Scheduler dump is the next step, then nightly). The local dumps on disk are now the only backups newer than the cutover neighborhood. PDF worker execution remains unproven on production (`worker: "unknown"`; no Redis/worker service exists) — the queued $0 in-process-worker plan addresses it. Render logs may still hold the pre-rotation Neon password in plaintext at the engine level (DB drivers log DSNs redacted; Render env values are masked) — rotation invalidated the exposed value regardless.
 
 ## CURRENT ETHIOPIAN-CALENDAR-FIRST — 2026-10-21
 
@@ -105,6 +114,7 @@ worktree; the money-math branch stays untouched in PR #22).
   calendar issue); `tests/test_profile_changes.py`, `test_rate_limiting.py`
   and `test_security_wave1.py` contain pre-existing mojibake from main,
   untouched.
+
 
 ## CURRENT RECOVERY DRILL (ACTIVITY 4) — 2026-10-20
 

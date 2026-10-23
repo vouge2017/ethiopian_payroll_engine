@@ -91,7 +91,9 @@ def test_run_worker_thread_builds_worker_with_queue(monkeypatch):
         def work(self, burst=False):
             calls.append({'burst': burst})
 
-    fake_cls = lambda queues, connection=None: _StubWorker(queues, connection)
+    def fake_cls(queues, connection=None):
+        return _StubWorker(queues, connection)
+
     monkeypatch.setattr(iw, '_thread_worker_class', lambda: fake_cls)
     iw._run_worker_thread('conn')
     assert made[0][0] == ['pdf_generation']

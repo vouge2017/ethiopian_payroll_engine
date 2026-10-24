@@ -226,6 +226,7 @@ def api_role_required(*roles):
 @api.route('/employees', methods=['GET'])
 @api_token_or_login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def list_employees():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
@@ -299,6 +300,7 @@ def create_employee():
 @api.route('/employees/<int:emp_id>', methods=['GET'])
 @api_token_or_login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def get_employee(emp_id):
     emp = Employee.query.filter_by(id=emp_id, company_id=_get_company_id(), is_deleted=False).first_or_404()
     return jsonify(
@@ -418,6 +420,7 @@ def delete_employee(emp_id):
 @api.route('/payroll-runs', methods=['GET'])
 @api_token_or_login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def list_payroll_runs():
     runs = PayrollRun.query.filter_by(company_id=_get_company_id()).order_by(PayrollRun.run_date.desc()).all()
     return jsonify(
@@ -436,6 +439,7 @@ def list_payroll_runs():
 @api.route('/payroll-runs/<int:run_id>', methods=['GET'])
 @api_token_or_login_required
 @company_required
+@api_role_required('owner', 'accountant')
 def get_payroll_run(run_id):
     run = PayrollRun.query.filter_by(id=run_id, company_id=_get_company_id()).first_or_404()
     return jsonify(
@@ -471,6 +475,13 @@ def download_payslip(payslip_id):
 
     # Tenant-scoped fetch: 404 (not 403) so payslip IDs are not enumerable
     payslip = Payslip.query.filter_by(id=payslip_id, company_id=_get_company_id()).first_or_404()
+    # Owners/accountants see all payslips; everyone else only their own
+    user = _get_current_user()
+    effective_role = user.get_role_for_company(_get_company_id()) if user is not None else None
+    if effective_role not in ('owner', 'accountant'):
+        employee = Employee.query.filter_by(id=payslip.employee_id, company_id=_get_company_id()).first()
+        if employee is None or employee.user_id != user.id:
+            return jsonify({'error': 'Not found'}), 404
     PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=_get_company_id()).first()
     if not payslip.pdf_file_path or not os.path.exists(payslip.pdf_file_path):
         return jsonify({'error': 'PDF not found'}), 404

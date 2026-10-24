@@ -675,17 +675,23 @@ def _calculate_item_amount(item, employee, for_date, units_input, running_total)
 def _apply_exempt_cap(item, amount, basic_salary):
     """Apply exempt cap logic to an earning item.
 
-    Uses the item's exempt_cap_amount (flat ETB cap) or exempt_cap_percent
-    (percent of basic). Same logic as the legacy EmployeeAllowance.exempt cap.
+    Uses the item's exempt_cap_amount (flat ETB cap) and/or exempt_cap_percent
+    (percent of basic). When both are set the exempt part is capped by the
+    LOWER of the two (e.g. transport: lower of ETB 2,200 or 25% of basic).
+    Same logic as the legacy EmployeeAllowance.exempt cap.
     """
     cap_amount = item.exempt_cap_amount
     cap_percent = item.exempt_cap_percent
+    percent_cap = None
+    if cap_percent is not None:
+        percent_cap = (basic_salary * _D(cap_percent) / Decimal('100')).quantize(Q, rounding=ROUND_HALF_UP)
 
+    if cap_amount is not None and cap_percent is not None:
+        return min(_D(amount), _D(cap_amount), percent_cap)
     if cap_amount is not None:
         return min(_D(amount), _D(cap_amount))
     if cap_percent is not None:
-        cap = (basic_salary * _D(cap_percent) / Decimal('100')).quantize(Q, rounding=ROUND_HALF_UP)
-        return min(_D(amount), cap)
+        return min(_D(amount), percent_cap)
     return _D(amount)
 
 

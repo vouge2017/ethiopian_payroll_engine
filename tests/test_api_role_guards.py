@@ -53,13 +53,13 @@ def ctx(app):
         db.session.flush()
 
         owner = User(phone='0911111111', company_id=co.id, role='owner')
-        owner.set_password('owner123')
+        owner.set_password('Test1234!')
 
         accountant = User(phone='0914444444', company_id=co.id, role='accountant')
-        accountant.set_password('acct123')
+        accountant.set_password('Test1234!')
 
         employee_user = User(phone='0922222222', company_id=co.id, role='employee')
-        employee_user.set_password('emp123')
+        employee_user.set_password('Test1234!')
         db.session.add_all([owner, accountant, employee_user])
         db.session.commit()
 
@@ -129,15 +129,15 @@ def _login(client, phone, password):
 
 
 def _as_employee(client):
-    _login(client, '0922222222', 'emp123')
+    _login(client, '0922222222', 'Test1234!')
 
 
 def _as_owner(client):
-    _login(client, '0911111111', 'owner123')
+    _login(client, '0911111111', 'Test1234!')
 
 
 def _as_accountant(client):
-    _login(client, '0914444444', 'acct123')
+    _login(client, '0914444444', 'Test1234!')
 
 
 # --- Employee / payroll-run listing requires owner or accountant ---

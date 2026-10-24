@@ -200,7 +200,8 @@ def enqueue_batch(run_id, company_id):
             result_ttl=3600,  # keep result for 1 hour
         )
 
-        job.rq_job_id = rq_job.get_id()
+        # rq 2.x renamed Job.get_id() to the .id property
+        job.rq_job_id = rq_job.id
         ps.pdf_status = 'not_generated'  # reset so _ensure_pdf doesn't serve stale
         enqueued += 1
 

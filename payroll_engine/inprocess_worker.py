@@ -44,14 +44,24 @@ def _redis_connection():
 
 
 def _thread_worker_class():
-    """SimpleWorker subclass that never touches signal handlers.
+    """SimpleWorker subclass that is safe inside a non-main thread.
 
     RQ installs SIGINT/SIGTERM handlers in work(); signal.signal only works
     in the main interpreter thread, so an in-thread worker must override it.
+    The default UnixSignalDeathPenalty likewise needs SIGALRM in the main
+    thread, so swap in the TimerDeathPenalty (threading.Timer based) instead.
     """
     from rq import SimpleWorker
+    from rq.timeouts import TimerDeathPenalty
 
-    return type('ThreadWorker', (SimpleWorker,), {'_install_signal_handlers': lambda self: None})
+    return type(
+        'ThreadWorker',
+        (SimpleWorker,),
+        {
+            '_install_signal_handlers': lambda self: None,
+            'death_penalty_class': TimerDeathPenalty,
+        },
+    )
 
 
 def _run_worker_thread(conn):

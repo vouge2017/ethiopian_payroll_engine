@@ -13,7 +13,7 @@ from datetime import date
 from decimal import Decimal
 
 from payroll_engine import constants as _constants
-from payroll_engine.leave import LeaveType
+from payroll_engine.leave import LeaveType, calculate_annual_entitlement
 from payroll_engine.models import Employee, EmployeeDeduction, FinalSettlement, LeaveBalance
 from payroll_engine.pension import employee_pension
 from payroll_engine.severance import calculate_severance
@@ -22,11 +22,49 @@ from payroll_engine.tax import calculate_tax
 Q = Decimal('0.01')
 
 
+def _outstanding_breakdown(employee: Employee, end_date: date) -> dict:
+    """Split the last working month's pay into basic and allowance components.
+
+    If end_date is the last calendar day of the month, the employee is owed
+    the full month. Otherwise the pay is prorated on the inclusive days
+    within the final calendar month (Ethiopian 30-day convention), counted
+    from the first of that month or the hire date, whichever is later.
+
+    Returns:
+        Dict with Decimal basic, allowances, total and int days_worked.
+    """
+    basic = Decimal(str(employee.basic_salary))
+    allowances = Decimal(str(employee.allowances))
+    gross = basic + allowances
+
+    # Last calendar day of the month → full salary.
+    if end_date.day == calendar.monthrange(end_date.year, end_date.month)[1]:
+        return {'basic': basic, 'allowances': allowances, 'total': gross, 'days_worked': 30}
+
+    period_start = end_date.replace(day=1)
+    start = getattr(employee, 'start_date', None)
+    if start is not None and start > period_start:
+        period_start = start
+    days_worked = (end_date - period_start).days + 1
+    days_worked = max(0, min(days_worked, 30))
+
+    factor = Decimal(str(days_worked)) / Decimal('30')
+    total = (gross * factor).quantize(Q)
+    prorated_basic = (basic * factor).quantize(Q)
+    return {
+        'basic': prorated_basic,
+        'allowances': total - prorated_basic,
+        'total': total,
+        'days_worked': days_worked,
+    }
+
+
 def calculate_outstanding_salary(employee: Employee, end_date: date) -> Decimal:
     """Calculate prorated salary for the last working month.
 
     If the employee works the full month, they get full salary.
-    If terminated mid-month, salary is prorated to the last working day.
+    If terminated mid-month, salary is prorated to the last working day,
+    counted from the first of that month or the hire date, whichever is later.
 
     Args:
         employee: Employee record
@@ -35,19 +73,7 @@ def calculate_outstanding_salary(employee: Employee, end_date: date) -> Decimal:
     Returns:
         Outstanding salary amount (ETB)
     """
-    basic = Decimal(str(employee.basic_salary))
-    allowances = Decimal(str(employee.allowances))
-    gross = basic + allowances
-
-    # If end_date is the last day of the month, full salary
-    if end_date.day != calendar.monthrange(end_date.year, end_date.month)[1]:
-        # Not the last day - prorate
-        days_in_month = 30  # Ethiopian convention
-        days_worked = end_date.day
-        prorated = gross * Decimal(str(days_worked)) / Decimal(str(days_in_month))
-        return prorated.quantize(Q)
-
-    return gross
+    return _outstanding_breakdown(employee, end_date)['total']
 
 
 def calculate_leave_encashment(employee: Employee, end_date: date, company_id: int, db_session=None) -> Decimal:
@@ -81,16 +107,18 @@ def calculate_leave_encashment(employee: Employee, end_date: date, company_id: i
         if balance:
             unused_days = balance.remaining
         else:
-            # No balance record - calculate from statutory
+            # No balance record - calculate from statutory rules
+            # (leave.calculate_annual_entitlement: Art. 77 — 16 days year 1,
+            # +1 day per 2 additional years, capped).
             start = employee.start_date or employee.created_at.date()
             years_service = (end_date - start).days // 365
-            entitled = 14 + years_service  # Statutory minimum
+            entitled = calculate_annual_entitlement(years_service)
             unused_days = entitled  # Assume no leave taken (conservative)
     else:
         # No session - use statutory calculation
         start = employee.start_date or employee.created_at.date()
         years_service = (end_date - start).days // 365
-        entitled = 14 + years_service
+        entitled = calculate_annual_entitlement(years_service)
         unused_days = entitled
 
     unused_days = max(0, unused_days)
@@ -133,13 +161,14 @@ def calculate_settlement(
     severance_amount = sev_result['final_amount'] if sev_result['eligible'] else Decimal('0')
 
     # 2. Outstanding salary
-    outstanding_salary = calculate_outstanding_salary(employee, end_date)
+    breakdown = _outstanding_breakdown(employee, end_date)
+    outstanding_salary = breakdown['total']
 
     # 3. Leave encashment
     leave_encashment = calculate_leave_encashment(employee, end_date, company_id, db_session)
 
-    # 4. Pension deduction on outstanding salary
-    pension_ded = employee_pension(employee.basic_salary)
+    # 4. Pension deduction on the prorated basic share of the final month
+    pension_ded = employee_pension(breakdown['basic'])
 
     # 5. Tax on outstanding salary. Timing controlled by
     # PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01): when False, pension no

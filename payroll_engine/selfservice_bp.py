@@ -18,6 +18,7 @@ from flask import Blueprint, Response, flash, redirect, render_template, request
 from flask_login import current_user, login_required
 
 from payroll_engine import db
+from payroll_engine.ethiopian_calendar import format_ethiopian_period
 from payroll_engine.models import Employee, PayrollRun, Payslip
 
 selfservice_bp = Blueprint('selfservice', __name__)
@@ -66,7 +67,7 @@ def _get_ytd_data(employee_id, year=None, company_id=None):
 
         ytd['payslips'].append(
             {
-                'period': run.period or run.run_date.strftime('%B %Y'),
+                'period': run.period or format_ethiopian_period(run.run_date),
                 'date': run.run_date,
                 'gross': ps.gross_salary or Decimal('0'),
                 'tax': ps.tax or Decimal('0'),

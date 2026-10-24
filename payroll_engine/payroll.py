@@ -15,6 +15,7 @@ Usage:
     result = calculate_payroll(basic_salary=10000, allowances=2000)
 """
 
+import calendar
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from payroll_engine import constants as _constants
@@ -26,13 +27,20 @@ Q = Decimal('0.01')
 
 
 def _D(value) -> Decimal:
-    """Safely convert any numeric type to Decimal."""
+    """Safely convert any numeric type to Decimal.
+
+    Non-finite values (NaN, Infinity) raise ValueError: money must be finite.
+    """
     if isinstance(value, Decimal):
-        return value
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, ValueError):
-        return Decimal('0')
+        d = value
+    else:
+        try:
+            d = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            return Decimal('0')
+    if not d.is_finite():
+        raise ValueError(f'Money value must be finite, got: {d}')
+    return d
 
 
 def calculate_prorated_salary(monthly_salary, start_date, end_date=None) -> Decimal:
@@ -77,6 +85,12 @@ def calculate_prorated_salary(monthly_salary, start_date, end_date=None) -> Deci
     # Days worked = end_date - start_date + 1 (inclusive)
     days_worked = (end_date - start_date).days + 1
     days_in_month = 30  # Ethiopian convention
+
+    # A complete calendar month counts as a complete pay month — a
+    # 28/29-day February worked in full is a full salary, not 28/30.
+    month_days = calendar.monthrange(end_date.year, end_date.month)[1]
+    if month_days < days_in_month:
+        days_in_month = month_days
 
     if days_worked >= days_in_month:
         return monthly_salary  # Full month, no proration needed
@@ -286,6 +300,9 @@ def calculate_payroll(
     net_after_sick = max(Decimal('0'), net_after_sick)  # Cannot go below zero
 
     # Step 11: Final net = Net after sick reduction - post-tax deductions
+    # NOTE: net can go negative here when post-tax deductions exceed pay.
+    # Approval-time validation BLOCKs negative net (validation.py), keeps
+    # the approval path safe; draft previews may show a negative estimate.
     net = net_after_sick - total_deductions
 
     # Step 12: Tax explanation (bilingual)

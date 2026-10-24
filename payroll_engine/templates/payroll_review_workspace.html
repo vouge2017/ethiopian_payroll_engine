@@ -2,7 +2,7 @@
 <!-- Combines: Story → Evidence → Issues → Resolution → Approval -->
 
 {% extends "base.html" %}
-{% block title %}Payroll Review — {{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }}{% endblock %}
+{% block title %}Payroll Review — {{ eth_period(run.run_date) if worksheet_rows else (run.period or run.run_date) }}{% endblock %}
 
 {% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/monthly-payroll.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
@@ -124,7 +124,7 @@
 </div><div class="monthly-review-amounts">{% if worksheet_rows %}
   <section class="card mb-4"><div class="card-body">
     <h2>Employee pay · ETB</h2>
-    <p class="small text-muted mt-2">Saved payroll for {{ run.run_date.strftime('%B %Y') }} (Gregorian). Later worksheet edits do not change these figures. Approval does not send payment.</p>
+    <p class="small text-muted mt-2">Saved payroll for {{ eth_period(run.run_date) }}. Later worksheet edits do not change these figures. Approval does not send payment.</p>
     {% set issue_ids = (sorted_issues or [])|map(attribute='employee_id')|list %}
     {% set finding_ids = (validation_results or [])|rejectattr('overridden')|rejectattr('severity', 'equalto', 'HINT')|map(attribute='employee_id')|list %}
     <div class="monthly-review-tools" id="review-employee-tools" hidden>

@@ -68,13 +68,20 @@ def invalidate_tax_cache():
 
 
 def _D(value) -> Decimal:
-    """Safely convert any numeric type to Decimal."""
+    """Safely convert any numeric type to Decimal.
+
+    Non-finite values (NaN, Infinity) raise ValueError: money must be finite.
+    """
     if isinstance(value, Decimal):
-        return value
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, ValueError):
-        return Decimal('0')
+        d = value
+    else:
+        try:
+            d = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            return Decimal('0')
+    if not d.is_finite():
+        raise ValueError(f'Money value must be finite, got: {d}')
+    return d
 
 
 def _get_brackets_and_relief(for_date=None):

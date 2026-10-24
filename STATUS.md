@@ -1,4 +1,4 @@
-﻿# STATUS.md — Command-Verified State
+# STATUS.md — Command-Verified State
 
 ## CURRENT NEON DATABASE MIGRATION (PRODUCTION DB CUTOVER) — 2026-10-21
 
@@ -8,6 +8,209 @@
 - **Password hygiene**: the first Neon connection password became visible in the agent tool transcript during capture, so it was rotated via the Neon console role action (uploaded `.env` receipt used to rebuild the secret locally, never printed in-repo), and `DATABASE_URL` was updated again on the web service and redeployed. Direct-connect and pooled variants are saved only under the protected local secrets directory.
 - Production proofs after cutover: `/readyz` HTTP 200 `{"checks":{"database":"up","migrations":"current","schema":"current","self":"up"},"status":"ready"}`; mobile-format browser session (same CDP profile as the October trial) signed in with the synthetic trial account — dashboard shows `Rc Trial Company`, 2 employees, run `PR-2019-01-005` with gross 20,680 / tax 3,202 / net 16,044, and the Ethiopian/Gregorian date header renders — full read path (auth, tenant scoping, dashboards) works against Neon.
 - Limits / open items: the Oct-3-updated Neon Free plan gives 1 GB per-project storage (current usage ≈ 0.1 GB), 100 CU-hours per month per project at 0.25 CU (scale-to-zero after 5 minutes idle adds a few-hundred-ms cold connection after idle), 6-hour instant-restore history and 1 manual snapshot — so automated dumps remain the backup story (weekly Task-Scheduler dump is the next step, then nightly). The local dumps on disk are now the only backups newer than the cutover neighborhood. PDF worker execution remains unproven on production (`worker: "unknown"`; no Redis/worker service exists) — the queued $0 in-process-worker plan addresses it. Render logs may still hold the pre-rotation Neon password in plaintext at the engine level (DB drivers log DSNs redacted; Render env values are masked) — rotation invalidated the exposed value regardless.
+
+## CURRENT CSV IMPORT ROUND-TRIP REPAIR — 2026-10-21
+
+- Same worktree/branch as the money-math slice (`feature/money-math-gaps`,
+  previous commit `d5163ca`). `payroll_engine/services/payroll_workflow.py`
+  (the `/payroll` upload path) previously read CSVs with plain `utf-8`, while
+  the shipped template (`/payroll/template`) explicitly writes a UTF-8 BOM and
+  leads with two `#` comment rows and blank lines: `csv.DictReader` then
+  treated the first comment as the header row, so re-uploading the app's own
+  template failed with "Missing required columns" — the exact
+  download-in-Excel, fill-Amharic-names, re-upload journey broke by design.
+- Fix: read with `utf-8-sig` (BOM stripped) and a
+  `_template_comment_or_blank()` pre-scan that skips blank, whitespace and
+  `#`/quoted-`#` lines before `DictReader`. The quoted case matters because
+  the template's second comment contains commas, so `csv.writer` emits it
+  quoted (`"# supported banks: cbe, dashen, awash, telebirr"`); a plain
+  `startswith('#')` test missed it (interactive repro recorded this).
+  `/payroll/import` (utf-8-sig already) and Excel paths were untouched.
+- New focused tests in `tests/test_payroll_workflow.py`: shipped-template
+  round-trip (byte-faithful reconstruction of the route's own content),
+  Amharic names pass through unchanged, `"6,000"` comma salary is an explicit
+  row error rather than a silent skip, blank/comment/whitespace lines
+  anywhere are skipped, header-only file, extra columns pass through.
+- Review ask "double-tap approve = one payroll" and "two admins editing the
+  same payroll" were found ALREADY covered by existing suites — recorded as
+  receipts, not re-tests: `tests/test_pg_worksheet_journey.py` (approve retry
+  after success → 302 with exactly one payslip row and exactly one
+  `payroll_run_completed` audit row) and `tests/test_pg_spreadsheet_inputs.py`
+  (concurrent saves produce one input+change audit, foreign-employee batch
+  rejected without writes, tenant ownership enforced, submitted worksheet
+  refuses changes, autosave preserves saved adjustments). Tenant
+  cross-access: `tests/test_p0a_tenant_isolation.py` covers real
+  cross-company read attempts at model+route level.
+- Verbatim receipts this slice: tests
+  `test_payroll_workflow.py test_csv_upload_hardening.py
+  tests/test_excel_money_validation.py` → `31 passed, 4 warnings in 29.05s`
+  (final run); `test_e2e_full.py test_smoke_e2e.py
+  test_integration_payroll_flow.py` → `5 passed, 5 warnings in 13.55s`; ruff
+  check/format pass on both changed files. PostgreSQL proof (disposable PG16
+  at 127.0.0.1:55439, Alembic-migrated generated databases, password held
+  outside the repo): `tests/test_pg_spreadsheet_inputs.py
+  tests/test_pg_worksheet_journey.py tests/test_pg_corrections.py` →
+  `48 passed, 74 warnings in 159.43s (0:02:39)` — this is the
+  money/concurrency/tenant approval proof at the real database level for the
+  money-math branch, satisfying the standing "PostgreSQL/Alembic proof"
+  requirement for the covered guarantees.
+
+## CURRENT MONEY-MATH EDGE GUARDS — 2026-10-21
+
+- Worktree `C:\Users\25191\AppData\Local\Temp\opencode\payroll-money-gaps`, branch
+  `feature/money-math-gaps` @ `27539f1` (origin/main, recovery-drill receipt).
+  Derived from the launch-readiness review's money-math list. Settlement
+  prorating: `calculate_outstanding_salary` now counts days from the hire date
+  when the employee joined inside the final month (was calendar
+  `end_date.day`, which paid 26/30 for a 20th-of-month hire terminated on the
+  26th), splits basic vs allowances so pension is taken on the PRORATED basic
+  share instead of full-month basic, and the statutory leave-encashment
+  fallback now uses `leave.calculate_annual_entitlement` (Art. 77: 16 days,
+  +1 per 2 years, capped) instead of the divergent `14 + years`. The dead
+  `calculate_prorated_salary` (zero callers) now treats a fully worked
+  February (28/29 days) as a full pay month instead of 28/30.
+- Non-finite guards: `_D()` in `payroll.py`, `tax.py`, `overtime.py`,
+  `pension.py`, `severance.py` now raises `ValueError` on NaN/Infinity
+  instead of silently producing NaN/Infinity money amounts.
+- New tests: `tests/test_money_guards.py` (non-finite rejects, 0/500/500k
+  salaries, net never negative, determinism, daily-worker, full-Feb prorata)
+  and `tests/test_settlement_edges.py` (last-day Feb/leap Feb/31st/Dec full
+  salary, hire-relative proration, prorated pension, Art. 77 fallback +
+  LeaveBalance precedence, settlement determinism). Verbatim:
+  `42 passed, 4 warnings in 15.43s`.
+- Regression selections (verbatim): `tests/test_tax.py tests/test_payroll.py
+  tests/test_overtime.py tests/test_overtime_integration.py
+  tests/test_severance.py tests/test_services.py tests/test_deductions.py
+  tests/test_adjustment.py tests/test_calculation_flow.py
+  tests/test_configurable_rules.py` → `158 passed, 4 warnings in 121.60s
+  (0:02:01)`; `test_input_validation.py test_validation_phase2.py
+  test_p0a_tenant_isolation.py test_payroll_draft.py test_period_and_lock.py`
+  → `72 passed, 4 warnings in 89.14s (0:01:29)`; `test_payroll_workflow.py
+  test_integration_payroll_flow.py test_p0c_idempotency.py
+  test_gate_payroll_immutability.py test_undo_approval.py` → `28 passed,
+  5 warnings in 21.82s`. Stale comment in `tests/test_services.py` updated to
+  Art. 77 counts (assertion unchanged).
+- Ruff 0.17.1 check and format --check pass for all changed/new files.
+- Limits and open findings (not fixed, require practitioner decision): (1)
+  SQLite-focused; PostgreSQL/Alembic proof for the money paths is still owed
+  before any merge claim (hosted CI only runs for PRs to main); (2) net pay
+  can go negative from post-tax deductions inside `calculate_payroll`, but
+  every approval path BLOCKs via `validation.py` — capping imports
+  court-order policy, so left to the owner; (3) adjustment bonus tax treats
+  the bonus as standalone monthly income (`calculate_tax(amount)`) instead of
+  marginal tax on the month's combined income — needs accountant sign-off;
+  (4) overtime hourly rate is quantized to 2dp before multiplication
+  (`72.115… → 72.12`), a small systematic rounding bias; (5) settlement
+  `net_final_payment` is not floored at zero when pending deductions exceed
+  earnings; (6) no hosted run: feature branches receive no CI.
+
+## CURRENT ETHIOPIAN-CALENDAR-FIRST — 2026-10-21
+
+Branch `feature/ethiopian-calendar-first` off `origin/main` `27539f1` (separate
+worktree; the money-math branch stays untouched in PR #22).
+
+- **Shipping calendar-converter bug found and fixed.** The user request was
+  "make sure we are using the Ethiopian calendar first, not Gregorian". While
+  auditing, the shipped `payroll_engine/ethiopian_calendar.py` converter was
+  found wrong: its 1461-day cycle indexing placed the 366-day year on
+  years ≡ 0 (mod 4) instead of the true leap years ≡ 3 (mod 4), which shifted
+  day labels for extended windows. Cross-checked against the classic Ethiopic
+  JDN formula over a 2020-01-01→2035-12-31 sweep: 1,460 of 5,844 sampled days
+  mismatched (≈25%), including every day in Jan 2020 (one-day shift). The old
+  `test_leap_year_2015` encoded the wrong belief ("Sep 11, 2023 = Meskerem 1,
+  2016"); world-verified reality is the opposite: Meskerem 1, 2016 EC fell on
+  **September 12, 2023** (Ethiopian News Agency: "the 2016 Ethiopian New Year
+  that started on the 12th of September"; Wikipedia Enkutatash: Sep 12 after
+  each Ethiopian leap year; timeanddate concurs). Converter rewritten with the
+  classic JDN formula (epoch 1723856); all world anchors verified: Sep 11,
+  2025 = Meskerem 1, 2018; Sep 11, 2026 = Meskerem 1, 2019; Sep 11, 2023 =
+  Pagume 6, 2015; Sep 12, 2023 = Meskerem 1, 2016; Sep 11, 2027 = Pagume 6,
+  2019; Sep 12, 2027 = Meskerem 1, 2020.
+- **Test rewrite**: `tests/test_ethiopian_calendar.py` corrected
+  (`test_leap_year_2015` now asserts Pagume 6 on Sep 11, 2023 and New Year on
+  Sep 12, 2023, citing ENA) and extended: 2019 leap boundary (Sep 11/12,
+  2027), the 2019 New-Year anchor, a collision-free whole-years property
+  sweep (EC 2012-2027: every year exactly 365/366 days, months 1-12 always
+  30 days, Pagume 5-or-6 shape) and preserved mid-year anchors (Jul 7, 2026 =
+  Sene 30, 2018; Jan 1, 2026 = Tahsas 23, 2018).
+- **Ethiopian-first everywhere it was Gregorian-first/dead-Gregorian.** The
+  app already had dual-calendar context helpers (`eth_date` renders
+  "Amharic ETH (Gregorian MM DD, YYYY)") used by most money/employee pages.
+  Remaining Gregorian-only/Gregorian-first sites were converted:
+  `components/monthly_payroll.html` (journey period dl now Ethiopian row
+  first), `payroll_review_workspace.html` (page title + "Saved payroll for"
+  sentence now use `eth_period` = "MONTH YYYY ዓ.ም. · Gregorian Month YYYY"),
+  `payroll_comparison.html` (4 run comparisons incl. chart labels),
+  `historical_import.html` (period fallback + created date),
+  `settlement_detail.html` (termination/worked dates, outstanding-salary
+  month header, created/paid dates), `leave_management.html` (leave range +
+  applied date), `billing.html` (trial end), `welcome.html` (example card now
+  titled "Tikimt 2019 ዓ.ም." with Gregorian fallback), Python producers:
+  `change_summary.py` retained-comparison period labels, `pdf.py` payslip
+  period label (replacing "(Gregorian)" suffix with the same dual label),
+  `payroll_bp.py` approval narrative (+ :2321 spreadsheet period context).
+  New context helper `eth_period` in `app/__init__.py` built on the shared
+  `format_ethiopian_period`. Admin/support audit timestamps keep Gregorian
+  date+time on purpose (ops metadata, time-of-day relevant); bank/ERCA
+  export files stay Gregorian on purpose (legal filings are Gregorian) —
+  recorded as deliberate, not omissions.
+- **Receipts**: `tests/test_ethiopian_calendar.py tests/
+  test_ethiopian_first_ui.py` → `22 passed in 5.43s`; change/narrative/pdf/
+  period/e2e SQLite batch → `87 passed, then 25 passed`; full review-page
+  ordering is pinned at HTTP level in
+  `tests/test_pg_worksheet_journey.py` (asserts `Saved payroll for {eth
+  period}` and absence of the old " (Gregorian)" suffix); PostgreSQL proof
+  (disposable PG16 at 127.0.0.1:55439): `test_pg_worksheet_journey.py
+  test_pg_monthly_journey.py test_pg_monthly_ui.py` → `32 passed, 68
+  warnings in 118.06s`, plus the rerun single journey after the new
+  assertion → `1 passed in 10.00s`. ruff check/format clean on all changed
+  files. BOM hygiene note: a template edit via PowerShell `Set-Content`
+  briefly introduced a UTF-8 BOM + mojibake into `leave_management.html`;
+  caught, reverted and redone with byte-clean edits (verified first bytes
+  `7B 25 20` `{% ` — no BOM, matching sibling templates).
+- **Review pass 2 (remaining Gregorian fallbacks).** Three more period labels
+  were still Gregorian-only and are now Ethiopian-first with Gregorian
+  fallback text supplied by `format_ethiopian_period`: `main.py` dashboard
+  "last month" summary, `selfservice_bp.py` employee-portal YTD rows, and the
+  `pdf.py` payslip period default (`emp.get('period') or
+  format_ethiopian_period(date.today())`). A stray UTF-8 BOM left in
+  `settlement_detail.html` by the earlier PowerShell edit was removed
+  (first bytes verified `7B 25 20`).
+- **Review pass 2 receipts**: `tests/test_employee_portal.py
+  tests/test_dashboard_api.py` → `14 passed in 33.07s`; broader SQLite batch
+  incl. `test_ac10_pdf.py` → `60 passed in 72.37s`; ruff check/format clean
+  on `payroll_engine` (85 files). PostgreSQL re-proof after a local PG outage
+  (cluster restored on the disposable port; UTF-8 database `payroll_test`):
+  `test_pg_worksheet_journey.py test_pg_monthly_journey.py
+  test_pg_monthly_ui.py` → `32 passed, 69 warnings in 137.56s`;
+  `test_pg_import_money.py` → `8 passed, 20 warnings in 27.68s`.
+- **Review pass 3 (self-review of the branch diff).** Found and fixed four
+  real gaps in the earlier passes: (1) `tasks.py` overwrote the payslip PDF
+  period with `'%B %Y (Gregorian)'` whenever a published worksheet snapshot
+  existed, silently undoing the `pdf.py` fix — now
+  `format_ethiopian_period(period_start)`; (2) the ERCA-deadline push body
+  and the payroll-summary email (`scheduled.py`) still printed Gregorian
+  months — both now Ethiopian-first; (3) `tasks.py` snapshot fallback and
+  `proactive.py` "Draft payroll for 2019-02 is ready!" exposed the machine
+  period key to users — now the Ethiopian-first label (the DB key is
+  unchanged); (4) the earlier "BOM fix" had left real mojibake committed in
+  `leave_management.html` (`â€”`) and `settlement_detail.html` (`Â·`, `Ã—`) —
+  all five spots corrected to `—`, `·`, `×`, files re-verified byte-clean
+  (first bytes `7B 25 20`). Approval narrative reworded to "Saved payroll
+  for <period> includes ...". Receipts after fixes: `test_proactive.py
+  test_change_summary.py test_ac10_pdf.py test_pdf_failure.py
+  test_rq_pdf.py test_notifications_webhooks.py` → `85 passed in 72.01s`;
+  PG16 `test_pg_worksheet_journey.py test_pg_monthly_journey.py` → `23
+  passed, 50 warnings in 54.62s`; `test_ac10_pdf.py
+  test_ethiopian_calendar.py test_ethiopian_first_ui.py` → `23 passed`.
+  Known remaining (deliberate): bank/ERCA export files and admin audit
+  timestamps stay Gregorian; `payroll_register.html` "Generated:" renders
+  empty because `now` is not in the template context (pre-existing, not a
+  calendar issue); `tests/test_profile_changes.py`, `test_rate_limiting.py`
+  and `test_security_wave1.py` contain pre-existing mojibake from main,
+  untouched.
+
+
 
 ## CURRENT RECOVERY DRILL (ACTIVITY 4) — 2026-10-20
 

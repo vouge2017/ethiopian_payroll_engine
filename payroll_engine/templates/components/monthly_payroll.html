@@ -8,8 +8,8 @@
 
 {% macro period(start) -%}
 <dl class="monthly-period" aria-label="Payroll period in both calendars">
-  <div><dt>Gregorian</dt><dd>{{ start.strftime('%b %d, %Y') }} – {{ payroll_month_end(start).strftime('%b %d, %Y') }}</dd></div>
-  <div><dt>Ethiopian</dt><dd>{{ eth_only(start) }} – {{ eth_only(payroll_month_end(start)) }}</dd></div>
+  <div><dt>Ethiopian</dt><dd>{{ eth_only(start) }} — {{ eth_only(payroll_month_end(start)) }}</dd></div>
+  <div><dt>Gregorian</dt><dd>{{ start.strftime('%b %d, %Y') }} — {{ payroll_month_end(start).strftime('%b %d, %Y') }}</dd></div>
 </dl>
 {%- endmacro %}
 

@@ -162,6 +162,14 @@ Fatima Mohamed	0944567890	15000"
             <h1 class="onboarding-form-title">Employees Imported!</h1>
             <p class="onboarding-form-subtitle" id="import-summary"></p>
 
+            <div id="import-warnings" class="onboarding-field" style="max-width: 672px; margin: 0 auto; text-align: left; display: none;">
+                <div class="alert alert-warning" style="border-radius: var(--radius-lg); font-size: var(--text-sm);">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong id="import-warning-count"></strong>
+                    <ul id="import-warnings-list" class="mb-0 mt-2" style="padding-left: 1.5em;"></ul>
+                </div>
+            </div>
+
             <div class="onboarding-actions" style="justify-content: center; margin-top: var(--space-8);">
                 <a href="{{ url_for('main.index') }}" class="onboarding-btn-next" style="text-decoration: none;">
                     Go to Dashboard
@@ -362,11 +370,33 @@ async function importEmployees() {
         const data = await resp.json();
 
         if (data.status === 'ok') {
-            document.getElementById('import-summary').textContent =
-                `${data.imported} employees imported successfully. ${data.total_errors > 0 ? data.total_errors + ' rows had errors.' : ''} You can now run payroll.`;
+            let summary = `${data.imported} employees imported successfully.`;
+            if (data.total_errors > 0) summary += ` ${data.total_errors} row(s) skipped.`;
+            if (data.total_warnings > 0) summary += ` ${data.total_warnings} row(s) imported without a phone.`;
+            document.getElementById('import-summary').textContent = summary + ' You can now run payroll.';
+
+            // Surface per-row warnings and errors inside the success screen
+            const issues = (data.warnings || []).concat(data.errors || []);
+            const totalIssues = (data.total_warnings || 0) + (data.total_errors || 0);
+            const warnDiv = document.getElementById('import-warnings');
+            if (totalIssues > 0) {
+                document.getElementById('import-warning-count').textContent = `${totalIssues} row(s) need attention:`;
+                document.getElementById('import-warnings-list').innerHTML = issues.map(escapeHtml).map(e => `<li>${e}</li>`).join('');
+                warnDiv.style.display = 'block';
+            } else {
+                warnDiv.style.display = 'none';
+            }
+
             document.getElementById('step-2').style.display = 'none';
             document.getElementById('step-3').style.display = 'block';
             updateStepper(4);
+        } else if (data.status === 'error' && (data.errors || data.warnings)) {
+            let msg = data.message || 'Import failed.';
+            const issues = (data.errors || []).concat(data.warnings || []);
+            if (issues.length > 0) msg += '\n\n' + issues.map(escapeHtml).join('\n');
+            alert('Import failed: ' + msg);
+            btn.disabled = false;
+            btn.innerHTML = `Import ${parsedEmployees.length} Employees <span class="material-symbols-outlined">check_circle</span>`;
         } else {
             alert('Import failed: ' + (data.message || 'Unknown error'));
             btn.disabled = false;
@@ -377,6 +407,10 @@ async function importEmployees() {
         btn.disabled = false;
         btn.innerHTML = `Import ${parsedEmployees.length} Employees <span class="material-symbols-outlined">check_circle</span>`;
     }
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 </script>
 {% endblock %}

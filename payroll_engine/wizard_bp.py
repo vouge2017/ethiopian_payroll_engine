@@ -41,23 +41,35 @@ def quick_import():
     company_id = _company_id()
     imported = 0
     errors = []
+    warnings = []
 
-    # Count once before loop (avoids N+1 queries)
-    existing_count = Employee.query.filter_by(company_id=company_id, is_deleted=False).count()
+    # Collect ALL employee IDs ever used for this company (including
+    # soft-deleted) once before the loop — generated IDs must never collide
+    # with uq_employee_company_empid.
+    used_ids = {
+        row[0]
+        for row in Employee.with_deleted().filter_by(company_id=company_id).with_entities(Employee.employee_id).all()
+    }
+    next_num = 1
 
     for i, emp_data in enumerate(employees):
         name = (emp_data.get('name') or '').strip()
         phone_raw = (emp_data.get('phone') or '').strip()
         salary_raw = emp_data.get('salary', 0)
 
-        # Validate phone if provided
+        # Validate phone if provided. Accept the 10-digit form people paste
+        # from phones (e.g. 0911234567) by stripping the leading 0 first.
         phone = None
+        phone_error_msg = None
         if phone_raw:
-            is_valid, normalized_phone, phone_error = validate_ethiopian_phone(phone_raw)
-            if not is_valid:
-                errors.append(f'Row {i + 1}: {phone_error}')
-                continue
-            phone = normalized_phone
+            candidate = phone_raw[1:] if phone_raw.startswith('0') else phone_raw
+            is_valid, normalized_phone, phone_error = validate_ethiopian_phone(candidate)
+            if is_valid:
+                phone = normalized_phone
+            else:
+                # An unfixable phone must not block the import: save the
+                # employee without a phone and warn.
+                phone_error_msg = phone_error
 
         if not name:
             errors.append(f'Row {i + 1}: missing name')
@@ -72,8 +84,15 @@ def quick_import():
             errors.append(f'Row {i + 1}: invalid salary "{salary_raw}"')
             continue
 
-        # Generate employee ID
-        emp_id = f'EMP{(existing_count + imported + 1):03d}'
+        # Generate next unused employee ID (skips soft-deleted employees too)
+        while f'EMP{next_num:03d}' in used_ids:
+            next_num += 1
+        emp_id = f'EMP{next_num:03d}'
+        used_ids.add(emp_id)
+        next_num += 1
+
+        if phone_error_msg:
+            warnings.append(f'Row {i + 1}: imported without phone ({phone_error_msg})')
 
         emp = Employee(
             employee_id=emp_id,
@@ -89,11 +108,18 @@ def quick_import():
 
     db.session.commit()
 
-    return jsonify(
-        {
-            'status': 'ok',
-            'imported': imported,
-            'errors': errors[:10],  # Return first 10 errors
-            'total_errors': len(errors),
-        }
-    )
+    response = {
+        'imported': imported,
+        'errors': errors[:10],  # Return first 10 errors
+        'total_errors': len(errors),
+        'warnings': warnings[:10],  # Return first 10 warnings
+        'total_warnings': len(warnings),
+    }
+
+    if imported == 0:
+        response['status'] = 'error'
+        response['message'] = 'No employees were imported.'
+        return jsonify(response), 422
+
+    response['status'] = 'ok'
+    return jsonify(response)

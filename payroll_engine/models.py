@@ -888,16 +888,38 @@ class EmployeeAllowance(db.Model):
     @property
     def calculated_exempt_amount(self):
         """Calculate the tax-exempt portion of this allowance."""
-        from decimal import Decimal
+        from decimal import ROUND_HALF_UP, Decimal
 
         if self.tax_treatment == self.TAX_TAXABLE:
             return Decimal('0')
         if self.tax_treatment == self.TAX_EXEMPT:
             return self.amount
-        # Partial exemption - apply cap
-        if self.exempt_cap_amount:
-            return min(self.amount, self.exempt_cap_amount)
-        return Decimal('0')
+        # Partial exemption - apply cap(s). When both a flat ETB cap and a
+        # percent-of-salary cap are set, the exempt part is capped by the
+        # LOWER of the two (e.g. transport: lower of ETB 2,200 or 25% of basic).
+        cap_amount = self.exempt_cap_amount
+        cap_percent = self.exempt_cap_percent
+        if cap_amount is None and cap_percent is None:
+            return Decimal('0')
+        caps = [Decimal(self.amount)]
+        if cap_amount is not None:
+            caps.append(Decimal(cap_amount))
+        if cap_percent is not None:
+            salary = self._percent_cap_salary()
+            percent_cap = (salary * Decimal(cap_percent) / Decimal('100')).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+            caps.append(percent_cap)
+        return min(caps)
+
+    def _percent_cap_salary(self):
+        """Salary the exempt_cap_percent applies to (basic_salary by default)."""
+        employee = self.employee
+        if employee is None:
+            return Decimal('0')
+        if (self.exempt_cap_basis or 'basic_salary') == 'gross_salary':
+            return Decimal(employee.gross_salary or 0)
+        return Decimal(employee.basic_salary or 0)
 
     @property
     def taxable_amount(self):

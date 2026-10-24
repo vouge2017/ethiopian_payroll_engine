@@ -15,6 +15,7 @@ Q = Decimal('0.01')
 # Regulatory caps (Ethiopian tax law)
 TRANSPORT_EXEMPT_CAP_ETB = Decimal('2200')
 TRANSPORT_EXEMPT_CAP_PERCENT = Decimal('0.25')  # 25% of basic salary
+TRANSPORT_EXEMPT_CAP_PERCENT_OF_BASIC = Decimal('25')  # stored as percent of basic salary
 
 
 def get_effective_allowances(employee: Employee) -> list[EmployeeAllowance]:
@@ -79,6 +80,7 @@ def add_allowance_for_employee(
     exempt_cap: Decimal | None = None,
     regulation_ref: str | None = None,
     custom_type_name: str | None = None,
+    exempt_cap_percent: Decimal | None = None,
     db_session=None,
 ) -> EmployeeAllowance:
     """Add an allowance to an employee with proper tax treatment.
@@ -101,9 +103,13 @@ def add_allowance_for_employee(
     """
     # Auto-apply regulatory rules for known types
     if allowance_type == 'transport':
-        cap = calculate_transport_exempt_amount(Decimal(str(employee.basic_salary)), amount)
+        # Tax-free part: the LOWER of ETB 2,200 or 25% of basic salary.
+        # Store BOTH caps so the cap re-evaluates if the salary changes.
         tax_treatment = 'partial'
-        exempt_cap = cap
+        exempt_cap = exempt_cap if exempt_cap is not None else TRANSPORT_EXEMPT_CAP_ETB
+        exempt_cap_percent = (
+            exempt_cap_percent if exempt_cap_percent is not None else TRANSPORT_EXEMPT_CAP_PERCENT_OF_BASIC
+        )
         regulation_ref = regulation_ref or 'Income Tax Proclamation - Transport Allowance Exemption'
 
     elif allowance_type == 'hardship':
@@ -130,6 +136,7 @@ def add_allowance_for_employee(
         amount=amount,
         tax_treatment=tax_treatment,
         exempt_cap_amount=exempt_cap,
+        exempt_cap_percent=exempt_cap_percent,
         regulation_reference=regulation_ref,
         is_active=True,
     )

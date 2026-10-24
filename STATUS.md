@@ -1,5 +1,18 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT CSV EMPLOYEE ID HASH PRESERVATION (WORK ORDER 28) — 2026-10-24
+
+- `payroll_engine/services/payroll_workflow.py` previously filtered all lines starting with `#` using `_template_comment_or_blank()`. While this correctly skipped template preamble comments before headers, it silently discarded valid data rows where `employee_id` started with `#` (e.g. `#EMP001` or `"#EMP001"`).
+- Fix: `_template_comment_or_blank()` now applies only to leading preamble lines prior to encountering the header row. For subsequent lines, `_is_comment_or_blank_row()` distinguishes genuine single-field comment lines from multi-column data rows, preserving employee rows whose ID begins with `#`.
+- Tests: `test_parse_csv_employee_ids_starting_with_hash` in `tests/test_payroll_workflow.py` proves both raw `#EMP001` and quoted `"#EMP002"` rows parse with correct basic salary and allowances. Combined test suite: `tests/test_payroll_workflow.py tests/test_csv_upload_hardening.py tests/test_demo_and_template.py` → `45 passed, 4 warnings in 80.73s`.
+
+## CURRENT RQ IN-PROCESS WORKER SIGNAL & DEATH PENALTY REPAIR (PR #27) — 2026-10-24
+
+- Merged to `main` as `06fb6bb6ff7fdccb16b3a966bb3ffd43097dcc7d` ([PR #27](https://github.com/vouge2017/ethiopian_payroll_engine/pull/27)).
+- Fix: `payroll_engine/inprocess_worker.py` sets `death_penalty_class = TimerDeathPenalty` (threading.Timer-based) on `ThreadWorker` and overrides `_install_signal_handlers = lambda self: None`. Resolves `ValueError: signal only works in main thread of the main interpreter` and `UnixSignalDeathPenalty` SIGALRM crash in non-main threads under RQ 2.x, plus fixes `Job.id` property access.
+- Local verification: `tests/test_inprocess_worker.py tests/test_rq_pdf.py` → `17 passed, 4 warnings in 10.85s`.
+- Hosted CI verification: all 7 checks passed on commit `9ed8de4` before merge (GitGuardian Security Checks, Ruff lint/format, migration-tests 3.11/3.12, test 3.11/3.12, test-postgres).
+
 ## CURRENT NEON DATABASE MIGRATION (PRODUCTION DB CUTOVER) — 2026-10-21
 
 - The live production service no longer uses the expiring Render free PostgreSQL. The web service `srv-d91t12u7r5hc738taug0` now connects to a **Neon** Free-plan Postgres project `EthioPayroll` (branch `production`, database `neondb`, AWS US West 2/Oregon — co-located with the Render web service region; user chose the region explicitly). Neon Free has no expiry clause and does not delete data, replacing the Render free DB that was set to expire 30 Oct 2026 (`+14-day` grace). The old Render PostgreSQL (`dpg-daufdenlot8c73auad8g-a`) is left untouched as a frozen fallback until it lapses.

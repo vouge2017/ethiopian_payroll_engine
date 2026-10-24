@@ -25,6 +25,27 @@ def _template_comment_or_blank(line: str) -> bool:
     return s.startswith('#')
 
 
+def _is_comment_or_blank_row(line: str, required_col_count: int = 4) -> bool:
+    """True for comment or blank lines after headers, but False for data rows starting with '#'.
+
+    Data rows with an employee ID starting with '#' (e.g. '#EMP001' or '"#EMP001"')
+    have multiple columns matching the CSV table schema. Genuine comments have fewer
+    columns than the required schema.
+    """
+    s = line.strip()
+    if not s:
+        return True
+    if not (s.startswith('#') or (s.startswith('"') and s.lstrip('"').lstrip().startswith('#'))):
+        return False
+    try:
+        import csv as _csv
+
+        row = next(_csv.reader([line]))
+        return len(row) < required_col_count
+    except Exception:
+        return True
+
+
 def parse_and_calculate_payroll(filepath: str) -> tuple[list[dict], list[str]]:
     """Parse a CSV or Excel file and calculate payroll for each row.
 
@@ -57,15 +78,26 @@ def parse_and_calculate_payroll(filepath: str) -> tuple[list[dict], list[str]]:
         # utf-8-sig: the shipped template and Excel round-trips carry a BOM;
         # plain utf-8 would leave \ufeff fused into the first header key.
         f_handle = open(filepath, newline='', encoding='utf-8-sig')
-        # The shipped template leads with '#' comment rows and blank lines;
-        # DictReader would treat the first comment as the header row, so
-        # strip those lines before reading.
-        csv_lines = [line for line in f_handle if not _template_comment_or_blank(line)]
+        # Skip leading template comments and blank lines before the header row,
+        # but preserve data rows whose employee_id begins with '#'.
+        required = ['employee_id', 'name', 'basic_salary', 'allowances']
+        csv_lines = []
+        header_found = False
+        for line in f_handle:
+            if not header_found:
+                if _template_comment_or_blank(line):
+                    continue
+                header_found = True
+                csv_lines.append(line)
+            else:
+                if _is_comment_or_blank_row(line, len(required)):
+                    continue
+                csv_lines.append(line)
+
         reader = csv_module.DictReader(csv_lines)
         if not reader.fieldnames:
             f_handle.close()
             raise ValueError('CSV file is empty or has no headers')
-        required = ['employee_id', 'name', 'basic_salary', 'allowances']
         missing = [col for col in required if col not in reader.fieldnames]
         if missing:
             f_handle.close()

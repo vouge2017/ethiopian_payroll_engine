@@ -200,6 +200,31 @@ def test_parse_blank_and_comment_lines_skipped(app):
         os.unlink(fname)
 
 
+def test_parse_csv_employee_ids_starting_with_hash(app):
+    """Employee IDs beginning with '#' (raw or quoted) are preserved as data rows."""
+    with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:
+        f.write('# Shipped template comment before header\n')
+        f.write('"# supported banks: cbe, dashen, awash, telebirr"\n')
+        f.write('\n')
+        f.write('employee_id,name,basic_salary,allowances\n')
+        f.write('#EMP001,Dawit Mekonnen,10000,2000\n')
+        f.write('# A comment between rows\n')
+        f.write('"#EMP002",Sara Tadesse,12000,1500\n')
+        fname = f.name
+    try:
+        data, errors = parse_and_calculate_payroll(fname)
+        assert errors == []
+        assert len(data) == 2
+        assert data[0]['id'] == '#EMP001'
+        assert data[0]['name'] == 'Dawit Mekonnen'
+        assert data[0]['basic'] == 10000.0
+        assert data[1]['id'] == '#EMP002'
+        assert data[1]['name'] == 'Sara Tadesse'
+        assert data[1]['basic'] == 12000.0
+    finally:
+        os.unlink(fname)
+
+
 def test_parse_header_only_csv(app):
     """A well-formed file with headers but no data rows yields no employees."""
     with tempfile.NamedTemporaryFile(suffix='.csv', delete=False, mode='w', encoding='utf-8') as f:

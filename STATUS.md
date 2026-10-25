@@ -1,5 +1,15 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT API ROLE GUARDS, TRANSPORT EXEMPT CAP & QUICK-START REPAIRS (PR #29) — 2026-10-25
+
+- Merged to `main` as `f335bf22490ede3bd7af90daa67b8b9ab7a555e8` ([PR #29](https://github.com/vouge2017/ethiopian_payroll_engine/pull/29)) from `9a49f886578282567611935c1210124b0749902a` + `31bc96e3f9095697c73db7af3d4640cf449c6c94`.
+- API role guards (`payroll_engine/api.py`, `tests/test_api_role_guards.py`): employee/payroll-run read endpoints are owner/accountant only (403 for employee role); non-staff payslip download is scoped to the employee's own payslip (404 otherwise).
+- Tax-free transport allowance cap (`payroll_engine/payroll_elements.py`, `payroll_engine/services/allowance_service.py`, `payroll_engine/models.py`, `tests/test_exempt_cap.py`): the exempt amount is now the LOWER of ETB 2,200 or 25% of basic salary (basic 5,000 + transport 2,000 → 1,250 exempt; basic 18,000 + transport 3,000 → 2,200 exempt).
+- Quick Start wizard repairs (`payroll_engine/wizard_bp.py`, `payroll_engine/templates/quick_start.html`, `tests/test_quick_start_bugs.py`): leading-zero phone paste (e.g. 0911234567) is accepted by stripping the leading 0, with a warning path when a phone cannot be normalized, and generated employee IDs skip every ID ever used for the tenant including soft-deleted rows (`test_import_ids_skip_soft_deleted`).
+- `31bc96e` standardizes the `tests/test_api_role_guards.py` passwords so GitGuardian does not flag generic test passwords.
+- Fresh local receipts at HEAD `31bc96e` (2026-10-25): `tests/test_api_role_guards.py tests/test_exempt_cap.py tests/test_quick_start_bugs.py` → `31 passed, 5 warnings in 33.61s`; ruff 0.17.1 check → `All checks passed!` and format --check → `8 files already formatted` on the slice's eight Python files.
+- Limits: hosted CI checks for PR #29 were not verifiable from this machine (GitHub CLI unauthenticated; commit check-runs API unreachable) — no hosted receipt is recorded for this merge. The transport exempt cap is statutory money math proven only at SQLite level; PostgreSQL/Alembic proof for it remains owed per the standing rule.
+
 ## CURRENT CSV EMPLOYEE ID HASH PRESERVATION (WORK ORDER 28) — 2026-10-24
 
 - `payroll_engine/services/payroll_workflow.py` previously filtered all lines starting with `#` using `_template_comment_or_blank()`. While this correctly skipped template preamble comments before headers, it silently discarded valid data rows where `employee_id` started with `#` (e.g. `#EMP001` or `"#EMP001"`).

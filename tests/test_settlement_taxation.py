@@ -52,6 +52,7 @@ from payroll_engine.models import (
 from payroll_engine.services import settlement_service
 from payroll_engine.services.settlement_service import (
     NO_LEAVE_RECORD_WARNING,
+    PENDING_CONFIRMATION_NOTICE,
     calculate_settlement,
     create_settlement_record,
 )
@@ -123,6 +124,7 @@ def test_example_a_pension_before_tax(setup, monkeypatch):
     assert r['tax_on_termination_payments'] == Decimal('5562.17')
     assert r['net_final_payment'] == Decimal('18926.16')
     assert r['warnings'] == []
+    assert r['calculation_details']['pending_confirmation'] == PENDING_CONFIRMATION_NOTICE
 
 
 def test_example_b_pension_not_before_tax(setup, monkeypatch):

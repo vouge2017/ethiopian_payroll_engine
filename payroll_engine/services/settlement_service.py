@@ -33,6 +33,11 @@ TAX_METHOD_NOTE = (
     'normal monthly PAYE brackets (pending accountant confirmation).'
 )
 NO_LEAVE_RECORD_WARNING = 'No leave records — enter unused leave days manually'
+# Shown on every settlement until the adviser's Q2/Q3 answers are confirmed in
+# writing (docs/decisions/2026-10-25-payroll-rules.md).
+PENDING_CONFIRMATION_NOTICE = (
+    'Termination-payment tax method and leave-pay formula pending written tax/labour-law confirmation'
+)
 
 
 def _outstanding_breakdown(employee: Employee, end_date: date) -> dict:
@@ -351,6 +356,7 @@ def calculate_settlement(
     calculation_details = {
         'tax_method': SETTLEMENT_LUMP_SUM_TAX_METHOD,
         'tax_method_note': TAX_METHOD_NOTE,
+        'pending_confirmation': PENDING_CONFIRMATION_NOTICE,
         'pension_deducted_before_tax': bool(_constants.PENSION_DEDUCTED_BEFORE_TAX),
         'taxable_lines': [
             {'code': 'outstanding_salary', 'label': 'Outstanding salary', 'amount': _s(outstanding_salary)},

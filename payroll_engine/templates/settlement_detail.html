@@ -61,6 +61,11 @@
                             </div>
 
                             {% set details = settlement.calculation_details or {} %}
+                            {% if details.get('pending_confirmation') %}
+                            <div class="alert alert-info py-2 small" data-testid="settlement-pending-confirmation">
+                                <i class="bi bi-info-circle me-1"></i>{{ details.get('pending_confirmation') }}
+                            </div>
+                            {% endif %}
                             {% for warning in details.get('warnings', []) %}
                             <div class="alert alert-warning py-2 small" data-testid="settlement-warning">
                                 <i class="bi bi-exclamation-triangle me-1"></i>{{ warning }}

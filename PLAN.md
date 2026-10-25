@@ -161,6 +161,30 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   non-default settings. PostgreSQL proof: CI only.
 - Which basis and divisor are legally right is a practitioner question
   (Labour Proc. 1156/2019 "wage"); the app keeps the old default.
+
+### Adviser answers on settlement (2026-10-25) — Q2 and Q3 PENDING
+
+Recorded in `docs/decisions/2026-10-25-payroll-rules.md` (added on
+`fix/paye-gross-income`, PR #32; reaches this branch through main).
+
+- **Q2 — termination-payment tax: PENDING written tax confirmation.** Severance,
+  pay in lieu of notice and leave encashment are taxable employment income.
+  Aggregation in the final month (what this branch does) is a supportable
+  starting interpretation but is **not verified**. No ERCA/MoR directive on
+  spreading was identified.
+- **Q3 — leave-pay formula: PENDING written labour-law confirmation.** No
+  universal formula is approved. Labour Proc. 1156/2019 Art 77(2) (leave pay =
+  the wage the worker would have received), Art 77(4) (unused leave paid on
+  termination), Art 53 (definition of wage, with exclusions). Components must
+  follow the Art 53 wage definition, not payroll "allowance" labels. The
+  26-day figure in Art 77(3) is about counting service, not a divisor.
+- Follow-up: the leave basis setting should eventually offer an "Art. 53 wage"
+  basis definition instead of `basic_plus_regular_allowances` /
+  `basic_only` built on "allowance" labels (see Parked).
+- Every new settlement now stores and shows the notice "Termination-payment
+  tax method and leave-pay formula pending written tax/labour-law
+  confirmation" (`calculation_details.pending_confirmation`, settlement page).
+- PR #33 stays draft until Q2 and Q3 are confirmed in writing.
 - Tests: new `tests/test_settlement_leave_rate.py` (hand-checked: basic 10,000
   + 2,000 regular allowance, 10 days → basic_only 3,333.33, basic_plus
   4,000.00; divisor 26; default unchanged; validation; DB constraint;
@@ -307,9 +331,11 @@ Each item still needs the owner to confirm it before it moves to Now.
    - Files: `services/settlement_service.py`, `severance.py`,
      `tests/test_settlement_edges.py`.
    - Size: M. Risk: high. Needs accountant input on the method for lump sums.
-   - Status (2026-10-25): implemented on `fix/settlement-taxation` (draft PR),
-     final-month aggregate method, pending accountant confirmation of the
-     method and PostgreSQL proof of migration `f4a5b6c7d8f4`.
+   - Status (2026-10-25): implemented on `fix/settlement-taxation` (draft PR
+     #33), final-month aggregate method. Adviser answered 2026-10-25: Q2
+     (tax method) and Q3 (leave formula, Labour Proc. 1156/2019 Arts 53, 77)
+     both PENDING written confirmation. PostgreSQL proof of migrations
+     `f4a5b6c7d8f4`/`f4a5b6c7d8f5`: CI only.
 2. **Reports use the month's frozen numbers, not today's employee record.**
    - Partly done on `fix/reports-frozen-values` (reports read stored payslip
      values and the `line_items` basic). Left: a `basic_salary` column for
@@ -398,6 +424,10 @@ Each item still needs the owner to confirm it before it moves to Now.
 ## 4. Parked ideas
 
 AI sessions put new ideas here, one line each, with the reason they are parked.
+
+- Leave-rate basis option "Art. 53 wage" (Labour Proc. 1156/2019 Art 53 wage
+  definition with its exclusions) replacing the "allowance"-label bases.
+  Parked: waits for the written labour-law confirmation (Q3).
 
 - Run the PostgreSQL test suite locally or in a sandbox. Parked: needs a
   disposable Postgres; CI covers it for now.

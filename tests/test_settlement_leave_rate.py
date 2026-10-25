@@ -287,3 +287,5 @@ def test_settlement_detail_page_shows_basis(app, setup):
     assert '÷ 30 days' in html
     assert 'ETB 333.33/day' in html
     assert 'regular allowances ETB 2000.00 not included' in html
+    assert 'data-testid="settlement-pending-confirmation"' in html
+    assert 'Termination-payment tax method and leave-pay formula pending written tax/labour-law confirmation' in html

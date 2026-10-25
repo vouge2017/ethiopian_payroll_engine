@@ -126,8 +126,10 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   fall back to the old formula. Since the merge of PR #31 the CSV export uses
   `frozen_figures` and leaves taxable blank for those legacy rows instead. `freeze_context` now records which rule was
   used.
-- Tests on the branch: **1734 passed, 0 failed, 0 errors, 205 skipped**
-  (SQLite, `python -m pytest` per file, Python 3.12). PostgreSQL tests not run.
+- Tests on the branch (after merging main @ `2b0d15e`, PR #34): **1742 passed,
+  0 failed, 0 errors, 205 skipped** (168 files, one process each, SQLite,
+  `python -m pytest`, Python 3.12; 1736 + 6 from #34). PostgreSQL tests run in
+  CI only.
 - Rule **confirmed by the adviser in writing, 2026-10-25** (Q1 in
   `docs/decisions/2026-10-25-payroll-rules.md`; Income Tax Proc. 979/2016
   Arts 10–12, Art 11 as amended by Proc. 1395/2025). RC-38000-01 is closed.
@@ -434,3 +436,12 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   text, rule sources, tax certificate); stale pension-before-tax copy made
   neutral; review table in the PR. Existing companies' DB labels need a data
   migration (not done). Tests: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.
+- 2026-10-25 — Hark — Adviser answers recorded. Added
+  `docs/decisions/2026-10-25-payroll-rules.md` (Q1 PAYE on gross CONFIRMED;
+  Q2 termination-payment tax, Q3 leave-pay formula, Q4 locked-month
+  corrections PENDING). Merged origin/main (`2b0d15e`, PR #34 Amharic labels)
+  into fix/paye-gross-income; PLAN.md conflicts resolved keeping all entries.
+  PR #32 title no longer says DO NOT MERGE. Parked: historical PAYE difference
+  report for locked months; Amharic/Oromo pension-before-tax copy now stale.
+  Tests: 1742 passed, 0 failed, 205 skipped (168 files, one process each,
+  SQLite). ruff check + format clean.

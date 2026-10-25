@@ -72,6 +72,42 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - No real secrets were found in tracked files. CI files only hold obviously fake
   test values. `.env` is not tracked.
 
+### Reports use frozen payroll values (branch `fix/reports-frozen-values`, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+  PR against `main` opened on the owner's instruction. Cut from `docs/plan-md`
+  @ `cc9065d`.
+- New `payroll_engine/frozen_payslip.py` reads each month's figures from the
+  payslip itself: gross, tax, employee/employer pension, net, taxable income and
+  exempt allowances (stored columns), and basic salary and overtime from the
+  `line_items` snapshot. Nothing reads `employee.basic_salary` any more for a
+  past month.
+- Switched to it: ERCA/PAYE schedule (default columns and company templates),
+  pension schedule, both CSV fallbacks, the payslip-details export
+  (`/payroll/payslips/export`), and payslip PDF regeneration (`pdf.py`,
+  `tasks.py`). The bank file and yearly summary already used stored net/gross.
+- Fixed on the way: report template paths `taxable`, `gross`, `net`,
+  `pension_employee`, `overtime_pay` are not Payslip attributes, so those ERCA
+  columns were blank (Total Taxable was empty). Decimal cells were not totalled
+  in the ERCA sheet. The ERCA CSV fallback crashed (`Payslip.overtime_pay`).
+  Locked runs could not be downloaded from `/reports/*` (only `completed`), and
+  locked months were left out of the yearly summary and the reports page list.
+- Gap, not fixed (needs a column + migration + PG proof): legacy-path payslips
+  (employee approved before having any pay-item assignment) have no
+  `line_items` and no `taxable_income`. Their basic salary was never stored.
+  Reports now leave Basic Salary / Total Taxable blank for them and print a red
+  note saying how many employees are affected; the PDF omits the Basic /
+  Allowances rows. All other figures are the approved ones.
+- Still open from Next item 2: "Transport" in ERCA is still "all non-basic,
+  non-overtime earnings" (now from the frozen basic), not a real transport
+  split; employee name/TIN/bank in reports still come from the current
+  employee record (deliberate: corrected bank accounts must reach the bank
+  file); no TIN / pension-number columns by default.
+- Tests: new `tests/test_reports_frozen_values.py` (approve → lock → raise
+  salaries → regenerate ERCA, pension, CSVs, yearly, bank file, payslip export,
+  PDF data; all identical and equal to the approved values). Full suite:
+  1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
+
 ### Branch `fix/paye-gross-income` (2026-10-25, not merged)
 
 - R1 done on the branch: `PENSION_DEDUCTED_BEFORE_TAX = False`, so PAYE is on
@@ -85,9 +121,10 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Locked months: approved payslips keep the tax, taxable and net that were
   stored on them. Nothing recomputes them from the flag. Two display paths
   re-derived taxable as `gross − pension` (employee portal payslip page and
-  the payslip CSV export). They now read the stored `Payslip.taxable_income`,
-  and only rows with no stored value fall back to the old formula. The payroll
-  results screen does the same. `freeze_context` now records which rule was
+  the payslip CSV export). They now read the stored `Payslip.taxable_income`.
+  On the portal and the payroll results screen, only rows with no stored value
+  fall back to the old formula. Since the merge of PR #31 the CSV export uses
+  `frozen_figures` and leaves taxable blank for those legacy rows instead. `freeze_context` now records which rule was
   used.
 - Tests on the branch: **1734 passed, 0 failed, 0 errors, 205 skipped**
   (SQLite, `python -m pytest` per file, Python 3.12). PostgreSQL tests not run.
@@ -148,11 +185,10 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Other things a senior engineer or payroll accountant would worry about
 
-- **Reports read today's employee record, not the month's numbers.** The PAYE and
-  pension schedules use `employee.basic_salary`. After a raise, re-downloading a
-  locked month gives a different basic (`reports.py:42,283,512`). In the CSV
-  fallback, "Transport" is `gross − basic`, so overtime and every allowance end up
-  in transport (`reports.py:514`). Payslips have no `basic_salary` snapshot column.
+- **Reports read today's employee record, not the month's numbers.** Fixed on
+  branch `fix/reports-frozen-values` (see above), except legacy-path payslips,
+  which have no stored basic. "Transport" in ERCA is still every non-basic,
+  non-overtime earning. Payslips have no `basic_salary` snapshot column.
 - **Payslip PDFs are on ephemeral disk.** `UPLOAD_FOLDER` defaults to
   `/tmp/uploads` (`__init__.py:134`, `pdf.py:154`). A Render redeploy wipes them.
   No worker runs in production.
@@ -217,6 +253,9 @@ Each item still needs the owner to confirm it before it moves to Now.
      `tests/test_settlement_edges.py`.
    - Size: M. Risk: high. Needs accountant input on the method for lump sums.
 2. **Reports use the month's frozen numbers, not today's employee record.**
+   - Partly done on `fix/reports-frozen-values` (reports read stored payslip
+     values and the `line_items` basic). Left: a `basic_salary` column for
+     legacy-path payslips, a real transport split, TIN/pension-number columns.
    - What: snapshot basic salary and allowance splits on `Payslip` (new column
      plus migration, or read them from `calculation_context`/`line_items`). Point
      the PAYE and pension schedules at the snapshot. Fix the CSV fallback
@@ -315,10 +354,6 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   first.
 - Upgrade `EncryptedType` to `StringEncryptedType` (deprecation warning).
   Parked: needs a careful data migration.
-- ERCA report "Total Taxable" column uses `data_path='taxable'`, but `Payslip`
-  has only `taxable_income`, so the cell is blank (`reports.py:47`,
-  `report_templates.py:62,78`). Parked: belongs to Next item 2 (reports use
-  frozen values).
 - Unused i18n key `pension_before_tax` (am/om) still describes the old rule.
   Parked: not shown anywhere, so fix it with the Amharic label work (Next item 7).
 
@@ -334,6 +369,12 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   reading live employee data, ephemeral PDFs and wrong Amharic labels. Wrote
   this PLAN.md and rewrote the top of AGENTS.md. Committed locally, not pushed (no
   GitHub credentials).
+- 2026-10-25 — Hark — Reports use frozen payroll values (branch fix/reports-frozen-values)
+  — ERCA, pension, CSV fallbacks, payslip export and PDF regeneration read the
+  payslip's stored figures and `line_items` basic, not `employee.basic_salary`.
+  Locked runs downloadable and included in the yearly summary. Legacy-path
+  payslips have no stored basic: left blank with a note. Tests:
+  1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
 - 2026-10-25 — Hark — PAYE on gross income (branch fix/paye-gross-income).
   Set `PENSION_DEDUCTED_BEFORE_TAX = False` (the flag stays configurable).
   Portal payslip, payslip CSV export and the results screen now read the
@@ -342,3 +383,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   on all engines and shows that locked months keep their values. Updated 10
   test files that pinned the old numbers. Tests: 1734 passed, 0 failed,
   205 skipped (SQLite). PR opened, DO NOT MERGE until accountant sign-off.
+- 2026-10-25 — Hark — PR #32 rebased on main, CI fixed. Merged origin/main
+  (bb47054, PRs #30 and #31) into fix/paye-gross-income. Payslip CSV export now
+  uses #31's `frozen_figures` (legacy rows without stored taxable are blank, not
+  re-derived). CI failure was `test-postgres`: 7 PostgreSQL-only tests still
+  pinned after-pension tax (2,310.15 instead of 2,520.15 on gross 12,900.50);
+  updated to the gross rule. Removed the parked ERCA "Total Taxable" item (fixed
+  by #31). Tests: 1736 passed, 0 failed, 205 skipped (167 files, one process
+  each, SQLite). Still DO NOT MERGE until accountant sign-off.

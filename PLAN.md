@@ -128,8 +128,34 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   used.
 - Tests on the branch: **1734 passed, 0 failed, 0 errors, 205 skipped**
   (SQLite, `python -m pytest` per file, Python 3.12). PostgreSQL tests not run.
-- Waiting on: an Ethiopian accountant's written sign-off (RC-38000-01) before
-  merge, and a decision on drafts/reviews still open at deploy (see Now).
+- Rule **confirmed by the adviser in writing, 2026-10-25** (Q1 in
+  `docs/decisions/2026-10-25-payroll-rules.md`; Income Tax Proc. 979/2016
+  Arts 10–12, Art 11 as amended by Proc. 1395/2025). RC-38000-01 is closed.
+- Still open: drafts/reviews still open at deploy (see Now), and what to do
+  about already-locked months (Q4, pending; see Parked).
+
+### Amharic label fixes (branch `fix/amharic-labels`, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+  PR against `main` opened on the owner's instruction. Cut from `origin/main` @
+  `bb47054`.
+- Replaced 41 clearly wrong strings (39 Amharic, 2 Afaan Oromoo): all 19
+  wrong pay-item `name_am` labels in `catalog.py` (e.g. employer pension
+  "ፀጉሮች" → "የአሠሪ የጡረታ መዋጮ 11%", "ስያፍ" → "… አበል"), the overtime
+  placeholder, PDF "Position"/"NET PAY", severance, tax explanation, compliance,
+  month-close, rule-source names (one had a corrupted U+FFFD character),
+  Enkutatash, and the tax certificate. The `pension_before_tax` and
+  `tax_explainer_intro` strings (am + om) no longer call pension-before-tax
+  "common practice"; they say it is still being confirmed (RC-38000-01).
+- Review table for the owner (native speaker) in the PR body: changed strings
+  with confidence, plus a "for review" list that was NOT changed.
+- PDF: NotoSansEthiopic is registered and embedded; Ethiopic renders. Gap:
+  pension, income-tax and overtime rows pass `custom_label`, which also
+  overrides the Amharic, so they print English-only (`payroll_elements.py`
+  `_line_item_dict`). Not fixed (engine code).
+- Not done: data migration for existing companies' `pay_item_type.name_am`
+  rows (seeding skips existing rows). Needs PG proof.
+- Tests: new `tests/test_amharic_labels.py` (6 tests). Full suite: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.
 
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
@@ -174,7 +200,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 | # | Rule | What the code does | Where |
 |---|------|--------------------|-------|
-| R1 | PAYE is on gross taxable income, **not** after the 7 % pension | **Fixed on branch `fix/paye-gross-income`, not merged.** On main, pension is subtracted before tax (`PENSION_DEDUCTED_BEFORE_TAX = True`). This under-withholds every month, e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
+| R1 | PAYE is on gross taxable income, **not** after the 7 % pension (adviser-confirmed 2026-10-25) | **Fixed on branch `fix/paye-gross-income`, not merged.** On main, pension is subtracted before tax (`PENSION_DEDUCTED_BEFORE_TAX = True`). This under-withholds every month, e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
 | R2 | Severance, termination pay and leave encashment are taxable | Final settlement taxes **only** outstanding salary. Severance and leave encashment are paid with no tax | `services/settlement_service.py:159-203` (tax at :178) |
 | R3 | Leave encashment counts unused days | When there is no balance row, it assumes **no leave was taken** and pays the full entitlement. It also uses the Gregorian `end_date.year` | `settlement_service.py:100-121` |
 | R4 | Per diem (>25 km): lower of 4 % of basic or ETB 500/day; managers lower of 5 % or ETB 1,000/day | Uses `max(255×30, 4 % of basic)` capped at 2,200 per month. There is no per-day logic, no manager tier and no distance check. The catalog per-diem item is fully TAXABLE | `services/allowance_service.py:123-128`; `catalog.py:216-228` |
@@ -220,8 +246,10 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 **Make PAYE use gross taxable income, without taking the 7 % pension off first (R1).**
 Owner approved 2026-10-25.
 
-- Status: **done on branch `fix/paye-gross-income`, waiting for an accountant's
-  sign-off before merge.** The PR is marked DO NOT MERGE.
+- Status: **done on branch `fix/paye-gross-income` (PR #32). Rule confirmed by
+  the adviser in writing on 2026-10-25** (Q1,
+  `docs/decisions/2026-10-25-payroll-rules.md`). Ready for owner review; merge
+  needs the owner's go-ahead.
 - What changed: `PENSION_DEDUCTED_BEFORE_TAX = False`
   (`payroll_engine/constants.py`), with the flag kept. Every calculation path
   follows it. The notice text and explanations were updated. Worked examples
@@ -229,10 +257,12 @@ Owner approved 2026-10-25.
   pinned the old after-pension numbers were updated.
 - Locked months keep their stored values. Tests now prove it for the export,
   portal and reports paths.
-- Still to decide before merge:
-  1. One Ethiopian accountant signs off on the rule in writing (closes
-     RC-38000-01).
-  2. Already-locked months: leave them, or issue correction runs.
+- Still to decide:
+  1. ~~Accountant sign-off on the rule (RC-38000-01)~~ — confirmed by the
+     adviser 2026-10-25.
+  2. Already-locked months: the lock does not remove the duty to address the
+     error (Q4, pending procedure). Do not overwrite them; see the parked
+     historical PAYE difference report.
   3. Drafts and worksheet reviews still open when this deploys hold figures
      calculated under the old rule. CSV drafts are approved from those stored
      figures. Refresh or re-upload them after deploy.
@@ -354,6 +384,13 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   first.
 - Upgrade `EncryptedType` to `StringEncryptedType` (deprecation warning).
   Parked: needs a careful data migration.
+- Historical PAYE difference report for locked months (quantify only, no
+  overwrite; correction via explicit adjustment run after procedure confirmed).
+  Parked: correction/amended-declaration procedure (Tax Administration Proc.
+  983/2016 Arts 28–29, as amended incl. Proc. 1434/2026) not yet confirmed (Q4).
+- Amharic/Oromo `pension_before_tax` and `tax_explainer_intro` still say the
+  pension-before-tax question is "still being confirmed" (RC-38000-01). Q1 is
+  now confirmed (tax on gross). Parked: needs native-speaker wording.
 - Unused i18n key `pension_before_tax` (am/om) still describes the old rule.
   Parked: not shown anywhere, so fix it with the Amharic label work (Next item 7).
 
@@ -392,3 +429,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   by #31). GitGuardian flagged test passwords `OwnerPass1!`/`EmpPass1!` in
   `tests/test_paye_gross_income.py`; switched to the repo's `Test1234!`. Tests: 1736 passed, 0 failed, 205 skipped (167 files, one process
   each, SQLite). Still DO NOT MERGE until accountant sign-off.
+- 2026-10-25 — Hark — Amharic label fixes (branch fix/amharic-labels) — 41
+  wrong Amharic/Oromo strings replaced (catalog pay items, PDF, severance, tax
+  text, rule sources, tax certificate); stale pension-before-tax copy made
+  neutral; review table in the PR. Existing companies' DB labels need a data
+  migration (not done). Tests: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.

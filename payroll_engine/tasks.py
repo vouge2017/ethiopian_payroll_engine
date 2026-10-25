@@ -88,6 +88,7 @@ def generate_payslip_pdf(job_id):
         db.session.commit()
 
         try:
+            from payroll_engine.frozen_payslip import payslip_pdf_figures
             from payroll_engine.payroll import generate_calculation_flow
 
             run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=payslip.company_id).first()
@@ -105,13 +106,8 @@ def generate_payslip_pdf(job_id):
             emp_data = {
                 'id': emp.employee_id,
                 'name': emp.name,
-                'basic': emp.basic_salary,
-                'allowances': emp.allowances,
-                'gross': payslip.gross_salary,
-                'tax': payslip.tax,
-                'pension_employee': payslip.employee_pension,
-                'pension_employer': payslip.employer_pension,
-                'net': payslip.net_pay,
+                # Frozen month figures, never today's employee record.
+                **payslip_pdf_figures(payslip),
                 'bank': emp.bank_or_telebirr or '',
                 'department': emp.department or '',
                 'position': emp.position or '',

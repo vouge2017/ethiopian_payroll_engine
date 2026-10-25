@@ -101,18 +101,14 @@ def _ensure_pdf(payslip, emp, company_info=None):
 
     # We claimed 'generating' — build the data and generate
     try:
+        from payroll_engine.frozen_payslip import payslip_pdf_figures
         from payroll_engine.payroll import generate_calculation_flow
 
         emp_data = {
             'id': emp.employee_id,
             'name': emp.name,
-            'basic': emp.basic_salary,
-            'allowances': emp.allowances,
-            'gross': payslip.gross_salary,
-            'tax': payslip.tax,
-            'pension_employee': payslip.employee_pension,
-            'pension_employer': payslip.employer_pension,
-            'net': payslip.net_pay,
+            # Frozen month figures, never today's employee record.
+            **payslip_pdf_figures(payslip),
             'bank': emp.bank_or_telebirr or '',
             'department': emp.department or '',
             'position': emp.position or '',
@@ -386,8 +382,11 @@ def generate_payslip(
                 earnings_data.append([label, f'{li.get("earned_amount", 0):,.2f}'])
     else:
         # Legacy payslip with no engine breakdown (not yet backfilled).
-        earnings_data.append(['Basic Salary', f'{emp["basic"]:,.2f}'])
-        if emp.get('allowances', 0) > 0:
+        # A regenerated legacy payslip has no frozen basic (basic=None): omit
+        # the split rather than print today's salary for a past month.
+        if emp.get('basic') is not None:
+            earnings_data.append(['Basic Salary', f'{emp["basic"]:,.2f}'])
+        if (emp.get('allowances') or 0) > 0:
             earnings_data.append(['Allowances', f'{emp["allowances"]:,.2f}'])
         if emp.get('ot_pay', 0) > 0:
             earnings_data.append(['Overtime', f'{emp["ot_pay"]:,.2f}'])

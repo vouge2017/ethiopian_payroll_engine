@@ -2431,11 +2431,17 @@ def export_payslips():
             from payroll_engine.services.worksheet_review import published_row
 
             snapshot = published_row(ps)
-            taxable = (ps.gross_salary or 0) - (ps.employee_pension or 0)
+            from payroll_engine.frozen_payslip import frozen_figures
+
+            # Frozen month values only: taxable as approved (NULL on legacy
+            # payslips -> blank, never re-derived), basic from the snapshot.
+            fig = frozen_figures(ps)
+            taxable = '' if fig['taxable'] is None else fig['taxable']
             total_deductions = (ps.employee_pension or 0) + (ps.tax or 0)
+            basic = '' if fig['basic'] is None else fig['basic']
             if snapshot:
-                taxable = ps.taxable_income
                 total_deductions = ps.gross_salary - ps.net_pay
+                basic = snapshot['basic']
             writer.writerow(
                 [
                     run.period or '',
@@ -2443,7 +2449,7 @@ def export_payslips():
                     snapshot['id'] if snapshot else (emp.employee_id if emp else ''),
                     snapshot['name'] if snapshot else (emp.name if emp else ''),
                     snapshot['department'] if snapshot else (emp.department if emp else ''),
-                    str(snapshot['basic'] if snapshot else (emp.basic_salary if emp else 0)),
+                    str(basic),
                     str(ps.gross_salary),
                     str(ps.employee_pension),
                     str(ps.employer_pension),

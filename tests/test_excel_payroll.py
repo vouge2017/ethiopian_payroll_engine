@@ -169,17 +169,17 @@ class TestCalculation:
         assert result.pension_employee == Decimal('700.00')
         # Employer pension: 11% of 10000 = 1100
         assert result.pension_employer == Decimal('1100.00')
-        # Taxable: 10000 - 700 = 9300
-        assert result.taxable == Decimal('9300.00')
-        # Tax on 9300:
+        # Taxable: gross 10000 (PAYE on gross; pension does not reduce it, RC-38000-01)
+        assert result.taxable == Decimal('10000.00')
+        # Tax on 10000:
         #   0-2000: 0
         #   2001-4000: 2000 × 15% = 300
         #   4001-7000: 3000 × 20% = 600
-        #   7001-9300: 2300 × 25% = 575
-        #   Total = 1475
-        assert result.tax == Decimal('1475.00')
-        # Net: 10000 - 700 - 1475 = 7825
-        assert result.net == Decimal('7825.00')
+        #   7001-10000: 3000 × 25% = 750
+        #   Total = 1650
+        assert result.tax == Decimal('1650.00')
+        # Net: 10000 - 700 - 1650 = 7650
+        assert result.net == Decimal('7650.00')
 
     def test_with_allowances(self, engine):
         """Basic + allowances."""
@@ -194,18 +194,18 @@ class TestCalculation:
         assert result.gross == Decimal('13000.00')
         # Pension: 7% of 10000 = 700 (on basic only)
         assert result.pension_employee == Decimal('700.00')
-        # Taxable: 13000 - 700 = 12300
-        assert result.taxable == Decimal('12300.00')
-        # Tax on 12300:
+        # Taxable: gross 13000 (pension does not reduce it, RC-38000-01)
+        assert result.taxable == Decimal('13000.00')
+        # Tax on 13000:
         #   0-2000: 0
         #   2001-4000: 2000 × 15% = 300
         #   4001-7000: 3000 × 20% = 600
         #   7001-10000: 3000 × 25% = 750
-        #   10001-12300: 2300 × 30% = 690
-        #   Total = 2340
-        assert result.tax == Decimal('2340.00')
-        # Net: 13000 - 700 - 2340 = 9960
-        assert result.net == Decimal('9960.00')
+        #   10001-13000: 3000 × 30% = 900
+        #   Total = 2550
+        assert result.tax == Decimal('2550.00')
+        # Net: 13000 - 700 - 2550 = 9750
+        assert result.net == Decimal('9750.00')
 
     def test_zero_salary(self, engine):
         """Zero salary should produce zero everything."""
@@ -230,8 +230,8 @@ class TestCalculation:
 
         # Pension: 7% of 1500 = 105
         assert result.pension_employee == Decimal('105.00')
-        # Taxable: 1500 - 105 = 1395 (below 2000 bracket)
-        assert result.taxable == Decimal('1395.00')
+        # Taxable: gross 1500 (below 2000 bracket; pension does not reduce it)
+        assert result.taxable == Decimal('1500.00')
         # Tax: 0 (below first bracket)
         assert result.tax == Decimal('0.00')
         # Net: 1500 - 105 = 1395
@@ -247,19 +247,19 @@ class TestCalculation:
 
         # Pension: 7% of 50000 = 3500
         assert result.pension_employee == Decimal('3500.00')
-        # Taxable: 50000 - 3500 = 46500
-        assert result.taxable == Decimal('46500.00')
-        # Tax on 46500:
+        # Taxable: gross 50000 (pension does not reduce it, RC-38000-01)
+        assert result.taxable == Decimal('50000.00')
+        # Tax on 50000:
         #   0-2000: 0
         #   2001-4000: 2000 × 15% = 300
         #   4001-7000: 3000 × 20% = 600
         #   7001-10000: 3000 × 25% = 750
         #   10001-14000: 4000 × 30% = 1200
-        #   14001-46500: 32500 × 35% = 11375
-        #   Total = 14225
-        assert result.tax == Decimal('14225.00')
-        # Net: 50000 - 3500 - 14225 = 32275
-        assert result.net == Decimal('32275.00')
+        #   14001-50000: 36000 × 35% = 12600
+        #   Total = 15450
+        assert result.tax == Decimal('15450.00')
+        # Net: 50000 - 3500 - 15450 = 31050
+        assert result.net == Decimal('31050.00')
 
     def test_pension_on_basic_only(self, engine):
         """Pension must be calculated on basic salary, not gross."""
@@ -274,21 +274,33 @@ class TestCalculation:
         assert result.pension_employee == Decimal('700.00')  # 7% of 10000
         assert result.pension_employer == Decimal('1100.00')  # 11% of 10000
 
-    def test_pension_before_tax(self, engine):
-        """Pension must be deducted before tax calculation."""
+    def test_pension_not_deducted_before_tax(self, engine):
+        """PAYE is on gross taxable income; pension does not reduce it (RC-38000-01)."""
         result = engine.calculate_employee(
             employee_id='E007',
             name='Test',
             basic_salary=Decimal('10000'),
         )
 
-        # Taxable = gross - pension = 10000 - 700 = 9300
-        assert result.taxable == Decimal('9300.00')
-        # NOT 10000 (which would be wrong)
-        assert result.taxable != result.gross
+        # Taxable = gross = 10000 (pension 700 is still deducted from pay)
+        assert result.taxable == Decimal('10000.00')
+        assert result.taxable == result.gross
+        assert result.pension_employee == Decimal('700.00')
 
-    def test_pension_tax_savings(self, engine):
-        """Pension-before-tax should produce measurable savings."""
+    def test_no_pension_tax_savings_under_gross_rule(self, engine):
+        """With PAYE on gross there is no pension tax saving."""
+        result = engine.calculate_employee(
+            employee_id='E008',
+            name='Test',
+            basic_salary=Decimal('10000'),
+        )
+        assert result.pension_tax_savings == Decimal('0.00')
+
+    def test_pension_tax_savings_legacy_rule(self, engine, monkeypatch):
+        """Legacy rule (constant True): pension-before-tax produces measurable savings."""
+        from payroll_engine import constants
+
+        monkeypatch.setattr(constants, 'PENSION_DEDUCTED_BEFORE_TAX', True)
         result = engine.calculate_employee(
             employee_id='E008',
             name='Test',
@@ -507,8 +519,10 @@ class TestExceptions:
 
     def test_cash_compliance_detected(self, engine):
         """Net > 50k without bank must be flagged."""
+        # 85,000 basic: tax 27,700 on gross, pension 5,950 → net 51,350 (> 50k).
+        # (80,000 nets 48,450 under PAYE on gross, below the threshold.)
         employees = [
-            {'employee_id': 'E001', 'name': 'Cash', 'basic_salary': 80000, 'bank_account': ''},
+            {'employee_id': 'E001', 'name': 'Cash', 'basic_salary': 85000, 'bank_account': ''},
         ]
 
         result = engine.run_from_data(employees)

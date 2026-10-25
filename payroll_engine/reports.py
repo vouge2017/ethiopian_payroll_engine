@@ -11,6 +11,14 @@ All reports are generated from Payslip data and downloadable as Excel.
 
 import io
 from datetime import date
+from decimal import Decimal
+
+from payroll_engine.frozen_payslip import UNFROZEN_BASIC_NOTE, frozen_figures, unfrozen_basic_count
+
+# Every money figure in a monthly report comes from the values frozen on the
+# payslip at approval (see payroll_engine/frozen_payslip.py), never from the
+# employee's current record: re-downloading a locked month must give the same
+# numbers after a raise.
 
 
 def generate_erca_report(payslips: list, company_name: str, period: str | None = None, company=None) -> bytes:
@@ -133,7 +141,6 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
     totals = {}  # key -> running total
 
     for i, p in enumerate(payslips, 1):
-        p.gross_salary - p.employee_pension
         row = 5 + i
 
         for col_idx, col_cfg in enumerate(columns, 1):
@@ -155,10 +162,10 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
             cell.border = thin_border
 
             # Format numeric columns
-            if key in NUMERIC_KEYS and isinstance(val, (int, float)):
+            if key in NUMERIC_KEYS and isinstance(val, (int, float, Decimal)) and not isinstance(val, bool):
                 cell.number_format = etb_format
                 cell.alignment = data_align
-                totals[key] = totals.get(key, 0) + val
+                totals[key] = totals.get(key, Decimal('0')) + Decimal(str(val))
             elif key == 'row_number':
                 cell.alignment = Alignment(horizontal='center')
             else:
@@ -186,6 +193,14 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
             cell.number_format = etb_format
             cell.alignment = data_align
             cell.border = thin_border
+
+    # --- Gap note: basic salary not stored on legacy-path payslips ---
+    shows_basic = any(c.get('data_path') in ('employee.basic_salary', 'basic_salary') for c in columns)
+    missing = unfrozen_basic_count(payslips) if shows_basic else 0
+    if missing:
+        ws.cell(row=totals_row + 2, column=1, value=UNFROZEN_BASIC_NOTE.format(count=missing)).font = Font(
+            italic=True, color='B03A2E'
+        )
 
     # --- Print setup ---
     ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
@@ -268,19 +283,21 @@ def generate_pension_report(payslips: list, company_name: str, period: str | Non
         ws.column_dimensions[cell.column_letter].width = width
 
     # --- Data rows ---
-    total_employee = 0
-    total_employer = 0
+    total_employee = Decimal('0')
+    total_employer = Decimal('0')
 
     for i, p in enumerate(payslips, 1):
         emp = p.employee
-        total = p.employee_pension + p.employer_pension
+        fig = frozen_figures(p)
+        total = fig['pension_employee'] + fig['pension_employer']
+        basic = fig['basic'] if fig['basic'] is not None else ''
         row = 5 + i
 
         ws.cell(row=row, column=1, value=i).alignment = Alignment(horizontal='center')
         ws.cell(row=row, column=2, value=emp.employee_id).alignment = name_align
         ws.cell(row=row, column=3, value=emp.name).alignment = name_align
 
-        for col_idx, val in [(4, emp.basic_salary), (5, p.employee_pension), (6, p.employer_pension), (7, total)]:
+        for col_idx, val in [(4, basic), (5, fig['pension_employee']), (6, fig['pension_employer']), (7, total)]:
             cell = ws.cell(row=row, column=col_idx, value=val)
             cell.number_format = etb_format
             cell.alignment = data_align
@@ -288,8 +305,8 @@ def generate_pension_report(payslips: list, company_name: str, period: str | Non
         for col_idx in range(1, 8):
             ws.cell(row=row, column=col_idx).border = thin_border
 
-        total_employee += p.employee_pension
-        total_employer += p.employer_pension
+        total_employee += fig['pension_employee']
+        total_employer += fig['pension_employer']
 
     # --- Totals row ---
     totals_row = 5 + len(payslips) + 1
@@ -303,6 +320,12 @@ def generate_pension_report(payslips: list, company_name: str, period: str | Non
         cell.number_format = etb_format
         cell.alignment = data_align
         cell.border = thin_border
+
+    missing = unfrozen_basic_count(payslips)
+    if missing:
+        ws.cell(row=totals_row + 2, column=1, value=UNFROZEN_BASIC_NOTE.format(count=missing)).font = Font(
+            italic=True, color='B03A2E'
+        )
 
     # --- Print setup ---
     ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
@@ -507,28 +530,31 @@ def _generate_erca_csv(payslips, company_name, period):
             'Tax withheld',
         ]
     )
+    from payroll_engine.security import prevent_csv_injection
+
     for _i, p in enumerate(payslips, 1):
         emp = p.employee
-        basic = float(emp.basic_salary or 0)
-        gross = float(p.gross_salary or 0)
-        transport = max(0, gross - basic)
+        fig = frozen_figures(p)
+        other = fig['other_earnings']
         start_date = emp.start_date.strftime('%d/%m/%Y') if emp.start_date else ''
-        from payroll_engine.security import prevent_csv_injection
 
         writer.writerow(
             [
                 prevent_csv_injection(emp.name),
                 start_date,
                 '',  # End Date
-                basic,
-                transport,  # Transport Allowance
-                transport,  # Taxable Transport Allowance
-                float(p.overtime_pay or 0),  # Over Time
+                '' if fig['basic'] is None else fig['basic'],
+                '' if other is None else other,  # Transport Allowance (all non-basic, non-OT earnings)
+                '' if other is None else other,  # Taxable Transport Allowance
+                '' if fig['overtime'] is None else fig['overtime'],  # Over Time
                 0,  # Other Taxable Benefit
-                float(p.taxable or 0),  # Total Taxable
-                float(p.tax or 0),  # Tax withheld
+                '' if fig['taxable'] is None else fig['taxable'],  # Total Taxable
+                fig['tax'],  # Tax withheld
             ]
         )
+    missing = unfrozen_basic_count(payslips)
+    if missing:
+        writer.writerow([UNFROZEN_BASIC_NOTE.format(count=missing)])
     return output.getvalue().encode('utf-8')
 
 
@@ -540,20 +566,23 @@ def _generate_pension_csv(payslips, company_name, period):
     writer = csv.writer(output)
     writer.writerow(['Pension Contribution Report', company_name, period or ''])
     writer.writerow(['No.', 'Employee ID', 'Name', 'Basic Salary', 'Employee 7%', 'Employer 11%', 'Total'])
+    from payroll_engine.security import prevent_csv_injection
+
     for i, p in enumerate(payslips, 1):
         emp = p.employee
-        total = p.employee_pension + p.employer_pension
-        from payroll_engine.security import prevent_csv_injection
-
+        fig = frozen_figures(p)
         writer.writerow(
             [
                 i,
                 prevent_csv_injection(emp.employee_id),
                 prevent_csv_injection(emp.name),
-                emp.basic_salary,
-                p.employee_pension,
-                p.employer_pension,
-                total,
+                '' if fig['basic'] is None else fig['basic'],
+                fig['pension_employee'],
+                fig['pension_employer'],
+                fig['pension_employee'] + fig['pension_employer'],
             ]
         )
+    missing = unfrozen_basic_count(payslips)
+    if missing:
+        writer.writerow([UNFROZEN_BASIC_NOTE.format(count=missing)])
     return output.getvalue().encode('utf-8')

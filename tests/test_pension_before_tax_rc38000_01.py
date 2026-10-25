@@ -1,8 +1,11 @@
-"""Pinned behaviour for the pension-before-tax assumption (RC-38000-01).
+"""Pinned behaviour for the PAYE timing switch (RC-38000-01).
 
-Pins current PAYE practice: the 7% employee pension is deducted before
-income tax. This is common payroll practice pending accountant sign-off
-(reference RC-38000-01); it is NOT attributed to a statute article here.
+Since 2026-10-25 (PLAN.md R1) PAYE is calculated on gross taxable income:
+the 7% employee pension is still deducted from pay but does not reduce
+taxable income (constants.PENSION_DEDUCTED_BEFORE_TAX = False). Pending an
+accountant's written sign-off (reference RC-38000-01); it is NOT attributed
+to a statute article here. The legacy rule (pension before tax) stays
+available by setting the constant to True.
 
 The pinned case must fail if constants.PENSION_DEDUCTED_BEFORE_TAX is
 flipped without a deliberate test update. The flip test proves every
@@ -40,16 +43,16 @@ def _tax_from_default_brackets(taxable: Decimal) -> Decimal:
 
 
 def test_pension_before_tax_RC38000_01():
-    """Pinned current practice (RC-38000-01): pension deducted before PAYE."""
+    """Pinned rule (RC-38000-01): PAYE on gross; pension NOT deducted before tax."""
     # Flip guard: flipping the constant must require a deliberate test update.
-    assert constants.PENSION_DEDUCTED_BEFORE_TAX is True
+    assert constants.PENSION_DEDUCTED_BEFORE_TAX is False
 
     result = calculate_payroll(basic_salary=RC_BASIC)
 
     assert result['pension_employee'] == Decimal('2660.00')
-    assert result['taxable'] == Decimal('35340.00')
-    assert result['tax'] == Decimal('10319.00')
-    assert result['net'] == Decimal('25021.00')
+    assert result['taxable'] == Decimal('38000.00')
+    assert result['tax'] == Decimal('11250.00')
+    assert result['net'] == Decimal('24090.00')
 
     # Derived from the existing bracket table, not copied values.
     assert result['tax'] == _tax_from_default_brackets(result['taxable'])
@@ -66,9 +69,9 @@ def test_pension_before_tax_RC38000_01_excel_engine():
     )
 
     assert result.pension_employee == Decimal('2660.00')
-    assert result.taxable == Decimal('35340.00')
-    assert result.tax == Decimal('10319.00')
-    assert result.net == Decimal('25021.00')
+    assert result.taxable == Decimal('38000.00')
+    assert result.tax == Decimal('11250.00')
+    assert result.net == Decimal('24090.00')
 
 
 def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_for_elements, monkeypatch):
@@ -82,7 +85,8 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
 
     tax_on_full_gross = _tax_from_default_brackets(RC_BASIC)  # 11,250.00 for 38,000
 
-    # --- Baseline with the constant as committed (True) ---
+    # --- Baseline with the legacy rule switched on (True) ---
+    monkeypatch.setattr(constants, 'PENSION_DEDUCTED_BEFORE_TAX', True)
     daily_true = calculate_daily_worker_payroll(Decimal('200'), 2)
 
     legacy_true = calculate_payroll(basic_salary=RC_BASIC)
@@ -125,7 +129,7 @@ def test_flip_changes_every_monthly_paye_path(app_for_elements, system_catalog_f
         _tax_from_default_brackets(Decimal('14485')) - _tax_from_default_brackets(Decimal('13485'))
     )
 
-    # --- Flip the assumption ---
+    # --- Flip to the committed default (False = PAYE on gross) ---
     monkeypatch.setattr(constants, 'PENSION_DEDUCTED_BEFORE_TAX', False)
 
     # Legacy monthly engine: taxable no longer includes the pension deduction.

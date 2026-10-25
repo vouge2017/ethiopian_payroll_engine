@@ -346,32 +346,59 @@ def _pay_item_amount(payslip, key, mode=None):
         except Exception:
             return 0
 
-    total = 0.0
+    from decimal import Decimal, InvalidOperation
+
+    total = Decimal('0')
     for li in line_items:
         if li.get('item_key') != key:
             continue
         if li.get('classification') not in ('earning', 'deduction'):
             continue
         try:
-            total += float(li.get('earned_amount') or 0)
-        except (TypeError, ValueError):
+            total += Decimal(str(li.get('earned_amount') or 0))
+        except (InvalidOperation, TypeError, ValueError):
             continue
-    return total
+    return total.quantize(Decimal('0.01'))
 
 
 def _legacy_allowance_total(payslip):
-    """Pre-elements fallback: total non-basic earnings on the payslip.
+    """Pre-elements fallback: total non-basic, non-overtime earnings.
 
-    Only used for payslips with no engine line_items snapshot. It cannot
-    distinguish one allowance from another, which is exactly why the generic
-    `_pay_item:` resolution exists.
+    Uses the basic salary FROZEN on the payslip (line_items snapshot), never
+    the employee's current record, so a raise after approval cannot move money
+    between columns of a locked month. Returns '' when the basic was not stored
+    (legacy-path payslip): the split is unknown and must not be invented.
+    It cannot distinguish one allowance from another, which is exactly why the
+    generic `_pay_item:` resolution exists.
     """
-    try:
-        basic = float(payslip.employee.basic_salary or 0)
-        gross = float(payslip.gross_salary or 0)
-        return max(0, gross - basic)
-    except Exception:
-        return 0
+    from payroll_engine.frozen_payslip import frozen_figures
+
+    other = frozen_figures(payslip)['other_earnings']
+    return '' if other is None else other
+
+
+# Payslip figures stored at approval. Report templates historically used these
+# short data paths ('taxable', 'gross', ...), which are not Payslip attributes,
+# and 'employee.basic_salary', which is TODAY's salary. All resolve to the
+# frozen per-month values instead.
+_FROZEN_PATHS = {
+    'employee.basic_salary': 'basic',
+    'basic_salary': 'basic',
+    'overtime_pay': 'overtime',
+    'employee.allowances': 'other_earnings',
+    'gross': 'gross',
+    'gross_salary': 'gross',
+    'taxable': 'taxable',
+    'taxable_income': 'taxable',
+    'exempt_allowances': 'exempt_allowances',
+    'tax': 'tax',
+    'pension_employee': 'pension_employee',
+    'employee_pension': 'pension_employee',
+    'pension_employer': 'pension_employer',
+    'employer_pension': 'pension_employer',
+    'net': 'net',
+    'net_pay': 'net',
+}
 
 
 def get_column_value(payslip, data_path: str, company=None, static_value=None):
@@ -398,6 +425,11 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
         return company.name if company else ''
     if data_path == '_end_date':
         return ''
+    if data_path in _FROZEN_PATHS:
+        from payroll_engine.frozen_payslip import frozen_figures
+
+        val = frozen_figures(payslip)[_FROZEN_PATHS[data_path]]
+        return '' if val is None else val
     if data_path == '_transport_allowance':
         return _legacy_allowance_total(payslip)
     if data_path == '_taxable_transport':

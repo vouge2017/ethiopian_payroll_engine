@@ -32,7 +32,7 @@ NATIONAL_HOLIDAYS_2025 = [
     {'name': "International Workers' Day", 'name_am': 'የሰራተኞች ቀን', 'date': date(2025, 5, 1), 'recurring': True},
     {'name': "Patriots' Victory Day", 'name_am': 'የአርበኞች ድል በዓል', 'date': date(2025, 5, 28), 'recurring': False},
     {'name': 'Downfall of the Dergue', 'name_am': 'ደርግ የወደቀበት ቀን', 'date': date(2025, 5, 28), 'recurring': False},
-    {'name': 'Enkutatash (New Year)', 'name_am': 'እንኳታሽ', 'date': date(2025, 9, 11), 'recurring': False},
+    {'name': 'Enkutatash (New Year)', 'name_am': 'እንቁጣጣሽ', 'date': date(2025, 9, 11), 'recurring': False},
     {'name': 'Finding of the True Cross', 'name_am': 'መስቀል', 'date': date(2025, 9, 27), 'recurring': False},
 ]
 
@@ -45,7 +45,7 @@ NATIONAL_HOLIDAYS_2026 = [
     {'name': "International Workers' Day", 'name_am': 'የሰራተኞች ቀን', 'date': date(2026, 5, 1), 'recurring': True},
     {'name': "Patriots' Victory Day", 'name_am': 'የአርበኞች ድል በዓል', 'date': date(2026, 5, 28), 'recurring': False},
     {'name': 'Downfall of the Dergue', 'name_am': 'ደርግ የወደቀበት ቀን', 'date': date(2026, 5, 28), 'recurring': False},
-    {'name': 'Enkutatash (New Year)', 'name_am': 'እንኳታሽ', 'date': date(2026, 9, 11), 'recurring': False},
+    {'name': 'Enkutatash (New Year)', 'name_am': 'እንቁጣጣሽ', 'date': date(2026, 9, 11), 'recurring': False},
     {'name': 'Finding of the True Cross', 'name_am': 'መስቀል', 'date': date(2026, 9, 27), 'recurring': False},
 ]
 

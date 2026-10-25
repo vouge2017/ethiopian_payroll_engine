@@ -48,11 +48,11 @@ def test_calc_flow_effective_tax_rate():
     result = calculate_payroll(basic_salary=10000, allowances=0)
     flow = generate_calculation_flow(result)
 
-    # Tax on 10000 - 700 (pension) = 9300 taxable
-    # Brackets: 2000*0 + 2000*0.15 + 3000*0.20 + 2300*0.25 = 0 + 300 + 600 + 575 = 1475
+    # Tax on gross 10000 (pension does not reduce taxable income, RC-38000-01)
+    # Brackets: 2000*0 + 2000*0.15 + 3000*0.20 + 3000*0.25 = 0 + 300 + 600 + 750 = 1650
     # No personal relief (removed — not in Proclamation 1395/2025)
-    # Effective rate: 1475/10000 = 14.75%
-    assert flow['effective_tax_rate'] == Decimal('14.75')
+    # Effective rate: 1650/10000 = 16.50%
+    assert flow['effective_tax_rate'] == Decimal('16.50')
 
 
 def test_calc_flow_summary_contains_amounts():
@@ -61,7 +61,8 @@ def test_calc_flow_summary_contains_amounts():
     flow = generate_calculation_flow(result)
 
     assert 'gross' in flow['summary'].lower() or str(result['gross']) in flow['summary']
-    assert '7,180.00' in flow['summary']
+    # gross 9,000 − pension 560 − tax 1,400 (on gross 9,000) = net 7,040
+    assert '7,040.00' in flow['summary']
 
 
 def test_calc_flow_deduction_flags():
@@ -112,8 +113,19 @@ def test_calc_flow_with_overtime():
     assert gross_step['amount'] > Decimal('10000')
 
 
-def test_calc_flow_pension_savings():
-    """Pension-before-tax savings are calculated correctly."""
+def test_calc_flow_no_pension_savings_under_gross_rule():
+    """PAYE on gross (default): no pension tax saving and no savings step."""
+    result = calculate_payroll(basic_salary=10000, allowances=2000)
+    flow = generate_calculation_flow(result)
+    assert flow['pension_savings'] == Decimal('0')
+    assert not [s for s in flow['steps'] if 'Savings' in s['label']]
+
+
+def test_calc_flow_pension_savings(monkeypatch):
+    """Legacy rule: pension-before-tax savings are calculated correctly."""
+    from payroll_engine import constants
+
+    monkeypatch.setattr(constants, 'PENSION_DEDUCTED_BEFORE_TAX', True)
     result = calculate_payroll(basic_salary=10000, allowances=2000)
     flow = generate_calculation_flow(result)
 
@@ -130,8 +142,11 @@ def test_calc_flow_pension_savings():
     assert flow['pension_savings'] == expected_savings
 
 
-def test_calc_flow_pension_savings_in_steps():
-    """Pension savings step appears when savings > 0."""
+def test_calc_flow_pension_savings_in_steps(monkeypatch):
+    """Legacy rule: pension savings step appears when savings > 0."""
+    from payroll_engine import constants
+
+    monkeypatch.setattr(constants, 'PENSION_DEDUCTED_BEFORE_TAX', True)
     result = calculate_payroll(basic_salary=10000, allowances=2000)
     flow = generate_calculation_flow(result)
 

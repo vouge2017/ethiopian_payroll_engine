@@ -146,14 +146,14 @@ STRINGS = {
     'how_tax_calculated': 'ግብር እንዴት ይሰላል?',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review:
     # the pension-before-tax statement now carries the pending-confirmation wording.
-    'tax_explainer_intro': 'የኢትዮጵያ ገቢ ግብር ተከታታይ ደረጃዎችን ይጠቀማል (ህግ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት መቀነስ የተለመደው ተግባር ሲሆን፣ እስኪረጋገጥ ዝግጁ አይደለም (RC-38000-01)። የሚተካ ገቢዎን ይቀንሳል።',
+    'tax_explainer_intro': 'የኢትዮጵያ የገቢ ግብር ደረጃ በደረጃ የሚጨምሩ መጣኔዎችን ይጠቀማል (አዋጅ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነስ እንደሆነ ገና እየተረጋገጠ ነው (RC-38000-01)።',
     'bracket': 'ደረጃ',
-    'taxable_range': 'የሚተካ ገቢ ክልል',
+    'taxable_range': 'ግብር የሚከፈልበት ገቢ ክልል',
     'tax_rate': 'መጠን',
-    'personal_relief': 'የግል ማስታገሻ',
+    'personal_relief': 'የግል የግብር ቅናሽ',
     'per_month': 'በወር',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review.
-    'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነሳል — የተለመደው ተግባር፣ እስኪረጋገጥ ይጠበቃል (RC-38000-01)።',
+    'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነስ እንደሆነ ገና እየተረጋገጠ ነው (RC-38000-01)።',
     'of_basic_salary': 'የመነሻ ደመወዝ',
     'then_tax': 'ከዚያ ግብር ይሰላል',
 }

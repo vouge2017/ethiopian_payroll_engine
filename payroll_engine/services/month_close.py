@@ -153,7 +153,7 @@ def build_month_end_close(db, models, run_id: int, company_id: int) -> MonthEndC
     step2 = CloseStep(
         step_number=2,
         name='Payslips Distributed',
-        name_am='የክፍያ ተረጋገጠ',
+        name_am='የደመወዝ ወረቀቶች ተሰራጭተዋል',
         description='Generate PDF payslips and distribute to employees.',
         prerequisites=[1],
     )

@@ -102,12 +102,15 @@ def read_xlsx(file_path_or_bytes, sheet_name=None):
             if i < len(normalized_headers) and normalized_headers[i]:
                 key = normalized_headers[i]
                 if val is not None:
-                    # Keep floats (money cells) numeric for parse_salary; make
-                    # everything else — including ints, which Excel produces
-                    # when an ID/TIN column is typed as numbers — text, so IDs
-                    # keep their string form and VARCHAR columns never
-                    # receive raw numerics.
-                    row_dict[key] = val if isinstance(val, float) else str(val).strip()
+                    # Keep non-integral floats (money cells like 8000.50)
+                    # numeric for parse_salary; make everything else — ints,
+                    # integral floats such as 1E5 or 8000.0 from numeric-typed
+                    # ID/TIN/money columns — text, so IDs keep their string
+                    # form and VARCHAR columns never receive raw numerics.
+                    if isinstance(val, float):
+                        row_dict[key] = str(int(val)) if val.is_integer() else val
+                    else:
+                        row_dict[key] = str(val).strip()
                 else:
                     row_dict[key] = ''
 

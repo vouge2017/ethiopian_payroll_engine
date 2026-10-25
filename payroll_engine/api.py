@@ -275,7 +275,12 @@ def create_employee():
     data = request.get_json()
     if isinstance(data, dict):
         raw_id = data.get('employee_id')
-        if raw_id is None or (isinstance(raw_id, str) and not raw_id.strip()):
+        if isinstance(raw_id, str):
+            # Normalize whitespace up front so stored IDs match the bulk
+            # import's stripped form and cannot create whitespace near-dupes.
+            data['employee_id'] = raw_id.strip()
+        raw_id = data.get('employee_id')
+        if raw_id is None or (isinstance(raw_id, str) and not raw_id):
             # Auto-generate the next free ID — mirrors the Quick Start wizard
             # and the bulk import, so companies without their own ID scheme
             # still work. uq_employee_company_empid spans soft-deleted rows,

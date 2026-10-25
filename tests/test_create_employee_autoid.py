@@ -139,3 +139,15 @@ def test_create_infinite_salary_rejected_422(client, owner_session):
     _login(client)
     resp = _create(client, {'name': 'Inf Salary', 'basic_salary': float('inf')})
     assert resp.status_code == 422
+
+
+def test_create_strips_surrounding_whitespace_id(client, owner_session):
+    """'  CUSTOM-9  ' must store as 'CUSTOM-9' and an exact repeat must 409,
+    so whitespace cannot create near-duplicate IDs (bulk already strips)."""
+    _login(client)
+    resp = _create(client, {'employee_id': '  CUSTOM-9  ', 'name': 'Spaced', 'basic_salary': 5000})
+    assert resp.status_code == 201
+    emp = Employee.query.filter_by(company_id=owner_session['co'].id, name='Spaced').first()
+    assert emp.employee_id == 'CUSTOM-9'
+    resp2 = _create(client, {'employee_id': 'CUSTOM-9', 'name': 'Dup', 'basic_salary': 5000})
+    assert resp2.status_code == 409

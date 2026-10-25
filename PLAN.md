@@ -29,7 +29,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Production (per the 2026-10-21 notes in STATUS.md, not re-checked here): one Render web service with a Neon Free Postgres. There is **no** Redis and **no** worker
   service. `render.yaml` still describes a Render Postgres + Redis + worker +
   cron, so it does not match reality.
-- 78 Alembic migrations with a single head, `f4a5b6c7d8f3`.
+- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main; `fix/settlement-taxation` adds `f4a5b6c7d8f4`).
 
 ### Tests (2026-10-25, this audit)
 
@@ -107,6 +107,35 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   salaries → regenerate ERCA, pension, CSVs, yearly, bank file, payslip export,
   PDF data; all identical and equal to the approved values). Full suite:
   1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
+
+### Settlement taxation (branch `fix/settlement-taxation`, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+  Draft PR against `main`: the tax method **needs accountant confirmation**.
+  Cut from `origin/main` @ `bb47054`.
+- Severance, pay in lieu of notice and leave encashment are now added to the
+  final month's taxable employment income and taxed once with the normal
+  monthly brackets (`SETTLEMENT_LUMP_SUM_TAX_METHOD = 'final_month_aggregate'`
+  in `services/settlement_service.py`). Source: Proc. 979/2016 Art. 12(1)(c)
+  (termination payments are employment income) and Art. 10(2) (tax on the
+  total employment income received for the month); rates per Proc. 1395/2025.
+  No law, regulation (410/2017) or MoR directive was found that prescribes
+  spreading a lump sum over months or years.
+- The pension-before-tax base follows `PENSION_DEDUCTED_BEFORE_TAX` as-is (not
+  changed here; R1 is on `fix/paye-gross-income`).
+- No leave record → 0 days paid and the warning "No leave records — enter
+  unused leave days manually". The terminate form takes optional unused leave
+  days and pay in lieu of notice. Leave year stays the Gregorian year of the
+  last day, because every LeaveBalance writer uses that key.
+- New columns on `final_settlement` (migration `f4a5b6c7d8f4`): `notice_pay`,
+  `taxable_income`, `calculation_details` (JSON: taxable lines, tax on salary
+  alone vs. extra tax from lump sums, method, leave-day source, warnings).
+  `tax_on_salary` now holds the total final-month tax. PostgreSQL migration
+  proof not run.
+- Tests: new `tests/test_settlement_taxation.py` (hand-checked worked examples
+  with the flag True and False, missing-leave-record warning, route tests);
+  `tests/test_settlement_edges.py` statutory-fallback tests replaced.
+  Full suite: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.
 
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
@@ -226,6 +255,9 @@ Each item still needs the owner to confirm it before it moves to Now.
    - Files: `services/settlement_service.py`, `severance.py`,
      `tests/test_settlement_edges.py`.
    - Size: M. Risk: high. Needs accountant input on the method for lump sums.
+   - Status (2026-10-25): implemented on `fix/settlement-taxation` (draft PR),
+     final-month aggregate method, pending accountant confirmation of the
+     method and PostgreSQL proof of migration `f4a5b6c7d8f4`.
 2. **Reports use the month's frozen numbers, not today's employee record.**
    - Partly done on `fix/reports-frozen-values` (reports read stored payslip
      values and the `line_items` basic). Left: a `basic_salary` column for
@@ -347,3 +379,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   Locked runs downloadable and included in the yearly summary. Legacy-path
   payslips have no stored basic: left blank with a note. Tests:
   1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
+- 2026-10-25 — Hark — Settlement taxation (branch fix/settlement-taxation)
+  — severance, pay in lieu of notice and leave encashment added to the final
+  month's taxable income (normal brackets, method constant, needs accountant
+  confirmation). No leave record → 0 days + warning; manual unused-days and
+  notice-pay inputs. Migration `f4a5b6c7d8f4`. Tests: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.

@@ -65,12 +65,14 @@ def test_create_employee_missing_body(client, company_user):
     assert 'details' in resp.get_json()
 
 
-def test_create_employee_missing_employee_id(client, company_user):
+def test_create_employee_missing_employee_id_autogenerates(client, company_user):
+    """Missing employee_id auto-generates the next free EMP### (WO30 parity
+    with the Quick Start wizard and bulk import)."""
     login(client)
     resp = client.post('/api/v1/employees', json={'name': 'Test'})
-    assert resp.status_code == 422
-    details = resp.get_json()['details']
-    assert any('employee_id' in d for d in details)
+    assert resp.status_code == 201
+    eid = resp.get_json()['employee_id']
+    assert eid.startswith('EMP') and eid[3:].isdigit()
 
 
 def test_create_employee_missing_name(client, company_user):
@@ -81,10 +83,13 @@ def test_create_employee_missing_name(client, company_user):
     assert any('name' in d for d in details)
 
 
-def test_create_employee_empty_employee_id(client, company_user):
+def test_create_employee_empty_employee_id_autogenerates(client, company_user):
+    """Empty employee_id auto-generates the next free EMP### (WO30)."""
     login(client)
     resp = client.post('/api/v1/employees', json={'employee_id': '', 'name': 'Test'})
-    assert resp.status_code == 422
+    assert resp.status_code == 201
+    eid = resp.get_json()['employee_id']
+    assert eid.startswith('EMP') and eid[3:].isdigit()
 
 
 def test_create_employee_negative_salary(client, company_user):

@@ -370,7 +370,9 @@ class TestApiValidationAbuse:
         )
         assert resp.status_code == 422
 
-    def test_reject_empty_employee_id(self, client, app, company_user):
+    def test_empty_employee_id_autogenerates_safe_id(self, client, app, company_user):
+        """An empty employee_id must never create a broken row or 500: it
+        auto-generates a valid EMP### (WO30 contract)."""
         _login(client)
         resp = client.post(
             '/api/v1/employees',
@@ -380,7 +382,9 @@ class TestApiValidationAbuse:
                 'basic_salary': 5000,
             },
         )
-        assert resp.status_code == 422
+        assert resp.status_code == 201
+        eid = resp.get_json()['employee_id']
+        assert eid.startswith('EMP') and eid[3:].isdigit()
 
     def test_reject_invalid_tin(self, client, app, company_user):
         _login(client)

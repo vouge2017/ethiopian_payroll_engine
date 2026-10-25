@@ -48,7 +48,7 @@ RULE_SOURCES = {
     'tax_brackets': RuleSource(
         rule_id='tax_brackets',
         name='Income Tax Brackets',
-        name_am='የገቢ ግብር�ደን',
+        name_am='የገቢ ግብር ደረጃዎች',
         source='Proclamation No. 1395/2025, Article 11',
         source_url='https://lawethiopia.com/images/proc1395-2025.pdf',
         effective_date='2025-09-01',
@@ -86,7 +86,7 @@ RULE_SOURCES = {
     'pension_employer_rate': RuleSource(
         rule_id='pension_employer_rate',
         name='Employer Pension Rate',
-        name_am='የሰራተኛ አሰሪ ጡረታ ተመን',
+        name_am='የአሠሪ የጡረታ መዋጮ ተመን',
         source='Proclamation No. 1268/2022, Article 10',
         effective_date='2022-01-01',
         category='pension',
@@ -206,7 +206,7 @@ RULE_SOURCES = {
     'severance_year1': RuleSource(
         rule_id='severance_year1',
         name='Severance — Year 1',
-        name_am='የስራ ማቋረጫ — የመጀመሪያ ዓመት',
+        name_am='የሥራ ስንብት ክፍያ — የመጀመሪያ ዓመት',
         source='Proclamation No. 1156/2019, Article 40(1)',
         effective_date='2019-01-01',
         category='severance',
@@ -215,7 +215,7 @@ RULE_SOURCES = {
     'severance_additional_years': RuleSource(
         rule_id='severance_additional_years',
         name='Severance — Additional Years',
-        name_am='የስራ ማቋረጫ — ተጨማሪ ዓመታት',
+        name_am='የሥራ ስንብት ክፍያ — ተጨማሪ ዓመታት',
         source='Proclamation No. 1156/2019, Article 40(2)',
         effective_date='2019-01-01',
         category='severance',
@@ -224,7 +224,7 @@ RULE_SOURCES = {
     'severance_maximum': RuleSource(
         rule_id='severance_maximum',
         name='Severance Maximum',
-        name_am='የስራ ማቋረጫ ከፍተኛ',
+        name_am='የሥራ ስንብት ክፍያ ከፍተኛ መጠን',
         source='Proclamation No. 1156/2019, Article 40',
         effective_date='2019-01-01',
         category='severance',

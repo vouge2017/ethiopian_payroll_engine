@@ -335,7 +335,7 @@ def generate_payslip(
     # ── EMPLOYEE INFO (bilingual) ──
     info_data = [
         ['Employee ID / የሰራተኛ መለያ:', emp['id'], 'Name / ስም:', emp['name']],
-        ['Department / ክፍል:', department or '—', 'Position / ሹም:', position or '—'],
+        ['Department / ክፍል:', department or '—', 'Position / የሥራ መደብ:', position or '—'],
         ['Pay Period / የክፍያ ጊዜ:', period, 'Payment / የክፍያ ዘዴ:', emp.get('bank', '—')],
     ]
     info_table = _table(info_data, colWidths=[35 * mm, 48 * mm, 35 * mm, 52 * mm])
@@ -489,7 +489,7 @@ def generate_payslip(
     elements.append(Spacer(1, 8))
 
     # ── NET PAY ──
-    net_data = [['NET PAY / የተቀረ ክፍያ (ETB)', f'{emp["net"]:,.2f}']]
+    net_data = [['NET PAY / የተጣራ ክፍያ (ETB)', f'{emp["net"]:,.2f}']]
     net_table = _table(net_data, colWidths=[110 * mm, 60 * mm])
     net_table.setStyle(
         TableStyle(

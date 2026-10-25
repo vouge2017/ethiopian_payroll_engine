@@ -274,7 +274,7 @@ def format_severance_for_payslip(result: dict) -> dict:
         return None
 
     return {
-        'label': 'Severance Pay / የስራ ማቆያ ክፍያ',
+        'label': 'Severance Pay / የሥራ ስንብት ክፍያ',
         'amount': result['final_amount'],
         'explanation': result['reason'],
     }

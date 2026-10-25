@@ -35,7 +35,7 @@ SYSTEM_ITEMS: list[dict] = [
     {
         'key': SYSTEM_ITEM_KEYS.BASIC_SALARY.value,
         'name_en': 'Basic Salary',
-        'name_am': 'ቀሜታ',
+        'name_am': 'መሠረታዊ ደመወዝ',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 100,
@@ -55,7 +55,7 @@ SYSTEM_ITEMS: list[dict] = [
     {
         'key': SYSTEM_ITEM_KEYS.EMPLOYEE_PENSION.value,
         'name_en': 'Employee Pension (7%)',
-        'name_am': 'ኢትዮጵያ የህብረተሰብ መረጃ 7%',
+        'name_am': 'የሠራተኛ የጡረታ መዋጮ 7%',
         'classification': PayItemClassification.DEDUCTION,
         'calculation_method': PayItemCalcMethod.PERCENT_OF_BASIC,
         'sort_order': 300,
@@ -73,7 +73,7 @@ SYSTEM_ITEMS: list[dict] = [
     {
         'key': SYSTEM_ITEM_KEYS.EMPLOYER_PENSION.value,
         'name_en': 'Employer Pension (11%)',
-        'name_am': 'ፀጉሮች 11%',
+        'name_am': 'የአሠሪ የጡረታ መዋጮ 11%',
         'classification': PayItemClassification.EMPLOYER_CHARGE,
         'calculation_method': PayItemCalcMethod.PERCENT_OF_BASIC,
         'sort_order': 350,
@@ -91,7 +91,7 @@ SYSTEM_ITEMS: list[dict] = [
     {
         'key': SYSTEM_ITEM_KEYS.INCOME_TAX.value,
         'name_en': 'Income Tax',
-        'name_am': 'የእጅሮ ስሚስ',
+        'name_am': 'የገቢ ግብር',
         'classification': PayItemClassification.TAX,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 400,
@@ -133,7 +133,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value,
         'name_en': 'General Allowance',
-        'name_am': 'አጠቃላይ ክፍያ',
+        'name_am': 'አጠቃላይ አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 100,
@@ -150,7 +150,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.TRANSPORT.value,
         'name_en': 'Transport Allowance',
-        'name_am': 'ስያፍ',
+        'name_am': 'የትራንስፖርት አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 150,
@@ -169,7 +169,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.HARDSHIP.value,
         'name_en': 'Hardship Allowance',
-        'name_am': 'ደረጃ ስያፍ',
+        'name_am': 'የአስቸጋሪ ቦታ አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 155,
@@ -187,7 +187,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.HOUSING.value,
         'name_en': 'Housing Allowance',
-        'name_am': 'መኖር ስያፍ',
+        'name_am': 'የቤት አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 160,
@@ -201,7 +201,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.COMMUNICATION.value,
         'name_en': 'Communication Allowance',
-        'name_am': 'ኢንተርኔት/ፊዮን ስያፍ',
+        'name_am': 'የኮሙኒኬሽን አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 165,
@@ -215,7 +215,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.PER_DIEM.value,
         'name_en': 'Per Diem',
-        'name_am': 'የሰዓት ወጪ',
+        'name_am': 'የውሎ አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 170,
@@ -229,7 +229,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.MEDICAL.value,
         'name_en': 'Medical Allowance',
-        'name_am': 'ጤና ስያፍ',
+        'name_am': 'የሕክምና አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 175,
@@ -243,7 +243,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.FOOD.value,
         'name_en': 'Food Allowance',
-        'name_am': 'መገባት ስያፍ',
+        'name_am': 'የምግብ አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 180,
@@ -257,7 +257,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.EDUCATION.value,
         'name_en': 'Education Allowance',
-        'name_am': 'ትምህርት ስያፍ',
+        'name_am': 'የትምህርት አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 185,
@@ -271,7 +271,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.UNIFORM.value,
         'name_en': 'Uniform Allowance',
-        'name_am': 'ተወው ልብስ ስያፍ',
+        'name_am': 'የደንብ ልብስ አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 190,
@@ -285,7 +285,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.OTHER.value,
         'name_en': 'Other Allowance',
-        'name_am': 'ሌላ ስያፍ',
+        'name_am': 'ሌላ አበል',
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 195,
@@ -314,7 +314,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.LOAN.value,
         'name_en': 'Staff Loan',
-        'name_am': 'ቤት መቀመጫ/የመሰብ ክፍያ',
+        'name_am': 'የሠራተኛ ብድር',
         'classification': PayItemClassification.DEDUCTION,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 510,
@@ -328,7 +328,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.COST_SHARING.value,
         'name_en': 'Cost Sharing',
-        'name_am': 'ካፒታል ክፍያ',
+        'name_am': 'የወጪ መጋራት',
         'classification': PayItemClassification.DEDUCTION,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 520,
@@ -342,7 +342,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.COURT_ORDER.value,
         'name_en': 'Court Order Deduction',
-        'name_am': 'ብረት መፍፍፍያ',
+        'name_am': 'የፍርድ ቤት ትዕዛዝ ተቀናሽ',
         'classification': PayItemClassification.DEDUCTION,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 530,
@@ -360,7 +360,7 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
     {
         'key': COMPANY_TEMPLATE_ITEM_KEYS.OTHER_DEDUCTION.value,
         'name_en': 'Other Deduction',
-        'name_am': 'ሌላ ክፍያ',
+        'name_am': 'ሌላ ተቀናሽ',
         'classification': PayItemClassification.DEDUCTION,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 540,

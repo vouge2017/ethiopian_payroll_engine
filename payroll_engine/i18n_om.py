@@ -142,14 +142,14 @@ STRINGS_OM = {
     'how_tax_calculated': 'Caasni akkamitti shallagama?',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review:
     # the pension-before-tax statement now carries the pending-confirmation wording.
-    'tax_explainer_intro': "Caansi lixuu Itoophiyaa brackettiin caalu fayyadamaa (Proclamation No. 1395/2025). Haqni guutuu dura caasaa irraa haqamaan akkaataa ammaa jiruudha; mirkanaa'iin hooersaalaan eegama (RC-38000-01). Lixuu kee ni hir'isa.",
+    'tax_explainer_intro': "Gibirri galii Itoophiyaa sadarkaa sadarkaan dabalu fayyadama (Labsii Lak. 1395/2025). Sooramni gibira dura hir'ifamuu fi dhiisuun isaa ammallee hin mirkanoofne (RC-38000-01).",
     'bracket': 'Bracket',
     'taxable_range': 'Hangaa Lixuu',
     'tax_rate': 'Hammam',
     'personal_relief': 'Dhoomsoo Dhuunfaa',
     'per_month': "ji'a tokkootti",
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review.
-    'pension_before_tax': "Haqni guutuu dura caasaa irraa ni haqama — akkaataa ammaa jiru; mirkanaa'insa eegaala (RC-38000-01)",
+    'pension_before_tax': "Sooramni gibira dura hir'ifamuu fi dhiisuun isaa ammallee hin mirkanoofne (RC-38000-01).",
     'of_basic_salary': "lixuu bu'uura",
     'then_tax': 'sana booda caasni ni shallagama',
 }

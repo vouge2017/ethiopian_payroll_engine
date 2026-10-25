@@ -61,6 +61,11 @@
                             </div>
 
                             {% set details = settlement.calculation_details or {} %}
+                            {% if details.get('tax_method_status') %}
+                            <div class="alert alert-light border py-2 small" data-testid="settlement-tax-method">
+                                <i class="bi bi-journal-text me-1"></i>{{ details.get('tax_method_note') }}
+                            </div>
+                            {% endif %}
                             {% if details.get('pending_confirmation') %}
                             <div class="alert alert-info py-2 small" data-testid="settlement-pending-confirmation">
                                 <i class="bi bi-info-circle me-1"></i>{{ details.get('pending_confirmation') }}

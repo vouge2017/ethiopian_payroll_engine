@@ -29,7 +29,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Production (per the 2026-10-21 notes in STATUS.md, not re-checked here): one Render web service with a Neon Free Postgres. There is **no** Redis and **no** worker
   service. `render.yaml` still describes a Render Postgres + Redis + worker +
   cron, so it does not match reality.
-- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main; `fix/settlement-taxation` adds `f4a5b6c7d8f4` and `f4a5b6c7d8f5`).
+- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main; `fix/settlement-taxation` adds `f4a5b6c7d8f4`, `f4a5b6c7d8f5` and `f4a5b6c7d8f6`).
 
 ### Tests (2026-10-25, this audit)
 
@@ -162,34 +162,52 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Which basis and divisor are legally right is a practitioner question
   (Labour Proc. 1156/2019 "wage"); the app keeps the old default.
 
-### Adviser answers on settlement (2026-10-25) — Q2 and Q3 PENDING
+### Adviser answers on settlement (2026-10-25, second review) — Q2 ACCEPTED, Q3 PARTIAL, Q4 PENDING
 
-Recorded in `docs/decisions/2026-10-25-payroll-rules.md` (added on
-`fix/paye-gross-income`, PR #32; reaches this branch through main).
+Recorded in `docs/decisions/2026-10-25-settlement-rules.md` (on this branch;
+kept separate from `docs/decisions/2026-10-25-payroll-rules.md` on PR #32,
+which is not merged, to avoid a conflict; it supersedes that file's Q2–Q4).
 
-- **Q2 — termination-payment tax: PENDING written tax confirmation.** Severance,
-  pay in lieu of notice and leave encashment are taxable employment income.
-  Aggregation in the final month (what this branch does) is a supportable
-  starting interpretation but is **not verified**. No ERCA/MoR directive on
-  spreading was identified.
-- **Q3 — leave-pay formula: PENDING written labour-law confirmation.** No
-  universal formula is approved. Labour Proc. 1156/2019 Art 77(2) (leave pay =
-  the wage the worker would have received), Art 77(4) (unused leave paid on
-  termination), Art 53 (definition of wage, with exclusions). Components must
-  follow the Art 53 wage definition, not payroll "allowance" labels. The
-  26-day figure in Art 77(3) is about counting service, not a divisor.
-- Follow-up: the leave basis setting should eventually offer an "Art. 53 wage"
-  basis definition instead of `basic_plus_regular_allowances` /
-  `basic_only` built on "allowance" labels (see Parked).
-- Every new settlement now stores and shows the notice "Termination-payment
-  tax method and leave-pay formula pending written tax/labour-law
-  confirmation" (`calculation_details.pending_confirmation`, settlement page).
-- PR #33 stays draft until Q2 and Q3 are confirmed in writing.
-- Tests after merging main @ `2b0d15e` (PR #34) and adding the notice:
-  **1737 passed, 0 failed, 0 errors, 205 skipped** (169 files, one process
-  each, SQLite, `python -m pytest`; 1731 + 6 from #34). Single Alembic head
-  `f4a5b6c7d8f5` (#34 added no migrations). PR #32 (PAYE on gross) is NOT
-  merged into this branch; `PENSION_DEDUCTED_BEFORE_TAX` is still `True` here.
+- **Q2 — termination-payment tax: ACCEPTED as statutory default.** Taxable
+  severance, notice pay and unused-leave pay are aggregated with other
+  taxable employment income in the month received (Proc. 979/2016 Arts 10,
+  12; withholding Art 88), unless a specific exemption/rule applies. Not a
+  confirmation that every directive was reviewed. Code unchanged
+  (`final_month_aggregate`); `TAX_METHOD_STATUS = 'statutory_default'`; each
+  settlement shows "Tax method: statutory default: aggregated in month
+  received (Proc. 979/2016 Arts 10, 12, 88)".
+- **Q3 — leave-pay formula: PARTIAL.** Qualifying wages under Labour Proc.
+  1156/2019 Arts 53 and 77 together; Art 53 exclusions apply; fixed /
+  contractual / regular does not by itself make an allowance includable; no
+  universal ÷26 or ÷30. "Do not use an unconfirmed default for live
+  settlements." Implemented: per-company confirmation
+  (`company.leave_rate_confirmed_at` / `_by`, migration `f4a5b6c7d8f6`,
+  existing companies unconfirmed). Settings → Company Profile has a
+  confirmation checkbox (audit `leave_rate_confirmation_change`; changing the
+  basis/divisor without re-ticking clears it). A settlement with leave
+  encashment > 0 is refused at finalize (terminate POST → 409, nothing saved,
+  employee stays active; `LeaveRuleNotConfirmedError` in
+  `create_settlement_record`) with "Choose and confirm your leave-pay basis
+  and divisor (Labour Proc. 1156/2019 Arts 53, 77) before finalizing" and a
+  link to the setting. New "Preview settlement" button (no password, nothing
+  saved) computes with a visible warning. Basis label is now "Basic +
+  allowances that qualify as wages (Art. 53)"; "(default)" tag removed. The
+  leave-pay pending notice stays on a settlement until the company confirms.
+- **Q4 — locked-month tax errors: PENDING procedure.** Preserve originals,
+  recalculate affected periods, formal correction under Tax Administration
+  Proc. 983/2016 as amended by Proc. 1434/2026; the 5-yr (10-yr fraud)
+  assessment period is not the PAYE amendment procedure; exact monthly PAYE
+  amendment procedure unconfirmed. Still parked.
+- PR #33 stays draft (owner decides on merge).
+- Tests: new `tests/test_settlement_leave_rule_confirmation.py` (12: block,
+  preview, zero-leave allow, confirm → allow, change clears, re-save keeps
+  stamp, override basis not confirmed); settlement fixtures in
+  `test_settlement_taxation.py` / `test_settlement_leave_rate.py` now confirm
+  the company. Full suite: **1749 passed, 0 failed, 0 errors, 205 skipped**
+  (170 files, one process each, `python -m pytest`, SQLite; 1737 + 12 new).
+  Single Alembic head `f4a5b6c7d8f6`. ruff check + format clean
+  (`payroll_engine/ tests/`). PostgreSQL: CI only. Screens not checked in a
+  real browser (no browser in the sandbox); HTML asserted in tests.
 - Tests: new `tests/test_settlement_leave_rate.py` (hand-checked: basic 10,000
   + 2,000 regular allowance, 10 days → basic_only 3,333.33, basic_plus
   4,000.00; divisor 26; default unchanged; validation; DB constraint;
@@ -337,9 +355,10 @@ Each item still needs the owner to confirm it before it moves to Now.
      `tests/test_settlement_edges.py`.
    - Size: M. Risk: high. Needs accountant input on the method for lump sums.
    - Status (2026-10-25): implemented on `fix/settlement-taxation` (draft PR
-     #33), final-month aggregate method. Adviser answered 2026-10-25: Q2
-     (tax method) and Q3 (leave formula, Labour Proc. 1156/2019 Arts 53, 77)
-     both PENDING written confirmation. PostgreSQL proof of migrations
+     #33), final-month aggregate method. Adviser second review 2026-10-25:
+     Q2 (tax method) ACCEPTED as statutory default; Q3 (leave formula,
+     Labour Proc. 1156/2019 Arts 53, 77) PARTIAL — leave pay blocked at
+     finalize until each company confirms its basis and divisor. PostgreSQL proof of migrations
      `f4a5b6c7d8f4`/`f4a5b6c7d8f5`: CI only.
 2. **Reports use the month's frozen numbers, not today's employee record.**
    - Partly done on `fix/reports-frozen-values` (reports read stored payslip
@@ -430,9 +449,11 @@ Each item still needs the owner to confirm it before it moves to Now.
 
 AI sessions put new ideas here, one line each, with the reason they are parked.
 
-- Leave-rate basis option "Art. 53 wage" (Labour Proc. 1156/2019 Art 53 wage
-  definition with its exclusions) replacing the "allowance"-label bases.
-  Parked: waits for the written labour-law confirmation (Q3).
+- Per-pay-item "Art. 53 wage" flag (Labour Proc. 1156/2019 Art 53 with its
+  exclusions) so the leave base sums only qualifying components instead of
+  `Employee.allowances`. Parked: Q3 is PARTIAL (2026-10-25); for now the
+  company confirms the basis (label "Basic + allowances that qualify as wages
+  (Art. 53)") before any leave pay is finalized.
 
 - Run the PostgreSQL test suite locally or in a sandbox. Parked: needs a
   disposable Postgres; CI covers it for now.
@@ -489,3 +510,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   method and leave-pay formula pending written tax/labour-law confirmation".
   Parked an "Art. 53 wage" leave basis. Tests: 1737 passed, 0 failed, 205
   skipped (169 files, SQLite). ruff check + format clean. Still draft.
+- 2026-10-25 — Hark — adviser Q2/Q3 applied to PR #33. Q2 ACCEPTED as
+  statutory default (aggregated in month received, Proc. 979/2016 Arts 10,
+  12, 88); Q3 PARTIAL: per-company leave-rule confirmation (migration
+  `f4a5b6c7d8f6`), settlements with leave encashment > 0 blocked at finalize
+  until confirmed, preview still allowed with a warning, basis relabelled
+  "Basic + allowances that qualify as wages (Art. 53)"; Q4 PENDING procedure.
+  Decisions in `docs/decisions/2026-10-25-settlement-rules.md`. Tests: 1749
+  passed, 0 failed, 205 skipped (170 files, SQLite). ruff clean. Still draft.

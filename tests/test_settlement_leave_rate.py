@@ -17,7 +17,7 @@ Employee: basic 10,000; regular monthly allowance (transport) 2,000 on record;
 The daily rate stays unrounded; only the encashment is rounded once.
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
@@ -63,7 +63,10 @@ def app():
 
 @pytest.fixture
 def setup(app):
-    company = Company(name='Synthetic Leave Rate Co')
+    # The company has confirmed its leave-pay basis and divisor, so settlements
+    # with leave encashment can be finalized (see test_settlement_leave_rule_confirmation.py
+    # for the unconfirmed block).
+    company = Company(name='Synthetic Leave Rate Co', leave_rate_confirmed_at=datetime(2026, 10, 25, 9, 0))
     db.session.add(company)
     db.session.flush()
     user = User(phone='911000778', company_id=company.id, role='owner')
@@ -110,7 +113,7 @@ def test_basic_plus_regular_allowances_example(setup):
     assert r['leave_encashment'] == Decimal('4000.00')
     leave = r['calculation_details']['leave']
     assert leave['rate_basis'] == 'basic_plus_regular_allowances'
-    assert leave['rate_basis_label'] == 'Basic salary + regular allowances'
+    assert leave['rate_basis_label'] == 'Basic + allowances that qualify as wages (Art. 53)'
     assert leave['rate_divisor'] == 30
     assert leave['rate_monthly_base'] == '12000.00'
     assert leave['daily_rate'] == '400.00'
@@ -223,7 +226,8 @@ def test_company_settings_page_saves_setting_and_audits(app, setup):
     assert page.status_code == 200
     html = page.get_data(as_text=True)
     assert 'name="leave_rate_basis"' in html
-    assert 'Basic salary + regular allowances (default)' in html
+    assert 'Basic + allowances that qualify as wages (Art. 53)' in html
+    assert '(default)' not in html
     assert 'name="leave_rate_divisor"' in html
 
     resp = client.post(
@@ -287,5 +291,8 @@ def test_settlement_detail_page_shows_basis(app, setup):
     assert '÷ 30 days' in html
     assert 'ETB 333.33/day' in html
     assert 'regular allowances ETB 2000.00 not included' in html
-    assert 'data-testid="settlement-pending-confirmation"' in html
-    assert 'Termination-payment tax method and leave-pay formula pending written tax/labour-law confirmation' in html
+    # Changing the basis directly in the DB keeps the confirmation stamp,
+    # so the settlement is finalized and shows no leave-pay pending notice.
+    assert 'data-testid="settlement-pending-confirmation"' not in html
+    assert 'data-testid="settlement-tax-method"' in html
+    assert 'statutory default: aggregated in month received (Proc. 979/2016 Arts 10, 12, 88)' in html

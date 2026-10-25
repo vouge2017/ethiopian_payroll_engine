@@ -22,22 +22,35 @@ from payroll_engine.tax import calculate_tax
 Q = Decimal('0.01')
 
 # How severance, pay in lieu of notice and leave encashment are taxed.
-# 'final_month_aggregate': add them to the final month's taxable employment
-# income and apply the normal monthly brackets once (Proc. 979/2016
-# Art. 10(2) and 12(1)(c); rates per Proc. 1395/2025 Art. 11). No source
-# found that prescribes spreading lump sums over months or years.
-# NEEDS ACCOUNTANT CONFIRMATION before production use.
+# 'final_month_aggregate': add them to the taxable employment income of the
+# month they are received (the final month) and apply the normal monthly
+# brackets once. Adviser 2026-10-25 (Q2 ACCEPTED as the statutory default):
+# taxable termination payments are aggregated with other taxable employment
+# income in the month received (Proc. 979/2016 Arts 10, 12; withholding
+# Art 88), unless a specific exemption or rule applies. Rates per Proc.
+# 1395/2025. Not a confirmation that every directive was reviewed
+# (docs/decisions/2026-10-25-settlement-rules.md).
 SETTLEMENT_LUMP_SUM_TAX_METHOD = 'final_month_aggregate'
-TAX_METHOD_NOTE = (
-    'Severance, notice pay and leave encashment are added to the final month and taxed with the '
-    'normal monthly PAYE brackets (pending accountant confirmation).'
-)
+TAX_METHOD_STATUS = 'statutory_default'
+TAX_METHOD_NOTE = 'Tax method: statutory default: aggregated in month received (Proc. 979/2016 Arts 10, 12, 88)'
 NO_LEAVE_RECORD_WARNING = 'No leave records — enter unused leave days manually'
-# Shown on every settlement until the adviser's Q2/Q3 answers are confirmed in
-# writing (docs/decisions/2026-10-25-payroll-rules.md).
-PENDING_CONFIRMATION_NOTICE = (
-    'Termination-payment tax method and leave-pay formula pending written tax/labour-law confirmation'
+# Shown on a settlement while the company has not confirmed its leave-pay
+# basis and divisor (adviser Q3 PARTIAL, 2026-10-25).
+LEAVE_RULE_PENDING_NOTICE = (
+    'Leave-pay basis and divisor pending: not yet confirmed by the company (Labour Proc. 1156/2019 Arts 53, 77)'
 )
+# Why a settlement with leave encashment > 0 cannot be finalized yet.
+LEAVE_RULE_BLOCK_MESSAGE = (
+    'Choose and confirm your leave-pay basis and divisor (Labour Proc. 1156/2019 Arts 53, 77) before finalizing'
+)
+
+
+class LeaveRuleNotConfirmedError(ValueError):
+    """A settlement with leave encashment > 0 was finalized before the company
+    confirmed its leave-pay basis and divisor."""
+
+    def __init__(self, message: str = LEAVE_RULE_BLOCK_MESSAGE):
+        super().__init__(message)
 
 
 def _outstanding_breakdown(employee: Employee, end_date: date) -> dict:
@@ -188,6 +201,34 @@ def company_leave_rate_settings(company_id: int, db_session=None) -> tuple[str, 
     return validate_leave_rate_settings(basis, divisor)
 
 
+def company_leave_rule_confirmation(company_id: int, db_session=None) -> dict:
+    """Whether the company has confirmed its leave-pay basis and divisor.
+
+    Returns ``{'confirmed': bool, 'confirmed_at': datetime | None,
+    'basis': str, 'divisor': int}``. No session or no company → unconfirmed
+    with the app defaults. The app defaults are never treated as approved.
+    """
+    basis, divisor = company_leave_rate_settings(company_id, db_session)
+    confirmed_at = None
+    if db_session is not None and company_id is not None:
+        company = db_session.get(Company, company_id)
+        if company is not None:
+            confirmed_at = company.leave_rate_confirmed_at
+    return {'confirmed': confirmed_at is not None, 'confirmed_at': confirmed_at, 'basis': basis, 'divisor': divisor}
+
+
+def settlement_finalize_block(calc: dict) -> str | None:
+    """Why this calculated settlement may not be finalized, or None.
+
+    Blocks only when leave encashment > 0 and the company has not confirmed
+    its leave-pay basis and divisor. Previews may still show the figures.
+    """
+    leave = (calc.get('calculation_details') or {}).get('leave') or {}
+    if Decimal(str(calc.get('leave_encashment') or '0')) > 0 and not leave.get('rule_confirmed'):
+        return LEAVE_RULE_BLOCK_MESSAGE
+    return None
+
+
 def leave_daily_rate_details(employee: Employee, basis=None, divisor=None) -> dict:
     """Daily wage for leave encashment and the components it was built from.
 
@@ -306,14 +347,20 @@ def calculate_settlement(
 
     # 3. Leave encashment: recorded or entered days only, never assumed.
     leave = resolve_unused_leave_days(employee, end_date, company_id, db_session, unused_leave_days)
-    if leave_rate_basis is None or leave_rate_divisor is None:
-        company_basis, company_divisor = company_leave_rate_settings(company_id, db_session)
-        leave_rate_basis = leave_rate_basis or company_basis
-        leave_rate_divisor = leave_rate_divisor if leave_rate_divisor is not None else company_divisor
+    confirmation = company_leave_rule_confirmation(company_id, db_session)
+    leave_rate_basis = leave_rate_basis or confirmation['basis']
+    leave_rate_divisor = leave_rate_divisor if leave_rate_divisor is not None else confirmation['divisor']
     rate = leave_daily_rate_details(employee, leave_rate_basis, leave_rate_divisor)
     daily_rate = rate['daily_rate']
     leave_encashment = (daily_rate * leave['days']).quantize(Q, rounding=ROUND_HALF_UP)
+    # Confirmed only if the company confirmed exactly the basis/divisor used.
+    rule_confirmed = confirmation['confirmed'] and (rate['basis'], rate['divisor']) == (
+        confirmation['basis'],
+        confirmation['divisor'],
+    )
     warnings = list(leave['warnings'])
+    if leave_encashment > 0 and not rule_confirmed:
+        warnings.append(LEAVE_RULE_BLOCK_MESSAGE + '. This figure is a preview only.')
 
     # 4. Pension deduction on the prorated basic share of the final month
     # (pension is on basic salary only; lump sums carry none).
@@ -355,8 +402,9 @@ def calculate_settlement(
 
     calculation_details = {
         'tax_method': SETTLEMENT_LUMP_SUM_TAX_METHOD,
+        'tax_method_status': TAX_METHOD_STATUS,
         'tax_method_note': TAX_METHOD_NOTE,
-        'pending_confirmation': PENDING_CONFIRMATION_NOTICE,
+        'pending_confirmation': None if rule_confirmed else LEAVE_RULE_PENDING_NOTICE,
         'pension_deducted_before_tax': bool(_constants.PENSION_DEDUCTED_BEFORE_TAX),
         'taxable_lines': [
             {'code': 'outstanding_salary', 'label': 'Outstanding salary', 'amount': _s(outstanding_salary)},
@@ -389,6 +437,10 @@ def calculate_settlement(
                     'included': rate['allowances_included'],
                 },
             ],
+            'rule_confirmed': rule_confirmed,
+            'rule_confirmed_at': (
+                confirmation['confirmed_at'].isoformat() if rule_confirmed and confirmation['confirmed_at'] else None
+            ),
             'rate_formula': (
                 f'{rate["basis_label"]} / {rate["divisor"]} = daily rate; '
                 'daily rate x unused days, rounded once to 0.01'
@@ -451,6 +503,10 @@ def create_settlement_record(
 
     Returns:
         FinalSettlement record (already added to session, not committed)
+
+    Raises:
+        LeaveRuleNotConfirmedError: leave encashment > 0 and the company has
+            not confirmed its leave-pay basis and divisor. Nothing is added.
     """
     calc = calculate_settlement(
         employee,
@@ -461,6 +517,9 @@ def create_settlement_record(
         unused_leave_days=unused_leave_days,
         notice_pay=notice_pay,
     )
+    block = settlement_finalize_block(calc)
+    if block:
+        raise LeaveRuleNotConfirmedError(block)
 
     settlement = FinalSettlement(
         company_id=company_id,

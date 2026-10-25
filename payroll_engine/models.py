@@ -442,6 +442,14 @@ class Company(db.Model):
         server_default=str(_constants.DEFAULT_LEAVE_RATE_DIVISOR),
         default=_constants.DEFAULT_LEAVE_RATE_DIVISOR,
     )
+    # When (UTC) and by which user the company confirmed its leave-pay basis
+    # and divisor. NULL = not confirmed: settlements with leave encashment > 0
+    # cannot be finalized (Labour Proc. 1156/2019 Arts 53, 77). Cleared when
+    # the basis or divisor changes without a fresh confirmation. The user id
+    # is a plain integer (no FK) to avoid a company <-> user FK cycle; the
+    # audit log records the same user.
+    leave_rate_confirmed_at = db.Column(db.DateTime, nullable=True)
+    leave_rate_confirmed_by = db.Column(db.Integer, nullable=True)
 
     __table_args__ = (
         db.CheckConstraint(

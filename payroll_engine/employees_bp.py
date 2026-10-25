@@ -1035,7 +1035,11 @@ def reactivate_employee(emp_id):
 @role_required('owner', 'accountant')
 def terminate_employee(emp_id):
     """Terminate an employee with severance calculation and final settlement."""
-    from payroll_engine.services.settlement_service import create_settlement_record
+    from payroll_engine.services.settlement_service import (
+        LeaveRuleNotConfirmedError,
+        calculate_settlement,
+        create_settlement_record,
+    )
     from payroll_engine.severance import TerminationReason
 
     emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
@@ -1044,12 +1048,15 @@ def terminate_employee(emp_id):
         reason = request.form.get('termination_reason', '').strip()
         password = request.form.get('password', '').strip()
         end_date_str = request.form.get('end_date', '').strip()
+        # 'preview' computes the settlement without saving or terminating
+        # (no password needed); anything else finalizes.
+        is_preview = request.form.get('action', '').strip() == 'preview'
 
         if reason not in TerminationReason.ALL:
             flash('Invalid termination reason.', 'danger')
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
-        if not password or not current_user.check_password(password):
+        if not is_preview and (not password or not current_user.check_password(password)):
             flash('Incorrect password. Termination cancelled.', 'danger')
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
@@ -1085,17 +1092,52 @@ def terminate_employee(emp_id):
             flash(err, 'danger')
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
-        # Create settlement using service
-        settlement = create_settlement_record(
-            employee=emp,
-            termination_reason=reason,
-            end_date=end_date,
-            company_id=_company_id(),
-            created_by=current_user.id,
-            db_session=db.session,
-            unused_leave_days=unused_leave_days,
-            notice_pay=notice_pay,
-        )
+        form_values = {
+            'termination_reason': reason,
+            'end_date': end_date.isoformat(),
+            'unused_leave_days': '' if unused_leave_days is None else str(unused_leave_days),
+            'notice_pay': '' if notice_pay is None else str(notice_pay),
+        }
+        if is_preview:
+            preview = calculate_settlement(
+                emp,
+                reason,
+                end_date,
+                _company_id(),
+                db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+            return _render_terminate_form(emp, preview=preview, form_values=form_values)
+
+        # Create settlement using service. Blocked (nothing saved, employee
+        # stays active) when leave encashment > 0 and the company has not
+        # confirmed its leave-pay basis and divisor.
+        try:
+            settlement = create_settlement_record(
+                employee=emp,
+                termination_reason=reason,
+                end_date=end_date,
+                company_id=_company_id(),
+                created_by=current_user.id,
+                db_session=db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+        except LeaveRuleNotConfirmedError as exc:
+            db.session.rollback()
+            preview = calculate_settlement(
+                emp,
+                reason,
+                end_date,
+                _company_id(),
+                db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+            return _render_terminate_form(
+                emp, preview=preview, form_values=form_values, block_message=str(exc), status=409
+            )
 
         # Soft-delete the employee
         emp.is_deleted = True
@@ -1152,25 +1194,38 @@ def terminate_employee(emp_id):
         return redirect(url_for('employees.settlement_detail', settlement_id=settlement.id))
 
     # GET: show termination form with severance preview
-    from payroll_engine.severance import calculate_severance
+    return _render_terminate_form(emp)
+
+
+def _render_terminate_form(emp, preview=None, form_values=None, block_message=None, status=200):
+    """Termination form with severance previews, an optional settlement
+    preview (not saved) and an optional finalize-block message."""
+    from payroll_engine.services.settlement_service import company_leave_rule_confirmation, recorded_unused_leave_days
+    from payroll_engine.severance import TerminationReason, calculate_severance
 
     today = date.today()
     start = emp.start_date or (emp.created_at.date() if emp.created_at else today)
-    from payroll_engine.services.settlement_service import recorded_unused_leave_days
 
     previews = {}
     for r in TerminationReason.ALL:
         result = calculate_severance(emp.basic_salary, start, today, r)
         previews[r] = result
 
-    return render_template(
-        'terminate_employee.html',
-        employee=emp,
-        start_date=start,
-        today=today,
-        previews=previews,
-        termination_reasons=TerminationReason.ALL,
-        recorded_leave_days=recorded_unused_leave_days(emp, today, _company_id(), db.session),
+    return (
+        render_template(
+            'terminate_employee.html',
+            employee=emp,
+            start_date=start,
+            today=today,
+            previews=previews,
+            termination_reasons=TerminationReason.ALL,
+            recorded_leave_days=recorded_unused_leave_days(emp, today, _company_id(), db.session),
+            leave_rule_confirmed=company_leave_rule_confirmation(_company_id(), db.session)['confirmed'],
+            settlement_preview=preview,
+            form_values=form_values or {},
+            block_message=block_message,
+        ),
+        status,
     )
 
 

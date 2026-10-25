@@ -1,5 +1,7 @@
 """Settings & team management blueprint."""
 
+from datetime import UTC, datetime
+
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -51,6 +53,7 @@ def company_profile():
         from payroll_engine.services.settlement_service import validate_leave_rate_settings
 
         leave_rate_change = None
+        leave_rate_confirmation = None
         if 'leave_rate_basis' in request.form or 'leave_rate_divisor' in request.form:
             try:
                 basis, divisor = validate_leave_rate_settings(
@@ -61,13 +64,26 @@ def company_profile():
                 db.session.rollback()
                 flash(str(exc), 'danger')
                 return redirect(url_for('settings.company_profile'))
-            if (basis, divisor) != (company.leave_rate_basis, company.leave_rate_divisor):
+            changed = (basis, divisor) != (company.leave_rate_basis, company.leave_rate_divisor)
+            # The checkbox mirrors the confirmed state: ticked = this basis and
+            # divisor are confirmed by the company; unticked = not confirmed.
+            confirm = request.form.get('leave_rate_confirm') == '1'
+            was_confirmed = company.leave_rate_confirmed_at is not None
+            if changed:
                 leave_rate_change = {
                     'leave_rate_basis': {'old': company.leave_rate_basis, 'new': basis},
                     'leave_rate_divisor': {'old': company.leave_rate_divisor, 'new': divisor},
                 }
             company.leave_rate_basis = basis
             company.leave_rate_divisor = divisor
+            if confirm and (changed or not was_confirmed):
+                company.leave_rate_confirmed_at = datetime.now(UTC).replace(tzinfo=None)
+                company.leave_rate_confirmed_by = current_user.id
+                leave_rate_confirmation = {'confirmed': True, 'leave_rate_basis': basis, 'leave_rate_divisor': divisor}
+            elif not confirm and was_confirmed:
+                company.leave_rate_confirmed_at = None
+                company.leave_rate_confirmed_by = None
+                leave_rate_confirmation = {'confirmed': False, 'leave_rate_basis': basis, 'leave_rate_divisor': divisor}
 
         company.webhook_url = request.form.get('webhook_url', '').strip() or None
         company.webhook_secret = request.form.get('webhook_secret', '').strip() or None
@@ -98,6 +114,13 @@ def company_profile():
                 user_id=current_user.id,
                 action='leave_rate_setting_change',
                 details=leave_rate_change,
+            )
+        if leave_rate_confirmation:
+            create_audit_log(
+                company_id=company.id,
+                user_id=current_user.id,
+                action='leave_rate_confirmation_change',
+                details=leave_rate_confirmation,
             )
         db.session.commit()
         flash('Company profile updated.', 'success')

@@ -33,7 +33,7 @@ D) Resignation, no leave record, nothing entered: leave 0, warning;
    tax = 1,475.00, net = 10,000 - 700 - 1,475 = 7,825.00
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
@@ -52,7 +52,7 @@ from payroll_engine.models import (
 from payroll_engine.services import settlement_service
 from payroll_engine.services.settlement_service import (
     NO_LEAVE_RECORD_WARNING,
-    PENDING_CONFIRMATION_NOTICE,
+    TAX_METHOD_NOTE,
     calculate_settlement,
     create_settlement_record,
 )
@@ -78,7 +78,10 @@ def app():
 
 @pytest.fixture
 def setup(app):
-    company = Company(name='Synthetic Settlement Co')
+    # The company has confirmed its leave-pay basis and divisor, so settlements
+    # with leave encashment can be finalized (see test_settlement_leave_rule_confirmation.py
+    # for the unconfirmed block).
+    company = Company(name='Synthetic Settlement Co', leave_rate_confirmed_at=datetime(2026, 10, 25, 9, 0))
     db.session.add(company)
     db.session.flush()
     user = User(phone='911000777', company_id=company.id, role='owner')
@@ -124,7 +127,11 @@ def test_example_a_pension_before_tax(setup, monkeypatch):
     assert r['tax_on_termination_payments'] == Decimal('5562.17')
     assert r['net_final_payment'] == Decimal('18926.16')
     assert r['warnings'] == []
-    assert r['calculation_details']['pending_confirmation'] == PENDING_CONFIRMATION_NOTICE
+    assert r['calculation_details']['pending_confirmation'] is None
+    assert r['calculation_details']['leave']['rule_confirmed'] is True
+    assert r['calculation_details']['tax_method_status'] == 'statutory_default'
+    assert r['calculation_details']['tax_method_note'] == TAX_METHOD_NOTE
+    assert 'Proc. 979/2016 Arts 10, 12, 88' in TAX_METHOD_NOTE
 
 
 def test_example_b_pension_not_before_tax(setup, monkeypatch):

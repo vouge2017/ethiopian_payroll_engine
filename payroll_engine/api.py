@@ -269,16 +269,37 @@ def list_employees():
 @limiter.limit('30 per minute')
 def create_employee():
     data = request.get_json()
+    if isinstance(data, dict):
+        raw_id = data.get('employee_id')
+        if raw_id is None or (isinstance(raw_id, str) and not raw_id.strip()):
+            # Auto-generate the next free ID — mirrors the Quick Start wizard
+            # and the bulk import, so companies without their own ID scheme
+            # still work. uq_employee_company_empid spans soft-deleted rows,
+            # so the generated ID must skip those too.
+            used_ids = {
+                row[0]
+                for row in Employee.with_deleted()
+                .filter_by(company_id=_get_company_id())
+                .with_entities(Employee.employee_id)
+                .all()
+            }
+            next_num = 1
+            while f'EMP{next_num:03d}' in used_ids:
+                next_num += 1
+            data['employee_id'] = f'EMP{next_num:03d}'
     errors = _validate_employee_data(data)
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 422
-    existing = Employee.query.filter_by(
-        company_id=_get_company_id(),
-        employee_id=data['employee_id'],
-        is_deleted=False,
-    ).first()
+    existing = (
+        Employee.with_deleted()
+        .filter_by(
+            company_id=_get_company_id(),
+            employee_id=data['employee_id'],
+        )
+        .first()
+    )
     if existing:
-        return jsonify({'error': 'Employee ID already exists'}), 409
+        return jsonify({'error': 'Employee ID already exists (including deleted employees)'}), 409
     emp = Employee(
         employee_id=data['employee_id'],
         name=data['name'],
@@ -290,7 +311,16 @@ def create_employee():
         company_id=_get_company_id(),
     )
     db.session.add(emp)
-    db.session.commit()
+    from sqlalchemy.exc import IntegrityError
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Defensive: a concurrent create can pass the pre-check and race on
+        # the unique constraint. Roll back cleanly.
+        db.session.rollback()
+        return jsonify({'error': 'Employee ID already exists (concurrent create)'}), 409
+
     from payroll_engine import trust_cache
 
     trust_cache.invalidate_trust_cache(_get_company_id())

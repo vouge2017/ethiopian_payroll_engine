@@ -195,3 +195,35 @@ def test_numeric_salary_still_imports(client, owner_session):
     assert resp.status_code == 200
     data = resp.get_json()
     assert data['imported'] == 1
+
+
+# --- Malformed payloads are 4xx with reasons, never 500s ---
+
+
+def test_bulk_non_dict_row_is_row_error(client, owner_session):
+    """A non-object row (e.g. a bare string) must be a row error, not an
+    AttributeError 500 mid-loop."""
+    _login(client)
+    resp = _bulk(client, ['alice', {'name': 'Valid Row', 'basic_salary': 5000}])
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['imported'] == 1
+    assert any('object' in e['error'].lower() for e in data['errors'])
+    assert data['errors'][0]['row'] == 1
+
+
+def test_bulk_non_dict_body_rejected_400(client, owner_session):
+    _login(client)
+    resp = client.post('/api/v1/employees/bulk', json=['not', 'a', 'dict'])
+    assert resp.status_code == 400
+
+
+def test_bulk_infinite_salary_is_row_error(client, owner_session):
+    """JSON Infinity parses fine in Python and would otherwise be stored as
+    an infinite basic_salary; it must be a row error."""
+    _login(client)
+    resp = _bulk(client, [{'name': 'Inf Salary', 'basic_salary': float('inf')}])
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['imported'] == 0
+    assert any('salary' in e['error'].lower() for e in data['errors'])

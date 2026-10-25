@@ -29,7 +29,7 @@ def quick_start():
 def quick_import():
     """Import employees from JSON payload. Returns JSON."""
     data = request.get_json()
-    if not data or not data.get('employees'):
+    if not isinstance(data, dict) or not isinstance(data.get('employees'), list) or not data.get('employees'):
         return jsonify({'status': 'error', 'message': 'No employee data provided'}), 400
 
     employees = data['employees']
@@ -53,6 +53,9 @@ def quick_import():
     next_num = 1
 
     for i, emp_data in enumerate(employees):
+        if not isinstance(emp_data, dict):
+            errors.append(f'Row {i + 1}: each employee must be a JSON object')
+            continue
         name = (emp_data.get('name') or '').strip()
         phone_raw = (emp_data.get('phone') or '').strip()
         salary_raw = emp_data.get('salary', 0)
@@ -77,6 +80,9 @@ def quick_import():
 
         try:
             salary = Decimal(str(salary_raw))
+            if not salary.is_finite():
+                errors.append(f'Row {i + 1}: invalid salary "{salary_raw}"')
+                continue
             if salary < 0:
                 errors.append(f'Row {i + 1}: negative salary')
                 continue

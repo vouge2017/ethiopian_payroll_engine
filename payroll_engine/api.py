@@ -124,8 +124,8 @@ def _validate_employee_data(data, *, partial=False):
     When partial=True (for PUT), fields are optional but checked if present.
     """
     errors = []
-    if not data:
-        return ['Request body is required']
+    if not isinstance(data, dict):
+        return ['Request body must be a JSON object']
 
     if not partial:
         if not data.get('employee_id'):
@@ -151,7 +151,9 @@ def _validate_employee_data(data, *, partial=False):
     if basic is not None:
         try:
             basic_d = Decimal(str(basic))
-            if basic_d < 0:
+            if not basic_d.is_finite():
+                errors.append('basic_salary must be a valid number')
+            elif basic_d < 0:
                 errors.append('basic_salary must be zero or positive')
         except (InvalidOperation, ValueError):
             errors.append('basic_salary must be a valid number')
@@ -160,7 +162,9 @@ def _validate_employee_data(data, *, partial=False):
     if allow is not None:
         try:
             allow_d = Decimal(str(allow))
-            if allow_d < 0:
+            if not allow_d.is_finite():
+                errors.append('allowances must be a valid number')
+            elif allow_d < 0:
                 errors.append('allowances must be zero or positive')
         except (InvalidOperation, ValueError):
             errors.append('allowances must be a valid number')
@@ -737,7 +741,7 @@ def bulk_import_employees():
     from payroll_engine.models import validate_ethiopian_phone
 
     data = request.get_json()
-    if not data or not data.get('employees'):
+    if not isinstance(data, dict) or not isinstance(data.get('employees'), list) or not data.get('employees'):
         return jsonify({'error': 'No employee data provided'}), 400
 
     employees = data['employees']
@@ -779,6 +783,9 @@ def bulk_import_employees():
     next_num = 1
 
     for i, emp_data in enumerate(employees):
+        if not isinstance(emp_data, dict):
+            errors.append({'row': i + 1, 'error': 'each employee must be a JSON object'})
+            continue
         name = (emp_data.get('name') or '').strip()
         phone_raw = (emp_data.get('phone') or '').strip()
         salary_raw = emp_data.get('basic_salary', emp_data.get('salary', 0))
@@ -798,6 +805,9 @@ def bulk_import_employees():
 
         try:
             salary = Decimal(str(salary_raw))
+            if not salary.is_finite():
+                errors.append({'row': i + 1, 'error': f'invalid salary: {salary_raw}'})
+                continue
             if salary < 0:
                 errors.append({'row': i + 1, 'error': 'negative salary'})
                 continue

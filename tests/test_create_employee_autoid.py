@@ -120,3 +120,22 @@ def test_create_explicit_id_still_honored(client, owner_session):
     assert resp.status_code == 201
     emp = Employee.query.filter_by(company_id=owner_session['co'].id, name='Named').first()
     assert emp.employee_id == 'CUSTOM-1'
+
+
+# --- Malformed payloads are 422 with reasons, never 500s ---
+
+
+def test_create_non_dict_body_rejected_422(client, owner_session):
+    """A JSON array body must be a validation error, not an AttributeError 500
+    when the validator calls .get() on it."""
+    _login(client)
+    resp = client.post('/api/v1/employees', json=['not', 'a', 'dict'])
+    assert resp.status_code == 422
+
+
+def test_create_infinite_salary_rejected_422(client, owner_session):
+    """JSON Infinity parses in Python and would otherwise be stored as an
+    infinite basic_salary; the validator must reject it."""
+    _login(client)
+    resp = _create(client, {'name': 'Inf Salary', 'basic_salary': float('inf')})
+    assert resp.status_code == 422

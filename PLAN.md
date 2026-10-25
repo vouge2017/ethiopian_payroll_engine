@@ -185,6 +185,11 @@ Recorded in `docs/decisions/2026-10-25-payroll-rules.md` (added on
   tax method and leave-pay formula pending written tax/labour-law
   confirmation" (`calculation_details.pending_confirmation`, settlement page).
 - PR #33 stays draft until Q2 and Q3 are confirmed in writing.
+- Tests after merging main @ `2b0d15e` (PR #34) and adding the notice:
+  **1737 passed, 0 failed, 0 errors, 205 skipped** (169 files, one process
+  each, SQLite, `python -m pytest`; 1731 + 6 from #34). Single Alembic head
+  `f4a5b6c7d8f5` (#34 added no migrations). PR #32 (PAYE on gross) is NOT
+  merged into this branch; `PENSION_DEDUCTED_BEFORE_TAX` is still `True` here.
 - Tests: new `tests/test_settlement_leave_rate.py` (hand-checked: basic 10,000
   + 2,000 regular allowance, 10 days → basic_only 3,333.33, basic_plus
   4,000.00; divisor 26; default unchanged; validation; DB constraint;
@@ -476,3 +481,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   text, rule sources, tax certificate); stale pension-before-tax copy made
   neutral; review table in the PR. Existing companies' DB labels need a data
   migration (not done). Tests: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.
+- 2026-10-25 — Hark — PR #33: merged origin/main (`2b0d15e`, PR #34) into
+  fix/settlement-taxation; PLAN.md conflicts resolved keeping all entries;
+  single Alembic head `f4a5b6c7d8f5`. Recorded adviser answers Q2 (tax
+  method) and Q3 (leave formula, Labour Proc. 1156/2019 Arts 53, 77) as
+  PENDING. Every settlement now stores and shows "Termination-payment tax
+  method and leave-pay formula pending written tax/labour-law confirmation".
+  Parked an "Art. 53 wage" leave basis. Tests: 1737 passed, 0 failed, 205
+  skipped (169 files, SQLite). ruff check + format clean. Still draft.

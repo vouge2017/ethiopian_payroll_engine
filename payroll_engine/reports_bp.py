@@ -38,13 +38,20 @@ def reports():
 
     # All completed runs for period selector
     all_completed_runs = (
-        PayrollRun.query.filter_by(company_id=company.id, status='completed').order_by(PayrollRun.run_date.desc()).all()
+        PayrollRun.query.filter_by(company_id=company.id)
+        .filter(PayrollRun.status.in_(('completed', 'locked')))
+        .order_by(PayrollRun.run_date.desc())
+        .all()
     )
 
     # Period selection
     selected_run_id = request.args.get('run_id', type=int)
     if selected_run_id:
-        selected_run = PayrollRun.query.filter_by(id=selected_run_id, company_id=company.id, status='completed').first()
+        selected_run = (
+            PayrollRun.query.filter_by(id=selected_run_id, company_id=company.id)
+            .filter(PayrollRun.status.in_(('completed', 'locked')))
+            .first()
+        )
         if not selected_run:
             flash('Payroll run not found.', 'warning')
             selected_run = all_completed_runs[0] if all_completed_runs else None
@@ -101,8 +108,8 @@ def download_erca_report(run_id):
     from payroll_engine.reports import generate_erca_report
 
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
-    if run.status != 'completed':
-        flash('Can only generate reports for completed payroll runs.', 'warning')
+    if run.status not in ('completed', 'locked'):
+        flash('Can only generate reports for completed or locked payroll runs.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     company = current_user.company
@@ -124,8 +131,8 @@ def download_pension_report(run_id):
     from payroll_engine.reports import generate_pension_report
 
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
-    if run.status != 'completed':
-        flash('Can only generate reports for completed payroll runs.', 'warning')
+    if run.status not in ('completed', 'locked'):
+        flash('Can only generate reports for completed or locked payroll runs.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     company = current_user.company
@@ -151,7 +158,7 @@ def download_yearly_summary(year):
     end = date(year, 12, 31)
     runs = PayrollRun.query.filter(
         PayrollRun.company_id == company.id,
-        PayrollRun.status == 'completed',
+        PayrollRun.status.in_(('completed', 'locked')),
         PayrollRun.run_date >= start,
         PayrollRun.run_date <= end,
     ).all()
@@ -184,8 +191,8 @@ def download_bank_file(run_id):
     )
 
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
-    if run.status != 'completed':
-        flash('Can only generate bank files for completed payroll runs.', 'warning')
+    if run.status not in ('completed', 'locked'):
+        flash('Can only generate bank files for completed or locked payroll runs.', 'warning')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     company = current_user.company

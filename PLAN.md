@@ -29,7 +29,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Production (per the 2026-10-21 notes in STATUS.md, not re-checked here): one Render web service with a Neon Free Postgres. There is **no** Redis and **no** worker
   service. `render.yaml` still describes a Render Postgres + Redis + worker +
   cron, so it does not match reality.
-- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main; `fix/settlement-taxation` adds `f4a5b6c7d8f4`).
+- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main; `fix/settlement-taxation` adds `f4a5b6c7d8f4` and `f4a5b6c7d8f5`).
 
 ### Tests (2026-10-25, this audit)
 
@@ -136,6 +136,35 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   with the flag True and False, missing-leave-record warning, route tests);
   `tests/test_settlement_edges.py` statutory-fallback tests replaced.
   Full suite: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.
+
+### Leave daily-rate basis setting (branch `fix/settlement-taxation`, PR #33, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+- Leave encashment's daily rate was hard-coded `(basic + allowances) / 30`.
+  It is now a per-company setting on `company`: `leave_rate_basis`
+  (`basic_plus_regular_allowances` = previous behaviour and the default, or
+  `basic_only`) and `leave_rate_divisor` (default 30, whole days 1-31, check
+  constraints in model and migration). Defaults live in `constants.py`.
+  Existing companies keep the defaults, so no figure changes until a company
+  changes the setting. "Regular allowances" = `Employee.allowances` (the
+  monthly allowance on record), exactly as before; pay-item assignments are
+  not read here.
+- Daily rate stays unrounded; encashment = rate x days, rounded once.
+  Settlement `calculation_details.leave` now freezes the basis, label,
+  divisor, monthly base, components (basic, regular allowances, included or
+  not), rounded and unrounded daily rate and the formula. The settlement page
+  shows them under Leave Encashment.
+- UI: Settings → Company Profile ("Payroll rules: leave encashment"), owner
+  only like the rest of that page; changes are audit-logged
+  (`leave_rate_setting_change`). There is no separate payroll-settings page.
+- Migration `f4a5b6c7d8f5` (after `f4a5b6c7d8f4`); downgrade refuses to drop
+  non-default settings. PostgreSQL proof: CI only.
+- Which basis and divisor are legally right is a practitioner question
+  (Labour Proc. 1156/2019 "wage"); the app keeps the old default.
+- Tests: new `tests/test_settlement_leave_rate.py` (hand-checked: basic 10,000
+  + 2,000 regular allowance, 10 days → basic_only 3,333.33, basic_plus
+  4,000.00; divisor 26; default unchanged; validation; DB constraint;
+  settings route + audit; settlement page). Full suite: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.
 
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
@@ -384,3 +413,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   month's taxable income (normal brackets, method constant, needs accountant
   confirmation). No leave record → 0 days + warning; manual unused-days and
   notice-pay inputs. Migration `f4a5b6c7d8f4`. Tests: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.
+- 2026-10-25 — Hark — leave daily-rate basis setting (PR #33) — per-company
+  `leave_rate_basis` (`basic_plus_regular_allowances` default / `basic_only`)
+  and `leave_rate_divisor` (default 30), migration `f4a5b6c7d8f5`, frozen in
+  settlement `calculation_details`, shown on the settlement page, set in
+  Settings → Company Profile. Tests: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.

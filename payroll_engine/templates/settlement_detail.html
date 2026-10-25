@@ -99,6 +99,15 @@
                                                 {{ details.leave.unused_days }} unused days × ETB {{ details.leave.daily_rate }}/day
                                                 ({% if details.leave.source == 'manual' %}entered manually{% elif details.leave.source == 'leave_record' %}from leave record {{ details.leave.leave_year }}{% else %}no leave record{% endif %})
                                             </small>
+                                            {% if details.leave.get('rate_basis') %}
+                                            <small class="text-muted d-block" data-testid="leave-rate-basis">
+                                                Daily rate basis: {{ details.leave.rate_basis_label }}
+                                                {%- for c in details.leave.get('rate_components', []) if c.included %}{% if loop.first %} (ETB {% endif %}{{ c.amount }}{% if not loop.last %} + {% else %}){% endif %}{% endfor %}
+                                                ÷ {{ details.leave.rate_divisor }} days
+                                                = ETB {{ details.leave.daily_rate }}/day
+                                                {%- for c in details.leave.get('rate_components', []) if not c.included %}; {{ c.label|lower }} ETB {{ c.amount }} not included{% endfor %}
+                                            </small>
+                                            {% endif %}
                                             {% endif %}
                                         </td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.leave_encashment) }}</td>

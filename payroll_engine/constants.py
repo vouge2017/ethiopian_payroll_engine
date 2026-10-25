@@ -27,6 +27,29 @@ import os
 #     deduction to show the pension tax saving.
 PENSION_DEDUCTED_BEFORE_TAX = True
 
+# --- Leave encashment daily rate (final settlement) ------------------------
+# Per-company setting (Company.leave_rate_basis / leave_rate_divisor).
+# Daily rate = monthly base / divisor, kept unrounded; encashment = daily rate
+# x unused days, rounded once to 0.01 (ROUND_HALF_UP).
+#   'basic_plus_regular_allowances' (default, the app's behaviour before the
+#       setting existed): basic salary + the employee's regular monthly
+#       allowances on record (Employee.allowances).
+#   'basic_only': basic salary alone.
+# The divisor defaults to 30 (Ethiopian 30-day month convention used across
+# the app). The company may set another whole number of days (1-31); the app
+# does not choose a different legal value for anyone.
+LEAVE_RATE_BASIS_BASIC_ONLY = 'basic_only'
+LEAVE_RATE_BASIS_BASIC_PLUS_REGULAR_ALLOWANCES = 'basic_plus_regular_allowances'
+LEAVE_RATE_BASES = (LEAVE_RATE_BASIS_BASIC_PLUS_REGULAR_ALLOWANCES, LEAVE_RATE_BASIS_BASIC_ONLY)
+LEAVE_RATE_BASIS_LABELS = {
+    LEAVE_RATE_BASIS_BASIC_PLUS_REGULAR_ALLOWANCES: 'Basic salary + regular allowances',
+    LEAVE_RATE_BASIS_BASIC_ONLY: 'Basic salary only',
+}
+DEFAULT_LEAVE_RATE_BASIS = LEAVE_RATE_BASIS_BASIC_PLUS_REGULAR_ALLOWANCES
+DEFAULT_LEAVE_RATE_DIVISOR = 30
+LEAVE_RATE_DIVISOR_MIN = 1
+LEAVE_RATE_DIVISOR_MAX = 31
+
 # Single documented switch for the pending-confirmation notice (RC-38000-01).
 # Default ON. Deployment override via env PAYROLL_PENDING_TAX_NOTICE (0 hides
 # the notice) without a code change; the env override is read by

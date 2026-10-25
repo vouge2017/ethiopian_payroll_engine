@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 # In dev/test: falls back to a deterministic key (NOT secure).
 import logging as _logging
 
+from payroll_engine import constants as _constants
 from payroll_engine import db
 
 _ENCRYPTION_KEY = os.environ.get('DB_ENCRYPTION_KEY')
@@ -425,6 +426,33 @@ class Company(db.Model):
     #   ]
     # }
     compliance_deadlines = db.Column(db.JSON, nullable=True)
+
+    # Final-settlement leave encashment daily rate (see constants.py):
+    # basis 'basic_plus_regular_allowances' (default) or 'basic_only';
+    # daily rate = monthly base / leave_rate_divisor (default 30).
+    leave_rate_basis = db.Column(
+        db.String(40),
+        nullable=False,
+        server_default=_constants.DEFAULT_LEAVE_RATE_BASIS,
+        default=_constants.DEFAULT_LEAVE_RATE_BASIS,
+    )
+    leave_rate_divisor = db.Column(
+        db.Integer,
+        nullable=False,
+        server_default=str(_constants.DEFAULT_LEAVE_RATE_DIVISOR),
+        default=_constants.DEFAULT_LEAVE_RATE_DIVISOR,
+    )
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "leave_rate_basis IN ('basic_plus_regular_allowances', 'basic_only')",
+            name='ck_company_leave_rate_basis',
+        ),
+        db.CheckConstraint(
+            'leave_rate_divisor BETWEEN 1 AND 31',
+            name='ck_company_leave_rate_divisor',
+        ),
+    )
 
     # Relationships
     users = db.relationship('User', backref='company', lazy=True)

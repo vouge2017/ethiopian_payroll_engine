@@ -71,6 +71,27 @@
                             <input type="text" class="form-control" name="webhook_secret" value="{{ company.webhook_secret or '' }}" placeholder="Optional secret for HMAC-SHA256">
                         </div>
                         <hr>
+                        <h6 class="mt-3">Payroll rules: leave encashment</h6>
+                        <p class="text-muted small">How the daily rate for unused annual leave is worked out in a final settlement. Daily rate = monthly base ÷ divisor; encashment = daily rate × unused days. Changing this affects only settlements created afterwards.</p>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label" for="leave_rate_basis">Daily-rate basis</label>
+                                <select class="form-select" id="leave_rate_basis" name="leave_rate_basis" data-testid="leave-rate-basis-setting">
+                                    {% for value, label in leave_rate_basis_choices %}
+                                    <option value="{{ value }}" {% if company.leave_rate_basis == value %}selected{% endif %}>{{ label }}{% if value == default_leave_rate_basis %} (default){% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Regular allowances are the employee's monthly allowances on record.</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="leave_rate_divisor">Divisor (days)</label>
+                                <input type="number" class="form-control" id="leave_rate_divisor" name="leave_rate_divisor"
+                                       min="{{ leave_rate_divisor_min }}" max="{{ leave_rate_divisor_max }}" step="1"
+                                       value="{{ company.leave_rate_divisor or default_leave_rate_divisor }}">
+                                <div class="form-text">Default {{ default_leave_rate_divisor }} (30-day month).</div>
+                            </div>
+                        </div>
+                        <hr>
                         <p class="text-muted small">
                             <i class="bi bi-info-circle me-1"></i>
                             Company name, TIN, and logo appear on PDF payslips and reports.

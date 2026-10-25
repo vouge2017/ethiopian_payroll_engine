@@ -14,7 +14,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from payroll_engine import constants as _constants
 from payroll_engine.leave import LeaveType
-from payroll_engine.models import Employee, EmployeeDeduction, FinalSettlement, LeaveBalance
+from payroll_engine.models import Company, Employee, EmployeeDeduction, FinalSettlement, LeaveBalance
 from payroll_engine.pension import employee_pension
 from payroll_engine.severance import calculate_severance
 from payroll_engine.tax import calculate_tax
@@ -149,9 +149,72 @@ def resolve_unused_leave_days(
     return {'days': Decimal('0'), 'source': 'none', 'recorded_days': None, 'warnings': warnings}
 
 
-def leave_daily_rate(employee: Employee) -> Decimal:
-    """Daily wage for leave encashment: (basic + allowances) / 30, unrounded."""
-    return (Decimal(str(employee.basic_salary)) + Decimal(str(employee.allowances))) / Decimal('30')
+def validate_leave_rate_settings(basis, divisor) -> tuple[str, int]:
+    """Check a leave daily-rate basis and divisor; return them normalised.
+
+    Raises ValueError for an unknown basis or a divisor outside 1-31.
+    """
+    if basis not in _constants.LEAVE_RATE_BASES:
+        raise ValueError(f'Unknown leave daily-rate basis: {basis!r}')
+    try:
+        divisor_int = int(divisor)
+    except (TypeError, ValueError):
+        raise ValueError('Leave daily-rate divisor must be a whole number of days.') from None
+    if (
+        str(divisor).strip() != str(divisor_int)
+        or not _constants.LEAVE_RATE_DIVISOR_MIN <= divisor_int <= _constants.LEAVE_RATE_DIVISOR_MAX
+    ):
+        raise ValueError(
+            f'Leave daily-rate divisor must be a whole number from '
+            f'{_constants.LEAVE_RATE_DIVISOR_MIN} to {_constants.LEAVE_RATE_DIVISOR_MAX}.'
+        )
+    return basis, divisor_int
+
+
+def company_leave_rate_settings(company_id: int, db_session=None) -> tuple[str, int]:
+    """The company's leave daily-rate basis and divisor (defaults if unset or no session)."""
+    basis = _constants.DEFAULT_LEAVE_RATE_BASIS
+    divisor = _constants.DEFAULT_LEAVE_RATE_DIVISOR
+    if db_session is not None and company_id is not None:
+        company = db_session.get(Company, company_id)
+        if company is not None:
+            basis = company.leave_rate_basis or basis
+            divisor = company.leave_rate_divisor or divisor
+    return validate_leave_rate_settings(basis, divisor)
+
+
+def leave_daily_rate_details(employee: Employee, basis=None, divisor=None) -> dict:
+    """Daily wage for leave encashment and the components it was built from.
+
+    ``basis``: 'basic_plus_regular_allowances' (default) → (basic + the
+    employee's regular monthly allowances on record) / divisor;
+    'basic_only' → basic / divisor. ``divisor`` defaults to 30. Uses the full
+    monthly figures (not the prorated final month). ``daily_rate`` is
+    unrounded; round only the encashment amount.
+    """
+    basis, divisor = validate_leave_rate_settings(
+        basis or _constants.DEFAULT_LEAVE_RATE_BASIS,
+        divisor if divisor is not None else _constants.DEFAULT_LEAVE_RATE_DIVISOR,
+    )
+    basic = Decimal(str(employee.basic_salary))
+    allowances = Decimal(str(employee.allowances or 0))
+    include_allowances = basis == _constants.LEAVE_RATE_BASIS_BASIC_PLUS_REGULAR_ALLOWANCES
+    monthly_base = basic + allowances if include_allowances else basic
+    return {
+        'basis': basis,
+        'basis_label': _constants.LEAVE_RATE_BASIS_LABELS[basis],
+        'divisor': divisor,
+        'basic_salary': basic,
+        'regular_allowances': allowances,
+        'allowances_included': include_allowances,
+        'monthly_base': monthly_base,
+        'daily_rate': monthly_base / Decimal(divisor),
+    }
+
+
+def leave_daily_rate(employee: Employee, basis=None, divisor=None) -> Decimal:
+    """Daily wage for leave encashment, unrounded (default (basic + allowances) / 30)."""
+    return leave_daily_rate_details(employee, basis, divisor)['daily_rate']
 
 
 def calculate_leave_encashment(
@@ -159,10 +222,12 @@ def calculate_leave_encashment(
 ) -> Decimal:
     """Encashment for unused annual leave, from recorded or entered days only.
 
-    No record and no manual figure → 0 (see ``resolve_unused_leave_days``).
+    Uses the company's leave daily-rate basis and divisor. No record and no
+    manual figure → 0 (see ``resolve_unused_leave_days``).
     """
     days = resolve_unused_leave_days(employee, end_date, company_id, db_session, manual_days)['days']
-    return (leave_daily_rate(employee) * days).quantize(Q, rounding=ROUND_HALF_UP)
+    basis, divisor = company_leave_rate_settings(company_id, db_session)
+    return (leave_daily_rate(employee, basis, divisor) * days).quantize(Q, rounding=ROUND_HALF_UP)
 
 
 def _s(value: Decimal) -> str:
@@ -185,6 +250,8 @@ def calculate_settlement(
     db_session=None,
     unused_leave_days=None,
     notice_pay=None,
+    leave_rate_basis=None,
+    leave_rate_divisor=None,
 ) -> dict:
     """Calculate complete final settlement for a terminated employee.
 
@@ -209,6 +276,9 @@ def calculate_settlement(
         unused_leave_days: Optional manual unused annual-leave days
             (overrides the leave record).
         notice_pay: Optional pay in lieu of notice (ETB), entered by the user.
+        leave_rate_basis / leave_rate_divisor: Override the company's leave
+            daily-rate setting (default: read from the Company row; falls
+            back to 'basic_plus_regular_allowances' / 30).
 
     Returns:
         Dict with all settlement components. ``income_tax`` is the total tax
@@ -231,7 +301,12 @@ def calculate_settlement(
 
     # 3. Leave encashment: recorded or entered days only, never assumed.
     leave = resolve_unused_leave_days(employee, end_date, company_id, db_session, unused_leave_days)
-    daily_rate = leave_daily_rate(employee)
+    if leave_rate_basis is None or leave_rate_divisor is None:
+        company_basis, company_divisor = company_leave_rate_settings(company_id, db_session)
+        leave_rate_basis = leave_rate_basis or company_basis
+        leave_rate_divisor = leave_rate_divisor if leave_rate_divisor is not None else company_divisor
+    rate = leave_daily_rate_details(employee, leave_rate_basis, leave_rate_divisor)
+    daily_rate = rate['daily_rate']
     leave_encashment = (daily_rate * leave['days']).quantize(Q, rounding=ROUND_HALF_UP)
     warnings = list(leave['warnings'])
 
@@ -294,6 +369,24 @@ def calculate_settlement(
             'recorded_days': None if leave['recorded_days'] is None else str(leave['recorded_days']),
             'leave_year': end_date.year,
             'daily_rate': str(daily_rate.quantize(Q, rounding=ROUND_HALF_UP)),
+            'daily_rate_unrounded': str(daily_rate.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP)),
+            'rate_basis': rate['basis'],
+            'rate_basis_label': rate['basis_label'],
+            'rate_divisor': rate['divisor'],
+            'rate_monthly_base': _s(rate['monthly_base']),
+            'rate_components': [
+                {'code': 'basic_salary', 'label': 'Basic salary', 'amount': _s(rate['basic_salary']), 'included': True},
+                {
+                    'code': 'regular_allowances',
+                    'label': 'Regular allowances',
+                    'amount': _s(rate['regular_allowances']),
+                    'included': rate['allowances_included'],
+                },
+            ],
+            'rate_formula': (
+                f'{rate["basis_label"]} / {rate["divisor"]} = daily rate; '
+                'daily rate x unused days, rounded once to 0.01'
+            ),
         },
         'warnings': warnings,
     }

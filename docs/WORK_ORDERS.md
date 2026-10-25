@@ -1,5 +1,11 @@
 # Focused delivery work orders
 
+## Current bulk-import ID hardening — 2026-10-25
+
+30. Harden `/api/v1/employees/bulk`: per-row rejection of numeric, overlength and duplicate employee IDs; generated IDs skip soft-deleted ones.
+
+Delivered on `codex/bulk-import-id-hardening`: red `6 failed, 2 passed, 4 warnings in 15.65s` → green `8 passed, 4 warnings in 20.23s`; regressions `46 passed, 12 warnings in 53.42s` and `113 passed, 4 warnings in 19.17s`; ruff 0.17.1 check/format pass. The parked idea is disproven for the Quick Start wizard and for silent duplicate persistence; the bulk API now fails with row-level errors. Also stringifies non-float Excel cells in `excel_import.read_xlsx` so numeric-typed ID/TIN columns never reach VARCHAR columns as raw ints. Not pushed to a PR; PostgreSQL run and hosted CI remain open. See [STATUS.md](../STATUS.md).
+
 ## Current local UI closure — 2026-10-15
 
 26. Close misleading compliance, first-use language gaps and review-refresh wording, then verify the founder-to-practitioner phone journey and operations evidence.

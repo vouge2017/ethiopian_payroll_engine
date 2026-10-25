@@ -702,6 +702,8 @@ def bulk_import_employees():
     """
     from decimal import Decimal, InvalidOperation
 
+    from sqlalchemy.exc import IntegrityError
+
     from payroll_engine.models import validate_ethiopian_phone
 
     data = request.get_json()
@@ -738,6 +740,14 @@ def bulk_import_employees():
     imported = 0
     errors = []
 
+    # Every ID ever used for this company, including soft-deleted rows —
+    # uq_employee_company_empid spans them, so supplied and generated IDs
+    # must both avoid the full set (mirrors the Quick Start wizard).
+    used_ids = {
+        row[0] for row in Employee.with_deleted().filter_by(company_id=cid).with_entities(Employee.employee_id).all()
+    }
+    next_num = 1
+
     for i, emp_data in enumerate(employees):
         name = (emp_data.get('name') or '').strip()
         phone_raw = (emp_data.get('phone') or '').strip()
@@ -765,10 +775,31 @@ def bulk_import_employees():
             errors.append({'row': i + 1, 'error': f'invalid salary: {salary_raw}'})
             continue
 
-        emp_id_str = emp_data.get('employee_id', '').strip()
-        if not emp_id_str:
-            existing_count = Employee.query.filter_by(company_id=cid, is_deleted=False).count()
-            emp_id_str = f'EMP{(existing_count + imported + 1):03d}'
+        raw_id = emp_data.get('employee_id')
+        if raw_id is None or (isinstance(raw_id, str) and not raw_id.strip()):
+            while f'EMP{next_num:03d}' in used_ids:
+                next_num += 1
+            emp_id_str = f'EMP{next_num:03d}'
+        elif not isinstance(raw_id, str):
+            errors.append({'row': i + 1, 'error': f'invalid employee_id {raw_id!r}: must be text like "EMP001"'})
+            continue
+        else:
+            emp_id_str = raw_id.strip()
+            if len(emp_id_str) > 20:
+                errors.append({'row': i + 1, 'error': 'employee_id longer than 20 characters'})
+                continue
+            if emp_id_str in used_ids:
+                errors.append(
+                    {
+                        'row': i + 1,
+                        'error': (
+                            f'duplicate employee_id "{emp_id_str}" '
+                            '(already used in this company, including deleted employees)'
+                        ),
+                    }
+                )
+                continue
+        used_ids.add(emp_id_str)
 
         emp = Employee(
             employee_id=emp_id_str,
@@ -785,7 +816,16 @@ def bulk_import_employees():
         db.session.add(emp)
         imported += 1
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Defensive: concurrent imports can pass the pre-checks and race on
+        # the unique constraint. Roll the whole batch back cleanly.
+        db.session.rollback()
+        return (
+            jsonify({'error': ('import failed and was rolled back; an employee ID collided with a concurrent import')}),
+            500,
+        )
 
     return jsonify(
         {

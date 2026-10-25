@@ -19,12 +19,17 @@ def money(value, *, positive=False):
 
 
 def freeze_context(for_date, *, employee_id, name, bank, period_start=None, tin='', department='', position=''):
+    from payroll_engine import constants
     from payroll_engine.tax import _get_brackets_and_relief
 
     brackets, _relief = _get_brackets_and_relief(for_date)
     return {
         'version': 1,
         'calculation_date': for_date.isoformat(),
+        # Audit trail: which PAYE timing rule (RC-38000-01) produced the
+        # approved figures. Informational only; stored values are never
+        # recomputed from it.
+        'pension_deducted_before_tax': bool(constants.PENSION_DEDUCTED_BEFORE_TAX),
         'period_start': (period_start or for_date.replace(day=1)).isoformat(),
         'tax_brackets': [
             {'max': None if upper.is_infinite() else str(upper), 'rate': str(rate)} for upper, rate in brackets

@@ -197,7 +197,7 @@ def test_overtime_included_in_gross():
 
 
 def test_deduction_order_with_overtime():
-    """Verify exact deduction order: gross+pension→taxable→tax→net"""
+    """Verify exact deduction order: gross→taxable→tax; net = gross − tax − pension"""
     from decimal import Decimal as D
 
     result = calculate_payroll(basic_salary=10000, allowances=2000, overtime_entries=[{'hours': 4, 'type': 'day'}])
@@ -205,8 +205,8 @@ def test_deduction_order_with_overtime():
     assert result['gross'] == D('12000') + result['overtime_pay']
     # Pension = 7% of basic (NOT affected by overtime)
     assert result['pension_employee'] == D('700')
-    # Taxable = gross - pension
-    assert result['taxable'] == result['gross'] - D('700')
+    # Taxable = gross (PAYE on gross; pension does not reduce it, RC-38000-01)
+    assert result['taxable'] == result['gross']
     # Net = gross - tax - pension
     assert result['net'] == result['gross'] - result['tax'] - D('700')
 
@@ -222,8 +222,8 @@ def test_verification_numbers():
     assert result['gross'] > D('12200')
     # Pension = 700 (7% of basic 10,000 — NOT affected by overtime)
     assert result['pension_employee'] == D('700')
-    # Taxable = gross - pension
-    assert result['taxable'] == result['gross'] - D('700')
+    # Taxable = gross (PAYE on gross; pension does not reduce it, RC-38000-01)
+    assert result['taxable'] == result['gross']
     # Net = gross - tax - pension
     assert result['net'] == result['gross'] - result['tax'] - D('700')
 

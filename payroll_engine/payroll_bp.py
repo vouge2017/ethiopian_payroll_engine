@@ -2431,7 +2431,13 @@ def export_payslips():
             from payroll_engine.services.worksheet_review import published_row
 
             snapshot = published_row(ps)
-            taxable = (ps.gross_salary or 0) - (ps.employee_pension or 0)
+            # Stored taxable income wins (RC-38000-01: never re-derive a locked
+            # month from today's PAYE timing). Legacy rows without it predate
+            # the change and were taxed after pension.
+            if ps.taxable_income is not None:
+                taxable = ps.taxable_income
+            else:
+                taxable = (ps.gross_salary or 0) - (ps.employee_pension or 0)
             total_deductions = (ps.employee_pension or 0) + (ps.tax or 0)
             if snapshot:
                 taxable = ps.taxable_income

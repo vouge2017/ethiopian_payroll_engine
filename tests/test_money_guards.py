@@ -116,7 +116,7 @@ def test_zero_salary_payroll():
 def test_low_salary_500():
     result = calculate_payroll(500)
     assert result['pension_employee'] == Decimal('35.00')
-    assert result['tax'] == Decimal('0')  # taxable 465 → 0% bracket
+    assert result['tax'] == Decimal('0')  # taxable 500 (gross, RC-38000-01) → 0% bracket
     assert result['net'] == Decimal('465.00')
     assert result['net'] >= 0
 
@@ -127,11 +127,14 @@ def test_high_salary_500k():
     assert result['tax'] > 0
     assert result['pension_employee'] == Decimal('35000.00')
     assert result['net'] >= 0
-    # Taxable = 465000 → progressive: 300 + 600 + 750 + 1200 + 451000×35%.
-    assert result['taxable'] == Decimal('465000.00')
+    # Taxable = gross 500000 (PAYE on gross, RC-38000-01)
+    # → progressive: 300 + 600 + 750 + 1200 + 486000×35% = 2850 + 170100 = 172950.
+    assert result['taxable'] == Decimal('500000.00')
     assert result['tax'] == Decimal('300') + Decimal('600') + Decimal('750') + Decimal('1200') + Decimal(
-        '451000'
+        '486000'
     ) * Decimal('0.35')
+    assert result['tax'] == Decimal('172950.00')
+    assert result['net'] == Decimal('292050.00')  # 500000 − 35000 − 172950
 
 
 def test_net_never_negative_across_salaries():

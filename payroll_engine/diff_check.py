@@ -468,7 +468,11 @@ def compare_spreadsheet(
                 e_tax,
                 _explain_tax(theirs=their_tax, ours=e_tax, engine=engine, basic=basic),
                 law='Brackets: Proclamation 1395/2025, Art. 11 — '
-                'pension-first timing: current practice, pending confirmation (RC-38000-01)',
+                + (
+                    'pension-first timing: legacy rule, pending confirmation (RC-38000-01)'
+                    if _pension_before_tax()
+                    else 'tax on gross taxable income (pension not deducted first), pending confirmation (RC-38000-01)'
+                ),
             )
             _diff(
                 'Employee pension (7%)',
@@ -557,12 +561,26 @@ def _explain_gross(
     )
 
 
+def _pension_before_tax() -> bool:
+    """Current PAYE timing (RC-38000-01); the diff check always calculates fresh."""
+    from payroll_engine import constants
+
+    return bool(constants.PENSION_DEDUCTED_BEFORE_TAX)
+
+
 def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str, Any], basic: Decimal) -> str:
+    before_tax = _pension_before_tax()
     if theirs is None:
+        if before_tax:
+            return (
+                'Your spreadsheet does not include a Tax (PAYE) column. Our engine computed the tax on income '
+                'after deducting the 7% employee pension first (legacy rule, pending accountant confirmation, '
+                'ref RC-38000-01).'
+            )
         return (
-            'Your spreadsheet does not include a Tax (PAYE) column. Our engine computed the tax on income '
-            'after deducting the 7% employee pension first. This timing is current practice in EthioPayroll, '
-            'pending accountant confirmation (ref RC-38000-01).'
+            'Your spreadsheet does not include a Tax (PAYE) column. Our engine computed the tax on gross '
+            'taxable income; the 7% employee pension does not reduce taxable income (pending accountant '
+            'confirmation, ref RC-38000-01).'
         )
     if ours is None:
         return 'Value missing on one side — cannot compare.'
@@ -572,23 +590,36 @@ def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str,
     psav = engine.get('pension_savings', Decimal('0'))
     pn = (
         f'Our engine deducts pension ({pension:,.2f}, 7% of basic {basic:,.2f}) '
-        f'before calculating tax, saving ETB {psav:,.2f} in tax — current practice, '
+        f'before calculating tax, saving ETB {psav:,.2f} in tax — legacy rule, '
         f'pending accountant confirmation (RC-38000-01). '
-        if pension > 0 and psav > 0
+        if before_tax and pension > 0 and psav > 0
         else ''
     )
     if ours < theirs:
+        if before_tax:
+            return (
+                f'Their tax ({theirs:,.2f}) > ours ({ours:,.2f}). '
+                f'{pn}Our taxable income is {taxable:,.2f} '
+                f'(gross {gross:,.2f} − pension). '
+                f'Check if their sheet deducts pension before tax.'
+            )
         return (
             f'Their tax ({theirs:,.2f}) > ours ({ours:,.2f}). '
-            f'{pn}Our taxable income is {taxable:,.2f} '
-            f'(gross {gross:,.2f} − pension). '
-            f'Check if their sheet deducts pension before tax.'
+            f'Our taxable income is {taxable:,.2f} (gross {gross:,.2f} − exempt allowances). '
+            f'Possible: their sheet taxes an allowance we treat as exempt, or uses an older bracket table.'
         )
     if ours > theirs:
+        if before_tax:
+            return (
+                f'Their tax ({theirs:,.2f}) < ours ({ours:,.2f}). '
+                f'Possible: (1) personal relief, '
+                f'(2) outdated tax bracket, (3) pension deduction differs from ours (we deduct 7% of basic). '
+                f'Verify the bracket amounts against the current income-tax schedule.'
+            )
         return (
             f'Their tax ({theirs:,.2f}) < ours ({ours:,.2f}). '
-            f'Possible: (1) personal relief, '
-            f'(2) outdated tax bracket, (3) pension deduction differs from ours (we deduct 7% of basic). '
+            f'Possible: (1) their sheet deducts the 7% pension before tax (we tax gross taxable income, '
+            f'pending accountant confirmation, RC-38000-01), (2) personal relief, (3) outdated tax bracket. '
             f'Verify the bracket amounts against the current income-tax schedule.'
         )
     return f'Tax matches: {theirs:,.2f}'

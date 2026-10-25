@@ -226,23 +226,23 @@ def test_full_payroll_flow(ctx, client):
     dawit_result = calculate_payroll(10000, 2000)
     assert dawit_result['pension_employee'] == Decimal('700')
     assert dawit_result['gross'] == 12000.0
-    assert dawit_result['taxable'] == 11300.0
+    assert dawit_result['taxable'] == 12000.0  # PAYE on gross (RC-38000-01)
 
     # Hana: 5000 basic + 500 allowances
     hana_result = calculate_payroll(5000, 500)
     assert hana_result['pension_employee'] == 350.0
     assert hana_result['gross'] == 5500.0
-    assert hana_result['taxable'] == 5150.0
+    assert hana_result['taxable'] == 5500.0
 
     # Kebede: 15000 basic + 3000 allowances
     kebede_result = calculate_payroll(15000, 3000)
     assert kebede_result['pension_employee'] == 1050.0
     assert kebede_result['gross'] == 18000.0
-    assert kebede_result['taxable'] == 16950.0
+    assert kebede_result['taxable'] == 18000.0
 
-    # Verify deduction order: pension BEFORE tax
-    # taxable = gross - pension (not gross)
-    assert dawit_result['taxable'] == dawit_result['gross'] - dawit_result['pension_employee']
+    # Verify deduction order: PAYE on gross taxable income (RC-38000-01);
+    # pension is deducted from pay but does not reduce taxable income.
+    assert dawit_result['taxable'] == dawit_result['gross']
     # net = gross - pension - tax
     expected_net = dawit_result['gross'] - dawit_result['pension_employee'] - dawit_result['tax']
     assert abs(dawit_result['net'] - expected_net) < 0.01
@@ -408,7 +408,9 @@ def test_full_payroll_flow(ctx, client):
     # ============================================================
     # STEP 13: Tax breakdown (bracket-by-bracket)
     # ============================================================
-    # Verify tax on 11300 (Dawit's taxable)
+    # Bracket arithmetic checks (pure calculate_tax on fixed amounts; these
+    # were Dawit/Hana/Kebede's taxable under the legacy pension-first rule).
+    # Verify tax on 11300
     # 0-2000: 0
     # 2001-4000: 2000 × 0.15 = 300
     # 4001-7000: 3000 × 0.20 = 600

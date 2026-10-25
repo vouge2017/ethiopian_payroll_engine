@@ -1140,14 +1140,23 @@ class FinalSettlement(db.Model):
     # Earnings
     outstanding_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     severance_pay = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    notice_pay = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))  # Pay in lieu of notice
     leave_encashment = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     total_earnings = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
 
     # Deductions
     pension_deduction = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    # Final-month taxable employment income: salary + severance + notice pay
+    # + leave encashment (less pension when PENSION_DEDUCTED_BEFORE_TAX).
+    taxable_income = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    # Column name kept for compatibility: holds the TOTAL income tax on the
+    # final month, including tax on severance, notice pay and leave encashment.
     tax_on_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     pending_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     deduction_details = db.Column(db.JSON, nullable=True)  # Breakdown of deductions
+    # Frozen calculation facts: taxable lines, tax split, method, leave-day
+    # source and warnings (money as strings).
+    calculation_details = db.Column(db.JSON, nullable=True)
     total_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
 
     # Net payment

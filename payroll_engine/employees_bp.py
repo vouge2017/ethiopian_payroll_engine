@@ -1063,6 +1063,28 @@ def terminate_employee(emp_id):
                 flash('Invalid date format.', 'danger')
                 return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
+        # Optional manual inputs: unused leave days and pay in lieu of notice.
+        from decimal import Decimal, InvalidOperation
+
+        def _optional_decimal(field, label, max_value):
+            raw = request.form.get(field, '').strip().replace(',', '')
+            if not raw:
+                return None, None
+            try:
+                value = Decimal(raw)
+            except InvalidOperation:
+                return None, f'{label} must be a number.'
+            if not value.is_finite() or value < 0 or value > max_value or value != value.quantize(Decimal('0.01')):
+                return None, f'{label} must be between 0 and {max_value:,} with at most 2 decimals.'
+            return value, None
+
+        unused_leave_days, err = _optional_decimal('unused_leave_days', 'Unused leave days', Decimal('365'))
+        if err is None:
+            notice_pay, err = _optional_decimal('notice_pay', 'Notice pay', Decimal('9999999999.99'))
+        if err:
+            flash(err, 'danger')
+            return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
+
         # Create settlement using service
         settlement = create_settlement_record(
             employee=emp,
@@ -1071,6 +1093,8 @@ def terminate_employee(emp_id):
             company_id=_company_id(),
             created_by=current_user.id,
             db_session=db.session,
+            unused_leave_days=unused_leave_days,
+            notice_pay=notice_pay,
         )
 
         # Soft-delete the employee
@@ -1102,6 +1126,12 @@ def terminate_employee(emp_id):
                 'severance_eligible': settlement.severance_pay > 0,
                 'severance_amount': str(settlement.severance_pay),
                 'settlement_id': settlement.id,
+                'notice_pay': str(settlement.notice_pay),
+                'leave_encashment': str(settlement.leave_encashment),
+                'unused_leave_days': (settlement.calculation_details or {}).get('leave', {}).get('unused_days'),
+                'leave_days_source': (settlement.calculation_details or {}).get('leave', {}).get('source'),
+                'taxable_income': str(settlement.taxable_income),
+                'income_tax': str(settlement.tax_on_salary),
                 'net_final_payment': str(settlement.net_final_payment),
             },
         )
@@ -1113,9 +1143,12 @@ def terminate_employee(emp_id):
         flash(
             f'{emp.name} terminated. Final settlement: ETB {settlement.net_final_payment:,.2f} '
             f'(Outstanding: {settlement.outstanding_salary:,.2f} + Severance: {settlement.severance_pay:,.2f} + '
-            f'Leave: {settlement.leave_encashment:,.2f} - Deductions: {settlement.total_deductions:,.2f}).',
+            f'Notice: {settlement.notice_pay:,.2f} + Leave: {settlement.leave_encashment:,.2f} '
+            f'- Deductions incl. tax: {settlement.total_deductions:,.2f}).',
             'warning',
         )
+        for warning in (settlement.calculation_details or {}).get('warnings', []):
+            flash(warning, 'warning')
         return redirect(url_for('employees.settlement_detail', settlement_id=settlement.id))
 
     # GET: show termination form with severance preview
@@ -1123,6 +1156,8 @@ def terminate_employee(emp_id):
 
     today = date.today()
     start = emp.start_date or (emp.created_at.date() if emp.created_at else today)
+    from payroll_engine.services.settlement_service import recorded_unused_leave_days
+
     previews = {}
     for r in TerminationReason.ALL:
         result = calculate_severance(emp.basic_salary, start, today, r)
@@ -1135,6 +1170,7 @@ def terminate_employee(emp_id):
         today=today,
         previews=previews,
         termination_reasons=TerminationReason.ALL,
+        recorded_leave_days=recorded_unused_leave_days(emp, today, _company_id(), db.session),
     )
 
 

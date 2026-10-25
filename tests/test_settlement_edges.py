@@ -12,7 +12,6 @@ from decimal import Decimal
 import pytest
 
 from payroll_engine import create_app, db
-from payroll_engine.leave import calculate_annual_entitlement
 from payroll_engine.models import (
     AuditLog,
     Company,
@@ -161,26 +160,25 @@ def test_settlement_pension_full_month_when_full(app):
     assert result['pension_deduction'] == employee_pension(Decimal('10000'))
 
 
-# --- Leave encashment statutory fallback follows Art. 77 ---
+# --- Leave encashment: no record → 0 days, never assumed entitlement (R3) ---
 
 
-def test_leave_fallback_matches_art77(app):
-    """3 years of service → 16 + 1 = 17 days (leave.calculate_annual_entitlement)."""
+def test_no_leave_record_pays_no_leave(app):
+    """3 years of service but no LeaveBalance row → 0 encashment plus a warning."""
     company = _make_company(app)
     emp = _make_employee(app, company, date(2023, 1, 15))
-    enc = calculate_settlement(emp, TerminationReason.REDUNDANCY, date(2026, 7, 15), company.id)['leave_encashment']
-    entitled = calculate_annual_entitlement(3)
-    assert entitled == 17
-    assert enc == (Decimal('12000') / Decimal('30') * Decimal(17)).quantize(Decimal('0.01'))
+    result = calculate_settlement(emp, TerminationReason.REDUNDANCY, date(2026, 7, 15), company.id, db.session)
+    assert result['leave_encashment'] == Decimal('0.00')
+    assert result['leave_days_source'] == 'none'
+    assert 'No leave records — enter unused leave days manually' in result['warnings']
 
 
-def test_leave_fallback_first_year(app):
+def test_no_session_pays_no_leave(app):
     company = _make_company(app)
     emp = _make_employee(app, company, date(2026, 6, 20))
-    enc = calculate_settlement(emp, TerminationReason.REDUNDANCY, date(2026, 6, 26), company.id)['leave_encashment']
-    entitled = calculate_annual_entitlement(0)
-    assert entitled == 16
-    assert enc == (Decimal('12000') / Decimal('30') * Decimal(16)).quantize(Decimal('0.01'))
+    result = calculate_settlement(emp, TerminationReason.REDUNDANCY, date(2026, 6, 26), company.id)
+    assert result['leave_encashment'] == Decimal('0.00')
+    assert result['warnings']
 
 
 def test_leave_balance_record_still_wins(app):

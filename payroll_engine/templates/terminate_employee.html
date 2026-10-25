@@ -84,6 +84,27 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="unused_leave_days" class="form-label">Unused annual leave days</label>
+                            <input type="number" class="form-control" id="unused_leave_days" name="unused_leave_days"
+                                   min="0" max="365" step="0.01" inputmode="decimal"
+                                   placeholder="{{ recorded_leave_days if recorded_leave_days is not none else '0' }}">
+                            {% if recorded_leave_days is not none %}
+                            <div class="form-text">Leave record for {{ today.year }}: {{ recorded_leave_days }} days unused. Leave empty to use the record.</div>
+                            {% else %}
+                            <div class="form-text text-warning-emphasis" data-testid="no-leave-record">
+                                <i class="bi bi-exclamation-triangle me-1"></i>No leave records — enter unused leave days manually. If left empty, no leave is paid out.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notice_pay" class="form-label">Pay in lieu of notice (ETB)</label>
+                            <input type="number" class="form-control" id="notice_pay" name="notice_pay"
+                                   min="0" step="0.01" inputmode="decimal" placeholder="0.00">
+                            <div class="form-text">Only if notice pay is owed. It is taxed with the final month's pay, together with severance and leave encashment.</div>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="password" class="form-label">Confirm Password *</label>
                             <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
                             <div class="form-text">Re-enter your password to confirm termination.</div>

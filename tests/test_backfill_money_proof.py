@@ -19,6 +19,7 @@ from decimal import Decimal
 
 import pytest
 
+from payroll_engine import constants as _constants
 from payroll_engine import create_app, db
 from payroll_engine.backfill import backfill_company
 from payroll_engine.models import (
@@ -267,9 +268,12 @@ def _run(co, user, emps, period, label):
         assert ps is not None, f'{label}: no payslip for {e.employee_id}'
         out[e.employee_id] = {
             'gross': Decimal(str(ps.gross_salary)),
+            # Legacy-path payslips store no taxable figure; derive it with the
+            # PAYE timing rule the draft was calculated under (RC-38000-01).
             'taxable': Decimal(str(ps.taxable_income))
             if ps.taxable_income is not None
-            else Decimal(str(ps.gross_salary)) - Decimal(str(ps.employee_pension)),
+            else Decimal(str(ps.gross_salary))
+            - (Decimal(str(ps.employee_pension)) if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')),
             'exempt': Decimal(str(ps.exempt_allowances or 0)),
             'tax': Decimal(str(ps.tax)),
             'pension': Decimal(str(ps.employee_pension)),
@@ -338,14 +342,14 @@ def test_money_proof_before_vs_after(ctx, proof_company):
 
     # 4b. Tax transparency: the exemption must be visible on the payslip and
     #     taxable/tax must tie:
-    #       taxable = gross - pension - exempt_allowances
+    #       taxable = gross - exempt_allowances (PAYE on gross, RC-38000-01)
     #       tax    = public brackets applied to that taxable
     # EMP001 carries the 2,200 transport exemption, so it must reconcile.
     assert after['EMP001']['exempt'] == Decimal('2200.00'), (
         f'the exemption must be visible, got {after["EMP001"]["exempt"]}'
     )
-    assert after['EMP001']['taxable'] == Decimal('19900.00'), (
-        f'gross 23500 - pension 1400 - exempt 2200 = 19900, got {after["EMP001"]["taxable"]}'
+    assert after['EMP001']['taxable'] == Decimal('21300.00'), (
+        f'gross 23500 - exempt 2200 = 21300 (pension not deducted first), got {after["EMP001"]["taxable"]}'
     )
     from payroll_engine.tax import calculate_tax
 

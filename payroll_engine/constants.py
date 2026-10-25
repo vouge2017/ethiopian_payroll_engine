@@ -14,18 +14,24 @@ the codebase.
 import enum
 import os
 
-# --- PAYE timing assumption -------------------------------------------------
-# Pending accountant sign-off, RC-38000-01. Flipping this changes PAYE for
-# every employee with pension.
-# True  = PAYE is calculated on (gross − 7% employee pension) — current
-#         practice in this app; not expressly traced to a statute article.
-# False = pension is deducted after PAYE: taxable = gross − exempt allowances.
+# --- PAYE timing rule ------------------------------------------------------
+# RC-38000-01. Flipping this changes PAYE for every employee with pension.
+# False = PAYE is calculated on gross taxable income (gross − exempt
+#         allowances); the 7% employee pension is still deducted from pay but
+#         does NOT reduce taxable income. This matches the owner's verified
+#         payroll rules (PLAN.md R1) and is the default from 2026-10-25,
+#         pending an Ethiopian accountant's written confirmation.
+# True  = legacy behaviour: PAYE on (gross − 7% employee pension). Kept
+#         configurable so the rule can be restored without a code change if the
+#         accountant disagrees.
 # Every monthly PAYE calculation must route its taxable-income step through
-# this constant. Intentional exceptions that are NOT controlled by it:
+# this constant. Approved/locked payroll months are NOT recomputed from it:
+# their tax, taxable income and net are stored on the Payslip rows.
+# Intentional exceptions that are NOT controlled by it:
 #   - daily workers (no pension deduction at all, tax on full gross);
 #   - comparison explanations that deliberately compute tax WITHOUT the
-#     deduction to show the pension tax saving.
-PENSION_DEDUCTED_BEFORE_TAX = True
+#     deduction to show the pension tax saving (zero under False).
+PENSION_DEDUCTED_BEFORE_TAX = False
 
 # --- Leave encashment daily rate (final settlement) ------------------------
 # Per-company setting (Company.leave_rate_basis / leave_rate_divisor).
@@ -65,9 +71,9 @@ LEAVE_RATE_DIVISOR_MAX = 31
 # never changes any calculation, and it never hard-blocks a path.
 PENDING_CONFIRMATION_NOTICE = True
 PENDING_PAYE_NOTICE_TEXT = (
-    'PAYE note: employee pension (7%) is deducted before income tax. '
-    'This is current practice in EthioPayroll, pending accountant confirmation '
-    '(ref RC-38000-01).'
+    'PAYE note: income tax is calculated on gross taxable income; the employee '
+    'pension (7%) is deducted from pay but does not reduce taxable income. '
+    'Pending accountant confirmation (ref RC-38000-01).'
 )
 
 

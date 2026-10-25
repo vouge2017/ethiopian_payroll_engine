@@ -206,9 +206,11 @@ def test_ac3_accumulation_matches_hand_calculation(ctx):
     assert r['gross'] == Decimal('17400'), '10000 + 2000 + 2400 + 3000'
     assert r['exempt_allowances'] == Decimal('600')
     assert r['pension_employee'] == Decimal('700'), '7% of 10000'
-    assert r['taxable'] == Decimal('16100'), '17400 - 700 - 600'
-    assert r['tax'] == calculate_tax(Decimal('16100')) == Decimal('3585')
-    assert r['net'] == Decimal('13115'), '17400 - 700 - 3585'
+    # PAYE on gross taxable income (RC-38000-01): pension does not reduce taxable.
+    assert r['taxable'] == Decimal('16800'), '17400 - 600 exempt'
+    # 0 + 300 + 600 + 750 + 1200 + (16800 - 14000) × 35% = 2850 + 980 = 3830
+    assert r['tax'] == calculate_tax(Decimal('16800')) == Decimal('3830')
+    assert r['net'] == Decimal('12870'), '17400 - 700 - 3830'
 
 
 def test_ac4_tax_treatment_per_item(ctx):
@@ -222,7 +224,7 @@ def test_ac4_tax_treatment_per_item(ctx):
     assert details['housing']['earned_amount'] == Decimal('3000')
 
     # taxable earnings = 10000 + (2000-600) + 2400 + 3000 = 16800
-    assert r['taxable'] == Decimal('16100'), 'taxable earnings 16800 minus pension 700'
+    assert r['taxable'] == Decimal('16800'), 'taxable earnings 16800 (pension does not reduce it, RC-38000-01)'
     assert r['pension_employee'] == Decimal('700')
 
 

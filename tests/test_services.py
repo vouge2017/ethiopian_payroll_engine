@@ -255,7 +255,10 @@ def test_payroll_with_transport_exemption(app, ids):
         db.session.commit()
         r = calculate_payroll(basic_salary=Decimal('10000'), allowance_records=[t])
         assert r['gross'] == Decimal('13000.00')
-        assert r['taxable'] == Decimal('10100.00')
+        # PAYE on gross taxable income (RC-38000-01): 13,000 − 2,200 exempt = 10,800
+        assert r['taxable'] == Decimal('10800.00')
+        # 300 + 600 + 750 + 800 × 30% = 1,890
+        assert r['tax'] == Decimal('1890.00')
         assert r['exempt_allowances'] == Decimal('2200.00')
         assert r['taxable_allowances'] == Decimal('800.00')
 

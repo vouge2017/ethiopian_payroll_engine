@@ -31,7 +31,7 @@ def test_approved_accounting_reconciles_and_preserves_employee_facts(worksheet, 
         assert journal['total_debits'] == journal['total_credits'] == Decimal('13200.50')
         assert journal['entries'][0]['employee_name'] == 'Synthetic monthly'
         assert journal['totals']['gross'] == Decimal('12900.50')
-        assert journal['totals']['net'] == Decimal('8590.35')
+        assert journal['totals']['net'] == Decimal('8380.35')
         lines = {line['account']: line for line in journal['journal_lines']}
         assert lines['5100']['debit'] == Decimal('12100.50')
         assert lines['1300']['credit'] == Decimal('500.00')
@@ -42,7 +42,7 @@ def test_approved_accounting_reconciles_and_preserves_employee_facts(worksheet, 
     debits = sum((Decimal(row[5] or '0') for row in journal_rows), Decimal('0'))
     credits = sum((Decimal(row[6] or '0') for row in journal_rows), Decimal('0'))
     assert debits == credits == Decimal('13200.50')
-    assert '8590.35' in response.get_data(as_text=True)
+    assert '8380.35' in response.get_data(as_text=True)
     assert 'Changed after approval' not in response.get_data(as_text=True)
     preview = client.get(f'/accounting/preview/{rid}')
     assert preview.status_code == 200
@@ -51,7 +51,7 @@ def test_approved_accounting_reconciles_and_preserves_employee_facts(worksheet, 
     with engine.connect() as conn:
         assert conn.execute(
             text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': rid}
-        ).scalar_one() == Decimal('8590.35')
+        ).scalar_one() == Decimal('8380.35')
 
 
 @pytest.mark.parametrize('fmt', ['generic', 'quickbooks', 'peachtree', 'xero'])

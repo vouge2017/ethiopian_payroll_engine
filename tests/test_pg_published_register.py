@@ -30,11 +30,11 @@ def test_register_uses_selected_approved_snapshot_after_master_changes(worksheet
     monkeypatch.setattr('payroll_engine.payroll_bp.calculate_payroll', forbidden_calculation)
     response = client.get(f'/payroll/register?run_id={rid}')
     assert response.status_code == 200
-    for value in (b'Synthetic monthly', b'12,900.50', b'2,310.15', b'8,590.35', b'10,000.00'):
+    for value in (b'Synthetic monthly', b'12,900.50', b'2,520.15', b'8,380.35', b'10,000.00'):
         assert value in response.data
     assert b'Changed after approval' not in response.data and b'30,000.00' not in response.data
     assert f'/payroll/runs/{rid}/download'.encode() in response.data
-    assert b'8,590.35' in client.get('/payroll/register').data
+    assert b'8,380.35' in client.get('/payroll/register').data
     assert client.get(f'/payroll/register?run_id={rid + 100000}').status_code == 404
 
 

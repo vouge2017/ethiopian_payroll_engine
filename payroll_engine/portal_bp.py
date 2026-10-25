@@ -87,7 +87,14 @@ def my_payslip_detail(payslip_id):
         abort(404)
     payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id, company_id=emp.company_id).first_or_404()
 
-    taxable = payslip.gross_salary - payslip.employee_pension
+    # Explain the STORED approved figures: use the taxable income frozen on the
+    # payslip, never one re-derived from today's PAYE timing setting
+    # (RC-38000-01). Legacy payslips without a stored taxable figure were all
+    # calculated under the old pension-before-tax rule, so derive it that way.
+    if payslip.taxable_income is not None:
+        taxable = payslip.taxable_income
+    else:
+        taxable = payslip.gross_salary - payslip.employee_pension
     tax_breakdown = calculate_tax_breakdown(taxable)
 
     payslip_month = payslip.generated_at.month if payslip.generated_at else None
@@ -124,6 +131,7 @@ def my_payslip_detail(payslip_id):
         {
             'gross': payslip.gross_salary,
             'pension_employee': payslip.employee_pension,
+            'exempt_allowances': payslip.exempt_allowances or 0,
             'taxable': taxable,
             'tax': payslip.tax,
             'net': payslip.net_pay,

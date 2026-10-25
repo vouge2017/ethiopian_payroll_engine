@@ -77,20 +77,21 @@ def test_saved_worksheet_review_approval_pdf_and_bank_agree(worksheet, monkeypat
         draft = PayrollDraft.query.filter_by(company_id=ids['company'], payroll_run_id=rid).one()
         snapshot = draft.employee_data[0]
         expected = Decimal(str(snapshot['net']))
-        assert expected == Decimal('8590.35')
+        # PAYE on gross taxable income (RC-38000-01): tax 2,520.15 on 12,900.50.
+        assert expected == Decimal('8380.35')
         assert snapshot['worksheet_inputs']['bonus'] == '900.50'
     review_page = client.get(f'/payroll/runs/{rid}/review').get_data(as_text=True)
-    assert '8,590.35' in review_page and '900.50' in review_page and 'Gregorian' in review_page
+    assert '8,380.35' in review_page and '900.50' in review_page and 'Gregorian' in review_page
     from payroll_engine.ethiopian_calendar import format_ethiopian_period
 
     expected_period = format_ethiopian_period(date.today().replace(day=1))
     assert f'Saved payroll for {expected_period}' in review_page
     assert ' (Gregorian)' not in review_page
-    assert 'Gross ETB 12,900.50 = total deductions ETB 4,310.15 + net ETB 8,590.35' in review_page
+    assert 'Gross ETB 12,900.50 = total deductions ETB 4,520.15 + net ETB 8,380.35' in review_page
     assert '0/1 employees' not in review_page and 'No data available.' not in review_page
     confirmation = client.get(f'/payroll/{rid}/confirm')
-    assert confirmation.status_code == 200 and b'8,590.35' in confirmation.data
-    assert b'4,310.15' in confirmation.data and b'Monthly Bonus' in confirmation.data
+    assert confirmation.status_code == 200 and b'8,380.35' in confirmation.data
+    assert b'4,520.15' in confirmation.data and b'Monthly Bonus' in confirmation.data
     assert b'Can be undone within 1 hour' not in confirmation.data
     approved = client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'})
     assert approved.status_code == 302
@@ -109,7 +110,7 @@ def test_saved_worksheet_review_approval_pdf_and_bank_agree(worksheet, monkeypat
         ).all()
         assert len(rows) == 1
         psid, *money = rows[0]
-        assert money == [Decimal('12900.50'), Decimal('2310.15'), Decimal('700'), Decimal('800'), expected]
+        assert money == [Decimal('12900.50'), Decimal('2520.15'), Decimal('700'), Decimal('800'), expected]
         assert (
             conn.execute(
                 text("SELECT count(*) FROM audit_log WHERE company_id=:c AND action='payroll_run_completed'"),
@@ -124,11 +125,11 @@ def test_saved_worksheet_review_approval_pdf_and_bank_agree(worksheet, monkeypat
         destination = Path(os.environ['PAYROLL_EVIDENCE_DIR'])
         destination.mkdir(parents=True, exist_ok=True)
         (destination / 'founder-trial-payslip.pdf').write_bytes(pdf.data)
-    for number in ('12,900.50', '2,310.15', '8,590.35', '4,310.15'):
+    for number in ('12,900.50', '2,520.15', '8,380.35', '4,520.15'):
         assert number in extracted
     bank = client.get(f'/reports/bank/{rid}?format=csv&bank=cbe')
     assert bank.status_code == 200 and bank.mimetype == 'text/csv'
-    assert '8590.35' in bank.get_data(as_text=True)
+    assert '8380.35' in bank.get_data(as_text=True)
 
 
 def test_review_creation_and_preview_do_not_consume_balances(worksheet, monkeypatch):
@@ -181,9 +182,9 @@ def test_later_approval_keeps_reviewed_month_amounts_and_identity(worksheet, mon
     with engine.connect() as conn:
         ps = conn.execute(text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one()
         # The prep save above auto-refreshes this unsubmitted review (documented
-        # in the review UI), so approval preserves the refreshed 9,260.00
-        # snapshot, not the pre-save 9,090.35.
-        assert ps == Decimal('9260.00')
+        # in the review UI), so approval preserves the refreshed 9,050.00
+        # snapshot, not the pre-save 8,880.35.
+        assert ps == Decimal('9050.00')
     bank = client.get(f'/reports/bank/{rid}?format=csv&bank=cbe')
     assert bank.status_code == 200
     assert 'Synthetic monthly' in bank.get_data(as_text=True)
@@ -317,21 +318,21 @@ def test_accountant_submits_and_owner_approves_preserved_amounts(worksheet, monk
     with engine.connect() as conn:
         assert conn.execute(
             text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': rid}
-        ).scalar_one() == Decimal('9890.35')
+        ).scalar_one() == Decimal('9680.35')
 
 
 def test_saved_worksheet_changes_refresh_open_review_automatically(worksheet, monkeypatch):
     _app, client, ids, engine, rid = saved_review(worksheet, monkeypatch, bonus='900.50')
     assert client.post('/payroll/spreadsheet', data=form(ids, bonus='0')).status_code == 302
-    assert b'9,260.00' in client.get(f'/payroll/runs/{rid}/review').data
+    assert b'9,050.00' in client.get(f'/payroll/runs/{rid}/review').data
     assert run_id(review(client, refresh_run_id=rid)) == rid
-    assert b'9,260.00' in client.get(f'/payroll/runs/{rid}/review').data
+    assert b'9,050.00' in client.get(f'/payroll/runs/{rid}/review').data
     assert client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'}).status_code == 302
     assert review(client, refresh_run_id=rid).status_code == 400
     with engine.connect() as conn:
         assert conn.execute(
             text('SELECT net_pay FROM payslip WHERE payroll_run_id=:id'), {'id': rid}
-        ).scalar_one() == Decimal('9260')
+        ).scalar_one() == Decimal('9050')
 
 
 def test_autosave_refreshes_review_but_submitted_review_rejects_edits(worksheet, monkeypatch):
@@ -474,7 +475,7 @@ def test_worker_pdf_uses_approved_snapshot_after_employee_changes(worksheet, mon
     pdf = client.get(f'/payslips/{psid}/download')
     assert pdf.status_code == 200
     extracted = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(pdf.data)).pages)
-    assert '9,090.35' in extracted and 'Synthetic monthly' in extracted
+    assert '8,880.35' in extracted and 'Synthetic monthly' in extracted
     assert 'Changed after approval' not in extracted and '30,000.00' not in extracted
 
 

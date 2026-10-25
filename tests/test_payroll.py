@@ -25,13 +25,14 @@ D = Decimal
 # TEST 1: Correct deduction order (15,000 ETB)
 # ---------------------------------------------------------------
 def test_payroll_15000():
-    """15,000 gross, basic 10,000 — verifies pension before tax."""
+    """15,000 gross, basic 10,000 — PAYE on gross, pension not deducted first (RC-38000-01)."""
     result = calculate_payroll(basic_salary=10000, allowances=5000)
     assert result['gross'] == D('15000')
     assert result['pension_employee'] == D('700')  # 7% of 10,000
-    assert result['taxable'] == D('14300')  # 15,000 - 700
-    assert result['tax'] == D('2955')  # tax on 14,300 (no personal relief)
-    assert result['net'] == D('11345')  # 15,000 - 2,955 - 700
+    assert result['taxable'] == D('15000')  # gross; pension does not reduce taxable income
+    # tax on 15,000: 300 + 600 + 750 + 1,200 + 1,000 × 35% = 3,200 (no personal relief)
+    assert result['tax'] == D('3200')
+    assert result['net'] == D('11100')  # 15,000 - 3,200 - 700
 
 
 # ---------------------------------------------------------------
@@ -76,7 +77,7 @@ def test_payroll_low_salary():
     result = calculate_payroll(basic_salary=1800, allowances=0)
     assert result['gross'] == D('1800')
     assert result['pension_employee'] == D('126')  # 7% of 1,800
-    assert result['taxable'] == D('1674')
+    assert result['taxable'] == D('1800')  # gross (RC-38000-01)
     assert result['tax'] == D('0')  # under 2,000 bracket
     assert result['net'] == D('1674')
 
@@ -89,7 +90,7 @@ def test_payroll_high_salary():
     result = calculate_payroll(basic_salary=50000, allowances=10000)
     assert result['gross'] == D('60000')
     assert result['pension_employee'] == D('3500')  # 7% of 50,000 (no ceiling)
-    assert result['taxable'] == D('56500')  # 60,000 - 3,500
+    assert result['taxable'] == D('60000')  # gross; pension does not reduce it (RC-38000-01)
     assert result['tax'] > 0
     assert result['net'] == result['gross'] - result['tax'] - result['pension_employee']
 
@@ -109,25 +110,25 @@ def test_payroll_basic_only():
 # ---------------------------------------------------------------
 def test_deduction_order_matters():
     """
-    If someone calls calculate_tax(gross) instead of
-    calculate_tax(gross - pension), they get WRONG numbers.
-    This test proves the difference.
+    PAYE is on gross taxable income (RC-38000-01, PLAN.md R1). Calling
+    calculate_tax(gross - pension) — the legacy pension-first rule — gives a
+    LOWER tax and under-withholds. This test proves the difference.
     """
     gross = D('15000')
     basic = D('10000')
     pension = basic * D('0.07')  # 700
 
-    # WRONG way: tax on full gross
-    wrong_tax = calculate_tax(gross)
+    # WRONG way (legacy rule): tax on gross - pension
+    wrong_tax = calculate_tax(gross - pension)
 
-    # RIGHT way: tax on gross - pension
-    right_tax = calculate_tax(gross - pension)
+    # RIGHT way: tax on gross taxable income
+    right_tax = calculate_tax(gross)
 
     # They must be different
     assert wrong_tax != right_tax, "Deduction order doesn't matter? Something is wrong."
 
-    # The wrong way produces a HIGHER tax (employee gets less)
-    assert wrong_tax > right_tax, 'Wrong deduction order should produce higher tax.'
+    # The legacy way under-withholds tax
+    assert wrong_tax < right_tax, 'Pension-first should produce lower (under-withheld) tax.'
 
     # Our function uses the right way
     result = calculate_payroll(basic_salary=basic, allowances=gross - basic)
@@ -159,8 +160,8 @@ def test_no_pension_ceiling_by_default():
     result = calculate_payroll(basic_salary=25000, allowances=5000)
     assert result['pension_employee'] == D('1750')
     assert result['pension_employer'] == D('2750')
-    # Taxable = gross - pension_employee = 30,000 - 1,750 = 28,250
-    assert result['taxable'] == D('28250')
+    # Taxable = gross = 30,000 (pension does not reduce it, RC-38000-01)
+    assert result['taxable'] == D('30000')
 
 
 def test_pension_ceiling_when_configured():

@@ -144,7 +144,7 @@
             <thead><tr><th>Field</th><th>Our method</th></tr></thead>
             <tbody>
             <tr><td><strong>Gross salary</strong></td><td>Basic + allowances + overtime. Your sheet may combine what we separate.</td></tr>
-            <tr><td><strong>Tax (PAYE)</strong></td><td>Progressive brackets. Pension (7%) is deducted <em>before</em> taxable income — current practice in EthioPayroll, accountant confirmation pending (ref RC-38000-01).</td></tr>
+            <tr><td><strong>Tax (PAYE)</strong></td><td>Progressive brackets on gross taxable income. Pension (7%) is deducted from pay but does <em>not</em> reduce taxable income — accountant confirmation pending (ref RC-38000-01).</td></tr>
             <tr><td><strong>Employee pension</strong></td><td>7% of basic salary, no ceiling (Proclamation 1268/2022).</td></tr>
             <tr><td><strong>Net pay</strong></td><td>Gross − pension − tax. We trace which component caused the gap.</td></tr>
             </tbody>
@@ -152,7 +152,7 @@
         <div class="example-box">
             <strong>Example:</strong> If your sheet shows <strong>net ETB 8,420</strong> and our engine calculates <strong>ETB 8,145</strong>:
             <ul>
-                <li>Tax: Yours 2,580 vs Ours 2,955 — engine deducts pension first, saving ETB 105 tax</li>
+                <li>Tax: Yours 2,580 vs Ours 2,955 — check which allowances your sheet treats as taxable</li>
                 <li>Pension: Yours 0 vs Ours 700 — 7% of basic (Proclamation 1268/2022)</li>
                 <li>Net diff: ETB 275 — caused by missing pension deduction</li>
             </ul>

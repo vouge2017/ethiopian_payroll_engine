@@ -441,6 +441,8 @@ class ExcelPayrollEngine:
         result.pension_employee = pension_emp
         result.pension_employer = pension_empr
 
+        from payroll_engine import constants as _constants
+
         step_num += 1
         steps.append(
             CalculationStep(
@@ -449,15 +451,18 @@ class ExcelPayrollEngine:
                 formula=f'{emp_rate * 100:.0f}% of basic salary',
                 inputs={'basic_salary': result.basic_salary, 'rate': emp_rate, 'ceiling': ceiling},
                 result=pension_emp,
-                note='Deducted before PAYE — current practice, pending accountant confirmation (RC-38000-01)',
+                note=(
+                    'Deducted before PAYE — legacy rule (RC-38000-01)'
+                    if _constants.PENSION_DEDUCTED_BEFORE_TAX
+                    else 'Deducted from pay; does not reduce taxable income — pending accountant confirmation '
+                    '(RC-38000-01)'
+                ),
                 is_deduction=True,
             )
         )
 
         # Step 6: Taxable income.
         # Timing controlled by PENSION_DEDUCTED_BEFORE_TAX (RC-38000-01).
-        from payroll_engine import constants as _constants
-
         pension_tax_adjustment = pension_emp if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
         taxable = gross - pension_tax_adjustment - exempt_total
         taxable = max(Decimal('0'), taxable)
@@ -468,7 +473,11 @@ class ExcelPayrollEngine:
             CalculationStep(
                 step_number=step_num,
                 label='Taxable Income',
-                formula='Gross − Pension − Exempt Allowances',
+                formula=(
+                    'Gross − Pension − Exempt Allowances'
+                    if _constants.PENSION_DEDUCTED_BEFORE_TAX
+                    else 'Gross − Exempt Allowances'
+                ),
                 inputs={
                     'gross': result.gross,
                     'pension': pension_emp,
@@ -522,7 +531,7 @@ class ExcelPayrollEngine:
                     },
                     result=pension_savings,
                     note=f'You save ETB {pension_savings:,.2f}/month because pension is deducted before PAYE '
-                    f'— current practice, pending accountant confirmation (RC-38000-01)',
+                    f'— legacy rule, pending accountant confirmation (RC-38000-01)',
                 )
             )
 

@@ -245,7 +245,7 @@ def explain_tax_amharic(gross_salary, for_date=None) -> str:
     brackets, _personal_relief = _get_brackets_and_relief(for_date)
 
     lines = [
-        f'ጠቅላይ ወርሃዊ ደመወዝ / Monthly Gross: ETB {gross_salary:,.2f}',
+        f'ጠቅላላ ወርሃዊ ደመወዝ / Monthly Gross: ETB {gross_salary:,.2f}',
         '=' * 50,
         'የታክስ ሥሌት / Tax Bracket Breakdown:',
         '-' * 50,

@@ -166,6 +166,29 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   4,000.00; divisor 26; default unchanged; validation; DB constraint;
   settings route + audit; settlement page). Full suite: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.
 
+### Amharic label fixes (branch `fix/amharic-labels`, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+  PR against `main` opened on the owner's instruction. Cut from `origin/main` @
+  `bb47054`.
+- Replaced 41 clearly wrong strings (39 Amharic, 2 Afaan Oromoo): all 19
+  wrong pay-item `name_am` labels in `catalog.py` (e.g. employer pension
+  "ፀጉሮች" → "የአሠሪ የጡረታ መዋጮ 11%", "ስያፍ" → "… አበል"), the overtime
+  placeholder, PDF "Position"/"NET PAY", severance, tax explanation, compliance,
+  month-close, rule-source names (one had a corrupted U+FFFD character),
+  Enkutatash, and the tax certificate. The `pension_before_tax` and
+  `tax_explainer_intro` strings (am + om) no longer call pension-before-tax
+  "common practice"; they say it is still being confirmed (RC-38000-01).
+- Review table for the owner (native speaker) in the PR body: changed strings
+  with confidence, plus a "for review" list that was NOT changed.
+- PDF: NotoSansEthiopic is registered and embedded; Ethiopic renders. Gap:
+  pension, income-tax and overtime rows pass `custom_label`, which also
+  overrides the Amharic, so they print English-only (`payroll_elements.py`
+  `_line_item_dict`). Not fixed (engine code).
+- Not done: data migration for existing companies' `pay_item_type.name_am`
+  rows (seeding skips existing rows). Needs PG proof.
+- Tests: new `tests/test_amharic_labels.py` (6 tests). Full suite: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance
@@ -418,3 +441,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   and `leave_rate_divisor` (default 30), migration `f4a5b6c7d8f5`, frozen in
   settlement `calculation_details`, shown on the settlement page, set in
   Settings → Company Profile. Tests: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.
+- 2026-10-25 — Hark — Amharic label fixes (branch fix/amharic-labels) — 41
+  wrong Amharic/Oromo strings replaced (catalog pay items, PDF, severance, tax
+  text, rule sources, tax certificate); stale pension-before-tax copy made
+  neutral; review table in the PR. Existing companies' DB labels need a data
+  migration (not done). Tests: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.

@@ -880,7 +880,7 @@ def _make_overtime_placeholder():
         id = None
         key = 'overtime'
         name_en = 'Overtime'
-        name_am = 'ፈተና ስርዓት'
+        name_am = 'የትርፍ ሰዓት ክፍያ'
         classification = PayItemClassification.EARNING
         calculation_method = PayItemCalcMethod.FIXED
         tax_treatment = PayItemTaxTreatment.TAXABLE

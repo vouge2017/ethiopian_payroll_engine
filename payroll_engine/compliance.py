@@ -239,7 +239,7 @@ def get_status_message(status: str) -> str:
     messages = {
         'green': 'Compliant / ተገቢ — All deadlines met or on track.',
         'yellow': 'At Risk / አደጋ ላይ — Some deadlines approaching or recently missed.',
-        'red': 'Non-Compliant / ያለግባት — Multiple deadlines missed. Action required.',
+        'red': 'Non-Compliant / ሕግን ያላከበረ — Multiple deadlines missed. Action required.',
     }
     return messages.get(status, 'Unknown / ያልታወቀ')
 

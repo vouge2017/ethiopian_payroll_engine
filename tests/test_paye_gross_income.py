@@ -246,9 +246,9 @@ def _locked_month(app, *, with_taxable=True, values=None):
     db.session.add(company)
     db.session.flush()
     owner = User(phone='0910000101', role='owner', company_id=company.id)
-    owner.set_password('OwnerPass1!')
+    owner.set_password('Test1234!')
     emp_user = User(phone='0911000102', role='employee', company_id=company.id)
-    emp_user.set_password('EmpPass1!')
+    emp_user.set_password('Test1234!')
     db.session.add_all([owner, emp_user])
     db.session.flush()
     employee = Employee(
@@ -295,7 +295,7 @@ def test_locked_month_payslip_export_uses_stored_values(elements_app):
     assert constants.PENSION_DEDUCTED_BEFORE_TAX is False
     _cid, _rid, pid = _locked_month(elements_app)
     client = elements_app.test_client()
-    client.post('/auth/login', data={'login_id': '0910000101', 'password': 'OwnerPass1!'})
+    client.post('/auth/login', data={'login_id': '0910000101', 'password': 'Test1234!'})
     resp = client.get('/payroll/payslips/export')
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
@@ -310,7 +310,7 @@ def test_locked_month_payslip_export_uses_stored_values(elements_app):
 def test_locked_month_portal_payslip_explains_stored_taxable(elements_app):
     _cid, _rid, pid = _locked_month(elements_app)
     client = elements_app.test_client()
-    client.post('/auth/login', data={'login_id': '0911000102', 'password': 'EmpPass1!'})
+    client.post('/auth/login', data={'login_id': '0911000102', 'password': 'Test1234!'})
     resp = client.get(f'/my/payslips/{pid}')
     assert resp.status_code == 200
     body = resp.get_data(as_text=True)
@@ -324,7 +324,7 @@ def test_legacy_locked_payslip_without_taxable_column(elements_app):
     """Rows approved before taxable_income existed were taxed after pension."""
     _cid, _rid, pid = _locked_month(elements_app, with_taxable=False)
     client = elements_app.test_client()
-    client.post('/auth/login', data={'login_id': '0911000102', 'password': 'EmpPass1!'})
+    client.post('/auth/login', data={'login_id': '0911000102', 'password': 'Test1234!'})
     resp = client.get(f'/my/payslips/{pid}')
     assert resp.status_code == 200
     assert 'on next 2,300' in resp.get_data(as_text=True)
@@ -389,7 +389,7 @@ def test_gross_rule_payslip_export_uses_stored_taxable(elements_app):
     """Export must not re-derive taxable as gross − pension."""
     _cid, _rid, pid = _locked_month(elements_app, values=APPROVED_GROSS_RULE)
     owner = elements_app.test_client()
-    owner.post('/auth/login', data={'login_id': '0910000101', 'password': 'OwnerPass1!'})
+    owner.post('/auth/login', data={'login_id': '0910000101', 'password': 'Test1234!'})
     body = owner.get('/payroll/payslips/export').get_data(as_text=True)
     row = next(line for line in body.splitlines() if 'L001' in line)
     assert '10000.00,1650.00' in row  # Taxable Income, Income Tax columns
@@ -400,7 +400,7 @@ def test_gross_rule_payslip_export_uses_stored_taxable(elements_app):
 def test_gross_rule_payslip_portal_uses_stored_taxable(elements_app):
     _cid, _rid, pid = _locked_month(elements_app, values=APPROVED_GROSS_RULE)
     emp = elements_app.test_client()
-    emp.post('/auth/login', data={'login_id': '0911000102', 'password': 'EmpPass1!'})
+    emp.post('/auth/login', data={'login_id': '0911000102', 'password': 'Test1234!'})
     resp = emp.get(f'/my/payslips/{pid}')
     assert resp.status_code == 200
     page = resp.get_data(as_text=True)
@@ -418,7 +418,7 @@ def test_gross_rule_payslip_portal_uses_stored_taxable(elements_app):
 def test_run_results_screen_shows_stored_taxable(elements_app, values, shown_taxable, note):
     _cid, rid, _pid = _locked_month(elements_app, values=values)
     client = elements_app.test_client()
-    client.post('/auth/login', data={'login_id': '0910000101', 'password': 'OwnerPass1!'})
+    client.post('/auth/login', data={'login_id': '0910000101', 'password': 'Test1234!'})
     resp = client.get(f'/payroll/runs/{rid}')
     assert resp.status_code == 200
     page = resp.get_data(as_text=True)

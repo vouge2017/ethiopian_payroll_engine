@@ -389,5 +389,6 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   re-derived). CI failure was `test-postgres`: 7 PostgreSQL-only tests still
   pinned after-pension tax (2,310.15 instead of 2,520.15 on gross 12,900.50);
   updated to the gross rule. Removed the parked ERCA "Total Taxable" item (fixed
-  by #31). Tests: 1736 passed, 0 failed, 205 skipped (167 files, one process
+  by #31). GitGuardian flagged test passwords `OwnerPass1!`/`EmpPass1!` in
+  `tests/test_paye_gross_income.py`; switched to the repo's `Test1234!`. Tests: 1736 passed, 0 failed, 205 skipped (167 files, one process
   each, SQLite). Still DO NOT MERGE until accountant sign-off.

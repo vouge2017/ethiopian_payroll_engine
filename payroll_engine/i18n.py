@@ -145,15 +145,15 @@ STRINGS = {
     # Flash Messages
     'how_tax_calculated': 'ግብር እንዴት ይሰላል?',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review:
-    # the pension-before-tax statement now carries the pending-confirmation wording.
-    'tax_explainer_intro': 'የኢትዮጵያ የገቢ ግብር ደረጃ በደረጃ የሚጨምሩ መጣኔዎችን ይጠቀማል (አዋጅ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነስ እንደሆነ ገና እየተረጋገጠ ነው (RC-38000-01)።',
+    # PAYE is on gross taxable pay before the 7% pension (Proc. 979/2016); RC-38000-01 closed.
+    'tax_explainer_intro': 'የኢትዮጵያ የገቢ ግብር ደረጃ በደረጃ የሚጨምሩ መጣኔዎችን ይጠቀማል (አዋጅ ቁጥር 1395/2025)። የገቢ ግብር የሚሰላው 7% የሠራተኛ ጡረታ መዋጮ ከመቀነሱ በፊት ባለው ጠቅላላ ግብር የሚከፈልበት ገቢ ላይ ነው (አዋጅ ቁጥር 979/2016፣ RC-38000-01)።',
     'bracket': 'ደረጃ',
     'taxable_range': 'ግብር የሚከፈልበት ገቢ ክልል',
     'tax_rate': 'መጠን',
     'personal_relief': 'የግል የግብር ቅናሽ',
     'per_month': 'በወር',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review.
-    'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነስ እንደሆነ ገና እየተረጋገጠ ነው (RC-38000-01)።',
+    'pension_before_tax': 'የገቢ ግብር የሚሰላው 7% የሠራተኛ ጡረታ መዋጮ ከመቀነሱ በፊት ባለው ጠቅላላ ግብር የሚከፈልበት ገቢ ላይ ነው (አዋጅ ቁጥር 979/2016፣ RC-38000-01)።',
     'of_basic_salary': 'የመነሻ ደመወዝ',
     'then_tax': 'ከዚያ ግብር ይሰላል',
 }

@@ -202,12 +202,12 @@
                                     {% if p_pension_pre_tax %}
                                     <div class="mt-2 small text-muted">
                                         💡 Pension (ETB {{ '%.2f'|format(p.employee_pension) }}) was deducted before tax
-                                        — legacy rule, pending accountant confirmation (ref RC-38000-01).
+                                        — legacy rule, not current law (ref RC-38000-01).
                                     </div>
                                     {% elif p.employee_pension > 0 %}
                                     <div class="mt-2 small text-muted">
                                         💡 Pension (ETB {{ '%.2f'|format(p.employee_pension) }}) is deducted from pay but does not reduce taxable income
-                                        — pending accountant confirmation (ref RC-38000-01).
+                                        (Income Tax Proclamation No. 979/2016).
                                     </div>
                                     {% endif %}
                                 </div>

@@ -1,5 +1,7 @@
 """Settings & team management blueprint."""
 
+from datetime import UTC, datetime
+
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
@@ -46,6 +48,43 @@ def company_profile():
             company.phone = None
 
         company.tin = request.form.get('tin', '').strip() or None
+
+        # Leave encashment daily-rate setting (only when the form sends it).
+        from payroll_engine.services.settlement_service import validate_leave_rate_settings
+
+        leave_rate_change = None
+        leave_rate_confirmation = None
+        if 'leave_rate_basis' in request.form or 'leave_rate_divisor' in request.form:
+            try:
+                basis, divisor = validate_leave_rate_settings(
+                    request.form.get('leave_rate_basis', company.leave_rate_basis).strip(),
+                    request.form.get('leave_rate_divisor', str(company.leave_rate_divisor)).strip(),
+                )
+            except ValueError as exc:
+                db.session.rollback()
+                flash(str(exc), 'danger')
+                return redirect(url_for('settings.company_profile'))
+            changed = (basis, divisor) != (company.leave_rate_basis, company.leave_rate_divisor)
+            # The checkbox mirrors the confirmed state: ticked = this basis and
+            # divisor are confirmed by the company; unticked = not confirmed.
+            confirm = request.form.get('leave_rate_confirm') == '1'
+            was_confirmed = company.leave_rate_confirmed_at is not None
+            if changed:
+                leave_rate_change = {
+                    'leave_rate_basis': {'old': company.leave_rate_basis, 'new': basis},
+                    'leave_rate_divisor': {'old': company.leave_rate_divisor, 'new': divisor},
+                }
+            company.leave_rate_basis = basis
+            company.leave_rate_divisor = divisor
+            if confirm and (changed or not was_confirmed):
+                company.leave_rate_confirmed_at = datetime.now(UTC).replace(tzinfo=None)
+                company.leave_rate_confirmed_by = current_user.id
+                leave_rate_confirmation = {'confirmed': True, 'leave_rate_basis': basis, 'leave_rate_divisor': divisor}
+            elif not confirm and was_confirmed:
+                company.leave_rate_confirmed_at = None
+                company.leave_rate_confirmed_by = None
+                leave_rate_confirmation = {'confirmed': False, 'leave_rate_basis': basis, 'leave_rate_divisor': divisor}
+
         company.webhook_url = request.form.get('webhook_url', '').strip() or None
         company.webhook_secret = request.form.get('webhook_secret', '').strip() or None
 
@@ -69,11 +108,35 @@ def company_profile():
             action='company_settings_change',
             details={'fields_updated': ['name', 'address', 'phone', 'tin', 'webhook_url', 'webhook_secret']},
         )
+        if leave_rate_change:
+            create_audit_log(
+                company_id=company.id,
+                user_id=current_user.id,
+                action='leave_rate_setting_change',
+                details=leave_rate_change,
+            )
+        if leave_rate_confirmation:
+            create_audit_log(
+                company_id=company.id,
+                user_id=current_user.id,
+                action='leave_rate_confirmation_change',
+                details=leave_rate_confirmation,
+            )
         db.session.commit()
         flash('Company profile updated.', 'success')
         return redirect(url_for('settings.company_profile'))
 
-    return render_template('company_profile.html', company=company)
+    from payroll_engine import constants
+
+    return render_template(
+        'company_profile.html',
+        company=company,
+        leave_rate_basis_choices=[(b, constants.LEAVE_RATE_BASIS_LABELS[b]) for b in constants.LEAVE_RATE_BASES],
+        default_leave_rate_basis=constants.DEFAULT_LEAVE_RATE_BASIS,
+        default_leave_rate_divisor=constants.DEFAULT_LEAVE_RATE_DIVISOR,
+        leave_rate_divisor_min=constants.LEAVE_RATE_DIVISOR_MIN,
+        leave_rate_divisor_max=constants.LEAVE_RATE_DIVISOR_MAX,
+    )
 
 
 @settings_bp.route('/settings/team')

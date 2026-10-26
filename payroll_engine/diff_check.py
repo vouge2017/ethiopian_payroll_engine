@@ -469,9 +469,9 @@ def compare_spreadsheet(
                 _explain_tax(theirs=their_tax, ours=e_tax, engine=engine, basic=basic),
                 law='Brackets: Proclamation 1395/2025, Art. 11 — '
                 + (
-                    'pension-first timing: legacy rule, pending confirmation (RC-38000-01)'
+                    'pension-first timing: legacy rule, not current law (RC-38000-01)'
                     if _pension_before_tax()
-                    else 'tax on gross taxable income (pension not deducted first), pending confirmation (RC-38000-01)'
+                    else 'tax on gross taxable income before the 7% pension (Proc. 979/2016; RC-38000-01 closed)'
                 ),
             )
             _diff(
@@ -574,13 +574,13 @@ def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str,
         if before_tax:
             return (
                 'Your spreadsheet does not include a Tax (PAYE) column. Our engine computed the tax on income '
-                'after deducting the 7% employee pension first (legacy rule, pending accountant confirmation, '
+                'after deducting the 7% employee pension first (legacy rule, not current law, '
                 'ref RC-38000-01).'
             )
         return (
             'Your spreadsheet does not include a Tax (PAYE) column. Our engine computed the tax on gross '
-            'taxable income; the 7% employee pension does not reduce taxable income (pending accountant '
-            'confirmation, ref RC-38000-01).'
+            'taxable income; the 7% employee pension does not reduce taxable income (Income Tax '
+            'Proclamation No. 979/2016).'
         )
     if ours is None:
         return 'Value missing on one side — cannot compare.'
@@ -591,7 +591,7 @@ def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str,
     pn = (
         f'Our engine deducts pension ({pension:,.2f}, 7% of basic {basic:,.2f}) '
         f'before calculating tax, saving ETB {psav:,.2f} in tax — legacy rule, '
-        f'pending accountant confirmation (RC-38000-01). '
+        f'not current law (RC-38000-01). '
         if before_tax and pension > 0 and psav > 0
         else ''
     )
@@ -619,7 +619,7 @@ def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str,
         return (
             f'Their tax ({theirs:,.2f}) < ours ({ours:,.2f}). '
             f'Possible: (1) their sheet deducts the 7% pension before tax (we tax gross taxable income, '
-            f'pending accountant confirmation, RC-38000-01), (2) personal relief, (3) outdated tax bracket. '
+            f'per Income Tax Proclamation No. 979/2016), (2) personal relief, (3) outdated tax bracket. '
             f'Verify the bracket amounts against the current income-tax schedule.'
         )
     return f'Tax matches: {theirs:,.2f}'

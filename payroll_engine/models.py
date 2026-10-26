@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 # In dev/test: falls back to a deterministic key (NOT secure).
 import logging as _logging
 
+from payroll_engine import constants as _constants
 from payroll_engine import db
 
 _ENCRYPTION_KEY = os.environ.get('DB_ENCRYPTION_KEY')
@@ -425,6 +426,41 @@ class Company(db.Model):
     #   ]
     # }
     compliance_deadlines = db.Column(db.JSON, nullable=True)
+
+    # Final-settlement leave encashment daily rate (see constants.py):
+    # basis 'basic_plus_regular_allowances' (default) or 'basic_only';
+    # daily rate = monthly base / leave_rate_divisor (default 30).
+    leave_rate_basis = db.Column(
+        db.String(40),
+        nullable=False,
+        server_default=_constants.DEFAULT_LEAVE_RATE_BASIS,
+        default=_constants.DEFAULT_LEAVE_RATE_BASIS,
+    )
+    leave_rate_divisor = db.Column(
+        db.Integer,
+        nullable=False,
+        server_default=str(_constants.DEFAULT_LEAVE_RATE_DIVISOR),
+        default=_constants.DEFAULT_LEAVE_RATE_DIVISOR,
+    )
+    # When (UTC) and by which user the company confirmed its leave-pay basis
+    # and divisor. NULL = not confirmed: settlements with leave encashment > 0
+    # cannot be finalized (Labour Proc. 1156/2019 Arts 53, 77). Cleared when
+    # the basis or divisor changes without a fresh confirmation. The user id
+    # is a plain integer (no FK) to avoid a company <-> user FK cycle; the
+    # audit log records the same user.
+    leave_rate_confirmed_at = db.Column(db.DateTime, nullable=True)
+    leave_rate_confirmed_by = db.Column(db.Integer, nullable=True)
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "leave_rate_basis IN ('basic_plus_regular_allowances', 'basic_only')",
+            name='ck_company_leave_rate_basis',
+        ),
+        db.CheckConstraint(
+            'leave_rate_divisor BETWEEN 1 AND 31',
+            name='ck_company_leave_rate_divisor',
+        ),
+    )
 
     # Relationships
     users = db.relationship('User', backref='company', lazy=True)
@@ -1140,14 +1176,23 @@ class FinalSettlement(db.Model):
     # Earnings
     outstanding_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     severance_pay = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    notice_pay = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))  # Pay in lieu of notice
     leave_encashment = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     total_earnings = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
 
     # Deductions
     pension_deduction = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    # Final-month taxable employment income: salary + severance + notice pay
+    # + leave encashment (less pension when PENSION_DEDUCTED_BEFORE_TAX).
+    taxable_income = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    # Column name kept for compatibility: holds the TOTAL income tax on the
+    # final month, including tax on severance, notice pay and leave encashment.
     tax_on_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     pending_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     deduction_details = db.Column(db.JSON, nullable=True)  # Breakdown of deductions
+    # Frozen calculation facts: taxable lines, tax split, method, leave-day
+    # source and warnings (money as strings).
+    calculation_details = db.Column(db.JSON, nullable=True)
     total_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
 
     # Net payment

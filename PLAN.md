@@ -23,13 +23,14 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Where the code is
 
-- Baseline: `origin/main` @ `f335bf2` (f335bf22490ede3bd7af90daa67b8b9ab7a555e8,
-  2026-10-25, "Merge pull request #29 … rq-timer-penalty").
-- This plan was written on branch `docs/plan-md`, cut from that SHA.
+- Baseline: `origin/main` @ `c65aaa0` (c65aaa072cb9243ef61722afcba498e41fcba47f,
+  2026-10-25, "Merge pull request #32 from vouge2017/fix/paye-gross-income").
+- This plan was first written on branch `docs/plan-md`, cut from `f335bf2`
+  (PR #29); the audit test numbers below are from that SHA.
 - Production (per the 2026-10-21 notes in STATUS.md, not re-checked here): one Render web service with a Neon Free Postgres. There is **no** Redis and **no** worker
   service. `render.yaml` still describes a Render Postgres + Redis + worker +
   cron, so it does not match reality.
-- 78 Alembic migrations with a single head, `f4a5b6c7d8f3`.
+- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main @ `c65aaa0`; `fix/settlement-taxation` adds `f4a5b6c7d8f4`, `f4a5b6c7d8f5` and `f4a5b6c7d8f6`).
 
 ### Tests (2026-10-25, this audit)
 
@@ -108,7 +109,112 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   PDF data; all identical and equal to the approved values). Full suite:
   1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
 
-### Branch `fix/paye-gross-income` (2026-10-25, not merged)
+### Settlement taxation (branch `fix/settlement-taxation`, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+  Draft PR against `main`: the tax method **needs accountant confirmation**.
+  Cut from `origin/main` @ `bb47054`.
+- Severance, pay in lieu of notice and leave encashment are now added to the
+  final month's taxable employment income and taxed once with the normal
+  monthly brackets (`SETTLEMENT_LUMP_SUM_TAX_METHOD = 'final_month_aggregate'`
+  in `services/settlement_service.py`). Source: Proc. 979/2016 Art. 12(1)(c)
+  (termination payments are employment income) and Art. 10(2) (tax on the
+  total employment income received for the month); rates per Proc. 1395/2025.
+  No law, regulation (410/2017) or MoR directive was found that prescribes
+  spreading a lump sum over months or years.
+- The settlement's PAYE base follows `PENSION_DEDUCTED_BEFORE_TAX`, which is
+  `False` on main since PR #32 (PAYE on gross, R1).
+- No leave record → 0 days paid and the warning "No leave records — enter
+  unused leave days manually". The terminate form takes optional unused leave
+  days and pay in lieu of notice. Leave year stays the Gregorian year of the
+  last day, because every LeaveBalance writer uses that key.
+- New columns on `final_settlement` (migration `f4a5b6c7d8f4`): `notice_pay`,
+  `taxable_income`, `calculation_details` (JSON: taxable lines, tax on salary
+  alone vs. extra tax from lump sums, method, leave-day source, warnings).
+  `tax_on_salary` now holds the total final-month tax. PostgreSQL migration
+  proof not run.
+- Tests: new `tests/test_settlement_taxation.py` (hand-checked worked examples
+  with the flag True and False, missing-leave-record warning, route tests);
+  `tests/test_settlement_edges.py` statutory-fallback tests replaced.
+  Full suite: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.
+
+### Leave daily-rate basis setting (branch `fix/settlement-taxation`, PR #33, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+- Leave encashment's daily rate was hard-coded `(basic + allowances) / 30`.
+  It is now a per-company setting on `company`: `leave_rate_basis`
+  (`basic_plus_regular_allowances` = previous behaviour and the default, or
+  `basic_only`) and `leave_rate_divisor` (default 30, whole days 1-31, check
+  constraints in model and migration). Defaults live in `constants.py`.
+  Existing companies keep the defaults, so no figure changes until a company
+  changes the setting. "Regular allowances" = `Employee.allowances` (the
+  monthly allowance on record), exactly as before; pay-item assignments are
+  not read here.
+- Daily rate stays unrounded; encashment = rate x days, rounded once.
+  Settlement `calculation_details.leave` now freezes the basis, label,
+  divisor, monthly base, components (basic, regular allowances, included or
+  not), rounded and unrounded daily rate and the formula. The settlement page
+  shows them under Leave Encashment.
+- UI: Settings → Company Profile ("Payroll rules: leave encashment"), owner
+  only like the rest of that page; changes are audit-logged
+  (`leave_rate_setting_change`). There is no separate payroll-settings page.
+- Migration `f4a5b6c7d8f5` (after `f4a5b6c7d8f4`); downgrade refuses to drop
+  non-default settings. PostgreSQL proof: CI only.
+- Which basis and divisor are legally right is a practitioner question
+  (Labour Proc. 1156/2019 "wage"); the app keeps the old default.
+
+### Adviser answers on settlement (2026-10-25, second review) — Q2 ACCEPTED, Q3 PARTIAL, Q4 PENDING
+
+Recorded in `docs/decisions/2026-10-25-payroll-rules.md` (Q2–Q4 sections,
+second review; Q1 is the PAYE-on-gross answer).
+
+- **Q2 — termination-payment tax: ACCEPTED as statutory default.** Taxable
+  severance, notice pay and unused-leave pay are aggregated with other
+  taxable employment income in the month received (Proc. 979/2016 Arts 10,
+  12; withholding Art 88), unless a specific exemption/rule applies. Not a
+  confirmation that every directive was reviewed. Code unchanged
+  (`final_month_aggregate`); `TAX_METHOD_STATUS = 'statutory_default'`; each
+  settlement shows "Tax method: statutory default: aggregated in month
+  received (Proc. 979/2016 Arts 10, 12, 88)".
+- **Q3 — leave-pay formula: PARTIAL.** Qualifying wages under Labour Proc.
+  1156/2019 Arts 53 and 77 together; Art 53 exclusions apply; fixed /
+  contractual / regular does not by itself make an allowance includable; no
+  universal ÷26 or ÷30. "Do not use an unconfirmed default for live
+  settlements." Implemented: per-company confirmation
+  (`company.leave_rate_confirmed_at` / `_by`, migration `f4a5b6c7d8f6`,
+  existing companies unconfirmed). Settings → Company Profile has a
+  confirmation checkbox (audit `leave_rate_confirmation_change`; changing the
+  basis/divisor without re-ticking clears it). A settlement with leave
+  encashment > 0 is refused at finalize (terminate POST → 409, nothing saved,
+  employee stays active; `LeaveRuleNotConfirmedError` in
+  `create_settlement_record`) with "Choose and confirm your leave-pay basis
+  and divisor (Labour Proc. 1156/2019 Arts 53, 77) before finalizing" and a
+  link to the setting. New "Preview settlement" button (no password, nothing
+  saved) computes with a visible warning. Basis label is now "Basic +
+  allowances that qualify as wages (Art. 53)"; "(default)" tag removed. The
+  leave-pay pending notice stays on a settlement until the company confirms.
+- **Q4 — locked-month tax errors: PENDING procedure.** Preserve originals,
+  recalculate affected periods, formal correction under Tax Administration
+  Proc. 983/2016 as amended by Proc. 1434/2026; the 5-yr (10-yr fraud)
+  assessment period is not the PAYE amendment procedure; exact monthly PAYE
+  amendment procedure unconfirmed. Still parked.
+- PR #33 stays draft (owner decides on merge).
+- Tests: new `tests/test_settlement_leave_rule_confirmation.py` (12: block,
+  preview, zero-leave allow, confirm → allow, change clears, re-save keeps
+  stamp, override basis not confirmed); settlement fixtures in
+  `test_settlement_taxation.py` / `test_settlement_leave_rate.py` now confirm
+  the company. Full suite (2026-10-26, after merging main @ `c65aaa0`, PR #32,
+  and the pension-note rewording): **1778 passed, 0 failed, 0 errors, 205
+  skipped** (171 files, one process each, `python -m pytest`, SQLite).
+  Single Alembic head `f4a5b6c7d8f6`. ruff check + format clean
+  (`payroll_engine/ tests/`). PostgreSQL: CI only. Screens not checked in a
+  real browser (no browser in the sandbox); HTML asserted in tests.
+- Tests: new `tests/test_settlement_leave_rate.py` (hand-checked: basic 10,000
+  + 2,000 regular allowance, 10 days → basic_only 3,333.33, basic_plus
+  4,000.00; divisor 26; default unchanged; validation; DB constraint;
+  settings route + audit; settlement page). Full suite: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.
+
+### Branch `fix/paye-gross-income` (2026-10-25, merged to main as PR #32 @ `c65aaa0`)
 
 - R1 done on the branch: `PENSION_DEDUCTED_BEFORE_TAX = False`, so PAYE is on
   gross taxable income. The flag is still there (set it to `True` to go back).
@@ -148,7 +254,9 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   month-close, rule-source names (one had a corrupted U+FFFD character),
   Enkutatash, and the tax certificate. The `pension_before_tax` and
   `tax_explainer_intro` strings (am + om) no longer call pension-before-tax
-  "common practice"; they say it is still being confirmed (RC-38000-01).
+  "common practice". Since 2026-10-26 they (and the matching English notes,
+  help FAQ, verification checklist, PAYE notice) state the confirmed rule: PAYE
+  on gross taxable pay before the 7% pension (Proc. 979/2016).
 - Review table for the owner (native speaker) in the PR body: changed strings
   with confidence, plus a "for review" list that was NOT changed.
 - PDF: NotoSansEthiopic is registered and embedded; Ethiopic renders. Gap:
@@ -202,7 +310,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 | # | Rule | What the code does | Where |
 |---|------|--------------------|-------|
-| R1 | PAYE is on gross taxable income, **not** after the 7 % pension (adviser-confirmed 2026-10-25) | **Fixed on branch `fix/paye-gross-income`, not merged.** On main, pension is subtracted before tax (`PENSION_DEDUCTED_BEFORE_TAX = True`). This under-withholds every month, e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
+| R1 | PAYE is on gross taxable income, **not** after the 7 % pension (adviser-confirmed 2026-10-25) | **Fixed on main by PR #32 (`c65aaa0`)**: `PENSION_DEDUCTED_BEFORE_TAX = False`. Before that, pension was subtracted before tax, under-withholding e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
 | R2 | Severance, termination pay and leave encashment are taxable | Final settlement taxes **only** outstanding salary. Severance and leave encashment are paid with no tax | `services/settlement_service.py:159-203` (tax at :178) |
 | R3 | Leave encashment counts unused days | When there is no balance row, it assumes **no leave was taken** and pays the full entitlement. It also uses the Gregorian `end_date.year` | `settlement_service.py:100-121` |
 | R4 | Per diem (>25 km): lower of 4 % of basic or ETB 500/day; managers lower of 5 % or ETB 1,000/day | Uses `max(255×30, 4 % of basic)` capped at 2,200 per month. There is no per-day logic, no manager tier and no distance check. The catalog per-diem item is fully TAXABLE | `services/allowance_service.py:123-128`; `catalog.py:216-228` |
@@ -284,6 +392,12 @@ Each item still needs the owner to confirm it before it moves to Now.
    - Files: `services/settlement_service.py`, `severance.py`,
      `tests/test_settlement_edges.py`.
    - Size: M. Risk: high. Needs accountant input on the method for lump sums.
+   - Status (2026-10-25): implemented on `fix/settlement-taxation` (draft PR
+     #33), final-month aggregate method. Adviser second review 2026-10-25:
+     Q2 (tax method) ACCEPTED as statutory default; Q3 (leave formula,
+     Labour Proc. 1156/2019 Arts 53, 77) PARTIAL — leave pay blocked at
+     finalize until each company confirms its basis and divisor. PostgreSQL proof of migrations
+     `f4a5b6c7d8f4`/`f4a5b6c7d8f5`: CI only.
 2. **Reports use the month's frozen numbers, not today's employee record.**
    - Partly done on `fix/reports-frozen-values` (reports read stored payslip
      values and the `line_items` basic). Left: a `basic_salary` column for
@@ -373,6 +487,12 @@ Each item still needs the owner to confirm it before it moves to Now.
 
 AI sessions put new ideas here, one line each, with the reason they are parked.
 
+- Per-pay-item "Art. 53 wage" flag (Labour Proc. 1156/2019 Art 53 with its
+  exclusions) so the leave base sums only qualifying components instead of
+  `Employee.allowances`. Parked: Q3 is PARTIAL (2026-10-25); for now the
+  company confirms the basis (label "Basic + allowances that qualify as wages
+  (Art. 53)") before any leave pay is finalized.
+
 - Run the PostgreSQL test suite locally or in a sandbox. Parked: needs a
   disposable Postgres; CI covers it for now.
 - e-Tax / ERCA portal direct filing (`ETAX_INTEGRATION_PATH.md`). Parked: the
@@ -414,6 +534,16 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   Locked runs downloadable and included in the yearly summary. Legacy-path
   payslips have no stored basic: left blank with a note. Tests:
   1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
+- 2026-10-25 — Hark — Settlement taxation (branch fix/settlement-taxation)
+  — severance, pay in lieu of notice and leave encashment added to the final
+  month's taxable income (normal brackets, method constant, needs accountant
+  confirmation). No leave record → 0 days + warning; manual unused-days and
+  notice-pay inputs. Migration `f4a5b6c7d8f4`. Tests: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.
+- 2026-10-25 — Hark — leave daily-rate basis setting (PR #33) — per-company
+  `leave_rate_basis` (`basic_plus_regular_allowances` default / `basic_only`)
+  and `leave_rate_divisor` (default 30), migration `f4a5b6c7d8f5`, frozen in
+  settlement `calculation_details`, shown on the settlement page, set in
+  Settings → Company Profile. Tests: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.
 - 2026-10-25 — Hark — PAYE on gross income (branch fix/paye-gross-income).
   Set `PENSION_DEDUCTED_BEFORE_TAX = False` (the flag stays configurable).
   Portal payslip, payslip CSV export and the results screen now read the
@@ -445,3 +575,19 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   report for locked months; Amharic/Oromo pension-before-tax copy now stale.
   Tests: 1742 passed, 0 failed, 205 skipped (168 files, one process each,
   SQLite). ruff check + format clean.
+- 2026-10-25 — Hark — PR #33: merged origin/main (`2b0d15e`, PR #34) into
+  fix/settlement-taxation; PLAN.md conflicts resolved keeping all entries;
+  single Alembic head `f4a5b6c7d8f5`. Recorded adviser answers Q2 (tax
+  method) and Q3 (leave formula, Labour Proc. 1156/2019 Arts 53, 77) as
+  PENDING. Every settlement now stores and shows "Termination-payment tax
+  method and leave-pay formula pending written tax/labour-law confirmation".
+  Parked an "Art. 53 wage" leave basis. Tests: 1737 passed, 0 failed, 205
+  skipped (169 files, SQLite). ruff check + format clean. Still draft.
+- 2026-10-25 — Hark — adviser Q2/Q3 applied to PR #33. Q2 ACCEPTED as
+  statutory default (aggregated in month received, Proc. 979/2016 Arts 10,
+  12, 88); Q3 PARTIAL: per-company leave-rule confirmation (migration
+  `f4a5b6c7d8f6`), settlements with leave encashment > 0 blocked at finalize
+  until confirmed, preview still allowed with a warning, basis relabelled
+  "Basic + allowances that qualify as wages (Art. 53)"; Q4 PENDING procedure.
+  Decisions in `docs/decisions/2026-10-25-payroll-rules.md`. Tests: 1749
+  passed, 0 failed, 205 skipped (170 files, SQLite). ruff clean. Still draft.

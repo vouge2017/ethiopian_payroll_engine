@@ -48,6 +48,8 @@ def encrypted_employee_db():
             db.session.remove()
             with engine.begin() as conn:
                 conn.execute(text('DELETE FROM employee WHERE company_id = :id'), {'id': company_id})
+                # Catalog rows seeded for this company by migration b7c1d2e3f4a5.
+                conn.execute(text('DELETE FROM pay_item_type WHERE company_id = :id'), {'id': company_id})
                 conn.execute(text('DELETE FROM company WHERE id = :id'), {'id': company_id})
             command.upgrade(cfg, 'head')
 

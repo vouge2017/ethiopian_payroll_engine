@@ -1,0 +1,37 @@
+version: 2
+
+exit_zero: false
+
+verbose: false
+instance: https://dashboard.gitguardian.com
+
+secret:
+  ignored_paths:
+    # Test files contain placeholder credentials for testing purposes
+    - 'tests/**'
+    # GitHub Actions workflows reference env var names, not secrets
+    - '.github/workflows/**'
+    # Docker compose files reference env var names, not secrets
+    - 'docker-compose.yml'
+    # Example env file contains placeholder values, not real secrets
+    - '.env.example'
+    # Demo data uses placeholder credentials for sample companies
+    - 'payroll_engine/demo.py'
+    # Screenshots may show credentials in UI
+    - '**/*.png'
+    - '**/*.jpg'
+    - '**/*.jpeg'
+
+  ignored_matches: []
+
+  ignored_detectors:
+    - Private Key
+    - API Key
+
+  ignored_filenames:
+    - 'package-lock.json'
+    - 'yarn.lock'
+    - 'Pipfile.lock'
+    - 'poetry.lock'
+    - 'Gemfile.lock'
+    - 'go.sum'

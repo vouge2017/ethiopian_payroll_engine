@@ -24,6 +24,7 @@ from payroll_engine.constants import (
     COMPANY_TEMPLATE_ITEM_KEYS,
     SYSTEM_ITEM_KEYS,
 )
+from payroll_engine.exemption_caps import TRANSPORT as TRANSPORT_CAP
 from payroll_engine.models import PayItemCalcMethod, PayItemClassification, PayItemTaxTreatment, PayItemType, db
 
 Q = Decimal('0.01')
@@ -159,16 +160,16 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 150,
-        # Regulatory rule lives HERE, not in the route: exempt up to the lower
-        # of ETB 2,200 or 25% of basic. Was hardcoded in add_allowance as
-        # `min(Decimal('2200'), emp.basic_salary * Decimal('0.25'))`.
+        # Exempt up to the lower of ETB 2,200 or 25% of basic. The numbers
+        # live in exemption_caps.TRANSPORT (one source of truth); the seeded
+        # row then carries them so the engine reads the company's own row.
         'tax_treatment': PayItemTaxTreatment.PARTIAL,
         'rate': Decimal('0'),  # placeholder; admin sets per-company
         'percent_of_item_key': None,
-        'exempt_cap_amount': Decimal('2200'),
-        'exempt_cap_percent': Decimal('25'),
-        'exempt_cap_basis': 'basic_salary',
-        'regulation_reference': 'Income Tax Proclamation - Transport Allowance Exemption',
+        'exempt_cap_amount': TRANSPORT_CAP.cap_amount,
+        'exempt_cap_percent': TRANSPORT_CAP.cap_percent,
+        'exempt_cap_basis': TRANSPORT_CAP.cap_basis,
+        'regulation_reference': TRANSPORT_CAP.regulation_reference,
         'max_percent_of_net': None,
     },
     {
@@ -379,6 +380,56 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Legal attributes (catalog PR 3). INFORMATIONAL: no calculation reads them.
+# ---------------------------------------------------------------------------
+#
+# (pensionable, counts_as_art53_wage) per standard key. Every key not listed
+# (deductions, tax, employer charges, company custom items) is (False, False).
+#
+# pensionable mirrors what the engines do today: pension is 7 % / 11 % of
+# basic salary only (pension.py), which matches Directive 1087/2025 Art. 2(13)
+# ("salary" excludes overtime and allowances).
+#
+# counts_as_art53_wage follows the text of Labour Proc. 1156/2019 Art. 53(2):
+# transport, hardship and per diem are expressly excluded; the other
+# allowances are not listed there, so they are marked True. Leave pay does NOT
+# use this flag yet (it uses Company.leave_rate_basis); switching it on is
+# catalog PR 4 and changes amounts, so it needs the adviser's answer first.
+#
+# All values are pending legal confirmation (PLAN.md, catalog PR 3). The same
+# lists are frozen in migration d1e2f3a4b5c6; a test keeps them equal.
+PENSIONABLE_KEYS = frozenset({SYSTEM_ITEM_KEYS.BASIC_SALARY.value})
+ART53_WAGE_KEYS = frozenset(
+    {
+        SYSTEM_ITEM_KEYS.BASIC_SALARY.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.HOUSING.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.COMMUNICATION.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.MEDICAL.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.FOOD.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.EDUCATION.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.UNIFORM.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.OTHER.value,
+    }
+)
+#: Excluded from Art. 53 wage by the text of Art. 53(2).
+ART53_EXCLUDED_KEYS = frozenset(
+    {
+        COMPANY_TEMPLATE_ITEM_KEYS.TRANSPORT.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.HARDSHIP.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.PER_DIEM.value,
+    }
+)
+
+
+def legal_attribute_defaults(key: str, classification: str) -> dict:
+    """Seeded legal flags for an item. Only earnings can be pensionable or wage."""
+    if classification != PayItemClassification.EARNING:
+        return {'pensionable': False, 'counts_as_art53_wage': False}
+    return {'pensionable': key in PENSIONABLE_KEYS, 'counts_as_art53_wage': key in ART53_WAGE_KEYS}
+
+
 def _norm(value):
     """Normalise a nullable numeric field to None or Decimal."""
     if value is None:
@@ -413,6 +464,7 @@ def item_from_spec(spec: dict, company_id: int | None, *, is_system: bool) -> Pa
         regulation_reference=spec.get('regulation_reference'),
         is_active=True,
         is_system=is_system,
+        **legal_attribute_defaults(spec['key'], spec['classification']),
     )
 
 

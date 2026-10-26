@@ -167,6 +167,8 @@ STRINGS_OM = {
     'move_down': 'Gadi Buusi',
     'in_use': 'Hojii Irra Jira',
     'item_code': 'Koodii',
+    # Catalog PR 3. DRAFT TRANSLATION, pending native-speaker review.
+    'tax_and_legal': 'Gibiraa fi Amaloota Seeraa',
     'item_kind': 'Gosa',
     'english_name': 'Maqaa (Afaan Ingiliffaa)',
     'amharic_name': 'Maqaa (Afaan Amaaraa)',

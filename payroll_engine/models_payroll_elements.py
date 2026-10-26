@@ -134,6 +134,17 @@ class PayItemType(db.Model):
     # employees_bp.add_deduction, which read the rule out of code.
     max_percent_of_net = db.Column(db.Numeric(5, 2), nullable=True)
     regulation_reference = db.Column(db.String(200), nullable=True)  # lock-in 5
+    # Legal attributes (catalog PR 3, migration d1e2f3a4b5c6). INFORMATIONAL
+    # ONLY: no calculation reads them yet. Pension is still computed on
+    # Employee.basic_salary (pension.py) and leave pay on the company's
+    # leave_rate_basis setting. Seeded values mirror that behaviour
+    # (catalog.LEGAL_ATTRIBUTE_DEFAULTS) and are pending legal confirmation.
+    #   pensionable: part of the pension "salary" (Proc. 1268/2022 Art. 10,
+    #     Directive 1087/2025 Art. 2(13)).
+    #   counts_as_art53_wage: part of "wage" under Labour Proc. 1156/2019
+    #     Art. 53 (base for leave pay and severance), not switched on until PR 4.
+    pensionable = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
+    counts_as_art53_wage = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
     sort_order = db.Column(db.Integer, nullable=False, default=100)
     is_system = db.Column(db.Boolean, nullable=False, default=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)

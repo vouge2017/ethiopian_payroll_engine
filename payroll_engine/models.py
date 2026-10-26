@@ -924,7 +924,7 @@ class EmployeeAllowance(db.Model):
     @property
     def calculated_exempt_amount(self):
         """Calculate the tax-exempt portion of this allowance."""
-        from decimal import ROUND_HALF_UP, Decimal
+        from decimal import Decimal
 
         if self.tax_treatment == self.TAX_TAXABLE:
             return Decimal('0')
@@ -933,20 +933,22 @@ class EmployeeAllowance(db.Model):
         # Partial exemption - apply cap(s). When both a flat ETB cap and a
         # percent-of-salary cap are set, the exempt part is capped by the
         # LOWER of the two (e.g. transport: lower of ETB 2,200 or 25% of basic).
+        # The arithmetic is shared with the elements engine
+        # (exemption_caps.lower_of_caps). A partial allowance with no cap set
+        # is NOT exempt on this legacy path (the elements engine differs; see
+        # PLAN.md catalog PR 3 audit).
+        from payroll_engine.exemption_caps import lower_of_caps
+
         cap_amount = self.exempt_cap_amount
         cap_percent = self.exempt_cap_percent
         if cap_amount is None and cap_percent is None:
             return Decimal('0')
-        caps = [Decimal(self.amount)]
-        if cap_amount is not None:
-            caps.append(Decimal(cap_amount))
-        if cap_percent is not None:
-            salary = self._percent_cap_salary()
-            percent_cap = (salary * Decimal(cap_percent) / Decimal('100')).quantize(
-                Decimal('0.01'), rounding=ROUND_HALF_UP
-            )
-            caps.append(percent_cap)
-        return min(caps)
+        return lower_of_caps(
+            Decimal(self.amount),
+            Decimal(cap_amount) if cap_amount is not None else None,
+            Decimal(cap_percent) if cap_percent is not None else None,
+            self._percent_cap_salary() if cap_percent is not None else Decimal('0'),
+        )
 
     def _percent_cap_salary(self):
         """Salary the exempt_cap_percent applies to (basic_salary by default)."""

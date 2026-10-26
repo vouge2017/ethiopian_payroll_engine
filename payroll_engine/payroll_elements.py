@@ -18,6 +18,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from payroll_engine import constants as _constants
 from payroll_engine import db
+from payroll_engine.exemption_caps import lower_of_caps
 from payroll_engine.models import (
     PayItemCalcMethod,
     PayItemClassification,
@@ -621,21 +622,20 @@ def _apply_exempt_cap(item, amount, basic_salary):
     Uses the item's exempt_cap_amount (flat ETB cap) and/or exempt_cap_percent
     (percent of basic). When both are set the exempt part is capped by the
     LOWER of the two (e.g. transport: lower of ETB 2,200 or 25% of basic).
-    Same logic as the legacy EmployeeAllowance.exempt cap.
+    The cap values come from the item's catalog row (seeded from
+    exemption_caps); the arithmetic is exemption_caps.lower_of_caps. A
+    PARTIAL item with no cap set is fully exempt on this path (unchanged
+    behaviour, e.g. hardship; see PLAN.md catalog PR 3 audit).
     """
     cap_amount = item.exempt_cap_amount
     cap_percent = item.exempt_cap_percent
-    percent_cap = None
-    if cap_percent is not None:
-        percent_cap = (basic_salary * _D(cap_percent) / Decimal('100')).quantize(Q, rounding=ROUND_HALF_UP)
-
-    if cap_amount is not None and cap_percent is not None:
-        return min(_D(amount), _D(cap_amount), percent_cap)
-    if cap_amount is not None:
-        return min(_D(amount), _D(cap_amount))
-    if cap_percent is not None:
-        return min(_D(amount), percent_cap)
-    return _D(amount)
+    exempt = lower_of_caps(
+        _D(amount),
+        _D(cap_amount) if cap_amount is not None else None,
+        _D(cap_percent) if cap_percent is not None else None,
+        basic_salary,
+    )
+    return _D(amount) if exempt is None else exempt
 
 
 def _merge_post_tax_deductions(

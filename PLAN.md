@@ -328,6 +328,98 @@ second review; Q1 is the PAYE-on-gross answer).
   (draft); give the page to an admin role once one exists; catalog PR 3 (tax
   treatment and exemption caps per item, reviewed).
 
+### Pay-item catalog PR 3: legal attributes and centralised caps (branch `feat/catalog-legal-attributes`, 2026-10-26)
+
+- State: draft PR, cut from `main` @ `62682e6` (PR #37 merged). Not merged.
+  **Behaviour-preserving: no payroll, pension, tax or settlement amount
+  changes** (golden test below). Versioning/snapshots (planned items 4–5)
+  are deferred to the next PR.
+- Audit (how amounts are computed today, before this PR):
+  - Pension: 7 % / 11 % of `Employee.basic_salary` only, in both engines
+    (`pension.py`, `payroll_elements.py`, `payroll.py`, `excel_payroll.py`).
+    No allowance or overtime is pensionable. Matches Directive 1087/2025
+    Art. 2(13) as read in the research note (pending confirmation).
+  - Taxable = gross − exempt allowances (pension not deducted, R1). Exempt
+    allowances come from: elements engine `_apply_exempt_cap` (catalog row
+    caps; transport = lower of ETB 2,200, 25 % of basic, amount; percent cap
+    rounded half-up to cents); legacy `EmployeeAllowance.calculated_exempt_amount`
+    (same lower-of rule); `allowance_service.calculate_transport_exempt_amount`
+    (what-if fallback; percent cap NOT rounded); `excel_payroll` (partial =
+    min(amount, `exempt_cap_amount`) only, ignores the percent cap). The
+    2,200 / 25 % numbers were in `allowance_service` and `catalog.py`.
+  - Inconsistencies found and deliberately NOT changed (each changes tax):
+    (a) a PARTIAL item with no cap (hardship) is fully exempt in the elements
+    engine but fully taxable on the legacy `EmployeeAllowance` path;
+    (b) medical is `exempt` in the legacy writer but `taxable` in the catalog
+    template; (c) per diem: catalog template taxable; legacy writer caps it at
+    `min(max(255 x 30, 4 % basic), 2,200)` = flat 2,200 for any salary up to
+    191,250 — not the statutory per-day rule; (d) `excel_payroll` ignores the
+    percent cap; (e) `payroll_elements` puts exempt/taxable the wrong way
+    round in `allowance_details` for fully EXEMPT/TAXABLE items (display
+    only; totals are right); (f) at approval the elements engine is called
+    with `for_date = run.run_date or today`, not the Ethiopian period's dates.
+  - Leave encashment: (basic + `Employee.allowances`) / 30 or basic / 30 by
+    company setting (PR #33); severance: basic / 30 (`severance.py`); no pay
+    item is read for either. Notice pay is entered by hand.
+  - Freezing today: approval (`services/payroll_service.process_payroll`,
+    worksheet `services/worksheet_review.py`) stores amounts on `Payslip`
+    plus `line_items` and `calculation_context` v1 (date, PAYE timing flag,
+    tax brackets, employee details). Lock is `PayrollRun.status='locked'`
+    (owner-only unlock back to `completed`). Corrections use the frozen
+    brackets (`correction_context.frozen_tax`). Item settings (tax treatment,
+    caps, flags) are NOT in the snapshot; nothing recomputes an approved
+    payslip today, but a future recalculation path would read live items.
+- What changed:
+  - `payroll_engine/exemption_caps.py`: the one source of truth for exemption
+    caps (`TRANSPORT`, `LEGACY_PER_DIEM` marked legacy-unreviewed,
+    `HOME_TO_WORK_TRANSPORT` ETB 600 defined but never applied) and the shared
+    `lower_of_caps` arithmetic used by the model and the elements engine.
+    `allowance_service` constants are now aliases; the catalog seeds the
+    transport row from `TRANSPORT`. Home-to-work: no catalog item, no
+    calculation (safer than an inactive item every company would see).
+  - `pay_item_type.pensionable` and `pay_item_type.counts_as_art53_wage`
+    (NOT NULL, default false), migration `d1e2f3a4b5c6` (schema + backfill
+    by key; downgrade drops them). Seeded: pensionable = basic salary only;
+    Art. 53 wage = basic salary + allowances not excluded by Art. 53(2)
+    (general, housing, communication, medical, food, education, uniform,
+    other); transport, hardship, per diem, deductions, tax, employer charges
+    and custom items = false. **No calculation reads either flag.**
+  - Settings → Pay items shows each earning's tax treatment and cap, and the
+    two flags, read-only with "Pending legal confirmation". Nothing can edit
+    them (not even custom items), because the engine does not honour them.
+  - Single Alembic head `d1e2f3a4b5c6`.
+- Tests: `tests/test_catalog_caps_golden.py` + `tests/golden/catalog_caps_golden.json`
+  (generated on main @ `62682e6` before the refactor, committed separately:
+  elements engine 182 scenarios, legacy engine 91, cap helpers 91, what-if
+  previews 80, settlement 16; basic 0 / 0.01 / 1,999.99 / 8,799.99 / 8,800 /
+  8,800.01 … × transport 0 / 2,199.99 / 2,200 / 2,200.01 / 25,000 …, with
+  overtime, per diem, hardship, medical, housing; exact `str(Decimal)`
+  match). `tests/test_catalog_legal_attributes.py` (seeded flags, migration
+  lists = catalog lists, SQLite downgrade/upgrade backfill, flipping flags
+  changes no amount, page read-only, owner-only, no cap literals outside
+  `exemption_caps`). `tests/test_pg_catalog_legal_attributes.py` (isolated
+  PG database: upgrade/backfill on native enums, downgrade keeps indexes and
+  tenancy trigger, re-upgrade; ORM seed on PG) — added to the CI PG job.
+  Full SQLite suite (181 files, one process each): 1906 passed, 0 failed,
+  0 errors, 222 skipped. PostgreSQL list (25 files, local PG 17): 195 passed.
+  ruff check / format clean.
+- Open legal questions (adviser): pension base under Directive 1087/2025
+  (is a position allowance "salary"?); Art. 53 classification of housing and
+  position allowances (and medical / uniform); per diem tiers (4 % / ETB 500
+  per day, managers 5 % / ETB 1,000; accommodation variants); home-to-work
+  ETB 600 and how practitioners split the two transport kinds; hardship
+  (exempt portion by area, list unpublished) — and whether hardship should be
+  fully exempt as the elements engine does today.
+- Next PR (deferred from this one): versioned item settings with effective
+  dates (labels, flags, caps, rates; assignments), an item-settings snapshot
+  in `calculation_context` (v2) at approval, backfill for existing approved
+  runs from current settings (documented), recalculation of unlocked periods
+  using the settings effective for the period date, version history and
+  audit entries on the settings page, PG proofs. Then catalog PR 4: switch
+  leave pay basis to the Art. 53 flags — **that changes amounts** for
+  companies on `basic_plus_regular_allowances`, so it needs the adviser's
+  answer first.
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance
@@ -548,11 +640,12 @@ Each item still needs the owner to confirm it before it moves to Now.
 
 AI sessions put new ideas here, one line each, with the reason they are parked.
 
-- Per-pay-item "Art. 53 wage" flag (Labour Proc. 1156/2019 Art 53 with its
-  exclusions) so the leave base sums only qualifying components instead of
-  `Employee.allowances`. Parked: Q3 is PARTIAL (2026-10-25); for now the
-  company confirms the basis (label "Basic + allowances that qualify as wages
-  (Art. 53)") before any leave pay is finalized.
+- Use the per-pay-item "Art. 53 wage" flag (`counts_as_art53_wage`, added
+  informational-only in catalog PR 3) so the leave base sums only qualifying
+  components instead of `Employee.allowances`. Parked: Q3 is PARTIAL
+  (2026-10-25); for now the company confirms the basis (label "Basic +
+  allowances that qualify as wages (Art. 53)") before any leave pay is
+  finalized. This is catalog PR 4 and changes amounts.
 
 - Run the PostgreSQL test suite locally or in a sandbox. Parked: needs a
   disposable Postgres; CI covers it for now.
@@ -659,3 +752,9 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   `pay_item_type.name_om`. Tests: SQLite 1879 passed, 0 failed, 219
   skipped (178 files); PostgreSQL 192 passed (CI PG list, local PG 17).
   ruff clean. Draft PR.
+- 2026-10-26 — Hark — Catalog PR 3 (branch feat/catalog-legal-attributes):
+  audit of pension / exemption / leave bases written above; exemption caps
+  centralised in `exemption_caps.py`; informational `pensionable` and
+  `counts_as_art53_wage` flags (migration `d1e2f3a4b5c6`) shown read-only on
+  the settings page. Golden test proves no amount changed. Versioned
+  snapshots deferred to the next PR.

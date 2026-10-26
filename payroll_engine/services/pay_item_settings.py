@@ -9,11 +9,13 @@ The rules live here so the routes stay thin and every rule is unit-testable:
 * **Keys are immutable.** A key is how the engine, imports and payslip
   snapshots refer to an item. Rename changes the labels (English, Amharic,
   Afaan Oromoo) only.
-* **No legal attributes here.** New custom items are always
+* **No legal attributes are edited here.** New custom items are always
   ``calculation_method='fixed'`` and ``tax_treatment='taxable'`` with no
   exemption caps (Ethiopian employment income is taxable unless a law exempts
-  it). Changing tax treatment, caps or other legal flags is a separate,
-  reviewed change (catalog PR 3).
+  it), ``pensionable=False`` and ``counts_as_art53_wage=False``. The page
+  shows every earning's tax treatment, cap and legal flags read-only
+  (:func:`legal_view`); the flags are not read by any calculation yet and
+  are pending legal confirmation, so they are not editable for any item.
 * **Used items are never deleted.** An item referenced by any assignment
   (active, ended or soft-deleted) or by any payslip snapshot can only be
   deactivated. Only unused *custom* items can be deleted; the standard
@@ -34,12 +36,14 @@ Callers commit.
 import re
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 
 from payroll_engine import db
 from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS, SYSTEM_ITEM_KEYS
+from payroll_engine.exemption_caps import PENDING_LEGAL_CONFIRMATION_LABEL
 from payroll_engine.models import Payslip
 from payroll_engine.models_payroll_elements import (
     PayItemCalcMethod,
@@ -206,6 +210,60 @@ def permissions(item, usage):
     }
 
 
+def _money_label(value):
+    value = Decimal(value)
+    return f'ETB {value:,.0f}' if value == value.to_integral_value() else f'ETB {value:,.2f}'
+
+
+def _percent_label(value):
+    value = Decimal(value).normalize()
+    return f'{value:f}%'
+
+
+def tax_label(item):
+    """Plain-English tax treatment of an item, with its exemption cap as stored on the row.
+
+    Describes what the payroll engine does with the row today; it is not a
+    legal opinion. A partial item with no cap is fully exempt in the elements
+    engine, and the label says so.
+    """
+    if item.classification != PayItemClassification.EARNING:
+        return None
+    tt = item.tax_treatment
+    if tt == PayItemTaxTreatment.EXEMPT:
+        return 'Tax-exempt'
+    if tt != PayItemTaxTreatment.PARTIAL:
+        return 'Taxable'
+    caps = []
+    if item.exempt_cap_amount is not None:
+        caps.append(_money_label(item.exempt_cap_amount))
+    if item.exempt_cap_percent is not None:
+        caps.append(f'{_percent_label(item.exempt_cap_percent)} of basic salary')
+    if not caps:
+        return 'Partly exempt: no cap is set, so payroll treats the full amount as exempt'
+    if len(caps) == 1:
+        return f'Exempt up to {caps[0]}; the rest is taxable'
+    return f'Exempt up to the lower of {caps[0]} or {caps[1]}; the rest is taxable'
+
+
+def legal_view(item):
+    """Read-only legal attributes for the settings page (None for non-earnings).
+
+    The flags are informational in this release: pension is calculated on
+    basic salary only and leave pay uses the company leave setting, whatever
+    the flags say. They are shown, never editable, and marked pending legal
+    confirmation (see exemption_caps / PLAN.md catalog PR 3).
+    """
+    if item.classification != PayItemClassification.EARNING:
+        return None
+    return {
+        'tax': tax_label(item),
+        'pensionable': bool(item.pensionable),
+        'counts_as_art53_wage': bool(item.counts_as_art53_wage),
+        'pending_note': PENDING_LEGAL_CONFIRMATION_LABEL,
+    }
+
+
 def catalog_view(company_id, today=None):
     """Grouped rows for the settings page: [(group id, i18n key, [(item, usage, perms)])]."""
     items = (
@@ -291,6 +349,10 @@ def create_item(company_id, user_id, *, key, kind, name_en, name_am=None, name_o
         classification=classification,
         calculation_method=PayItemCalcMethod.FIXED,
         tax_treatment=PayItemTaxTreatment.TAXABLE,
+        # Custom items are never pensionable or Art. 53 wage until the engine
+        # honours the flags and the legal reading is confirmed (catalog PR 4).
+        pensionable=False,
+        counts_as_art53_wage=False,
         sort_order=(top + 10) if top is not None else default,
         is_system=False,
         is_active=True,
@@ -313,6 +375,8 @@ def create_item(company_id, user_id, *, key, kind, name_en, name_am=None, name_o
             'classification': classification,
             'calculation_method': item.calculation_method,
             'tax_treatment': item.tax_treatment,
+            'pensionable': item.pensionable,
+            'counts_as_art53_wage': item.counts_as_art53_wage,
             'sort_order': item.sort_order,
             **labels,
         },

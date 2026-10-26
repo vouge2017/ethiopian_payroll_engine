@@ -171,6 +171,8 @@ STRINGS = {
     'move_down': 'ወደ ታች',
     'in_use': 'በጥቅም ላይ ያለ',
     'item_code': 'ኮድ',
+    # Catalog PR 3. DRAFT TRANSLATION, pending native-speaker review.
+    'tax_and_legal': 'ግብርና የሕግ መለያዎች',
     'item_kind': 'ዓይነት',
     'english_name': 'ስም (እንግሊዝኛ)',
     'amharic_name': 'ስም (አማርኛ)',

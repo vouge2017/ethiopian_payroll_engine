@@ -1,0 +1,42 @@
+version: 2
+
+exit_zero: true
+
+verbose: false
+
+instance: https://dashboard.gitguardian.com
+
+secret:
+  ignored_paths:
+    - 'tests/**'
+    - '.github/workflows/**'
+    - 'docker-compose.yml'
+    - '.env.example'
+    - 'payroll_engine/demo.py'
+    - '**/*.png'
+    - '**/*.jpg'
+    - '**/*.jpeg'
+
+  ignored_matches: []
+
+  ignored_detectors:
+    - Generic Password
+    - High Entropy
+    - Private Key
+    - API Key
+    - Database URL
+
+  ignored_filenames:
+    - 'package-lock.json'
+    - 'yarn.lock'
+    - 'Pipfile.lock'
+    - 'poetry.lock'
+    - 'Gemfile.lock'
+    - 'go.sum'
+
+  # Exclude from detection
+  excluded_paths:
+    - 'tests/**'
+    - '.github/workflows/**'
+    - 'docker-compose.yml'
+    - '.env.example'

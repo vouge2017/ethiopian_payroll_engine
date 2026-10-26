@@ -145,6 +145,25 @@ class PayItemType(db.Model):
             'max_percent_of_net IS NULL OR (max_percent_of_net >= 0 AND max_percent_of_net <= 100)',
             name='ck_pay_item_type_max_percent_of_net',
         ),
+        # Lock-in 2, mirrored from migration 8e3a7b2c9d1f so create_all()
+        # databases (tests, local dev) enforce the same uniqueness as
+        # migrated ones: one system row per key, one company row per
+        # (company_id, key). Names match the migration; no schema change.
+        db.Index(
+            'uq_pay_item_type_system_key',
+            'key',
+            unique=True,
+            postgresql_where=sa.text('company_id IS NULL'),
+            sqlite_where=sa.text('company_id IS NULL'),
+        ),
+        db.Index(
+            'uq_pay_item_type_company_key',
+            'company_id',
+            'key',
+            unique=True,
+            postgresql_where=sa.text('company_id IS NOT NULL'),
+            sqlite_where=sa.text('company_id IS NOT NULL'),
+        ),
     )
 
     # Relationships

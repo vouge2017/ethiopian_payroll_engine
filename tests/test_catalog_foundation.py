@@ -361,3 +361,127 @@ def test_service_check_rejects_foreign_links(app):
         check_assignment_tenancy(a.id, emp_b.id, None)
     with pytest.raises(CrossTenantAssignmentError):
         check_assignment_tenancy(a.id, None, item_b.id)
+
+
+def test_assignment_with_foreign_base_assignment_rejected(app):
+    a, b = _company('Base A'), _company('Base B')
+    seed_company_catalog(a.id)
+    seed_company_catalog(b.id)
+    emp_a, emp_b = _employee(a, 'A1'), _employee(b, 'B1')
+    item_a = PayItemType.query.filter_by(company_id=a.id, key='housing').one()
+    item_b = PayItemType.query.filter_by(company_id=b.id, key='transport').one()
+    base_b = PayrollItemAssignment(company_id=b.id, employee_id=emp_b.id, pay_item_type_id=item_b.id, fixed_amount=1)
+    db.session.add(base_b)
+    db.session.commit()
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=a.id, employee_id=emp_a.id, pay_item_type_id=item_a.id, percent_of_item_id=base_b.id
+        )
+    )
+    with pytest.raises(CrossTenantAssignmentError, match='base assignment'):
+        db.session.flush()
+    db.session.rollback()
+    with pytest.raises(CrossTenantAssignmentError, match='base assignment'):
+        check_assignment_tenancy(a.id, emp_a.id, item_a.id, base_b.id)
+
+
+# ---------------------------------------------------------------------------
+# Review follow-ups: uniqueness, seeder race path, migration coverage
+# ---------------------------------------------------------------------------
+
+
+def test_model_declares_partial_unique_indexes(app):
+    """create_all() databases enforce lock-in 2 exactly like migrated ones."""
+    from sqlalchemy.exc import IntegrityError
+
+    a, b = _company('Uq A'), _company('Uq B')
+    names = {ix.name: ix for ix in PayItemType.__table__.indexes}
+    assert names['uq_pay_item_type_system_key'].unique
+    assert names['uq_pay_item_type_company_key'].unique
+
+    def item(company_id, key):
+        return PayItemType(
+            company_id=company_id,
+            key=key,
+            name_en='Dup',
+            classification='earning',
+            calculation_method='fixed',
+            tax_treatment='taxable',
+        )
+
+    db.session.add_all([item(a.id, 'dup_key'), item(b.id, 'dup_key'), item(None, 'dup_key')])
+    db.session.commit()  # same key across companies and the system catalog is fine
+    db.session.add(item(a.id, 'dup_key'))
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+    db.session.rollback()
+    db.session.add(item(None, 'dup_key'))
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+    db.session.rollback()
+
+
+def test_seeder_lost_race_is_skipped_not_raised(app, monkeypatch):
+    """A concurrent seeder already inserted the rows: our insert collides, we report skipped."""
+    from payroll_engine import catalog
+
+    co = _company('Race PLC')
+    seed_company_catalog(co.id)
+    monkeypatch.setattr(catalog, '_existing_keys', lambda company_id: set())  # stale read
+    result = seed_company_catalog(co.id)
+    assert result == {'system_created': 0, 'created': 0, 'skipped': len(COMPANY_TEMPLATE_ITEMS)}
+    # The session is still usable and nothing was duplicated.
+    keys = _company_keys(co.id)
+    assert sorted(keys) == sorted(TEMPLATE_KEYS)
+    assert sorted(_system_keys()) == sorted(SYSTEM_KEYS)
+
+
+def test_ensure_catalog_does_not_commit_unrelated_pending_work(app, monkeypatch):
+    from payroll_engine import employees_bp
+
+    co = _company('Pending PLC')
+    seed_company_catalog(co.id)
+    db.session.add(Company(name='Pending, never committed'))
+    assert employees_bp._ensure_catalog(co.id) == 0
+    db.session.rollback()
+    assert Company.query.filter_by(name='Pending, never committed').first() is None
+
+
+def test_migration_refuses_cross_company_base_assignment(app):
+    a, b = _company('MigBase A'), _company('MigBase B')
+    seed_company_catalog(a.id)
+    seed_company_catalog(b.id)
+    emp_a, emp_b = _employee(a, 'A1'), _employee(b, 'B1')
+    item_a = PayItemType.query.filter_by(company_id=a.id, key='housing').one()
+    item_b = PayItemType.query.filter_by(company_id=b.id, key='transport').one()
+    base_b = PayrollItemAssignment(company_id=b.id, employee_id=emp_b.id, pay_item_type_id=item_b.id, fixed_amount=1)
+    db.session.add(base_b)
+    db.session.commit()
+    db.session.execute(  # bypasses the ORM guard, like a pre-existing bad row
+        PayrollItemAssignment.__table__.insert().values(
+            company_id=a.id,
+            employee_id=emp_a.id,
+            pay_item_type_id=item_a.id,
+            percent_of_item_id=base_b.id,
+            is_active=True,
+        )
+    )
+    mig = _load_migration()
+    bad = mig.find_cross_company_assignments(db.session.connection())
+    assert [r[1:] for r in bad] == [(a.id, b.id, 'base_assignment')]
+    with pytest.raises(RuntimeError, match='base assignment'):
+        _run_upgrade(mig)
+
+
+def test_trigger_migration_is_noop_on_sqlite(app):
+    path = MIGRATION.parent / 'c8d9e0f1a2b3_assignment_tenancy_trigger.py'
+    spec = importlib.util.spec_from_file_location('mig_c8d9e0f1a2b3', path)
+    mig = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mig)
+    assert mig.down_revision == 'b7c1d2e3f4a5'
+    conn = db.session.connection()
+    with Operations.context(MigrationContext.configure(conn)):
+        mig.upgrade()
+        mig.downgrade()
+    triggers = db.session.execute(db.text("SELECT name FROM sqlite_master WHERE type = 'trigger'")).all()
+    assert triggers == []

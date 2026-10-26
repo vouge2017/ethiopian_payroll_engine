@@ -416,6 +416,15 @@ def item_from_spec(spec: dict, company_id: int | None, *, is_system: bool) -> Pa
     )
 
 
+def _existing_keys(company_id: int | None) -> set[str]:
+    """Keys already present in ``company_id``'s catalog (None = system catalog)."""
+    if company_id is None:
+        scope = PayItemType.company_id.is_(None)
+    else:
+        scope = PayItemType.company_id == company_id
+    return {k for (k,) in db.session.query(PayItemType.key).filter(scope).all()}
+
+
 def _seed(company_id: int | None, specs: list[dict], *, is_system: bool, commit: bool) -> dict[str, int]:
     """Create the rows of ``specs`` that ``company_id`` lacks (None = system catalog).
 
@@ -425,11 +434,7 @@ def _seed(company_id: int | None, specs: list[dict], *, is_system: bool, commit:
     partial unique index rejects our insert, the savepoint rolls back and the
     call reports everything as skipped instead of failing the caller.
     """
-    if company_id is None:
-        scope = PayItemType.company_id.is_(None)
-    else:
-        scope = PayItemType.company_id == company_id
-    existing = {k for (k,) in db.session.query(PayItemType.key).filter(scope).all()}
+    existing = _existing_keys(company_id)
     missing = [spec for spec in specs if spec['key'] not in existing]
 
     created = 0

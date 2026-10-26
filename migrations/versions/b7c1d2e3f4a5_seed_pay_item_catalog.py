@@ -2,9 +2,9 @@
 
 Data migration, no schema change.
 
-1. Refuses to run while any payroll_item_assignment links an employee or a
-   pay_item_type of a different company (system items, company_id IS NULL,
-   are allowed). Offending ids are reported; they must be fixed by hand,
+1. Refuses to run while any payroll_item_assignment links an employee, a
+   pay_item_type or a base assignment (percent_of_item_id) of a different
+   company (system items, company_id IS NULL, are allowed). Offending ids are reported; they must be fixed by hand,
    because silently re-pointing money rows is not safe.
 2. Seeds the shared system catalog (company_id IS NULL) and, for each company,
    every standard template key it lacks. Existing rows are never modified, so
@@ -68,13 +68,17 @@ _INSERT = sa.text(
 )
 
 CROSS_COMPANY_SQL = sa.text(
-    'SELECT a.id, a.company_id, e.company_id AS other_company, \'employee\' AS via '
+    "SELECT a.id, a.company_id, e.company_id AS other_company, 'employee' AS via "
     'FROM payroll_item_assignment a JOIN employee e ON e.id = a.employee_id '
     'WHERE e.company_id <> a.company_id '
     'UNION ALL '
-    'SELECT a.id, a.company_id, t.company_id AS other_company, \'pay_item_type\' AS via '
+    "SELECT a.id, a.company_id, t.company_id AS other_company, 'pay_item_type' AS via "
     'FROM payroll_item_assignment a JOIN pay_item_type t ON t.id = a.pay_item_type_id '
     'WHERE t.company_id IS NOT NULL AND t.company_id <> a.company_id '
+    'UNION ALL '
+    "SELECT a.id, a.company_id, b.company_id AS other_company, 'base_assignment' AS via "
+    'FROM payroll_item_assignment a JOIN payroll_item_assignment b ON b.id = a.percent_of_item_id '
+    'WHERE b.company_id <> a.company_id '
     'ORDER BY 1'
 )
 
@@ -140,7 +144,7 @@ def upgrade():
         sample = ', '.join(f'assignment {a} (company {c}) -> {via} of company {o}' for a, c, o, via in bad[:20])
         raise RuntimeError(
             f'Refusing to seed the pay-item catalog: {len(bad)} payroll_item_assignment row(s) link '
-            f'another company\'s employee or pay item: {sample}. Fix these rows by hand, then re-run.'
+            f"another company's employee, pay item or base assignment: {sample}. Fix these rows by hand, then re-run."
         )
     seed_catalog(conn)
 

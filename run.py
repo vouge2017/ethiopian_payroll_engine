@@ -23,6 +23,10 @@ def seed_db():
     # Create demo company
     company = Company(name="Demo Company")
     db.session.add(company)
+    db.session.flush()
+    from payroll_engine.catalog import seed_company_catalog
+
+    seed_company_catalog(company.id, commit=False)
     db.session.commit()
 
     # Create admin user

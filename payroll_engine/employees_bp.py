@@ -51,14 +51,18 @@ SYSTEM_MANAGED_KEYS = frozenset({'income_tax', 'employee_pension', 'employer_pen
 def _ensure_catalog(company_id):
     """Seed the company's catalog if it has none of its template rows yet.
 
-    Idempotent and a no-op (one SELECT inside the seeder) once seeded. Returns
-    the number of company rows created.
+    Idempotent and a no-op (two SELECTs inside the seeder) once seeded. Returns
+    the number of company rows created. Commits only when it actually created
+    rows, so calling it never flushes unrelated pending work in the request.
     """
     from payroll_engine.catalog import seed_company_catalog
 
     if company_id is None:
         return 0
-    return seed_company_catalog(company_id)['created']
+    result = seed_company_catalog(company_id, commit=False)
+    if result['created'] or result['system_created']:
+        db.session.commit()
+    return result['created']
 
 
 def company_pay_items(classification=None, include_system=False):

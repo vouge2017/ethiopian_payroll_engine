@@ -2218,6 +2218,14 @@ from payroll_engine.models_payroll_elements import (
     PayrollItemAssignment as PayrollItemAssignment,
 )
 
+# Structural tenant isolation for the elements tables. Assigned here rather
+# than in the class bodies because models_payroll_elements cannot import
+# TenantQuery without a circular import. Every terminal query must reference
+# company_id: `company_id == X` for a company's rows, `company_id IS NULL` for
+# the shared system catalog (PayItemType only). An unscoped query raises.
+PayItemType.query_class = TenantQuery
+PayrollItemAssignment.query_class = TenantQuery
+
 
 class SpreadsheetInput(db.Model):
     """One saved monthly worksheet input per tenant and employee; no approval effect."""

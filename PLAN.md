@@ -267,6 +267,32 @@ second review; Q1 is the PAYE-on-gross answer).
   rows (seeding skips existing rows). Needs PG proof.
 - Tests: new `tests/test_amharic_labels.py` (6 tests). Full suite: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.
 
+### Pay-item catalog PR 1: seeding + tenant isolation (branch `feat/catalog-foundation`, 2026-10-26)
+
+- State: draft PR, SQLite suite green, not hosted-tested, not merged. Cut from
+  `origin/main` @ `70b7b8d`.
+- One seeder: `catalog.seed_company_catalog(company_id)` (system items +
+  company templates, idempotent, never overwrites a customised row, SAVEPOINT
+  so a concurrent seed cannot fail the caller). Called by every company
+  creation path (signup setup-profile, Google signup, setup-company, demo,
+  `seed_staging.py`). The duplicate `payroll_elements.seed_pay_item_types`
+  (copied system rows into companies; tests only) is removed; backfill and the
+  spreadsheet advance path build items through the same `item_from_spec`.
+- Migration `b7c1d2e3f4a5` (data only): seeds system items + every missing
+  template key for every existing company; refuses to run if any assignment
+  already links another company's employee or pay item; downgrade is a no-op.
+- "Run flask migrate-pay-items" error replaced: employee screens re-seed a
+  missing catalog on demand.
+- `PayItemType` / `PayrollItemAssignment` now use `TenantQuery` (system items
+  must be queried with an explicit `company_id IS NULL`). Assignments are
+  guarded at the model layer (before insert/update): employee and base
+  assignment must be the same company; pay item same company or system. No DB
+  constraint: a composite FK cannot express "same company OR system item" and
+  needs SQLite table rebuilds. Bulk/Core inserts bypass the guard.
+- Open: PostgreSQL run of the migration (CI only); DB-level trigger if wanted;
+  partial unique indexes exist only in migrations, not in the model (SQLite
+  tests built with `create_all` do not enforce them).
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance

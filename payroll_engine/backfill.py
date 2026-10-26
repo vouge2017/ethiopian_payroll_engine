@@ -74,7 +74,7 @@ def _resolve_type(company_id, key, classification, label=None):
     COMPANY_TEMPLATE_ITEMS when the company genuinely lacks the item.
     """
     from payroll_engine import db
-    from payroll_engine.catalog import COMPANY_TEMPLATE_ITEMS
+    from payroll_engine.catalog import COMPANY_TEMPLATE_ITEMS, item_from_spec
     from payroll_engine.models_payroll_elements import PayItemType
 
     item = PayItemType.query.filter_by(company_id=company_id, key=key).first()
@@ -96,22 +96,7 @@ def _resolve_type(company_id, key, classification, label=None):
             is_system=False,
         )
     else:
-        item = PayItemType(
-            company_id=company_id,
-            key=tmpl['key'],
-            name_en=tmpl.get('name_en'),
-            name_am=tmpl.get('name_am'),
-            classification=tmpl.get('classification', classification),
-            calculation_method=tmpl.get('calculation_method', 'fixed'),
-            tax_treatment=tmpl.get('tax_treatment', 'taxable'),
-            exempt_cap_amount=tmpl.get('exempt_cap_amount'),
-            exempt_cap_percent=tmpl.get('exempt_cap_percent'),
-            exempt_cap_basis=tmpl.get('exempt_cap_basis'),
-            max_percent_of_net=tmpl.get('max_percent_of_net'),
-            regulation_reference=tmpl.get('regulation_reference'),
-            sort_order=tmpl.get('sort_order'),
-            is_system=False,
-        )
+        item = item_from_spec(tmpl, company_id, is_system=False)
 
     db.session.add(item)
     db.session.flush()

@@ -160,13 +160,13 @@ STRINGS = {
     'pay_items': 'የክፍያ ዓይነቶች',
     'employer_contributions': 'የአሠሪ መዋጮዎች',
     'tax': 'ግብር',
-    'deactivate': 'አቦዝን',
+    'deactivate': 'አግድ',
     'delete': 'አጥፋ',
     'save_changes': 'ለውጦችን አስቀምጥ',
-    'edit_names': 'ስም ቀይር',
+    'edit_names': 'ስም አስተካክል',
     'locked': 'የተቆለፈ',
-    'inactive': 'የቦዘነ',
-    'add_pay_item': 'የክፍያ ዓይነት መዝግብ',
+    'inactive': 'ሥራ ላይ ያልሆነ',
+    'add_pay_item': 'የክፍያ ዓይነት ጨምር',
     'move_up': 'ወደ ላይ',
     'move_down': 'ወደ ታች',
     'in_use': 'በጥቅም ላይ ያለ',
@@ -174,7 +174,7 @@ STRINGS = {
     'item_kind': 'ዓይነት',
     'english_name': 'ስም (እንግሊዝኛ)',
     'amharic_name': 'ስም (አማርኛ)',
-    'oromo_name': 'ስም (ኦሮሞኛ)',
+    'oromo_name': 'ስም (ኦሮምኛ)',
 }
 
 

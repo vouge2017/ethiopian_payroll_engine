@@ -1,27 +1,23 @@
-# GitGuardian configuration for EthioPayroll
-# This file configures GitGuardian's secret scanning for this repository
-
 version: 2
 
-exit_zero: true
+exit_zero: false
 
 verbose: false
-
 instance: https://dashboard.gitguardian.com
 
 secret:
   ignored_paths:
     # Test files contain placeholder credentials for testing purposes
     - 'tests/**'
-    # GitHub Actions workflow files use env vars for credentials
+    # GitHub Actions workflows reference env var names, not secrets
     - '.github/workflows/**'
-    # Docker compose files use env vars for credentials
+    # Docker compose files reference env var names, not secrets
     - 'docker-compose.yml'
     # Example env file contains placeholder values, not real secrets
     - '.env.example'
     # Demo data uses placeholder credentials for sample companies
     - 'payroll_engine/demo.py'
-    # Screenshots may contain visible credentials in UI
+    # Screenshots may show credentials in UI
     - '**/*.png'
     - '**/*.jpg'
     - '**/*.jpeg'
@@ -29,14 +25,8 @@ secret:
   ignored_matches: []
 
   ignored_detectors:
-    # Generic Password detector triggers on test credentials
-    - Generic Password
-    # High Entropy detector triggers on placeholder values
-    - High Entropy
-    # These detectors are not relevant for our use case
     - Private Key
     - API Key
-    - Database URL
 
   ignored_filenames:
     - 'package-lock.json'

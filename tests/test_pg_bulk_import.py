@@ -95,7 +95,7 @@ def test_pg_bulk_numeric_employee_id_is_row_error(pg_session):
 def test_pg_bulk_overlength_employee_id_is_row_error(pg_session):
     """On PostgreSQL the column really is VARCHAR(20); the route must reject
     the row itself instead of letting the driver fail the batch."""
-    client, ids, app = pg_session
+    client, _ids, _app = pg_session
     resp = _bulk(client, [{'employee_id': 'X' * 21, 'name': 'Long', 'basic_salary': 5000}])
     assert resp.status_code == 200
     data = resp.get_json()
@@ -107,9 +107,7 @@ def test_pg_bulk_generated_ids_skip_soft_deleted(pg_session):
     client, ids, app = pg_session
     with app.app_context():
         for n in ('EMP001', 'EMP002', 'EMP003'):
-            db.session.add(
-                Employee(employee_id=n, name=f'W {n}', basic_salary=5000, company_id=ids['company'])
-            )
+            db.session.add(Employee(employee_id=n, name=f'W {n}', basic_salary=5000, company_id=ids['company']))
         db.session.commit()
         gone = Employee.query.filter_by(company_id=ids['company'], employee_id='EMP002').first()
         gone.is_deleted = True

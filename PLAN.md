@@ -23,13 +23,14 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Where the code is
 
-- Baseline: `origin/main` @ `f335bf2` (f335bf22490ede3bd7af90daa67b8b9ab7a555e8,
-  2026-10-25, "Merge pull request #29 … rq-timer-penalty").
-- This plan was written on branch `docs/plan-md`, cut from that SHA.
+- Baseline: `origin/main` @ `c65aaa0` (c65aaa072cb9243ef61722afcba498e41fcba47f,
+  2026-10-25, "Merge pull request #32 from vouge2017/fix/paye-gross-income").
+- This plan was first written on branch `docs/plan-md`, cut from `f335bf2`
+  (PR #29); the audit test numbers below are from that SHA.
 - Production (per the 2026-10-21 notes in STATUS.md, not re-checked here): one Render web service with a Neon Free Postgres. There is **no** Redis and **no** worker
   service. `render.yaml` still describes a Render Postgres + Redis + worker +
   cron, so it does not match reality.
-- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main; `fix/settlement-taxation` adds `f4a5b6c7d8f4`, `f4a5b6c7d8f5` and `f4a5b6c7d8f6`).
+- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main @ `c65aaa0`; `fix/settlement-taxation` adds `f4a5b6c7d8f4`, `f4a5b6c7d8f5` and `f4a5b6c7d8f6`).
 
 ### Tests (2026-10-25, this audit)
 
@@ -121,8 +122,8 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   total employment income received for the month); rates per Proc. 1395/2025.
   No law, regulation (410/2017) or MoR directive was found that prescribes
   spreading a lump sum over months or years.
-- The pension-before-tax base follows `PENSION_DEDUCTED_BEFORE_TAX` as-is (not
-  changed here; R1 is on `fix/paye-gross-income`).
+- The settlement's PAYE base follows `PENSION_DEDUCTED_BEFORE_TAX`, which is
+  `False` on main since PR #32 (PAYE on gross, R1).
 - No leave record → 0 days paid and the warning "No leave records — enter
   unused leave days manually". The terminate form takes optional unused leave
   days and pay in lieu of notice. Leave year stays the Gregorian year of the
@@ -164,9 +165,8 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Adviser answers on settlement (2026-10-25, second review) — Q2 ACCEPTED, Q3 PARTIAL, Q4 PENDING
 
-Recorded in `docs/decisions/2026-10-25-settlement-rules.md` (on this branch;
-kept separate from `docs/decisions/2026-10-25-payroll-rules.md` on PR #32,
-which is not merged, to avoid a conflict; it supersedes that file's Q2–Q4).
+Recorded in `docs/decisions/2026-10-25-payroll-rules.md` (Q2–Q4 sections,
+second review; Q1 is the PAYE-on-gross answer).
 
 - **Q2 — termination-payment tax: ACCEPTED as statutory default.** Taxable
   severance, notice pay and unused-leave pay are aggregated with other
@@ -307,7 +307,7 @@ which is not merged, to avoid a conflict; it supersedes that file's Q2–Q4).
 
 | # | Rule | What the code does | Where |
 |---|------|--------------------|-------|
-| R1 | PAYE is on gross taxable income, **not** after the 7 % pension (adviser-confirmed 2026-10-25) | **Fixed on branch `fix/paye-gross-income`, not merged.** On main, pension is subtracted before tax (`PENSION_DEDUCTED_BEFORE_TAX = True`). This under-withholds every month, e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
+| R1 | PAYE is on gross taxable income, **not** after the 7 % pension (adviser-confirmed 2026-10-25) | **Fixed on main by PR #32 (`c65aaa0`)**: `PENSION_DEDUCTED_BEFORE_TAX = False`. Before that, pension was subtracted before tax, under-withholding e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
 | R2 | Severance, termination pay and leave encashment are taxable | Final settlement taxes **only** outstanding salary. Severance and leave encashment are paid with no tax | `services/settlement_service.py:159-203` (tax at :178) |
 | R3 | Leave encashment counts unused days | When there is no balance row, it assumes **no leave was taken** and pays the full entitlement. It also uses the Gregorian `end_date.year` | `settlement_service.py:100-121` |
 | R4 | Per diem (>25 km): lower of 4 % of basic or ETB 500/day; managers lower of 5 % or ETB 1,000/day | Uses `max(255×30, 4 % of basic)` capped at 2,200 per month. There is no per-day logic, no manager tier and no distance check. The catalog per-diem item is fully TAXABLE | `services/allowance_service.py:123-128`; `catalog.py:216-228` |
@@ -586,5 +586,5 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   `f4a5b6c7d8f6`), settlements with leave encashment > 0 blocked at finalize
   until confirmed, preview still allowed with a warning, basis relabelled
   "Basic + allowances that qualify as wages (Art. 53)"; Q4 PENDING procedure.
-  Decisions in `docs/decisions/2026-10-25-settlement-rules.md`. Tests: 1749
+  Decisions in `docs/decisions/2026-10-25-payroll-rules.md`. Tests: 1749
   passed, 0 failed, 205 skipped (170 files, SQLite). ruff clean. Still draft.

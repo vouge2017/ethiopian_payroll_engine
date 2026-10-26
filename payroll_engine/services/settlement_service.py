@@ -29,7 +29,7 @@ Q = Decimal('0.01')
 # income in the month received (Proc. 979/2016 Arts 10, 12; withholding
 # Art 88), unless a specific exemption or rule applies. Rates per Proc.
 # 1395/2025. Not a confirmation that every directive was reviewed
-# (docs/decisions/2026-10-25-settlement-rules.md).
+# (docs/decisions/2026-10-25-payroll-rules.md).
 SETTLEMENT_LUMP_SUM_TAX_METHOD = 'final_month_aggregate'
 TAX_METHOD_STATUS = 'statutory_default'
 TAX_METHOD_NOTE = 'Tax method: statutory default: aggregated in month received (Proc. 979/2016 Arts 10, 12, 88)'

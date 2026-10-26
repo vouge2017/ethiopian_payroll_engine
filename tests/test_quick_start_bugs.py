@@ -65,6 +65,36 @@ def _import(client, rows):
     return client.post('/quick-start/import', json={'employees': rows}, headers={'Content-Type': 'application/json'})
 
 
+def test_import_non_dict_row_is_row_error(app, company_user, client):
+    """A non-object row must be a row error, not an AttributeError 500."""
+    login(client)
+    resp = _import(client, ['alice', {'name': 'Valid', 'salary': 5000}])
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['imported'] == 1
+    assert any('object' in e.lower() for e in data['errors'])
+
+
+def test_import_non_dict_body_rejected_400(app, company_user, client):
+    login(client)
+    resp = client.post('/quick-start/import', json=['x'], headers={'Content-Type': 'application/json'})
+    assert resp.status_code == 400
+
+
+def test_import_infinite_salary_is_row_error(app, company_user, client):
+    """JSON Infinity parses in Python and must not be stored as a salary."""
+    login(client)
+    resp = _import(client, [{'name': 'Ok', 'salary': 5000}, {'name': 'Inf', 'salary': float('inf')}])
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data['imported'] == 1
+    assert any('salary' in e.lower() for e in data['errors'])
+    # A batch where every row fails takes the wizard's no-import error path.
+    resp2 = _import(client, [{'name': 'Inf2', 'salary': float('inf')}])
+    assert resp2.status_code == 422
+    assert resp2.get_json()['imported'] == 0
+
+
 def test_import_accepts_leading_zero_phone(app, company_user, client):
     """Phones pasted as 0911234567 must be imported as 911234567."""
     login(client)

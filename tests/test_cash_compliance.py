@@ -14,6 +14,71 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from payroll_engine.validation import validate_payroll_data
 
 
+def _base_row():
+    """Minimal valid row: below the cash limit, with bank details."""
+    return {
+        'basic': 45000,
+        'allowances': 10000,
+        'gross': 55000,
+        'taxable': 51850,
+        'tax': 12500,
+        'pension_employee': 3150,
+        'pension_employer': 4950,
+        'net': 39350,
+        'tin': '',
+    }
+
+
+def test_duplicate_employee_id_in_file_blocks():
+    """The same employee ID twice in one payroll file must BLOCK (WO30 gap fix:
+    the live /payroll upload path had no duplicate-ID rule)."""
+    employees = [
+        {**_base_row(), 'id': 'EMP001', 'name': 'Dawit One', 'bank': 'cbe:1001'},
+        {**_base_row(), 'id': 'EMP001', 'name': 'Dawit Two', 'bank': 'cbe:1002'},
+        {**_base_row(), 'id': 'EMP002', 'name': 'Other Worker', 'bank': 'cbe:1003'},
+    ]
+    results = validate_payroll_data(employees)
+    dupes = [r for r in results if r.rule_code == 'DUPLICATE_ID']
+    assert len(dupes) == 1
+    assert dupes[0].severity == 'BLOCK'
+    assert 'EMP001' in dupes[0].message
+    assert dupes[0].employee_name == 'Dawit Two'
+
+
+def test_duplicate_employee_id_three_occurrences_blocks_once_with_count():
+    employees = [
+        {**_base_row(), 'id': 'EMP007', 'name': 'A', 'bank': 'cbe:2001'},
+        {**_base_row(), 'id': 'EMP007', 'name': 'B', 'bank': 'cbe:2002'},
+        {**_base_row(), 'id': 'EMP007', 'name': 'C', 'bank': 'cbe:2003'},
+    ]
+    results = validate_payroll_data(employees)
+    dupes = [r for r in results if r.rule_code == 'DUPLICATE_ID']
+    assert len(dupes) == 1
+    assert dupes[0].severity == 'BLOCK'
+    assert '3 times' in dupes[0].message
+    assert dupes[0].details['occurrences'] == ['A', 'B', 'C']
+
+
+def test_unique_ids_do_not_block():
+    employees = [
+        {**_base_row(), 'id': 'EMP001', 'name': 'A', 'bank': 'cbe:3001'},
+        {**_base_row(), 'id': 'EMP002', 'name': 'B', 'bank': 'cbe:3002'},
+    ]
+    results = validate_payroll_data(employees)
+    assert [r for r in results if r.rule_code == 'DUPLICATE_ID'] == []
+
+
+def test_blank_ids_not_flagged_as_duplicates():
+    """Rows with blank IDs are another check's problem; blank must not make
+    two rows look like duplicates of each other."""
+    employees = [
+        {**_base_row(), 'id': '', 'name': 'A', 'bank': 'cbe:4001'},
+        {**_base_row(), 'id': '   ', 'name': 'B', 'bank': 'cbe:4002'},
+    ]
+    results = validate_payroll_data(employees)
+    assert [r for r in results if r.rule_code == 'DUPLICATE_ID'] == []
+
+
 def _make_emp(name='Dawit Mekonnen', net=55000, bank=''):
     """Helper to create a minimal employee data dict."""
     return {

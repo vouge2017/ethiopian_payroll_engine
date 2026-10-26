@@ -47,3 +47,26 @@ def test_excel_workflow_reports_invalid_row_and_preserves_valid_row(tmp_path, fi
     assert len(errors) == 1 and 'Row 2: invalid numeric value' in errors[0]
     assert [row['id'] for row in data] == ['GOOD']
     assert data[0]['basic'] == 10000.5 and data[0]['allowances'] == 2000
+
+
+def test_read_xlsx_normalizes_numeric_cells(tmp_path):
+    """Numeric-typed ID/TIN columns must arrive as text so they can never
+    reach VARCHAR columns as raw numerics; money keeps its decimals."""
+    from io import BytesIO
+
+    from payroll_engine.excel_import import read_xlsx
+
+    book = openpyxl.Workbook()
+    book.active.append(['employee_id', 'tin', 'basic_salary'])
+    book.active.append([100000.0, 123456789, 8000.5])
+    book.active.append([1, '1234567890', 8000.0])
+    buf = BytesIO()
+    book.save(buf)
+    rows = read_xlsx(BytesIO(buf.getvalue()))
+    assert rows[0]['employee_id'] == '100000'
+    assert rows[0]['tin'] == '123456789'
+    assert rows[0]['basic_salary'] == 8000.5
+    assert rows[1]['employee_id'] == '1'
+    assert rows[1]['tin'] == '1234567890'
+    assert rows[1]['basic_salary'] == '8000'
+    assert parse_salary(rows[1]['basic_salary']) == Decimal('8000')

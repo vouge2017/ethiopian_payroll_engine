@@ -62,23 +62,23 @@ FAQ_DATA = [
                 '- 7,001–10,000 ETB: 25%\n'
                 '- 10,001–14,000 ETB: 30%\n'
                 '- 14,001+ ETB: 35%\n\n'
-                'These brackets apply to your **taxable income**. Our engine deducts the 7% pension '
-                'contribution before tax — current practice in EthioPayroll, pending accountant '
-                'confirmation (ref RC-38000-01). '
+                'These brackets apply to your **taxable income**. The 7% employee pension is deducted '
+                'from pay but does not reduce taxable income: PAYE is on gross taxable pay '
+                '(Income Tax Proclamation No. 979/2016). '
                 'Bracket rates: Proclamation No. 1395/2025, Article 36(1).',
             },
             {
                 'anchor': 'tax-calculation',
                 'question': 'How is my income tax calculated step by step?',
                 'answer': '1. Start with your gross salary\n'
-                '2. Subtract 7% pension → this gives taxable income '
-                '(current practice, pending accountant confirmation, ref RC-38000-01)\n'
+                '2. Subtract exempt allowances → this gives taxable income; the 7% pension does '
+                'not reduce it (Income Tax Proclamation No. 979/2016)\n'
                 '3. Apply each tax bracket to portions of taxable income\n'
                 '4. Add up the tax from each bracket → total tax\n\n'
                 'Example: Gross 10,000 ETB\n'
-                '- Pension: 700 (7% of 10,000)\n'
-                '- Taxable: 9,300\n'
-                '- Tax: 0 + 300 + 600 + 575 + 0 = 1,475 tax',
+                '- Taxable: 10,000\n'
+                '- Tax: 0 + 300 + 600 + 750 = 1,650 tax\n'
+                '- Pension: 700 (7% of 10,000), deducted from pay after tax',
             },
         ],
     },
@@ -236,9 +236,9 @@ FAQ_DATA = [
                 'question': 'How do I understand my payslip calculation?',
                 'answer': 'Each payslip shows a **step-by-step calculation flow**:\n'
                 '1. Gross Salary (basic + allowances)\n'
-                '2. Pension deduction (7% of basic)\n'
-                '3. Taxable income (gross − pension) — current practice, pending accountant '
-                'confirmation (ref RC-38000-01)\n'
+                '2. Taxable income (gross − exempt allowances; the 7% pension does not reduce it, '
+                'Income Tax Proclamation No. 979/2016)\n'
+                '3. Pension deduction (7% of basic)\n'
                 '4. Tax calculation by bracket\n'
                 '5. Personal relief applied\n'
                 '6. Net pay (gross − pension − tax − other deductions)\n\n'

@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 # In dev/test: falls back to a deterministic key (NOT secure).
 import logging as _logging
 
+from payroll_engine import constants as _constants
 from payroll_engine import db
 
 _ENCRYPTION_KEY = os.environ.get('DB_ENCRYPTION_KEY')
@@ -425,6 +426,41 @@ class Company(db.Model):
     #   ]
     # }
     compliance_deadlines = db.Column(db.JSON, nullable=True)
+
+    # Final-settlement leave encashment daily rate (see constants.py):
+    # basis 'basic_plus_regular_allowances' (default) or 'basic_only';
+    # daily rate = monthly base / leave_rate_divisor (default 30).
+    leave_rate_basis = db.Column(
+        db.String(40),
+        nullable=False,
+        server_default=_constants.DEFAULT_LEAVE_RATE_BASIS,
+        default=_constants.DEFAULT_LEAVE_RATE_BASIS,
+    )
+    leave_rate_divisor = db.Column(
+        db.Integer,
+        nullable=False,
+        server_default=str(_constants.DEFAULT_LEAVE_RATE_DIVISOR),
+        default=_constants.DEFAULT_LEAVE_RATE_DIVISOR,
+    )
+    # When (UTC) and by which user the company confirmed its leave-pay basis
+    # and divisor. NULL = not confirmed: settlements with leave encashment > 0
+    # cannot be finalized (Labour Proc. 1156/2019 Arts 53, 77). Cleared when
+    # the basis or divisor changes without a fresh confirmation. The user id
+    # is a plain integer (no FK) to avoid a company <-> user FK cycle; the
+    # audit log records the same user.
+    leave_rate_confirmed_at = db.Column(db.DateTime, nullable=True)
+    leave_rate_confirmed_by = db.Column(db.Integer, nullable=True)
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "leave_rate_basis IN ('basic_plus_regular_allowances', 'basic_only')",
+            name='ck_company_leave_rate_basis',
+        ),
+        db.CheckConstraint(
+            'leave_rate_divisor BETWEEN 1 AND 31',
+            name='ck_company_leave_rate_divisor',
+        ),
+    )
 
     # Relationships
     users = db.relationship('User', backref='company', lazy=True)
@@ -888,7 +924,7 @@ class EmployeeAllowance(db.Model):
     @property
     def calculated_exempt_amount(self):
         """Calculate the tax-exempt portion of this allowance."""
-        from decimal import ROUND_HALF_UP, Decimal
+        from decimal import Decimal
 
         if self.tax_treatment == self.TAX_TAXABLE:
             return Decimal('0')
@@ -897,20 +933,22 @@ class EmployeeAllowance(db.Model):
         # Partial exemption - apply cap(s). When both a flat ETB cap and a
         # percent-of-salary cap are set, the exempt part is capped by the
         # LOWER of the two (e.g. transport: lower of ETB 2,200 or 25% of basic).
+        # The arithmetic is shared with the elements engine
+        # (exemption_caps.lower_of_caps). A partial allowance with no cap set
+        # is NOT exempt on this legacy path (the elements engine differs; see
+        # PLAN.md catalog PR 3 audit).
+        from payroll_engine.exemption_caps import lower_of_caps
+
         cap_amount = self.exempt_cap_amount
         cap_percent = self.exempt_cap_percent
         if cap_amount is None and cap_percent is None:
             return Decimal('0')
-        caps = [Decimal(self.amount)]
-        if cap_amount is not None:
-            caps.append(Decimal(cap_amount))
-        if cap_percent is not None:
-            salary = self._percent_cap_salary()
-            percent_cap = (salary * Decimal(cap_percent) / Decimal('100')).quantize(
-                Decimal('0.01'), rounding=ROUND_HALF_UP
-            )
-            caps.append(percent_cap)
-        return min(caps)
+        return lower_of_caps(
+            Decimal(self.amount),
+            Decimal(cap_amount) if cap_amount is not None else None,
+            Decimal(cap_percent) if cap_percent is not None else None,
+            self._percent_cap_salary() if cap_percent is not None else Decimal('0'),
+        )
 
     def _percent_cap_salary(self):
         """Salary the exempt_cap_percent applies to (basic_salary by default)."""
@@ -1140,14 +1178,23 @@ class FinalSettlement(db.Model):
     # Earnings
     outstanding_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     severance_pay = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    notice_pay = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))  # Pay in lieu of notice
     leave_encashment = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     total_earnings = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
 
     # Deductions
     pension_deduction = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    # Final-month taxable employment income: salary + severance + notice pay
+    # + leave encashment (less pension when PENSION_DEDUCTED_BEFORE_TAX).
+    taxable_income = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
+    # Column name kept for compatibility: holds the TOTAL income tax on the
+    # final month, including tax on severance, notice pay and leave encashment.
     tax_on_salary = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     pending_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
     deduction_details = db.Column(db.JSON, nullable=True)  # Breakdown of deductions
+    # Frozen calculation facts: taxable lines, tax split, method, leave-day
+    # source and warnings (money as strings).
+    calculation_details = db.Column(db.JSON, nullable=True)
     total_deductions = db.Column(db.Numeric(12, 2), nullable=False, default=Decimal('0'))
 
     # Net payment
@@ -2172,6 +2219,14 @@ from payroll_engine.models_payroll_elements import (
 from payroll_engine.models_payroll_elements import (
     PayrollItemAssignment as PayrollItemAssignment,
 )
+
+# Structural tenant isolation for the elements tables. Assigned here rather
+# than in the class bodies because models_payroll_elements cannot import
+# TenantQuery without a circular import. Every terminal query must reference
+# company_id: `company_id == X` for a company's rows, `company_id IS NULL` for
+# the shared system catalog (PayItemType only). An unscoped query raises.
+PayItemType.query_class = TenantQuery
+PayrollItemAssignment.query_class = TenantQuery
 
 
 class SpreadsheetInput(db.Model):

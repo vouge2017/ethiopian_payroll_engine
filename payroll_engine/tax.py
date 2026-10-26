@@ -23,9 +23,9 @@ across public sources (1–8 July 2025 vs 1 September 2025); effective-date
 applicability is to be confirmed by the accountant.
 
 The order in which the employee pension contribution enters the PAYE
-taxable base is current practice pending accountant confirmation
-(constants.PENSION_DEDUCTED_BEFORE_TAX, RC-38000-01) and is NOT attributed
-to any statute article here.
+taxable base is set by constants.PENSION_DEDUCTED_BEFORE_TAX (default False:
+PAYE on gross taxable pay before the 7% pension, Income Tax Proc. 979/2016;
+RC-38000-01 closed).
 
 Rules are configurable via the TaxRule database model.
 When no database rule exists, falls back to hardcoded defaults.

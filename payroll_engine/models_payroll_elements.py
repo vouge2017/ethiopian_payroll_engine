@@ -18,6 +18,7 @@ Design doc: Phase 1 proposal + Phase 2 corrections (per-period units_input; depr
 
 from datetime import UTC, datetime
 
+import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ENUM
 
 from payroll_engine import db
@@ -93,6 +94,8 @@ class PayItemType(db.Model):
     key = db.Column(db.String(30), nullable=False)
     name_en = db.Column(db.String(100), nullable=False)
     name_am = db.Column(db.String(100), nullable=True)
+    # Afaan Oromoo label (migration 9b4e6d2a8c13); NULL falls back to English.
+    name_om = db.Column(db.String(100), nullable=True)
     # PostgreSQL uses migration-owned native enums. String bind casts in
     # ORM bulk inserts are incompatible with those columns; SQLite keeps
     # its existing String representation for unit fixtures.
@@ -131,6 +134,17 @@ class PayItemType(db.Model):
     # employees_bp.add_deduction, which read the rule out of code.
     max_percent_of_net = db.Column(db.Numeric(5, 2), nullable=True)
     regulation_reference = db.Column(db.String(200), nullable=True)  # lock-in 5
+    # Legal attributes (catalog PR 3, migration d1e2f3a4b5c6). INFORMATIONAL
+    # ONLY: no calculation reads them yet. Pension is still computed on
+    # Employee.basic_salary (pension.py) and leave pay on the company's
+    # leave_rate_basis setting. Seeded values mirror that behaviour
+    # (catalog.LEGAL_ATTRIBUTE_DEFAULTS) and are pending legal confirmation.
+    #   pensionable: part of the pension "salary" (Proc. 1268/2022 Art. 10,
+    #     Directive 1087/2025 Art. 2(13)).
+    #   counts_as_art53_wage: part of "wage" under Labour Proc. 1156/2019
+    #     Art. 53 (base for leave pay and severance), not switched on until PR 4.
+    pensionable = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
+    counts_as_art53_wage = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
     sort_order = db.Column(db.Integer, nullable=False, default=100)
     is_system = db.Column(db.Boolean, nullable=False, default=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
@@ -143,6 +157,25 @@ class PayItemType(db.Model):
         db.CheckConstraint(
             'max_percent_of_net IS NULL OR (max_percent_of_net >= 0 AND max_percent_of_net <= 100)',
             name='ck_pay_item_type_max_percent_of_net',
+        ),
+        # Lock-in 2, mirrored from migration 8e3a7b2c9d1f so create_all()
+        # databases (tests, local dev) enforce the same uniqueness as
+        # migrated ones: one system row per key, one company row per
+        # (company_id, key). Names match the migration; no schema change.
+        db.Index(
+            'uq_pay_item_type_system_key',
+            'key',
+            unique=True,
+            postgresql_where=sa.text('company_id IS NULL'),
+            sqlite_where=sa.text('company_id IS NULL'),
+        ),
+        db.Index(
+            'uq_pay_item_type_company_key',
+            'company_id',
+            'key',
+            unique=True,
+            postgresql_where=sa.text('company_id IS NOT NULL'),
+            sqlite_where=sa.text('company_id IS NOT NULL'),
         ),
     )
 
@@ -164,6 +197,14 @@ class PayItemType(db.Model):
     @property
     def is_system_item(self):
         return self.is_system or self.company_id is None
+
+    def label(self, language='en'):
+        """The item's name in the UI language ('en', 'am', 'om'), falling back to English."""
+        if language == 'am' and self.name_am:
+            return self.name_am
+        if language == 'om' and self.name_om:
+            return self.name_om
+        return self.name_en
 
 
 # ---------------------------------------------------------------------------
@@ -277,7 +318,88 @@ class PayrollItemAssignment(db.Model):
 
 
 # ---------------------------------------------------------------------------
+# Tenant isolation guard — an assignment may only link rows of its own company
+# ---------------------------------------------------------------------------
+#
+# A composite FK (company_id, employee_id) -> employee(company_id, id) would
+# need new unique constraints and a table rebuild on SQLite, and cannot express
+# "pay item belongs to this company OR is a shared system item (company_id IS
+# NULL)". The rule is therefore enforced at the model layer for every ORM
+# insert/update (mapper events below) and exposed as a service check
+# (check_assignment_tenancy) that routes can call before building a row.
+# The b7c1d2e3f4a5 migration refuses to run while existing rows violate it.
+
+
+class CrossTenantAssignmentError(ValueError):
+    """An assignment references an employee, pay item or base assignment of another company."""
+
+
+def _tenancy_violations(connection, company_id, employee_id, pay_item_type_id, percent_of_item_id=None):
+    """Return human-readable violations of the assignment tenancy rule (empty = OK).
+
+    Runs plain SQL on ``connection`` so it works inside a flush (mapper events)
+    as well as from service code (pass ``db.session.connection()``).
+    """
+    problems = []
+    if employee_id is not None:
+        emp_company = connection.execute(
+            sa.text('SELECT company_id FROM employee WHERE id = :id'), {'id': employee_id}
+        ).scalar()
+        if emp_company is not None and emp_company != company_id:
+            problems.append(f'employee {employee_id} belongs to company {emp_company}, not {company_id}')
+    if pay_item_type_id is not None:
+        row = connection.execute(
+            sa.text('SELECT company_id FROM pay_item_type WHERE id = :id'), {'id': pay_item_type_id}
+        ).first()
+        # company_id IS NULL = shared system catalog item, assignable by any company.
+        if row is not None and row[0] is not None and row[0] != company_id:
+            problems.append(f'pay item type {pay_item_type_id} belongs to company {row[0]}, not {company_id}')
+    if percent_of_item_id is not None:
+        base_company = connection.execute(
+            sa.text('SELECT company_id FROM payroll_item_assignment WHERE id = :id'), {'id': percent_of_item_id}
+        ).scalar()
+        if base_company is not None and base_company != company_id:
+            problems.append(f'base assignment {percent_of_item_id} belongs to company {base_company}, not {company_id}')
+    return problems
+
+
+def check_assignment_tenancy(company_id, employee_id, pay_item_type_id, percent_of_item_id=None):
+    """Service-level check: raise CrossTenantAssignmentError if the links cross companies."""
+    problems = _tenancy_violations(
+        db.session.connection(), company_id, employee_id, pay_item_type_id, percent_of_item_id
+    )
+    if problems:
+        raise CrossTenantAssignmentError('Cross-company assignment rejected: ' + '; '.join(problems))
+
+
+_TENANCY_ATTRS = ('company_id', 'employee_id', 'pay_item_type_id', 'percent_of_item_id')
+
+
+def _guard_assignment(mapper, connection, target, *, is_update):
+    if is_update:
+        state = sa.inspect(target)
+        if not any(state.attrs[name].history.has_changes() for name in _TENANCY_ATTRS):
+            return
+    # Many-to-one FKs are synced from relationships before before_insert fires.
+    problems = _tenancy_violations(
+        connection, target.company_id, target.employee_id, target.pay_item_type_id, target.percent_of_item_id
+    )
+    if problems:
+        raise CrossTenantAssignmentError('Cross-company assignment rejected: ' + '; '.join(problems))
+
+
+@sa.event.listens_for(PayrollItemAssignment, 'before_insert')
+def _guard_assignment_insert(mapper, connection, target):
+    _guard_assignment(mapper, connection, target, is_update=False)
+
+
+@sa.event.listens_for(PayrollItemAssignment, 'before_update')
+def _guard_assignment_update(mapper, connection, target):
+    _guard_assignment(mapper, connection, target, is_update=True)
+
+
+# ---------------------------------------------------------------------------
 # Tenant query registration — new models are company-scoped
 # ---------------------------------------------------------------------------
-# Note: Registration happens in __init__.py's _register_tenant_models().
-# The new models are added there.
+# Note: Registration happens in __init__.py's _register_tenant_models();
+# TenantQuery is attached as query_class in models.py (circular-import safe).

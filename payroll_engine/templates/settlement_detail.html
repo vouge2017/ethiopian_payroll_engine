@@ -60,33 +60,68 @@
                                 </div>
                             </div>
 
+                            {% set details = settlement.calculation_details or {} %}
+                            {% if details.get('tax_method_status') %}
+                            <div class="alert alert-light border py-2 small" data-testid="settlement-tax-method">
+                                <i class="bi bi-journal-text me-1"></i>{{ details.get('tax_method_note') }}
+                            </div>
+                            {% endif %}
+                            {% if details.get('pending_confirmation') %}
+                            <div class="alert alert-info py-2 small" data-testid="settlement-pending-confirmation">
+                                <i class="bi bi-info-circle me-1"></i>{{ details.get('pending_confirmation') }}
+                            </div>
+                            {% endif %}
+                            {% for warning in details.get('warnings', []) %}
+                            <div class="alert alert-warning py-2 small" data-testid="settlement-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>{{ warning }}
+                            </div>
+                            {% endfor %}
+
                             <!-- Earnings -->
-                            <h6 class="text-success mb-3"><i class="bi bi-plus-circle me-2"></i>EARNINGS</h6>
+                            <h6 class="text-success mb-3"><i class="bi bi-plus-circle me-2"></i>EARNINGS (all taxable)</h6>
                             <div class="table-responsive">
                             <table class="table table-sm responsive-card">
                                 <tbody>
                                     <tr>
-                                        <td>Outstanding Salary ({{ eth_period(settlement.end_date) }})</td>
+                                        <td>Outstanding Salary ({{ eth_period(settlement.end_date) }}) <span class="badge text-bg-light">Taxable</span></td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.outstanding_salary) }}</td>
                                     </tr>
                                     {% if settlement.severance_pay > 0 %}
                                     <tr>
                                         <td>
-                                            Severance Pay
-                                            <small class="text-muted d-block">Monthly salary × {{ settlement.years_of_service }} years (capped at 12 months)</small>
+                                            Severance Pay <span class="badge text-bg-light">Taxable</span>
+                                            <small class="text-muted d-block">Labour Proc. 1156/2019 Art. 40, {{ settlement.years_of_service }} years of service</small>
                                         </td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.severance_pay) }}</td>
                                     </tr>
                                     {% endif %}
-                                    {% if settlement.leave_encashment > 0 %}
+                                    {% if settlement.notice_pay and settlement.notice_pay > 0 %}
+                                    <tr>
+                                        <td>Pay in lieu of notice <span class="badge text-bg-light">Taxable</span></td>
+                                        <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.notice_pay) }}</td>
+                                    </tr>
+                                    {% endif %}
                                     <tr>
                                         <td>
-                                            Leave Encashment
-                                            <small class="text-muted d-block">Unused annual leave days</small>
+                                            Leave Encashment <span class="badge text-bg-light">Taxable</span>
+                                            {% if details.get('leave') %}
+                                            <small class="text-muted d-block">
+                                                {{ details.leave.unused_days }} unused days × ETB {{ details.leave.daily_rate }}/day
+                                                ({% if details.leave.source == 'manual' %}entered manually{% elif details.leave.source == 'leave_record' %}from leave record {{ details.leave.leave_year }}{% else %}no leave record{% endif %})
+                                            </small>
+                                            {% if details.leave.get('rate_basis') %}
+                                            <small class="text-muted d-block" data-testid="leave-rate-basis">
+                                                Daily rate basis: {{ details.leave.rate_basis_label }}
+                                                {%- for c in details.leave.get('rate_components', []) if c.included %}{% if loop.first %} (ETB {% endif %}{{ c.amount }}{% if not loop.last %} + {% else %}){% endif %}{% endfor %}
+                                                ÷ {{ details.leave.rate_divisor }} days
+                                                = ETB {{ details.leave.daily_rate }}/day
+                                                {%- for c in details.leave.get('rate_components', []) if not c.included %}; {{ c.label|lower }} ETB {{ c.amount }} not included{% endfor %}
+                                            </small>
+                                            {% endif %}
+                                            {% endif %}
                                         </td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.leave_encashment) }}</td>
                                     </tr>
-                                    {% endif %}
                                     <tr class="table-success">
                                         <td class="fw-bold">Total Earnings</td>
                                         <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.total_earnings) }}</td>
@@ -94,6 +129,40 @@
                                 </tbody>
                             </table>
 </div>
+
+                            {% if details.get('taxable_income') %}
+                            <!-- Tax -->
+                            <h6 class="mt-4 mb-3"><i class="bi bi-calculator me-2"></i>INCOME TAX (final month)</h6>
+                            <div class="table-responsive">
+                            <table class="table table-sm responsive-card" data-testid="settlement-tax">
+                                <tbody>
+                                    {% if details.get('pension_deducted_before_tax') %}
+                                    <tr>
+                                        <td>Less employee pension (deducted before tax)</td>
+                                        <td class="text-end">- ETB {{ details.pension_off_tax_base }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td class="fw-bold">Taxable employment income</td>
+                                        <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.taxable_income) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Tax on salary alone</td>
+                                        <td class="text-end">ETB {{ details.tax_salary_only }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Additional tax from severance, notice pay and leave encashment</td>
+                                        <td class="text-end">ETB {{ details.tax_on_termination_payments }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Total income tax</td>
+                                        <td class="text-end fw-bold">ETB {{ '%.2f'|format(settlement.tax_on_salary) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </div>
+                            <p class="text-muted small">{{ details.get('tax_method_note', '') }}</p>
+                            {% endif %}
 
                             <!-- Deductions -->
                             <h6 class="text-danger mt-4 mb-3"><i class="bi bi-dash-circle me-2"></i>DEDUCTIONS</h6>
@@ -105,7 +174,7 @@
                                         <td class="text-end">- ETB {{ '%.2f'|format(settlement.pension_deduction) }}</td>
                                     </tr>
                                     <tr>
-                                        <td>Income Tax on salary portion</td>
+                                        <td>Income Tax{% if details.get('taxable_income') %} (salary, severance, notice pay and leave encashment){% else %} on salary portion{% endif %}</td>
                                         <td class="text-end">- ETB {{ '%.2f'|format(settlement.tax_on_salary) }}</td>
                                     </tr>
                                     {% if settlement.pending_deductions > 0 %}
@@ -152,10 +221,11 @@
                                 Severance calculation per <strong>Labor Proclamation No. 1156/2019, Articles 40-42</strong>:
                             </p>
                             <ul class="text-muted small mb-0">
-                                <li>Severance = monthly salary × years of service</li>
+                                <li>Severance = 30 days' wages for year 1 + 1/3 of that per further year</li>
                                 <li>Maximum cap: 12 months of salary</li>
                                 <li>Applies to: redundancy, mutual agreement</li>
                                 <li>Does not apply to: resignation, termination for cause</li>
+                                <li>Severance, notice pay and leave encashment are employment income (Income Tax Proc. 979/2016 Art. 12(1)(c); rates per Proc. 1395/2025)</li>
                             </ul>
                         </div>
                     </div>

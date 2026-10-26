@@ -8,14 +8,16 @@ EmployeeAllowance records.
 
 from decimal import Decimal
 
+from payroll_engine.exemption_caps import LEGACY_PER_DIEM, TRANSPORT, transport_exempt_amount
 from payroll_engine.models import Employee, EmployeeAllowance
 
 Q = Decimal('0.01')
 
-# Regulatory caps (Ethiopian tax law)
-TRANSPORT_EXEMPT_CAP_ETB = Decimal('2200')
-TRANSPORT_EXEMPT_CAP_PERCENT = Decimal('0.25')  # 25% of basic salary
-TRANSPORT_EXEMPT_CAP_PERCENT_OF_BASIC = Decimal('25')  # stored as percent of basic salary
+# Regulatory caps: aliases of payroll_engine.exemption_caps (the one source of
+# truth), kept for existing importers. Do not define cap numbers here.
+TRANSPORT_EXEMPT_CAP_ETB = TRANSPORT.cap_amount
+TRANSPORT_EXEMPT_CAP_PERCENT = TRANSPORT.cap_percent / Decimal('100')  # fraction of basic salary
+TRANSPORT_EXEMPT_CAP_PERCENT_OF_BASIC = TRANSPORT.cap_percent  # stored as percent of basic salary
 
 
 def get_effective_allowances(employee: Employee) -> list[EmployeeAllowance]:
@@ -67,8 +69,7 @@ def calculate_transport_exempt_amount(basic_salary: Decimal, transport_amount: D
     Returns:
         Tax-exempt amount (capped)
     """
-    cap = min(TRANSPORT_EXEMPT_CAP_ETB, basic_salary * TRANSPORT_EXEMPT_CAP_PERCENT)
-    return min(transport_amount, cap)
+    return transport_exempt_amount(basic_salary, transport_amount)
 
 
 def add_allowance_for_employee(
@@ -110,7 +111,7 @@ def add_allowance_for_employee(
         exempt_cap_percent = (
             exempt_cap_percent if exempt_cap_percent is not None else TRANSPORT_EXEMPT_CAP_PERCENT_OF_BASIC
         )
-        regulation_ref = regulation_ref or 'Income Tax Proclamation - Transport Allowance Exemption'
+        regulation_ref = regulation_ref or TRANSPORT.regulation_reference
 
     elif allowance_type == 'hardship':
         tax_treatment = 'partial'
@@ -121,12 +122,12 @@ def add_allowance_for_employee(
         regulation_ref = regulation_ref or 'Income Tax Proclamation - Medical Exemption'
 
     elif allowance_type == 'per_diem':
-        # Per diem: exempt up to ETB 255/day or 4% of salary
-        cap = max(Decimal('255') * Decimal('30'), Decimal(str(employee.basic_salary)) * Decimal('0.04'))
-        cap = min(cap, Decimal('2200'))
+        # Legacy, unreviewed per diem cap (exemption_caps.LEGACY_PER_DIEM).
+        # NOT the statutory per-day rule; left unchanged on purpose until the
+        # reviewed per diem change (PLAN.md Next item 4).
         tax_treatment = 'partial'
-        exempt_cap = cap
-        regulation_ref = regulation_ref or 'Income Tax Proclamation - Per Diem Exemption'
+        exempt_cap = LEGACY_PER_DIEM.cap(employee.basic_salary)
+        regulation_ref = regulation_ref or LEGACY_PER_DIEM.regulation_reference
 
     allowance = EmployeeAllowance(
         company_id=company_id,

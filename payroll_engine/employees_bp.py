@@ -35,14 +35,34 @@ employees_bp = Blueprint('employees', __name__)
 # ---------------------------------------------------------------------------
 # Pay item catalog helpers (elements architecture)
 #
-# Company catalogs are seeded by `flask migrate-pay-items`. These helpers read
-# the per-company PayItemType rows so routes never hardcode an allowance/deduction
-# type list or a regulatory rule.
+# Every company is given its catalog when it is created (catalog.
+# seed_company_catalog) and the b7c1d2e3f4a5 migration backfilled companies
+# that predate that. As a last line of defence these helpers re-seed a missing
+# catalog on demand instead of telling the user to run a CLI command. They read
+# the per-company PayItemType rows so routes never hardcode an
+# allowance/deduction type list or a regulatory rule.
 # ---------------------------------------------------------------------------
 
 #: Pay items the engine owns. Users may not create assignments for these
 #: (AC5) — the engine derives pension and tax from basic salary every period.
 SYSTEM_MANAGED_KEYS = frozenset({'income_tax', 'employee_pension', 'employer_pension'})
+
+
+def _ensure_catalog(company_id):
+    """Seed the company's catalog if it has none of its template rows yet.
+
+    Idempotent and a no-op (two SELECTs inside the seeder) once seeded. Returns
+    the number of company rows created. Commits only when it actually created
+    rows, so calling it never flushes unrelated pending work in the request.
+    """
+    from payroll_engine.catalog import seed_company_catalog
+
+    if company_id is None:
+        return 0
+    result = seed_company_catalog(company_id, commit=False)
+    if result['created'] or result['system_created']:
+        db.session.commit()
+    return result['created']
 
 
 def company_pay_items(classification=None, include_system=False):
@@ -53,8 +73,12 @@ def company_pay_items(classification=None, include_system=False):
         include_system: when True also returns the system catalog rows
             (company_id IS NULL), e.g. for display. Assigning to them is
             still rejected by assert_assignable_item.
+
+    A company with no catalog rows at all is seeded on demand first.
     """
     company_id = _company_id()
+    if company_id is not None and not PayItemType.query.filter_by(company_id=company_id).first():
+        _ensure_catalog(company_id)
     q = PayItemType.query.filter(
         PayItemType.is_active.is_(True),
         db.or_(
@@ -71,13 +95,17 @@ def assert_assignable_item(item_key):
     """Return the PayItemType for item_key, or None after flashing why not.
 
     Enforces that the key exists in the ACTIVE company catalog and that it is
-    not an engine-managed system item (AC5).
+    not an engine-managed system item (AC5). A standard catalog key that the
+    company is missing (company created before catalog seeding) is seeded on
+    demand rather than rejected.
     """
-    item = PayItemType.query.filter_by(company_id=_company_id(), key=item_key, is_active=True).first()
+    company_id = _company_id()
+    item = PayItemType.query.filter_by(company_id=company_id, key=item_key, is_active=True).first()
+    if item is None and _ensure_catalog(company_id):
+        item = PayItemType.query.filter_by(company_id=company_id, key=item_key, is_active=True).first()
     if item is None:
         flash(
-            f'"{item_key}" is not a pay item in your company catalog. '
-            'Run "flask migrate-pay-items" or pick a different item.',
+            f'"{item_key}" is not an active pay item in your company catalog. Pick a different item.',
             'danger',
         )
         return None
@@ -1035,7 +1063,11 @@ def reactivate_employee(emp_id):
 @role_required('owner', 'accountant')
 def terminate_employee(emp_id):
     """Terminate an employee with severance calculation and final settlement."""
-    from payroll_engine.services.settlement_service import create_settlement_record
+    from payroll_engine.services.settlement_service import (
+        LeaveRuleNotConfirmedError,
+        calculate_settlement,
+        create_settlement_record,
+    )
     from payroll_engine.severance import TerminationReason
 
     emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
@@ -1044,12 +1076,15 @@ def terminate_employee(emp_id):
         reason = request.form.get('termination_reason', '').strip()
         password = request.form.get('password', '').strip()
         end_date_str = request.form.get('end_date', '').strip()
+        # 'preview' computes the settlement without saving or terminating
+        # (no password needed); anything else finalizes.
+        is_preview = request.form.get('action', '').strip() == 'preview'
 
         if reason not in TerminationReason.ALL:
             flash('Invalid termination reason.', 'danger')
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
-        if not password or not current_user.check_password(password):
+        if not is_preview and (not password or not current_user.check_password(password)):
             flash('Incorrect password. Termination cancelled.', 'danger')
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
@@ -1063,15 +1098,74 @@ def terminate_employee(emp_id):
                 flash('Invalid date format.', 'danger')
                 return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
-        # Create settlement using service
-        settlement = create_settlement_record(
-            employee=emp,
-            termination_reason=reason,
-            end_date=end_date,
-            company_id=_company_id(),
-            created_by=current_user.id,
-            db_session=db.session,
-        )
+        # Optional manual inputs: unused leave days and pay in lieu of notice.
+        from decimal import Decimal, InvalidOperation
+
+        def _optional_decimal(field, label, max_value):
+            raw = request.form.get(field, '').strip().replace(',', '')
+            if not raw:
+                return None, None
+            try:
+                value = Decimal(raw)
+            except InvalidOperation:
+                return None, f'{label} must be a number.'
+            if not value.is_finite() or value < 0 or value > max_value or value != value.quantize(Decimal('0.01')):
+                return None, f'{label} must be between 0 and {max_value:,} with at most 2 decimals.'
+            return value, None
+
+        unused_leave_days, err = _optional_decimal('unused_leave_days', 'Unused leave days', Decimal('365'))
+        if err is None:
+            notice_pay, err = _optional_decimal('notice_pay', 'Notice pay', Decimal('9999999999.99'))
+        if err:
+            flash(err, 'danger')
+            return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
+
+        form_values = {
+            'termination_reason': reason,
+            'end_date': end_date.isoformat(),
+            'unused_leave_days': '' if unused_leave_days is None else str(unused_leave_days),
+            'notice_pay': '' if notice_pay is None else str(notice_pay),
+        }
+        if is_preview:
+            preview = calculate_settlement(
+                emp,
+                reason,
+                end_date,
+                _company_id(),
+                db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+            return _render_terminate_form(emp, preview=preview, form_values=form_values)
+
+        # Create settlement using service. Blocked (nothing saved, employee
+        # stays active) when leave encashment > 0 and the company has not
+        # confirmed its leave-pay basis and divisor.
+        try:
+            settlement = create_settlement_record(
+                employee=emp,
+                termination_reason=reason,
+                end_date=end_date,
+                company_id=_company_id(),
+                created_by=current_user.id,
+                db_session=db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+        except LeaveRuleNotConfirmedError as exc:
+            db.session.rollback()
+            preview = calculate_settlement(
+                emp,
+                reason,
+                end_date,
+                _company_id(),
+                db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+            return _render_terminate_form(
+                emp, preview=preview, form_values=form_values, block_message=str(exc), status=409
+            )
 
         # Soft-delete the employee
         emp.is_deleted = True
@@ -1102,6 +1196,12 @@ def terminate_employee(emp_id):
                 'severance_eligible': settlement.severance_pay > 0,
                 'severance_amount': str(settlement.severance_pay),
                 'settlement_id': settlement.id,
+                'notice_pay': str(settlement.notice_pay),
+                'leave_encashment': str(settlement.leave_encashment),
+                'unused_leave_days': (settlement.calculation_details or {}).get('leave', {}).get('unused_days'),
+                'leave_days_source': (settlement.calculation_details or {}).get('leave', {}).get('source'),
+                'taxable_income': str(settlement.taxable_income),
+                'income_tax': str(settlement.tax_on_salary),
                 'net_final_payment': str(settlement.net_final_payment),
             },
         )
@@ -1113,28 +1213,47 @@ def terminate_employee(emp_id):
         flash(
             f'{emp.name} terminated. Final settlement: ETB {settlement.net_final_payment:,.2f} '
             f'(Outstanding: {settlement.outstanding_salary:,.2f} + Severance: {settlement.severance_pay:,.2f} + '
-            f'Leave: {settlement.leave_encashment:,.2f} - Deductions: {settlement.total_deductions:,.2f}).',
+            f'Notice: {settlement.notice_pay:,.2f} + Leave: {settlement.leave_encashment:,.2f} '
+            f'- Deductions incl. tax: {settlement.total_deductions:,.2f}).',
             'warning',
         )
+        for warning in (settlement.calculation_details or {}).get('warnings', []):
+            flash(warning, 'warning')
         return redirect(url_for('employees.settlement_detail', settlement_id=settlement.id))
 
     # GET: show termination form with severance preview
-    from payroll_engine.severance import calculate_severance
+    return _render_terminate_form(emp)
+
+
+def _render_terminate_form(emp, preview=None, form_values=None, block_message=None, status=200):
+    """Termination form with severance previews, an optional settlement
+    preview (not saved) and an optional finalize-block message."""
+    from payroll_engine.services.settlement_service import company_leave_rule_confirmation, recorded_unused_leave_days
+    from payroll_engine.severance import TerminationReason, calculate_severance
 
     today = date.today()
     start = emp.start_date or (emp.created_at.date() if emp.created_at else today)
+
     previews = {}
     for r in TerminationReason.ALL:
         result = calculate_severance(emp.basic_salary, start, today, r)
         previews[r] = result
 
-    return render_template(
-        'terminate_employee.html',
-        employee=emp,
-        start_date=start,
-        today=today,
-        previews=previews,
-        termination_reasons=TerminationReason.ALL,
+    return (
+        render_template(
+            'terminate_employee.html',
+            employee=emp,
+            start_date=start,
+            today=today,
+            previews=previews,
+            termination_reasons=TerminationReason.ALL,
+            recorded_leave_days=recorded_unused_leave_days(emp, today, _company_id(), db.session),
+            leave_rule_confirmed=company_leave_rule_confirmation(_company_id(), db.session)['confirmed'],
+            settlement_preview=preview,
+            form_values=form_values or {},
+            block_message=block_message,
+        ),
+        status,
     )
 
 

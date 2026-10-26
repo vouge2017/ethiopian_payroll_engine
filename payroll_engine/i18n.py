@@ -145,17 +145,38 @@ STRINGS = {
     # Flash Messages
     'how_tax_calculated': 'ግብር እንዴት ይሰላል?',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review:
-    # the pension-before-tax statement now carries the pending-confirmation wording.
-    'tax_explainer_intro': 'የኢትዮጵያ የገቢ ግብር ደረጃ በደረጃ የሚጨምሩ መጣኔዎችን ይጠቀማል (አዋጅ ቁጥር 1395/2025)። ጡረታ ከግብር በፊት ይቀነስ እንደሆነ ገና እየተረጋገጠ ነው (RC-38000-01)።',
+    # PAYE is on gross taxable pay before the 7% pension (Proc. 979/2016); RC-38000-01 closed.
+    'tax_explainer_intro': 'የኢትዮጵያ የገቢ ግብር ደረጃ በደረጃ የሚጨምሩ መጣኔዎችን ይጠቀማል (አዋጅ ቁጥር 1395/2025)። የገቢ ግብር የሚሰላው 7% የሠራተኛ ጡረታ መዋጮ ከመቀነሱ በፊት ባለው ጠቅላላ ግብር የሚከፈልበት ገቢ ላይ ነው (አዋጅ ቁጥር 979/2016፣ RC-38000-01)።',
     'bracket': 'ደረጃ',
     'taxable_range': 'ግብር የሚከፈልበት ገቢ ክልል',
     'tax_rate': 'መጠን',
     'personal_relief': 'የግል የግብር ቅናሽ',
     'per_month': 'በወር',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review.
-    'pension_before_tax': 'ጡረታ ከግብር በፊት ይቀነስ እንደሆነ ገና እየተረጋገጠ ነው (RC-38000-01)።',
+    'pension_before_tax': 'የገቢ ግብር የሚሰላው 7% የሠራተኛ ጡረታ መዋጮ ከመቀነሱ በፊት ባለው ጠቅላላ ግብር የሚከፈልበት ገቢ ላይ ነው (አዋጅ ቁጥር 979/2016፣ RC-38000-01)።',
     'of_basic_salary': 'የመነሻ ደመወዝ',
     'then_tax': 'ከዚያ ግብር ይሰላል',
+    # Pay-item settings (catalog PR 2). DRAFT TRANSLATION, pending native-speaker review.
+    'pay_items': 'የክፍያ ዓይነቶች',
+    'employer_contributions': 'የአሠሪ መዋጮዎች',
+    'tax': 'ግብር',
+    'deactivate': 'አግድ',
+    'delete': 'አጥፋ',
+    'save_changes': 'ለውጦችን አስቀምጥ',
+    'edit_names': 'ስም አስተካክል',
+    'locked': 'የተቆለፈ',
+    'inactive': 'ሥራ ላይ ያልሆነ',
+    'add_pay_item': 'የክፍያ ዓይነት ጨምር',
+    'move_up': 'ወደ ላይ',
+    'move_down': 'ወደ ታች',
+    'in_use': 'በጥቅም ላይ ያለ',
+    'item_code': 'ኮድ',
+    # Catalog PR 3. DRAFT TRANSLATION, pending native-speaker review.
+    'tax_and_legal': 'ግብርና የሕግ መለያዎች',
+    'item_kind': 'ዓይነት',
+    'english_name': 'ስም (እንግሊዝኛ)',
+    'amharic_name': 'ስም (አማርኛ)',
+    'oromo_name': 'ስም (ኦሮምኛ)',
 }
 
 

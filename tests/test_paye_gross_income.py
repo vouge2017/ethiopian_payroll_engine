@@ -150,6 +150,8 @@ def elements_app():
 
 
 def _elements_employee(basic):
+    from helpers import copy_system_items_to_company
+
     from payroll_engine import db
     from payroll_engine.models import (
         Company,
@@ -160,7 +162,6 @@ def _elements_employee(basic):
         PayItemType,
         PayrollItemAssignment,
     )
-    from payroll_engine.payroll_elements import seed_pay_item_types
 
     company = Company(name='Gross PAYE PLC')
     db.session.add(company)
@@ -179,7 +180,7 @@ def _elements_employee(basic):
         )
     )
     db.session.flush()
-    seed_pay_item_types(company.id)
+    copy_system_items_to_company(company.id)
     db.session.flush()
     basic_type = db.session.query(PayItemType).filter_by(company_id=company.id, key='basic_salary').one()
     employee = Employee(

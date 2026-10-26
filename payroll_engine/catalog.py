@@ -3,7 +3,10 @@ Per-company pay-item catalog seed.
 
 Defines the standard catalog (system items: company_id IS NULL) and the
 company-template catalog (company_id-scoped copies seeded at company creation
-and backfilled for existing companies via the migrate-pay-items CLI command.
+by seed_company_catalog(), backfilled for existing companies by the
+b7c1d2e3f4a5 data migration, and re-seeded on demand when a route finds a
+company without its catalog). ``flask migrate-pay-items`` remains available
+for the legacy-row data backfill.
 
 System items are NEVER company-scoped — they are the shared definitions that
 every company inherits. Company templates are per-company copies that an admin
@@ -15,10 +18,13 @@ catalog seeding + flask migrate-pay-items CLI).
 
 from decimal import Decimal
 
+from sqlalchemy.exc import IntegrityError
+
 from payroll_engine.constants import (
     COMPANY_TEMPLATE_ITEM_KEYS,
     SYSTEM_ITEM_KEYS,
 )
+from payroll_engine.exemption_caps import TRANSPORT as TRANSPORT_CAP
 from payroll_engine.models import PayItemCalcMethod, PayItemClassification, PayItemTaxTreatment, PayItemType, db
 
 Q = Decimal('0.01')
@@ -108,7 +114,7 @@ SYSTEM_ITEMS: list[dict] = [
 # ---------------------------------------------------------------------------
 # Company template catalog.
 # These are the per-company items seeded at company creation and backfilled
-# for existing companies via flask migrate-pay-items.
+# for existing companies by the b7c1d2e3f4a5 data migration.
 #
 # Each item is a TEMPLATE — it defines the default configuration for that
 # pay item type in a company. The company admin can then customise:
@@ -154,16 +160,16 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
         'classification': PayItemClassification.EARNING,
         'calculation_method': PayItemCalcMethod.FIXED,
         'sort_order': 150,
-        # Regulatory rule lives HERE, not in the route: exempt up to the lower
-        # of ETB 2,200 or 25% of basic. Was hardcoded in add_allowance as
-        # `min(Decimal('2200'), emp.basic_salary * Decimal('0.25'))`.
+        # Exempt up to the lower of ETB 2,200 or 25% of basic. The numbers
+        # live in exemption_caps.TRANSPORT (one source of truth); the seeded
+        # row then carries them so the engine reads the company's own row.
         'tax_treatment': PayItemTaxTreatment.PARTIAL,
         'rate': Decimal('0'),  # placeholder; admin sets per-company
         'percent_of_item_key': None,
-        'exempt_cap_amount': Decimal('2200'),
-        'exempt_cap_percent': Decimal('25'),
-        'exempt_cap_basis': 'basic_salary',
-        'regulation_reference': 'Income Tax Proclamation - Transport Allowance Exemption',
+        'exempt_cap_amount': TRANSPORT_CAP.cap_amount,
+        'exempt_cap_percent': TRANSPORT_CAP.cap_percent,
+        'exempt_cap_basis': TRANSPORT_CAP.cap_basis,
+        'regulation_reference': TRANSPORT_CAP.regulation_reference,
         'max_percent_of_net': None,
     },
     {
@@ -374,6 +380,56 @@ COMPANY_TEMPLATE_ITEMS: list[dict] = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Legal attributes (catalog PR 3). INFORMATIONAL: no calculation reads them.
+# ---------------------------------------------------------------------------
+#
+# (pensionable, counts_as_art53_wage) per standard key. Every key not listed
+# (deductions, tax, employer charges, company custom items) is (False, False).
+#
+# pensionable mirrors what the engines do today: pension is 7 % / 11 % of
+# basic salary only (pension.py), which matches Directive 1087/2025 Art. 2(13)
+# ("salary" excludes overtime and allowances).
+#
+# counts_as_art53_wage follows the text of Labour Proc. 1156/2019 Art. 53(2):
+# transport, hardship and per diem are expressly excluded; the other
+# allowances are not listed there, so they are marked True. Leave pay does NOT
+# use this flag yet (it uses Company.leave_rate_basis); switching it on is
+# catalog PR 4 and changes amounts, so it needs the adviser's answer first.
+#
+# All values are pending legal confirmation (PLAN.md, catalog PR 3). The same
+# lists are frozen in migration d1e2f3a4b5c6; a test keeps them equal.
+PENSIONABLE_KEYS = frozenset({SYSTEM_ITEM_KEYS.BASIC_SALARY.value})
+ART53_WAGE_KEYS = frozenset(
+    {
+        SYSTEM_ITEM_KEYS.BASIC_SALARY.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.HOUSING.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.COMMUNICATION.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.MEDICAL.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.FOOD.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.EDUCATION.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.UNIFORM.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.OTHER.value,
+    }
+)
+#: Excluded from Art. 53 wage by the text of Art. 53(2).
+ART53_EXCLUDED_KEYS = frozenset(
+    {
+        COMPANY_TEMPLATE_ITEM_KEYS.TRANSPORT.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.HARDSHIP.value,
+        COMPANY_TEMPLATE_ITEM_KEYS.PER_DIEM.value,
+    }
+)
+
+
+def legal_attribute_defaults(key: str, classification: str) -> dict:
+    """Seeded legal flags for an item. Only earnings can be pensionable or wage."""
+    if classification != PayItemClassification.EARNING:
+        return {'pensionable': False, 'counts_as_art53_wage': False}
+    return {'pensionable': key in PENSIONABLE_KEYS, 'counts_as_art53_wage': key in ART53_WAGE_KEYS}
+
+
 def _norm(value):
     """Normalise a nullable numeric field to None or Decimal."""
     if value is None:
@@ -383,51 +439,83 @@ def _norm(value):
     return Decimal(str(value))
 
 
-def seed_system_items() -> dict[str, int]:
+def item_from_spec(spec: dict, company_id: int | None, *, is_system: bool) -> PayItemType:
+    """Build an (unsaved) PayItemType from a catalog spec dict.
+
+    The one place a catalog spec becomes a row, shared by the seeders below,
+    the legacy backfill and any on-demand creation, so a template is never
+    materialised two different ways.
+    """
+    return PayItemType(
+        company_id=company_id,
+        key=spec['key'],
+        name_en=spec['name_en'],
+        name_am=spec.get('name_am'),
+        classification=spec['classification'],
+        calculation_method=spec['calculation_method'],
+        sort_order=spec['sort_order'],
+        tax_treatment=spec['tax_treatment'],
+        rate=_norm(spec.get('rate')),
+        percent_of_item_key=spec.get('percent_of_item_key'),
+        exempt_cap_amount=_norm(spec.get('exempt_cap_amount')),
+        exempt_cap_percent=_norm(spec.get('exempt_cap_percent')),
+        exempt_cap_basis=spec.get('exempt_cap_basis'),
+        max_percent_of_net=_norm(spec.get('max_percent_of_net')),
+        regulation_reference=spec.get('regulation_reference'),
+        is_active=True,
+        is_system=is_system,
+        **legal_attribute_defaults(spec['key'], spec['classification']),
+    )
+
+
+def _existing_keys(company_id: int | None) -> set[str]:
+    """Keys already present in ``company_id``'s catalog (None = system catalog)."""
+    if company_id is None:
+        scope = PayItemType.company_id.is_(None)
+    else:
+        scope = PayItemType.company_id == company_id
+    return {k for (k,) in db.session.query(PayItemType.key).filter(scope).all()}
+
+
+def _seed(company_id: int | None, specs: list[dict], *, is_system: bool, commit: bool) -> dict[str, int]:
+    """Create the rows of ``specs`` that ``company_id`` lacks (None = system catalog).
+
+    Idempotent: existing (company_id, key) rows are never touched, so a
+    company's customisations survive re-seeding. Inserts run inside a
+    SAVEPOINT; if a concurrent request seeded the same company first, the
+    partial unique index rejects our insert, the savepoint rolls back and the
+    call reports everything as skipped instead of failing the caller.
+    """
+    existing = _existing_keys(company_id)
+    missing = [spec for spec in specs if spec['key'] not in existing]
+
+    created = 0
+    if missing:
+        try:
+            with db.session.begin_nested():
+                for spec in missing:
+                    db.session.add(item_from_spec(spec, company_id, is_system=is_system))
+                db.session.flush()
+            created = len(missing)
+        except IntegrityError:
+            # Lost a race with a concurrent seeder; the rows now exist.
+            created = 0
+
+    if commit:
+        db.session.commit()
+    return {'created': created, 'skipped': len(specs) - created}
+
+
+def seed_system_items(commit: bool = True) -> dict[str, int]:
     """Seed the system catalog (company_id IS NULL, is_system=True).
 
     Idempotent: skips items whose key already exists in the system catalog.
     Returns counts per action: {'created': N, 'skipped': M}.
     """
-    created = 0
-    skipped = 0
-
-    for spec in SYSTEM_ITEMS:
-        existing = PayItemType.query.filter_by(
-            company_id=None,
-            key=spec['key'],
-        ).first()
-
-        if existing:
-            skipped += 1
-            continue
-
-        item = PayItemType(
-            company_id=None,
-            key=spec['key'],
-            name_en=spec['name_en'],
-            name_am=spec['name_am'],
-            classification=spec['classification'],
-            calculation_method=spec['calculation_method'],
-            sort_order=spec['sort_order'],
-            tax_treatment=spec['tax_treatment'],
-            rate=_norm(spec.get('rate')),
-            percent_of_item_key=spec.get('percent_of_item_key'),
-            exempt_cap_amount=_norm(spec.get('exempt_cap_amount')),
-            exempt_cap_percent=_norm(spec.get('exempt_cap_percent')),
-            exempt_cap_basis=spec.get('exempt_cap_basis'),
-            regulation_reference=spec.get('regulation_reference'),
-            is_active=True,
-            is_system=True,
-        )
-        db.session.add(item)
-        created += 1
-
-    db.session.commit()
-    return {'created': created, 'skipped': skipped}
+    return _seed(None, SYSTEM_ITEMS, is_system=True, commit=commit)
 
 
-def seed_company_templates(company_id: int) -> dict[str, int]:
+def seed_company_templates(company_id: int, commit: bool = True) -> dict[str, int]:
     """Seed the standard company template catalog for one company.
 
     Idempotent: skips items whose (company_id, key) already exists.
@@ -436,66 +524,52 @@ def seed_company_templates(company_id: int) -> dict[str, int]:
     """
     if company_id is None:
         return {'created': 0, 'skipped': 0}
+    return _seed(company_id, COMPANY_TEMPLATE_ITEMS, is_system=False, commit=commit)
 
-    created = 0
-    skipped = 0
 
-    for spec in COMPANY_TEMPLATE_ITEMS:
-        existing = PayItemType.query.filter_by(
-            company_id=company_id,
-            key=spec['key'],
-        ).first()
+def seed_company_catalog(company_id: int, commit: bool = True) -> dict[str, int]:
+    """Give one company its full catalog: the shared system items plus its templates.
 
-        if existing:
-            skipped += 1
-            continue
+    THE seeder every company-creation path calls (signup, Google signup,
+    setup-company, demo, staging seed) and the on-demand fallback used when a
+    route finds a company without its catalog. Idempotent and cheap when the
+    catalog is already complete (two SELECTs, no writes).
 
-        item = PayItemType(
-            company_id=company_id,
-            key=spec['key'],
-            name_en=spec['name_en'],
-            name_am=spec['name_am'],
-            classification=spec['classification'],
-            calculation_method=spec['calculation_method'],
-            sort_order=spec['sort_order'],
-            tax_treatment=spec['tax_treatment'],
-            rate=_norm(spec.get('rate')),
-            percent_of_item_key=spec.get('percent_of_item_key'),
-            exempt_cap_amount=_norm(spec.get('exempt_cap_amount')),
-            exempt_cap_percent=_norm(spec.get('exempt_cap_percent')),
-            exempt_cap_basis=spec.get('exempt_cap_basis'),
-            max_percent_of_net=_norm(spec.get('max_percent_of_net')),
-            regulation_reference=spec.get('regulation_reference'),
-            is_active=True,
-            is_system=False,
-        )
-        db.session.add(item)
-        created += 1
-
-    db.session.commit()
-    return {'created': created, 'skipped': skipped}
+    Pass ``commit=False`` inside a larger unit of work; rows are flushed so
+    they are visible to the rest of the transaction.
+    """
+    system = seed_system_items(commit=False)
+    templates = seed_company_templates(company_id, commit=False)
+    if commit:
+        db.session.commit()
+    return {
+        'system_created': system['created'],
+        'created': templates['created'],
+        'skipped': templates['skipped'],
+    }
 
 
 def migrate_pay_items() -> dict[str, int]:
-    """Backfill the company template catalog for ALL existing companies.
+    """Backfill the catalog for ALL existing companies (system items + templates).
 
     Idempotent: only creates items that don't already exist for each company.
-    Does NOT touch system catalog items (company_id IS NULL) — those are
-    seeded separately by seed_system_items() and are shared across all companies.
+    Existing rows, system or company, are never modified.
 
     Returns aggregate counts: {'companies': N, 'items_created': M, 'items_skipped': K}.
     """
     from payroll_engine.models import Company
 
     companies = Company.query.all()
+    seed_system_items(commit=False)
     total_created = 0
     total_skipped = 0
 
     for company in companies:
-        result = seed_company_templates(company.id)
+        result = seed_company_templates(company.id, commit=False)
         total_created += result['created']
         total_skipped += result['skipped']
 
+    db.session.commit()
     return {
         'companies': len(companies),
         'items_created': total_created,

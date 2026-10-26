@@ -61,9 +61,48 @@
 
                     <hr>
 
+                    {% if block_message %}
+                    <div class="alert alert-danger" data-testid="settlement-finalize-blocked">
+                        <i class="bi bi-slash-circle me-1"></i><strong>Not finalized.</strong> {{ block_message }}:
+                        <a href="{{ url_for('settings.company_profile') }}#leave-pay-rule">Settings → Company Profile → Payroll rules: leave encashment</a>.
+                        The employee has not been terminated and nothing was saved.
+                    </div>
+                    {% elif not leave_rule_confirmed %}
+                    <div class="alert alert-warning small" data-testid="leave-rule-unconfirmed-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Your company has not confirmed its leave-pay basis and divisor.
+                        A settlement that pays out unused leave can be previewed but not finalized until you
+                        <a href="{{ url_for('settings.company_profile') }}#leave-pay-rule">choose and confirm them</a>
+                        (Labour Proc. 1156/2019 Arts 53, 77).
+                    </div>
+                    {% endif %}
+
+                    {% if settlement_preview %}
+                    {% set d = settlement_preview.calculation_details %}
+                    <div class="card mb-4 border-info" data-testid="settlement-preview">
+                        <div class="card-header bg-light"><strong>Settlement preview</strong> <span class="badge bg-secondary">Not saved</span></div>
+                        <div class="card-body small">
+                            {% for warning in settlement_preview.warnings %}
+                            <div class="alert alert-warning py-1 mb-2"><i class="bi bi-exclamation-triangle me-1"></i>{{ warning }}</div>
+                            {% endfor %}
+                            <table class="table table-sm mb-2">
+                                <tbody>
+                                    <tr><td>Outstanding salary</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.outstanding_salary) }}</td></tr>
+                                    <tr><td>Severance pay</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.severance_amount) }}</td></tr>
+                                    <tr><td>Pay in lieu of notice</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.notice_pay) }}</td></tr>
+                                    <tr><td>Leave encashment ({{ d.leave.unused_days }} days × ETB {{ d.leave.daily_rate }}/day; {{ d.leave.rate_basis_label }} ÷ {{ d.leave.rate_divisor }})</td><td class="text-end" data-testid="preview-leave-encashment">ETB {{ '%.2f'|format(settlement_preview.leave_encashment) }}</td></tr>
+                                    <tr><td>Income tax (final month)</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.income_tax) }}</td></tr>
+                                    <tr><td>Total deductions</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.total_deductions) }}</td></tr>
+                                    <tr class="fw-bold"><td>Net final payment</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.net_final_payment) }}</td></tr>
+                                </tbody>
+                            </table>
+                            <div class="text-muted">{{ d.tax_method_note }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Termination Form -->
                     <form method="POST" action="{{ url_for('employees.terminate_employee', emp_id=employee.id) }}"
-                          onsubmit="return confirm('Are you sure you want to terminate {{ employee.name }}? This action will deactivate their account.');">
+                          onsubmit="return (event.submitter && event.submitter.value === 'preview') || confirm('Are you sure you want to terminate {{ employee.name }}? This action will deactivate their account.');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <div class="mb-3">
@@ -71,7 +110,7 @@
                             <select class="form-select" id="termination_reason" name="termination_reason" required>
                                 <option value="">-- Select Reason --</option>
                                 {% for reason in termination_reasons %}
-                                <option value="{{ reason }}">{{ reason|replace('_', ' ')|title }}</option>
+                                <option value="{{ reason }}" {% if form_values.get('termination_reason') == reason %}selected{% endif %}>{{ reason|replace('_', ' ')|title }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -79,18 +118,42 @@
                         <div class="mb-3">
                             <label for="end_date" class="form-label">{{ _('last_working_day') }}</label>
                             <input type="date" class="form-control" id="end_date" name="end_date"
-                                   value="{{ today.isoformat() }}">
+                                   value="{{ form_values.get('end_date') or today.isoformat() }}">
                             <div class="form-text">Defaults to today if left empty.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="unused_leave_days" class="form-label">Unused annual leave days</label>
+                            <input type="number" class="form-control" id="unused_leave_days" name="unused_leave_days"
+                                   min="0" max="365" step="0.01" inputmode="decimal" value="{{ form_values.get('unused_leave_days', '') }}"
+                                   placeholder="{{ recorded_leave_days if recorded_leave_days is not none else '0' }}">
+                            {% if recorded_leave_days is not none %}
+                            <div class="form-text">Leave record for {{ today.year }}: {{ recorded_leave_days }} days unused. Leave empty to use the record.</div>
+                            {% else %}
+                            <div class="form-text text-warning-emphasis" data-testid="no-leave-record">
+                                <i class="bi bi-exclamation-triangle me-1"></i>No leave records — enter unused leave days manually. If left empty, no leave is paid out.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notice_pay" class="form-label">Pay in lieu of notice (ETB)</label>
+                            <input type="number" class="form-control" id="notice_pay" name="notice_pay"
+                                   min="0" step="0.01" inputmode="decimal" placeholder="0.00" value="{{ form_values.get('notice_pay', '') }}">
+                            <div class="form-text">Only if notice pay is owed. It is taxed with the final month's pay, together with severance and leave encashment.</div>
                         </div>
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Confirm Password *</label>
                             <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
-                            <div class="form-text">Re-enter your password to confirm termination.</div>
+                            <div class="form-text">Re-enter your password to confirm termination. Not needed for a preview.</div>
                         </div>
 
                         <div class="d-grid gap-2 d-md-flex">
-                            <button type="submit" class="btn btn-danger" data-confirm="Confirm termination? This action cannot be easily undone.">
+                            <button type="submit" name="action" value="preview" class="btn btn-outline-primary" formnovalidate data-testid="preview-settlement">
+                                <i class="bi bi-eye me-1"></i>Preview settlement
+                            </button>
+                            <button type="submit" name="action" value="terminate" class="btn btn-danger" data-confirm="Confirm termination? This action cannot be easily undone.">
                                 <i class="bi bi-person-dash me-1"></i>{{ _('terminate_employee') }}
                             </button>
                             <a href="{{ url_for('employees.employee_detail', emp_id=employee.id) }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>

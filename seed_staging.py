@@ -76,6 +76,10 @@ def seed_preview(app, *, database_name, database_host, owner_password, accountan
             first_use, payroll = [Company(name=name) for name in WORKSPACES]
             db.session.add_all([first_use, payroll])
             db.session.flush()
+            from payroll_engine.catalog import seed_company_catalog
+
+            for company in (first_use, payroll):
+                seed_company_catalog(company.id, commit=False)
             users = []
             for identity, company, role, password in (
                 ('first_use_owner', first_use, 'owner', owner_password),

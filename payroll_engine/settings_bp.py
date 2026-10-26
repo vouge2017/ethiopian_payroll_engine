@@ -1,7 +1,10 @@
 """Settings & team management blueprint."""
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from datetime import UTC, datetime
+
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy.exc import IntegrityError
 
 from payroll_engine import db
 from payroll_engine.models import Company, Employee, User
@@ -46,6 +49,43 @@ def company_profile():
             company.phone = None
 
         company.tin = request.form.get('tin', '').strip() or None
+
+        # Leave encashment daily-rate setting (only when the form sends it).
+        from payroll_engine.services.settlement_service import validate_leave_rate_settings
+
+        leave_rate_change = None
+        leave_rate_confirmation = None
+        if 'leave_rate_basis' in request.form or 'leave_rate_divisor' in request.form:
+            try:
+                basis, divisor = validate_leave_rate_settings(
+                    request.form.get('leave_rate_basis', company.leave_rate_basis).strip(),
+                    request.form.get('leave_rate_divisor', str(company.leave_rate_divisor)).strip(),
+                )
+            except ValueError as exc:
+                db.session.rollback()
+                flash(str(exc), 'danger')
+                return redirect(url_for('settings.company_profile'))
+            changed = (basis, divisor) != (company.leave_rate_basis, company.leave_rate_divisor)
+            # The checkbox mirrors the confirmed state: ticked = this basis and
+            # divisor are confirmed by the company; unticked = not confirmed.
+            confirm = request.form.get('leave_rate_confirm') == '1'
+            was_confirmed = company.leave_rate_confirmed_at is not None
+            if changed:
+                leave_rate_change = {
+                    'leave_rate_basis': {'old': company.leave_rate_basis, 'new': basis},
+                    'leave_rate_divisor': {'old': company.leave_rate_divisor, 'new': divisor},
+                }
+            company.leave_rate_basis = basis
+            company.leave_rate_divisor = divisor
+            if confirm and (changed or not was_confirmed):
+                company.leave_rate_confirmed_at = datetime.now(UTC).replace(tzinfo=None)
+                company.leave_rate_confirmed_by = current_user.id
+                leave_rate_confirmation = {'confirmed': True, 'leave_rate_basis': basis, 'leave_rate_divisor': divisor}
+            elif not confirm and was_confirmed:
+                company.leave_rate_confirmed_at = None
+                company.leave_rate_confirmed_by = None
+                leave_rate_confirmation = {'confirmed': False, 'leave_rate_basis': basis, 'leave_rate_divisor': divisor}
+
         company.webhook_url = request.form.get('webhook_url', '').strip() or None
         company.webhook_secret = request.form.get('webhook_secret', '').strip() or None
 
@@ -69,11 +109,35 @@ def company_profile():
             action='company_settings_change',
             details={'fields_updated': ['name', 'address', 'phone', 'tin', 'webhook_url', 'webhook_secret']},
         )
+        if leave_rate_change:
+            create_audit_log(
+                company_id=company.id,
+                user_id=current_user.id,
+                action='leave_rate_setting_change',
+                details=leave_rate_change,
+            )
+        if leave_rate_confirmation:
+            create_audit_log(
+                company_id=company.id,
+                user_id=current_user.id,
+                action='leave_rate_confirmation_change',
+                details=leave_rate_confirmation,
+            )
         db.session.commit()
         flash('Company profile updated.', 'success')
         return redirect(url_for('settings.company_profile'))
 
-    return render_template('company_profile.html', company=company)
+    from payroll_engine import constants
+
+    return render_template(
+        'company_profile.html',
+        company=company,
+        leave_rate_basis_choices=[(b, constants.LEAVE_RATE_BASIS_LABELS[b]) for b in constants.LEAVE_RATE_BASES],
+        default_leave_rate_basis=constants.DEFAULT_LEAVE_RATE_BASIS,
+        default_leave_rate_divisor=constants.DEFAULT_LEAVE_RATE_DIVISOR,
+        leave_rate_divisor_min=constants.LEAVE_RATE_DIVISOR_MIN,
+        leave_rate_divisor_max=constants.LEAVE_RATE_DIVISOR_MAX,
+    )
 
 
 @settings_bp.route('/settings/team')
@@ -356,3 +420,173 @@ def report_templates():
         default=default,
         report_type=report_type,
     )
+
+
+# ---------------------------------------------------------------------------
+# Pay items (company catalog settings)
+#
+# Owner-only, like the other company-configuration pages (company profile,
+# team). Every route resolves the item through the company scope: another
+# company's id is a 404; a shared statutory item (company_id IS NULL) is
+# visible but locked, and any change to it is refused with 403. Rules and
+# audit logging live in services.pay_item_settings.
+# ---------------------------------------------------------------------------
+
+_PAY_ITEM_FORM_FIELDS = ('kind', 'key', 'name_en', 'name_am', 'name_om')
+
+
+def _pay_item_or_404(item_id):
+    from payroll_engine.services import pay_item_settings as svc
+
+    item = svc.get_visible_item(_company_id(), item_id)
+    if item is None:
+        abort(404)
+    return item
+
+
+def _company_pay_item_or_403(item_id):
+    """The company's own item; 404 if not visible, 403 if it is a locked system item."""
+    item = _pay_item_or_404(item_id)
+    if item.company_id is None:
+        abort(403)
+    return item
+
+
+def _render_pay_items(form=None, status=200):
+    from payroll_engine.services import pay_item_settings as svc
+
+    return (
+        render_template(
+            'settings/pay_items.html',
+            groups=svc.catalog_view(_company_id()),
+            legal_view=svc.legal_view,
+            form=form or {},
+        ),
+        status,
+    )
+
+
+@settings_bp.route('/settings/pay-items', methods=['GET'])
+@role_required('owner')
+def pay_items():
+    """List the company's pay items (system + own) grouped by kind."""
+    body, status = _render_pay_items()
+    return body, status
+
+
+@settings_bp.route('/settings/pay-items', methods=['POST'])
+@role_required('owner')
+def pay_item_create():
+    from payroll_engine.services import pay_item_settings as svc
+
+    form = {f: request.form.get(f, '') for f in _PAY_ITEM_FORM_FIELDS}
+    try:
+        item = svc.create_item(
+            _company_id(),
+            current_user.id,
+            key=form['key'],
+            kind=form['kind'],
+            name_en=form['name_en'],
+            name_am=form['name_am'],
+            name_om=form['name_om'],
+        )
+    except svc.PayItemSettingsError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return _render_pay_items(form=form, status=400)
+    db.session.commit()
+    flash(f'{item.name_en} added.', 'success')
+    return redirect(url_for('settings.pay_items', _anchor=f'item-{item.id}'))
+
+
+@settings_bp.route('/settings/pay-items/<int:item_id>/edit', methods=['GET', 'POST'])
+@role_required('owner')
+def pay_item_edit(item_id):
+    """Rename an item (labels only; the key is immutable)."""
+    from payroll_engine.services import pay_item_settings as svc
+
+    item = _pay_item_or_404(item_id)
+    locked = item.company_id is None
+    reason = svc.permissions(item, svc.Usage())['reason'] if locked else None
+    if request.method == 'GET':
+        return render_template('settings/pay_item_edit.html', item=item, locked=locked, reason=reason, form={})
+
+    if locked:
+        abort(403)
+    form = {f: request.form.get(f, '') for f in ('name_en', 'name_am', 'name_om')}
+    try:
+        changed = svc.rename_item(item, current_user.id, **form)
+    except svc.PayItemSettingsError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return render_template('settings/pay_item_edit.html', item=item, locked=False, reason=None, form=form), 400
+    db.session.commit()
+    flash('Names saved.' if changed else 'Nothing changed.', 'success' if changed else 'info')
+    return redirect(url_for('settings.pay_items', _anchor=f'item-{item.id}'))
+
+
+def _pay_item_action(item_id, action, success_message):
+    from payroll_engine.services import pay_item_settings as svc
+
+    item = _company_pay_item_or_403(item_id)
+    anchor = f'item-{item.id}'
+    try:
+        result = action(svc, item)
+    except svc.PayItemSettingsError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return redirect(url_for('settings.pay_items', _anchor=anchor))
+    db.session.commit()
+    if result is not False:
+        flash(success_message.format(name=item.name_en), 'success')
+    return redirect(url_for('settings.pay_items', _anchor=anchor))
+
+
+@settings_bp.route('/settings/pay-items/<int:item_id>/move', methods=['POST'])
+@role_required('owner')
+def pay_item_move(item_id):
+    direction = request.form.get('direction', '')
+    return _pay_item_action(
+        item_id, lambda svc, item: svc.move_item(item, current_user.id, direction), 'Order of {name} updated.'
+    )
+
+
+@settings_bp.route('/settings/pay-items/<int:item_id>/deactivate', methods=['POST'])
+@role_required('owner')
+def pay_item_deactivate(item_id):
+    return _pay_item_action(
+        item_id,
+        lambda svc, item: svc.deactivate_item(item, current_user.id),
+        '{name} deactivated. It is hidden from new assignments and kept for history.',
+    )
+
+
+@settings_bp.route('/settings/pay-items/<int:item_id>/reactivate', methods=['POST'])
+@role_required('owner')
+def pay_item_reactivate(item_id):
+    return _pay_item_action(
+        item_id, lambda svc, item: svc.reactivate_item(item, current_user.id), '{name} reactivated.'
+    )
+
+
+@settings_bp.route('/settings/pay-items/<int:item_id>/delete', methods=['POST'])
+@role_required('owner')
+def pay_item_delete(item_id):
+    from payroll_engine.services import pay_item_settings as svc
+
+    item = _company_pay_item_or_403(item_id)
+    name = item.name_en
+    try:
+        svc.delete_item(item, current_user.id)
+    except svc.PayItemSettingsError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return redirect(url_for('settings.pay_items', _anchor=f'item-{item_id}'))
+    except IntegrityError:
+        # An assignment referencing it was created concurrently (FK RESTRICT).
+        db.session.rollback()
+        flash('This item is now in use, so it is kept for history. Deactivate it instead.', 'danger')
+        return redirect(url_for('settings.pay_items', _anchor=f'item-{item_id}'))
+    db.session.commit()
+    flash(f'{name} deleted.', 'success')
+    return redirect(url_for('settings.pay_items'))

@@ -482,6 +482,9 @@ def setup_profile():
         company.trial_ends_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=TRIAL_DAYS)
         db.session.add(company)
         db.session.flush()
+        from payroll_engine.catalog import seed_company_catalog
+
+        seed_company_catalog(company.id, commit=False)
 
         current_user.first_name = first_name
         current_user.middle_name = middle_name
@@ -655,6 +658,10 @@ def google_register():
 
         company = Company(name=company_name)
         db.session.add(company)
+        db.session.flush()
+        from payroll_engine.catalog import seed_company_catalog
+
+        seed_company_catalog(company.id, commit=False)
         db.session.commit()
 
         user = User(

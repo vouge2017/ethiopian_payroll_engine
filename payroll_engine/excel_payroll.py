@@ -454,8 +454,7 @@ class ExcelPayrollEngine:
                 note=(
                     'Deducted before PAYE — legacy rule (RC-38000-01)'
                     if _constants.PENSION_DEDUCTED_BEFORE_TAX
-                    else 'Deducted from pay; does not reduce taxable income — pending accountant confirmation '
-                    '(RC-38000-01)'
+                    else 'Deducted from pay; does not reduce taxable income (Income Tax Proclamation No. 979/2016)'
                 ),
                 is_deduction=True,
             )
@@ -531,7 +530,7 @@ class ExcelPayrollEngine:
                     },
                     result=pension_savings,
                     note=f'You save ETB {pension_savings:,.2f}/month because pension is deducted before PAYE '
-                    f'— legacy rule, pending accountant confirmation (RC-38000-01)',
+                    f'— legacy rule, not current law (RC-38000-01)',
                 )
             )
 

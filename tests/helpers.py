@@ -132,3 +132,44 @@ def setup_db(company, run=None, employees=None, payslips=None):
     mock_models.LeaveBalance.query.filter_by.return_value.all.return_value = []
 
     return mock_db, mock_models
+
+
+def copy_system_items_to_company(company_id):
+    """Test fixture: give a company its own copy of each active system item.
+
+    Production never does this (system items are shared, company_id IS NULL;
+    companies get COMPANY_TEMPLATE_ITEMS via catalog.seed_company_catalog).
+    Engine tests use it to build a company-level basic_salary row. Replaces
+    the removed payroll_elements.seed_pay_item_types.
+    """
+    from payroll_engine import db
+    from payroll_engine.models import PayItemType
+
+    system_items = db.session.query(PayItemType).filter(PayItemType.company_id.is_(None), PayItemType.is_active).all()
+    have = {k for (k,) in db.session.query(PayItemType.key).filter(PayItemType.company_id == company_id).all()}
+    for item in system_items:
+        if item.key in have:
+            continue
+        db.session.add(
+            PayItemType(
+                company_id=company_id,
+                key=item.key,
+                name_en=item.name_en,
+                name_am=item.name_am,
+                classification=item.classification,
+                calculation_method=item.calculation_method,
+                percent_of_item_key=item.percent_of_item_key,
+                rate=item.rate,
+                tax_treatment=item.tax_treatment,
+                exempt_cap_amount=item.exempt_cap_amount,
+                exempt_cap_percent=item.exempt_cap_percent,
+                exempt_cap_basis=item.exempt_cap_basis,
+                regulation_reference=item.regulation_reference,
+                sort_order=item.sort_order,
+                is_system=False,
+                is_active=True,
+                effective_date=item.effective_date,
+                end_date=item.end_date,
+            )
+        )
+    db.session.flush()

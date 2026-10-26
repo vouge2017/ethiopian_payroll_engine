@@ -92,6 +92,7 @@ def validate_payroll_data(
 
     # --- BLOCK checks (must fix before processing) ---
 
+    _check_duplicate_ids(employees_data, results)
     _check_duplicate_employees(employees_data, results)
     _check_negative_net_pay(employees_data, results)
     _check_missing_bank(employees_data, results)
@@ -115,6 +116,35 @@ def validate_payroll_data(
     _check_active_deductions(employees_data, company_id, results)
 
     return results
+
+
+def _check_duplicate_ids(data: list[dict], results: list[ValidationResult]):
+    """BLOCK: The same employee ID appears more than once in this file.
+
+    The database rejects duplicate employee records, but a monthly payroll
+    file that lists one employee twice previously passed upload validation
+    and would pay that person twice.
+    """
+    occurrences: dict[str, list[str]] = {}
+    for emp in data:
+        eid = str(emp.get('id', '') or '').strip()
+        if not eid:
+            continue
+        occurrences.setdefault(eid, []).append(str(emp.get('name', '') or ''))
+    for eid, names in occurrences.items():
+        if len(names) > 1:
+            results.append(
+                ValidationResult(
+                    rule_code='DUPLICATE_ID',
+                    severity='BLOCK',
+                    message=f"Duplicate employee ID '{eid}' appears {len(names)} times in this file. "
+                    'Each employee may appear only once per payroll.',
+                    employee_id=eid,
+                    employee_name=names[1],
+                    hint='Remove the duplicate row, or correct the ID if two different people share it.',
+                    details={'occurrences': names},
+                )
+            )
 
 
 def _check_duplicate_employees(data: list[dict], results: list[ValidationResult]):

@@ -23,13 +23,14 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Where the code is
 
-- Baseline: `origin/main` @ `f335bf2` (f335bf22490ede3bd7af90daa67b8b9ab7a555e8,
-  2026-10-25, "Merge pull request #29 … rq-timer-penalty").
-- This plan was written on branch `docs/plan-md`, cut from that SHA.
+- Baseline: `origin/main` @ `c65aaa0` (c65aaa072cb9243ef61722afcba498e41fcba47f,
+  2026-10-25, "Merge pull request #32 from vouge2017/fix/paye-gross-income").
+- This plan was first written on branch `docs/plan-md`, cut from `f335bf2`
+  (PR #29); the audit test numbers below are from that SHA.
 - Production (per the 2026-10-21 notes in STATUS.md, not re-checked here): one Render web service with a Neon Free Postgres. There is **no** Redis and **no** worker
   service. `render.yaml` still describes a Render Postgres + Redis + worker +
   cron, so it does not match reality.
-- 78 Alembic migrations with a single head, `f4a5b6c7d8f3`.
+- 78 Alembic migrations with a single head, `f4a5b6c7d8f3` (on main @ `c65aaa0`; `fix/settlement-taxation` adds `f4a5b6c7d8f4`, `f4a5b6c7d8f5` and `f4a5b6c7d8f6`).
 
 ### Tests (2026-10-25, this audit)
 
@@ -108,7 +109,112 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   PDF data; all identical and equal to the approved values). Full suite:
   1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
 
-### Branch `fix/paye-gross-income` (2026-10-25, not merged)
+### Settlement taxation (branch `fix/settlement-taxation`, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+  Draft PR against `main`: the tax method **needs accountant confirmation**.
+  Cut from `origin/main` @ `bb47054`.
+- Severance, pay in lieu of notice and leave encashment are now added to the
+  final month's taxable employment income and taxed once with the normal
+  monthly brackets (`SETTLEMENT_LUMP_SUM_TAX_METHOD = 'final_month_aggregate'`
+  in `services/settlement_service.py`). Source: Proc. 979/2016 Art. 12(1)(c)
+  (termination payments are employment income) and Art. 10(2) (tax on the
+  total employment income received for the month); rates per Proc. 1395/2025.
+  No law, regulation (410/2017) or MoR directive was found that prescribes
+  spreading a lump sum over months or years.
+- The settlement's PAYE base follows `PENSION_DEDUCTED_BEFORE_TAX`, which is
+  `False` on main since PR #32 (PAYE on gross, R1).
+- No leave record → 0 days paid and the warning "No leave records — enter
+  unused leave days manually". The terminate form takes optional unused leave
+  days and pay in lieu of notice. Leave year stays the Gregorian year of the
+  last day, because every LeaveBalance writer uses that key.
+- New columns on `final_settlement` (migration `f4a5b6c7d8f4`): `notice_pay`,
+  `taxable_income`, `calculation_details` (JSON: taxable lines, tax on salary
+  alone vs. extra tax from lump sums, method, leave-day source, warnings).
+  `tax_on_salary` now holds the total final-month tax. PostgreSQL migration
+  proof not run.
+- Tests: new `tests/test_settlement_taxation.py` (hand-checked worked examples
+  with the flag True and False, missing-leave-record warning, route tests);
+  `tests/test_settlement_edges.py` statutory-fallback tests replaced.
+  Full suite: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.
+
+### Leave daily-rate basis setting (branch `fix/settlement-taxation`, PR #33, 2026-10-25)
+
+- State: implemented, locally tested on SQLite. Not hosted-tested, not merged.
+- Leave encashment's daily rate was hard-coded `(basic + allowances) / 30`.
+  It is now a per-company setting on `company`: `leave_rate_basis`
+  (`basic_plus_regular_allowances` = previous behaviour and the default, or
+  `basic_only`) and `leave_rate_divisor` (default 30, whole days 1-31, check
+  constraints in model and migration). Defaults live in `constants.py`.
+  Existing companies keep the defaults, so no figure changes until a company
+  changes the setting. "Regular allowances" = `Employee.allowances` (the
+  monthly allowance on record), exactly as before; pay-item assignments are
+  not read here.
+- Daily rate stays unrounded; encashment = rate x days, rounded once.
+  Settlement `calculation_details.leave` now freezes the basis, label,
+  divisor, monthly base, components (basic, regular allowances, included or
+  not), rounded and unrounded daily rate and the formula. The settlement page
+  shows them under Leave Encashment.
+- UI: Settings → Company Profile ("Payroll rules: leave encashment"), owner
+  only like the rest of that page; changes are audit-logged
+  (`leave_rate_setting_change`). There is no separate payroll-settings page.
+- Migration `f4a5b6c7d8f5` (after `f4a5b6c7d8f4`); downgrade refuses to drop
+  non-default settings. PostgreSQL proof: CI only.
+- Which basis and divisor are legally right is a practitioner question
+  (Labour Proc. 1156/2019 "wage"); the app keeps the old default.
+
+### Adviser answers on settlement (2026-10-25, second review) — Q2 ACCEPTED, Q3 PARTIAL, Q4 PENDING
+
+Recorded in `docs/decisions/2026-10-25-payroll-rules.md` (Q2–Q4 sections,
+second review; Q1 is the PAYE-on-gross answer).
+
+- **Q2 — termination-payment tax: ACCEPTED as statutory default.** Taxable
+  severance, notice pay and unused-leave pay are aggregated with other
+  taxable employment income in the month received (Proc. 979/2016 Arts 10,
+  12; withholding Art 88), unless a specific exemption/rule applies. Not a
+  confirmation that every directive was reviewed. Code unchanged
+  (`final_month_aggregate`); `TAX_METHOD_STATUS = 'statutory_default'`; each
+  settlement shows "Tax method: statutory default: aggregated in month
+  received (Proc. 979/2016 Arts 10, 12, 88)".
+- **Q3 — leave-pay formula: PARTIAL.** Qualifying wages under Labour Proc.
+  1156/2019 Arts 53 and 77 together; Art 53 exclusions apply; fixed /
+  contractual / regular does not by itself make an allowance includable; no
+  universal ÷26 or ÷30. "Do not use an unconfirmed default for live
+  settlements." Implemented: per-company confirmation
+  (`company.leave_rate_confirmed_at` / `_by`, migration `f4a5b6c7d8f6`,
+  existing companies unconfirmed). Settings → Company Profile has a
+  confirmation checkbox (audit `leave_rate_confirmation_change`; changing the
+  basis/divisor without re-ticking clears it). A settlement with leave
+  encashment > 0 is refused at finalize (terminate POST → 409, nothing saved,
+  employee stays active; `LeaveRuleNotConfirmedError` in
+  `create_settlement_record`) with "Choose and confirm your leave-pay basis
+  and divisor (Labour Proc. 1156/2019 Arts 53, 77) before finalizing" and a
+  link to the setting. New "Preview settlement" button (no password, nothing
+  saved) computes with a visible warning. Basis label is now "Basic +
+  allowances that qualify as wages (Art. 53)"; "(default)" tag removed. The
+  leave-pay pending notice stays on a settlement until the company confirms.
+- **Q4 — locked-month tax errors: PENDING procedure.** Preserve originals,
+  recalculate affected periods, formal correction under Tax Administration
+  Proc. 983/2016 as amended by Proc. 1434/2026; the 5-yr (10-yr fraud)
+  assessment period is not the PAYE amendment procedure; exact monthly PAYE
+  amendment procedure unconfirmed. Still parked.
+- PR #33 stays draft (owner decides on merge).
+- Tests: new `tests/test_settlement_leave_rule_confirmation.py` (12: block,
+  preview, zero-leave allow, confirm → allow, change clears, re-save keeps
+  stamp, override basis not confirmed); settlement fixtures in
+  `test_settlement_taxation.py` / `test_settlement_leave_rate.py` now confirm
+  the company. Full suite (2026-10-26, after merging main @ `c65aaa0`, PR #32,
+  and the pension-note rewording): **1778 passed, 0 failed, 0 errors, 205
+  skipped** (171 files, one process each, `python -m pytest`, SQLite).
+  Single Alembic head `f4a5b6c7d8f6`. ruff check + format clean
+  (`payroll_engine/ tests/`). PostgreSQL: CI only. Screens not checked in a
+  real browser (no browser in the sandbox); HTML asserted in tests.
+- Tests: new `tests/test_settlement_leave_rate.py` (hand-checked: basic 10,000
+  + 2,000 regular allowance, 10 days → basic_only 3,333.33, basic_plus
+  4,000.00; divisor 26; default unchanged; validation; DB constraint;
+  settings route + audit; settlement page). Full suite: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.
+
+### Branch `fix/paye-gross-income` (2026-10-25, merged to main as PR #32 @ `c65aaa0`)
 
 - R1 done on the branch: `PENSION_DEDUCTED_BEFORE_TAX = False`, so PAYE is on
   gross taxable income. The flag is still there (set it to `True` to go back).
@@ -148,7 +254,9 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   month-close, rule-source names (one had a corrupted U+FFFD character),
   Enkutatash, and the tax certificate. The `pension_before_tax` and
   `tax_explainer_intro` strings (am + om) no longer call pension-before-tax
-  "common practice"; they say it is still being confirmed (RC-38000-01).
+  "common practice". Since 2026-10-26 they (and the matching English notes,
+  help FAQ, verification checklist, PAYE notice) state the confirmed rule: PAYE
+  on gross taxable pay before the 7% pension (Proc. 979/2016).
 - Review table for the owner (native speaker) in the PR body: changed strings
   with confidence, plus a "for review" list that was NOT changed.
 - PDF: NotoSansEthiopic is registered and embedded; Ethiopic renders. Gap:
@@ -158,6 +266,159 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Not done: data migration for existing companies' `pay_item_type.name_am`
   rows (seeding skips existing rows). Needs PG proof.
 - Tests: new `tests/test_amharic_labels.py` (6 tests). Full suite: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.
+
+### Pay-item catalog PR 1: seeding + tenant isolation (branch `feat/catalog-foundation`, PR #35, 2026-10-26)
+
+- State: PR #35, SQLite suite and CI (incl. PostgreSQL job) green; PostgreSQL
+  tests also run locally (PG 17). Cut from `origin/main` @ `70b7b8d`.
+- One seeder: `catalog.seed_company_catalog(company_id)` (system items +
+  company templates, idempotent, never overwrites a customised row, SAVEPOINT
+  so a concurrent seed cannot fail the caller; proven with a real two-session
+  race on PostgreSQL). Called by every company creation path (signup
+  setup-profile, Google signup, setup-company, demo, `seed_staging.py`,
+  `run.py seed-db`). The duplicate `payroll_elements.seed_pay_item_types` is
+  removed; backfill and the spreadsheet advance path build items through the
+  same `item_from_spec`.
+- Migration `b7c1d2e3f4a5` (data only): seeds system items + every missing
+  template key for every existing company; refuses to run if any assignment
+  already links another company's employee, pay item or base assignment;
+  downgrade is a no-op.
+- Migration `c8d9e0f1a2b3` (PostgreSQL only, single head): triggers reject
+  any `payroll_item_assignment` insert/update that links another company's
+  employee, pay item (system items allowed) or base assignment, and block
+  moving a referenced employee / pay item to another company (SQLSTATE 23514).
+  Re-checks existing rows first; downgrade drops triggers and functions.
+- "Run flask migrate-pay-items" error replaced: employee screens re-seed a
+  missing catalog on demand (commits only when rows were created).
+- `PayItemType` / `PayrollItemAssignment` use `TenantQuery` (system items
+  must be queried with an explicit `company_id IS NULL`; unscoped queries
+  raise, they never return empty). ORM guard (before insert/update) plus the PG
+  triggers enforce assignment tenancy.
+- The partial unique indexes on `pay_item_type` are now declared on the model
+  too (same names as the migration), so `create_all` databases enforce them.
+- Open: SQLite has no trigger (ORM guard only); `backfill` still creates
+  ad-hoc items for unknown legacy keys (by design).
+
+### Pay-item catalog PR 2: company pay-item settings page (branch `feat/catalog-settings-ui`, 2026-10-26)
+
+- State: draft PR, cut from `main` @ `fcd9b31` (PR #35 merged). Not merged.
+- What: Settings → Pay items (`/settings/pay-items`), owner-only (there is no
+  admin role yet). Lists system + company items grouped as earnings,
+  allowances, deductions, employer contributions, tax; add a custom item,
+  rename (English / Amharic / Afaan Oromoo labels; key immutable), move
+  up/down, deactivate / reactivate, delete. Linked from the sidebar (Prepare)
+  and the company profile page. Rules in
+  `payroll_engine/services/pay_item_settings.py`; routes in `settings_bp.py`.
+- Rules: system items (`company_id IS NULL`) are visible but locked (403 on
+  any change); another company's item is 404. Used items (any assignment,
+  ended or soft-deleted, or any payslip snapshot) are deactivate-only, and
+  only once no assignment is still running. General allowance and salary
+  advance (written by imports) can never be deactivated. Only unused custom
+  items can be deleted (template items are re-seeded, so they deactivate).
+  New custom items are always fixed and fully taxable with no exemption caps
+  until catalog PR 3 adds reviewed tax settings. Reordering is display-only;
+  no amount changes. Reserved keys (system, engine, template) are refused.
+  Every change writes an audit-log row; CSRF via the app-wide CSRFProtect.
+- No tax, pension or legal formula changed.
+- Migration `9b4e6d2a8c13` (schema only): nullable `pay_item_type.name_om`;
+  downgrade drops it. Single Alembic head.
+- Tests: `tests/test_pay_item_settings.py` (SQLite) and
+  `tests/test_pg_pay_item_settings.py` (PostgreSQL, added to the CI PG job).
+- Open: native-speaker review of the 18 new Amharic / Afaan Oromoo strings
+  (draft); give the page to an admin role once one exists; catalog PR 3 (tax
+  treatment and exemption caps per item, reviewed).
+
+### Pay-item catalog PR 3: legal attributes and centralised caps (branch `feat/catalog-legal-attributes`, 2026-10-26)
+
+- State: draft PR, cut from `main` @ `62682e6` (PR #37 merged). Not merged.
+  **Behaviour-preserving: no payroll, pension, tax or settlement amount
+  changes** (golden test below). Versioning/snapshots (planned items 4–5)
+  are deferred to the next PR.
+- Audit (how amounts are computed today, before this PR):
+  - Pension: 7 % / 11 % of `Employee.basic_salary` only, in both engines
+    (`pension.py`, `payroll_elements.py`, `payroll.py`, `excel_payroll.py`).
+    No allowance or overtime is pensionable. Matches Directive 1087/2025
+    Art. 2(13) as read in the research note (pending confirmation).
+  - Taxable = gross − exempt allowances (pension not deducted, R1). Exempt
+    allowances come from: elements engine `_apply_exempt_cap` (catalog row
+    caps; transport = lower of ETB 2,200, 25 % of basic, amount; percent cap
+    rounded half-up to cents); legacy `EmployeeAllowance.calculated_exempt_amount`
+    (same lower-of rule); `allowance_service.calculate_transport_exempt_amount`
+    (what-if fallback; percent cap NOT rounded); `excel_payroll` (partial =
+    min(amount, `exempt_cap_amount`) only, ignores the percent cap). The
+    2,200 / 25 % numbers were in `allowance_service` and `catalog.py`.
+  - Inconsistencies found and deliberately NOT changed (each changes tax):
+    (a) a PARTIAL item with no cap (hardship) is fully exempt in the elements
+    engine but fully taxable on the legacy `EmployeeAllowance` path;
+    (b) medical is `exempt` in the legacy writer but `taxable` in the catalog
+    template; (c) per diem: catalog template taxable; legacy writer caps it at
+    `min(max(255 x 30, 4 % basic), 2,200)` = flat 2,200 for any salary up to
+    191,250 — not the statutory per-day rule; (d) `excel_payroll` ignores the
+    percent cap; (e) `payroll_elements` puts exempt/taxable the wrong way
+    round in `allowance_details` for fully EXEMPT/TAXABLE items (display
+    only; totals are right); (f) at approval the elements engine is called
+    with `for_date = run.run_date or today`, not the Ethiopian period's dates.
+  - Leave encashment: (basic + `Employee.allowances`) / 30 or basic / 30 by
+    company setting (PR #33); severance: basic / 30 (`severance.py`); no pay
+    item is read for either. Notice pay is entered by hand.
+  - Freezing today: approval (`services/payroll_service.process_payroll`,
+    worksheet `services/worksheet_review.py`) stores amounts on `Payslip`
+    plus `line_items` and `calculation_context` v1 (date, PAYE timing flag,
+    tax brackets, employee details). Lock is `PayrollRun.status='locked'`
+    (owner-only unlock back to `completed`). Corrections use the frozen
+    brackets (`correction_context.frozen_tax`). Item settings (tax treatment,
+    caps, flags) are NOT in the snapshot; nothing recomputes an approved
+    payslip today, but a future recalculation path would read live items.
+- What changed:
+  - `payroll_engine/exemption_caps.py`: the one source of truth for exemption
+    caps (`TRANSPORT`, `LEGACY_PER_DIEM` marked legacy-unreviewed,
+    `HOME_TO_WORK_TRANSPORT` ETB 600 defined but never applied) and the shared
+    `lower_of_caps` arithmetic used by the model and the elements engine.
+    `allowance_service` constants are now aliases; the catalog seeds the
+    transport row from `TRANSPORT`. Home-to-work: no catalog item, no
+    calculation (safer than an inactive item every company would see).
+  - `pay_item_type.pensionable` and `pay_item_type.counts_as_art53_wage`
+    (NOT NULL, default false), migration `d1e2f3a4b5c6` (schema + backfill
+    by key; downgrade drops them). Seeded: pensionable = basic salary only;
+    Art. 53 wage = basic salary + allowances not excluded by Art. 53(2)
+    (general, housing, communication, medical, food, education, uniform,
+    other); transport, hardship, per diem, deductions, tax, employer charges
+    and custom items = false. **No calculation reads either flag.**
+  - Settings → Pay items shows each earning's tax treatment and cap, and the
+    two flags, read-only with "Pending legal confirmation". Nothing can edit
+    them (not even custom items), because the engine does not honour them.
+  - Single Alembic head `d1e2f3a4b5c6`.
+- Tests: `tests/test_catalog_caps_golden.py` + `tests/golden/catalog_caps_golden.json`
+  (generated on main @ `62682e6` before the refactor, committed separately:
+  elements engine 182 scenarios, legacy engine 91, cap helpers 91, what-if
+  previews 80, settlement 16; basic 0 / 0.01 / 1,999.99 / 8,799.99 / 8,800 /
+  8,800.01 … × transport 0 / 2,199.99 / 2,200 / 2,200.01 / 25,000 …, with
+  overtime, per diem, hardship, medical, housing; exact `str(Decimal)`
+  match). `tests/test_catalog_legal_attributes.py` (seeded flags, migration
+  lists = catalog lists, SQLite downgrade/upgrade backfill, flipping flags
+  changes no amount, page read-only, owner-only, no cap literals outside
+  `exemption_caps`). `tests/test_pg_catalog_legal_attributes.py` (isolated
+  PG database: upgrade/backfill on native enums, downgrade keeps indexes and
+  tenancy trigger, re-upgrade; ORM seed on PG) — added to the CI PG job.
+  Full SQLite suite (181 files, one process each): 1906 passed, 0 failed,
+  0 errors, 222 skipped. PostgreSQL list (25 files, local PG 17): 195 passed.
+  ruff check / format clean.
+- Open legal questions (adviser): pension base under Directive 1087/2025
+  (is a position allowance "salary"?); Art. 53 classification of housing and
+  position allowances (and medical / uniform); per diem tiers (4 % / ETB 500
+  per day, managers 5 % / ETB 1,000; accommodation variants); home-to-work
+  ETB 600 and how practitioners split the two transport kinds; hardship
+  (exempt portion by area, list unpublished) — and whether hardship should be
+  fully exempt as the elements engine does today.
+- Next PR (deferred from this one): versioned item settings with effective
+  dates (labels, flags, caps, rates; assignments), an item-settings snapshot
+  in `calculation_context` (v2) at approval, backfill for existing approved
+  runs from current settings (documented), recalculation of unlocked periods
+  using the settings effective for the period date, version history and
+  audit entries on the settings page, PG proofs. Then catalog PR 4: switch
+  leave pay basis to the Art. 53 flags — **that changes amounts** for
+  companies on `basic_plus_regular_allowances`, so it needs the adviser's
+  answer first.
 
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
@@ -202,7 +463,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 | # | Rule | What the code does | Where |
 |---|------|--------------------|-------|
-| R1 | PAYE is on gross taxable income, **not** after the 7 % pension (adviser-confirmed 2026-10-25) | **Fixed on branch `fix/paye-gross-income`, not merged.** On main, pension is subtracted before tax (`PENSION_DEDUCTED_BEFORE_TAX = True`). This under-withholds every month, e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
+| R1 | PAYE is on gross taxable income, **not** after the 7 % pension (adviser-confirmed 2026-10-25) | **Fixed on main by PR #32 (`c65aaa0`)**: `PENSION_DEDUCTED_BEFORE_TAX = False`. Before that, pension was subtracted before tax, under-withholding e.g. ETB 175 per month on a 10,000 basic (1,475 instead of 1,650) | `constants.py:28`; used in `payroll.py:265`, `payroll_elements.py:262`, `excel_payroll.py:461`, `impact.py:328,444`, `settlement_service.py:176` |
 | R2 | Severance, termination pay and leave encashment are taxable | Final settlement taxes **only** outstanding salary. Severance and leave encashment are paid with no tax | `services/settlement_service.py:159-203` (tax at :178) |
 | R3 | Leave encashment counts unused days | When there is no balance row, it assumes **no leave was taken** and pays the full entitlement. It also uses the Gregorian `end_date.year` | `settlement_service.py:100-121` |
 | R4 | Per diem (>25 km): lower of 4 % of basic or ETB 500/day; managers lower of 5 % or ETB 1,000/day | Uses `max(255×30, 4 % of basic)` capped at 2,200 per month. There is no per-day logic, no manager tier and no distance check. The catalog per-diem item is fully TAXABLE | `services/allowance_service.py:123-128`; `catalog.py:216-228` |
@@ -284,6 +545,12 @@ Each item still needs the owner to confirm it before it moves to Now.
    - Files: `services/settlement_service.py`, `severance.py`,
      `tests/test_settlement_edges.py`.
    - Size: M. Risk: high. Needs accountant input on the method for lump sums.
+   - Status (2026-10-25): implemented on `fix/settlement-taxation` (draft PR
+     #33), final-month aggregate method. Adviser second review 2026-10-25:
+     Q2 (tax method) ACCEPTED as statutory default; Q3 (leave formula,
+     Labour Proc. 1156/2019 Arts 53, 77) PARTIAL — leave pay blocked at
+     finalize until each company confirms its basis and divisor. PostgreSQL proof of migrations
+     `f4a5b6c7d8f4`/`f4a5b6c7d8f5`: CI only.
 2. **Reports use the month's frozen numbers, not today's employee record.**
    - Partly done on `fix/reports-frozen-values` (reports read stored payslip
      values and the `line_items` basic). Left: a `basic_salary` column for
@@ -373,6 +640,13 @@ Each item still needs the owner to confirm it before it moves to Now.
 
 AI sessions put new ideas here, one line each, with the reason they are parked.
 
+- Use the per-pay-item "Art. 53 wage" flag (`counts_as_art53_wage`, added
+  informational-only in catalog PR 3) so the leave base sums only qualifying
+  components instead of `Employee.allowances`. Parked: Q3 is PARTIAL
+  (2026-10-25); for now the company confirms the basis (label "Basic +
+  allowances that qualify as wages (Art. 53)") before any leave pay is
+  finalized. This is catalog PR 4 and changes amounts.
+
 - Run the PostgreSQL test suite locally or in a sandbox. Parked: needs a
   disposable Postgres; CI covers it for now.
 - e-Tax / ERCA portal direct filing (`ETAX_INTEGRATION_PATH.md`). Parked: the
@@ -414,6 +688,16 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   Locked runs downloadable and included in the yearly summary. Legacy-path
   payslips have no stored basic: left blank with a note. Tests:
   1707 passed, 0 failed, 0 errors, 205 skipped (166 files, one process each, `python -m pytest`, SQLite; baseline 1705 + 2 new). PostgreSQL tests not run.
+- 2026-10-25 — Hark — Settlement taxation (branch fix/settlement-taxation)
+  — severance, pay in lieu of notice and leave encashment added to the final
+  month's taxable income (normal brackets, method constant, needs accountant
+  confirmation). No leave record → 0 days + warning; manual unused-days and
+  notice-pay inputs. Migration `f4a5b6c7d8f4`. Tests: 1719 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 12 new). PostgreSQL tests not run.
+- 2026-10-25 — Hark — leave daily-rate basis setting (PR #33) — per-company
+  `leave_rate_basis` (`basic_plus_regular_allowances` default / `basic_only`)
+  and `leave_rate_divisor` (default 30), migration `f4a5b6c7d8f5`, frozen in
+  settlement `calculation_details`, shown on the settlement page, set in
+  Settings → Company Profile. Tests: 1731 passed, 0 failed, 0 errors, 205 skipped (168 files, one process each, `python -m pytest`, SQLite; baseline 1719 + 12 new). PostgreSQL tests not run locally.
 - 2026-10-25 — Hark — PAYE on gross income (branch fix/paye-gross-income).
   Set `PENSION_DEDUCTED_BEFORE_TAX = False` (the flag stays configurable).
   Portal payslip, payslip CSV export and the results screen now read the
@@ -445,3 +729,32 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   report for locked months; Amharic/Oromo pension-before-tax copy now stale.
   Tests: 1742 passed, 0 failed, 205 skipped (168 files, one process each,
   SQLite). ruff check + format clean.
+- 2026-10-25 — Hark — PR #33: merged origin/main (`2b0d15e`, PR #34) into
+  fix/settlement-taxation; PLAN.md conflicts resolved keeping all entries;
+  single Alembic head `f4a5b6c7d8f5`. Recorded adviser answers Q2 (tax
+  method) and Q3 (leave formula, Labour Proc. 1156/2019 Arts 53, 77) as
+  PENDING. Every settlement now stores and shows "Termination-payment tax
+  method and leave-pay formula pending written tax/labour-law confirmation".
+  Parked an "Art. 53 wage" leave basis. Tests: 1737 passed, 0 failed, 205
+  skipped (169 files, SQLite). ruff check + format clean. Still draft.
+- 2026-10-25 — Hark — adviser Q2/Q3 applied to PR #33. Q2 ACCEPTED as
+  statutory default (aggregated in month received, Proc. 979/2016 Arts 10,
+  12, 88); Q3 PARTIAL: per-company leave-rule confirmation (migration
+  `f4a5b6c7d8f6`), settlements with leave encashment > 0 blocked at finalize
+  until confirmed, preview still allowed with a warning, basis relabelled
+  "Basic + allowances that qualify as wages (Art. 53)"; Q4 PENDING procedure.
+  Decisions in `docs/decisions/2026-10-25-payroll-rules.md`. Tests: 1749
+  passed, 0 failed, 205 skipped (170 files, SQLite). ruff clean. Still draft.
+- 2026-10-26 — Hark — Catalog PR 2 (`feat/catalog-settings-ui`): company
+  pay-item settings page (owner-only; add, rename, reorder, deactivate /
+  reactivate, delete unused custom items; system items locked; new items
+  fixed + taxable until PR 3). Migration `9b4e6d2a8c13` adds
+  `pay_item_type.name_om`. Tests: SQLite 1879 passed, 0 failed, 219
+  skipped (178 files); PostgreSQL 192 passed (CI PG list, local PG 17).
+  ruff clean. Draft PR.
+- 2026-10-26 — Hark — Catalog PR 3 (branch feat/catalog-legal-attributes):
+  audit of pension / exemption / leave bases written above; exemption caps
+  centralised in `exemption_caps.py`; informational `pensionable` and
+  `counts_as_art53_wage` flags (migration `d1e2f3a4b5c6`) shown read-only on
+  the settings page. Golden test proves no amount changed. Versioned
+  snapshots deferred to the next PR.

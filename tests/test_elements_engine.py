@@ -7,7 +7,7 @@ Root-cause coverage for the critical issues:
 2. Declining-balance remaining_balance persisted (db.session.add was present
    but the assignment's updated state was never committed back to session)
 3. percent_of_item raises NotImplementedError (not silently returns 0)
-4. seed_pay_item_types creates company copies from system catalog
+4. (seeding moved to test_catalog_foundation.py)
 
 Also cross-validates elements engine output against the legacy
 calculate_payroll() for the same inputs, so regressions are caught
@@ -22,6 +22,7 @@ from decimal import Decimal
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+from helpers import copy_system_items_to_company
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee
@@ -33,10 +34,7 @@ from payroll_engine.models_payroll_elements import (
     PayrollItemAssignment,
 )
 from payroll_engine.payroll import calculate_payroll as calculate_legacy
-from payroll_engine.payroll_elements import (
-    calculate_payroll_from_assignments,
-    seed_pay_item_types,
-)
+from payroll_engine.payroll_elements import calculate_payroll_from_assignments
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -149,7 +147,7 @@ def system_catalog(app, company):
             item.rate = rate
         db.session.add(item)
     db.session.flush()
-    seed_pay_item_types(company.id)
+    copy_system_items_to_company(company.id)
     db.session.flush()
     return company
 
@@ -373,68 +371,10 @@ class TestPercentOfItem:
 
 
 # ---------------------------------------------------------------------------
-# 5. System catalog seeding
+# 5. System catalog seeding -- covered by tests/test_catalog_foundation.py
+#    (payroll_elements.seed_pay_item_types was removed in favour of the single
+#    seeder in payroll_engine.catalog).
 # ---------------------------------------------------------------------------
-
-
-class TestSeedPayItemTypes:
-    """seed_pay_item_types copies all active system items into a company's
-    catalog, skipping keys that already have a company-specific copy."""
-
-    def test_creates_company_copies(self, app, system_catalog):
-        c = system_catalog
-        for key, _, _, _, _, _, _ in SYSTEM_KEYS:
-            count = (
-                db.session.query(PayItemType)
-                .filter_by(
-                    company_id=c.id,
-                    key=key,
-                )
-                .count()
-            )
-            assert count == 1, f'Missing or duplicate company copy for {key}'
-
-    def test_no_duplicates_on_reseed(self, app, system_catalog):
-        seed_pay_item_types(system_catalog.id)
-        for key, _, _, _, _, _, _ in SYSTEM_KEYS:
-            count = (
-                db.session.query(PayItemType)
-                .filter_by(
-                    company_id=system_catalog.id,
-                    key=key,
-                )
-                .count()
-            )
-            assert count == 1, f'Duplicate created on reseed for {key}'
-
-    def test_inactive_not_seeded(self, app, company):
-        active = PayItemType(
-            company_id=None,
-            key='active_item',
-            name_en='Active',
-            classification=PayItemClassification.EARNING,
-            calculation_method=PayItemCalcMethod.FIXED,
-            is_system=True,
-            is_active=True,
-            sort_order=1,
-        )
-        inactive = PayItemType(
-            company_id=None,
-            key='inactive_item',
-            name_en='Inactive',
-            classification=PayItemClassification.EARNING,
-            calculation_method=PayItemCalcMethod.FIXED,
-            is_system=True,
-            is_active=False,
-            sort_order=2,
-        )
-        db.session.add_all([active, inactive])
-        db.session.flush()
-
-        seed_pay_item_types(company.id)
-
-        assert db.session.query(PayItemType).filter_by(company_id=company.id, key='active_item').count() == 1
-        assert db.session.query(PayItemType).filter_by(company_id=company.id, key='inactive_item').count() == 0
 
 
 # ---------------------------------------------------------------------------

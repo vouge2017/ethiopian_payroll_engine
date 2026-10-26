@@ -227,10 +227,10 @@ def test_notice_switch_defaults_on_and_can_be_disabled(monkeypatch):
 
     text = constants.PENDING_PAYE_NOTICE_TEXT
     assert 'RC-38000-01' in text
-    assert 'pending' in text.lower()
+    assert '979/2016' in text
 
-    # No statute citation in the notice.
-    assert 'Proclamation' not in text
+    # RC-38000-01 closed: the notice cites the proclamation, not a single article.
+    assert 'Proclamation No. 979/2016' in text
     assert 'Article' not in text
 
 
@@ -260,6 +260,8 @@ def system_catalog_for_elements(app_for_elements):
 
     Runs inside the app context opened by app_for_elements.
     """
+    from helpers import copy_system_items_to_company
+
     from payroll_engine import db
     from payroll_engine.models import (
         Company,
@@ -270,7 +272,6 @@ def system_catalog_for_elements(app_for_elements):
         PayItemType,
         PayrollItemAssignment,
     )
-    from payroll_engine.payroll_elements import seed_pay_item_types
 
     company = Company(name='RC38 Test PLC')
     db.session.add(company)
@@ -290,7 +291,7 @@ def system_catalog_for_elements(app_for_elements):
         )
     )
     db.session.flush()
-    seed_pay_item_types(company.id)
+    copy_system_items_to_company(company.id)
     db.session.flush()
 
     basic_type = db.session.query(PayItemType).filter_by(company_id=company.id, key='basic_salary').one()

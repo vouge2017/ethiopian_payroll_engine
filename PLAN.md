@@ -400,6 +400,9 @@ second review; Q1 is the PAYE-on-gross answer).
   `exemption_caps`). `tests/test_pg_catalog_legal_attributes.py` (isolated
   PG database: upgrade/backfill on native enums, downgrade keeps indexes and
   tenancy trigger, re-upgrade; ORM seed on PG) — added to the CI PG job.
+  Full SQLite suite (181 files, one process each): 1906 passed, 0 failed,
+  0 errors, 222 skipped. PostgreSQL list (25 files, local PG 17): 195 passed.
+  ruff check / format clean.
 - Open legal questions (adviser): pension base under Directive 1087/2025
   (is a position allowance "salary"?); Art. 53 classification of housing and
   position allowances (and medical / uniform); per diem tiers (4 % / ETB 500

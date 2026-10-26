@@ -105,7 +105,7 @@ def test_upgrade_backfills_downgrade_drops_and_reupgrade(isolated):
     with engine.begin() as conn:
         company_id = conn.execute(
             sa.text(
-                "INSERT INTO company (name, created_at, billing_status, plan_code) "
+                'INSERT INTO company (name, created_at, billing_status, plan_code) '
                 "VALUES ('PG PR3 Co', :now, 'active', 'standard') RETURNING id"
             ),
             {'now': now},
@@ -128,7 +128,7 @@ def test_upgrade_backfills_downgrade_drops_and_reupgrade(isolated):
     with engine.connect() as conn:
         nullable = conn.execute(
             sa.text(
-                "SELECT column_name, is_nullable, column_default FROM information_schema.columns "
+                'SELECT column_name, is_nullable, column_default FROM information_schema.columns '
                 "WHERE table_name = 'pay_item_type' AND column_name IN ('pensionable', 'counts_as_art53_wage')"
             )
         ).all()
@@ -144,7 +144,7 @@ def test_upgrade_backfills_downgrade_drops_and_reupgrade(isolated):
             r[0]
             for r in conn.execute(
                 sa.text(
-                    "SELECT t.tgname FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid "
+                    'SELECT t.tgname FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid '
                     "WHERE c.relname = 'pay_item_type' AND NOT t.tgisinternal"
                 )
             )

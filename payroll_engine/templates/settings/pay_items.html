@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{{ _('pay_items') }} - Settings{% endblock %}
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb breadcrumb-sm mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('settings.company_profile') }}" class="text-decoration-none">Settings</a></li>
+        <li class="breadcrumb-item active">{{ _('pay_items') }}</li>
+    </ol>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <h2 class="fw-bold mb-1"><i class="bi bi-list-check me-2"></i>{{ _('pay_items') }}</h2>
+    <p class="text-muted mb-4">
+        The allowances and deductions you can assign to employees. Statutory items (basic salary, income tax and
+        pension) are set by law and locked. Items that are in use are kept for history: deactivate them instead of deleting.
+    </p>
+
+    {% for group_id, group_label, rows in groups %}
+    {% if rows %}
+    <div class="card mb-4" id="group-{{ group_id }}">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">{{ _(group_label) }}</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ _('name') }}</th>
+                            <th>{{ _('item_code') }}</th>
+                            <th>{{ _('status') }}</th>
+                            <th class="text-end">{{ _('actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item, usage, perms in rows %}
+                        <tr id="item-{{ item.id }}" class="{% if not item.is_active %}text-muted{% endif %}" data-item-key="{{ item.key }}">
+                            <td data-label="{{ _('name') }}">
+                                <div class="fw-semibold">{{ item.label(current_language) }}</div>
+                                {% if current_language != 'en' %}<div class="small text-muted">{{ item.name_en }}</div>{% endif %}
+                                {% if current_language != 'am' and item.name_am %}<div class="small text-muted" lang="am">{{ item.name_am }}</div>{% endif %}
+                                {% if current_language != 'om' and item.name_om %}<div class="small text-muted" lang="om">{{ item.name_om }}</div>{% endif %}
+                            </td>
+                            <td data-label="{{ _('item_code') }}"><code>{{ item.key }}</code></td>
+                            <td data-label="{{ _('status') }}">
+                                {% if perms.locked %}
+                                <span class="badge bg-secondary" title="{{ perms.reason }}"><i class="bi bi-lock-fill me-1"></i>{{ _('locked') }}</span>
+                                {% endif %}
+                                {% if not item.is_active %}
+                                <span class="badge bg-light text-dark border">{{ _('inactive') }}</span>
+                                {% endif %}
+                                {% if usage.used %}
+                                <span class="badge bg-info text-dark" title="{{ usage.total_assignments }} assignment(s), {{ usage.active_assignments }} running">{{ _('in_use') }}: {{ usage.total_assignments }}</span>
+                                {% endif %}
+                                {% if perms.reason and not perms.locked %}
+                                <div class="small text-muted">{{ perms.reason }}</div>
+                                {% endif %}
+                            </td>
+                            <td data-label="{{ _('actions') }}" class="text-end">
+                                {% if perms.locked %}
+                                <span class="small text-muted">{{ perms.reason }}</span>
+                                {% else %}
+                                <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+                                    {% if perms.can_move %}
+                                    <form method="POST" action="{{ url_for('settings.pay_item_move', item_id=item.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="direction" value="up">
+                                        <button type="submit" class="btn btn-sm btn-ghost" title="{{ _('move_up') }}" aria-label="{{ _('move_up') }}: {{ item.name_en }}"><i class="bi bi-arrow-up"></i></button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('settings.pay_item_move', item_id=item.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="direction" value="down">
+                                        <button type="submit" class="btn btn-sm btn-ghost" title="{{ _('move_down') }}" aria-label="{{ _('move_down') }}: {{ item.name_en }}"><i class="bi bi-arrow-down"></i></button>
+                                    </form>
+                                    {% endif %}
+                                    {% if perms.can_rename %}
+                                    <a href="{{ url_for('settings.pay_item_edit', item_id=item.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil me-1"></i>{{ _('edit_names') }}</a>
+                                    {% endif %}
+                                    {% if perms.can_deactivate %}
+                                    <form method="POST" action="{{ url_for('settings.pay_item_deactivate', item_id=item.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">{{ _('deactivate') }}</button>
+                                    </form>
+                                    {% endif %}
+                                    {% if perms.can_reactivate %}
+                                    <form method="POST" action="{{ url_for('settings.pay_item_reactivate', item_id=item.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-success">{{ _('reactivate') }}</button>
+                                    </form>
+                                    {% endif %}
+                                    {% if perms.can_delete %}
+                                    <form method="POST" action="{{ url_for('settings.pay_item_delete', item_id=item.id) }}" class="d-inline"
+                                          onsubmit='return confirm({{ ("Delete " ~ item.name_en ~ " permanently? This cannot be undone.")|tojson }});'>
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="{{ _('delete') }}" aria-label="{{ _('delete') }}: {{ item.name_en }}"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <!-- Add a custom item -->
+    <div class="card" id="add-pay-item">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>{{ _('add_pay_item') }}</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">
+                New items are fixed monthly amounts and are fully taxable. Tax exemptions and caps cannot be set here.
+                The code cannot be changed later.
+            </p>
+            <form method="POST" action="{{ url_for('settings.pay_item_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" for="kind">{{ _('item_kind') }}</label>
+                        <select class="form-select" name="kind" id="kind" required>
+                            <option value="earning" {% if form.get('kind', 'earning') == 'earning' %}selected{% endif %}>{{ _('allowances') }}</option>
+                            <option value="deduction" {% if form.get('kind') == 'deduction' %}selected{% endif %}>{{ _('deductions') }}</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="key">{{ _('item_code') }}</label>
+                        <input type="text" class="form-control" name="key" id="key" required maxlength="30"
+                               pattern="[a-z][a-z0-9_]{1,29}" placeholder="e.g. fuel_allowance" value="{{ form.get('key', '') }}">
+                        <div class="form-text">Lowercase letters, digits and underscores.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="name_en">{{ _('english_name') }}</label>
+                        <input type="text" class="form-control" name="name_en" id="name_en" required maxlength="100" value="{{ form.get('name_en', '') }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="name_am">{{ _('amharic_name') }}</label>
+                        <input type="text" class="form-control" name="name_am" id="name_am" maxlength="100" lang="am" value="{{ form.get('name_am', '') }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="name_om">{{ _('oromo_name') }}</label>
+                        <input type="text" class="form-control" name="name_om" id="name_om" maxlength="100" lang="om" value="{{ form.get('name_om', '') }}">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-plus-lg me-1"></i>{{ _('add_pay_item') }}</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

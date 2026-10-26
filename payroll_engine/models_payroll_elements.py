@@ -94,6 +94,8 @@ class PayItemType(db.Model):
     key = db.Column(db.String(30), nullable=False)
     name_en = db.Column(db.String(100), nullable=False)
     name_am = db.Column(db.String(100), nullable=True)
+    # Afaan Oromoo label (migration 9b4e6d2a8c13); NULL falls back to English.
+    name_om = db.Column(db.String(100), nullable=True)
     # PostgreSQL uses migration-owned native enums. String bind casts in
     # ORM bulk inserts are incompatible with those columns; SQLite keeps
     # its existing String representation for unit fixtures.
@@ -184,6 +186,14 @@ class PayItemType(db.Model):
     @property
     def is_system_item(self):
         return self.is_system or self.company_id is None
+
+    def label(self, language='en'):
+        """The item's name in the UI language ('en', 'am', 'om'), falling back to English."""
+        if language == 'am' and self.name_am:
+            return self.name_am
+        if language == 'om' and self.name_om:
+            return self.name_om
+        return self.name_en
 
 
 # ---------------------------------------------------------------------------

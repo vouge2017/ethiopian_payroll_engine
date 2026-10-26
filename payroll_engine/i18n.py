@@ -156,6 +156,25 @@ STRINGS = {
     'pension_before_tax': 'የገቢ ግብር የሚሰላው 7% የሠራተኛ ጡረታ መዋጮ ከመቀነሱ በፊት ባለው ጠቅላላ ግብር የሚከፈልበት ገቢ ላይ ነው (አዋጅ ቁጥር 979/2016፣ RC-38000-01)።',
     'of_basic_salary': 'የመነሻ ደመወዝ',
     'then_tax': 'ከዚያ ግብር ይሰላል',
+    # Pay-item settings (catalog PR 2). DRAFT TRANSLATION, pending native-speaker review.
+    'pay_items': 'የክፍያ ዓይነቶች',
+    'employer_contributions': 'የአሠሪ መዋጮዎች',
+    'tax': 'ግብር',
+    'deactivate': 'አቦዝን',
+    'delete': 'አጥፋ',
+    'save_changes': 'ለውጦችን አስቀምጥ',
+    'edit_names': 'ስም ቀይር',
+    'locked': 'የተቆለፈ',
+    'inactive': 'የቦዘነ',
+    'add_pay_item': 'የክፍያ ዓይነት መዝግብ',
+    'move_up': 'ወደ ላይ',
+    'move_down': 'ወደ ታች',
+    'in_use': 'በጥቅም ላይ ያለ',
+    'item_code': 'ኮድ',
+    'item_kind': 'ዓይነት',
+    'english_name': 'ስም (እንግሊዝኛ)',
+    'amharic_name': 'ስም (አማርኛ)',
+    'oromo_name': 'ስም (ኦሮሞኛ)',
 }
 
 

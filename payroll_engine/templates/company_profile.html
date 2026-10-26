@@ -15,6 +15,10 @@
 <div class="p-4 p-md-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a href="{{ url_for('settings.team_settings') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-people me-1"></i>{{ _('team') }}</a>
+                <a href="{{ url_for('settings.pay_items') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-list-check me-1"></i>{{ _('pay_items') }}</a>
+            </div>
             <div class="card">
                 <div class="card-header bg-transparent">
                     <h5 class="mb-0"><i class="bi bi-building me-2"></i>Company Profile</h5>

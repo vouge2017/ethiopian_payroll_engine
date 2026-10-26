@@ -734,7 +734,7 @@ def _annotate_general_allowance(company_id, employees_data):
     Returns the number of rows annotated. Pure in-memory: nothing is written
     here, so a rejected upload leaves no trace.
     """
-    from payroll_engine.catalog import seed_company_templates
+    from payroll_engine.catalog import seed_company_catalog
     from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS
     from payroll_engine.models_payroll_elements import PayItemType
 
@@ -756,7 +756,7 @@ def _annotate_general_allowance(company_id, employees_data):
         # Make sure the company has the item before any row is processed.
         existing = PayItemType.query.filter_by(company_id=company_id, key=target_key).first()
         if existing is None:
-            seed_company_templates(company_id)
+            seed_company_catalog(company_id)
     return count
 
 
@@ -1636,31 +1636,19 @@ def set_advance_assignment(employee_id, company_id, advance, period_start, today
     re-created only if the new amount is positive. Deactivating (rather than
     deleting) keeps the audit trail.
     """
-    from payroll_engine.catalog import COMPANY_TEMPLATE_ITEMS
+    from payroll_engine.catalog import seed_company_catalog
     from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
     from payroll_engine.services.worksheet_review import month_end
 
     item = PayItemType.query.filter_by(company_id=company_id, key='advance').first()
     if item is None:
-        tmpl = next(
-            (t for t in COMPANY_TEMPLATE_ITEMS if str(t.get('key')).strip().lower() == 'advance'),
-            None,
-        )
-        if tmpl is None:
-            # No standard advance template -- nothing sensible to invent here.
+        # Company predates catalog seeding: give it its whole catalog (same
+        # single seeder as company creation), then resolve the item again.
+        seed_company_catalog(company_id, commit=False)
+        item = PayItemType.query.filter_by(company_id=company_id, key='advance').first()
+        if item is None:
+            # The company deliberately removed/renamed its advance item.
             return None
-        item = PayItemType(
-            company_id=company_id,
-            key='advance',
-            name_en=tmpl.get('name_en'),
-            name_am=tmpl.get('name_am'),
-            classification=tmpl.get('classification', 'deduction'),
-            calculation_method=tmpl.get('calculation_method', 'fixed'),
-            tax_treatment=tmpl.get('tax_treatment', 'taxable'),
-            is_system=False,
-        )
-        db.session.add(item)
-        db.session.flush()
 
     # Retire this period's previous advance (soft delete -- keeps the trail).
     PayrollItemAssignment.query.filter(

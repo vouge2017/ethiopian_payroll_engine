@@ -57,6 +57,10 @@ def setup_company():
 
             company = Company(name=company_name)
             db.session.add(company)
+            db.session.flush()
+            from payroll_engine.catalog import seed_company_catalog
+
+            seed_company_catalog(company.id, commit=False)
             db.session.commit()
 
             current_user.company_id = company.id

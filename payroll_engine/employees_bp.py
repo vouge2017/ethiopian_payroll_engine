@@ -35,14 +35,34 @@ employees_bp = Blueprint('employees', __name__)
 # ---------------------------------------------------------------------------
 # Pay item catalog helpers (elements architecture)
 #
-# Company catalogs are seeded by `flask migrate-pay-items`. These helpers read
-# the per-company PayItemType rows so routes never hardcode an allowance/deduction
-# type list or a regulatory rule.
+# Every company is given its catalog when it is created (catalog.
+# seed_company_catalog) and the b7c1d2e3f4a5 migration backfilled companies
+# that predate that. As a last line of defence these helpers re-seed a missing
+# catalog on demand instead of telling the user to run a CLI command. They read
+# the per-company PayItemType rows so routes never hardcode an
+# allowance/deduction type list or a regulatory rule.
 # ---------------------------------------------------------------------------
 
 #: Pay items the engine owns. Users may not create assignments for these
 #: (AC5) — the engine derives pension and tax from basic salary every period.
 SYSTEM_MANAGED_KEYS = frozenset({'income_tax', 'employee_pension', 'employer_pension'})
+
+
+def _ensure_catalog(company_id):
+    """Seed the company's catalog if it has none of its template rows yet.
+
+    Idempotent and a no-op (two SELECTs inside the seeder) once seeded. Returns
+    the number of company rows created. Commits only when it actually created
+    rows, so calling it never flushes unrelated pending work in the request.
+    """
+    from payroll_engine.catalog import seed_company_catalog
+
+    if company_id is None:
+        return 0
+    result = seed_company_catalog(company_id, commit=False)
+    if result['created'] or result['system_created']:
+        db.session.commit()
+    return result['created']
 
 
 def company_pay_items(classification=None, include_system=False):
@@ -53,8 +73,12 @@ def company_pay_items(classification=None, include_system=False):
         include_system: when True also returns the system catalog rows
             (company_id IS NULL), e.g. for display. Assigning to them is
             still rejected by assert_assignable_item.
+
+    A company with no catalog rows at all is seeded on demand first.
     """
     company_id = _company_id()
+    if company_id is not None and not PayItemType.query.filter_by(company_id=company_id).first():
+        _ensure_catalog(company_id)
     q = PayItemType.query.filter(
         PayItemType.is_active.is_(True),
         db.or_(
@@ -71,13 +95,17 @@ def assert_assignable_item(item_key):
     """Return the PayItemType for item_key, or None after flashing why not.
 
     Enforces that the key exists in the ACTIVE company catalog and that it is
-    not an engine-managed system item (AC5).
+    not an engine-managed system item (AC5). A standard catalog key that the
+    company is missing (company created before catalog seeding) is seeded on
+    demand rather than rejected.
     """
-    item = PayItemType.query.filter_by(company_id=_company_id(), key=item_key, is_active=True).first()
+    company_id = _company_id()
+    item = PayItemType.query.filter_by(company_id=company_id, key=item_key, is_active=True).first()
+    if item is None and _ensure_catalog(company_id):
+        item = PayItemType.query.filter_by(company_id=company_id, key=item_key, is_active=True).first()
     if item is None:
         flash(
-            f'"{item_key}" is not a pay item in your company catalog. '
-            'Run "flask migrate-pay-items" or pick a different item.',
+            f'"{item_key}" is not an active pay item in your company catalog. Pick a different item.',
             'danger',
         )
         return None

@@ -661,7 +661,9 @@ def create_app():
 
         Two phases, both idempotent and safe to re-run:
 
-          1. Catalog  -- seed the per-company PayItemType rows a company lacks.
+          1. Catalog  -- seed the per-company PayItemType rows a company lacks
+                         (normally already done at company creation and by
+                         the b7c1d2e3f4a5 migration; kept as a safe re-run).
           2. Data     -- convert EmployeeAllowance / EmployeeDeduction rows into
                          PayrollItemAssignment rows, and give every active
                          employee a basic_salary assignment.

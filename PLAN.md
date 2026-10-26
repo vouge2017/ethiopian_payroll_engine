@@ -267,6 +267,38 @@ second review; Q1 is the PAYE-on-gross answer).
   rows (seeding skips existing rows). Needs PG proof.
 - Tests: new `tests/test_amharic_labels.py` (6 tests). Full suite: 1713 passed, 0 failed, 0 errors, 205 skipped (167 files, one process each, `python -m pytest`, SQLite; baseline 1707 + 6 new). ruff check + format clean. PostgreSQL tests not run.
 
+### Pay-item catalog PR 1: seeding + tenant isolation (branch `feat/catalog-foundation`, PR #35, 2026-10-26)
+
+- State: PR #35, SQLite suite and CI (incl. PostgreSQL job) green; PostgreSQL
+  tests also run locally (PG 17). Cut from `origin/main` @ `70b7b8d`.
+- One seeder: `catalog.seed_company_catalog(company_id)` (system items +
+  company templates, idempotent, never overwrites a customised row, SAVEPOINT
+  so a concurrent seed cannot fail the caller; proven with a real two-session
+  race on PostgreSQL). Called by every company creation path (signup
+  setup-profile, Google signup, setup-company, demo, `seed_staging.py`,
+  `run.py seed-db`). The duplicate `payroll_elements.seed_pay_item_types` is
+  removed; backfill and the spreadsheet advance path build items through the
+  same `item_from_spec`.
+- Migration `b7c1d2e3f4a5` (data only): seeds system items + every missing
+  template key for every existing company; refuses to run if any assignment
+  already links another company's employee, pay item or base assignment;
+  downgrade is a no-op.
+- Migration `c8d9e0f1a2b3` (PostgreSQL only, single head): triggers reject
+  any `payroll_item_assignment` insert/update that links another company's
+  employee, pay item (system items allowed) or base assignment, and block
+  moving a referenced employee / pay item to another company (SQLSTATE 23514).
+  Re-checks existing rows first; downgrade drops triggers and functions.
+- "Run flask migrate-pay-items" error replaced: employee screens re-seed a
+  missing catalog on demand (commits only when rows were created).
+- `PayItemType` / `PayrollItemAssignment` use `TenantQuery` (system items
+  must be queried with an explicit `company_id IS NULL`; unscoped queries
+  raise, they never return empty). ORM guard (before insert/update) plus the PG
+  triggers enforce assignment tenancy.
+- The partial unique indexes on `pay_item_type` are now declared on the model
+  too (same names as the migration), so `create_all` databases enforce them.
+- Open: SQLite has no trigger (ORM guard only); `backfill` still creates
+  ad-hoc items for unknown legacy keys (by design).
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance

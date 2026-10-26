@@ -106,7 +106,8 @@ class SystemItemKey(enum.Enum):
 class CompanyTemplateItemKey(enum.Enum):
     """Keys for standard company-template items (company_id-scoped copies).
 
-    Seeded at company creation and backfilled via flask migrate-pay-items.
+    Seeded at company creation (catalog.seed_company_catalog) and backfilled for
+    existing companies by the b7c1d2e3f4a5 data migration.
     Company admins can customise these per company.
     """
 

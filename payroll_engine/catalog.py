@@ -3,7 +3,10 @@ Per-company pay-item catalog seed.
 
 Defines the standard catalog (system items: company_id IS NULL) and the
 company-template catalog (company_id-scoped copies seeded at company creation
-and backfilled for existing companies via the migrate-pay-items CLI command.
+by seed_company_catalog(), backfilled for existing companies by the
+b7c1d2e3f4a5 data migration, and re-seeded on demand when a route finds a
+company without its catalog). ``flask migrate-pay-items`` remains available
+for the legacy-row data backfill.
 
 System items are NEVER company-scoped — they are the shared definitions that
 every company inherits. Company templates are per-company copies that an admin
@@ -14,6 +17,8 @@ catalog seeding + flask migrate-pay-items CLI).
 """
 
 from decimal import Decimal
+
+from sqlalchemy.exc import IntegrityError
 
 from payroll_engine.constants import (
     COMPANY_TEMPLATE_ITEM_KEYS,
@@ -108,7 +113,7 @@ SYSTEM_ITEMS: list[dict] = [
 # ---------------------------------------------------------------------------
 # Company template catalog.
 # These are the per-company items seeded at company creation and backfilled
-# for existing companies via flask migrate-pay-items.
+# for existing companies by the b7c1d2e3f4a5 data migration.
 #
 # Each item is a TEMPLATE — it defines the default configuration for that
 # pay item type in a company. The company admin can then customise:
@@ -383,51 +388,82 @@ def _norm(value):
     return Decimal(str(value))
 
 
-def seed_system_items() -> dict[str, int]:
+def item_from_spec(spec: dict, company_id: int | None, *, is_system: bool) -> PayItemType:
+    """Build an (unsaved) PayItemType from a catalog spec dict.
+
+    The one place a catalog spec becomes a row, shared by the seeders below,
+    the legacy backfill and any on-demand creation, so a template is never
+    materialised two different ways.
+    """
+    return PayItemType(
+        company_id=company_id,
+        key=spec['key'],
+        name_en=spec['name_en'],
+        name_am=spec.get('name_am'),
+        classification=spec['classification'],
+        calculation_method=spec['calculation_method'],
+        sort_order=spec['sort_order'],
+        tax_treatment=spec['tax_treatment'],
+        rate=_norm(spec.get('rate')),
+        percent_of_item_key=spec.get('percent_of_item_key'),
+        exempt_cap_amount=_norm(spec.get('exempt_cap_amount')),
+        exempt_cap_percent=_norm(spec.get('exempt_cap_percent')),
+        exempt_cap_basis=spec.get('exempt_cap_basis'),
+        max_percent_of_net=_norm(spec.get('max_percent_of_net')),
+        regulation_reference=spec.get('regulation_reference'),
+        is_active=True,
+        is_system=is_system,
+    )
+
+
+def _existing_keys(company_id: int | None) -> set[str]:
+    """Keys already present in ``company_id``'s catalog (None = system catalog)."""
+    if company_id is None:
+        scope = PayItemType.company_id.is_(None)
+    else:
+        scope = PayItemType.company_id == company_id
+    return {k for (k,) in db.session.query(PayItemType.key).filter(scope).all()}
+
+
+def _seed(company_id: int | None, specs: list[dict], *, is_system: bool, commit: bool) -> dict[str, int]:
+    """Create the rows of ``specs`` that ``company_id`` lacks (None = system catalog).
+
+    Idempotent: existing (company_id, key) rows are never touched, so a
+    company's customisations survive re-seeding. Inserts run inside a
+    SAVEPOINT; if a concurrent request seeded the same company first, the
+    partial unique index rejects our insert, the savepoint rolls back and the
+    call reports everything as skipped instead of failing the caller.
+    """
+    existing = _existing_keys(company_id)
+    missing = [spec for spec in specs if spec['key'] not in existing]
+
+    created = 0
+    if missing:
+        try:
+            with db.session.begin_nested():
+                for spec in missing:
+                    db.session.add(item_from_spec(spec, company_id, is_system=is_system))
+                db.session.flush()
+            created = len(missing)
+        except IntegrityError:
+            # Lost a race with a concurrent seeder; the rows now exist.
+            created = 0
+
+    if commit:
+        db.session.commit()
+    return {'created': created, 'skipped': len(specs) - created}
+
+
+def seed_system_items(commit: bool = True) -> dict[str, int]:
     """Seed the system catalog (company_id IS NULL, is_system=True).
 
     Idempotent: skips items whose key already exists in the system catalog.
     Returns counts per action: {'created': N, 'skipped': M}.
     """
-    created = 0
-    skipped = 0
-
-    for spec in SYSTEM_ITEMS:
-        existing = PayItemType.query.filter_by(
-            company_id=None,
-            key=spec['key'],
-        ).first()
-
-        if existing:
-            skipped += 1
-            continue
-
-        item = PayItemType(
-            company_id=None,
-            key=spec['key'],
-            name_en=spec['name_en'],
-            name_am=spec['name_am'],
-            classification=spec['classification'],
-            calculation_method=spec['calculation_method'],
-            sort_order=spec['sort_order'],
-            tax_treatment=spec['tax_treatment'],
-            rate=_norm(spec.get('rate')),
-            percent_of_item_key=spec.get('percent_of_item_key'),
-            exempt_cap_amount=_norm(spec.get('exempt_cap_amount')),
-            exempt_cap_percent=_norm(spec.get('exempt_cap_percent')),
-            exempt_cap_basis=spec.get('exempt_cap_basis'),
-            regulation_reference=spec.get('regulation_reference'),
-            is_active=True,
-            is_system=True,
-        )
-        db.session.add(item)
-        created += 1
-
-    db.session.commit()
-    return {'created': created, 'skipped': skipped}
+    return _seed(None, SYSTEM_ITEMS, is_system=True, commit=commit)
 
 
-def seed_company_templates(company_id: int) -> dict[str, int]:
+def seed_company_templates(company_id: int, commit: bool = True) -> dict[str, int]:
     """Seed the standard company template catalog for one company.
 
     Idempotent: skips items whose (company_id, key) already exists.
@@ -436,66 +472,52 @@ def seed_company_templates(company_id: int) -> dict[str, int]:
     """
     if company_id is None:
         return {'created': 0, 'skipped': 0}
+    return _seed(company_id, COMPANY_TEMPLATE_ITEMS, is_system=False, commit=commit)
 
-    created = 0
-    skipped = 0
 
-    for spec in COMPANY_TEMPLATE_ITEMS:
-        existing = PayItemType.query.filter_by(
-            company_id=company_id,
-            key=spec['key'],
-        ).first()
+def seed_company_catalog(company_id: int, commit: bool = True) -> dict[str, int]:
+    """Give one company its full catalog: the shared system items plus its templates.
 
-        if existing:
-            skipped += 1
-            continue
+    THE seeder every company-creation path calls (signup, Google signup,
+    setup-company, demo, staging seed) and the on-demand fallback used when a
+    route finds a company without its catalog. Idempotent and cheap when the
+    catalog is already complete (two SELECTs, no writes).
 
-        item = PayItemType(
-            company_id=company_id,
-            key=spec['key'],
-            name_en=spec['name_en'],
-            name_am=spec['name_am'],
-            classification=spec['classification'],
-            calculation_method=spec['calculation_method'],
-            sort_order=spec['sort_order'],
-            tax_treatment=spec['tax_treatment'],
-            rate=_norm(spec.get('rate')),
-            percent_of_item_key=spec.get('percent_of_item_key'),
-            exempt_cap_amount=_norm(spec.get('exempt_cap_amount')),
-            exempt_cap_percent=_norm(spec.get('exempt_cap_percent')),
-            exempt_cap_basis=spec.get('exempt_cap_basis'),
-            max_percent_of_net=_norm(spec.get('max_percent_of_net')),
-            regulation_reference=spec.get('regulation_reference'),
-            is_active=True,
-            is_system=False,
-        )
-        db.session.add(item)
-        created += 1
-
-    db.session.commit()
-    return {'created': created, 'skipped': skipped}
+    Pass ``commit=False`` inside a larger unit of work; rows are flushed so
+    they are visible to the rest of the transaction.
+    """
+    system = seed_system_items(commit=False)
+    templates = seed_company_templates(company_id, commit=False)
+    if commit:
+        db.session.commit()
+    return {
+        'system_created': system['created'],
+        'created': templates['created'],
+        'skipped': templates['skipped'],
+    }
 
 
 def migrate_pay_items() -> dict[str, int]:
-    """Backfill the company template catalog for ALL existing companies.
+    """Backfill the catalog for ALL existing companies (system items + templates).
 
     Idempotent: only creates items that don't already exist for each company.
-    Does NOT touch system catalog items (company_id IS NULL) — those are
-    seeded separately by seed_system_items() and are shared across all companies.
+    Existing rows, system or company, are never modified.
 
     Returns aggregate counts: {'companies': N, 'items_created': M, 'items_skipped': K}.
     """
     from payroll_engine.models import Company
 
     companies = Company.query.all()
+    seed_system_items(commit=False)
     total_created = 0
     total_skipped = 0
 
     for company in companies:
-        result = seed_company_templates(company.id)
+        result = seed_company_templates(company.id, commit=False)
         total_created += result['created']
         total_skipped += result['skipped']
 
+    db.session.commit()
     return {
         'companies': len(companies),
         'items_created': total_created,

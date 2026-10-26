@@ -120,6 +120,10 @@ def create_demo_data():
     # 2. Create demo company
     company = Company(name='Sample Trading PLC', is_demo=True)
     db.session.add(company)
+    db.session.flush()
+    from payroll_engine.catalog import seed_company_catalog
+
+    seed_company_catalog(company.id, commit=False)
     db.session.commit()
 
     # 3. Create demo user

@@ -135,7 +135,7 @@ def test_engine_extra_items_are_not_persisted(seeded_company):
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
     from payroll_engine.payroll_elements import calculate_payroll_from_assignments
 
-    before = PayrollItemAssignment.query.count()
+    before = db.session.query(PayrollItemAssignment).count()
     basic_va = virtual_assignment(seeded_company.id, 'basic_salary', Decimal('20000'))
     va = virtual_assignment(seeded_company.id, 'transport', Decimal('3000'))
     assert va is not None
@@ -157,7 +157,7 @@ def test_engine_extra_items_are_not_persisted(seeded_company):
     assert 'transport' in keys
     assert 'basic_salary' in keys
     db.session.rollback()
-    assert PayrollItemAssignment.query.count() == before
+    assert db.session.query(PayrollItemAssignment).count() == before
 
 
 # ---------------------------------------------------------------------------

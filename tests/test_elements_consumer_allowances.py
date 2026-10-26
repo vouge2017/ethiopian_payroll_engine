@@ -121,7 +121,7 @@ def test_add_allowance_creates_assignment(app, ctx):
         follow_redirects=True,
     )
     assert r.status_code == 200
-    a = PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id).one()
+    a = PayrollItemAssignment.query.filter_by(company_id=ctx.emp.company_id, employee_id=ctx.emp.id).one()
     assert a.item_type.key == 'transport'
     assert a.fixed_amount == Decimal('1500')
     assert a.is_active is True
@@ -143,7 +143,7 @@ def test_add_allowance_rejects_unknown_key(app, ctx):
         data={'allowance_type': 'not_a_real_item', 'amount': '500'},
         follow_redirects=True,
     )
-    assert PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id).count() == 0
+    assert PayrollItemAssignment.query.filter_by(company_id=ctx.emp.company_id, employee_id=ctx.emp.id).count() == 0
 
 
 def test_add_allowance_rejects_deduction_item(app, ctx):
@@ -153,7 +153,7 @@ def test_add_allowance_rejects_deduction_item(app, ctx):
         data={'allowance_type': 'court_order', 'amount': '500'},
         follow_redirects=True,
     )
-    assert PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id).count() == 0
+    assert PayrollItemAssignment.query.filter_by(company_id=ctx.emp.company_id, employee_id=ctx.emp.id).count() == 0
 
 
 # --------------------------------------------------------------------------
@@ -175,7 +175,9 @@ def test_add_deduction_percentage_creates_assignment(app, ctx):
         },
         follow_redirects=True,
     )
-    d = PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id, custom_label='Case 42').one()
+    d = PayrollItemAssignment.query.filter_by(
+        company_id=ctx.emp.company_id, employee_id=ctx.emp.id, custom_label='Case 42'
+    ).one()
     assert d.item_type.key == 'court_order'
     assert d.percent_of_net == Decimal('60')
     assert d.fixed_amount is None
@@ -197,7 +199,9 @@ def test_add_deduction_fixed_uses_fixed_amount(app, ctx):
         },
         follow_redirects=True,
     )
-    d = PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id, custom_label='Case 43').one()
+    d = PayrollItemAssignment.query.filter_by(
+        company_id=ctx.emp.company_id, employee_id=ctx.emp.id, custom_label='Case 43'
+    ).one()
     assert d.fixed_amount == Decimal('500')
     assert d.percent_of_net is None
 
@@ -218,7 +222,9 @@ def test_add_deduction_persists_document_trail(app, ctx):
         },
         follow_redirects=True,
     )
-    d = PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id, custom_label='Case 44').one()
+    d = PayrollItemAssignment.query.filter_by(
+        company_id=ctx.emp.company_id, employee_id=ctx.emp.id, custom_label='Case 44'
+    ).one()
     assert d.reference_number == 'SC-2026-99'
     # document_path stays None when no file was uploaded
     assert d.document_path is None
@@ -247,13 +253,13 @@ def test_add_deduction_writes_no_legacy_row(app, ctx):
 
 @pytest.mark.parametrize('key', ['employee_pension', 'employer_pension', 'income_tax'])
 def test_ac5_rejects_system_item_assignment(app, ctx, key):
-    before = PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id).count()
+    before = PayrollItemAssignment.query.filter_by(company_id=ctx.emp.company_id, employee_id=ctx.emp.id).count()
     ctx.client.post(
         f'/employees/{ctx.emp.id}/allowances/add',
         data={'allowance_type': key, 'amount': '500'},
         follow_redirects=True,
     )
-    after = PayrollItemAssignment.query.filter_by(employee_id=ctx.emp.id).count()
+    after = PayrollItemAssignment.query.filter_by(company_id=ctx.emp.company_id, employee_id=ctx.emp.id).count()
     assert after == before
 
 

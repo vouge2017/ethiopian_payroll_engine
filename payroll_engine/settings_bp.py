@@ -456,7 +456,12 @@ def _render_pay_items(form=None, status=200):
     from payroll_engine.services import pay_item_settings as svc
 
     return (
-        render_template('settings/pay_items.html', groups=svc.catalog_view(_company_id()), form=form or {}),
+        render_template(
+            'settings/pay_items.html',
+            groups=svc.catalog_view(_company_id()),
+            legal_view=svc.legal_view,
+            form=form or {},
+        ),
         status,
     )
 

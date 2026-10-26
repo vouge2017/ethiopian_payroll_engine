@@ -16,6 +16,13 @@
         The allowances and deductions you can assign to employees. Statutory items (basic salary, income tax and
         pension) are set by law and locked. Items that are in use are kept for history: deactivate them instead of deleting.
     </p>
+    <div class="alert alert-light border small mb-4" id="legal-attributes-note">
+        <i class="bi bi-info-circle me-1"></i>
+        The tax column shows how payroll treats each earning today. The <strong>pensionable</strong> and
+        <strong>Art. 53 wage</strong> marks are for information only and are <strong>pending legal confirmation</strong>:
+        pension is calculated on basic salary only, and leave pay uses your company's leave-pay setting. They cannot be
+        changed here yet.
+    </div>
 
     {% for group_id, group_label, rows in groups %}
     {% if rows %}
@@ -30,6 +37,7 @@
                         <tr>
                             <th>{{ _('name') }}</th>
                             <th>{{ _('item_code') }}</th>
+                            <th>{{ _('tax_and_legal') }}</th>
                             <th>{{ _('status') }}</th>
                             <th class="text-end">{{ _('actions') }}</th>
                         </tr>
@@ -44,6 +52,19 @@
                                 {% if current_language != 'om' and item.name_om %}<div class="small text-muted" lang="om">{{ item.name_om }}</div>{% endif %}
                             </td>
                             <td data-label="{{ _('item_code') }}"><code>{{ item.key }}</code></td>
+                            {% set legal = legal_view(item) %}
+                            <td data-label="{{ _('tax_and_legal') }}" class="small">
+                                {% if legal %}
+                                <div class="legal-tax">{{ legal.tax }}</div>
+                                <div class="text-muted legal-flags">
+                                    Pensionable: <strong>{{ 'Yes' if legal.pensionable else 'No' }}</strong> &middot;
+                                    Art. 53 wage: <strong>{{ 'Yes' if legal.counts_as_art53_wage else 'No' }}</strong>
+                                    <span class="badge bg-warning-subtle text-dark border ms-1">{{ legal.pending_note }}</span>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">&mdash;</span>
+                                {% endif %}
+                            </td>
                             <td data-label="{{ _('status') }}">
                                 {% if perms.locked %}
                                 <span class="badge bg-secondary" title="{{ perms.reason }}"><i class="bi bi-lock-fill me-1"></i>{{ _('locked') }}</span>

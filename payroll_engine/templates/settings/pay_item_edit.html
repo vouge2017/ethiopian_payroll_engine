@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ item.name_en }} - {{ _('pay_items') }}{% endblock %}
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb breadcrumb-sm mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('settings.company_profile') }}" class="text-decoration-none">Settings</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('settings.pay_items') }}" class="text-decoration-none">{{ _('pay_items') }}</a></li>
+        <li class="breadcrumb-item active">{{ item.label(current_language) }}</li>
+    </ol>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <h2 class="fw-bold mb-1">
+        {% if locked %}<i class="bi bi-lock-fill me-2"></i>{% else %}<i class="bi bi-pencil me-2"></i>{% endif %}{{ item.label(current_language) }}
+    </h2>
+    <p class="text-muted mb-4">{{ _('item_code') }}: <code>{{ item.key }}</code>{% if not item.is_active %} · <span class="badge bg-light text-dark border">{{ _('inactive') }}</span>{% endif %}</p>
+
+    <div class="card" style="max-width: 720px;">
+        <div class="card-body">
+            {% if locked %}
+            <div class="alert alert-secondary d-flex align-items-start" role="note">
+                <i class="bi bi-lock-fill me-2 mt-1"></i>
+                <div>{{ reason }}</div>
+            </div>
+            {% else %}
+            <p class="text-muted small">Only the names change. The code, tax treatment and amounts stay as they are.</p>
+            {% endif %}
+            <form method="POST" action="{{ url_for('settings.pay_item_edit', item_id=item.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label class="form-label" for="name_en">{{ _('english_name') }}</label>
+                    <input type="text" class="form-control" name="name_en" id="name_en" maxlength="100" required
+                           value="{{ form.get('name_en', item.name_en or '') }}" {% if locked %}disabled{% endif %}>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="name_am">{{ _('amharic_name') }}</label>
+                    <input type="text" class="form-control" name="name_am" id="name_am" maxlength="100" lang="am"
+                           value="{{ form.get('name_am', item.name_am or '') }}" {% if locked %}disabled{% endif %}>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="name_om">{{ _('oromo_name') }}</label>
+                    <input type="text" class="form-control" name="name_om" id="name_om" maxlength="100" lang="om"
+                           value="{{ form.get('name_om', item.name_om or '') }}" {% if locked %}disabled{% endif %}>
+                </div>
+                {% if not locked %}
+                <button type="submit" class="btn btn-primary">{{ _('save_changes') }}</button>
+                {% endif %}
+                <a href="{{ url_for('settings.pay_items') }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

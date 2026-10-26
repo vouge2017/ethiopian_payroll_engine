@@ -299,6 +299,35 @@ second review; Q1 is the PAYE-on-gross answer).
 - Open: SQLite has no trigger (ORM guard only); `backfill` still creates
   ad-hoc items for unknown legacy keys (by design).
 
+### Pay-item catalog PR 2: company pay-item settings page (branch `feat/catalog-settings-ui`, 2026-10-26)
+
+- State: draft PR, cut from `main` @ `fcd9b31` (PR #35 merged). Not merged.
+- What: Settings → Pay items (`/settings/pay-items`), owner-only (there is no
+  admin role yet). Lists system + company items grouped as earnings,
+  allowances, deductions, employer contributions, tax; add a custom item,
+  rename (English / Amharic / Afaan Oromoo labels; key immutable), move
+  up/down, deactivate / reactivate, delete. Linked from the sidebar (Prepare)
+  and the company profile page. Rules in
+  `payroll_engine/services/pay_item_settings.py`; routes in `settings_bp.py`.
+- Rules: system items (`company_id IS NULL`) are visible but locked (403 on
+  any change); another company's item is 404. Used items (any assignment,
+  ended or soft-deleted, or any payslip snapshot) are deactivate-only, and
+  only once no assignment is still running. General allowance and salary
+  advance (written by imports) can never be deactivated. Only unused custom
+  items can be deleted (template items are re-seeded, so they deactivate).
+  New custom items are always fixed and fully taxable with no exemption caps
+  until catalog PR 3 adds reviewed tax settings. Reordering is display-only;
+  no amount changes. Reserved keys (system, engine, template) are refused.
+  Every change writes an audit-log row; CSRF via the app-wide CSRFProtect.
+- No tax, pension or legal formula changed.
+- Migration `9b4e6d2a8c13` (schema only): nullable `pay_item_type.name_om`;
+  downgrade drops it. Single Alembic head.
+- Tests: `tests/test_pay_item_settings.py` (SQLite) and
+  `tests/test_pg_pay_item_settings.py` (PostgreSQL, added to the CI PG job).
+- Open: native-speaker review of the 18 new Amharic / Afaan Oromoo strings
+  (draft); give the page to an admin role once one exists; catalog PR 3 (tax
+  treatment and exemption caps per item, reviewed).
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance
@@ -623,3 +652,10 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   "Basic + allowances that qualify as wages (Art. 53)"; Q4 PENDING procedure.
   Decisions in `docs/decisions/2026-10-25-payroll-rules.md`. Tests: 1749
   passed, 0 failed, 205 skipped (170 files, SQLite). ruff clean. Still draft.
+- 2026-10-26 — Hark — Catalog PR 2 (`feat/catalog-settings-ui`): company
+  pay-item settings page (owner-only; add, rename, reorder, deactivate /
+  reactivate, delete unused custom items; system items locked; new items
+  fixed + taxable until PR 3). Migration `9b4e6d2a8c13` adds
+  `pay_item_type.name_om`. Tests: SQLite 1879 passed, 0 failed, 219
+  skipped (178 files); PostgreSQL 192 passed (CI PG list, local PG 17).
+  ruff clean. Draft PR.

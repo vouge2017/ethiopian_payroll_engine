@@ -2,7 +2,7 @@
 <!-- Combines: Story → Evidence → Issues → Resolution → Approval -->
 
 {% extends "base.html" %}
-{% block title %}Payroll Review — {{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }}{% endblock %}
+{% block title %}{{ _('review_page_title') }} — {{ run.run_date.strftime('%B %Y') ~ ' (Gregorian)' if worksheet_rows else (run.period or run.run_date) }}{% endblock %}
 
 {% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/monthly-payroll.css') }}?v={{ static_version }}">{% endblock %}
 {% block content %}
@@ -14,27 +14,27 @@
   <!-- Header -->
   <div class="monthly-heading">
     <div>
-      <p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else "Monthly payroll" }}</p>
-      <h1>Review payroll</h1>
-      <p class="text-muted mb-0">{{ run.reference or 'Run #' + run.id|string }} · Check this month’s saved pay and the changes below.</p>
+      <p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else _('monthly_default_workspace') }}</p>
+      <h1>{{ _('review_title') }}</h1>
+      <p class="text-muted mb-0">{{ run.reference or 'Run #' + run.id|string }} · {{ _('review_intro') }}</p>
     </div>
     <div class="d-flex align-items-center gap-3">
       {% if run.status in ('completed', 'locked') %}
         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
-          <i class="bi bi-check-circle me-1"></i> {{ 'Approved and locked' if run.status == 'locked' else 'Approved' }}
+          <i class="bi bi-check-circle me-1"></i> {{ _('review_approved_locked') if run.status == 'locked' else _('review_approved') }}
         </span>
       {% elif run.status == 'pending_approval' and can_approve %}
-        <span class="badge bg-warning-subtle text-dark px-3 py-2">Waiting for owner approval</span>
+        <span class="badge bg-warning-subtle text-dark px-3 py-2">{{ _('review_waiting_owner') }}</span>
       {% elif can_approve %}
         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
-          <i class="bi bi-check-circle me-1"></i> Ready for owner review
+          <i class="bi bi-check-circle me-1"></i> {{ _('review_ready_owner') }}
         </span>
       {% else %}
         <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
-          <i class="bi bi-x-circle me-1"></i> Resolve blocking issues
+          <i class="bi bi-x-circle me-1"></i> {{ _('review_resolve_blocking') }}
         </span>
       {% endif %}
-      <a href="/payroll/runs/{{ run.id }}" class="btn btn-sm btn-ghost">View Details <i class="bi bi-arrow-right"></i></a>
+      <a href="/payroll/runs/{{ run.id }}" class="btn btn-sm btn-ghost">{{ _('review_view_details') }} <i class="bi bi-arrow-right"></i></a>
     </div>
   </div>
 
@@ -42,23 +42,23 @@
   <!-- SECTION 1: STORY — What happened? -->
   <!-- ═══════════════════════════════════════════ -->
 
-{% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
+{% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">{{ _('review_run_date') }} · {{ eth_date(run.run_date) }}</p>{% endif %}
 {{ monthly.steps(3 if run.status in ('pending_approval', 'completed', 'locked') else 2) }}
-{% if worksheet_rows %}{{ monthly.totals(worksheet_rows|length, worksheet_rows|sum(attribute='gross'), worksheet_rows|sum(attribute='tax'), worksheet_rows|sum(attribute='net'), 'Saved net pay', comparison=change_summary) }}{% endif %}
+{% if worksheet_rows %}{{ monthly.totals(worksheet_rows|length, worksheet_rows|sum(attribute='gross'), worksheet_rows|sum(attribute='tax'), worksheet_rows|sum(attribute='net'), _('review_saved_net_label'), comparison=change_summary) }}{% endif %}
   {% if component_errors and component_errors.change_summary %}
     {% set component_name = 'Change Summary' %}
     {% set error_message = component_errors.change_summary %}
     {% include '_component_error.html' with context %}
   {% else %}
   <section class="monthly-change-context">
-      <h2 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>What to check this month</h2>
-      <p>These are the saved figures for this review. Saving preparation updates this unsubmitted review automatically; submitted reviews keep their approved figures.</p>
+      <h2 class="fw-semibold mb-3"><i class="bi bi-book text-primary me-2"></i>{{ _('review_what_to_check') }}</h2>
+      <p>{{ _('review_frozen_help') }}</p>
 
       {% if change_summary and change_summary.retained_comparison %}
-      {% if change_summary.previous_period %}<p class="monthly-comparison-summary"><strong>{{ changed_count }} {{ 'employee' if changed_count == 1 else 'employees' }} changed</strong> compared with {{ change_summary.previous_period }}. Open an employee row or the full change record to understand the changes.</p>{% else %}<p>No earlier approved payroll is available for comparison. Check each employee’s pay before continuing.</p>{% endif %}
-      {% if change_summary.comparison_notes %}<details class="monthly-notes"><summary>About this comparison</summary>{% for note in change_summary.comparison_notes %}<p>{{ note }}</p>{% endfor %}</details>{% endif %}
+      {% if change_summary.previous_period %}<p class="monthly-comparison-summary"><strong>{{ changed_count }} {{ _('review_changed_one') if changed_count == 1 else _('review_changed_many') }}</strong> {{ _('review_compared_with') }} {{ change_summary.previous_period }}. {{ _('review_open_row_help') }}</p>{% else %}<p>{{ _('review_no_prior') }}</p>{% endif %}
+      {% if change_summary.comparison_notes %}<details class="monthly-notes"><summary>{{ _('review_about_comparison') }}</summary>{% for note in change_summary.comparison_notes %}<p>{{ note }}</p>{% endfor %}</details>{% endif %}
       {% if change_summary.changes %}
-      <details class="monthly-notes"><summary>Full change record · {{ change_summary.changes|length }} updates</summary>
+      <details class="monthly-notes"><summary>{{ _('review_full_record') }} · {{ change_summary.changes|length }} {{ _('review_updates') }}</summary>
       <ul class="list-unstyled">
         {% for employee_id, changes in change_summary.changes|groupby('employee_id', case_sensitive=true) %}
         <li class="border-bottom py-2"><strong>{{ changes[0].employee_name }} ({{ employee_id }})</strong><ul class="mt-2 ps-3">{% for change in changes %}<li>{{ change.description }}</li>{% endfor %}</ul></li>
@@ -75,8 +75,8 @@
 <div class="monthly-review-grid"><div>  {% if saved_blocks or component_errors or (run.status not in ('completed', 'locked') and not can_approve) %}
   <div class="card mb-4 border-warning">
     <div class="card-body">
-      <p class="fw-semibold mb-1">Review checks need attention</p>
-      <p class="small mb-0">Review the findings and any unavailable information before continuing.</p>
+      <p class="fw-semibold mb-1">{{ _('review_checks_attention') }}</p>
+      <p class="small mb-0">{{ _('review_checks_attention_help') }}</p>
     </div>
   </div>
   {% endif %}
@@ -86,16 +86,16 @@
     {% include '_component_error.html' with context %}
   {% elif sorted_issues %}
   <section class="card mb-4" id="monthly-findings"><div class="card-body">
-    <h2>Review notes · {{ sorted_issues|length }}</h2>
-    <p class="small text-muted mt-2">Blocking findings must be resolved. Other notes explain what deserves a check.</p>
+    <h2>{{ _('review_notes_title') }} · {{ sorted_issues|length }}</h2>
+    <p class="small text-muted mt-2">{{ _('review_notes_help') }}</p>
     {% for issue in sorted_issues %}
     <details class="monthly-finding"{% if issue.blocking or issue.severity in ('critical', 'high') %} open{% endif %}>
-      <summary><span><strong>{{ issue.title }}</strong>{% if issue.employee_name %}<span class="monthly-finding-person">{{ issue.employee_name }}</span>{% endif %}</span><span class="monthly-finding-level">{{ 'Blocking' if issue.blocking else 'Review' }}</span></summary>
+      <summary><span><strong>{{ issue.title }}</strong>{% if issue.employee_name %}<span class="monthly-finding-person">{{ issue.employee_name }}</span>{% endif %}</span><span class="monthly-finding-level">{{ _('review_finding_blocking') if issue.blocking else _('review_finding_review') }}</span></summary>
       <div class="monthly-finding-body">
         <p>{{ issue.impact or issue.description }}</p>
-        {% if issue.cause %}<p><strong>Why:</strong> {{ issue.cause }}</p>{% endif %}
-        {% if issue.recommendation %}<p><strong>What to do:</strong> {{ issue.recommendation }}</p>{% endif %}
-        {% if issue.action_url %}<a href="{{ issue.action_url }}" class="btn btn-outline-secondary">{{ 'Add phone number' if issue.code == 'MISSING_PHONE' else (issue.action_required or 'Open employee details') }}</a>{% endif %}
+        {% if issue.cause %}<p><strong>{{ _('review_why') }}:</strong> {{ issue.cause }}</p>{% endif %}
+        {% if issue.recommendation %}<p><strong>{{ _('review_what_to_do') }}:</strong> {{ issue.recommendation }}</p>{% endif %}
+        {% if issue.action_url %}<a href="{{ issue.action_url }}" class="btn btn-outline-secondary">{{ _('review_add_phone') if issue.code == 'MISSING_PHONE' else (issue.action_required or _('review_open_details')) }}</a>{% endif %}
       </div>
     </details>
     {% endfor %}
@@ -106,13 +106,13 @@
   <!-- SECTION 4: APPROVAL — Ready? -->
   {% if validation_results %}
   <div class="card mb-4"><div class="card-body">
-    <h2>Saved validation checks</h2>
+    <h2>{{ _('review_saved_validation') }}</h2>
     <ul class="list-unstyled">{% for finding in validation_results if finding.severity != 'HINT' %}
-      <li class="border-bottom py-2"><strong>{{ finding.severity }} · {{ finding.rule_code }}</strong>: {{ finding.message }}{% if finding.overridden %}<span class="badge bg-secondary">Override recorded</span>{% endif %}</li>
+      <li class="border-bottom py-2"><strong>{{ finding.severity }} · {{ finding.rule_code }}</strong>: {{ finding.message }}{% if finding.overridden %}<span class="badge bg-secondary">{{ _('review_override_recorded') }}</span>{% endif %}</li>
     {% endfor %}</ul>
     {% set hints = validation_results|selectattr('severity', 'equalto', 'HINT')|list %}
-    {% if hints %}<details class="monthly-notes"><summary>Additional check notes · {{ hints|length }}</summary><ul class="list-unstyled">{% for finding in hints %}<li class="border-bottom py-2"><strong>{{ finding.rule_code }}</strong>: {{ finding.message }}</li>{% endfor %}</ul></details>{% endif %}
-    <p class="small text-muted">Resolve blocking findings and review flags on the approval screen.</p>
+    {% if hints %}<details class="monthly-notes"><summary>{{ _('review_additional_notes') }} · {{ hints|length }}</summary><ul class="list-unstyled">{% for finding in hints %}<li class="border-bottom py-2"><strong>{{ finding.rule_code }}</strong>: {{ finding.message }}</li>{% endfor %}</ul></details>{% endif %}
+    <p class="small text-muted">{{ _('review_flag_help') }}</p>
   </div></div>
   {% endif %}
   <!-- ═══════════════════════════════════════════ -->
@@ -123,26 +123,26 @@
 
 </div><div class="monthly-review-amounts">{% if worksheet_rows %}
   <section class="card mb-4"><div class="card-body">
-    <h2>Employee pay · ETB</h2>
-    <p class="small text-muted mt-2">Saved payroll for {{ run.run_date.strftime('%B %Y') }} (Gregorian). Later worksheet edits do not change these figures. Approval does not send payment.</p>
+    <h2>{{ _('review_employee_pay') }}</h2>
+    <p class="small text-muted mt-2">{{ _('review_saved_payroll_for') }} {{ run.run_date.strftime('%B %Y') }} {{ _('review_gregorian_note') }}. {{ _('review_later_edit_note') }}</p>
     {% set issue_ids = (sorted_issues or [])|map(attribute='employee_id')|list %}
     {% set finding_ids = (validation_results or [])|rejectattr('overridden')|rejectattr('severity', 'equalto', 'HINT')|map(attribute='employee_id')|list %}
     <div class="monthly-review-tools" id="review-employee-tools" hidden>
-      <label for="review-employee-search">Find an employee in this review</label>
-      <input type="search" id="review-employee-search" class="form-control" placeholder="Name or employee ID" autocomplete="off" aria-controls="review-employee-ledger">
-      <div class="monthly-review-filters" role="group" aria-label="Filter preserved employee amounts"><button type="button" class="btn btn-outline-secondary" data-review-filter="all" aria-pressed="true">All employees</button><button type="button" class="btn btn-outline-secondary" data-review-filter="issues" aria-pressed="false">With review issues</button>{% if change_summary and change_summary.retained_comparison %}<button type="button" class="btn btn-outline-secondary" data-review-filter="changed" aria-pressed="false">Changed</button>{% endif %}</div>
+      <label for="review-employee-search">{{ _('review_find_employee') }}</label>
+      <input type="search" id="review-employee-search" class="form-control" placeholder="{{ _('monthly_search_placeholder') }}" autocomplete="off" aria-controls="review-employee-ledger">
+      <div class="monthly-review-filters" role="group" aria-label="{{ _('review_filter_aria') }}"><button type="button" class="btn btn-outline-secondary" data-review-filter="all" aria-pressed="true">{{ _('review_filter_all') }}</button><button type="button" class="btn btn-outline-secondary" data-review-filter="issues" aria-pressed="false">{{ _('review_filter_issues') }}</button>{% if change_summary and change_summary.retained_comparison %}<button type="button" class="btn btn-outline-secondary" data-review-filter="changed" aria-pressed="false">{{ _('review_filter_changed') }}</button>{% endif %}</div>
       <p id="review-employee-count" role="status"></p>
     </div>
     <div class="monthly-ledger" id="review-employee-ledger">
     {% for row in worksheet_rows %}{% set has_issue = row.id in issue_ids or row.employee_pk in finding_ids %}<details class="monthly-review-row" data-review-employee data-review-search="{{ (row.name ~ ' ' ~ row.id)|lower }}" data-review-changed="{{ 'true' if row.id in changed_ids else 'false' }}" data-review-issues="{{ 'true' if has_issue else 'false' }}">
-      <summary><span class="monthly-row-identity"><strong>{{ row.name }}</strong><span>{{ row.id }} · Gross ETB {{ '{:,.2f}'.format(row.gross) }}</span>{% if has_issue %}<span class="monthly-row-issue">Review issue</span>{% elif row.id in changed_ids %}<span class="monthly-row-change">Changed</span>{% endif %}</span><span class="monthly-row-net"><span>Net pay · ETB</span><strong>{{ '{:,.2f}'.format(row.net) }}</strong></span><span class="monthly-expand-icon" aria-hidden="true"></span></summary>
+      <summary><span class="monthly-row-identity"><strong>{{ row.name }}</strong><span>{{ row.id }} · Gross ETB {{ '{:,.2f}'.format(row.gross) }}</span>{% if has_issue %}<span class="monthly-row-issue">{{ _('review_issue_badge') }}</span>{% elif row.id in changed_ids %}<span class="monthly-row-change">{{ _('review_changed_badge') }}</span>{% endif %}</span><span class="monthly-row-net"><span>{{ _('review_net_pay_etb') }}</span><strong>{{ '{:,.2f}'.format(row.net) }}</strong></span><span class="monthly-expand-icon" aria-hidden="true"></span></summary>
       <div class="monthly-breakdown">
       {% set employee_changes = change_summary.changes|selectattr('employee_id', 'equalto', row.id)|list if change_summary and change_summary.retained_comparison else [] %}
-      {% if employee_changes %}<div class="monthly-row-changes"><h3>Why this pay changed</h3><ul>{% for change in employee_changes %}<li>{{ change.description }}</li>{% endfor %}</ul></div>{% endif %}
-      <p class="small text-muted">Bonus ETB {{ row.worksheet_inputs.bonus }} · Extra unpaid days {{ row.worksheet_inputs.absence_days }}</p>
-      <dl class="monthly-amounts"><div><dt>Gross</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>Income tax</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>Pension</dt><dd>{{ '{:,.2f}'.format(row.pension_employee) }}</dd></div><div><dt>Leave deductions</dt><dd>{{ '{:,.2f}'.format(row.unpaid_leave_reduction + row.sick_leave_reduction) }}</dd></div><div><dt>Other deductions</dt><dd>{{ '{:,.2f}'.format(row.total_deductions) }}</dd></div><div class="monthly-net"><dt>Net pay</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
+      {% if employee_changes %}<div class="monthly-row-changes"><h3>{{ _('review_why_pay_changed') }}</h3><ul>{% for change in employee_changes %}<li>{{ change.description }}</li>{% endfor %}</ul></div>{% endif %}
+      <p class="small text-muted">{{ _('review_bonus_label') }} ETB {{ row.worksheet_inputs.bonus }} · {{ _('monthly_extra_unpaid_days') }} {{ row.worksheet_inputs.absence_days }}</p>
+      <dl class="monthly-amounts"><div><dt>{{ _('gross') }}</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>{{ _('review_income_tax_plain') }}</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>{{ _('monthly_pension_label') }}</dt><dd>{{ '{:,.2f}'.format(row.pension_employee) }}</dd></div><div><dt>{{ _('review_leave_deductions') }}</dt><dd>{{ '{:,.2f}'.format(row.unpaid_leave_reduction + row.sick_leave_reduction) }}</dd></div><div><dt>{{ _('review_other_deductions') }}</dt><dd>{{ '{:,.2f}'.format(row.total_deductions) }}</dd></div><div class="monthly-net"><dt>{{ _('review_net_pay_plain') }}</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
       </div></details>{% endfor %}</div>
-    <div class="monthly-no-match" id="review-no-match" hidden><p>No employees match these filters. All preserved payroll amounts remain included.</p><button type="button" class="btn btn-outline-secondary" id="review-clear-filters">Clear employee filters</button></div>
+    <div class="monthly-no-match" id="review-no-match" hidden><p>{{ _('review_no_filter_match') }}</p><button type="button" class="btn btn-outline-secondary" id="review-clear-filters">{{ _('review_clear_filters') }}</button></div>
     {% if run.status == 'review' %}
     <details class="monthly-notes"><summary>{{ _('review_newer_changes') }}</summary><p>{{ _('review_newer_changes_help') }}</p>
       <a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-outline-secondary mb-2">{{ _('review_return_preparation') }}</a>
@@ -150,53 +150,53 @@
     </details>{% endif %}
   </div></section>{% endif %}
 </div></div>
-<section class="monthly-decision" aria-label="Next payroll action">
+<section class="monthly-decision" aria-label="{{ _('review_next_action_aria') }}">
   {% if run.status in ('completed', 'locked') %}
   <div class="card mb-4"><div class="card-body">
-    <h2>Approved payroll</h2>
-    <p>Approval is recorded. Downloading outputs does not mean salaries have been paid.</p>
-    <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">View approved payroll</a>
+    <h2>{{ _('review_approved_title') }}</h2>
+    <p>{{ _('review_approval_recorded') }}</p>
+    <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">{{ _('review_view_approved') }}</a>
   </div></div>
   {% elif component_errors and component_errors.exceptions %}
   <div class="card mb-4">
     <div class="card-body">
-      <h2 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-purple me-2"></i>Next step</h2>
+      <h2 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-purple me-2"></i>{{ _('review_next_step') }}</h2>
       <div class="d-flex align-items-center justify-content-between">
         <div>
-          <p class="text-warning fw-semibold small mb-1">Cannot verify payroll safety — exception checks failed.</p>
-          <p class="text-muted small mb-0">Review payroll manually before approving.</p>
+          <p class="text-warning fw-semibold small mb-1">{{ _('review_cannot_verify') }}</p>
+          <p class="text-muted small mb-0">{{ _('review_manually') }}</p>
         </div>
-        <button disabled class="btn btn-secondary btn-lg">Approve Payroll</button>
+        <button disabled class="btn btn-secondary btn-lg">{{ _('review_approve_button') }}</button>
       </div>
     </div>
   </div>
   {% else %}
   <div class="card mb-4">
     <div class="card-body">
-      <h2 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-primary me-2"></i>Next step</h2>
+      <h2 class="fw-semibold mb-3"><i class="bi bi-arrow-right text-primary me-2"></i>{{ _('review_next_step') }}</h2>
 
       {% if can_approve %}
       <div class="d-flex align-items-center justify-content-between">
         <div>
-          <p class="small mb-1">No blocking issues were found. Check the amounts and any warnings before approval.</p>
-          <p class="text-muted small mb-0">Once approved, payslips will be finalized and the bank file can be generated.</p>
+          <p class="small mb-1">{{ _('review_no_blocking_help') }}</p>
+          <p class="text-muted small mb-0">{{ _('review_after_approval') }}</p>
         </div>
         {% if worksheet_rows %}
           {% if run.status in ('completed', 'locked') %}
-          <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">View approved payroll</a>
+          <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-success">{{ _('review_view_approved') }}</a>
           {% elif current_user.get_role_for_company(run.company_id) == 'owner' %}
-          <a href="{{ url_for('payroll.payroll_confirm', run_id=run.id) }}" class="btn btn-success">Continue to approval</a>
+          <a href="{{ url_for('payroll.payroll_confirm', run_id=run.id) }}" class="btn btn-success">{{ _('continue_approval') }}</a>
           {% elif run.status == 'review' %}
           <form method="POST" action="{{ url_for('payroll.submit_worksheet_review', run_id=run.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-success" type="submit">Submit to owner</button>
+            <button class="btn btn-success" type="submit">{{ _('review_submit_owner') }}</button>
           </form>
-          {% else %}<span>Waiting for owner approval</span>{% endif %}
+          {% else %}<span>{{ _('review_waiting_owner') }}</span>{% endif %}
         {% else %}
         <form method="POST" action="/payroll/runs/{{ run.id }}/approve">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-success btn-lg">
-            <i class="bi bi-check-circle me-1"></i> Approve Payroll
+            <i class="bi bi-check-circle me-1"></i> {{ _('review_approve_button') }}
           </button>
         </form>
         {% endif %}
@@ -204,13 +204,13 @@
       {% else %}
       <div class="d-flex align-items-center justify-content-between">
         <div>
-          <p class="text-danger fw-semibold small mb-1">Approval is unavailable.</p>
-          {% if saved_blocks %}<p class="small mb-1">{{ saved_blocks|length }} saved blocking check(s). Resolve these findings before approval.</p>{% endif %}
-          {% if exceptions and exceptions.blocking_issues %}<p class="small mb-1">{{ exceptions.blocking_issues|length }} blocking payroll issue(s). Resolve the listed issues before approval.</p>{% endif %}
-          {% if component_errors %}<p class="small mb-1">Some review information could not be verified. Resolve the reported errors and reload the review.</p>{% endif %}
-          {% if not saved_blocks and not component_errors and not (exceptions and exceptions.blocking_issues) %}<p class="text-muted small mb-0">Check the saved payroll status and evidence above before continuing.</p>{% endif %}
+          <p class="text-danger fw-semibold small mb-1">{{ _('review_unavailable') }}</p>
+          {% if saved_blocks %}<p class="small mb-1">{{ _('review_saved_blocks').format(saved_blocks|length) }}</p>{% endif %}
+          {% if exceptions and exceptions.blocking_issues %}<p class="small mb-1">{{ _('review_blocking_issues').format(exceptions.blocking_issues|length) }}</p>{% endif %}
+          {% if component_errors %}<p class="small mb-1">{{ _('review_unverified_info') }}</p>{% endif %}
+          {% if not saved_blocks and not component_errors and not (exceptions and exceptions.blocking_issues) %}<p class="text-muted small mb-0">{{ _('review_check_status') }}</p>{% endif %}
         </div>
-        <button disabled class="btn btn-secondary btn-lg">Approve Payroll</button>
+        <button disabled class="btn btn-secondary btn-lg">{{ _('review_approve_button') }}</button>
       </div>
       {% endif %}
     </div>
@@ -223,11 +223,11 @@
     {% set error_message = component_errors.evidence %}
     {% include '_component_error.html' with context %}
   {% elif evidence %}
-  <details class="card mb-4 monthly-evidence" {% if not evidence.ready_for_approval %}open{% endif %}><summary class="card-header">Payroll evidence · {{ evidence.passed|length }}/{{ evidence.total }} checks passed</summary>
+  <details class="card mb-4 monthly-evidence" {% if not evidence.ready_for_approval %}open{% endif %}><summary class="card-header">{{ _('review_evidence_title') }} · {{ _('review_checks_passed').format(evidence.passed|length, evidence.total) }}</summary>
     <div class="card-body">
       <h2 class="fw-semibold mb-3">
-        <i class="bi bi-shield-check text-success me-2"></i>Trust Evidence
-        <small class="text-muted fw-normal">({{ evidence.passed|length }}/{{ evidence.total }} passed)</small>
+        <i class="bi bi-shield-check text-success me-2"></i>{{ _('review_trust_evidence') }}
+        <small class="text-muted fw-normal">({{ _('review_passed_only').format(evidence.passed|length, evidence.total) }})</small>
       </h2>
 
       <div class="d-flex flex-column gap-1">
@@ -247,7 +247,7 @@
               <div class="text-muted small opacity-75">{{ signal.detail }}</div>
             {% endif %}
             {% if signal.source %}
-              <div class="text-primary small">Source: {{ signal.source }}</div>
+              <div class="text-primary small">{{ _('review_source') }}: {{ signal.source }}</div>
             {% endif %}
           </div>
         </div>
@@ -263,10 +263,14 @@
 
   <!-- Navigation -->
   <div class="d-flex justify-content-between text-muted small">
-    <a href="/payroll/runs" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>All Payroll Runs</a>
-    <a href="/payroll/runs/{{ run.id }}" class="text-decoration-none">View Details <i class="bi bi-arrow-right"></i></a>
+    <a href="/payroll/runs" class="text-decoration-none"><i class="bi bi-arrow-left me-1"></i>{{ _('review_all_runs') }}</a>
+    <a href="/payroll/runs/{{ run.id }}" class="text-decoration-none">{{ _('review_view_details') }} <i class="bi bi-arrow-right"></i></a>
   </div>
 
 </div>
 {% endblock %}
-{% block extra_js %}<script src="{{ url_for('static', filename='js/monthly-payroll.js') }}?v={{ static_version }}" defer></script>{% endblock %}
+{% block extra_js %}
+{% set ui = {'stateDirty': _('monthly_state_dirty'), 'stateSaved': _('monthly_state_saved'), 'estimate': _('monthly_estimate_label'), 'lastSaved': _('monthly_last_saved_label'), 'saveBusy': _('monthly_busy_saving'), 'reviewBusy': _('monthly_busy_opening'), 'guidanceDirty': _('monthly_save_first_help'), 'guidanceClean': _('monthly_review_uses_saved'), 'countPattern': _('monthly_js_count_pattern'), 'reviewCountPattern': _('monthly_js_review_count_pattern')} %}
+<script>window.PAYROLL_I18N = {{ ui|tojson }};</script>
+<script src="{{ url_for('static', filename='js/monthly-payroll.js') }}?v={{ static_version }}" defer></script>
+{% endblock %}

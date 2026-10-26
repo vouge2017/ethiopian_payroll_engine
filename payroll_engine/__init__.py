@@ -74,6 +74,23 @@ def _configure_logging(app):
     app.logger.propagate = False
 
 
+def warn_ephemeral_upload_folder(app):
+    """Log-only durability warning for production deploy targets.
+
+    UPLOAD_FOLDER accepts uploads, deferred PDFs and deferred bank exports.
+    On container hosts these must live on a persistent mounted disk, not in
+    the container's /tmp. Logging only; never blocks startup.
+    """
+    upload_folder = app.config.get('UPLOAD_FOLDER', '')
+    if str(upload_folder).startswith('/tmp') and app.config.get('ENV') == 'production':
+        app.logger.warning(
+            'UPLOAD_FOLDER is under /tmp (%s). Files written there are lost on '
+            'redeploy or restart. Set UPLOAD_FOLDER to a persistent mounted disk '
+            '(release requirement: durable file storage).',
+            upload_folder,
+        )
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -211,6 +228,7 @@ def create_app():
     app.config['SESSION_TIMEOUT_MINUTES'] = idle_minutes
     app.config['SESSION_ABSOLUTE_TIMEOUT_HOURS'] = int(os.environ.get('SESSION_ABSOLUTE_TIMEOUT_HOURS', '8'))
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    warn_ephemeral_upload_folder(app)
     db.init_app(app)
     migrate.init_app(app, db)
 

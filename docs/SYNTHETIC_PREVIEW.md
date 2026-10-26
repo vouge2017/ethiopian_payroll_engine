@@ -99,3 +99,31 @@ account-help page, Amharic help, combined phone/email sign-in and Amharic
 registration loaded in browser. No registration or payroll was submitted. Worker
 health is unknown. Free database expiration is 30 October 2026. An uncoached
 physical-phone owner/practitioner walkthrough remains open.
+
+## Staged rollout checklist (2026-10-18)
+
+Working slice: `feature/amharic-prep-review-and-ops` (Amharic prep + review screens,
+worker heartbeat REDIS_URL fix, durable-storage warning). Apply these stages in
+order; a stage may be skipped only with an explicit founder decision recorded in
+STATUS.
+
+1. Durable foundations — attach a persistent database (free instance expires
+   2026-10-30) and a mounted disk for `UPLOAD_FOLDER`; set `UPLOAD_FOLDER` in
+   Render env, never a `/tmp` path in production. Verify the app no longer logs
+   the `/tmp` durability warning at startup.
+2. Monitoring — set `SENTRY_DSN` on web and worker; confirm the worker
+   heartbeat flips `/readyz`'s worker section from `unknown` to `healthy` by
+   exercising the Redis instance the worker actually uses (`REDIS_URL`,
+   `Dockerfile.worker`). Confirm Sentry receives a test event from staging.
+3. Language sign-off — native Amharic (and Oromo) speaker reviews the draft
+   strings in `docs/NATIVE_REVIEW_PACKAGE_20261018.md` and the RC-38000-01
+   notices in `docs/PENSION_BEFORE_TAX_RC38000_01.md`; corrections are code
+   changes, not runtime edits.
+4. Uncoached phone trial — Tigist (owner) performs add-employee, invalid-input
+   recovery, prepare/review in Amharic, and downloads one PDF/CSV without
+   coaching. Blockers then re-run affected checks.
+5. Backup and incident readiness — done backup/restore drill, including DB
+   encryption keys, plus a named incident/support owner and a real monitored
+   recovery contact.
+6. Authorized deploy — after 1-5, deploy the reviewed SHA to the production
+   service; record SHA, /readyz receipt and worker heartbeat in STATUS.

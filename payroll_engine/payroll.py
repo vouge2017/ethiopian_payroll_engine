@@ -5,9 +5,9 @@ This is THE ONLY ALLOWED WAY to calculate payroll.
 It enforces the deduction order: Gross → Pension → Taxable → Tax → Net.
 
 Why this exists:
-    The deduction order (pension deducted before tax) is app-enforced so all
-    monthly paths tax the same way. This ordering is current payroll practice
-    pending accountant sign-off (ref RC-38000-01); it is controlled by
+    The deduction order is app-enforced so all monthly paths tax the same way.
+    PAYE is on gross taxable pay before the 7% pension (Income Tax Proc.
+    979/2016; RC-38000-01 closed); it is controlled by
     constants.PENSION_DEDUCTED_BEFORE_TAX, not independently hard-coded here.
 
 Usage:
@@ -405,7 +405,7 @@ def generate_calculation_flow(result: dict) -> dict:
                 '7% of basic salary, deducted before PAYE — legacy rule (RC-38000-01)'
                 if before_tax
                 else '7% of basic salary, deducted from pay; it does not reduce taxable income '
-                '— pending accountant confirmation (RC-38000-01)'
+                '(Income Tax Proclamation No. 979/2016)'
             ),
             'is_deduction': True,
             'icon': '🏦',
@@ -451,7 +451,7 @@ def generate_calculation_flow(result: dict) -> dict:
                 'label': 'Pension Tax Savings',
                 'amount': pension_savings,
                 'note': f'You save this much because pension is deducted before PAYE — '
-                f'legacy rule, pending accountant confirmation (RC-38000-01). '
+                f'legacy rule, not current law (RC-38000-01). '
                 f'Without it, tax would be ETB {tax_without_pension:,.2f}',
                 'is_deduction': False,
                 'icon': '💡',
@@ -495,7 +495,7 @@ def generate_calculation_flow(result: dict) -> dict:
         f'ETB {gross:,.2f} gross → Pension {pension:,.2f} → Taxable {taxable:,.2f} → Tax {tax:,.2f} → Net {net:,.2f}'
     )
     if pension_savings > 0:
-        summary += f' (Pension saves ETB {pension_savings:,.2f}/month in tax — legacy rule, pending confirmation)'
+        summary += f' (Pension saves ETB {pension_savings:,.2f}/month in tax — legacy rule, not current law)'
 
     return {
         'steps': steps,

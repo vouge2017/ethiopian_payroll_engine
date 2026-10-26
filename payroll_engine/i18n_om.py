@@ -141,15 +141,15 @@ STRINGS_OM = {
     # Flash Messages
     'how_tax_calculated': 'Caasni akkamitti shallagama?',
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review:
-    # the pension-before-tax statement now carries the pending-confirmation wording.
-    'tax_explainer_intro': "Gibirri galii Itoophiyaa sadarkaa sadarkaan dabalu fayyadama (Labsii Lak. 1395/2025). Sooramni gibira dura hir'ifamuu fi dhiisuun isaa ammallee hin mirkanoofne (RC-38000-01).",
+    # PAYE is on gross taxable pay before the 7% pension (Proc. 979/2016); RC-38000-01 closed.
+    'tax_explainer_intro': "Gibirri galii Itoophiyaa sadarkaa sadarkaan dabalu fayyadama (Labsii Lak. 1395/2025). Gibirri galii galii gibiraaf ka'umsa ta'u waliigalaa irratti shallagama, osoo sooramni hojjetaa 7% hin hir'atin dura (Labsii Lak. 979/2016, RC-38000-01).",
     'bracket': 'Bracket',
     'taxable_range': 'Hangaa Lixuu',
     'tax_rate': 'Hammam',
     'personal_relief': 'Dhoomsoo Dhuunfaa',
     'per_month': "ji'a tokkootti",
     # DRAFT TRANSLATION (RC-38000-01), pending native-speaker review.
-    'pension_before_tax': "Sooramni gibira dura hir'ifamuu fi dhiisuun isaa ammallee hin mirkanoofne (RC-38000-01).",
+    'pension_before_tax': "Gibirri galii galii gibiraaf ka'umsa ta'u waliigalaa irratti shallagama, osoo sooramni hojjetaa 7% hin hir'atin dura (Labsii Lak. 979/2016, RC-38000-01).",
     'of_basic_salary': "lixuu bu'uura",
     'then_tax': 'sana booda caasni ni shallagama',
 }

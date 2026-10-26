@@ -19,8 +19,8 @@ import os
 # False = PAYE is calculated on gross taxable income (gross − exempt
 #         allowances); the 7% employee pension is still deducted from pay but
 #         does NOT reduce taxable income. This matches the owner's verified
-#         payroll rules (PLAN.md R1) and is the default from 2026-10-25,
-#         pending an Ethiopian accountant's written confirmation.
+#         payroll rules (PLAN.md R1) and is the default from 2026-10-25;
+#         confirmed per Income Tax Proclamation No. 979/2016 (RC-38000-01 closed).
 # True  = legacy behaviour: PAYE on (gross − 7% employee pension). Kept
 #         configurable so the rule can be restored without a code change if the
 #         accountant disagrees.
@@ -73,7 +73,7 @@ PENDING_CONFIRMATION_NOTICE = True
 PENDING_PAYE_NOTICE_TEXT = (
     'PAYE note: income tax is calculated on gross taxable income; the employee '
     'pension (7%) is deducted from pay but does not reduce taxable income. '
-    'Pending accountant confirmation (ref RC-38000-01).'
+    'Income Tax Proclamation No. 979/2016 (ref RC-38000-01).'
 )
 
 

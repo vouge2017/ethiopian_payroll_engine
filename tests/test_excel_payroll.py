@@ -376,12 +376,11 @@ class TestCalculationFlow:
             basic_salary=Decimal('10000'),
         )
 
-        # RC-38000-01: the pension-before-tax step must NOT present a statute
-        # article as its legal basis — it is current practice pending
-        # accountant confirmation, so no legal_reference badge is allowed.
+        # RC-38000-01 closed: the pension step carries no legal_reference badge;
+        # its note cites Proc. 979/2016 (pension does not reduce taxable income).
         pension_steps = [s for s in result.steps if 'Pension' in s.label]
         assert all(not s.legal_reference for s in pension_steps)
-        assert any('pending accountant confirmation' in (s.note or '').lower() for s in pension_steps)
+        assert any('979/2016' in (s.note or '') for s in pension_steps)
 
         # Tax step should reference the proclamation (bracket schedule)
         tax_steps = [s for s in result.steps if 'Income Tax' in s.label]

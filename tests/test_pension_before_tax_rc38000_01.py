@@ -227,10 +227,10 @@ def test_notice_switch_defaults_on_and_can_be_disabled(monkeypatch):
 
     text = constants.PENDING_PAYE_NOTICE_TEXT
     assert 'RC-38000-01' in text
-    assert 'pending' in text.lower()
+    assert '979/2016' in text
 
-    # No statute citation in the notice.
-    assert 'Proclamation' not in text
+    # RC-38000-01 closed: the notice cites the proclamation, not a single article.
+    assert 'Proclamation No. 979/2016' in text
     assert 'Article' not in text
 
 

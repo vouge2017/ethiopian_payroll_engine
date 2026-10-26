@@ -203,8 +203,9 @@ second review; Q1 is the PAYE-on-gross answer).
   preview, zero-leave allow, confirm → allow, change clears, re-save keeps
   stamp, override basis not confirmed); settlement fixtures in
   `test_settlement_taxation.py` / `test_settlement_leave_rate.py` now confirm
-  the company. Full suite: **1749 passed, 0 failed, 0 errors, 205 skipped**
-  (170 files, one process each, `python -m pytest`, SQLite; 1737 + 12 new).
+  the company. Full suite (2026-10-26, after merging main @ `c65aaa0`, PR #32,
+  and the pension-note rewording): **1778 passed, 0 failed, 0 errors, 205
+  skipped** (171 files, one process each, `python -m pytest`, SQLite).
   Single Alembic head `f4a5b6c7d8f6`. ruff check + format clean
   (`payroll_engine/ tests/`). PostgreSQL: CI only. Screens not checked in a
   real browser (no browser in the sandbox); HTML asserted in tests.
@@ -253,7 +254,9 @@ second review; Q1 is the PAYE-on-gross answer).
   month-close, rule-source names (one had a corrupted U+FFFD character),
   Enkutatash, and the tax certificate. The `pension_before_tax` and
   `tax_explainer_intro` strings (am + om) no longer call pension-before-tax
-  "common practice"; they say it is still being confirmed (RC-38000-01).
+  "common practice". Since 2026-10-26 they (and the matching English notes,
+  help FAQ, verification checklist, PAYE notice) state the confirmed rule: PAYE
+  on gross taxable pay before the 7% pension (Proc. 979/2016).
 - Review table for the owner (native speaker) in the PR body: changed strings
   with confidence, plus a "for review" list that was NOT changed.
 - PDF: NotoSansEthiopic is registered and embedded; Ethiopic renders. Gap:

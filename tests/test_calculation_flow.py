@@ -153,9 +153,9 @@ def test_calc_flow_pension_savings_in_steps(monkeypatch):
     savings_steps = [s for s in flow['steps'] if 'Savings' in s['label']]
     assert len(savings_steps) == 1
     assert savings_steps[0]['amount'] > Decimal('0')
-    # RC-38000-01: the savings note now carries the pending-confirmation wording.
+    # RC-38000-01 closed: the legacy savings note is labelled as not current law.
     assert 'without it, tax would be' in savings_steps[0]['note'].lower()
-    assert 'pending accountant confirmation' in savings_steps[0]['note'].lower()
+    assert 'legacy rule, not current law' in savings_steps[0]['note'].lower()
 
 
 def test_calc_flow_no_savings_when_zero_pension():

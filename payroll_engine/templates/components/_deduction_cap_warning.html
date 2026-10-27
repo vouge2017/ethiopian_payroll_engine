@@ -1,0 +1,15 @@
+{# One-third deduction cap warning (catalog PR 6, Labour Proc. 1156/2019 Art. 59). #}
+{% if deduction_cap_breaches %}
+<div class="alert alert-warning" role="alert" data-testid="deduction-cap-warning">
+    <strong>{{ _('deduction_cap_warning_title') }}</strong>
+    <p class="mb-2 small">These employees' deductions without written consent are more than one third of their monthly basic salary
+        (Labour Proclamation No. 1156/2019, Art. 59). The amounts below are calculated as entered and will not be reduced, but
+        <strong>approval is blocked</strong> until written consent is recorded on the deduction or the employee, or the deduction changes.
+        Court orders, income tax and pension are not counted (pending adviser confirmation).</p>
+    <ul class="mb-0 small">
+        {% for c in deduction_cap_breaches %}
+        <li>{{ c.employee_code }} {{ c.name }}: ETB {{ '{:,.2f}'.format(c.counted) }} without consent; one third of ETB {{ '{:,.2f}'.format(c.wage) }} is ETB {{ '{:,.2f}'.format(c.cap) }}.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

@@ -950,6 +950,59 @@ def delete_assignment(emp_id, assignment_id):
     return _assignment_redirect(emp_id)
 
 
+@employees_bp.route('/employees/<int:emp_id>/pay-items/<int:assignment_id>/consent', methods=['POST'])
+@role_required('owner', 'accountant')
+def assignment_consent(emp_id, assignment_id):
+    """Record or withdraw written consent for one deduction (Art. 59 one-third cap)."""
+    from payroll_engine.services import employee_assignments as ea
+
+    emp = _employee_or_404(emp_id)
+    a = _assignment_or_404(emp, assignment_id)
+    try:
+        changed = ea.set_assignment_consent(
+            _company_id(),
+            current_user.id,
+            a,
+            bool(request.form.get('consent_on_file')),
+            request.form.get('consent_note'),
+        )
+    except ea.AssignmentError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return redirect(url_for('employees.edit_assignment', emp_id=emp_id, assignment_id=assignment_id))
+    if changed:
+        _assignment_done('Written consent saved.')
+    else:
+        flash('Nothing changed.', 'info')
+    return _assignment_redirect(emp_id)
+
+
+@employees_bp.route('/employees/<int:emp_id>/deduction-consent', methods=['POST'])
+@role_required('owner', 'accountant')
+def employee_deduction_consent(emp_id):
+    """Record or withdraw an employee's written consent covering all their deductions."""
+    from payroll_engine.services import employee_assignments as ea
+
+    emp = _employee_or_404(emp_id)
+    try:
+        changed = ea.set_employee_consent(
+            _company_id(),
+            current_user.id,
+            emp,
+            bool(request.form.get('consent_on_file')),
+            request.form.get('consent_note'),
+        )
+    except ea.AssignmentError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return _assignment_redirect(emp_id)
+    if changed:
+        _assignment_done('Written consent saved.')
+    else:
+        flash('Nothing changed.', 'info')
+    return _assignment_redirect(emp_id)
+
+
 IMPORT_TEMPLATE_ROWS = (
     ('employee_id', 'item_key', 'amount', 'start_date', 'end_date', 'amount_type', 'label'),
     ('EMP001', 'transport', '1500.00', '2026-11-01', '', 'fixed', ''),

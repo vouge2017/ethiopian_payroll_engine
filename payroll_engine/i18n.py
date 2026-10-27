@@ -203,6 +203,9 @@ STRINGS = {
     'default_amount': 'መደበኛ መጠን',
     'starts_on': 'የሚጀምርበት ቀን',
     'own_amount': 'የሠራተኛው የራሱ መጠን',
+    # Catalog PR 6 (deduction cap). DRAFT TRANSLATION, pending native-speaker review.
+    'written_consent': 'የጽሑፍ ፈቃድ',
+    'deduction_cap_warning_title': 'ተቀናሾች ከደመወዙ አንድ ሦስተኛ በላይ ናቸው',
 }
 
 

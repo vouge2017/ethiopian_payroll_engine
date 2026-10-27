@@ -217,7 +217,9 @@ def test_migration_seeds_existing_companies_idempotently(app):
     db.session.commit()
     assert sorted(_company_keys(a.id)) == sorted(TEMPLATE_KEYS)
     assert sorted(_company_keys(b.id)) == sorted(TEMPLATE_KEYS)
-    assert sorted(_system_keys()) == sorted(SYSTEM_KEYS)
+    # The overtime rate items are created by the later migration b5c6d7e8f9a0
+    # (catalog PR 6), which also copies the TaxRule rates; this one skips them.
+    assert sorted(_system_keys()) == sorted(set(SYSTEM_KEYS) - mig._LATER_SYSTEM_KEYS)
 
     assert mig.seed_catalog(db.session.connection()) == 0  # second run: nothing new
     _run_upgrade(mig)

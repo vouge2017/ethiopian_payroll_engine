@@ -381,6 +381,7 @@ class ExcelPayrollEngine:
             ot_result = calculate_total_overtime(
                 result.basic_salary,
                 [{'hours': float(overtime_hours), 'type': overtime_type}],
+                for_date=self.for_date,
             )
             overtime_pay = ot_result['total_pay']
             overtime_total_hours = ot_result['total_hours']

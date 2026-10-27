@@ -743,3 +743,72 @@ def set_default_amount(item, user_id, raw):
         },
     )
     return True
+
+
+# ---------------------------------------------------------------------------
+# Written consent for deductions (catalog PR 6, Labour Proc. 1156/2019 Art. 59)
+# ---------------------------------------------------------------------------
+
+CONSENT_NOTE_MAX = 200
+
+
+def _consent_values(on_file, note):
+    note = (note or '').strip() or None
+    if note and len(note) > CONSENT_NOTE_MAX:
+        raise AssignmentError(f'Consent note is longer than {CONSENT_NOTE_MAX} characters.')
+    if on_file and not note:
+        raise AssignmentError('Say where the written consent is kept (e.g. "Signed form, HR file 12, 2026-10-02").')
+    return bool(on_file), note
+
+
+def _apply_consent(target, user_id, on_file, note):
+    from datetime import UTC, datetime
+
+    before = {'on_file': bool(target.deduction_consent_on_file), 'note': target.deduction_consent_note}
+    target.deduction_consent_on_file = on_file
+    target.deduction_consent_note = note
+    target.deduction_consent_recorded_at = datetime.now(UTC).replace(tzinfo=None)
+    target.deduction_consent_recorded_by = user_id
+    return before
+
+
+def set_assignment_consent(company_id, user_id, assignment, on_file, note):
+    """Record (or withdraw) the employee's written consent for one deduction assignment."""
+    item = assignment.item_type
+    if item is None or item.classification != PayItemClassification.DEDUCTION:
+        raise AssignmentError('Written consent applies to deductions only.')
+    on_file, note = _consent_values(on_file, note)
+    if bool(assignment.deduction_consent_on_file) == on_file and assignment.deduction_consent_note == note:
+        return False
+    before = _apply_consent(assignment, user_id, on_file, note)
+    db.session.flush()
+    _audit(
+        company_id,
+        user_id,
+        'deduction_consent_changed',
+        assignment,
+        _employee(company_id, assignment),
+        item,
+        before=before,
+        on_file=on_file,
+        note=note,
+    )
+    return True
+
+
+def set_employee_consent(company_id, user_id, employee, on_file, note):
+    """Record (or withdraw) an employee's written consent covering all their deductions."""
+    if employee.company_id != company_id:
+        raise AssignmentError('Employee not found.')
+    on_file, note = _consent_values(on_file, note)
+    if bool(employee.deduction_consent_on_file) == on_file and employee.deduction_consent_note == note:
+        return False
+    before = _apply_consent(employee, user_id, on_file, note)
+    db.session.flush()
+    create_audit_log(
+        company_id=company_id,
+        user_id=user_id,
+        action='employee_deduction_consent_changed',
+        details={'employee_id': employee.employee_id, 'before': before, 'on_file': on_file, 'note': note},
+    )
+    return True

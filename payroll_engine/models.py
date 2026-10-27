@@ -749,6 +749,13 @@ class Employee(db.Model):
     deleted_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     invite_token = db.Column(db.String(64), nullable=True, unique=True)
     invite_expires = db.Column(db.DateTime, nullable=True)
+    # Written consent to deductions above one third of the monthly wage
+    # (Labour Proc. 1156/2019 Art. 59; catalog PR 6, migration b5c6d7e8f9a0).
+    # Covers every deduction of the employee for the cap check.
+    deduction_consent_on_file = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    deduction_consent_note = db.Column(db.String(200), nullable=True)
+    deduction_consent_recorded_at = db.Column(db.DateTime, nullable=True)
+    deduction_consent_recorded_by = db.Column(db.Integer, nullable=True)  # user id (no FK constraint)
     # Employee-editable personal info
     address = db.Column(db.String(300), nullable=True)
     emergency_contact = db.Column(db.String(100), nullable=True)

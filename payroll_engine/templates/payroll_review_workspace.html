@@ -44,6 +44,7 @@
 
 {% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
 {{ monthly.steps(3 if run.status in ('pending_approval', 'completed', 'locked') else 2) }}
+{% if run.status not in ('completed', 'locked') %}{% include "components/_deduction_cap_warning.html" %}{% endif %}
 {% if worksheet_rows %}{{ monthly.totals(worksheet_rows|length, worksheet_rows|sum(attribute='gross'), worksheet_rows|sum(attribute='tax'), worksheet_rows|sum(attribute='net'), 'Saved net pay', comparison=change_summary) }}{% endif %}
   {% if component_errors and component_errors.change_summary %}
     {% set component_name = 'Change Summary' %}

@@ -631,6 +631,74 @@ second review; Q1 is the PAYE-on-gross answer).
   format clean. Single Alembic head `a4b5c6d7e8f9`. Screens not checked in
   a real browser (none in the sandbox); HTML asserted in tests.
 
+### Pay-item catalog PR 6: overtime in the catalog + one-third deduction cap (branch `feat/catalog-overtime-deduction-cap`, 2026-10-27)
+
+- State: draft PR, **stacked on PR 5** (base `feat/catalog-employee-assignments`,
+  #42); must merge after #42, then be retargeted to `main`. Not merged.
+  **No current amount changes**: rates copied as the app applied them, golden
+  test `tests/test_catalog_assignment_golden.py` unchanged and green.
+- Overtime: the four Art. 68 overtime types are shared system catalog items
+  (`overtime_day`, `overtime_night`, `overtime_holiday`,
+  `overtime_rest_day_holiday`; earning, rate_x_units, taxable, not
+  pensionable, not Art. 53 wage), locked (no edit / deactivate, key reserved,
+  never assignable, never loaded as a monthly earning), shown read-only on
+  Settings → Pay items. Migration `b5c6d7e8f9a0` creates them with versions
+  that copy the live rates: code defaults from 2000-01-01, then each active
+  ET TaxRule's overtime rates from its effective date. `overtime._get_overtime_rules`
+  now reads the multiplier from the catalog version effective for the
+  period (`overtime_catalog.catalog_rates`); TaxRule rates / code defaults are
+  only the fallback for a type with no active item. Limits and the hourly
+  divisor still come from TaxRule. Every engine passes the period date: the
+  elements engine, the legacy `payroll.calculate_payroll` and the Excel
+  engine (`excel_payroll`, `for_date=self.for_date`) — the legacy engines
+  previously ignored the date for overtime.
+- Migration fix: the b7c1d2e3f4a5 catalog seeder reads the live catalog spec,
+  which now includes the overtime items; it now skips them
+  (`_LATER_SYSTEM_KEYS`) so on a fresh Alembic build `b5c6d7e8f9a0` creates
+  them and copies the TaxRule rates (otherwise b7c1 created them first and
+  the copy was skipped). No effect on databases already past b7c1.
+- Deduction cap (Labour Proc. 1156/2019 Art. 59): approval is **blocked** in
+  both approval paths (worksheet review and itemized/CSV draft) when a
+  month's deductions without written consent exceed one third of basic
+  salary. The preview (review workspace, confirm page) warns. Amounts are
+  never reduced; nothing is written or consumed on a blocked approval.
+  Court orders are not counted. PAYE and pension are not deductions here.
+- Written consent: per deduction (assignment edit page) or per employee
+  (employee page), with a required note saying where the written consent is
+  kept, who recorded it and when; audit `deduction_consent_changed` /
+  `employee_deduction_consent_changed`. Owner / accountant only. Columns
+  `deduction_consent_on_file` (NOT NULL default false), `_note`,
+  `_recorded_at`, `_recorded_by` on `payroll_item_assignment` and
+  `employee`. Downgrade refuses while any consent is recorded (legal
+  evidence) and while an overtime item is assigned.
+- **Pending adviser (not decided; no rates changed):**
+  1. Overtime rates: `seed_tax_rules.py` seeds day 1.25 / night 1.50, the code
+     defaults are 1.50 / 1.75. Whatever an active TaxRule says is what the app
+     applied and what the migration copied. Which is right?
+  2. The `holiday` type is labelled "public holiday" at 2.0x, but the code
+     comment says Art. 68(1)(c) weekly rest day; Art. 68(1)(d) public holiday
+     is 2.5x (`rest_day_holiday`). Labels/mapping to confirm.
+  3. One-third cap: which monthly wage (basic now, `WAGE_BASIS`; or Art. 53
+     wage / gross), whether written consent lifts the cap entirely (it does
+     now), and whether cost-sharing (counted now) and court orders (excluded
+     now) are treated correctly.
+- Tests: `tests/test_overtime_catalog_deduction_cap.py` (12, SQLite) and
+  `tests/test_pg_overtime_deduction_cap.py` (PG, 4: head; isolated upgrade
+  copies code defaults + TaxRule rates, consent columns NOT NULL default
+  false, other rows/versions/indexes/triggers unchanged, idempotent,
+  downgrade refuses with consent then round-trips; shared DB: every engine
+  reads the catalog rate, itemized approval blocked until consent) — added
+  to the CI PG job. Head pin bumped in `test_pg_pr8_reconciliation.py`.
+  Full SQLite suite (191 files, one process each, `python -m pytest`): 2007
+  passed, 0 failed, 0 errors, 235 skipped (PR 5 baseline 1995 + 12 new; +4
+  PG skips). PostgreSQL CI list (29 files, local PG 17): 208 passed.
+  `tests/test_catalog_foundation.py` now expects b7c1 to skip the overtime
+  keys; `tests/test_pg_encrypted_employee.py` inserts into downgraded
+  schemas with only the columns they have (Employee gained the consent
+  columns).
+  ruff check / format clean. Single Alembic head `b5c6d7e8f9a0`. Screens not
+  checked in a real browser (none in the sandbox); HTML asserted in tests.
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance
@@ -897,6 +965,13 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 - Amharic/Oromo `pension_before_tax` and `tax_explainer_intro` still say the
   pension-before-tax question is "still being confirmed" (RC-38000-01). Q1 is
   now confirmed (tax on gross). Parked: needs native-speaker wording.
+- Overtime rate / label questions from catalog PR 6 (seeded TaxRule 1.25 /
+  1.50 vs code defaults 1.50 / 1.75; `holiday` 2.0x labelled public holiday vs
+  Art. 68 rest day, public holiday 2.5x). Parked: pending adviser; rates are
+  unchanged and are now edited only through catalog versions.
+- One-third deduction cap details (wage base, whether consent lifts the cap,
+  cost-sharing counted, court orders excluded). Parked: pending adviser;
+  current behaviour is documented in `payroll_engine/deduction_cap.py`.
 - Unused i18n key `pension_before_tax` (am/om) still describes the old rule.
   Parked: not shown anywhere, so fix it with the Amharic label work (Next item 7).
 
@@ -1012,3 +1087,16 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   changes (golden generated on main first). Tests: SQLite 1995 passed, 0
   failed, 231 skipped (189 files); PostgreSQL 204 passed (28 files, local
   PG 17). ruff clean.
+- 2026-10-27 — Hark — Catalog PR 6 (`feat/catalog-overtime-deduction-cap`,
+  stacked on #42): four Art. 68 overtime rates as locked, versioned system
+  catalog items (migration `b5c6d7e8f9a0` copies code defaults then each
+  active TaxRule from its date; every engine, including the legacy CSV and
+  Excel engines, reads the version effective for the period; b7c1 seeder
+  now skips these keys); approval blocked in both approval paths when
+  non-consented deductions exceed 1/3 of basic (preview warns, nothing
+  reduced, court orders excluded); written consent per deduction or per
+  employee. No amount changes (golden unchanged). Pending adviser: overtime
+  rates 1.25/1.50 seeded vs 1.50/1.75 defaults, `holiday` 2.0x label vs
+  Art. 68 rest day / public holiday 2.5x, cap wage base, consent lifting the
+  cap, cost-sharing. Tests: SQLite 2007 passed, 0 failed, 235 skipped (191
+  files); PostgreSQL 208 passed (29 files, local PG 17). ruff clean.

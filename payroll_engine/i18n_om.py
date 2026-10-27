@@ -199,4 +199,7 @@ STRINGS_OM = {
     'default_amount': 'Hanga Idilee',
     'starts_on': 'Guyyaa Itti Jalqabu',
     'own_amount': 'Hanga Mataa Isaa',
+    # Catalog PR 6 (deduction cap). DRAFT TRANSLATION, pending native-speaker review.
+    'written_consent': 'Hayyama Barreeffamaa',
+    'deduction_cap_warning_title': "Hir'isni mindaa keessaa harka sadii keessaa tokko caala",
 }

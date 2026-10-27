@@ -73,5 +73,28 @@
             </form>
         </div>
     </div>
+    {% if row.item.classification == 'deduction' %}
+    <div class="card mt-4" style="max-width: 760px;" data-testid="consent-card">
+        <div class="card-body">
+            <h5 class="card-title">{{ _('written_consent') }}</h5>
+            <p class="text-muted small">Labour Proclamation No. 1156/2019, Art. 59: deductions without the employee's written consent may not
+                exceed one third of the monthly wage. Payroll approval is blocked above that line unless consent is on file. Court orders,
+                income tax and pension are not counted (pending adviser confirmation).</p>
+            <form method="POST" action="{{ url_for('employees.assignment_consent', emp_id=employee.id, assignment_id=row.assignment.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="consent_on_file" value="1" id="consent_on_file" {% if row.assignment.deduction_consent_on_file %}checked{% endif %}>
+                    <label class="form-check-label" for="consent_on_file">The employee's signed written consent for this deduction is on file</label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="consent_note">Where it is kept</label>
+                    <input type="text" class="form-control" name="consent_note" id="consent_note" maxlength="200"
+                           value="{{ row.assignment.deduction_consent_note or '' }}" placeholder="e.g. Signed form, HR file 12, 2026-10-02">
+                </div>
+                <button type="submit" class="btn btn-outline-primary">{{ _('save_changes') }}</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -4,7 +4,7 @@
   write one ``PayrollRunItemSnapshot`` in the approval transaction.
 * The ERCA ``_pay_item:<key>:taxable`` column of an approved month reads the
   frozen tax treatment, so a later settings edit changes neither that column
-  nor the stored payslip. Runs without a snapshot keep the live lookup.
+  nor the stored payslip. Runs without a snapshot do not use live settings.
 * Snapshots are tenant-scoped (TenantQuery), cannot link another company's
   run and are immutable (ORM guard; PostgreSQL triggers in
   test_pg_run_item_snapshot.py).
@@ -274,7 +274,7 @@ def test_item_exempt_at_approval_stays_exempt(setup):
     assert _pay_item_amount(_payslip(company.id, run.id), 'housing', 'taxable') == 0
 
 
-def test_run_without_snapshot_falls_back_to_live_settings(setup):
+def test_run_without_snapshot_does_not_fall_back_to_live_settings(setup):
     company, user, emp = setup
     run = _approve_draft(company, user, emp)
     # A run approved before this PR (and not backfilled) has no snapshot row.
@@ -282,11 +282,42 @@ def test_run_without_snapshot_falls_back_to_live_settings(setup):
     db.session.commit()
     ps = _payslip(company.id, run.id)
     assert run_item_snapshot(company.id, run.id) is None
-    assert _pay_item_amount(ps, 'housing', 'taxable') == Decimal('3000.00')
+    assert _pay_item_amount(ps, 'housing', 'taxable') == ''
     housing = PayItemType.query.filter_by(company_id=company.id, key='housing').one()
     housing.tax_treatment = 'exempt'
     db.session.commit()
-    assert _pay_item_amount(_payslip(company.id, run.id), 'housing', 'taxable') == 0
+    assert _pay_item_amount(_payslip(company.id, run.id), 'housing', 'taxable') == ''
+
+
+@pytest.mark.parametrize(('percent', 'expected'), [(None, Decimal('800.00')), (Decimal('25'), '')])
+def test_partial_taxable_item_uses_only_reconstructible_snapshot_values(setup, percent, expected):
+    company, user, emp = setup
+    housing = PayItemType.query.filter_by(company_id=company.id, key='housing').one()
+    housing.tax_treatment = 'partial'
+    housing.exempt_cap_amount = Decimal('2200')
+    housing.exempt_cap_percent = percent
+    db.session.commit()
+    run = _approve_draft(company, user, emp)
+    assert _pay_item_amount(_payslip(company.id, run.id), 'housing', 'taxable') == expected
+
+
+def test_backfilled_report_discloses_settings_were_not_captured_at_approval(setup):
+    import io
+
+    import openpyxl
+
+    from payroll_engine.reports import generate_erca_report
+
+    company, user, emp = setup
+    run = _approve_draft(company, user, emp)
+    db.session.execute(
+        sa.text('UPDATE payroll_run_item_snapshot SET backfilled = true WHERE payroll_run_id = :id'), {'id': run.id}
+    )
+    db.session.commit()
+    db.session.expire_all()
+    workbook = openpyxl.load_workbook(io.BytesIO(generate_erca_report([_payslip(company.id, run.id)], company.name)))
+    text_cells = [str(cell.value) for row in workbook.active for cell in row if cell.value is not None]
+    assert any('backfilled from settings at migration time' in cell for cell in text_cells)
 
 
 # ---------------------------------------------------------------------------

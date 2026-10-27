@@ -319,13 +319,22 @@ def test_locked_month_reports_unchanged_after_salary_change(client, locked_month
         assert Decimal(str(cell['Tax withheld'])) == approved['tax'], key
         overtime = Decimal(str(cell['Over Time']))
         assert overtime > 0, key
-        # transport/other column = gross - frozen basic - overtime (3,000 housing)
-        assert Decimal(str(cell['Transport Allowance'])) == Decimal('3000'), key
+        # The approved snapshot identifies housing as taxable, not transport.
+        assert cell['Transport Allowance'] == 0, key
+        assert cell['Taxable Transport Allowance'] == 0, key
+        assert cell['Other Taxable Benefit'] == 3000, key
+        assert any('Allowance breakdown unavailable' in str(c) for r in rows for c in r), key
+        totals = dict(zip(header, _row_for(rows, 'TOTALS'), strict=False))
+        assert totals['Other Taxable Benefit'] in (None, ''), key
+        assert any('Totals are blank' in str(c) for r in rows for c in r), key
 
     erca_csv_row = _row_for(after['erca_csv'], 'Abebe Engine')
     assert Decimal(erca_csv_row[3]) == Decimal('10000')
     assert Decimal(erca_csv_row[8]) == approved['taxable']
     assert Decimal(erca_csv_row[9]) == approved['tax']
+    assert [Decimal(value) for value in erca_csv_row[4:6]] == [0, 0]
+    assert Decimal(erca_csv_row[7]) == Decimal('3000.00')
+    assert any('Allowance breakdown unavailable' in str(c) for r in after['erca_csv'] for c in r)
     pension_csv_row = _row_for(after['pension_csv'], 'Abebe Engine')
     assert Decimal(pension_csv_row[3]) == Decimal('10000')
 
@@ -396,3 +405,40 @@ def test_frozen_figures_reads_line_items_not_employee():
     assert fig['basic'] is None and fig['basic_frozen'] is False
     assert fig['overtime'] is None and fig['other_earnings'] is None and fig['taxable'] is None
     assert fig['net'] == Decimal('10588.48')
+
+
+def test_custom_pay_item_columns_do_not_invent_historical_tax_treatment():
+    from payroll_engine.report_templates import get_column_value
+
+    class Slip:
+        company_id = 1
+        payroll_run_id = None
+        line_items = [{'item_key': 'housing', 'classification': 'earning', 'earned_amount': '3000.00'}]
+
+    slip = Slip()
+    assert get_column_value(slip, '_pay_item:housing') == Decimal('3000.00')
+    assert get_column_value(slip, '_pay_item:housing:taxable') == ''
+    slip.line_items = None
+    assert get_column_value(slip, '_pay_item:housing') == ''
+    assert get_column_value(slip, '_pay_item:housing:taxable') == ''
+
+
+def test_custom_taxable_and_missing_snapshot_report_warns(client, locked_month, monkeypatch):
+    from payroll_engine import report_templates
+    from payroll_engine.reports import generate_erca_report
+
+    columns = [
+        {'key': 'employee_name', 'label': 'Name', 'data_path': 'employee.name'},
+        {'key': 'housing', 'label': 'Housing', 'data_path': '_pay_item:housing'},
+        {'key': 'housing_tax', 'label': 'Housing taxable', 'data_path': '_pay_item:housing:taxable'},
+    ]
+    monkeypatch.setattr(report_templates, 'get_enabled_columns', lambda *_args: columns)
+    company = db.session.get(Company, locked_month['company_id'])
+    rows = _xlsx_rows(generate_erca_report(_payslips(locked_month), company.name, '2026-09', company))
+    header = next(row for row in rows if row and 'Housing taxable' in row)
+    engine = dict(zip(header, _row_for(rows, 'Abebe Engine'), strict=False))
+    legacy = dict(zip(header, _row_for(rows, 'Sara Legacy'), strict=False))
+    assert engine['Housing'] == 3000
+    assert engine['Housing taxable'] == 3000
+    assert legacy['Housing'] in (None, '')
+    assert any('Pay-item breakdown unavailable' in str(cell) for row in rows for cell in row)

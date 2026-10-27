@@ -73,6 +73,110 @@ def seed_run(company_id, count):
     return run_id
 
 
+def test_paye_report_does_not_relabel_housing_after_salary_change(report_db):
+    """Migrated PostgreSQL: approved amounts survive a raise without invented categories."""
+    import csv
+    import io
+
+    import openpyxl
+
+    from payroll_engine.reports import _generate_erca_csv, generate_erca_report
+
+    app, company_id, _engine, _companies = report_db
+    with app.app_context():
+        run_id = seed_run(company_id, 1)
+        slip = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run_id).one()
+        slip.gross_salary = Decimal('13000.00')
+        slip.taxable_income = Decimal('13000.00')
+        slip.line_items = [
+            {'item_key': 'basic_salary', 'classification': 'earning', 'earned_amount': '10000.00'},
+            {'item_key': 'housing', 'classification': 'earning', 'earned_amount': '3000.00'},
+        ]
+        db.session.commit()
+        slip.employee.basic_salary = Decimal('20000.00')
+        db.session.commit()
+        db.session.expire_all()
+        slip = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run_id).one()
+
+        sheet = openpyxl.load_workbook(io.BytesIO(generate_erca_report([slip], 'Synthetic', '2026-09'))).active
+        rows = list(sheet.iter_rows(values_only=True))
+        header = rows[4]
+        row = dict(zip(header, rows[5], strict=False))
+        assert row['Basic Salary'] == 10000
+        assert row['Total Taxable'] == 13000
+        assert row['Transport Allowance'] in (None, '')
+        assert row['Taxable Transport Allowance'] in (None, '')
+        assert row['Other Taxable Benefit'] in (None, '')
+        assert any('Allowance breakdown unavailable' in str(cell) for values in rows for cell in values)
+
+        csv_rows = list(csv.reader(io.StringIO(_generate_erca_csv([slip], 'Synthetic', '2026-09').decode())))
+        assert csv_rows[2][3:6] == ['10000.00', '', '']
+        assert csv_rows[2][7:9] == ['', '13000.00']
+
+
+def test_paye_report_uses_company_run_snapshot_on_postgresql(report_db):
+    import io
+
+    import openpyxl
+
+    from payroll_engine.models_payroll_elements import PayrollRunItemSnapshot
+    from payroll_engine.reports import generate_erca_report
+
+    app, company_id, _engine, _companies = report_db
+    with app.app_context():
+        run_id = seed_run(company_id, 1)
+        slip = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run_id).one()
+        slip.line_items = [
+            {'item_key': 'basic_salary', 'classification': 'earning', 'earned_amount': '10000.00'},
+            {'item_key': 'housing', 'classification': 'earning', 'earned_amount': '3000.00'},
+        ]
+        db.session.add(
+            PayrollRunItemSnapshot(
+                company_id=company_id,
+                payroll_run_id=run_id,
+                calculation_date=date(2026, 9, 1),
+                snapshot={
+                    'version': 1,
+                    'items': [
+                        {'company_id': company_id, 'key': 'housing', 'tax_treatment': 'taxable'},
+                    ],
+                },
+            )
+        )
+        db.session.commit()
+        sheet = openpyxl.load_workbook(io.BytesIO(generate_erca_report([slip], 'Synthetic', '2026-09'))).active
+        rows = list(sheet.iter_rows(values_only=True))
+        row = dict(zip(rows[4], rows[5], strict=False))
+        assert row['Transport Allowance'] == 0
+        assert row['Taxable Transport Allowance'] == 0
+        assert row['Other Taxable Benefit'] == 3000
+
+
+@pytest.mark.parametrize('count', [5, 25])
+def test_report_queries_snapshot_once_per_run(report_db, count):
+    from payroll_engine.reports import _generate_erca_csv, generate_erca_report
+
+    app, company_id, engine, _companies = report_db
+    with app.app_context():
+        run_id = seed_run(company_id, count)
+        slips = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run_id).all()
+        statements = []
+
+        def record_sql(_conn, _cursor, statement, _parameters, _context, _executemany):
+            if statement.lstrip().upper().startswith('SELECT') and 'FROM payroll_run_item_snapshot ' in statement:
+                statements.append(statement)
+
+        event.listen(engine, 'before_cursor_execute', record_sql)
+        try:
+            generate_erca_report(slips, 'Synthetic', '2026-09')
+            assert len(statements) == 1
+            statements.clear()
+            _generate_erca_csv(slips, 'Synthetic', '2026-09')
+            assert len(statements) == 1
+        finally:
+            event.remove(engine, 'before_cursor_execute', record_sql)
+
+
 @pytest.mark.parametrize('count', [5, 25])
 def test_report_employee_query_count_is_bounded(report_db, count):
     app, company_id, engine, _ = report_db

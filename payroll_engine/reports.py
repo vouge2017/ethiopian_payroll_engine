@@ -15,6 +15,30 @@ from decimal import Decimal
 
 from payroll_engine.frozen_payslip import UNFROZEN_BASIC_NOTE, frozen_figures, unfrozen_basic_count
 
+UNKNOWN_ALLOWANCE_NOTE = (
+    'Allowance breakdown unavailable for some cells: the saved run settings, earning lines, or '
+    'inputs needed for a partial exemption are missing. Review before filing.'
+)
+UNKNOWN_ITEM_NOTE = (
+    'Pay-item breakdown unavailable for some columns: the approved item snapshot or per-item tax treatment '
+    'was not preserved. Blank cells require review before filing.'
+)
+BACKFILLED_ITEM_NOTE = (
+    'Some item settings were backfilled from settings at migration time, not from approval. '
+    'Review these breakdowns against original payroll records before filing.'
+)
+INCOMPLETE_TOTAL_NOTE = 'Totals are blank where one or more employee values are missing. Review before filing.'
+
+
+def _report_run_snapshot(payslip, cache):
+    from payroll_engine.item_snapshot import run_item_snapshot
+
+    key = (payslip.company_id, payslip.payroll_run_id)
+    if key not in cache:
+        cache[key] = run_item_snapshot(*key)
+    return cache[key]
+
+
 # Every money figure in a monthly report comes from the values frozen on the
 # payslip at approval (see payroll_engine/frozen_payslip.py), never from the
 # employee's current record: re-downloading a locked month must give the same
@@ -139,9 +163,22 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
 
     # --- Data rows ---
     totals = {}  # key -> running total
+    incomplete_totals = set()
+    unknown_allowance = False
+    unknown_item = False
+    backfilled = False
+    relevant_paths = ('_transport_allowance', '_taxable_transport', '_other_taxable')
+    snapshots = {}
+    uses_snapshot = any(
+        c.get('static_value') is None
+        and ((c.get('data_path') or '') in relevant_paths or (c.get('data_path') or '').startswith('_pay_item:'))
+        for c in columns
+    )
 
     for i, p in enumerate(payslips, 1):
         row = 5 + i
+        snapshot = _report_run_snapshot(p, snapshots) if uses_snapshot else None
+        backfilled |= bool(snapshot and snapshot.backfilled)
 
         for col_idx, col_cfg in enumerate(columns, 1):
             key = col_cfg['key']
@@ -149,7 +186,12 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
             static_value = col_cfg.get('static_value')
 
             # Extract value — use get_column_value for flexibility
-            val = get_column_value(p, data_path, company, static_value)
+            val = get_column_value(p, data_path, company, static_value, snapshot=snapshot)
+            if static_value is None and val in (None, ''):
+                unknown_allowance |= data_path in relevant_paths
+                unknown_item |= data_path.startswith('_pay_item:')
+            if key in NUMERIC_KEYS and val in (None, ''):
+                incomplete_totals.add(key)
 
             # Handle row number specially
             if data_path == '_row_number':
@@ -186,7 +228,7 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
 
     for col_idx, col_cfg in enumerate(columns, 1):
         key = col_cfg['key']
-        if key in totals:
+        if key in totals and key not in incomplete_totals:
             cell = ws.cell(row=totals_row, column=col_idx, value=totals[key])
             cell.font = totals_font
             cell.fill = totals_fill
@@ -201,6 +243,16 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
         ws.cell(row=totals_row + 2, column=1, value=UNFROZEN_BASIC_NOTE.format(count=missing)).font = Font(
             italic=True, color='B03A2E'
         )
+
+    if unknown_allowance:
+        ws.cell(row=totals_row + 3, column=1, value=UNKNOWN_ALLOWANCE_NOTE).font = Font(italic=True, color='B03A2E')
+
+    if unknown_item:
+        ws.cell(row=totals_row + 4, column=1, value=UNKNOWN_ITEM_NOTE).font = Font(italic=True, color='B03A2E')
+    if backfilled:
+        ws.cell(row=totals_row + 5, column=1, value=BACKFILLED_ITEM_NOTE).font = Font(italic=True, color='B03A2E')
+    if incomplete_totals:
+        ws.cell(row=totals_row + 6, column=1, value=INCOMPLETE_TOTAL_NOTE).font = Font(italic=True, color='B03A2E')
 
     # --- Print setup ---
     ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
@@ -530,12 +582,22 @@ def _generate_erca_csv(payslips, company_name, period):
             'Tax withheld',
         ]
     )
+    from payroll_engine.report_templates import get_column_value
     from payroll_engine.security import prevent_csv_injection
 
+    unknown_allowance = False
+    backfilled = False
+    snapshots = {}
     for _i, p in enumerate(payslips, 1):
         emp = p.employee
         fig = frozen_figures(p)
-        other = fig['other_earnings']
+        snapshot = _report_run_snapshot(p, snapshots)
+        breakdown = [
+            get_column_value(p, path, snapshot=snapshot)
+            for path in ('_transport_allowance', '_taxable_transport', '_other_taxable')
+        ]
+        unknown_allowance |= any(value == '' for value in breakdown)
+        backfilled |= bool(snapshot and snapshot.backfilled)
         start_date = emp.start_date.strftime('%d/%m/%Y') if emp.start_date else ''
 
         writer.writerow(
@@ -544,10 +606,10 @@ def _generate_erca_csv(payslips, company_name, period):
                 start_date,
                 '',  # End Date
                 '' if fig['basic'] is None else fig['basic'],
-                '' if other is None else other,  # Transport Allowance (all non-basic, non-OT earnings)
-                '' if other is None else other,  # Taxable Transport Allowance
+                breakdown[0],
+                breakdown[1],
                 '' if fig['overtime'] is None else fig['overtime'],  # Over Time
-                0,  # Other Taxable Benefit
+                breakdown[2],
                 '' if fig['taxable'] is None else fig['taxable'],  # Total Taxable
                 fig['tax'],  # Tax withheld
             ]
@@ -555,6 +617,10 @@ def _generate_erca_csv(payslips, company_name, period):
     missing = unfrozen_basic_count(payslips)
     if missing:
         writer.writerow([UNFROZEN_BASIC_NOTE.format(count=missing)])
+    if unknown_allowance:
+        writer.writerow([UNKNOWN_ALLOWANCE_NOTE])
+    if backfilled:
+        writer.writerow([BACKFILLED_ITEM_NOTE])
     return output.getvalue().encode('utf-8')
 
 

@@ -430,5 +430,5 @@ def test_ac11_report_column_resolves_by_key_per_company(ctx):
         line_items = []
 
     assert _pay_item_amount(PS(), 'night_shift') == 2400.0, 'the ERCA column must resolve night_shift for Company A'
-    assert _pay_item_amount(CompanyBPayslip(), 'night_shift') == 0, 'Company B has no night_shift and must report 0'
+    assert _pay_item_amount(CompanyBPayslip(), 'night_shift') == '', 'an empty snapshot does not prove zero'
     assert PayItemType.query.filter_by(company_id=b.id, key='night_shift').first() is None

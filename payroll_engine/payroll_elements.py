@@ -19,6 +19,13 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from payroll_engine import constants as _constants
 from payroll_engine import db
 from payroll_engine.exemption_caps import lower_of_caps
+from payroll_engine.item_versions import (
+    ResolvedAssignment,
+    ResolvedItemType,
+    resolve_assignments,
+    resolve_rows,
+    unwrap,
+)
 from payroll_engine.models import (
     PayItemCalcMethod,
     PayItemClassification,
@@ -84,6 +91,16 @@ def _D(value) -> Decimal:
         return Decimal(str(value))
     except (InvalidOperation, ValueError):
         return Decimal('0')
+
+
+def _is_assignment(item):
+    """True for a PayrollItemAssignment or its resolved-version view (catalog PR 4b)."""
+    return isinstance(item, (PayrollItemAssignment, ResolvedAssignment))
+
+
+def _is_item_type(item):
+    """True for a PayItemType row or its resolved-version view (catalog PR 4b)."""
+    return isinstance(item, (PayItemType, ResolvedItemType))
 
 
 def _item_quantity(assignment, units_input):
@@ -164,7 +181,9 @@ def calculate_payroll_from_assignments(
     # What-if simulations pass hypothetical rows in memory. They are bucketed
     # with the same classification mapping as persisted rows, so a hypothetical
     # item is taxed/capped identically to a real one.
-    for extra in extra_items or []:
+    for extra in resolve_assignments(
+        [e for e in extra_items or [] if getattr(e, 'item_type', None) is not None], for_date
+    ):
         item_type = getattr(extra, 'item_type', None)
         if item_type is None:
             continue
@@ -199,7 +218,7 @@ def calculate_payroll_from_assignments(
             item, employee, for_date, units_input, total_earnings + total_deductions_pre_tax
         )
         # Normalize: assignments carry their PayItemType via .item_type
-        item_type = item if isinstance(item, PayItemType) else getattr(item, 'item_type', None)
+        item_type = item if _is_item_type(item) else getattr(item, 'item_type', None)
         classification = item_type.classification if item_type else PayItemClassification.EARNING
         is_system = getattr(item_type, 'is_system', False) if item_type else False
 
@@ -376,14 +395,14 @@ def _load_system_items(company_id, for_date):
 
     rows = (
         db.session.query(PayItemType)
-        .filter(
-            PayItemType.company_id.is_(None),
-            PayItemType.is_active == True,
-        )
+        .filter(PayItemType.company_id.is_(None))
         .filter(type_effective)
         .order_by(PayItemType.sort_order)
         .all()
     )
+    # Catalog PR 4b: settings (including is_active) come from the version
+    # effective on for_date; with a single version that is the row itself.
+    rows = [row for row in resolve_rows(rows, for_date) if row.is_active]
 
     for row in rows:
         bucket = {
@@ -424,13 +443,14 @@ def _load_employee_items(employee_id, company_id, for_date):
             PayrollItemAssignment.employee_id == employee_id,
             PayrollItemAssignment.company_id == company_id,
             PayrollItemAssignment.is_active == True,
-            PayItemType.is_active == True,
         )
         .filter(type_effective, assignment_effective)
         .order_by(PayItemType.sort_order, PayrollItemAssignment.id)
     )
 
-    rows = query.all()
+    # Catalog PR 4b: the item's settings (including is_active) come from the
+    # version effective on for_date; with a single version that is the row.
+    rows = [row for row in resolve_assignments(query.all(), for_date) if row.item_type.is_active]
 
     earnings = []
     deductions = []
@@ -550,7 +570,7 @@ def _calculate_item_amount(item, employee, for_date, units_input, running_total)
 
     item may be a PayItemType (system catalog) or a PayrollItemAssignment.
     """
-    if isinstance(item, PayrollItemAssignment):
+    if _is_assignment(item):
         item_type = item.item_type
         # Derive from the populated column, not the type's default -- see
         # _effective_method. Falling back to item_type.calculation_method here
@@ -573,12 +593,8 @@ def _calculate_item_amount(item, employee, for_date, units_input, running_total)
     if method == PayItemCalcMethod.FIXED:
         return _D(fixed or 0)
     elif method == PayItemCalcMethod.RATE_X_UNITS:
-        qty = (
-            _item_quantity(item if isinstance(item, PayrollItemAssignment) else None, units_input)
-            if isinstance(item, PayrollItemAssignment)
-            else _D(0)
-        )
-        if not isinstance(item, PayrollItemAssignment):
+        qty = _item_quantity(item if _is_assignment(item) else None, units_input) if _is_assignment(item) else _D(0)
+        if not _is_assignment(item):
             qty = _D(0)  # system items don't have per-period units
         return (rate or Decimal('0')) * qty
     elif method == PayItemCalcMethod.PERCENT_OF_BASIC:
@@ -705,7 +721,7 @@ def _merge_post_tax_deductions(
                 assignment.remaining_balance = (_D(assignment.remaining_balance) - amount).quantize(
                     Q, rounding=ROUND_HALF_UP
                 )
-                db.session.add(assignment)
+                db.session.add(unwrap(assignment))
 
         if amount > 0:
             total += amount
@@ -748,7 +764,7 @@ def _line_item_dict(item, amount, classification, is_system, **kwargs):
     custom_label = kwargs.get('custom_label')
     is_legacy = kwargs.get('is_legacy', False)
 
-    if isinstance(item, PayrollItemAssignment):
+    if _is_assignment(item):
         item_type = item.item_type
         key = item_type.key if item_type else 'unknown'
         label = custom_label or item.label
@@ -796,7 +812,7 @@ def _line_item_dict(item, amount, classification, is_system, **kwargs):
 
 def _allowance_detail(item, amount, exempt, taxable):
     """Build an allowance detail dict compatible with calculate_payroll's shape."""
-    if isinstance(item, PayrollItemAssignment):
+    if _is_assignment(item):
         item_type = item.item_type
         key = item_type.key if item_type else 'unknown'
         label = item.label

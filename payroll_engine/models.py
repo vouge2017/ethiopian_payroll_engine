@@ -2217,6 +2217,9 @@ from payroll_engine.models_payroll_elements import (
     PayItemType as PayItemType,
 )
 from payroll_engine.models_payroll_elements import (
+    PayItemTypeVersion as PayItemTypeVersion,
+)
+from payroll_engine.models_payroll_elements import (
     PayrollItemAssignment as PayrollItemAssignment,
 )
 from payroll_engine.models_payroll_elements import (
@@ -2231,6 +2234,7 @@ from payroll_engine.models_payroll_elements import (
 PayItemType.query_class = TenantQuery
 PayrollItemAssignment.query_class = TenantQuery
 PayrollRunItemSnapshot.query_class = TenantQuery
+PayItemTypeVersion.query_class = TenantQuery
 
 
 class SpreadsheetInput(db.Model):

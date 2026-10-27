@@ -29,6 +29,15 @@ The rules live here so the routes stay thin and every rule is unit-testable:
   and printed. It does not change any amount: percent-of-net deductions use a
   fixed net-before-deductions base.
 
+* **Changes are versioned, never overwritten (catalog PR 4b).** Renaming,
+  deactivating and reactivating an item records the next
+  ``PayItemTypeVersion`` (who, when, what changed, effective date) through
+  ``item_versions.record_version``. A rename takes effect on the date the
+  owner picks (today by default, never in the future, never before the
+  current version's date); deactivation and reactivation take effect today.
+  Unlocked periods before that date keep calculating with the earlier
+  version; approved and locked runs keep their frozen snapshot.
+
 Every successful change writes an audit-log row through ``create_audit_log``.
 Callers commit.
 """
@@ -44,6 +53,14 @@ from sqlalchemy.exc import IntegrityError
 from payroll_engine import db
 from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS, SYSTEM_ITEM_KEYS
 from payroll_engine.exemption_caps import PENDING_LEGAL_CONFIRMATION_LABEL
+from payroll_engine.item_versions import (
+    SOURCE_CREATED,
+    SOURCE_SETTINGS,
+    current_version,
+    diff_settings,
+    record_version,
+    settings_of,
+)
 from payroll_engine.models import Payslip
 from payroll_engine.models_payroll_elements import (
     PayItemCalcMethod,
@@ -325,6 +342,40 @@ def _labels(item):
     return {'name_en': item.name_en, 'name_am': item.name_am, 'name_om': item.name_om}
 
 
+def earliest_effective_from(item):
+    """The first date a new version of ``item`` may take effect (its current version's date)."""
+    version = current_version(item)
+    return version.effective_from if version is not None else None
+
+
+def clean_effective_from(item, value, today=None):
+    """Parse and check the effective date of a change. Empty means today."""
+    today = today or date.today()
+    if value in (None, ''):
+        chosen = today
+    elif isinstance(value, date):
+        chosen = value
+    else:
+        try:
+            chosen = date.fromisoformat(str(value).strip())
+        except ValueError as exc:
+            raise PayItemSettingsError('Effective date must be a date (YYYY-MM-DD).') from exc
+    if chosen > today:
+        raise PayItemSettingsError('Effective date cannot be in the future.')
+    earliest = earliest_effective_from(item)
+    if earliest is not None and chosen < earliest:
+        raise PayItemSettingsError(
+            f'Effective date cannot be before {earliest.isoformat()}, the date the current version took effect.'
+        )
+    return chosen
+
+
+def _new_version(item, user_id, old_settings, effective_from):
+    """Record the settings page's change of ``item`` as its next version."""
+    changes = diff_settings(old_settings, settings_of(item))
+    return record_version(item, effective_from=effective_from, source=SOURCE_SETTINGS, user_id=user_id, changes=changes)
+
+
 # ---------------------------------------------------------------------------
 # Changes (each writes one audit row; the caller commits)
 # ---------------------------------------------------------------------------
@@ -358,6 +409,7 @@ def create_item(company_id, user_id, *, key, kind, name_en, name_am=None, name_o
         is_active=True,
         **labels,
     )
+    record_version(item, effective_from=date.today(), source=SOURCE_CREATED, user_id=user_id)
     try:
         with db.session.begin_nested():
             db.session.add(item)
@@ -384,20 +436,33 @@ def create_item(company_id, user_id, *, key, kind, name_en, name_am=None, name_o
     return item
 
 
-def rename_item(item, user_id, *, name_en, name_am=None, name_om=None):
-    """Change labels only. Returns True if anything changed."""
+def rename_item(item, user_id, *, name_en, name_am=None, name_om=None, effective_from=None, today=None):
+    """Change labels only, as a new version effective on ``effective_from``.
+
+    Returns True if anything changed.
+    """
     _require_company_item(item)
     new = clean_labels(name_en, name_am, name_om)
     old = _labels(item)
     if new == old:
         return False
+    when = clean_effective_from(item, effective_from, today=today)
+    before = settings_of(item)
     for field, value in new.items():
         setattr(item, field, value)
+    version = _new_version(item, user_id, before, when)
     create_audit_log(
         company_id=item.company_id,
         user_id=user_id,
         action='pay_item_renamed',
-        details={'pay_item_id': item.id, 'key': item.key, 'old': old, 'new': new},
+        details={
+            'pay_item_id': item.id,
+            'key': item.key,
+            'old': old,
+            'new': new,
+            'version_no': version.version_no,
+            'effective_from': when.isoformat(),
+        },
     )
     return True
 
@@ -454,25 +519,44 @@ def deactivate_item(item, user_id, today=None):
     perms = permissions(item, usage)
     if not perms['can_deactivate']:
         raise PayItemSettingsError(perms['reason'] or 'This item cannot be deactivated.')
+    when = today or date.today()
+    when = max(when, earliest_effective_from(item) or when)
+    before = settings_of(item)
     item.is_active = False
+    version = _new_version(item, user_id, before, when)
     create_audit_log(
         company_id=item.company_id,
         user_id=user_id,
         action='pay_item_deactivated',
-        details={'pay_item_id': item.id, 'key': item.key, 'assignments_kept': usage.total_assignments},
+        details={
+            'pay_item_id': item.id,
+            'key': item.key,
+            'assignments_kept': usage.total_assignments,
+            'version_no': version.version_no,
+            'effective_from': version.effective_from.isoformat(),
+        },
     )
 
 
-def reactivate_item(item, user_id):
+def reactivate_item(item, user_id, today=None):
     _require_company_item(item)
     if item.is_active:
         raise PayItemSettingsError('This item is already active.')
+    when = today or date.today()
+    when = max(when, earliest_effective_from(item) or when)
+    before = settings_of(item)
     item.is_active = True
+    version = _new_version(item, user_id, before, when)
     create_audit_log(
         company_id=item.company_id,
         user_id=user_id,
         action='pay_item_reactivated',
-        details={'pay_item_id': item.id, 'key': item.key},
+        details={
+            'pay_item_id': item.id,
+            'key': item.key,
+            'version_no': version.version_no,
+            'effective_from': version.effective_from.isoformat(),
+        },
     )
 
 
@@ -495,6 +579,7 @@ def delete_item(item, user_id):
         'classification': item.classification,
         'sort_order': item.sort_order,
         'is_active': item.is_active,
+        'versions': len(item.versions),
         **_labels(item),
     }
     company_id = item.company_id

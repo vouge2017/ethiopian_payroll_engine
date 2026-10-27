@@ -152,6 +152,10 @@ class PayItemType(db.Model):
     end_date = db.Column(db.Date, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.now(UTC))
+    # Mirror of the newest PayItemTypeVersion.version_no (catalog PR 4b,
+    # migration f3a4b5c6d7e8). The row itself always holds the settings of
+    # that version; older versions live in pay_item_type_version.
+    current_version_no = db.Column(db.Integer, nullable=False, default=1, server_default='1')
 
     __table_args__ = (
         db.CheckConstraint(
@@ -181,6 +185,14 @@ class PayItemType(db.Model):
 
     # Relationships
     assignments = db.relationship('PayrollItemAssignment', backref='item_type', lazy=True)
+    versions = db.relationship(
+        'PayItemTypeVersion',
+        backref='pay_item_type',
+        lazy=True,
+        order_by='PayItemTypeVersion.version_no',
+        cascade='all, delete-orphan',
+        passive_deletes=True,
+    )
 
     # ------------------------------------------------------------------
     # Lock-in 4: units_input key resolution order
@@ -461,8 +473,95 @@ def _guard_snapshot_update(mapper, connection, target):
     raise ImmutableSnapshotError(f'Run item snapshot {target.id} is immutable')
 
 
+class ImmutableVersionError(ValueError):
+    """A pay-item version was changed after it was written, or linked across tenants."""
+
+
+class PayItemTypeVersion(db.Model):
+    """One dated version of a PayItemType's settings (catalog PR 4b).
+
+    ``version_no`` 1 is the item as it was created (or, for items that existed
+    before migration f3a4b5c6d7e8, as it was at migration time). Every change
+    of a versioned setting adds the next number; ``PayItemType.current_version_no``
+    mirrors the newest one and the PayItemType row holds its settings.
+
+    The payroll engine reads, for an unlocked period, the version effective on
+    the calculation date (``payroll_engine.item_versions.resolve_item_types``).
+    Approved and locked runs keep the settings frozen in their
+    ``PayrollRunItemSnapshot`` (catalog PR 4a) and never read versions.
+
+    ``company_id`` equals the item's company (NULL for the shared system
+    catalog). Rows are immutable: no UPDATE (ORM guard below; PostgreSQL
+    triggers in the migration). They are deleted only with their item, which
+    the settings page allows only for unused custom items.
+    """
+
+    __tablename__ = 'pay_item_type_version'
+
+    id = db.Column(db.Integer, primary_key=True)
+    pay_item_type_id = db.Column(
+        db.Integer, db.ForeignKey('pay_item_type.id', ondelete='CASCADE'), nullable=False, index=True
+    )
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=True, index=True)
+    version_no = db.Column(db.Integer, nullable=False)
+    effective_from = db.Column(db.Date, nullable=False)
+    # Versioned settings (payroll_engine.item_versions.VERSIONED_FIELDS).
+    name_en = db.Column(db.String(100), nullable=False)
+    name_am = db.Column(db.String(100), nullable=True)
+    name_om = db.Column(db.String(100), nullable=True)
+    calculation_method = db.Column(db.String(20), nullable=False)
+    percent_of_item_key = db.Column(db.String(30), nullable=True)
+    rate = db.Column(db.Numeric(10, 4), nullable=True)
+    tax_treatment = db.Column(db.String(20), nullable=False)
+    exempt_cap_amount = db.Column(db.Numeric(12, 2), nullable=True)
+    exempt_cap_percent = db.Column(db.Numeric(5, 2), nullable=True)
+    exempt_cap_basis = db.Column(db.String(20), nullable=True)
+    max_percent_of_net = db.Column(db.Numeric(5, 2), nullable=True)
+    regulation_reference = db.Column(db.String(200), nullable=True)
+    pensionable = db.Column(db.Boolean, nullable=False, default=False)
+    counts_as_art53_wage = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    # Who and why: 'migration' (version 1 of a pre-existing item), 'created',
+    # 'settings' (settings page), 'direct' (changed outside the settings page).
+    source = db.Column(db.String(20), nullable=False)
+    changed_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    # {field: {"old": ..., "new": ...}} against the previous version; NULL for version 1.
+    changes = db.Column(db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None))
+
+    __table_args__ = (
+        db.UniqueConstraint('pay_item_type_id', 'version_no', name='uq_pay_item_type_version_no'),
+        db.CheckConstraint('version_no >= 1', name='ck_pay_item_type_version_no_positive'),
+    )
+
+    def __repr__(self):
+        return f'<PayItemTypeVersion item={self.pay_item_type_id} v{self.version_no} from {self.effective_from}>'
+
+
+@sa.event.listens_for(PayItemTypeVersion, 'before_insert')
+def _guard_version_insert(mapper, connection, target):
+    row = connection.execute(
+        sa.text('SELECT company_id FROM pay_item_type WHERE id = :id'), {'id': target.pay_item_type_id}
+    ).first()
+    if row is not None and row[0] != target.company_id:
+        raise ImmutableVersionError(
+            f'Pay item version rejected: item {target.pay_item_type_id} belongs to company {row[0]}, '
+            f'not {target.company_id}'
+        )
+
+
+@sa.event.listens_for(PayItemTypeVersion, 'before_update')
+def _guard_version_update(mapper, connection, target):
+    raise ImmutableVersionError(f'Pay item version {target.id} is immutable')
+
+
 # ---------------------------------------------------------------------------
 # Tenant query registration — new models are company-scoped
 # ---------------------------------------------------------------------------
 # Note: Registration happens in __init__.py's _register_tenant_models();
 # TenantQuery is attached as query_class in models.py (circular-import safe).
+
+
+# Installs the before_flush hook that versions every PayItemType change
+# (catalog PR 4b). Imported last: item_versions reads these models lazily.
+from payroll_engine import item_versions as _item_versions  # noqa: F401

@@ -117,7 +117,11 @@ def _snapshots(engine):
 def test_single_head():
     cfg = Config(str(REPO / 'migrations/alembic.ini'))
     cfg.set_main_option('script_location', str(REPO / 'migrations'))
-    assert ScriptDirectory.from_config(cfg).get_heads() == [REVISION]
+    script = ScriptDirectory.from_config(cfg)
+    heads = script.get_heads()
+    assert len(heads) == 1
+    # Later migrations build on this one (catalog PR 4b: f3a4b5c6d7e8).
+    assert REVISION in {rev.revision for rev in script.walk_revisions(base='base', head=heads[0])}
 
 
 def test_upgrade_backfills_triggers_guard_and_downgrade_round_trips(isolated):
@@ -142,7 +146,7 @@ def test_upgrade_backfills_triggers_guard_and_downgrade_round_trips(isolated):
         review = _run(conn, company_id, 'review', date(2026, 9, 1), '2018-13')
         foreign = _run(conn, other_id, 'completed', date(2026, 7, 1), '2018-11')
 
-    command.upgrade(cfg, 'head')
+    command.upgrade(cfg, REVISION)
     tables, triggers, functions = _objects(engine)
     assert TABLE in tables and triggers == TRIGGERS and functions == FUNCTIONS
     snaps = _snapshots(engine)
@@ -199,7 +203,7 @@ def test_upgrade_backfills_triggers_guard_and_downgrade_round_trips(isolated):
     tables, triggers, functions = _objects(engine)
     assert TABLE not in tables and not triggers and not functions
 
-    command.upgrade(cfg, 'head')
+    command.upgrade(cfg, REVISION)
     again = _snapshots(engine)
     assert set(again) == {completed, locked, foreign}
     assert again[completed].snapshot == snaps[completed].snapshot

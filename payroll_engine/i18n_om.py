@@ -173,4 +173,13 @@ STRINGS_OM = {
     'english_name': 'Maqaa (Afaan Ingiliffaa)',
     'amharic_name': 'Maqaa (Afaan Amaaraa)',
     'oromo_name': 'Maqaa (Afaan Oromoo)',
+    # Catalog PR 4b (version history). DRAFT TRANSLATION, pending native-speaker review.
+    'version': 'Gulaallii',
+    'version_history': 'Seenaa Jijjiiramaa',
+    'effective_from': 'Irraa Kaasee Hojiirra Kan Oolu',
+    'changed_by': 'Kan Jijjiire',
+    'recorded_at': "Yeroo Galmaa'e",
+    'what_changed': 'Kan Jijjiirame',
+    'current_version': 'Gulaallii Ammaa',
+    'first_version': 'Gulaallii Jalqabaa',
 }

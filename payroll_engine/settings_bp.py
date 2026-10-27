@@ -508,21 +508,50 @@ def pay_item_edit(item_id):
     item = _pay_item_or_404(item_id)
     locked = item.company_id is None
     reason = svc.permissions(item, svc.Usage())['reason'] if locked else None
+
+    def page(form, status=200):
+        earliest = svc.earliest_effective_from(item)
+        return (
+            render_template(
+                'settings/pay_item_edit.html',
+                item=item,
+                locked=locked,
+                reason=reason,
+                form=form,
+                today=date.today(),
+                earliest_effective_from=earliest,
+            ),
+            status,
+        )
+
     if request.method == 'GET':
-        return render_template('settings/pay_item_edit.html', item=item, locked=locked, reason=reason, form={})
+        return page({})
 
     if locked:
         abort(403)
-    form = {f: request.form.get(f, '') for f in ('name_en', 'name_am', 'name_om')}
+    form = {f: request.form.get(f, '') for f in ('name_en', 'name_am', 'name_om', 'effective_from')}
     try:
         changed = svc.rename_item(item, current_user.id, **form)
     except svc.PayItemSettingsError as exc:
         db.session.rollback()
         flash(str(exc), 'danger')
-        return render_template('settings/pay_item_edit.html', item=item, locked=False, reason=None, form=form), 400
+        return page(form, 400)
     db.session.commit()
-    flash('Names saved.' if changed else 'Nothing changed.', 'success' if changed else 'info')
+    flash(
+        'Names saved as a new version.' if changed else 'Nothing changed.',
+        'success' if changed else 'info',
+    )
     return redirect(url_for('settings.pay_items', _anchor=f'item-{item.id}'))
+
+
+@settings_bp.route('/settings/pay-items/<int:item_id>/history', methods=['GET'])
+@role_required('owner')
+def pay_item_history(item_id):
+    """Version history of one item (own or shared system item), newest first."""
+    from payroll_engine.item_versions import history
+
+    item = _pay_item_or_404(item_id)
+    return render_template('settings/pay_item_history.html', item=item, versions=history(item))
 
 
 def _pay_item_action(item_id, action, success_message):

@@ -422,7 +422,7 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ### Pay-item catalog PR 4a: approval-time item-settings snapshots (branch `feat/catalog-versioning`, PR #40, 2026-10-27)
 
-- State: draft PR #40, cut from `main` @ `ba54f90`. Not merged.
+- State: **merged** to `main` as PR #40 (`173c1d4`, 2026-10-27).
   **Behaviour-preserving: no payroll, tax, pension or settlement amount
   changes** (`tests/test_catalog_caps_golden.py` unchanged and green).
 - New table `payroll_run_item_snapshot` (model
@@ -464,6 +464,90 @@ second review; Q1 is the PAYE-on-gross answer).
   resolution of item settings (and recalculation of unlocked periods with
   them), version history and audit entries on the settings page. Then the
   Art. 53 leave-basis switch (changes amounts, needs the adviser).
+
+### Pay-item catalog PR 4b: versioned item settings with effective dates (branch `feat/catalog-item-versions`, PR #41, 2026-10-27)
+
+- State: draft PR #41, cut from `main` @ `173c1d4` (PR #40 merged).
+  Not merged. **Behaviour-preserving: no payroll, tax, pension or settlement
+  amount changes** (PR 3 golden file unchanged and green; new golden tests
+  below).
+- New table `pay_item_type_version` (model `PayItemTypeVersion`,
+  TenantQuery-registered): one row per version of an item's settings
+  (labels en/am/om, calculation method, rate, percent-of-item key, tax
+  treatment, exemption caps amount/percent/basis, max % of net, regulation
+  reference, pensionable, Art. 53 flag, is_active), `version_no` (unique per
+  item), `effective_from`, `source` (`migration` / `created` / `settings` /
+  `direct`), `changed_by_user_id`, `changes` (field: old/new), `created_at`.
+  `company_id` = the item's company (NULL for system items). Key,
+  classification and sort order are not versioned. New column
+  `pay_item_type.current_version_no` mirrors the newest version; the
+  `pay_item_type` row always holds that version's settings.
+- Writers: version 1 is written for every new item by a `before_flush` hook
+  (seeder, demo, backfill, settings page). The settings page records a new
+  version for rename (effective date chosen by the owner: today by default,
+  not in the future, not before the current version's date), deactivate and
+  reactivate (effective today). Any other ORM change of a versioned setting
+  is versioned as `direct` with the replaced version's date, i.e. the same
+  "applies to every covered date" effect overwriting had before. Raw-SQL
+  edits of `pay_item_type` (future data migrations) must write their own
+  version. Used items are still never deleted; deleting an unused custom
+  item removes its versions (`ON DELETE CASCADE`).
+- Engine (`payroll_elements`): system items and assignments resolve the
+  version effective on the calculation date (`item_versions.resolve_item_types`:
+  latest `(effective_from, version_no)` on or before the date; before every
+  version, the item as first known). Items with one version, and dates the
+  current version covers, use the live row unchanged (no extra query). Only
+  the versioned settings come from an older version, through read-only views
+  (`ResolvedItemType`, `ResolvedAssignment`); declining-balance writes still
+  go to the real assignment. The active filter moved from SQL to the
+  resolved version. Approved/locked runs never resolve versions (stored
+  amounts; 4a snapshots). The approval snapshot now records, per item, the
+  version effective on the approval's calculation date (the same settings
+  the engine used); the snapshot JSON format is unchanged.
+- Settings page: "Version N" per item, a history link per item (system
+  items too) and `/settings/pay-items/<id>/history` (owner-only, 404 for
+  another company's item): version, effective date, who, when (UTC), what
+  changed (old → new). Rename form has an effective-date field. New i18n
+  keys `version`, `version_history`, `effective_from`, `changed_by`,
+  `recorded_at`, `what_changed`, `current_version`, `first_version` (English
+  from the key; Amharic / Afaan Oromoo DRAFT, pending native-speaker
+  review).
+- Migration `f3a4b5c6d7e8` (single head): adds the column (plain ADD
+  COLUMN), creates the table and **backfills version 1 for every existing
+  item** (system and company, active or not) from its settings at migration
+  time (`source = migration`, `effective_from` = item `effective_date`, else
+  its `created_at` date). PostgreSQL triggers (SQLSTATE 23514):
+  `trg_pay_item_type_version_tenancy` (version company = item company),
+  `trg_pay_item_type_version_immutable` (no UPDATE),
+  `trg_pay_item_type_versioned_company` (an item with versions cannot move
+  company). ORM guards mirror the first two on SQLite. Downgrade drops
+  triggers, functions, table and column.
+- Not changed (still open): no tax setting is editable in the UI (pending
+  adviser: pension base, Art. 53 leave basis, per diem tiers, ETB 600
+  transport, hardship/medical). The engine is still called with
+  `for_date = run.run_date or today` at approval (audit item (f)), so
+  "the period's version" means the version effective on that date. The
+  legacy `payroll.py` / `excel_payroll` / `allowance_service` paths do not
+  read `pay_item_type`, so they do not resolve versions.
+- Tests: `tests/test_item_versions.py` (SQLite, 27: version 1 = row for
+  every item, migration field list / columns / head, SQLite downgrade →
+  upgrade backfill; golden: PR 3 elements + what-if matrices byte-identical
+  after label/active versions on every company item, and amounts identical
+  before/after on the dates they cover; engine resolution of tax treatment,
+  cap and active flag per period; snapshot uses the version for its
+  calculation date; settings page versions, effective-date validation,
+  history page access; immutability, tenancy, direct-change versioning,
+  unscoped query raises) and `tests/test_pg_item_versions.py` (PG, 3:
+  single head; isolated DB upgrade/backfill on native enums, the three
+  triggers each proven by dropping it in a rolled-back transaction, cascade,
+  downgrade/re-upgrade; ORM + service + engine + snapshot on the shared DB)
+  — added to the CI PG job. Head constant bumped in
+  `test_pg_pr8_reconciliation.py`; `test_pg_run_item_snapshot.py` now
+  targets its own revision. Full SQLite suite (185 files, one
+  process each, `python -m pytest`): 1946 passed, 0 failed, 0 errors, 228
+  skipped (4a baseline 1919 + 27 new). PostgreSQL CI list (27 files, local
+  PG 17): 201 passed (4a 198 + 3 new). ruff check /
+  format clean.
 
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
@@ -692,6 +776,12 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   allowances that qualify as wages (Art. 53)") before any leave pay is
   finalized. This is catalog PR 4 and changes amounts.
 
+- Future-dated pay-item versions (effective after today) and an owner-chosen
+  date for deactivate / reactivate. Parked: the row must mirror the newest
+  version, so future versions need a scheduled switch; not needed until tax
+  settings become editable (catalog PR 4b).
+- Record the resolved `version_no` per item in the approval snapshot.
+  Parked: changes the frozen 4a snapshot format (needs a v2 + migration).
 - Run the PostgreSQL test suite locally or in a sandbox. Parked: needs a
   disposable Postgres; CI covers it for now.
 - e-Tax / ERCA portal direct filing (`ETAX_INTEGRATION_PATH.md`). Parked: the
@@ -810,3 +900,10 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   No amount changes. Tests: SQLite 1919
   passed, 0 failed, 222 skipped (182 files); PostgreSQL 198 passed (26
   files, local PG 17). ruff clean.
+- 2026-10-27 — Hark — Catalog PR 4b (`feat/catalog-item-versions`, draft
+  PR #41): `pay_item_type_version` + `current_version_no` (migration
+  `f3a4b5c6d7e8`, version 1 backfilled for every item, PG triggers),
+  effective-dated resolution in the elements engine and approval snapshot,
+  settings-page edits recorded as versions with a history page. No amount
+  changes (golden). Tests: SQLite 1946 passed, 0 failed, 228 skipped (185
+  files); PostgreSQL 201 passed (27 files, local PG 17). ruff clean.

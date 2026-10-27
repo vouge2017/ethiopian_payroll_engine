@@ -420,6 +420,51 @@ second review; Q1 is the PAYE-on-gross answer).
   companies on `basic_plus_regular_allowances`, so it needs the adviser's
   answer first.
 
+### Pay-item catalog PR 4a: approval-time item-settings snapshots (branch `feat/catalog-versioning`, PR #40, 2026-10-27)
+
+- State: draft PR #40, cut from `main` @ `ba54f90`. Not merged.
+  **Behaviour-preserving: no payroll, tax, pension or settlement amount
+  changes** (`tests/test_catalog_caps_golden.py` unchanged and green).
+- New table `payroll_run_item_snapshot` (model
+  `PayrollRunItemSnapshot`, TenantQuery-registered): one row per run
+  (unique `payroll_run_id`, `ON DELETE CASCADE`), `company_id` NOT NULL,
+  JSON `snapshot` (every pay item visible to the company: own + system rows,
+  active or not, with labels en/am/om, classification, tax treatment, caps,
+  method, rate, `max_percent_of_net`, pensionable, Art. 53 flag, is_active,
+  dates), `calculation_date`, `backfilled`, `captured_at`.
+  Serialiser: `payroll_engine/item_snapshot.py`.
+- Written in the approval transaction in both paths
+  (`services/payroll_service.process_payroll`, calculation date = the
+  approval's existing `run.run_date or today`; worksheet
+  `apply_approved_rows`, calculation date = the rows' month end).
+  Approval `for_date` and `calculation_context` v1 unchanged.
+- ERCA `_pay_item:<key>:taxable` (`report_templates._pay_item_amount`) reads
+  `tax_treatment` from the snapshot (company's own rows only, as the live
+  lookup did); runs without a snapshot fall back to the live item.
+- Guards: ORM (`before_insert` company must match the run; `before_update`
+  rejects any change) and PostgreSQL triggers
+  `trg_payroll_run_item_snapshot_tenancy` / `_immutable` (SQLSTATE 23514).
+- Migration `e2f3a4b5c6d7` (single head): creates the table and triggers and
+  **backfills every existing `completed`/`locked` run from the settings
+  current at migration time** (`backfilled = true`, `calculation_date =
+  run_date`). Those rows record today's settings, not necessarily the ones
+  used at approval (never stored). Downgrade drops triggers, functions and
+  table. Historical-import runs (`source='import'`, created `completed`
+  outside approval) get no snapshot when created after the migration; they
+  have no line items, so the taxable column is 0 for them either way.
+- Tests: `tests/test_run_item_snapshot.py` (SQLite, 13) and
+  `tests/test_pg_run_item_snapshot.py` (PG, 3; trigger tests also show the
+  same statements succeed once the trigger is dropped) — added to the CI PG
+  job. Head constants bumped in `test_pg_pr8_reconciliation.py` and
+  `test_pg_catalog_legal_attributes.py`. Full SQLite
+  suite (182 files, one process each, `python -m pytest`): 1919 passed, 0
+  failed, 0 errors, 222 skipped (PR 3 baseline 1906 + 13 new). PostgreSQL
+  list (26 files, local PG 17): 198 passed. ruff check / format clean.
+- Left for catalog PR 4b: `pay_item_type_version` table, effective-dated
+  resolution of item settings (and recalculation of unlocked periods with
+  them), version history and audit entries on the settings page. Then the
+  Art. 53 leave-basis switch (changes amounts, needs the adviser).
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance
@@ -758,3 +803,10 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   `counts_as_art53_wage` flags (migration `d1e2f3a4b5c6`) shown read-only on
   the settings page. Golden test proves no amount changed. Versioned
   snapshots deferred to the next PR.
+- 2026-10-27 — Hark — Catalog PR 4a (`feat/catalog-versioning`, draft PR
+  #40): approval-time pay-item settings snapshot table
+  `payroll_run_item_snapshot` written in both approval paths, ERCA taxable
+  column reads it, migration `e2f3a4b5c6d7` with backfill and PG triggers.
+  No amount changes. Tests: SQLite 1919
+  passed, 0 failed, 222 skipped (182 files); PostgreSQL 198 passed (26
+  files, local PG 17). ruff clean.

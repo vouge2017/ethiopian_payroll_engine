@@ -2219,6 +2219,9 @@ from payroll_engine.models_payroll_elements import (
 from payroll_engine.models_payroll_elements import (
     PayrollItemAssignment as PayrollItemAssignment,
 )
+from payroll_engine.models_payroll_elements import (
+    PayrollRunItemSnapshot as PayrollRunItemSnapshot,
+)
 
 # Structural tenant isolation for the elements tables. Assigned here rather
 # than in the class bodies because models_payroll_elements cannot import
@@ -2227,6 +2230,7 @@ from payroll_engine.models_payroll_elements import (
 # the shared system catalog (PayItemType only). An unscoped query raises.
 PayItemType.query_class = TenantQuery
 PayrollItemAssignment.query_class = TenantQuery
+PayrollRunItemSnapshot.query_class = TenantQuery
 
 
 class SpreadsheetInput(db.Model):

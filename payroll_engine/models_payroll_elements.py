@@ -399,6 +399,69 @@ def _guard_assignment_update(mapper, connection, target):
 
 
 # ---------------------------------------------------------------------------
+# PayrollRunItemSnapshot — pay-item settings frozen at approval (catalog PR 4a)
+# ---------------------------------------------------------------------------
+
+
+class ImmutableSnapshotError(ValueError):
+    """A run item snapshot was changed after it was written, or links another company's run."""
+
+
+class PayrollRunItemSnapshot(db.Model):
+    """The company's pay-item settings as they were when a run was approved.
+
+    One row per approved run, written in the same transaction as the approval
+    (services/payroll_service.process_payroll, worksheet_review.apply_approved_rows)
+    by payroll_engine.item_snapshot.capture_run_item_snapshot. ``snapshot`` holds
+    every PayItemType visible to the company (its own rows and the shared
+    system rows, active or not) with labels, tax treatment, caps, method, rate
+    and the legal flags. Reports of an approved month read item settings from
+    here, so a later settings edit cannot change that month's figures.
+
+    Rows for runs approved before this table existed were backfilled by
+    migration e2f3a4b5c6d7 from the settings current at migration time
+    (``backfilled=True``): they record those settings, not the ones used at
+    approval.
+
+    Immutable: no UPDATE (ORM guard below; PostgreSQL trigger in the
+    migration). The row is deleted with its run (ON DELETE CASCADE), e.g. by
+    demo cleanup.
+    """
+
+    __tablename__ = 'payroll_run_item_snapshot'
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False, index=True)
+    payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id', ondelete='CASCADE'), nullable=False)
+    snapshot = db.Column(db.JSON, nullable=False)
+    calculation_date = db.Column(db.Date, nullable=False)
+    backfilled = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
+    captured_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None))
+
+    __table_args__ = (db.UniqueConstraint('payroll_run_id', name='uq_payroll_run_item_snapshot_run'),)
+
+    def __repr__(self):
+        return f'<PayrollRunItemSnapshot run={self.payroll_run_id} company={self.company_id}>'
+
+
+@sa.event.listens_for(PayrollRunItemSnapshot, 'before_insert')
+def _guard_snapshot_insert(mapper, connection, target):
+    run_company = connection.execute(
+        sa.text('SELECT company_id FROM payroll_run WHERE id = :id'), {'id': target.payroll_run_id}
+    ).scalar()
+    if run_company is not None and run_company != target.company_id:
+        raise ImmutableSnapshotError(
+            f'Run item snapshot rejected: run {target.payroll_run_id} belongs to company {run_company}, '
+            f'not {target.company_id}'
+        )
+
+
+@sa.event.listens_for(PayrollRunItemSnapshot, 'before_update')
+def _guard_snapshot_update(mapper, connection, target):
+    raise ImmutableSnapshotError(f'Run item snapshot {target.id} is immutable')
+
+
+# ---------------------------------------------------------------------------
 # Tenant query registration — new models are company-scoped
 # ---------------------------------------------------------------------------
 # Note: Registration happens in __init__.py's _register_tenant_models();

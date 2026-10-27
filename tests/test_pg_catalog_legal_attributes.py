@@ -94,7 +94,11 @@ def _flags(engine, company_id):
 def test_single_head():
     cfg = Config(str(REPO / 'migrations/alembic.ini'))
     cfg.set_main_option('script_location', str(REPO / 'migrations'))
-    assert ScriptDirectory.from_config(cfg).get_heads() == [REVISION]
+    script = ScriptDirectory.from_config(cfg)
+    heads = script.get_heads()
+    assert len(heads) == 1
+    # Later migrations build on this one (catalog PR 4a: e2f3a4b5c6d7).
+    assert REVISION in {rev.revision for rev in script.walk_revisions(base='base', head=heads[0])}
 
 
 def test_upgrade_backfills_downgrade_drops_and_reupgrade(isolated):
@@ -120,7 +124,7 @@ def test_upgrade_backfills_downgrade_drops_and_reupgrade(isolated):
             {'c': company_id, 'now': now},
         )
 
-    command.upgrade(cfg, 'head')
+    command.upgrade(cfg, REVISION)
     assert {'pensionable', 'counts_as_art53_wage'} <= _columns(engine)
     flags = _flags(engine, company_id)
     for key, expected in EXPECTED.items():
@@ -152,7 +156,7 @@ def test_upgrade_backfills_downgrade_drops_and_reupgrade(isolated):
     assert {'uq_pay_item_type_system_key', 'uq_pay_item_type_company_key'} <= indexes
     assert 'trg_pay_item_type_company_tenancy' in triggers
 
-    command.upgrade(cfg, 'head')
+    command.upgrade(cfg, REVISION)
     assert _flags(engine, company_id) == flags
     with engine.connect() as conn:
         assert conn.execute(sa.text('SELECT version_num FROM alembic_version')).scalar_one() == REVISION

@@ -235,6 +235,7 @@ def create_app():
         PayrollDraft,
         PayrollItemAssignment,
         PayrollRun,
+        PayrollRunItemSnapshot,
         Payslip,
         TenantQuery,
     )
@@ -260,6 +261,7 @@ def create_app():
     # Elements architecture (Phase 2): pay item type registry + assignments
     TenantQuery.register_model(PayItemType)
     TenantQuery.register_model(PayrollItemAssignment)
+    TenantQuery.register_model(PayrollRunItemSnapshot)
 
     # Batch 4 (Phase 3b, P0-A, 2026-08-31): tenant-isolation registration.
     #

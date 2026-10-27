@@ -2,6 +2,7 @@
 
 import calendar
 import json
+from datetime import date
 from decimal import Decimal
 
 from flask import abort
@@ -443,6 +444,16 @@ def apply_approved_rows(run, company_id, rows):
         ledger.remaining_balance -= amount
         if ledger.remaining_balance <= 0:
             ledger.is_active = False
+    # Freeze the pay-item settings in the approval transaction (catalog PR 4a).
+    # The reviewed rows were calculated for the month end; record that date.
+    from payroll_engine.item_snapshot import capture_run_item_snapshot
+
+    calculation_date = rows[0].get('calculation_date')
+    capture_run_item_snapshot(
+        run,
+        company_id,
+        date.fromisoformat(calculation_date) if calculation_date else month_end(run.run_date),
+    )
 
 
 def published_row(payslip):

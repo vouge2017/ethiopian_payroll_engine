@@ -623,6 +623,12 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             # the ledger stays in step with what was actually deducted.
             _decline_balances(emp.id, company_id, deduction_details)
 
+        # Freeze the pay-item settings this approval used (catalog PR 4a),
+        # in the same transaction as the payslips.
+        from payroll_engine.item_snapshot import capture_run_item_snapshot
+
+        capture_run_item_snapshot(run, company_id, today)
+
         run.status = 'completed'
 
         # Compliance scoring

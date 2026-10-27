@@ -325,10 +325,12 @@ def get_enabled_columns(company, report_type: str = 'erca') -> list[dict]:
 def _pay_item_amount(payslip, key, mode=None):
     """Sum one pay item by PayItemType.key from the payslip's line_items.
 
-    `mode='taxable'` restricts the sum to items whose PayItemType.tax_treatment
-    is 'taxable', which is what the ERCA "taxable benefit" columns mean. The
-    tax treatment lives on the type row, not in the line-item snapshot, so it
-    is looked up from the catalog.
+    `mode='taxable'` restricts the sum to items whose tax_treatment is
+    'taxable', which is what the ERCA "taxable benefit" columns mean. The tax
+    treatment is not in the line items: it is read from the run's
+    approval-time item snapshot (catalog PR 4a), so a settings edit after
+    approval cannot move this column. Runs without a snapshot fall back to
+    the live PayItemType row.
 
     Returns 0 when the payslip has no engine snapshot (not yet backfilled).
     """
@@ -338,10 +340,18 @@ def _pay_item_amount(payslip, key, mode=None):
 
     if mode == 'taxable':
         try:
-            from payroll_engine.models_payroll_elements import PayItemType
+            from payroll_engine.item_snapshot import run_item_snapshot, snapshot_item
 
-            item = PayItemType.query.filter_by(company_id=payslip.company_id, key=key).first()
-            if item is None or item.tax_treatment != 'taxable':
+            frozen = run_item_snapshot(payslip.company_id, getattr(payslip, 'payroll_run_id', None))
+            if frozen is not None:
+                item = snapshot_item(frozen, payslip.company_id, key)
+                treatment = item.get('tax_treatment') if item else None
+            else:
+                from payroll_engine.models_payroll_elements import PayItemType
+
+                item = PayItemType.query.filter_by(company_id=payslip.company_id, key=key).first()
+                treatment = item.tax_treatment if item else None
+            if treatment != 'taxable':
                 return 0
         except Exception:
             return 0

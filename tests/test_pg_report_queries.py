@@ -73,6 +73,47 @@ def seed_run(company_id, count):
     return run_id
 
 
+def test_paye_report_does_not_relabel_housing_after_salary_change(report_db):
+    """Migrated PostgreSQL: approved amounts survive a raise without invented categories."""
+    import csv
+    import io
+
+    import openpyxl
+
+    from payroll_engine.reports import _generate_erca_csv, generate_erca_report
+
+    app, company_id, _engine, _companies = report_db
+    with app.app_context():
+        run_id = seed_run(company_id, 1)
+        slip = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run_id).one()
+        slip.gross_salary = Decimal('13000.00')
+        slip.taxable_income = Decimal('13000.00')
+        slip.line_items = [
+            {'item_key': 'basic_salary', 'classification': 'earning', 'earned_amount': '10000.00'},
+            {'item_key': 'housing', 'classification': 'earning', 'earned_amount': '3000.00'},
+        ]
+        db.session.commit()
+        slip.employee.basic_salary = Decimal('20000.00')
+        db.session.commit()
+        db.session.expire_all()
+        slip = Payslip.query.filter_by(company_id=company_id, payroll_run_id=run_id).one()
+
+        sheet = openpyxl.load_workbook(io.BytesIO(generate_erca_report([slip], 'Synthetic', '2026-09'))).active
+        rows = list(sheet.iter_rows(values_only=True))
+        header = rows[4]
+        row = dict(zip(header, rows[5], strict=False))
+        assert row['Basic Salary'] == 10000
+        assert row['Total Taxable'] == 13000
+        assert row['Transport Allowance'] in (None, '')
+        assert row['Taxable Transport Allowance'] in (None, '')
+        assert row['Other Taxable Benefit'] in (None, '')
+        assert any('Allowance breakdown unavailable' in str(cell) for values in rows for cell in values)
+
+        csv_rows = list(csv.reader(io.StringIO(_generate_erca_csv([slip], 'Synthetic', '2026-09').decode())))
+        assert csv_rows[2][3:6] == ['10000.00', '', '']
+        assert csv_rows[2][7:9] == ['', '13000.00']
+
+
 @pytest.mark.parametrize('count', [5, 25])
 def test_report_employee_query_count_is_bounded(report_db, count):
     app, company_id, engine, _ = report_db

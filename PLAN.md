@@ -7,6 +7,39 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Report allowance breakdown correction (2026-10-27, locally tested)
+
+- `fix/report-unknown-breakdowns`, based on `ba54f90`, now in isolated
+  `report-review-worktree`; the original checkout contains separate holiday
+  work and retains the original uncommitted report changes. PR #31
+  (`fix/reports-frozen-values`) is already merged on main; its legacy snapshot
+  gap remains. The default PAYE report previously described all non-basic,
+  non-overtime earnings as transport and taxable transport, including housing.
+- Implemented locally: leave the three unverified allowance breakdown columns
+  blank in XLSX and CSV, with a review-before-filing note. Approved taxable
+  totals and withheld tax remain unchanged. This does not create a verified
+  filing format or reconstruct missing historical classifications.
+- Default and custom report columns leave unknown per-item tax treatment and
+  missing legacy snapshots blank and display a review warning; current catalog
+  settings are not used to reconstruct historical tax treatment.
+- Focused SQLite tests: `13 passed, 4 warnings in 15.58s`. Full suite:
+  `1908 passed, 223 skipped, 45 warnings in 4623.35s (1:17:03)`; exit 0,
+  `python -m pytest tests -q --capture=sys -p no:cacheprovider --tb=short`.
+  The earlier per-file suite returned:
+  `TOTAL: 1824 passed, 0 failed, 2 errors, 223 skipped` (exit 1):
+  `test_exceptions.py` and `test_pay_item_settings.py` exceeded the runner's
+  120-second process limit. Standalone reruns exited 0: respectively
+  `30 passed, 4 warnings in 3.25s` and `52 passed, 4 warnings in 331.11s`.
+  These reruns do not change the full-suite result.
+  Isolated source preflight passed (one head `d1e2f3a4b5c6`); fresh disposable
+  PostgreSQL 16 UTF-8 database migrated to that head, and report queries plus
+  the report regression gave `4 passed, 20 warnings in 9.71s`. A second
+  synthetic database upgraded from `9b4e6d2a8c13` with a locked payslip;
+  count and gross, tax, pension and net sums were unchanged at head. Exact
+  committed SHA, hosted checks and practitioner acceptance remain open.
+- Custom `_pay_item:...:taxable` fields remain blank until per-item tax
+  treatment is stored with the approved month. No merge or deployment.
+
 ### Which docs to trust
 
 - **PLAN.md (this file) is the truth** for status, the current task and the
@@ -717,29 +750,61 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ## 2. Now
 
-**Make PAYE use gross taxable income, without taking the 7 % pension off first (R1).**
-Owner approved 2026-10-25.
+**Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
+order** (owner pasted an independent review and asked to adopt it; I concur).
+No merge or deployment without the owner's explicit go-ahead. Reconciled: the
+previous "Now" said PR #32 (PAYE on gross, R1) was awaiting merge — it is
+merged on main @ `c65aaa0`.
 
-- Status: **done on branch `fix/paye-gross-income` (PR #32). Rule confirmed by
-  the adviser in writing on 2026-10-25** (Q1,
-  `docs/decisions/2026-10-25-payroll-rules.md`). Ready for owner review; merge
-  needs the owner's go-ahead.
-- What changed: `PENSION_DEDUCTED_BEFORE_TAX = False`
-  (`payroll_engine/constants.py`), with the flag kept. Every calculation path
-  follows it. The notice text and explanations were updated. Worked examples
-  were added (10,000 → 1,650 / 7,650; 3,000; 5,000; 20,000). The tests that
-  pinned the old after-pension numbers were updated.
-- Locked months keep their stored values. Tests now prove it for the export,
-  portal and reports paths.
-- Still to decide:
-  1. ~~Accountant sign-off on the rule (RC-38000-01)~~ — confirmed by the
-     adviser 2026-10-25.
-  2. Already-locked months: the lock does not remove the duty to address the
-     error (Q4, pending procedure). Do not overwrite them; see the parked
-     historical PAYE difference report.
-  3. Drafts and worksheet reviews still open when this deploys hold figures
-     calculated under the old rule. CSV drafts are approved from those stored
-     figures. Refresh or re-upload them after deploy.
+1. **Review slice: reports use frozen payroll values (first code slice).**
+   Review `fix/reports-frozen-values` against main @ `ba54f90`, including
+   legacy payslips that lack snapshots (missing history is shown, never
+   invented). Synthetic proof: approve a month, change the salary, regenerate
+   payslip / PAYE report / pension report / bank file. Done when the supported
+   historical figures reconcile to the approved month and PostgreSQL/migration
+   checks pass on the exact reviewed revision. (PLAN Next item 2.)
+2. **Adviser pack, in parallel, no code.** Written worked examples for:
+   pensionable salary and eligibility (Proc. 1268/2022 + Directive 1087/2025);
+   per diem, transport and casual-worker exemptions with the actual directive
+   and effective dates; holiday work vs holiday overtime (2.5× Art. 68(1)(d)
+   vs 2× Art. 75); leave encashment (Art. 53 qualifying components and the
+   company-confirmed divisor); the exact procedure for correcting a filed PAYE
+   month (Q4; Proc. 1434/2026 hook). Decision record:
+   `docs/decisions/2026-10-25-payroll-rules.md`. A company setting is not
+   itself proof that the selected rule is lawful. (PLAN Next items 1, 3, 4.)
+3. **One dependable monthly workflow.** One accountant completes a synthetic
+   month across import → calculate → review → approve → lock → payslips →
+   reports → bank file; identical worked cases across every calculation path;
+   retry / duplicate-approval and tenant-access tests; screens checked in a
+   real browser. Prerequisite for an accountant trial; not proof of a real
+   filing, bank payment or statutory acceptance. (PLAN Next item 5.)
+4. **/diff/ accountant wedge — demo before public.** Demonstrate the existing
+   authenticated tool with synthetic spreadsheets; accountants identify
+   confusing explanations, missing columns and disagreements; design the free
+   experience around what they need. Before any public upload: period
+   selection, rule versions, data retention, upload limits, result
+   availability across workers, privacy and abuse controls. "Free, no login"
+   is a product decision needing safe design and user evidence.
+5. **Real filing and payment formats (needs a live pilot account).** Obtain
+   authorized blank or sanitized templates for one accountant's e-Tax process,
+   pension process (Directive 1087/2025 contribution form) and primary bank;
+   record portal version, field definitions, sample validation and acceptance
+   result; only then build format-specific exports. Generating a file, filing
+   it and paying employees stay three different states; payout APIs and
+   reconciliation come later, once a provider's contract and failure responses
+   are understood.
+6. **Service, pricing and recovery.** Interview accountants on ETB pricing,
+   deadline support, procurement and who buys/refers. In parallel verify
+   backup/restore, encryption-key recovery, durable payslips and the deployed
+   revision before any real-data pilot.
+
+- Carried over from the R1 slice: already-locked months — the lock does not
+  remove the duty to address an error (Q4; see point 2); do not overwrite
+  them. Drafts and worksheet reviews still open at deploy hold pre-R1
+  figures; refresh or re-upload them after deploy.
+- Checkout note 2026-10-26: main @ `ba54f90`; PLAN.md modified (this file);
+  untracked webhook migration and deprecated mobile files preserved, touched
+  by no one.
 
 ---
 
@@ -903,6 +968,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-27 — Codex — Report breakdown correction: unknown categories and missing snapshots remain blank with a warning. SQLite full suite 1908 passed, 223 skipped, 45 warnings; PostgreSQL report checks 4 passed. Exact-commit proof, hosted validation and practitioner acceptance remain open.
 
 - 2026-10-25 — Hark — Full audit. Cut `docs/plan-md` from `origin/main` @
   `f335bf2`. Tests: 1705 passed, 0 failed, 0 errors, 205 skipped (PostgreSQL

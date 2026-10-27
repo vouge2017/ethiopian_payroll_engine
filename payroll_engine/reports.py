@@ -15,6 +15,15 @@ from decimal import Decimal
 
 from payroll_engine.frozen_payslip import UNFROZEN_BASIC_NOTE, frozen_figures, unfrozen_basic_count
 
+UNKNOWN_ALLOWANCE_NOTE = (
+    'Allowance breakdown unavailable: transport, taxable transport and other taxable benefit '
+    'are blank because their approved classifications were not preserved. Review before filing.'
+)
+UNKNOWN_ITEM_NOTE = (
+    'Pay-item breakdown unavailable for some columns: the approved item snapshot or per-item tax treatment '
+    'was not preserved. Blank cells require review before filing.'
+)
+
 # Every money figure in a monthly report comes from the values frozen on the
 # payslip at approval (see payroll_engine/frozen_payslip.py), never from the
 # employee's current record: re-downloading a locked month must give the same
@@ -201,6 +210,22 @@ def generate_erca_report(payslips: list, company_name: str, period: str | None =
         ws.cell(row=totals_row + 2, column=1, value=UNFROZEN_BASIC_NOTE.format(count=missing)).font = Font(
             italic=True, color='B03A2E'
         )
+
+    if payslips and any(
+        c.get('data_path') in ('_transport_allowance', '_taxable_transport', '_other_taxable')
+        and c.get('static_value') is None
+        for c in columns
+    ):
+        ws.cell(row=totals_row + 3, column=1, value=UNKNOWN_ALLOWANCE_NOTE).font = Font(
+            italic=True, color='B03A2E'
+        )
+
+    item_paths = [c.get('data_path', '') for c in columns if c.get('static_value') is None]
+    if payslips and (
+        any(path.startswith('_pay_item:') and path.endswith(':taxable') for path in item_paths)
+        or (any(path.startswith('_pay_item:') for path in item_paths) and any(not p.line_items for p in payslips))
+    ):
+        ws.cell(row=totals_row + 4, column=1, value=UNKNOWN_ITEM_NOTE).font = Font(italic=True, color='B03A2E')
 
     # --- Print setup ---
     ws.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
@@ -535,7 +560,6 @@ def _generate_erca_csv(payslips, company_name, period):
     for _i, p in enumerate(payslips, 1):
         emp = p.employee
         fig = frozen_figures(p)
-        other = fig['other_earnings']
         start_date = emp.start_date.strftime('%d/%m/%Y') if emp.start_date else ''
 
         writer.writerow(
@@ -544,10 +568,10 @@ def _generate_erca_csv(payslips, company_name, period):
                 start_date,
                 '',  # End Date
                 '' if fig['basic'] is None else fig['basic'],
-                '' if other is None else other,  # Transport Allowance (all non-basic, non-OT earnings)
-                '' if other is None else other,  # Taxable Transport Allowance
+                '',  # Transport classification was not frozen.
+                '',  # Taxable transport classification was not frozen.
                 '' if fig['overtime'] is None else fig['overtime'],  # Over Time
-                0,  # Other Taxable Benefit
+                '',  # Other taxable benefit classification was not frozen.
                 '' if fig['taxable'] is None else fig['taxable'],  # Total Taxable
                 fig['tax'],  # Tax withheld
             ]
@@ -555,6 +579,8 @@ def _generate_erca_csv(payslips, company_name, period):
     missing = unfrozen_basic_count(payslips)
     if missing:
         writer.writerow([UNFROZEN_BASIC_NOTE.format(count=missing)])
+    if payslips:
+        writer.writerow([UNKNOWN_ALLOWANCE_NOTE])
     return output.getvalue().encode('utf-8')
 
 

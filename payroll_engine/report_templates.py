@@ -45,7 +45,7 @@ COLUMN_LIBRARY = [
     # its PayItemType.key, so a report can surface a new allowance without a
     # code change. These replace the hardcoded transport/taxable_transport/
     # other_taxable trio, which is kept only for stored templates that still
-    # reference those keys (see _legacy_allowance_total).
+    # reference those keys. Their breakdown is unknown without a snapshot.
     {'key': 'pay_item_housing', 'label': 'Housing Allowance', 'data_path': '_pay_item:housing', 'group': 'salary'},
     {
         'key': 'pay_item_transport',
@@ -325,38 +325,25 @@ def get_enabled_columns(company, report_type: str = 'erca') -> list[dict]:
 def _pay_item_amount(payslip, key, mode=None):
     """Sum one pay item by PayItemType.key from the payslip's line_items.
 
-    `mode='taxable'` restricts the sum to items whose tax_treatment is
-    'taxable', which is what the ERCA "taxable benefit" columns mean. The tax
-    treatment is not in the line items: it is read from the run's
-    approval-time item snapshot (catalog PR 4a), so a settings edit after
-    approval cannot move this column. Runs without a snapshot fall back to
-    the live PayItemType row.
-
-    Returns 0 when the payslip has no engine snapshot (not yet backfilled).
+    Item settings are read from the company's run snapshot, not the live catalog.
     """
+    from decimal import Decimal, InvalidOperation
+
     line_items = getattr(payslip, 'line_items', None)
     if not line_items:
-        return 0
+        return ''
 
     if mode == 'taxable':
-        try:
-            from payroll_engine.item_snapshot import run_item_snapshot, snapshot_item
+        from payroll_engine.item_snapshot import run_item_snapshot, snapshot_item
 
-            frozen = run_item_snapshot(payslip.company_id, getattr(payslip, 'payroll_run_id', None))
-            if frozen is not None:
-                item = snapshot_item(frozen, payslip.company_id, key)
-                treatment = item.get('tax_treatment') if item else None
-            else:
-                from payroll_engine.models_payroll_elements import PayItemType
-
-                item = PayItemType.query.filter_by(company_id=payslip.company_id, key=key).first()
-                treatment = item.tax_treatment if item else None
-            if treatment != 'taxable':
-                return 0
-        except Exception:
-            return 0
-
-    from decimal import Decimal, InvalidOperation
+        frozen = run_item_snapshot(payslip.company_id, getattr(payslip, 'payroll_run_id', None))
+        if frozen is None:
+            return ''
+        item = snapshot_item(frozen, payslip.company_id, key)
+        if item is None or item.get('tax_treatment') not in ('taxable', 'exempt'):
+            return ''
+        if item['tax_treatment'] == 'exempt':
+            return Decimal('0.00')
 
     total = Decimal('0')
     for li in line_items:
@@ -369,22 +356,6 @@ def _pay_item_amount(payslip, key, mode=None):
         except (InvalidOperation, TypeError, ValueError):
             continue
     return total.quantize(Decimal('0.01'))
-
-
-def _legacy_allowance_total(payslip):
-    """Pre-elements fallback: total non-basic, non-overtime earnings.
-
-    Uses the basic salary FROZEN on the payslip (line_items snapshot), never
-    the employee's current record, so a raise after approval cannot move money
-    between columns of a locked month. Returns '' when the basic was not stored
-    (legacy-path payslip): the split is unknown and must not be invented.
-    It cannot distinguish one allowance from another, which is exactly why the
-    generic `_pay_item:` resolution exists.
-    """
-    from payroll_engine.frozen_payslip import frozen_figures
-
-    other = frozen_figures(payslip)['other_earnings']
-    return '' if other is None else other
 
 
 # Payslip figures stored at approval. Report templates historically used these
@@ -441,11 +412,11 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
         val = frozen_figures(payslip)[_FROZEN_PATHS[data_path]]
         return '' if val is None else val
     if data_path == '_transport_allowance':
-        return _legacy_allowance_total(payslip)
+        return ''
     if data_path == '_taxable_transport':
-        return _legacy_allowance_total(payslip)
+        return ''
     if data_path == '_other_taxable':
-        return 0
+        return ''
 
     # --- Generic pay-item resolution (elements architecture) ---
     #
@@ -457,9 +428,7 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
     #
     # Suffixes:
     #   (none)  -- sum of every line for that key
-    #   :taxable -- only lines whose tax treatment is 'taxable' (needs the
-    #               type row, so this is resolved via PayItemType, not the
-    #               snapshot)
+    #   :taxable -- unavailable until the approved per-item treatment is frozen
     if data_path.startswith('_pay_item:'):
         spec = data_path[len('_pay_item:') :]
         key, _, mode = spec.partition(':')

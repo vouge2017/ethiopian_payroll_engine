@@ -544,6 +544,24 @@ def pay_item_edit(item_id):
     return redirect(url_for('settings.pay_items', _anchor=f'item-{item.id}'))
 
 
+@settings_bp.route('/settings/pay-items/<int:item_id>/default-amount', methods=['POST'])
+@role_required('owner')
+def pay_item_default_amount(item_id):
+    """Set or clear the company default monthly amount (pre-fills employee assignments only)."""
+    from payroll_engine.services import employee_assignments as ea
+
+    item = _company_pay_item_or_403(item_id)
+    try:
+        changed = ea.set_default_amount(item, current_user.id, request.form.get('default_amount', ''))
+    except ea.AssignmentError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return redirect(url_for('settings.pay_item_edit', item_id=item.id))
+    db.session.commit()
+    flash('Default amount saved.' if changed else 'Nothing changed.', 'success' if changed else 'info')
+    return redirect(url_for('settings.pay_item_edit', item_id=item.id))
+
+
 @settings_bp.route('/settings/pay-items/<int:item_id>/history', methods=['GET'])
 @role_required('owner')
 def pay_item_history(item_id):

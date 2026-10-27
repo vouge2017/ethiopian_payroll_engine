@@ -61,5 +61,23 @@
             </form>
         </div>
     </div>
+    {% if not locked and item.classification in ('earning', 'deduction') %}
+    <div class="card mt-4" style="max-width: 720px;" data-testid="default-amount-card">
+        <div class="card-body">
+            <h5 class="card-title">{{ _('default_amount') }}</h5>
+            <p class="text-muted small">Pre-fills the amount when you assign this item to an employee. Each employee keeps their own amount
+                (a different amount shows as an override). Changing the default never changes existing assignments or any payroll amount.</p>
+            <form method="POST" action="{{ url_for('settings.pay_item_default_amount', item_id=item.id) }}" class="row g-2 align-items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-auto">
+                    <label class="form-label" for="default_amount">ETB per month</label>
+                    <input type="text" inputmode="decimal" class="form-control" name="default_amount" id="default_amount" style="max-width: 200px;"
+                           value="{{ item.default_amount if item.default_amount is not none else '' }}" placeholder="No default">
+                </div>
+                <div class="col-auto"><button type="submit" class="btn btn-outline-primary">{{ _('save_changes') }}</button></div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -239,9 +239,15 @@ def my_profile():
         employee_id=emp.id, company_id=_company_id(), status=ProfileChangeRequest.STATUS_PENDING
     ).all()
     pending_fields = {r.field_name for r in pending}
+    # Read-only list of the employee's own pay items (catalog PR 5). Only
+    # the linked employee's rows are read; nothing here can change them.
+    from payroll_engine.services.employee_assignments import employee_view
+
+    pay_items = [r for r in employee_view(_company_id(), emp) if r.status in ('active', 'scheduled')]
     return render_template(
         'employee_portal/profile.html',
         employee=emp,
+        pay_items=pay_items,
         leaves=leaves,
         masked_bank=masked_bank,
         pending_fields=pending_fields,

@@ -186,6 +186,23 @@ STRINGS = {
     'what_changed': 'የተቀየረው',
     'current_version': 'የአሁኑ ስሪት',
     'first_version': 'የመጀመሪያ ስሪት',
+    # Catalog PR 5 (employee assignments). DRAFT TRANSLATION, pending native-speaker review.
+    'assigned_pay_items': 'የተመደቡ የክፍያ ዓይነቶች',
+    'import_pay_items': 'የክፍያ ዓይነቶችን ከፋይል አስገባ',
+    'pay_item': 'የክፍያ ዓይነት',
+    'amount': 'መጠን',
+    'ends_on': 'የሚያበቃበት ቀን',
+    'edit': 'አስተካክል',
+    'end_assignment': 'አቋርጥ',
+    'amount_type': 'የመጠን ዓይነት',
+    'label': 'መግለጫ',
+    'assign': 'መድብ',
+    'deduction': 'ተቀናሽ',
+    'change_from': 'ለውጡ የሚጀምርበት ቀን',
+    'dry_run_preview': 'ቅድመ እይታ (ምንም አይቀመጥም)',
+    'default_amount': 'መደበኛ መጠን',
+    'starts_on': 'የሚጀምርበት ቀን',
+    'own_amount': 'የሠራተኛው የራሱ መጠን',
 }
 
 

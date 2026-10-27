@@ -203,7 +203,11 @@ def test_migration_matches_app_and_single_head():
     assert {c.name for c in mig._columns()} == model_cols
     cfg = Config(str(REPO / 'migrations/alembic.ini'))
     cfg.set_main_option('script_location', str(REPO / 'migrations'))
-    assert ScriptDirectory.from_config(cfg).get_heads() == ['f3a4b5c6d7e8']
+    script = ScriptDirectory.from_config(cfg)
+    heads = script.get_heads()
+    assert len(heads) == 1
+    # Later migrations build on this one (catalog PR 5: a4b5c6d7e8f9).
+    assert 'f3a4b5c6d7e8' in {rev.revision for rev in script.walk_revisions(base='base', head=heads[0])}
 
 
 def _ops(fn):

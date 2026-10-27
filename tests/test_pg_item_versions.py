@@ -140,7 +140,10 @@ def _settings_by_item(conn):
 
 def test_single_head():
     script = ScriptDirectory.from_config(_cfg(PG_URL))
-    assert script.get_heads() == [REVISION]
+    heads = script.get_heads()
+    assert len(heads) == 1
+    # Later migrations build on this one (catalog PR 5: a4b5c6d7e8f9).
+    assert REVISION in {rev.revision for rev in script.walk_revisions(base='base', head=heads[0])}
 
 
 def test_upgrade_backfills_triggers_guard_and_downgrade_round_trips(isolated):

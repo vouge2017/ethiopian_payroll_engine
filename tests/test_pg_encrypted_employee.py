@@ -13,7 +13,7 @@ from alembic import command
 from alembic.config import Config
 from flask import Flask
 from flask_migrate import Migrate
-from sqlalchemy import text
+from sqlalchemy import Column, MetaData, Table, inspect, text
 
 from payroll_engine import db
 from payroll_engine.models import Company, Employee
@@ -55,7 +55,26 @@ def encrypted_employee_db():
 
 
 def add_employee(company_id, **fields):
-    employee = Employee(
+    # Several tests insert into an older (downgraded) schema, so write only the
+    # columns that schema has (later migrations add Employee columns, e.g.
+    # b5c6d7e8f9a0's deduction consent). The ORM column types are kept, so
+    # encrypted fields are bound exactly as the app binds them.
+    existing = {c['name'] for c in inspect(db.session.connection()).get_columns('employee')}
+    table = Table(
+        'employee',
+        MetaData(),
+        *(
+            Column(
+                c.name,
+                c.type,
+                primary_key=c.primary_key,
+                default=c.default.arg if c.default is not None else None,
+            )
+            for c in Employee.__table__.columns
+            if c.name in existing
+        ),
+    )
+    values = dict(
         company_id=company_id,
         employee_id=uuid4().hex[:15],
         name='Synthetic employee',
@@ -63,9 +82,7 @@ def add_employee(company_id, **fields):
         allowances=0,
         **fields,
     )
-    db.session.add(employee)
-    db.session.flush()
-    employee_id = employee.id
+    employee_id = db.session.execute(table.insert().values(**values).returning(table.c.id)).scalar_one()
     db.session.commit()
     db.session.remove()
     return employee_id

@@ -83,6 +83,10 @@ CROSS_COMPANY_SQL = sa.text(
 )
 
 
+#: System keys seeded by a later migration (b5c6d7e8f9a0), never by this one.
+_LATER_SYSTEM_KEYS = frozenset({'overtime_day', 'overtime_night', 'overtime_holiday', 'overtime_rest_day_holiday'})
+
+
 def _specs():
     """The catalog definitions, as plain dicts.
 
@@ -101,7 +105,12 @@ def _specs():
             out[col] = value
         return out
 
-    return [plain(s) for s in SYSTEM_ITEMS], [plain(s) for s in COMPANY_TEMPLATE_ITEMS]
+    # The overtime rate items joined SYSTEM_ITEMS in catalog PR 6. They are
+    # created by migration b5c6d7e8f9a0, which also copies the rates the app
+    # applied (code defaults, then each active TaxRule from its date); seeding
+    # them here first would make that copy a no-op on a fresh Alembic build.
+    system = [s for s in SYSTEM_ITEMS if s['key'] not in _LATER_SYSTEM_KEYS]
+    return [plain(s) for s in system], [plain(s) for s in COMPANY_TEMPLATE_ITEMS]
 
 
 def find_cross_company_assignments(conn):

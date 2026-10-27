@@ -246,7 +246,8 @@ def calculate_payroll(
     overtime_total_hours = Decimal('0')
     overtime_result = None
     if overtime_entries:
-        overtime_result = calculate_total_overtime(basic_salary, overtime_entries)
+        # Catalog PR 6: overtime rates are the catalog version effective on for_date.
+        overtime_result = calculate_total_overtime(basic_salary, overtime_entries, for_date=for_date)
         overtime_pay = overtime_result['total_pay']
         overtime_total_hours = overtime_result['total_hours']
 

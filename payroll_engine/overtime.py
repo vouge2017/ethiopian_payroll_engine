@@ -17,8 +17,11 @@ Overtime pay = hourly_rate × hours × multiplier
 
 Overtime is taxable income (included in gross for ERCA reporting).
 
-All multipliers and limits are configurable via TaxRule.rules_json['overtime'].
-When no database rule exists, falls back to hardcoded defaults (Ethiopian law).
+Since catalog PR 6 the multipliers are read from the system overtime items of
+the pay-item catalog (payroll_engine.overtime_catalog), versioned with
+effective dates. Limits and the hourly divisor stay configurable via
+TaxRule.rules_json['overtime']; TaxRule rates and the hardcoded defaults are
+the fallback for a type that has no active catalog item.
 """
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -121,6 +124,21 @@ def _get_overtime_rules(for_date=None) -> dict:
                 result['max_hours_year'] = int(ot_cfg['max_hours_year'])
             if 'monthly_hours' in ot_cfg:
                 result['monthly_hours'] = _D(ot_cfg['monthly_hours'])
+    except Exception:
+        pass
+
+    # Catalog PR 6: the multipliers come from the system overtime items in the
+    # pay-item catalog (versioned, effective on for_date). TaxRule / code
+    # defaults above remain the fallback for a type with no active item.
+    try:
+        from payroll_engine.overtime_catalog import catalog_rates
+
+        for code, rate in catalog_rates(for_date).items():
+            # Keep the existing Decimal (e.g. Decimal('1.50') vs the column's
+            # Decimal('1.5000')) when the value is the same, so displayed rate
+            # strings do not change; the catalog value wins when it differs.
+            if code not in result['rates'] or result['rates'][code] != rate:
+                result['rates'][code] = rate
     except Exception:
         pass
 

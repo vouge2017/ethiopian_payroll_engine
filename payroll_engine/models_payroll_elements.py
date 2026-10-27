@@ -281,6 +281,14 @@ class PayrollItemAssignment(db.Model):
     end_date = db.Column(db.Date, nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
+    # Written consent for this deduction (Labour Proc. 1156/2019 Art. 59;
+    # catalog PR 6, migration b5c6d7e8f9a0). A deduction with consent on file
+    # is not counted towards the one-third cap that blocks approval.
+    deduction_consent_on_file = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
+    deduction_consent_note = db.Column(db.String(200), nullable=True)
+    deduction_consent_recorded_at = db.Column(db.DateTime, nullable=True)
+    deduction_consent_recorded_by = db.Column(db.Integer, nullable=True)  # user id (no FK constraint)
+
     # Declining-balance state (for deduction items in declining tracking mode)
     tracking_mode = db.Column(db.String(15), nullable=True)  # 'declining' or 'date_bounded'
     total_to_recover = db.Column(db.Numeric(12, 2), nullable=True)

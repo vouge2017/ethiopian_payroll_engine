@@ -111,6 +111,18 @@ SYSTEM_ITEMS: list[dict] = [
     },
 ]
 
+
+# Overtime rate items (catalog PR 6): one shared system item per overtime
+# type code, rate = Art. 68 multiplier. Read by overtime._get_overtime_rules,
+# never assigned and never loaded as a monthly earning.
+def _overtime_specs():
+    from payroll_engine.overtime_catalog import specs
+
+    return specs()
+
+
+SYSTEM_ITEMS.extend(_overtime_specs())
+
 # ---------------------------------------------------------------------------
 # Company template catalog.
 # These are the per-company items seeded at company creation and backfilled

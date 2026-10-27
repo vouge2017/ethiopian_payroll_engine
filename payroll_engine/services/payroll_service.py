@@ -288,7 +288,16 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
     employees_data = draft.employee_data
 
     if run.source == 'spreadsheet':
+        # Catalog PR 6: one-third deduction cap (Labour Proc. 1156/2019 Art. 59).
+        # Checked on the reviewed rows before anything is written; amounts are
+        # never reduced. Consent is read at approval time.
+        from payroll_engine.deduction_cap import blocking_message, check_rows
         from payroll_engine.services.worksheet_review import apply_approved_rows
+
+        cap_breaches = check_rows(company_id, employees_data)
+        if cap_breaches:
+            db.session.rollback()
+            return ApprovalResult(success=False, message=blocking_message(cap_breaches), redirect_to='detail')
 
         try:
             apply_approved_rows(run, company_id, employees_data)
@@ -450,7 +459,10 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Create/update employees and payslips
         # PDFs are generated lazily on download (not at approval time)
+        from payroll_engine.deduction_cap import check_employee
         from payroll_engine.payroll_elements import calculate_payroll_from_assignments
+
+        cap_breaches = []
 
         for emp_data in employees_data:
             emp = emp_by_eid.get(emp_data['id'])
@@ -599,6 +611,11 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 taxable_income = None
                 calculation_context = None  # Do not invent context for precomputed legacy amounts.
 
+            # Catalog PR 6: one-third deduction cap (Art. 59), both paths.
+            cap = check_employee(company_id, emp, emp_data.get('basic'), deduction_details)
+            if cap.exceeds:
+                cap_breaches.append(cap)
+
             payslip = Payslip(
                 payroll_run_id=run.id,
                 employee_id=emp.id,
@@ -622,6 +639,11 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             # Decrement declining-balance balances from the engine's result so
             # the ledger stays in step with what was actually deducted.
             _decline_balances(emp.id, company_id, deduction_details)
+
+        if cap_breaches:
+            from payroll_engine.deduction_cap import DeductionCapExceededError, blocking_message
+
+            raise DeductionCapExceededError(blocking_message(cap_breaches))
 
         # Freeze the pay-item settings this approval used (catalog PR 4a),
         # in the same transaction as the payslips.
@@ -739,6 +761,13 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         )
 
     except Exception as e:
+        from payroll_engine.deduction_cap import DeductionCapExceededError
+
+        if isinstance(e, DeductionCapExceededError):
+            # Not a failure of the run: nothing was written, the run stays in
+            # review so the owner can record consent or change the deduction.
+            db.session.rollback()
+            return ApprovalResult(success=False, message=str(e), redirect_to='detail')
         # Roll back the entire approval attempt
         db.session.rollback()
 

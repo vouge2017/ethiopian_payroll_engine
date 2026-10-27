@@ -404,7 +404,13 @@ def _load_system_items(company_id, for_date):
     # effective on for_date; with a single version that is the row itself.
     rows = [row for row in resolve_rows(rows, for_date) if row.is_active]
 
+    from payroll_engine.overtime_catalog import OVERTIME_KEYS
+
     for row in rows:
+        # Overtime rate items (catalog PR 6) are rate tables read by the
+        # overtime module, not monthly earnings.
+        if row.key in OVERTIME_KEYS:
+            continue
         bucket = {
             PayItemClassification.EARNING: earnings,
             PayItemClassification.DEDUCTION: deductions,

@@ -911,8 +911,11 @@ def payroll_confirm(run_id):
         emp['tax_breakdown'] = calculate_tax_breakdown(taxable)
         emp['calc_flow'] = generate_calculation_flow(emp)
 
+    from payroll_engine.deduction_cap import check_rows
+
     return render_template(
         'payroll_confirm.html',
+        deduction_cap_breaches=check_rows(_company_id(), employees_data),
         run=run,
         employees=employees_data,
         employee_count=len(employees_data),
@@ -2635,8 +2638,11 @@ def payroll_review_workspace(run_id):
         and not any(finding.severity == 'BLOCK' and not finding.overridden for finding in validation_results)
         and run.status in ('review', 'pending_approval')
     )
+    from payroll_engine.deduction_cap import check_rows
+
     return render_template(
         'payroll_review_workspace.html',
+        deduction_cap_breaches=check_rows(cid, worksheet_rows),
         worksheet_rows=worksheet_rows,
         run=run,
         narrative=narrative,

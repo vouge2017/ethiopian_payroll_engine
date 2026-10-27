@@ -8,6 +8,7 @@
 <div class="monthly-payroll monthly-confirm">
 <header class="monthly-heading"><div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p><h1>{{ _('approve_payroll') }}</h1><p>Confirm the reviewed amounts. Approval does not send payment.</p></div><a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary">Back to review</a></header>
 {{ monthly.steps(3) }}
+{% include "components/_deduction_cap_warning.html" %}
 {% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
 {{ monthly.totals(employee_count, total_gross, total_tax, total_net, 'Preserved net pay') }}
 <p class="monthly-pension">Employee pension · ETB {{ '{:,.2f}'.format(total_pension) }} · already included in deductions</p>

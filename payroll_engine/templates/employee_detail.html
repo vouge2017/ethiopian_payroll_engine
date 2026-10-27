@@ -236,6 +236,7 @@
                             </td>
                             <td data-label="{{ _('amount') }}">
                                 {% if row.mode == 'fixed' %}ETB {{ '{:,.2f}'.format(row.value) }}{% elif row.mode == 'rate_x_units' %}{{ row.value }} / unit{% else %}{{ '%.2f'|format(row.value) }}% {{ 'of basic' if row.mode == 'percent_of_basic' else 'of net' }}{% endif %}
+                                {% if row.assignment.deduction_consent_on_file %}<span class="badge bg-light text-dark border ms-1" title="{{ row.assignment.deduction_consent_note or '' }}">{{ _('written_consent') }}</span>{% endif %}
                                 {% if row.is_override %}<span class="badge bg-info text-dark ms-1" title="Company default: ETB {{ '{:,.2f}'.format(row.item.default_amount) }}">{{ _('own_amount') }}</span>{% endif %}
                             </td>
                             <td data-label="{{ _('starts_on') }}">{{ row.assignment.effective_date.isoformat() if row.assignment.effective_date else '—' }}</td>
@@ -274,6 +275,21 @@
             {% else %}
             <p class="text-muted">No pay items assigned yet.</p>
             {% endif %}
+
+            <form method="POST" action="{{ url_for('employees.employee_deduction_consent', emp_id=employee.id) }}" class="row g-2 align-items-end mb-3" data-testid="employee-consent-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-5">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="consent_on_file" value="1" id="employee_consent" {% if employee.deduction_consent_on_file %}checked{% endif %}>
+                        <label class="form-check-label small" for="employee_consent">{{ _('written_consent') }}: signed consent covering all this employee's deductions is on file (Art. 59 one-third cap)</label>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control form-control-sm" name="consent_note" maxlength="200" aria-label="Where the consent is kept"
+                           value="{{ employee.deduction_consent_note or '' }}" placeholder="Where it is kept">
+                </div>
+                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-outline-secondary w-100">{{ _('save_changes') }}</button></div>
+            </form>
 
             {% if assignable_items %}
             <form method="POST" action="{{ url_for('employees.add_assignment', emp_id=employee.id) }}" class="row g-2 align-items-end" data-testid="assignment-add-form">

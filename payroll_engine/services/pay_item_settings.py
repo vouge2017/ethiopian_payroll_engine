@@ -69,6 +69,7 @@ from payroll_engine.models_payroll_elements import (
     PayItemType,
     PayrollItemAssignment,
 )
+from payroll_engine.overtime_catalog import OVERTIME_KEYS
 from payroll_engine.shared import create_audit_log
 
 KEY_PATTERN = re.compile(r'^[a-z][a-z0-9_]{1,29}$')
@@ -102,7 +103,7 @@ IMPORT_MANAGED_KEYS = frozenset(
 ENGINE_KEYS = frozenset({'income_tax', 'employee_pension', 'employer_pension'})
 
 TEMPLATE_KEYS = frozenset(k.value for k in COMPANY_TEMPLATE_ITEM_KEYS)
-SYSTEM_KEYS = frozenset(k.value for k in SYSTEM_ITEM_KEYS)
+SYSTEM_KEYS = frozenset(k.value for k in SYSTEM_ITEM_KEYS) | OVERTIME_KEYS
 
 #: Keys a custom item may not take: shared system keys (the engine prefers a
 #: company row over the system row for some of them, so a company

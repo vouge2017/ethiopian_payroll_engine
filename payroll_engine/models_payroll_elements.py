@@ -145,6 +145,12 @@ class PayItemType(db.Model):
     #     Art. 53 (base for leave pay and severance), not switched on until PR 4.
     pensionable = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
     counts_as_art53_wage = db.Column(db.Boolean, nullable=False, default=False, server_default=sa.false())
+    # Company default monthly amount for a fixed-amount earning or deduction
+    # (catalog PR 5, migration a4b5c6d7e8f9). It only pre-fills new employee
+    # assignments; an assignment whose own amount differs is shown as a
+    # per-employee override. No calculation reads it, and it is not
+    # versioned (payroll reads the amount stored on each assignment).
+    default_amount = db.Column(db.Numeric(12, 2), nullable=True)
     sort_order = db.Column(db.Integer, nullable=False, default=100)
     is_system = db.Column(db.Boolean, nullable=False, default=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)

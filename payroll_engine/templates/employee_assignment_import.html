@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ _('import_pay_items') }}{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <h2 class="fw-bold mb-1"><i class="bi bi-upload me-2"></i>{{ _('import_pay_items') }}</h2>
+    <p class="text-muted mb-4">Assign catalog pay items to many employees from a CSV or Excel file. You always see a preview first; nothing is saved
+        until you confirm, and then every row is saved or none is. Importing the same file again changes nothing.</p>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">File format</h5>
+            <p class="small mb-2">One row per assignment, with a header row. Columns: {% for c in columns %}<code>{{ c }}</code>{% if not loop.last %}, {% endif %}{% endfor %}.
+                <code>employee_id</code>, <code>item_key</code> and <code>amount</code> are required. <code>amount_type</code> is <code>fixed</code> (ETB per month, default),
+                <code>percent_of_basic</code> (earnings) or <code>percent_of_net</code> (deductions). Dates are Gregorian <code>YYYY-MM-DD</code>.
+                Deductions need a <code>label</code>. Up to {{ max_rows }} rows.</p>
+            <p class="small mb-2"><strong>Employee IDs must match exactly.</strong> If Excel turned <code>0001</code> into <code>1</code>, format the column as text and type the IDs again;
+                rows that could mean more than one employee are rejected, never guessed.</p>
+            <p class="small mb-3">Item keys in your catalog:
+                {% for item in items %}<code>{{ item.key }}</code>{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+            <a href="{{ url_for('employees.assignment_import_template') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-download me-1"></i>Download template (CSV)</a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('employees.import_assignments') }}" class="row g-2 align-items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="preview">
+                <div class="col-md-6">
+                    <label class="form-label" for="file">CSV or Excel (.xlsx) file</label>
+                    <input type="file" class="form-control" name="file" id="file" accept=".csv,.xlsx" required>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="confirm_legacy" value="1" id="confirm_legacy_upload" {% if confirm_legacy %}checked{% endif %}>
+                        <label class="form-check-label small" for="confirm_legacy_upload">Some employees still have legacy allowances. I understand that once they have a catalog earning,
+                            monthly payroll pays only catalog items, and the file includes their allowances as catalog items.</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">{{ _('dry_run_preview') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if plan %}
+    <div class="card" data-testid="import-preview">
+        <div class="card-body">
+            <h5 class="card-title">{{ _('dry_run_preview') }}</h5>
+            {% for err in plan.header_errors %}<div class="alert alert-danger">{{ err }}</div>{% endfor %}
+            {% set c = plan.counts %}
+            <p>
+                <span class="badge bg-success">{{ c['create'] }} to add</span>
+                <span class="badge bg-primary">{{ c['update'] }} to update</span>
+                <span class="badge bg-secondary">{{ c['unchanged'] }} unchanged</span>
+                <span class="badge bg-danger">{{ c['error'] }} with errors</span>
+            </p>
+            {% if plan.rows %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle responsive-card">
+                    <thead class="table-light"><tr><th>Row</th><th>employee_id</th><th>item_key</th><th>amount</th><th>start</th><th>end</th><th>Result</th></tr></thead>
+                    <tbody>
+                        {% for r in plan.rows %}
+                        <tr class="{% if r.errors %}table-danger{% endif %}" data-row="{{ r.number }}">
+                            <td>{{ r.number }}</td>
+                            <td>{{ r.raw['employee_id'] }}{% if r.employee %}<small class="text-muted d-block">{{ r.employee.name }}</small>{% endif %}</td>
+                            <td>{{ r.raw['item_key'] }}</td>
+                            <td>{{ r.raw['amount'] }}{% if r.raw['amount_type'] %} <small class="text-muted">{{ r.raw['amount_type'] }}</small>{% endif %}</td>
+                            <td>{{ r.raw['start_date'] }}</td>
+                            <td>{{ r.raw['end_date'] }}</td>
+                            <td>
+                                {% if r.errors %}
+                                {% for e in r.errors %}<div class="small text-danger">{{ e }}</div>{% endfor %}
+                                {% else %}
+                                <span class="small">{{ r.message }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+            {% if plan.can_apply %}
+            <form method="POST" action="{{ url_for('employees.import_assignments') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="apply">
+                <input type="hidden" name="payload" value="{{ payload }}">
+                {% if confirm_legacy %}<input type="hidden" name="confirm_legacy" value="1">{% endif %}
+                <button type="submit" class="btn btn-success">Import {{ c['create'] + c['update'] }} row(s)</button>
+            </form>
+            {% elif plan.errors or plan.header_errors %}
+            <p class="text-danger mb-0">Fix the rows marked above and upload the file again. Nothing has been saved.</p>
+            {% else %}
+            <p class="text-muted mb-0">Nothing to import: every row is already in place.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

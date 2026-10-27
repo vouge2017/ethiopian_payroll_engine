@@ -844,7 +844,10 @@ def bulk_import_employees():
                     }
                 )
                 continue
-        used_ids.add(emp_id_str)
+        pay_items = emp_data.get('pay_items') or []
+        if not isinstance(pay_items, list) or not all(isinstance(p, dict) for p in pay_items):
+            errors.append({'row': i + 1, 'error': 'pay_items must be a list of objects'})
+            continue
 
         emp = Employee(
             employee_id=emp_id_str,
@@ -858,7 +861,17 @@ def bulk_import_employees():
             company_id=cid,
             employee_type=emp_data.get('employee_type', 'monthly'),
         )
-        db.session.add(emp)
+        if pay_items:
+            # Catalog PR 5: per-item allowances / deductions become catalog
+            # assignments through the same rules as the employee page. The
+            # employee and its assignments are saved together or not at all.
+            problem = _bulk_pay_items(cid, emp, pay_items)
+            if problem:
+                errors.append({'row': i + 1, 'error': problem})
+                continue
+        else:
+            db.session.add(emp)
+        used_ids.add(emp_id_str)
         imported += 1
 
     try:
@@ -879,6 +892,47 @@ def bulk_import_employees():
             'total_errors': len(errors),
         }
     )
+
+
+def _bulk_pay_items(company_id, emp, pay_items):
+    """Save ``emp`` with its catalog assignments in a SAVEPOINT; return an error message or None."""
+    from payroll_engine.services import employee_assignments as ea
+
+    user = _get_current_user()
+    earning_keys = {i.key for i in ea.assignable_items(company_id) if i.classification == 'earning'}
+    if Decimal(str(emp.allowances or 0)) > 0 and any(
+        (p.get('item_key') or '').strip() in earning_keys for p in pay_items
+    ):
+        return (
+            'give either "allowances" or earning pay_items, not both: once an employee has a catalog '
+            'earning, monthly payroll pays only catalog items'
+        )
+    savepoint = db.session.begin_nested()
+    try:
+        db.session.add(emp)
+        db.session.flush()
+        for n, p in enumerate(pay_items, start=1):
+            try:
+                item = ea.assignable_item(company_id, key=(p.get('item_key') or '').strip())
+                ea.create_assignment(
+                    company_id,
+                    getattr(user, 'id', None),
+                    emp,
+                    item,
+                    mode=p.get('amount_type'),
+                    value=p.get('amount'),
+                    start=p.get('start_date'),
+                    end=p.get('end_date'),
+                    label=p.get('label'),
+                    source='api_bulk_import',
+                )
+            except ea.AssignmentError as exc:
+                raise ea.AssignmentError(f'pay_items[{n}]: {exc}') from None
+        savepoint.commit()
+    except ea.AssignmentError as exc:
+        savepoint.rollback()
+        return str(exc)
+    return None
 
 
 # --- Accounting Export API ---

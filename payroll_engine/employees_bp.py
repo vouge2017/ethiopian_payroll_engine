@@ -631,8 +631,19 @@ def employee_detail(emp_id):
     active_deductions = [d for d in deductions if d.is_active]
     inactive_deductions = [d for d in deductions if not d.is_active]
     years = today.year
+    from payroll_engine.services import employee_assignments as ea
+
+    _ensure_catalog(emp.company_id)
     return render_template(
         'employee_detail.html',
+        assignment_rows=ea.employee_view(emp.company_id, emp, today),
+        assignable_items=ea.assignable_items(emp.company_id),
+        assignment_modes=ea.MODES,
+        assignment_mode_labels=ea.MODE_LABELS,
+        legacy_allowance_total=(
+            ea.legacy_allowance_total(emp) if not ea.has_catalog_earning(emp.company_id, emp.id) else Decimal('0')
+        ),
+        today=today,
         employee=emp,
         payslips=payslips,
         payslips_pagination=payslips_pagination,
@@ -783,6 +794,252 @@ def delete_allowance(allowance_id):
     trust_cache.invalidate_trust_cache(_company_id())
     flash('Allowance removed.', 'info')
     return redirect(url_for('employees.employee_detail', emp_id=emp_id))
+
+
+# --- Employee pay-item assignments (catalog PR 5) ---
+
+
+def _assignment_redirect(emp_id):
+    return redirect(url_for('employees.employee_detail', emp_id=emp_id, _anchor='pay-items'))
+
+
+def _employee_or_404(emp_id):
+    return Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
+
+
+def _assignment_or_404(emp, assignment_id):
+    from payroll_engine.services import employee_assignments as ea
+
+    a = ea.get_assignment(_company_id(), assignment_id)
+    if a is None or a.employee_id != emp.id:
+        from flask import abort
+
+        abort(404)
+    return a
+
+
+def _assignment_done(message):
+    from payroll_engine import trust_cache
+
+    db.session.commit()
+    trust_cache.invalidate_trust_cache(_company_id())
+    flash(message, 'success')
+
+
+@employees_bp.route('/employees/<int:emp_id>/pay-items', methods=['POST'])
+@role_required('owner', 'accountant')
+def add_assignment(emp_id):
+    """Assign a company catalog item to an employee."""
+    from payroll_engine.services import employee_assignments as ea
+
+    emp = _employee_or_404(emp_id)
+    try:
+        item = ea.assignable_item(_company_id(), item_id=request.form.get('pay_item_type_id', type=int))
+        a = ea.create_assignment(
+            _company_id(),
+            current_user.id,
+            emp,
+            item,
+            mode=request.form.get('amount_type'),
+            value=request.form.get('amount'),
+            start=request.form.get('start_date'),
+            end=request.form.get('end_date'),
+            label=request.form.get('label'),
+            reference=request.form.get('reference_number'),
+            confirm_legacy=bool(request.form.get('confirm_legacy')),
+        )
+    except ea.AssignmentError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return _assignment_redirect(emp_id)
+    _assignment_done(f'{a.custom_label or item.name_en} assigned to {emp.name}.')
+    return _assignment_redirect(emp_id)
+
+
+@employees_bp.route('/employees/<int:emp_id>/pay-items/<int:assignment_id>/edit', methods=['GET', 'POST'])
+@role_required('owner', 'accountant')
+def edit_assignment(emp_id, assignment_id):
+    """Edit an assignment (in place if unused, from a date if used in approved payroll)."""
+    from payroll_engine.services import employee_assignments as ea
+
+    emp = _employee_or_404(emp_id)
+    a = _assignment_or_404(emp, assignment_id)
+    view = next((r for r in ea.employee_view(_company_id(), emp) if r.assignment.id == a.id), None)
+    if view is None or view.managed:
+        flash('This assignment is managed by the system and cannot be edited here.', 'warning')
+        return _assignment_redirect(emp_id)
+
+    def page(form, status=200):
+        return (
+            render_template(
+                'employee_assignment_edit.html',
+                employee=emp,
+                row=view,
+                form=form,
+                modes=ea.MODES[view.item.classification],
+                mode_labels=ea.MODE_LABELS,
+            ),
+            status,
+        )
+
+    if request.method == 'GET':
+        return page({})
+    form = {
+        f: request.form.get(f, '') for f in ('amount_type', 'amount', 'start_date', 'end_date', 'label', 'change_from')
+    }
+    try:
+        result = ea.update_assignment(
+            _company_id(),
+            current_user.id,
+            a,
+            mode=form['amount_type'] or None,
+            value=form['amount'],
+            start=form['start_date'] if not view.used else None,
+            end=form['end_date'],
+            label=form['label'],
+            change_from=form['change_from'] or None,
+        )
+    except ea.AssignmentError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return page(form, 400)
+    if result.id != a.id:
+        _assignment_done(
+            f'New amount for {view.label} starts {result.effective_date.isoformat()}; '
+            f'the earlier assignment ends {a.end_date.isoformat()}.'
+        )
+    else:
+        _assignment_done(f'{view.label} updated.')
+    return _assignment_redirect(emp_id)
+
+
+@employees_bp.route('/employees/<int:emp_id>/pay-items/<int:assignment_id>/end', methods=['POST'])
+@role_required('owner', 'accountant')
+def end_assignment(emp_id, assignment_id):
+    """End-date an assignment."""
+    from payroll_engine.services import employee_assignments as ea
+
+    emp = _employee_or_404(emp_id)
+    a = _assignment_or_404(emp, assignment_id)
+    try:
+        ea.end_assignment(_company_id(), current_user.id, a, request.form.get('end_date'))
+    except ea.AssignmentError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return _assignment_redirect(emp_id)
+    _assignment_done(f'{a.custom_label or a.item_type.name_en} ends {a.end_date.isoformat()}.')
+    return _assignment_redirect(emp_id)
+
+
+@employees_bp.route('/employees/<int:emp_id>/pay-items/<int:assignment_id>/delete', methods=['POST'])
+@role_required('owner', 'accountant')
+def delete_assignment(emp_id, assignment_id):
+    """Delete an assignment that no approved payroll used."""
+    from payroll_engine.services import employee_assignments as ea
+
+    emp = _employee_or_404(emp_id)
+    a = _assignment_or_404(emp, assignment_id)
+    label = a.custom_label or a.item_type.name_en
+    try:
+        ea.delete_assignment(_company_id(), current_user.id, a)
+    except ea.AssignmentError as exc:
+        db.session.rollback()
+        flash(str(exc), 'danger')
+        return _assignment_redirect(emp_id)
+    _assignment_done(f'{label} removed.')
+    return _assignment_redirect(emp_id)
+
+
+IMPORT_TEMPLATE_ROWS = (
+    ('employee_id', 'item_key', 'amount', 'start_date', 'end_date', 'amount_type', 'label'),
+    ('EMP001', 'transport', '1500.00', '2026-11-01', '', 'fixed', ''),
+    ('EMP001', 'loan', '1000.00', '2026-11-01', '2027-04-30', 'fixed', 'Staff loan 2026'),
+)
+
+
+@employees_bp.route('/employees/pay-items/import/template.csv')
+@role_required('owner', 'accountant')
+def assignment_import_template():
+    out = io.StringIO()
+    csv.writer(out).writerows(IMPORT_TEMPLATE_ROWS)
+    return send_file(
+        io.BytesIO(out.getvalue().encode('utf-8-sig')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='pay_item_assignments_template.csv',
+    )
+
+
+@employees_bp.route('/employees/pay-items/import', methods=['GET', 'POST'])
+@role_required('owner', 'accountant')
+@limiter.limit('20 per minute', methods=['POST'])
+def import_assignments():
+    """Bulk import of assignments: upload -> dry-run preview -> confirm (all or nothing)."""
+    import json
+
+    from payroll_engine.services import assignment_import as ai
+
+    company_id = _company_id()
+    _ensure_catalog(company_id)
+    items = [i for i in company_pay_items() if i.classification in ('earning', 'deduction')]
+
+    def page(plan=None, payload=None, status=200, confirm_legacy=False):
+        return (
+            render_template(
+                'employee_assignment_import.html',
+                plan=plan,
+                payload=payload,
+                items=items,
+                columns=ai.COLUMNS,
+                confirm_legacy=confirm_legacy,
+                max_rows=ai.MAX_ROWS,
+            ),
+            status,
+        )
+
+    if request.method == 'GET':
+        return page()
+
+    confirm_legacy = bool(request.form.get('confirm_legacy'))
+    try:
+        if request.form.get('action') == 'apply':
+            rows = ai.rows_from_payload(json.loads(request.form.get('payload') or '[]'))
+            headers = list(ai.COLUMNS)
+        else:
+            upload = request.files.get('file')
+            if upload is None or not upload.filename:
+                raise ai.ImportFileError('Choose a .csv or .xlsx file to upload.')
+            headers, rows = ai.read_rows(upload)
+    except (ai.ImportFileError, ValueError) as exc:
+        flash(str(exc), 'danger')
+        return page(status=400)
+
+    payload = json.dumps(ai.rows_to_payload(rows), ensure_ascii=False)
+    if request.form.get('action') != 'apply':
+        plan = ai.plan_import(company_id, headers, rows, confirm_legacy=confirm_legacy)
+        db.session.rollback()
+        return page(plan, payload, confirm_legacy=confirm_legacy)
+
+    try:
+        plan = ai.apply_import(company_id, current_user.id, headers, rows, confirm_legacy=confirm_legacy)
+    except Exception:
+        db.session.rollback()
+        raise
+    if not plan.can_apply:
+        db.session.rollback()
+        flash('Nothing was imported. Fix the rows marked below and upload again.', 'danger')
+        return page(plan, payload, status=400, confirm_legacy=confirm_legacy)
+    counts = plan.counts
+    create_audit_log(
+        company_id=company_id,
+        user_id=current_user.id,
+        action='pay_item_assignments_imported',
+        details={'created': counts['create'], 'updated': counts['update'], 'unchanged': counts['unchanged']},
+    )
+    _assignment_done(
+        f'Import finished: {counts["create"]} added, {counts["update"]} updated, {counts["unchanged"]} unchanged.'
+    )
+    return redirect(url_for('employees.list_employees'))
 
 
 # --- Employee Deductions ---

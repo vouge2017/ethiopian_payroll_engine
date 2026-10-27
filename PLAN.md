@@ -549,6 +549,88 @@ second review; Q1 is the PAYE-on-gross answer).
   PG 17): 201 passed (4a 198 + 3 new). ruff check /
   format clean.
 
+### Pay-item catalog PR 5: employee assignments from the catalog (branch `feat/catalog-employee-assignments`, 2026-10-27)
+
+- State: draft PR, cut from `main` @ `b2847fa` (PRs #40, #41 merged). Not
+  merged. **Behaviour-preserving: no payroll, tax, pension or settlement
+  amount changes** (golden test below; engine untouched).
+- Employee page: new "Assigned pay items" card lists every
+  `PayrollItemAssignment` of the employee (status active / scheduled /
+  ended / inactive, amount or %, dates, "used in approved payroll up to …",
+  "own amount" badge when it differs from the company default). It also
+  shows rows written by the old allowance/deduction routes, which the page
+  never listed before. Add from the company catalog (own active earnings and
+  deductions only; system items refused): `fixed` ETB/month,
+  `percent_of_basic` (earnings) or `percent_of_net` (deductions), start /
+  end dates, label (required for deductions), reference. Edit / end /
+  delete per row. Routes `employees.add_assignment`, `edit_assignment`,
+  `end_assignment`, `delete_assignment`; rules in
+  `payroll_engine/services/employee_assignments.py`.
+- Rules: an assignment is **used** once an approved payslip carries its id
+  (line items or deduction details). Used: never deleted; start date fixed;
+  amount/type change only from a date after the last approved month that
+  used it (old row end-dated the day before, new row added, audit
+  `pay_item_assignment_revised`); end date not before the end of that month;
+  label editable. Unused: edited in place or deleted. Earnings: one running
+  assignment per item (no overlapping dates). Deductions may overlap with
+  different labels. Rate-times-units is not offered (the worksheet cannot
+  capture units).
+- Legacy allowances: the worksheet pays `EmployeeAllowance` records /
+  `Employee.allowances` only while the employee has no catalog earning other
+  than basic. Adding the first catalog earning to such an employee now needs
+  an explicit confirmation (page checkbox, import checkbox), never a silent
+  switch. Deductions do not need it.
+- Roles: owner and accountant edit (there is no HR role in the codebase;
+  `role_required` knows owner / accountant / employee). Employee role:
+  403 on all employee pages; reads own active/scheduled pay items on
+  `/my/profile` (read-only). Another company's employee / assignment: 404.
+- Company default amount: `pay_item_type.default_amount` (migration
+  `a4b5c6d7e8f9`, nullable, not versioned), owner sets it on Settings → Pay
+  items → item page. It pre-fills the add form; an assignment's own amount is
+  what payroll uses (Keka-style per-employee override). **No calculation
+  reads the default.**
+- Import: Employees → "Import pay items" (`/employees/pay-items/import`,
+  owner/accountant). CSV or .xlsx: `employee_id, item_key, amount,
+  start_date, end_date, amount_type, label`. Dry-run preview (create /
+  update / unchanged / error per row), then apply re-validates and writes
+  all rows or none. Re-import is a no-op. Match = employee + item + start
+  (+ label for deductions); unused rows update in place, used rows are
+  refused. Employee IDs match exactly; rejected, never guessed: "1" when
+  only "0001" exists (suggests it), numeric Excel cells when two IDs read as
+  the same number ("1" and "0001"), duplicate rows, overlapping rows,
+  deleted employees. Template CSV download. Max 2,000 rows.
+- JSON bulk import (`POST /api/v1/employees/bulk`): optional per-employee
+  `pay_items` list → catalog assignments through the same service, saved
+  with the employee in a SAVEPOINT (one bad item rejects that employee only).
+  `allowances` plus an earning in `pay_items` is refused (the worksheet
+  would stop paying `allowances`). The CSV payroll upload's `allowances` →
+  General Allowance mapping is unchanged; Quick Start has no allowance
+  column.
+- i18n: new keys `assigned_pay_items`, `import_pay_items`, `pay_item`,
+  `amount`, `ends_on`, `starts_on`, `edit`, `end_assignment`, `amount_type`,
+  `label`, `assign`, `deduction`, `change_from`, `dry_run_preview`,
+  `default_amount`, `own_amount` (English from the key; Amharic / Afaan
+  Oromoo DRAFT, pending native-speaker review). Existing `start_date`
+  (employment start) and `override` keys were not reused because their
+  Amharic means something else.
+- Tests: `tests/test_catalog_assignment_golden.py` +
+  `tests/golden/catalog_assignment_golden.json` (generated on `main` @
+  `b2847fa` before any change, committed first: 8 employees in every
+  existing data state through the worksheet review and the engine for two
+  months, overtime matrix on all engines with and without a TaxRule
+  override, deductions above one third); `tests/test_employee_assignments.py`
+  (16) and `tests/test_assignment_import.py` (28) on SQLite;
+  `tests/test_pg_employee_assignments.py` (PG, 3: head, isolated
+  upgrade/downgrade keeps rows, versions, indexes and triggers; service,
+  used-revision, import and tenancy trigger on the shared DB) — added to
+  the CI PG job. Head pins bumped/relaxed in `test_item_versions.py`,
+  `test_pg_item_versions.py`, `test_pg_pr8_reconciliation.py`.
+  Full SQLite suite (189 files, one process each, `python -m pytest`): 1995
+  passed, 0 failed, 0 errors, 231 skipped (4b baseline 1946 + 49 new).
+  PostgreSQL CI list (28 files, local PG 17): 204 passed. ruff check /
+  format clean. Single Alembic head `a4b5c6d7e8f9`. Screens not checked in
+  a real browser (none in the sandbox); HTML asserted in tests.
+
 ### Local commit 8597610 (branch `fix/api-role-scoping`, never pushed)
 
 - Main already has it. Main contains `9a49f88 fix: api role guards, allowance
@@ -782,6 +864,19 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   settings become editable (catalog PR 4b).
 - Record the resolved `version_no` per item in the approval snapshot.
   Parked: changes the frozen 4a snapshot format (needs a v2 + migration).
+- Assignments that follow the company default amount (no own amount, so a
+  default change applies to them). Parked: payroll would then read
+  `default_amount`, which needs versioning and changes amounts (catalog PR 5).
+- Rate-times-units assignments (hours, days) on the employee page and in the
+  import. Parked: the worksheet review cannot capture units yet.
+- Apply only the valid rows of an assignment import. Parked: all-or-nothing
+  is the safer default for payroll data; owner to decide.
+- Retire the old Allowances / Deductions cards on the employee page (they
+  show legacy `EmployeeAllowance` / `EmployeeDeduction` rows and the old add
+  forms). Parked: legacy rows still exist and are still paid; needs a data
+  migration into assignments with a money proof.
+- Mid-month assignment start/end proration. Parked: the engine uses the
+  month-end date; proration is a payroll rule (Next item, mid-month joiners).
 - Run the PostgreSQL test suite locally or in a sandbox. Parked: needs a
   disposable Postgres; CI covers it for now.
 - e-Tax / ERCA portal direct filing (`ETAX_INTEGRATION_PATH.md`). Parked: the
@@ -907,3 +1002,13 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   settings-page edits recorded as versions with a history page. No amount
   changes (golden). Tests: SQLite 1946 passed, 0 failed, 228 skipped (185
   files); PostgreSQL 201 passed (27 files, local PG 17). ruff clean.
+- 2026-10-27 — Hark — Catalog PR 5 (`feat/catalog-employee-assignments`):
+  employee page lists/adds/edits/ends/deletes catalog assignments (used ones
+  never deleted, changed only from a date after the last approved month),
+  legacy-allowance confirmation, employee read-only portal list, company
+  default amount (migration `a4b5c6d7e8f9`, display/pre-fill only), CSV/xlsx
+  assignment import with dry run, all-or-nothing apply, idempotent re-import
+  and strict employee-ID matching, JSON bulk import `pay_items`. No amount
+  changes (golden generated on main first). Tests: SQLite 1995 passed, 0
+  failed, 231 skipped (189 files); PostgreSQL 204 passed (28 files, local
+  PG 17). ruff clean.

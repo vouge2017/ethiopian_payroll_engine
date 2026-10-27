@@ -106,7 +106,7 @@
         <div class="col-md-2">
             <div class="card">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">{{ _('start_date') }}</h6>
+                    <h6 class="text-muted">{{ _('starts_on') }}</h6>
                     <p class="mb-0">{{ eth_date(employee.start_date) if employee.start_date else 'Not set' }}</p>
                 </div>
             </div>
@@ -200,6 +200,138 @@
             {% endif %}
             {% else %}
             <p class="text-muted mb-0">No overtime recorded this month.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pay items from the company catalog (catalog PR 5) -->
+    <div class="card mb-4" id="pay-items">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>{{ _('assigned_pay_items') }}</h5>
+            <a href="{{ url_for('employees.import_assignments') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-upload me-1"></i>{{ _('import_pay_items') }}</a>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">Pay items come from your company catalog (Settings &rarr; Pay items). Monthly payroll uses the amount
+                on each assignment. An assignment that approved payroll already used is never deleted: end it, or change its amount from a date.</p>
+            {% if assignment_rows %}
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle responsive-card" data-testid="assignment-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{{ _('pay_item') }}</th>
+                            <th>{{ _('amount') }}</th>
+                            <th>{{ _('starts_on') }}</th>
+                            <th>{{ _('ends_on') }}</th>
+                            <th>{{ _('status') }}</th>
+                            <th class="text-end"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in assignment_rows %}
+                        <tr data-assignment-id="{{ row.assignment.id }}" class="{% if row.status in ('ended', 'inactive') %}text-muted{% endif %}">
+                            <td data-label="{{ _('pay_item') }}">
+                                <strong>{{ row.label }}</strong>
+                                {% if row.assignment.custom_label %}<small class="text-muted d-block">{{ row.item.label(current_language) }}</small>{% endif %}
+                                <small class="text-muted d-block">{{ 'Earning' if row.item.classification == 'earning' else 'Deduction' }} &middot; <code>{{ row.item.key }}</code></small>
+                            </td>
+                            <td data-label="{{ _('amount') }}">
+                                {% if row.mode == 'fixed' %}ETB {{ '{:,.2f}'.format(row.value) }}{% elif row.mode == 'rate_x_units' %}{{ row.value }} / unit{% else %}{{ '%.2f'|format(row.value) }}% {{ 'of basic' if row.mode == 'percent_of_basic' else 'of net' }}{% endif %}
+                                {% if row.is_override %}<span class="badge bg-info text-dark ms-1" title="Company default: ETB {{ '{:,.2f}'.format(row.item.default_amount) }}">{{ _('own_amount') }}</span>{% endif %}
+                            </td>
+                            <td data-label="{{ _('starts_on') }}">{{ row.assignment.effective_date.isoformat() if row.assignment.effective_date else '—' }}</td>
+                            <td data-label="{{ _('ends_on') }}">{{ row.assignment.end_date.isoformat() if row.assignment.end_date else '—' }}</td>
+                            <td data-label="{{ _('status') }}">
+                                <span class="badge bg-{{ {'active': 'success', 'scheduled': 'primary', 'ended': 'secondary', 'inactive': 'light text-dark border'}[row.status] }}">{{ row.status|capitalize }}</span>
+                                {% if row.used %}<small class="text-muted d-block">Used in approved payroll up to {{ row.last_used.strftime('%b %Y') if row.last_used else '' }}</small>{% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if row.managed %}
+                                <small class="text-muted">Managed by the system</small>
+                                {% elif row.status != 'inactive' %}
+                                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('employees.edit_assignment', emp_id=employee.id, assignment_id=row.assignment.id) }}">{{ _('edit') }}</a>
+                                {% if not row.assignment.end_date or row.assignment.end_date >= today %}
+                                <form method="POST" action="{{ url_for('employees.end_assignment', emp_id=employee.id, assignment_id=row.assignment.id) }}" class="d-inline-flex gap-1 align-items-center">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="date" name="end_date" class="form-control form-control-sm" style="width: 150px" required
+                                           value="{{ today.isoformat() }}" aria-label="{{ _('ends_on') }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-warning">{{ _('end_assignment') }}</button>
+                                </form>
+                                {% endif %}
+                                {% if row.can_delete %}
+                                <form method="POST" action="{{ url_for('employees.delete_assignment', emp_id=employee.id, assignment_id=row.assignment.id) }}" class="d-inline"
+                                      onsubmit="return confirm('Remove this assignment? It was never used in approved payroll.')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">{{ _('delete') }}</button>
+                                </form>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No pay items assigned yet.</p>
+            {% endif %}
+
+            {% if assignable_items %}
+            <form method="POST" action="{{ url_for('employees.add_assignment', emp_id=employee.id) }}" class="row g-2 align-items-end" data-testid="assignment-add-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="col-md-3">
+                    <label class="form-label small" for="assign_item">{{ _('pay_item') }}</label>
+                    <select class="form-select form-select-sm" name="pay_item_type_id" id="assign_item" required>
+                        <option value="">Choose…</option>
+                        {% for item in assignable_items %}
+                        <option value="{{ item.id }}" data-classification="{{ item.classification }}"
+                                data-default="{{ item.default_amount if item.default_amount is not none else '' }}">{{ item.label(current_language) }}{% if item.classification == 'deduction' %} ({{ _('deduction')|lower }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" for="assign_type">{{ _('amount_type') }}</label>
+                    <select class="form-select form-select-sm" name="amount_type" id="assign_type">
+                        <option value="fixed">{{ assignment_mode_labels['fixed'] }}</option>
+                        <option value="percent_of_basic">{{ assignment_mode_labels['percent_of_basic'] }} (earnings)</option>
+                        <option value="percent_of_net">{{ assignment_mode_labels['percent_of_net'] }} (deductions)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" for="assign_amount">{{ _('amount') }}</label>
+                    <input type="text" inputmode="decimal" class="form-control form-control-sm" name="amount" id="assign_amount" required>
+                    <div class="form-text small" id="assign_default_hint"></div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" for="assign_start">{{ _('starts_on') }}</label>
+                    <input type="date" class="form-control form-control-sm" name="start_date" id="assign_start" value="{{ today.replace(day=1).isoformat() }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" for="assign_end">{{ _('ends_on') }}</label>
+                    <input type="date" class="form-control form-control-sm" name="end_date" id="assign_end">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small" for="assign_label">{{ _('label') }}</label>
+                    <input type="text" class="form-control form-control-sm" name="label" id="assign_label" maxlength="100" placeholder="Required for deductions">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small" for="assign_ref">Reference</label>
+                    <input type="text" class="form-control form-control-sm" name="reference_number" id="assign_ref" maxlength="100">
+                </div>
+                {% if legacy_allowance_total and legacy_allowance_total > 0 %}
+                <div class="col-12">
+                    <div class="form-check alert alert-warning py-2 mb-0">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" name="confirm_legacy" value="1" id="confirm_legacy">
+                        <label class="form-check-label small" for="confirm_legacy">
+                            This employee has legacy allowances of ETB {{ '{:,.2f}'.format(legacy_allowance_total) }} that are not catalog items.
+                            Once they have a catalog earning, monthly payroll pays only catalog items. I have added (or will add) those allowances as catalog items.
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-plus me-1"></i>{{ _('assign') }}</button>
+                </div>
+            </form>
             {% endif %}
         </div>
     </div>
@@ -552,6 +684,27 @@
 {% endblock %}
 
 {% block extra_js %}
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+    const select = document.getElementById('assign_item');
+    if (!select) return;
+    const amount = document.getElementById('assign_amount');
+    const hint = document.getElementById('assign_default_hint');
+    const type = document.getElementById('assign_type');
+    select.addEventListener('change', function () {
+        const opt = select.options[select.selectedIndex];
+        const def = opt ? opt.dataset.default : '';
+        const cls = opt ? opt.dataset.classification : '';
+        hint.textContent = def ? 'Company default: ETB ' + def + '. Change it to override for this employee.' : '';
+        if (def && !amount.value) amount.value = def;
+        for (const o of type.options) {
+            o.disabled = (cls === 'earning' && o.value === 'percent_of_net') || (cls === 'deduction' && o.value === 'percent_of_basic');
+        }
+        if (type.selectedOptions[0] && type.selectedOptions[0].disabled) type.value = 'fixed';
+    });
+})();
+</script>
 <script nonce="{{ csp_nonce }}">
 async function deleteOvertime(entryId, btn) {
     if (!confirm('Delete this overtime entry?')) return;

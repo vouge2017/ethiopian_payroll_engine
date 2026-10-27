@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ row.label }} - {{ employee.name }}{% endblock %}
+{% block content %}
+<div class="p-4 p-md-5">
+    <h3 class="mb-1">
+        <a href="{{ url_for('employees.employee_detail', emp_id=employee.id, _anchor='pay-items') }}" class="text-decoration-none text-muted me-2"><i class="bi bi-arrow-left"></i></a>
+        {{ row.label }}
+    </h3>
+    <p class="text-muted mb-4">{{ employee.name }} &middot; {{ employee.employee_id }} &middot; <code>{{ row.item.key }}</code></p>
+
+    <div class="card" style="max-width: 760px;">
+        <div class="card-body">
+            {% if row.used %}
+            <div class="alert alert-info small" role="note" data-testid="used-note">
+                Approved payroll already used this assignment (up to {{ row.last_used.strftime('%B %Y') if row.last_used else '' }}).
+                Those months never change. A new amount or amount type starts on the "change from" date
+                ({{ row.first_open.isoformat() if row.first_open else '' }} or later): this assignment ends the day before and a new one starts.
+                The label and end date can change directly.
+            </div>
+            {% else %}
+            <p class="text-muted small">No approved payroll has used this assignment yet, so it is edited in place.</p>
+            {% endif %}
+            {% if row.item.default_amount is not none %}
+            <p class="small">Company default: ETB {{ '{:,.2f}'.format(row.item.default_amount) }}{% if row.is_override %} &middot; <span class="badge bg-info text-dark">{{ _('own_amount') }}</span>{% endif %}</p>
+            {% endif %}
+            <form method="POST" action="{{ url_for('employees.edit_assignment', emp_id=employee.id, assignment_id=row.assignment.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="amount_type">{{ _('amount_type') }}</label>
+                        <select class="form-select" name="amount_type" id="amount_type">
+                            {% for m in modes %}
+                            <option value="{{ m }}" {% if (form.get('amount_type') or row.mode) == m %}selected{% endif %}>{{ mode_labels[m] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="amount">{{ _('amount') }}</label>
+                        <input type="text" inputmode="decimal" class="form-control" name="amount" id="amount" required
+                               value="{{ form.get('amount') or row.value }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="start_date">{{ _('starts_on') }}</label>
+                        <input type="date" class="form-control" name="start_date" id="start_date"
+                               value="{{ form.get('start_date') or (row.assignment.effective_date.isoformat() if row.assignment.effective_date else '') }}"
+                               {% if row.used %}disabled{% endif %}>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="end_date">{{ _('ends_on') }}</label>
+                        <input type="date" class="form-control" name="end_date" id="end_date"
+                               value="{{ form.get('end_date', row.assignment.end_date.isoformat() if row.assignment.end_date else '') }}">
+                    </div>
+                    {% if row.used %}
+                    <div class="col-md-6">
+                        <label class="form-label" for="change_from">{{ _('change_from') }}</label>
+                        <input type="date" class="form-control" name="change_from" id="change_from"
+                               value="{{ form.get('change_from') or (row.first_open.isoformat() if row.first_open else '') }}"
+                               {% if row.first_open %}min="{{ row.first_open.isoformat() }}"{% endif %}>
+                        <div class="form-text">Only used when the amount or amount type changes.</div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <label class="form-label" for="label">{{ _('label') }}</label>
+                        <input type="text" class="form-control" name="label" id="label" maxlength="100"
+                               value="{{ form.get('label', row.assignment.custom_label or '') }}"
+                               {% if row.item.classification == 'deduction' %}required{% endif %}>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">{{ _('save_changes') }}</button>
+                    <a href="{{ url_for('employees.employee_detail', emp_id=employee.id, _anchor='pay-items') }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

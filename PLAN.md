@@ -7,20 +7,22 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
-### Report allowance breakdown correction (rebased, locally tested)
+### Report allowance breakdown correction (current, locally verified)
 
-- Rebased `fix/report-unknown-breakdowns` onto main `b2847fa`. Reports now
-  read saved run-item settings and payslip earning lines. Missing snapshots or
-  unavailable partial-exemption inputs leave affected cells blank with a review
-  note. Backfilled run snapshots show a separate warning: their settings were
-  captured at migration, not approval. Live catalog changes are not used to
-  reconstruct historical taxable breakdowns.
-- PostgreSQL report, snapshot and version tests: `13 passed, 38 warnings in
-  24.16s` on an isolated UTF-8 PG 16 cluster. Full SQLite suite:
-  `1951 passed, 232 skipped, 64 warnings in 1645.53s (0:27:25)`, exit 0,
-  `python -m pytest tests -q --capture=sys -p no:cacheprovider --tb=short`.
-  No PR, merge, deployment or practitioner acceptance. Rewriting the already
-  pushed branch needs the owner's explicit force-push approval.
+- `fix/report-unknown-breakdowns` is rebased onto current `origin/main`
+  `cc8815e` (PR #42). Implementation commits: `bf27760` and `0f26287`.
+- XLSX/CSV reports read approved and locked run-item tax settings and saved
+  payslip earning lines. Missing snapshots and unreconstructible
+  percentage-based exemptions stay blank with an accountant-review note;
+  migration-backfilled snapshots get a distinct warning because they may not
+  reflect approval-time settings. Reports do not use today's catalog values.
+- PostgreSQL report/snapshot/version tests: `13 passed, 38 warnings in
+  57.96s`. Full suite: `2000 passed, 235 skipped, 66 warnings in 2596.63s
+  (0:43:16)`, exit 0, `python -m pytest tests -q --capture=sys
+  -p no:cacheprovider --tb=short`. PostgreSQL used an isolated UTF-8 PG 16
+  test database; no production data was accessed.
+- State: implemented and locally tested. Hosted checks, merge, deployment and
+  practitioner acceptance remain pending.
 
 - Committed and pushed as `3ed083542e183d832db566f4f92c4a79ade574dc` on
   `fix/report-unknown-breakdowns`; exact-commit SQLite tests 13 passed and
@@ -985,6 +987,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-27 — Codex — Rebased the report correction onto current main
+  `cc8815e` (PR #42). Snapshot-aware reports passed the full SQLite suite
+  (2000 passed, 235 skipped) and PostgreSQL report/snapshot/version tests
+  (13 passed). No production database accessed.
 
 - 2026-10-27 — Codex — Rebased report correction onto main `b2847fa`; use
   run-item snapshots, warn on missing/backfilled data and incomplete totals.

@@ -11,7 +11,8 @@ Readers of an approved month's item settings (today only the ERCA
 to the live PayItemType row only when the run has no snapshot.
 
 No amount is computed from the snapshot: payslip figures stay the ones stored
-at approval. Effective-dated item versions and history are catalog PR 4b.
+at approval. Since catalog PR 4b the snapshot holds, per item, the version
+effective on the approval's calculation date (payroll_engine.item_versions).
 
 The item serialisation is frozen, byte for byte, in migration e2f3a4b5c6d7
 (backfill); tests/test_run_item_snapshot.py keeps the two equal.
@@ -126,10 +127,12 @@ def capture_run_item_snapshot(run, company_id, calculation_date):
     """Add the approval-time item snapshot for ``run`` to the current session.
 
     Must be called inside the approval transaction (the caller commits).
-    ``calculation_date`` is the date the approval calculated for; it is
-    recorded, not used to pick settings.
+    ``calculation_date`` is the date the approval calculated for. Each item's
+    settings are the version effective on that date (catalog PR 4b), the same
+    ones the engine used; with a single version that is the live row.
     """
     from payroll_engine import db
+    from payroll_engine.item_versions import resolve_rows
     from payroll_engine.models_payroll_elements import PayrollRunItemSnapshot
 
     if run.company_id != company_id:
@@ -137,7 +140,7 @@ def capture_run_item_snapshot(run, company_id, calculation_date):
     row = PayrollRunItemSnapshot(
         company_id=company_id,
         payroll_run_id=run.id,
-        snapshot=build_snapshot(_visible_items(company_id)),
+        snapshot=build_snapshot(resolve_rows(_visible_items(company_id), calculation_date)),
         calculation_date=calculation_date,
         backfilled=False,
         captured_at=datetime.now(UTC).replace(tzinfo=None),

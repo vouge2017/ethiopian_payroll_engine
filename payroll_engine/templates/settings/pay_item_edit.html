@@ -25,7 +25,9 @@
                 <div>{{ reason }}</div>
             </div>
             {% else %}
-            <p class="text-muted small">Only the names change. The code, tax treatment and amounts stay as they are.</p>
+            <p class="text-muted small">Only the names change. The code, tax treatment and amounts stay as they are.
+                Saving records a new version from the effective date below; payroll months before that date keep the
+                current names, and approved or locked months never change.</p>
             {% endif %}
             <form method="POST" action="{{ url_for('settings.pay_item_edit', item_id=item.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -45,9 +47,17 @@
                            value="{{ form.get('name_om', item.name_om or '') }}" {% if locked %}disabled{% endif %}>
                 </div>
                 {% if not locked %}
+                <div class="mb-3">
+                    <label class="form-label" for="effective_from">{{ _('effective_from') }}</label>
+                    <input type="date" class="form-control" name="effective_from" id="effective_from" style="max-width: 220px;"
+                           value="{{ form.get('effective_from') or today.isoformat() }}" max="{{ today.isoformat() }}"
+                           {% if earliest_effective_from %}min="{{ earliest_effective_from.isoformat() }}"{% endif %}>
+                    <div class="form-text">Today or earlier{% if earliest_effective_from %}, not before {{ earliest_effective_from.isoformat() }} (current version){% endif %}.</div>
+                </div>
                 <button type="submit" class="btn btn-primary">{{ _('save_changes') }}</button>
                 {% endif %}
                 <a href="{{ url_for('settings.pay_items') }}" class="btn btn-outline-secondary">{{ _('cancel') }}</a>
+                <a href="{{ url_for('settings.pay_item_history', item_id=item.id) }}" class="btn btn-link"><i class="bi bi-clock-history me-1"></i>{{ _('version_history') }}</a>
             </form>
         </div>
     </div>

@@ -232,6 +232,7 @@ def create_app():
         Leave,
         OvertimeEntry,
         PayItemType,
+        PayItemTypeVersion,
         PayrollDraft,
         PayrollItemAssignment,
         PayrollRun,
@@ -262,6 +263,7 @@ def create_app():
     TenantQuery.register_model(PayItemType)
     TenantQuery.register_model(PayrollItemAssignment)
     TenantQuery.register_model(PayrollRunItemSnapshot)
+    TenantQuery.register_model(PayItemTypeVersion)
 
     # Batch 4 (Phase 3b, P0-A, 2026-08-31): tenant-isolation registration.
     #

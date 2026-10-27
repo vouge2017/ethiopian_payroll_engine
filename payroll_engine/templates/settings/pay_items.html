@@ -51,7 +51,8 @@
                                 {% if current_language != 'am' and item.name_am %}<div class="small text-muted" lang="am">{{ item.name_am }}</div>{% endif %}
                                 {% if current_language != 'om' and item.name_om %}<div class="small text-muted" lang="om">{{ item.name_om }}</div>{% endif %}
                             </td>
-                            <td data-label="{{ _('item_code') }}"><code>{{ item.key }}</code></td>
+                            <td data-label="{{ _('item_code') }}"><code>{{ item.key }}</code>
+                                <div class="small text-muted item-version">{{ _('version') }} {{ item.current_version_no or 1 }}</div></td>
                             {% set legal = legal_view(item) %}
                             <td data-label="{{ _('tax_and_legal') }}" class="small">
                                 {% if legal %}
@@ -82,6 +83,7 @@
                             <td data-label="{{ _('actions') }}" class="text-end">
                                 {% if perms.locked %}
                                 <span class="small text-muted">{{ perms.reason }}</span>
+                                <div><a href="{{ url_for('settings.pay_item_history', item_id=item.id) }}" class="btn btn-sm btn-link px-0 item-history-link"><i class="bi bi-clock-history me-1"></i>{{ _('version_history') }}</a></div>
                                 {% else %}
                                 <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
                                     {% if perms.can_move %}
@@ -99,6 +101,7 @@
                                     {% if perms.can_rename %}
                                     <a href="{{ url_for('settings.pay_item_edit', item_id=item.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil me-1"></i>{{ _('edit_names') }}</a>
                                     {% endif %}
+                                    <a href="{{ url_for('settings.pay_item_history', item_id=item.id) }}" class="btn btn-sm btn-outline-secondary item-history-link" title="{{ _('version_history') }}" aria-label="{{ _('version_history') }}: {{ item.name_en }}"><i class="bi bi-clock-history"></i></a>
                                     {% if perms.can_deactivate %}
                                     <form method="POST" action="{{ url_for('settings.pay_item_deactivate', item_id=item.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

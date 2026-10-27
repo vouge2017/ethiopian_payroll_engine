@@ -177,6 +177,15 @@ STRINGS = {
     'english_name': 'ስም (እንግሊዝኛ)',
     'amharic_name': 'ስም (አማርኛ)',
     'oromo_name': 'ስም (ኦሮምኛ)',
+    # Catalog PR 4b (version history). DRAFT TRANSLATION, pending native-speaker review.
+    'version': 'ስሪት',
+    'version_history': 'የለውጥ ታሪክ',
+    'effective_from': 'ተፈጻሚ ከሚሆንበት ቀን',
+    'changed_by': 'የቀየረው',
+    'recorded_at': 'የተመዘገበበት ጊዜ',
+    'what_changed': 'የተቀየረው',
+    'current_version': 'የአሁኑ ስሪት',
+    'first_version': 'የመጀመሪያ ስሪት',
 }
 
 

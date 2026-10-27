@@ -319,18 +319,21 @@ def test_locked_month_reports_unchanged_after_salary_change(client, locked_month
         assert Decimal(str(cell['Tax withheld'])) == approved['tax'], key
         overtime = Decimal(str(cell['Over Time']))
         assert overtime > 0, key
-        # Housing must not be presented as transport or as a known tax split.
-        assert cell['Transport Allowance'] in (None, ''), key
-        assert cell['Taxable Transport Allowance'] in (None, ''), key
-        assert cell['Other Taxable Benefit'] in (None, ''), key
+        # The approved snapshot identifies housing as taxable, not transport.
+        assert cell['Transport Allowance'] == 0, key
+        assert cell['Taxable Transport Allowance'] == 0, key
+        assert cell['Other Taxable Benefit'] == 3000, key
         assert any('Allowance breakdown unavailable' in str(c) for r in rows for c in r), key
+        totals = dict(zip(header, _row_for(rows, 'TOTALS'), strict=False))
+        assert totals['Other Taxable Benefit'] in (None, ''), key
+        assert any('Totals are blank' in str(c) for r in rows for c in r), key
 
     erca_csv_row = _row_for(after['erca_csv'], 'Abebe Engine')
     assert Decimal(erca_csv_row[3]) == Decimal('10000')
     assert Decimal(erca_csv_row[8]) == approved['taxable']
     assert Decimal(erca_csv_row[9]) == approved['tax']
-    assert erca_csv_row[4:6] == ['', '']
-    assert erca_csv_row[7] == ''
+    assert [Decimal(value) for value in erca_csv_row[4:6]] == [0, 0]
+    assert Decimal(erca_csv_row[7]) == Decimal('3000.00')
     assert any('Allowance breakdown unavailable' in str(c) for r in after['erca_csv'] for c in r)
     pension_csv_row = _row_for(after['pension_csv'], 'Abebe Engine')
     assert Decimal(pension_csv_row[3]) == Decimal('10000')
@@ -408,6 +411,8 @@ def test_custom_pay_item_columns_do_not_invent_historical_tax_treatment():
     from payroll_engine.report_templates import get_column_value
 
     class Slip:
+        company_id = 1
+        payroll_run_id = None
         line_items = [{'item_key': 'housing', 'classification': 'earning', 'earned_amount': '3000.00'}]
 
     slip = Slip()
@@ -434,6 +439,6 @@ def test_custom_taxable_and_missing_snapshot_report_warns(client, locked_month, 
     engine = dict(zip(header, _row_for(rows, 'Abebe Engine'), strict=False))
     legacy = dict(zip(header, _row_for(rows, 'Sara Legacy'), strict=False))
     assert engine['Housing'] == 3000
-    assert engine['Housing taxable'] in (None, '')
+    assert engine['Housing taxable'] == 3000
     assert legacy['Housing'] in (None, '')
     assert any('Pay-item breakdown unavailable' in str(cell) for row in rows for cell in row)

@@ -7,19 +7,36 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
-### Report allowance breakdown correction (2026-10-27, locally tested)
+### Report allowance breakdown correction (rebased, locally tested)
 
-- `fix/report-unknown-breakdowns`, based on `ba54f90`, now in isolated
+- Rebased `fix/report-unknown-breakdowns` onto main `b2847fa`. Reports now
+  read saved run-item settings and payslip earning lines. Missing snapshots or
+  unavailable partial-exemption inputs leave affected cells blank with a review
+  note. Backfilled run snapshots show a separate warning: their settings were
+  captured at migration, not approval. Live catalog changes are not used to
+  reconstruct historical taxable breakdowns.
+- PostgreSQL report, snapshot and version tests: `13 passed, 38 warnings in
+  24.16s` on an isolated UTF-8 PG 16 cluster. Full SQLite suite:
+  `1951 passed, 232 skipped, 64 warnings in 1645.53s (0:27:25)`, exit 0,
+  `python -m pytest tests -q --capture=sys -p no:cacheprovider --tb=short`.
+  No PR, merge, deployment or practitioner acceptance. Rewriting the already
+  pushed branch needs the owner's explicit force-push approval.
+
+- Committed and pushed as `3ed083542e183d832db566f4f92c4a79ade574dc` on
+  `fix/report-unknown-breakdowns`; exact-commit SQLite tests 13 passed and
+  PostgreSQL report tests 4 passed. No hosted checks were listed on first
+  lookup; no PR, merge, deployment or practitioner acceptance.
+- Earlier revision `3ed0835`, based on `ba54f90`, was in isolated
   `report-review-worktree`; the original checkout contains separate holiday
   work and retains the original uncommitted report changes. PR #31
   (`fix/reports-frozen-values`) is already merged on main; its legacy snapshot
   gap remains. The default PAYE report previously described all non-basic,
   non-overtime earnings as transport and taxable transport, including housing.
-- Implemented locally: leave the three unverified allowance breakdown columns
+- Earlier revision: left the three unverified allowance breakdown columns
   blank in XLSX and CSV, with a review-before-filing note. Approved taxable
   totals and withheld tax remain unchanged. This does not create a verified
   filing format or reconstruct missing historical classifications.
-- Default and custom report columns leave unknown per-item tax treatment and
+- Earlier revision's default and custom report columns left unknown per-item tax treatment and
   missing legacy snapshots blank and display a review warning; current catalog
   settings are not used to reconstruct historical tax treatment.
 - Focused SQLite tests: `13 passed, 4 warnings in 15.58s`. Full suite:
@@ -37,8 +54,8 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   synthetic database upgraded from `9b4e6d2a8c13` with a locked payslip;
   count and gross, tax, pension and net sums were unchanged at head. Exact
   committed SHA, hosted checks and practitioner acceptance remain open.
-- Custom `_pay_item:...:taxable` fields remain blank until per-item tax
-  treatment is stored with the approved month. No merge or deployment.
+- Earlier revision left custom `_pay_item:...:taxable` fields blank; this has
+  been superseded by the snapshot-aware implementation described above.
 
 ### Which docs to trust
 
@@ -968,6 +985,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-27 — Codex — Rebased report correction onto main `b2847fa`; use
+  run-item snapshots, warn on missing/backfilled data and incomplete totals.
+  SQLite suite 1951 passed, 232 skipped; PostgreSQL report/snapshot/version
+  tests 13 passed. No PR, merge or deployment.
 
 - 2026-10-27 — Codex — Report breakdown correction: unknown categories and missing snapshots remain blank with a warning. SQLite full suite 1908 passed, 223 skipped, 45 warnings; PostgreSQL report checks 4 passed. Exact-commit proof, hosted validation and practitioner acceptance remain open.
 

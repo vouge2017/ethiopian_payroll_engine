@@ -322,7 +322,18 @@ def get_enabled_columns(company, report_type: str = 'erca') -> list[dict]:
     return result
 
 
-def _pay_item_amount(payslip, key, mode=None):
+_SNAPSHOT_UNSET = object()
+
+
+def _run_snapshot(payslip, snapshot):
+    if snapshot is _SNAPSHOT_UNSET:
+        from payroll_engine.item_snapshot import run_item_snapshot
+
+        return run_item_snapshot(payslip.company_id, getattr(payslip, 'payroll_run_id', None))
+    return snapshot
+
+
+def _pay_item_amount(payslip, key, mode=None, snapshot=_SNAPSHOT_UNSET):
     """Sum one pay item by PayItemType.key from the payslip's line_items.
 
     Item settings are read from the company's run snapshot, not the live catalog.
@@ -333,17 +344,41 @@ def _pay_item_amount(payslip, key, mode=None):
     if not line_items:
         return ''
 
+    lines = [
+        li
+        for li in line_items
+        if isinstance(li, dict) and li.get('item_key') == key and li.get('classification') == 'earning'
+    ]
     if mode == 'taxable':
-        from payroll_engine.item_snapshot import run_item_snapshot, snapshot_item
+        from payroll_engine.item_snapshot import snapshot_item
 
-        frozen = run_item_snapshot(payslip.company_id, getattr(payslip, 'payroll_run_id', None))
+        frozen = _run_snapshot(payslip, snapshot)
         if frozen is None:
             return ''
+        if not lines:
+            return Decimal('0.00')
         item = snapshot_item(frozen, payslip.company_id, key)
-        if item is None or item.get('tax_treatment') not in ('taxable', 'exempt'):
+        if item is None or item.get('tax_treatment') not in ('taxable', 'exempt', 'partial'):
             return ''
         if item['tax_treatment'] == 'exempt':
             return Decimal('0.00')
+        if item['tax_treatment'] == 'partial':
+            # A percent cap was calculated from the employee's basic salary,
+            # which is not necessarily the basic pay-item amount. It was not
+            # recorded per line, so it cannot safely be reconstructed here.
+            if item.get('exempt_cap_percent') is not None:
+                return ''
+            cap = item.get('exempt_cap_amount')
+            if cap is None:
+                return Decimal('0.00')
+            try:
+                flat_cap = Decimal(str(cap))
+                return sum(
+                    (max(Decimal('0'), Decimal(str(li['earned_amount'])) - flat_cap) for li in lines), Decimal('0')
+                ).quantize(Decimal('0.01'))
+            except (InvalidOperation, TypeError, ValueError, KeyError):
+                return ''
+        line_items = lines
 
     total = Decimal('0')
     for li in line_items:
@@ -356,6 +391,29 @@ def _pay_item_amount(payslip, key, mode=None):
         except (InvalidOperation, TypeError, ValueError):
             continue
     return total.quantize(Decimal('0.01'))
+
+
+def _allowance_breakdown(payslip, path, snapshot=_SNAPSHOT_UNSET):
+    """Resolve report categories from frozen earning lines and run settings."""
+    lines = getattr(payslip, 'line_items', None)
+    frozen = _run_snapshot(payslip, snapshot)
+    if not lines or frozen is None:
+        return ''
+    if path == '_transport_allowance':
+        return _pay_item_amount(payslip, 'transport')
+    if path == '_taxable_transport':
+        return _pay_item_amount(payslip, 'transport', 'taxable', frozen)
+    from decimal import Decimal
+
+    keys = {li.get('item_key') for li in lines if isinstance(li, dict) and li.get('classification') == 'earning'}
+    keys -= {'basic_salary', 'transport', 'overtime'}
+    total = Decimal('0.00')
+    for key in keys:
+        amount = _pay_item_amount(payslip, key, 'taxable', frozen)
+        if amount == '':
+            return ''
+        total += amount
+    return total
 
 
 # Payslip figures stored at approval. Report templates historically used these
@@ -382,7 +440,7 @@ _FROZEN_PATHS = {
 }
 
 
-def get_column_value(payslip, data_path: str, company=None, static_value=None):
+def get_column_value(payslip, data_path: str, company=None, static_value=None, snapshot=_SNAPSHOT_UNSET):
     """Extract a value from a payslip using a data_path string.
 
     Args:
@@ -411,12 +469,8 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
 
         val = frozen_figures(payslip)[_FROZEN_PATHS[data_path]]
         return '' if val is None else val
-    if data_path == '_transport_allowance':
-        return ''
-    if data_path == '_taxable_transport':
-        return ''
-    if data_path == '_other_taxable':
-        return ''
+    if data_path in ('_transport_allowance', '_taxable_transport', '_other_taxable'):
+        return _allowance_breakdown(payslip, data_path, snapshot)
 
     # --- Generic pay-item resolution (elements architecture) ---
     #
@@ -432,7 +486,7 @@ def get_column_value(payslip, data_path: str, company=None, static_value=None):
     if data_path.startswith('_pay_item:'):
         spec = data_path[len('_pay_item:') :]
         key, _, mode = spec.partition(':')
-        return _pay_item_amount(payslip, key, mode or None)
+        return _pay_item_amount(payslip, key, mode or None, snapshot)
 
     # Handle encrypted fields
     if data_path == 'employee.bank_account':

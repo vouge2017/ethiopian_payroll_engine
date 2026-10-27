@@ -465,9 +465,9 @@ second review; Q1 is the PAYE-on-gross answer).
   them), version history and audit entries on the settings page. Then the
   Art. 53 leave-basis switch (changes amounts, needs the adviser).
 
-### Pay-item catalog PR 4b: versioned item settings with effective dates (branch `feat/catalog-item-versions`, 2026-10-27)
+### Pay-item catalog PR 4b: versioned item settings with effective dates (branch `feat/catalog-item-versions`, PR #41, 2026-10-27)
 
-- State: draft PR (see Log), cut from `main` @ `173c1d4` (PR #40 merged).
+- State: draft PR #41, cut from `main` @ `173c1d4` (PR #40 merged).
   Not merged. **Behaviour-preserving: no payroll, tax, pension or settlement
   amount changes** (PR 3 golden file unchanged and green; new golden tests
   below).
@@ -901,7 +901,7 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   passed, 0 failed, 222 skipped (182 files); PostgreSQL 198 passed (26
   files, local PG 17). ruff clean.
 - 2026-10-27 — Hark — Catalog PR 4b (`feat/catalog-item-versions`, draft
-  PR): `pay_item_type_version` + `current_version_no` (migration
+  PR #41): `pay_item_type_version` + `current_version_no` (migration
   `f3a4b5c6d7e8`, version 1 backfilled for every item, PG triggers),
   effective-dated resolution in the elements engine and approval snapshot,
   settings-page edits recorded as versions with a history page. No amount

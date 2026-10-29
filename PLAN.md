@@ -7,10 +7,28 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
-### Report allowance breakdown correction (current, locally verified)
+### Adviser pack review (2026-10-30)
 
-- `fix/report-unknown-breakdowns` is rebased onto current `origin/main`
-  `cc8815e` (PR #42). Implementation commits: `bf27760` and `0f26287`.
+- Branch `docs/adviser-pack-evidence`, based on merged report revision
+  `6f041d78`: research-only review in `docs/decisions/2026-10-25-payroll-rules.md`.
+  Five topics have source references, examples and unanswered adviser questions.
+- Located the Ministry of Justice's Amharic exempt-income directive: Article 6
+  appears to use the higher per-diem amount. Instrument identity, amendments,
+  interpretation and applicability require qualified review. Corrected the
+  assessment-revision citation to renumbered Article 96(2). No payroll code or
+  statutory calculation changed; no practitioner acceptance is claimed.
+- Validation: adviser-pack structure/citation assertions and `git diff --check`
+  passed. With Python 3.12, SQLite, UTF-8 and `python -m pytest tests -q
+  --capture=sys -p no:cacheprovider --tb=short`: **2000 passed, 235 skipped,
+  66 warnings in 1401.05s (0:23:21)**. The prior runner timed out on
+  `test_assignment_import.py`; a separate rerun passed: `28 passed, 4 warnings
+  in 77.06s (0:01:17)`. PostgreSQL tests were skipped; no deployment or external
+  review. Test base SHA `6f041d78e30848ce4e820604236bed75c035b242`; the slice
+  changes documentation only.
+
+### Report allowance breakdown correction (PR #44 merged)
+
+- PR #44 was merged into `main` on 2026-10-27 as `6f041d78e30848ce4e820604236bed75c035b242`, based on `cc8815e` (PR #42). Implementation commits: `bf27760` and `0f26287`.
 - XLSX/CSV reports read approved and locked run-item tax settings and saved
   payslip earning lines. Missing snapshots and unreconstructible
   percentage-based exemptions stay blank with an accountant-review note;
@@ -21,7 +39,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   (0:43:16)`, exit 0, `python -m pytest tests -q --capture=sys
   -p no:cacheprovider --tb=short`. PostgreSQL used an isolated UTF-8 PG 16
   test database; no production data was accessed.
-- State: implemented and locally tested. Hosted checks, merge, deployment and
+- State: implemented, locally and hosted tested, and merged. Deployment and
   practitioner acceptance remain pending.
 
 - Committed and pushed as `3ed083542e183d832db566f4f92c4a79ade574dc` on
@@ -791,6 +809,9 @@ merged on main @ `c65aaa0`.
    month (Q4; Proc. 1434/2026 hook). Decision record:
    `docs/decisions/2026-10-25-payroll-rules.md`. A company setting is not
    itself proof that the selected rule is lawful. (PLAN Next items 1, 3, 4.)
+    Research pack reviewed 2026-10-30 with official-source citations, synthetic
+    examples, and explicit unanswered questions. It is ready for adviser review;
+    legal and practitioner answers and applicable directive versions remain open.
 3. **One dependable monthly workflow.** One accountant completes a synthetic
    month across import → calculate → review → approve → lock → payslips →
    reports → bank file; identical worked cases across every calculation path;
@@ -987,6 +1008,16 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-30 — Codex — Reviewed the staged adviser pack, located the Amharic
+  exempt-income directive and corrected the assessment-revision article citation;
+  retained unresolved legal questions for an adviser. Full SQLite suite 2000
+  passed, 235 skipped, 66 warnings; no payroll code changed.
+
+- 2026-10-27 — Codex — PR #44 merged to main as `6f041d78`; report snapshot
+  behavior passed all required hosted checks, including Python 3.12 and
+  PostgreSQL. Next: adviser pack research completed; external answers remain
+  open. No production database accessed.
 
 - 2026-10-27 — Codex — Rebased the report correction onto current main
   `cc8815e` (PR #42). Snapshot-aware reports passed the full SQLite suite

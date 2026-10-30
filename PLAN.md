@@ -7,6 +7,25 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Final legal adviser pack (2026-10-30)
+
+- Created `ETHIOPAYROLL_LEGAL_ADVISER_PACK_FINAL.md`,
+  `LEGAL_SOURCE_VERIFICATION_REGISTER.md`, and
+  `LEGAL_RULE_IMPLEMENTATION_STATUS.md` for the five agreed topics.
+- Verified pension multiple-employer provision is Proclamation 1268/2022
+  Article 52(2), not Article 53(2); added the official 1085/2025 directive.
+  The 45-day commencement interpretation remains open.
+- Compared original Proc. 983/2016 Article 29 with Proc. 1434/2026: Article
+  28 limitation period amended; Article 29 is not expressly changed in the
+  amendment reviewed; its 120-day decision period appears textually unchanged.
+  The official current monthly PAYE operational guidance was not located and
+  is labelled `OFFICIAL GUIDANCE UNVERIFIED`. The original Proc. 983 text was
+  checked from a non-government copy; obtain an official copy before legal
+  reliance.
+- No payroll code, calculations, rates, thresholds, migrations or production
+  behavior changed. No tests run for this documentation-only task. No claim
+  that all five topics are legally resolved or adviser-accepted.
+
 ### Adviser pack review (2026-10-30)
 
 - Branch `docs/adviser-pack-evidence`, based on merged report revision
@@ -1008,6 +1027,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-30 — Codex — Prepared final five-topic adviser pack, source register
+  and implementation-status sheet. Corrected pension reference to Article
+  52(2), compared Proc. 983/2016 Article 29 with Proc. 1434/2026, and left
+  current Ministry of Revenue PAYE guidance unverified. No code changed.
 
 - 2026-10-30 — Codex — Reviewed the staged adviser pack, located the Amharic
   exempt-income directive and corrected the assessment-revision article citation;

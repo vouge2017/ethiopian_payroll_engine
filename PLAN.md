@@ -7,10 +7,61 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
-### Report allowance breakdown correction (current, locally verified)
+### Adviser pack second review (2026-10-30)
 
-- `fix/report-unknown-breakdowns` is rebased onto current `origin/main`
-  `cc8815e` (PR #42). Implementation commits: `bf27760` and `0f26287`.
+- Second review found two source-register links incorrectly pointed to Labour Proclamation 1156/2019; corrected them to the official Regulation 410/2017 and Pension Proclamation 1268/2022 Gazette PDFs.
+- Corrected the Directive 1085/2025 date attribution: its actual Justice record displays 25 Ginbot 2017 E.C. (a date in June 2025), consistent at month level with the June 2025 PDF date. The 10 March 2026 date belongs to a separate explanatory-note record. Article 74 effective date remains unverified pending registration/upload evidence.
+- Rechecked official Justice records and direct Gazette links. No payroll code changed; documentation validation only; no test suite run.
+
+### Adviser pack critical corrections (2026-10-30)
+
+- Updated the three legal adviser-pack documents after critical source review.
+- Corrected Proc. 1434/2026 references to Article 2 items 4 and 12 and Article 3; separated assessment limitation from monthly PAYE return amendment.
+- Recorded the June 2025 directive PDF date and 10 March 2026 Justice explanatory-record date; Directive 1085/2025 effective date remains unverified because Art. 74 registration/upload evidence was not found.
+- Added the official MoR Proc. 979 technical note as explanatory evidence; exact transport/per diem formula and operative directive remain provisional/unconfirmed.
+- No payroll code, calculations, rates, thresholds, migrations or production behavior changed. Documentation checks only; no test suite run. No legal approval or adviser acceptance is claimed.
+
+### Final legal adviser pack (2026-10-30)
+
+- Created `ETHIOPAYROLL_LEGAL_ADVISER_PACK_FINAL.md`,
+  `LEGAL_SOURCE_VERIFICATION_REGISTER.md`, and
+  `LEGAL_RULE_IMPLEMENTATION_STATUS.md` for the five agreed topics.
+- Verified pension multiple-employer provision is Proclamation 1268/2022
+  Article 52(2), not Article 53(2); added the official 1085/2025 directive.
+  The 45-day commencement interpretation remains open.
+- Compared original Proc. 983/2016 Article 29 with Proc. 1434/2026: Article
+  28 limitation period amended; Article 29 is not expressly changed in the
+  amendment reviewed; its 120-day decision period appears textually unchanged.
+  The official current monthly PAYE operational guidance was not located and
+  is labelled `OFFICIAL GUIDANCE UNVERIFIED`. The original Proc. 983 text was
+  checked from a non-government copy; obtain an official copy before legal
+  reliance.
+- No payroll code, calculations, rates, thresholds, migrations or production
+  behavior changed. No tests run for this documentation-only task. No claim
+  that all five topics are legally resolved or adviser-accepted.
+
+### Adviser pack review (2026-10-30)
+
+- Branch `docs/adviser-pack-evidence`, based on merged report revision
+  `6f041d78`: research-only review in `docs/decisions/2026-10-25-payroll-rules.md`.
+  Five topics have source references, examples and unanswered adviser questions.
+- Located the Ministry of Justice's Amharic exempt-income directive: Article 6
+  appears to use the higher per-diem amount. Instrument identity, amendments,
+  interpretation and applicability require qualified review. Corrected the
+  assessment-revision citation to renumbered Article 96(2). No payroll code or
+  statutory calculation changed; no practitioner acceptance is claimed.
+- Validation: adviser-pack structure/citation assertions and `git diff --check`
+  passed. With Python 3.12, SQLite, UTF-8 and `python -m pytest tests -q
+  --capture=sys -p no:cacheprovider --tb=short`: **2000 passed, 235 skipped,
+  66 warnings in 1401.05s (0:23:21)**. The prior runner timed out on
+  `test_assignment_import.py`; a separate rerun passed: `28 passed, 4 warnings
+  in 77.06s (0:01:17)`. PostgreSQL tests were skipped; no deployment or external
+  review. Test base SHA `6f041d78e30848ce4e820604236bed75c035b242`; the slice
+  changes documentation only.
+
+### Report allowance breakdown correction (PR #44 merged)
+
+- PR #44 was merged into `main` on 2026-10-27 as `6f041d78e30848ce4e820604236bed75c035b242`, based on `cc8815e` (PR #42). Implementation commits: `bf27760` and `0f26287`.
 - XLSX/CSV reports read approved and locked run-item tax settings and saved
   payslip earning lines. Missing snapshots and unreconstructible
   percentage-based exemptions stay blank with an accountant-review note;
@@ -21,7 +72,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   (0:43:16)`, exit 0, `python -m pytest tests -q --capture=sys
   -p no:cacheprovider --tb=short`. PostgreSQL used an isolated UTF-8 PG 16
   test database; no production data was accessed.
-- State: implemented and locally tested. Hosted checks, merge, deployment and
+- State: implemented, locally and hosted tested, and merged. Deployment and
   practitioner acceptance remain pending.
 
 - Committed and pushed as `3ed083542e183d832db566f4f92c4a79ade574dc` on
@@ -791,6 +842,9 @@ merged on main @ `c65aaa0`.
    month (Q4; Proc. 1434/2026 hook). Decision record:
    `docs/decisions/2026-10-25-payroll-rules.md`. A company setting is not
    itself proof that the selected rule is lawful. (PLAN Next items 1, 3, 4.)
+    Research pack reviewed 2026-10-30 with official-source citations, synthetic
+    examples, and explicit unanswered questions. It is ready for adviser review;
+    legal and practitioner answers and applicable directive versions remain open.
 3. **One dependable monthly workflow.** One accountant completes a synthetic
    month across import → calculate → review → approve → lock → payslips →
    reports → bank file; identical worked cases across every calculation path;
@@ -987,6 +1041,25 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-30 — Codex — Second review corrected the source register's Regulation 410/2017 and Pension Proclamation 1268/2022 links and distinguished the directive's actual Justice record date from a separately dated explanatory-note record. Directive dates are consistent at month level; Article 74 effective date remains unverified. No payroll code changed; documentation checks only, no tests run.
+
+- 2026-10-30 — Codex — Corrected the adviser pack's Proc. 1434 citation structure, separated assessment limitation from filed monthly PAYE correction, recorded the pension directive date discrepancy/effectiveness evidence gap, and downgraded transport/per diem formula claims. Updated legal documents and PLAN.md; no payroll code changed; documentation checks only, no tests run.
+
+- 2026-10-30 — Codex — Prepared final five-topic adviser pack, source register
+  and implementation-status sheet. Corrected pension reference to Article
+  52(2), compared Proc. 983/2016 Article 29 with Proc. 1434/2026, and left
+  current Ministry of Revenue PAYE guidance unverified. No code changed.
+
+- 2026-10-30 — Codex — Reviewed the staged adviser pack, located the Amharic
+  exempt-income directive and corrected the assessment-revision article citation;
+  retained unresolved legal questions for an adviser. Full SQLite suite 2000
+  passed, 235 skipped, 66 warnings; no payroll code changed.
+
+- 2026-10-27 — Codex — PR #44 merged to main as `6f041d78`; report snapshot
+  behavior passed all required hosted checks, including Python 3.12 and
+  PostgreSQL. Next: adviser pack research completed; external answers remain
+  open. No production database accessed.
 
 - 2026-10-27 — Codex — Rebased the report correction onto current main
   `cc8815e` (PR #42). Snapshot-aware reports passed the full SQLite suite

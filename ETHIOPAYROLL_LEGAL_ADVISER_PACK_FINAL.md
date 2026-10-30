@@ -1,111 +1,126 @@
-# EthioPayroll legal adviser pack
+# EthioPayroll — Ethiopian payroll legal adviser pack
 
 **Prepared:** 30 October 2026
+**Purpose:** Request written professional interpretation of five Ethiopian payroll-law topics.
+**Scope:** This is a source-backed question pack, not a legal opinion, compliance certification, or approval to change payroll calculations.
 
-**Purpose:** Obtain written professional interpretation of five Ethiopian payroll law areas.
-**Scope:** Legal verification and product decision support only. This pack does not authorize changes to payroll calculations or production behaviour.
+## How to answer
 
-## How to respond
+For each answer, please identify the law and version relied on, exact provision, effective date, and any current official form, directive or portal instruction. Please distinguish the wording of the law from your professional interpretation. Where the evidence is incomplete, please mark the answer unresolved and identify the document or authority needed to resolve it.
 
-For each question, please state the law and version you relied on, the exact provision, effective date, and any relevant Ministry of Revenue, pension-administration or labour-authority form or portal instruction. Please distinguish your legal interpretation from the text of the source. If the evidence is incomplete, please mark the answer unresolved and identify what document or authority would settle it.
+### Status labels used
+
+- **CONFIRMED LEGAL PROVISION:** The stated proposition is supported by an identified legal source; this does not resolve how it applies to every payroll case.
+- **PROFESSIONAL INTERPRETATION REQUIRED:** The text exists, but its application is uncertain.
+- **OFFICIAL GUIDANCE UNVERIFIED:** No identifiable current official guidance supporting the operational claim has been located.
+- **DEVELOPMENT RECOMMENDATION:** A software control suggestion, not a legal requirement.
+- **IMPLEMENTATION BLOCKED:** Do not treat the disputed calculation or workflow as legally approved.
 
 ## 1. Transport allowance and per diem exemptions
 
-**Legal question.** Which employment travel and transport payments qualify for income-tax exemption, and what limits and evidence apply?
+**Legal question.** Which transport, travel and per diem payments qualify for income-tax exemption, and what limits, salary base and evidence apply?
 
-**Legal sources and provisions.** Income Tax Proclamation No. 979/2016, Article 65(1)(a), provides for specified employee benefits to be exempt subject to limits in a directive. The Ministry of Justice hosts an Amharic PDF titled *Performance of Income Exempted from Income Tax, Directive No. 200/2013*. Articles 5 and 6 cover transport and domestic per diem. A Ministry of Finance index separately lists an exempt-income directive as No. 1/2011. The identity or relationship between those numbered instruments has not been established. Regulation No. 410/2017, Article 54(1)(b)-(c), separately addresses qualifying unskilled casual employees.
+**Sources and provisions.** Income Tax Proclamation No. 979/2016, Article 65(1)(a), addresses specified employee benefits and employment travel payments, subject to limitations set by directive. The Ministry of Revenue's *Federal Income Tax Proclamation No. 979/2016 Technical Notes* discusses Article 65(1)(a), including contractual transportation allowance and transport expenses/per diem for employment travel. The Ministry of Justice hosts an Amharic exempt-income directive PDF labelled No. 200/2013 (Arts. 5, 6 and 14); the Ministry of Finance's tax-directive index lists a file labelled No. 1/2011. Their identity, operative status and amendment history have not been established. Regulation No. 410/2017, Article 54(1)(b)-(c), also addresses qualifying unskilled casual workers.
 
-**CONFIRMED LEGAL PROVISION.** The official Amharic directive PDF states in Article 5 a work-related transport limit based on 25% of monthly salary capped at ETB 2,200, and a home-to-work transport limit of ETB 600. Article 6(1)(a) appears to state the greater of ETB 500 or 4% for ordinary employees' daily domestic per diem; Article 6(1)(c) appears to state the greater of ETB 1,000 or 5% for managers or assistant managers. Article 14 says the directive takes effect on 1 Miyazya 2011 E.C. (9 April 2019). This is a reading of the Amharic primary text; a secondary payroll summary gives a conflicting lower-of formula.
+**CONFIRMED LEGAL PROVISION.** Article 65 establishes the listed exemption categories, with limitations to be set by directive. It does not itself state the numerical transport or per diem limits discussed below.
 
-**PROFESSIONAL INTERPRETATION REQUIRED.** Confirm the instrument's correct number and whether it is the same instrument listed by Finance as Directive No. 1/2011; confirm subsequent amendments and current effectiveness; confirm the Amharic cap wording, salary base, eligible employee categories, distance test, accommodation and meal treatment, required records, and treatment of cash reimbursements versus allowances. Regulation 410/2017 Article 54 also uses both a 12-month period and a calendar-year description for the casual-worker test; confirm how the provisions interact and what “last employment” means in practice.
+**TECHNICAL NOTE SUPPORT — NOT AN INDEPENDENT BINDING RULE.** The Ministry of Revenue technical note explains the statutory categories and that transport/per diem exemption amounts are subject to directive limits. It is explanatory material; it does not by itself resolve which directive is operative or replace its text.
 
-**Adviser question.** Please provide the operative directive and amendments, confirm the correct higher/lower formula and salary base for each exemption, and specify the documents and facts needed to substantiate each exempt payment. Please also confirm the casual-worker rule and its relationship, if any, to pension eligibility.
+**PROVISIONAL READING — NOT CONFIRMED.** A reading of the Justice-hosted Amharic directive PDF suggests transport figures including 25% of salary capped at ETB 2,200 and home-to-work transport of ETB 600, and daily domestic per diem figures expressed as the greater of a fixed amount or a percentage for specified employee categories. These amounts and formulas are not approved here: the directive identity/number, salary base, precise wording and current applicability remain unsettled. Secondary summaries conflict on the formula.
 
-**Payroll impact.** Classification, exempt/taxable portions, PAYE and supporting evidence.
+**PROFESSIONAL INTERPRETATION REQUIRED.** Confirm the operative directive and amendments; its correct number and relationship, if any, to the Ministry of Finance listing; the exact formula and salary base; employee categories; distance and travel tests; lodging/meal treatment; required evidence; and distinction between commuting allowance, contractual transport allowance and actual work-travel reimbursement. Regulation 410/2017 Article 54 contains a casual-worker test with period wording that requires interpretation, including what counts as the relevant prior employment period.
 
-**Implementation status.** `CONFIGURABLE PENDING CONFIRMATION` for categories; `IMPLEMENTATION BLOCKED` for disputed current limits or formulas. No threshold is approved by this pack.
+**Adviser question.** Please provide or identify the currently operative directive and amendments, confirm the exact exemption and formula for each payment type and employee category, identify the salary base and substantiation records, and explain the casual-worker rule in Regulation 410/2017 Article 54. Please state which conclusions come from binding text and which are interpretation.
 
-## 2. Correction of a filed monthly PAYE return
+**Payroll impact.** Payment classification, exempt/taxable portions, PAYE and evidence retention.
 
-**Legal question.** What must an employer do when it discovers an error in a monthly PAYE declaration already submitted to the Ministry of Revenue?
+**Implementation status.** Categories may be represented as data fields (**DEVELOPMENT RECOMMENDATION**). Exact thresholds/formulas are **CONFIGURABLE PENDING CONFIRMATION**; production use of disputed exemption calculations is **IMPLEMENTATION BLOCKED**.
 
-**Legal sources and provisions.** Federal Tax Administration Proclamation No. 983/2016, Article 29(1)-(5), provides an application for the Authority to amend a filed self-assessment. Under Article 29(2), the request states the amendments and reasons and is filed within the period in Article 28(2)(b)(1). Article 29(3) provides a 120-day decision period and refers to an Authority directive. The original English text was checked in a publicly available copy; an official Ministry of Justice-hosted copy of Proclamation 983/2016 was not located during this review. Proclamation No. 1434/2026, Articles 4 and 12, replaces Article 28(2)'s limitation periods and adds Articles 97-102 governing revision of assessment notices. Article 3 makes the amendment effective upon publication in the Federal Negarit Gazette; the Gazette copy is dated 30 July 2026.
+## 2. Correction of filed monthly PAYE returns
 
-**CONFIRMED LEGAL PROVISION.** Proclamation 1434/2026 changed the ordinary assessment limitation period in Article 28(2): five years for self-assessments from filing, and five years for other assessments from issuance; fraud has a ten-year period. Article 29 is not expressly amended in the text of Proclamation 1434/2026 located for this review. Therefore Article 29's 120-day decision period appears textually unchanged, while its cross-reference to Article 28(2)(b)(1) now points to the amended five-year self-assessment period. The amendment also creates a distinct assessment-notice revision route; that route must not be assumed to be identical to an employer's monthly PAYE declaration correction.
+**Legal question.** What must an employer do after discovering an error in an already-submitted monthly PAYE declaration?
 
-**OFFICIAL GUIDANCE UNVERIFIED.** No identifiable current Ministry of Revenue guidance was located that establishes the operational monthly PAYE amendment form, portal menu, deadline or overpayment process. Claims about a “transition guide” or FAQ are not relied on without title, issuing authority, date and official copy.
+**Sources and provisions.** Federal Tax Administration Proclamation No. 983/2016, Article 29(1)-(5), is available in a publicly accessible non-government copy; an official government copy of the original text was not located in this review. Article 29(2) refers to the period in Article 28(2)(b)(1), and Article 29(3) states a 120-day period for the Authority's decision and refers to an Authority directive. Tax Administration Amendment Proclamation No. 1434/2026, **Article 2, item 4**, replaces Article 28(2); **Article 2, item 12**, adds Articles 97–102 concerning revision of assessment notices; **Article 3** provides that the amendment takes effect upon publication in the Federal Negarit Gazette. The official Gazette is dated 30 July 2026.
 
-**PROFESSIONAL INTERPRETATION REQUIRED.** Confirm whether Article 29 is the correct route for a monthly PAYE withholding declaration; whether any implementing directive under Article 29(3) exists; how Article 29 interacts with the new Articles 97-102; and the actual portal procedure, deadlines, evidence, interest/penalties, payment, credit and refund handling.
+**CONFIRMED LEGAL PROVISION.** Article 2, item 4 of Proclamation 1434/2026 replaces Article 28(2) of Proclamation 983/2016. The amended Article 28(2) provides a five-year period for amendment of self-assessments counted from filing, five years for other assessments counted from issuance of the assessment notice, and ten years in the specified tax-fraud case. Article 2, item 12 adds a distinct assessment-notice revision framework in Articles 97–102. Article 3 makes the amendment effective upon Gazette publication. These are assessment provisions; they do not, by themselves, establish a five-year employer deadline for correcting a monthly PAYE declaration.
 
-**Adviser question.** Please provide the exact current process for correcting an already-submitted monthly PAYE declaration, including the portal path or form, deadline, supporting documents, responsibility of employer versus Authority, additional-tax and interest/penalty treatment, and overpayment credit/refund route. Please specifically confirm the continuing effect of the original Article 29 five-year filing window and 120-day decision period after Proclamation 1434/2026.
+**PROFESSIONAL INTERPRETATION REQUIRED.** In the original text reviewed, Article 29 is not expressly amended by Proclamation 1434/2026. Its cross-reference to Article 28(2)(b)(1) must be read against the substituted Article 28(2). However, the original Article 29 copy was not government-hosted, and no consolidated official text was located. Do not infer from the assessment limitation period that Article 29 is the correct or exclusive route for amending a filed monthly PAYE declaration.
 
-**Payroll impact.** Historical-period correction, employee schedules, additional liability or overpayment, approvals, evidence and filing references.
+**OFFICIAL GUIDANCE UNVERIFIED.** No identifiable current Ministry of Revenue document was located that specifies the monthly PAYE return correction portal process, form, submission deadline, supporting documents, additional liabilities or overpayment procedure. Do not rely on an unnamed FAQ or transition guide.
 
-**Implementation status.** `IMPLEMENTATION BLOCKED` for a filing or refund workflow until the current official procedure is identified. Preserving original approved payroll and producing a difference report are development recommendations only.
+**Adviser question.** Please confirm, in writing: (1) the assessment limitation period applicable under the amended Article 28; (2) the legal route for correcting an already-filed monthly PAYE declaration and whether Article 29 applies; (3) additional tax, interest and penalties; (4) overpayment, credit and refund treatment; and (5) the current portal/form, required documents and applicable submission deadlines. Please provide the official consolidated text or guidance relied on, including title, issuing authority, number, date and relevant provision.
 
-## 3. Pension eligibility, 45-day threshold and multiple employers
+**Payroll impact.** Historical-period correction, employee-level schedules, additional liability or overpayment, approvals, evidence and submission references.
 
-**Legal question.** When does a salaried private-organization employee become covered and when do contribution obligations begin, particularly during the first 45 days and where the employee has multiple employers?
+**Implementation status.** Internal preservation and comparison controls are **DEVELOPMENT RECOMMENDATIONS**. The legal filing, payment/interest and credit/refund workflow is **OFFICIAL GUIDANCE UNVERIFIED** and **IMPLEMENTATION BLOCKED** pending an authoritative procedure.
 
-**Legal sources and provisions.** Private Organization Employees' Pension Proclamation No. 1268/2022, Article 2(1), defines a private-organization employee as a salaried person employed for not less than 45 days. Article 4(2) concerns notification of the social-security identification number when an employee joins another covered organization. Article 10 sets contribution rates. **Article 52(2)** addresses an employee employed and salaried by two or more private organizations. Article 53 concerns data/evidence and cooperation. Official Ministry of Justice copies: [Proclamation No. 1268/2022](https://justice.gov.et/wp-content/uploads/2025/02/%E1%8A%A0%E1%8B%8B%E1%8C%85-%E1%89%81%E1%8C%A5%E1%88%AD-1268-2014.pdf) and [Private Organizations Employees' Pension Implementation Directive No. 1085/2025](https://justice.gov.et/wp-content/uploads/2026/02/1085-Private-Organizations-Employees-Pension-Implementation-Directive-No.-1085-2025.pdf).
+## 3. Pension eligibility, the 45-day rule and multiple employers
 
-**CONFIRMED LEGAL PROVISION.** Article 52(2) says that where an employee is employed and salaried by two or more private organizations, contributions may be collected, according to the employee's choice, from salary paid by one private organization, subject to the provision's public-servant qualification. Directive 1085/2025 is an official implementation instrument and Article 74 makes its effect contingent on Ministry of Justice registration and upload to the Administration website. The Justice-hosted directive page identifies it as Directive No. 1085/2025, dated 10 March 2026. The PDF itself is dated June 2025 and its Article 74 states the registration/upload condition.
+**Legal question.** When does coverage and contribution liability start around the 45-day employee-definition threshold, and how is the multiple-employer election administered?
 
-**PROFESSIONAL INTERPRETATION REQUIRED.** Article 2(1)'s 45-day definition does not by itself answer whether contributions commence on day one, after day 45, or retroactively once the threshold is met. The directive search did not locate a provision expressly answering the commencement question. Article 52(2)'s election needs operational interpretation: evidence of choice, employer notification, changes of chosen employer and duplicate-contribution prevention.
+**Sources and provisions.** Private Organization Employees' Pension Proclamation No. 1268/2022: Article 2(1) defines a private-organization employee by reference to employment for not less than 45 days; Article 4(2) addresses notification of the employee's social-security identification number when joining another covered organization; Article 10 sets contribution rates; Article 52(2) addresses an employee employed and salaried by two or more private organizations; Article 53 concerns evidentiary data/cooperation. Official sources: [Proclamation 1268/2022](https://justice.gov.et/wp-content/uploads/2025/02/%E1%8A%A0%E1%8B%8B%E1%8C%85-%E1%89%81%E1%8C%A5%E1%88%AD-1268-2014.pdf) and [Directive 1085/2025 PDF](https://justice.gov.et/wp-content/uploads/2026/02/1085-Private-Organizations-Employees-Pension-Implementation-Directive-No.-1085-2025.pdf). The Ministry of Justice page associated with the directive shows 10 March 2026 but is titled as an explanatory note; the directive PDF says “Done at Addis Ababa, June 2025.”
 
-**Adviser question.** How is the 45-day period counted and what event starts coverage? Are contributions due from the start of employment, only after qualification, or retrospectively after qualification? What evidence and procedure operationalize Article 52(2)'s one-employer election? Does Directive 1085/2025 or another binding instruction clarify any of these questions? Please identify its exact provision.
+**CONFIRMED LEGAL PROVISION.** Article 52(2), not Article 53(2), is the multiple-private-employer provision. It allows the contribution to be collected, according to the employee's choice, from salary paid by one of the private organizations, subject to the statutory qualification in that provision. Article 53 is a separate evidence/data and cooperation provision.
 
-**Payroll impact.** Pension enrolment, first-period deductions, employer contributions, remittance, multiple-employer coordination and audit evidence.
+**PROFESSIONAL INTERPRETATION REQUIRED.** The 45-day definition alone does not establish whether contributions start on the first employment day, after 45 days, or retrospectively once the definition is met. Article 52(2)'s practical evidence, employer notification, election changes and duplicate-contribution controls also need clarification.
 
-**Implementation status.** `APPROVED` only for the statutory rates and basic salary definition where independently confirmed by applicable provisions. Eligibility commencement and election workflow are `IMPLEMENTATION BLOCKED` pending written interpretation.
+**OFFICIAL GUIDANCE UNVERIFIED.** Directive 1085/2025 Article 74 states an effectiveness condition involving registration by the Ministry of Justice and upload/publication on the Administration website. The Justice record page displays 10 March 2026 for an explanatory-note record, while the directive PDF is dated June 2025. No dated registration record or evidence of the required Administration-site upload/publication was located. Therefore the directive's effective date is **UNVERIFIED** in this pack; no conclusion is drawn that the condition has or has not been met.
+
+**Adviser question.** How are the 45 days counted, and what date starts pension coverage and contributions? Are contributions due from the beginning of employment, only after qualification, or retrospectively? What written election and employer/Administration process implements Article 52(2)? Does Directive 1085/2025 clarify these questions, and can you provide evidence of its registration and required upload/publication date under Article 74?
+
+**Payroll impact.** Pension enrolment, first-period deductions, employer contributions, remittance, multi-employer coordination and audit evidence.
+
+**Implementation status.** The statutory provisions can be represented, but commencement and election procedures are **PROFESSIONAL INTERPRETATION REQUIRED**; Directive 1085/2025's effective date is **OFFICIAL GUIDANCE UNVERIFIED**. Eligibility commencement and election workflow are **IMPLEMENTATION BLOCKED** pending written confirmation.
 
 ## 4. Public-holiday work versus overtime
 
-**Legal question.** How should an employer classify and pay ordinary scheduled work on a public holiday, hours that also qualify as overtime, and overlapping rest-day hours?
+**Legal question.** How should ordinary scheduled work on a public holiday be paid, and how are hours also classified as overtime or weekly-rest-day work treated?
 
-**Legal source and provisions.** Labour Proclamation No. 1156/2019, Articles 66-68 and 73-75. Official Ministry of Justice copy: [Labour Proclamation No. 1156/2019](https://justice.gov.et/wp-content/uploads/2025/02/%E1%8A%A0%E1%8B%8B%E1%8C%85-%E1%89%81%E1%8C%A5%E1%88%AD-1156-2011.pdf).
+**Source and provisions.** Labour Proclamation No. 1156/2019, Articles 66–68 and 73–75. [Official Ministry of Justice Gazette PDF](https://justice.gov.et/wp-content/uploads/2025/02/%E1%8A%A0%E1%8B%8B%E1%8C%85-%E1%89%81%E1%8C%A5%E1%88%AD-1156-2011.pdf).
 
-**CONFIRMED LEGAL PROVISION.** Article 66 defines overtime by work in excess of normal daily hours, subject to the listed exceptions. Article 68(1)(d) sets the public-holiday overtime rate at not less than 2.5 times the ordinary hourly rate. Article 75(1) says a worker shall be paid twice the hourly wage for each hour worked on a public holiday. Article 74(1) says monthly-paid workers do not have wages reduced because they did not work on a public holiday.
+**CONFIRMED LEGAL PROVISION.** Article 66 defines overtime by reference to work beyond normal daily hours, subject to its provisions. Article 68(1)(d) sets the public-holiday overtime rate at not less than 2.5 times the ordinary hourly rate. Article 75(1) provides twice the hourly wage for each hour worked on a public holiday. Article 74(1) protects monthly-paid workers' wages where they do not work because of a public holiday.
 
-**PROFESSIONAL INTERPRETATION REQUIRED.** The provisions establish the rates but do not, on the sources reviewed, settle how ordinary monthly salary interacts with Article 75 payment, whether the two rates can ever stack, or classification for hours that overlap overtime, rest day and public holiday.
+**PROFESSIONAL INTERPRETATION REQUIRED.** The reviewed text does not settle how Article 75 payment interacts with ordinary monthly salary, or how a single hour overlapping public holiday, overtime and weekly rest day is classified and paid.
 
-**Adviser question.** For monthly-paid and hourly-paid employees, what additional amount is due for scheduled public-holiday work? For a given hour that is both public-holiday work and overtime, which rate applies, and may any rates be combined? How are shifts crossing normal hours and overlapping weekly rest days classified? What hourly divisor applies to each work pattern?
+**Adviser question.** For monthly-paid and hourly-paid employees, what additional amount is due for scheduled public-holiday work? For hours also qualifying as overtime or weekly-rest-day work, which rate applies and can rates be combined? How should shifts crossing normal hours be classified, and what hourly divisor applies?
 
-**Payroll impact.** Hour classification, overtime multiplier, monthly payroll totals and avoidance of underpayment or double counting.
+**Payroll impact.** Work-hour classification, holiday/overtime calculation, payroll totals and avoidance of underpayment or duplicate payment.
 
-**Implementation status.** Statutory rate table may be represented as `APPROVED`; calculation treatment for monthly-paid holiday hours and overlapping classifications is `IMPLEMENTATION BLOCKED` pending interpretation.
+**Implementation status.** Statutory categories and rates are **CONFIRMED LEGAL PROVISIONS**; their interaction in disputed work patterns is **PROFESSIONAL INTERPRETATION REQUIRED** and **IMPLEMENTATION BLOCKED** pending confirmation.
 
 ## 5. Annual-leave pay and unused leave on termination
 
-**Legal question.** Which wage components and daily divisor determine pay during annual leave and cash payment for unused leave when employment ends?
+**Legal question.** Which wage components and divisor determine annual-leave pay and payment for unused leave at termination?
 
-**Legal source and provisions.** Labour Proclamation No. 1156/2019, Articles 36, 53, 76-78. Official Ministry of Justice copy linked in section 4.
+**Source and provisions.** Labour Proclamation No. 1156/2019, Articles 36, 53 and 76–78 (official Justice PDF linked in section 4).
 
-**CONFIRMED LEGAL PROVISION.** Article 53 defines wages and excludes listed items including overtime, per diem, hardship and transport allowances, relocation expenses, bonuses, commissions, incentives and service charges. Article 77(2) says leave pay equals the wage the worker would have received if continuing to work; Article 77(4) provides payment for unused leave on termination; Article 77(5) provides proportional entitlement for service below one year. Article 77(3)'s 26-day equivalence is expressly for determining qualifying service for leave entitlement. Article 36 provides a seven-working-day payment period for wages and other termination payments due, subject to its stated exception.
+**CONFIRMED LEGAL PROVISION.** Article 53 defines wages and excludes listed items, including overtime, per diem, hardship and transport allowances, relocation expenses, bonuses, commissions, incentives and service charges. Article 77(2) provides leave pay equal to the wage the worker would have received if work continued; Article 77(4) provides payment for unused leave on termination; Article 77(5) provides proportional entitlement for service below one year. Article 77(3)'s 26-day equivalence is for determining qualifying service for leave entitlement, not an express monetary divisor. Article 36 provides a seven-working-day period for payment of wages and other termination payments due, subject to its exception.
 
-**PROFESSIONAL INTERPRETATION REQUIRED.** Article 77 does not expressly set a daily cash divisor. Confirm how Article 53's wage definition applies to actual fixed and variable pay components, partial periods, leave balances and the termination calculation. Do not infer that Article 77(3) makes 26 the monetary divisor.
+**PROFESSIONAL INTERPRETATION REQUIRED.** The reviewed provisions do not expressly establish a daily cash divisor. Application of the wage definition to actual fixed/variable components, partial periods, carried leave and termination requires confirmation.
 
-**Adviser question.** Which current and variable components count as the wage in Articles 53 and 77? What divisor and reference period apply to leave taken and unused leave paid on termination? How should partial years, variable pay, carryover and the Article 36 payment deadline be applied?
+**Adviser question.** Which current and variable components count as wages under Articles 53 and 77? What divisor and reference period apply to leave taken and unused leave paid at termination? How should partial years, variable pay, carryover and the Article 36 payment deadline be applied?
 
-**Payroll impact.** Leave accrual, leave-period pay, termination amounts, final payroll and payment deadline.
+**Payroll impact.** Leave entitlement, leave-period pay, balances, termination amounts and payment timing.
 
-**Implementation status.** Leave entitlement and balance tracking can be `APPROVED` against the statutory text. Cash divisor and component selection are `CONFIGURABLE PENDING CONFIRMATION`; finalizing a disputed calculation is `IMPLEMENTATION BLOCKED`.
+**Implementation status.** Entitlement provisions are **CONFIRMED LEGAL PROVISIONS**; component selection and divisor are **PROFESSIONAL INTERPRETATION REQUIRED**, may be **CONFIGURABLE PENDING CONFIRMATION**, and disputed live calculations are **IMPLEMENTATION BLOCKED**.
 
 ## Development recommendations (not legal conclusions)
 
-- Preserve submitted/approved originals and audit history; never silently overwrite a filed or locked period.
-- Keep a period-specific difference calculation separate from filing an amended return or recording a payment/refund.
-- Record the source, effective date, reviewer and company decision for any configured rule.
-- These are product-control recommendations. They do not establish a statutory correction process or approve any unresolved calculation.
+- Preserve submitted/approved originals and audit history; never silently overwrite a filed return or locked payroll period.
+- Keep an internal period-difference calculation separate from filing an amended return or recording payment, credit or refund.
+- Record the source, effective date, reviewer and employer decision for any configured rule.
 
-## Change log from the prior adviser pack
+These are software-control recommendations only. They do not establish a statutory process or approve any unresolved calculation.
 
-- Corrected the multiple-employer citation from Article 53(2) to Article 52(2); Article 53 addresses evidence/data and cooperation.
-- Added the official Ministry of Justice copy of Directive No. 1085/2025 and its effective-date clause.
-- Compared original Article 29 with the 2026 amendment: Article 28's limitation period is changed; Article 29 is not expressly amended in the reviewed amendment text, so its 120-day decision period appears to remain. The five-year period operates through Article 29's cross-reference to amended Article 28.
-- Removed reliance on an unnamed Ministry of Revenue transition guide. Current monthly PAYE operational guidance remains `OFFICIAL GUIDANCE UNVERIFIED`.
-- Added explicit legal-source status, unresolved interpretation, payroll impact and implementation status for all five original areas.
+## Change log from the prior pack
 
-## Written answers required
+- Corrected Proclamation 1434/2026 citations: Article 2 item 4 amends Article 28; Article 2 item 12 adds Articles 97–102; Article 3 is the effective-date clause.
+- Separated the Article 28 assessment limitation from any deadline for correcting an already-filed monthly PAYE declaration; operational correction, charges, refund/credit and portal process remain unverified.
+- Recorded both Directive 1085/2025 dates and the Article 74 condition; effective date remains unverified without evidence of registration and upload/publication.
+- Retained the correct pension multiple-employer reference, Article 52(2), and the unresolved 45-day commencement question.
+- Downgraded exact transport/per diem figures to a provisional reading, separated the Ministry of Revenue technical note from binding text, and retained the directive/salary-base/formula gap.
+- Repaired encoding and aligned legal and implementation status labels across the pack and companion registers.
 
-Please return answers to the bold **Adviser question** paragraphs in sections 1-5. Do not treat this pack as a legal opinion or as confirmation that unresolved rules are approved for production.
+## Written answers requested
+
+Please answer the adviser questions in sections 1–5 in writing. Identify the exact sources and distinguish confirmed legal text from your interpretation. This pack is not a legal opinion or compliance certification.

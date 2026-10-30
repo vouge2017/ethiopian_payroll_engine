@@ -7,6 +7,14 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Adviser pack critical corrections (2026-10-30)
+
+- Updated the three legal adviser-pack documents after critical source review.
+- Corrected Proc. 1434/2026 references to Article 2 items 4 and 12 and Article 3; separated assessment limitation from monthly PAYE return amendment.
+- Recorded the June 2025 directive PDF date and 10 March 2026 Justice explanatory-record date; Directive 1085/2025 effective date remains unverified because Art. 74 registration/upload evidence was not found.
+- Added the official MoR Proc. 979 technical note as explanatory evidence; exact transport/per diem formula and operative directive remain provisional/unconfirmed.
+- No payroll code, calculations, rates, thresholds, migrations or production behavior changed. Documentation checks only; no test suite run. No legal approval or adviser acceptance is claimed.
+
 ### Final legal adviser pack (2026-10-30)
 
 - Created `ETHIOPAYROLL_LEGAL_ADVISER_PACK_FINAL.md`,
@@ -1027,6 +1035,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-30 — Codex — Corrected the adviser pack's Proc. 1434 citation structure, separated assessment limitation from filed monthly PAYE correction, recorded the pension directive date discrepancy/effectiveness evidence gap, and downgraded transport/per diem formula claims. Updated legal documents and PLAN.md; no payroll code changed; documentation checks only, no tests run.
 
 - 2026-10-30 — Codex — Prepared final five-topic adviser pack, source register
   and implementation-status sheet. Corrected pension reference to Article

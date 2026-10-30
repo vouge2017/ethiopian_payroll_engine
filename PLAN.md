@@ -7,6 +7,19 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Holiday calendar corrected to Proc. 1334/2024 (branch `fix/holiday-calendar-1334-2024`)
+
+- State: implemented, locally tested (SQLite), 13/13 tests pass. Branch pushed. PR #46 open.
+- What: Patriots' Victory Day → May 5 (Art. 4); May 28 "Downfall of the Dergue" abolished;
+  Dec 9 & Feb 20 are memorial days only (Art. 5). Old seed wrongly put Patriots' Victory Day
+  AND Downfall of the Dergue both on May 28 of 2025 and 2026.
+- `payroll_engine/holidays.py` rewritten: `national_holidays(year)` builds 9 closed holidays;
+  `orthodox_easter()` via Julian computus; 2027 September shift; `add_national_holiday()`
+  for lunar dates (Mawlid/Eid al-Fitr/Eid al-Adha) announced per official gazette.
+- Migration `h1334c2024a1`: delete wrong May 28 rows, seed corrected 2025-2027 (idempotent).
+- Cross-checked with `holidays` Python package — all dates match. ruff clean.
+- PostgreSQL migration proof: CI only (no local PG available).
+
 ### Adviser pack second review (2026-10-30)
 
 - Second review found two source-register links incorrectly pointed to Labour Proclamation 1156/2019; corrected them to the official Regulation 410/2017 and Pension Proclamation 1268/2022 Gazette PDFs.

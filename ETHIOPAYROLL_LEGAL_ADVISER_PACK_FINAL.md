@@ -15,6 +15,7 @@ For each answer, please identify the law and version relied on, exact provision,
 - **OFFICIAL GUIDANCE UNVERIFIED:** No identifiable current official guidance supporting the operational claim has been located.
 - **DEVELOPMENT RECOMMENDATION:** A software control suggestion, not a legal requirement.
 - **IMPLEMENTATION BLOCKED:** Do not treat the disputed calculation or workflow as legally approved.
+- **UNVERIFIED:** The available evidence does not establish a required fact or effective-date condition.
 
 ## 1. Transport allowance and per diem exemptions
 
@@ -58,19 +59,19 @@ For each answer, please identify the law and version relied on, exact provision,
 
 **Legal question.** When does coverage and contribution liability start around the 45-day employee-definition threshold, and how is the multiple-employer election administered?
 
-**Sources and provisions.** Private Organization Employees' Pension Proclamation No. 1268/2022: Article 2(1) defines a private-organization employee by reference to employment for not less than 45 days; Article 4(2) addresses notification of the employee's social-security identification number when joining another covered organization; Article 10 sets contribution rates; Article 52(2) addresses an employee employed and salaried by two or more private organizations; Article 53 concerns evidentiary data/cooperation. Official sources: [Proclamation 1268/2022](https://justice.gov.et/wp-content/uploads/2025/02/%E1%8A%A0%E1%8B%8B%E1%8C%85-%E1%89%81%E1%8C%A5%E1%88%AD-1268-2014.pdf) and [Directive 1085/2025 PDF](https://justice.gov.et/wp-content/uploads/2026/02/1085-Private-Organizations-Employees-Pension-Implementation-Directive-No.-1085-2025.pdf). The Ministry of Justice page associated with the directive shows 10 March 2026 but is titled as an explanatory note; the directive PDF says “Done at Addis Ababa, June 2025.”
+**Sources and provisions.** Private Organization Employees' Pension Proclamation No. 1268/2022: Article 2(1) defines a private-organization employee by reference to employment for not less than 45 days; Article 4(2) addresses notification of the employee's social-security identification number when joining another covered organization; Article 10 sets contribution rates; Article 52(2) addresses an employee employed and salaried by two or more private organizations; Article 53 concerns evidentiary data/cooperation. Official sources: [Proclamation 1268/2022](https://justice.gov.et/wp-content/uploads/2025/02/%E1%8A%A0%E1%8B%8B%E1%8C%85-%E1%89%81%E1%8C%A5%E1%88%AD-1268-2014.pdf) and [Directive 1085/2025 PDF](https://justice.gov.et/wp-content/uploads/2026/02/1085-Private-Organizations-Employees-Pension-Implementation-Directive-No.-1085-2025.pdf) ([Justice directive record](https://justice.gov.et/am/directives/private-organizations-employees-pension-implementation-directive-2/)). The official Justice directive record displays 25 Ginbot 2017 E.C. (a date in June 2025); the directive PDF says “Done at Addis Ababa, June 2025.” A separate explanatory-note record is dated 10 March 2026 and is not the directive record. The two directive dates are consistent at month level.
 
 **CONFIRMED LEGAL PROVISION.** Article 52(2), not Article 53(2), is the multiple-private-employer provision. It allows the contribution to be collected, according to the employee's choice, from salary paid by one of the private organizations, subject to the statutory qualification in that provision. Article 53 is a separate evidence/data and cooperation provision.
 
 **PROFESSIONAL INTERPRETATION REQUIRED.** The 45-day definition alone does not establish whether contributions start on the first employment day, after 45 days, or retrospectively once the definition is met. Article 52(2)'s practical evidence, employer notification, election changes and duplicate-contribution controls also need clarification.
 
-**OFFICIAL GUIDANCE UNVERIFIED.** Directive 1085/2025 Article 74 states an effectiveness condition involving registration by the Ministry of Justice and upload/publication on the Administration website. The Justice record page displays 10 March 2026 for an explanatory-note record, while the directive PDF is dated June 2025. No dated registration record or evidence of the required Administration-site upload/publication was located. Therefore the directive's effective date is **UNVERIFIED** in this pack; no conclusion is drawn that the condition has or has not been met.
+**OFFICIAL GUIDANCE UNVERIFIED.** Directive 1085/2025 Article 74 states an effectiveness condition involving registration by the Ministry of Justice and upload/publication on the Administration website. The official Justice directive record displays 25 Ginbot 2017 E.C. (in June 2025), consistent at month level with the PDF date of June 2025. A separate explanatory-note record is dated 10 March 2026. The Justice record does not identify its displayed directive date as the Article 74 registration date, and evidence of Administration-site upload/publication was not located. The Article 74 effective date therefore remains **UNVERIFIED**.
 
 **Adviser question.** How are the 45 days counted, and what date starts pension coverage and contributions? Are contributions due from the beginning of employment, only after qualification, or retrospectively? What written election and employer/Administration process implements Article 52(2)? Does Directive 1085/2025 clarify these questions, and can you provide evidence of its registration and required upload/publication date under Article 74?
 
 **Payroll impact.** Pension enrolment, first-period deductions, employer contributions, remittance, multi-employer coordination and audit evidence.
 
-**Implementation status.** The statutory provisions can be represented, but commencement and election procedures are **PROFESSIONAL INTERPRETATION REQUIRED**; Directive 1085/2025's effective date is **OFFICIAL GUIDANCE UNVERIFIED**. Eligibility commencement and election workflow are **IMPLEMENTATION BLOCKED** pending written confirmation.
+**Implementation status.** The statutory provisions can be represented, but commencement and election procedures are **PROFESSIONAL INTERPRETATION REQUIRED**; Directive 1085/2025 effective date is **UNVERIFIED**. Eligibility commencement and election workflow are **IMPLEMENTATION BLOCKED** pending written confirmation.
 
 ## 4. Public-holiday work versus overtime
 
@@ -116,7 +117,7 @@ These are software-control recommendations only. They do not establish a statuto
 
 - Corrected Proclamation 1434/2026 citations: Article 2 item 4 amends Article 28; Article 2 item 12 adds Articles 97–102; Article 3 is the effective-date clause.
 - Separated the Article 28 assessment limitation from any deadline for correcting an already-filed monthly PAYE declaration; operational correction, charges, refund/credit and portal process remain unverified.
-- Recorded both Directive 1085/2025 dates and the Article 74 condition; effective date remains unverified without evidence of registration and upload/publication.
+- Corrected the directive record date to 25 Ginbot 2017 E.C. (June 2025), clarified that 10 March 2026 belongs to a separate explanatory-note record, and retained the Article 74 registration/upload evidence gap.
 - Retained the correct pension multiple-employer reference, Article 52(2), and the unresolved 45-day commencement question.
 - Downgraded exact transport/per diem figures to a provisional reading, separated the Ministry of Revenue technical note from binding text, and retained the directive/salary-base/formula gap.
 - Repaired encoding and aligned legal and implementation status labels across the pack and companion registers.

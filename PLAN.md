@@ -7,6 +7,12 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Adviser pack second review (2026-10-30)
+
+- Second review found two source-register links incorrectly pointed to Labour Proclamation 1156/2019; corrected them to the official Regulation 410/2017 and Pension Proclamation 1268/2022 Gazette PDFs.
+- Corrected the Directive 1085/2025 date attribution: its actual Justice record displays 25 Ginbot 2017 E.C. (a date in June 2025), consistent at month level with the June 2025 PDF date. The 10 March 2026 date belongs to a separate explanatory-note record. Article 74 effective date remains unverified pending registration/upload evidence.
+- Rechecked official Justice records and direct Gazette links. No payroll code changed; documentation validation only; no test suite run.
+
 ### Adviser pack critical corrections (2026-10-30)
 
 - Updated the three legal adviser-pack documents after critical source review.
@@ -1035,6 +1041,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-30 — Codex — Second review corrected the source register's Regulation 410/2017 and Pension Proclamation 1268/2022 links and distinguished the directive's actual Justice record date from a separately dated explanatory-note record. Directive dates are consistent at month level; Article 74 effective date remains unverified. No payroll code changed; documentation checks only, no tests run.
 
 - 2026-10-30 — Codex — Corrected the adviser pack's Proc. 1434 citation structure, separated assessment limitation from filed monthly PAYE correction, recorded the pension directive date discrepancy/effectiveness evidence gap, and downgraded transport/per diem formula claims. Updated legal documents and PLAN.md; no payroll code changed; documentation checks only, no tests run.
 

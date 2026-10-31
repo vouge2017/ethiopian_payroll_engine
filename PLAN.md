@@ -7,6 +7,16 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Item 3: monthly workflow review (2026-10-31, review findings recorded)
+
+- Branch `review/monthly-workflow`, originally cut from `origin/main` at `6f041d78e30848ce4e820604236bed75c035b242`. PR #45 has since merged into `main` at `b25931ffdaa53e6fafebcedc95ee467d3487def0`; this work did not merge it.
+- Synthetic browser journey reached registration, company setup, employee creation, payroll preparation, review, approval and lock. A missing bank account blocked approval; editing the fake bank account and refreshing the review cleared the block. The locked run showed payment pending.
+- Browser-downloaded PAYE and pension workbooks matched the synthetic approved figures: gross 10,000, tax 1,650, employee pension 700, employer pension 1,100, net 7,650 ETB. This is a local synthetic check, not filing or payment proof.
+- The month-close workflow crashes because steps 2 onward construct `CloseStep` without required `status`. Further blockers: generated payslips count as distributed; filing steps can be treated as complete without evidence of filing; action URLs need route verification; the disbursement page rejects locked runs even though the bank report route accepts them. Keep this workflow unavailable for operational reliance until these semantics and routes are corrected and tested.
+- Focused SQLite checks: `8 passed, 5 warnings in 31.18s`; route-based `test_e2e_full.py` passed with a temporary upload folder: `1 passed, 4 warnings in 18.39s`. It manually changes the run to review and calls report helpers, so it is not complete browser-journey proof. Skill source preflight script is absent from this checkout.
+- Full suite on the original review baseline: `1997 passed, 235 skipped, 3 failed, 66 warnings in 1725.61s (0:28:45)`. Three failures were in `tests/test_item_versions.py`; its module-level `TODAY = date.today()` became stale when the suite crossed midnight, while application effective-date validation evaluated the next calendar day. Rerunning the affected selection on 2026-10-31 gave `5 passed, 22 deselected, 4 warnings in 46.36s`. No item 3 production code changed.
+- Browser bank-file download after lock, retry/concurrency and duplicate approval, cross-tenant flows, other calculation paths, PostgreSQL guarantees, and full end-to-end reconciliation remain open. No deployed or practitioner acceptance is claimed.
+
 ### Adviser pack second review (2026-10-30)
 
 - Second review found two source-register links incorrectly pointed to Labour Proclamation 1156/2019; corrected them to the official Regulation 410/2017 and Pension Proclamation 1268/2022 Gazette PDFs.
@@ -1041,6 +1051,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-10-31 — Codex — Reviewed item 3 in isolated `review/monthly-workflow`; synthetic browser journey reached approval/lock and downloaded/reconciled PAYE and pension workbooks. Recorded month-close and disbursement workflow blockers above. Full suite had 3 midnight-boundary failures; rerun of the affected tests passed. No calculation or production behavior changed.
 
 - 2026-10-30 — Codex — Second review corrected the source register's Regulation 410/2017 and Pension Proclamation 1268/2022 links and distinguished the directive's actual Justice record date from a separately dated explanatory-note record. Directive dates are consistent at month level; Article 74 effective date remains unverified. No payroll code changed; documentation checks only, no tests run.
 

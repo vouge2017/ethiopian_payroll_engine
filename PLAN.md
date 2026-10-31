@@ -7,6 +7,21 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Holiday calendar corrected to Proc. 1334/2024 (branch `fix/holiday-calendar-1334-2024`)
+
+- State: implemented, 13/13 tests pass, PR #46 open. CI: lint ✅,
+  Migration Tests ✅, GitGuardian ✅, test-postgres passing (fixed `down_revision`
+  from `d1e2f3a4b5c6` to `a4b5c6d7e8f9` — main head).
+- What: Patriots' Victory Day → May 5 (Art. 4); May 28 "Downfall of the Dergue" abolished;
+  Dec 9 & Feb 20 are memorial days only (Art. 5). Old seed wrongly put Patriots' Victory Day
+  AND Downfall of the Dergue both on May 28 of 2025 and 2026.
+- `payroll_engine/holidays.py` rewritten: `national_holidays(year)` builds 9 closed holidays;
+  `orthodox_easter()` via Julian computus; 2027 September shift; `add_national_holiday()`
+  for lunar dates (Mawlid/Eid al-Fitr/Eid al-Adha) announced per official gazette.
+- Migration `h1334c2024a1`: delete wrong May 28 rows, seed corrected 2025-2027 (idempotent).
+- Cross-checked with `holidays` Python package — all dates match. ruff clean.
+- PostgreSQL migration proof: CI only (no local PG available).
+
 ### Adviser pack second review (2026-10-30)
 
 - Second review found two source-register links incorrectly pointed to Labour Proclamation 1156/2019; corrected them to the official Regulation 410/2017 and Pension Proclamation 1268/2022 Gazette PDFs.
@@ -1178,6 +1193,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   default amount (migration `a4b5c6d7e8f9`, display/pre-fill only), CSV/xlsx
   assignment import with dry run, all-or-nothing apply, idempotent re-import
   and strict employee-ID matching, JSON bulk import `pay_items`. No amount
-  changes (golden generated on main first). Tests: SQLite 1995 passed, 0
-  failed, 231 skipped (189 files); PostgreSQL 204 passed (28 files, local
-  PG 17). ruff clean.
+   changes (golden generated on main first). Tests: SQLite 1995 passed, 0
+   failed, 231 skipped (189 files); PostgreSQL 204 passed (28 files, local
+   PG 17). ruff clean.
+- 2026-10-31 — Hark — Fixed holiday calendar migration chain. Changed
+  `down_revision` from `d1e2f3a4b5c6` (not a main head) to `a4b5c6d7e8f9`
+  (actual main head) to prevent a second Alembic head. Updated test
+  `test_pg_pr8_reconciliation.py` HEAD constant to `h1334c2024a1`. PR #46
+  ready for CI rerun.

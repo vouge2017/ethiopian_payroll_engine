@@ -9,7 +9,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Item 3: monthly workflow review (2026-10-31, review findings recorded)
 
-- Branch `review/monthly-workflow`, originally cut from `origin/main` at `6f041d78e30848ce4e820604236bed75c035b242`. PR #45 has since merged into `main` at `b25931ffdaa53e6fafebcedc95ee467d3487def0`; this work did not merge it.
+- Branch `review/monthly-workflow` is rebased onto `origin/main` at `b25931ffdaa53e6fafebcedc95ee467d3487def0` (PR #45 merge). Review findings commit before the rebase was `bdd1030`, rewritten as `909b4a7`; this work did not merge PR #45.
 - Synthetic browser journey reached registration, company setup, employee creation, payroll preparation, review, approval and lock. A missing bank account blocked approval; editing the fake bank account and refreshing the review cleared the block. The locked run showed payment pending.
 - Browser-downloaded PAYE and pension workbooks matched the synthetic approved figures: gross 10,000, tax 1,650, employee pension 700, employer pension 1,100, net 7,650 ETB. This is a local synthetic check, not filing or payment proof.
 - The month-close workflow crashes because steps 2 onward construct `CloseStep` without required `status`. Further blockers: generated payslips count as distributed; filing steps can be treated as complete without evidence of filing; action URLs need route verification; the disbursement page rejects locked runs even though the bank report route accepts them. Keep this workflow unavailable for operational reliance until these semantics and routes are corrected and tested.

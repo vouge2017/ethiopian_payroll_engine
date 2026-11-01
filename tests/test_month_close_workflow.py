@@ -141,9 +141,7 @@ def test_locked_month_with_all_pdfs_does_not_claim_employee_delivery(app):
     assert payslip_step.status == 'completed'
     assert payslip_step.name == 'Payslips generated'
     assert 'delivery is not tracked' in payslip_step.detail
-    assert payslip_step.actions == [
-        {'label': 'Download payslips', 'url': '/payroll/runs/27/download', 'method': 'GET'}
-    ]
+    assert payslip_step.actions == [{'label': 'Download payslips', 'url': '/payroll/runs/27/download', 'method': 'GET'}]
 
 
 def test_locked_month_close_route_renders_for_owner_and_rejects_foreign_company_run(app):

@@ -169,8 +169,16 @@ def build_month_end_close(db, models, run_id: int, company_id: int, *, can_lock:
 
     outputs = (
         ('PAYE report', f'/reports/erca/{run_id}', 'Download the PAYE schedule; filing is tracked separately.'),
-        ('Pension report', f'/reports/pension/{run_id}', 'Download the pension schedule; filing is tracked separately.'),
-        ('Bank payment file', f'/reports/bank/{run_id}', 'Download a payment instruction file; this does not confirm payment.'),
+        (
+            'Pension report',
+            f'/reports/pension/{run_id}',
+            'Download the pension schedule; filing is tracked separately.',
+        ),
+        (
+            'Bank payment file',
+            f'/reports/bank/{run_id}',
+            'Download a payment instruction file; this does not confirm payment.',
+        ),
     )
     for step_number, (name, url, description) in enumerate(outputs, start=4):
         step = CloseStep(

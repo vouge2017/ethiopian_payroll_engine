@@ -9,14 +9,29 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Item 3: monthly workflow review (2026-10-31, review findings recorded)
 
-- Branch `review/monthly-workflow` is rebased onto `origin/main` at `b25931ffdaa53e6fafebcedc95ee467d3487def0` (PR #45 merge). Review findings commit before the rebase was `bdd1030`, rewritten as `909b4a7`; this work did not merge PR #45.
+- Branch `review/monthly-workflow` was based on `b25931ffdaa53e6fafebcedc95ee467d3487def0` (PR #45 merge) and is now integrating `origin/main` at `7df250de03929b3bb39ed05dfad343c3923272a5` (PR #46 merge) to resolve the `PLAN.md` conflict in PR #47.
 - Synthetic browser journey reached registration, company setup, employee creation, payroll preparation, review, approval and lock. A missing bank account blocked approval; editing the fake bank account and refreshing the review cleared the block. The locked run showed payment pending.
 - Browser-downloaded PAYE and pension workbooks matched the synthetic approved figures: gross 10,000, tax 1,650, employee pension 700, employer pension 1,100, net 7,650 ETB. This is a local synthetic check, not filing or payment proof.
 - Resolved on branch `review/monthly-workflow` @ `acd985b`: fixed the month-close route crash; replaced false delivery/filing/payment completion claims with observable lock, generated-PDF and download states; verified action routes; kept locked-run outputs available. A locked-run bank workbook is exercised by `test_locked_month_reports_unchanged_after_salary_change`, which checks its amount against the approved net after employee salary changes. This is output reconciliation, not bank acceptance or proof of payment.
 - Focused SQLite checks: `8 passed, 5 warnings in 31.18s`; route-based `test_e2e_full.py` passed with a temporary upload folder: `1 passed, 4 warnings in 18.39s`. It manually changes the run to review and calls report helpers, so it is not complete browser-journey proof. Skill source preflight script is absent from this checkout.
 - Full suite on the original review baseline: `1997 passed, 235 skipped, 3 failed, 66 warnings in 1725.61s (0:28:45)`. Three failures were in `tests/test_item_versions.py`; its module-level `TODAY = date.today()` became stale when the suite crossed midnight, while application effective-date validation evaluated the next calendar day. Rerunning the affected selection on 2026-10-31 gave `5 passed, 22 deselected, 4 warnings in 46.36s`. No item 3 production code changed.
 - 2026-11-01 PostgreSQL cross-check: initialized a disposable local PostgreSQL 16 cluster and ran the system-first worksheet, monthly review, approval/retry/concurrency, tenant, PDF/bank output, accounting, calculation-context, report-query and import-money test files with Alembic migrations: **55 passed, 141 warnings in 135.83s**. Database was isolated to a temporary cluster on port 55432. This closes the planned synthetic PostgreSQL workflow check. SQLite locked-run report reconciliation and legacy-to-assignment money proofs also passed (7 tests); the transport-tax difference remains explicitly documented. The ExcelPayrollEngine is test-only with no production caller found. Item 3 synthetic validation is complete: month-close states/routes, browser page content/responsive width, system-first monthly calculation, approval/locking semantics, retry/idempotency, tenant access, payslip/report/bank outputs and calculation-path cross-checks have evidence. The full suite on the prior branch revision had 1997 passed, 235 skipped, 11 Windows CP1252 decoding failures in unchanged catalog/golden files. No real filing, bank payment, hosted-CI result for this SHA, or practitioner acceptance is claimed.
-- 2026-11-01 item 3 review fixes, commit `cc6cc7d`: employee payslip detail now links to the tenant-scoped employee download endpoint. The month-close checklist exposes report and payslip downloads after approval, warns that they are not final until the run is locked, and keeps a download action visible when all PDFs are already generated. Focused workflow/self-service tests on the final code: **15 passed, 4 warnings in 27.87s**; Ruff and `git diff --check` passed. Full suite on the immediately preceding code revision: **1997 passed, 235 skipped, 11 failed, 62 warnings in 21266.14s**. All 11 failures are CP1252 `UnicodeDecodeError`s in unchanged catalog/golden/i18n source reads; the changed item 3 tests passed. PostgreSQL item 3 proof remains **55 passed, 141 warnings** on the earlier verified revision. Current branch is 6 commits ahead and 3 behind `origin/main` (`7df250d`); it has not been integrated with the latest main or tested by hosted CI at `cc6cc7d`. Synthetic item 3 validation is complete, but it is not yet merge-ready. No real filing, bank payment, deployment or practitioner acceptance is claimed.
+- 2026-11-01 item 3 review fixes, commit `cc6cc7d`: employee payslip detail now links to the tenant-scoped employee download endpoint. The month-close checklist exposes report and payslip downloads after approval, warns that they are not final until the run is locked, and keeps a download action visible when all PDFs are already generated. Focused workflow/self-service tests on the final code: **15 passed, 4 warnings in 27.87s**; Ruff and `git diff --check` passed. Full suite on the immediately preceding code revision: **1997 passed, 235 skipped, 11 failed, 62 warnings in 21266.14s**. All 11 failures are CP1252 `UnicodeDecodeError`s in unchanged catalog/golden/i18n source reads; the changed item 3 tests passed. PostgreSQL item 3 proof remains **55 passed, 141 warnings** on the earlier verified revision. Current branch is integrating `origin/main` at `7df250d`; PR #47 still needs final checks after conflict resolution. Synthetic item 3 validation is complete, but it is not yet merge-ready. No real filing, bank payment, deployment or practitioner acceptance is claimed.
+
+### Holiday calendar corrected to Proc. 1334/2024 (branch `fix/holiday-calendar-1334-2024`)
+
+- State: merged to `origin/main` in PR #46 as `7df250d`. CI: lint ✅,
+  Migration Tests ✅, GitGuardian ✅, test-postgres passing (fixed `down_revision`
+  from `d1e2f3a4b5c6` to `a4b5c6d7e8f9` — main head).
+- What: Patriots' Victory Day → May 5 (Art. 4); May 28 "Downfall of the Dergue" abolished;
+  Dec 9 & Feb 20 are memorial days only (Art. 5). Old seed wrongly put Patriots' Victory Day
+  AND Downfall of the Dergue both on May 28 of 2025 and 2026.
+- `payroll_engine/holidays.py` rewritten: `national_holidays(year)` builds 9 closed holidays;
+  `orthodox_easter()` via Julian computus; 2027 September shift; `add_national_holiday()`
+  for lunar dates (Mawlid/Eid al-Fitr/Eid al-Adha) announced per official gazette.
+- Migration `h1334c2024a1`: delete wrong May 28 rows, seed corrected 2025-2027 (idempotent).
+- Cross-checked with `holidays` Python package — all dates match. ruff clean.
+- PostgreSQL migration proof: CI on PR #46; the migration head correction is included in `7df250d`.
 
 ### Adviser pack second review (2026-10-30)
 
@@ -1199,6 +1214,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   default amount (migration `a4b5c6d7e8f9`, display/pre-fill only), CSV/xlsx
   assignment import with dry run, all-or-nothing apply, idempotent re-import
   and strict employee-ID matching, JSON bulk import `pay_items`. No amount
-  changes (golden generated on main first). Tests: SQLite 1995 passed, 0
-  failed, 231 skipped (189 files); PostgreSQL 204 passed (28 files, local
-  PG 17). ruff clean.
+   changes (golden generated on main first). Tests: SQLite 1995 passed, 0
+   failed, 231 skipped (189 files); PostgreSQL 204 passed (28 files, local
+   PG 17). ruff clean.
+- 2026-10-31 — Hark — Fixed holiday calendar migration chain. Changed
+  `down_revision` from `d1e2f3a4b5c6` (not a main head) to `a4b5c6d7e8f9`
+  (actual main head) to prevent a second Alembic head. Updated test
+  `test_pg_pr8_reconciliation.py` HEAD constant to `h1334c2024a1`. PR #46
+  ready for CI rerun.

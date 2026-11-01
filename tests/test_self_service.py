@@ -143,6 +143,27 @@ class TestPayslipAcknowledgmentModel:
                 db.session.commit()
 
 
+def test_employee_payslip_download_link_uses_tenant_scoped_portal_route(app):
+    _cid, _owner_id, _employee_user_id, _employee_id, _run_id, payslip_id = _setup(app)
+    with app.app_context():
+        payslip = db.session.get(Payslip, payslip_id)
+        payslip.pdf_file_path = 'synthetic-payslip.pdf'
+        db.session.commit()
+
+    client = app.test_client()
+    client.post('/auth/login', data={'login_id': '0911111111', 'password': 'EmpPass1!'})
+    response = client.get('/my/payslips')
+
+    assert response.status_code == 200
+    assert f'/my/payslips/{payslip_id}/download'.encode() in response.data
+    assert f'href="/payslips/{payslip_id}/download"'.encode() not in response.data
+
+    detail = client.get(f'/my/payslips/{payslip_id}')
+    assert detail.status_code == 200
+    assert f'/my/payslips/{payslip_id}/download'.encode() in detail.data
+    assert f'href="/payslips/{payslip_id}/download"'.encode() not in detail.data
+
+
 # ─── Acknowledge Route ───
 
 

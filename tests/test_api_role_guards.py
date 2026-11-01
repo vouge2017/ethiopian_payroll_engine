@@ -202,3 +202,18 @@ def test_accountant_downloads_any_payslip(client, ctx):
     db.session.commit()
     resp = client.get(f'/api/v1/payslips/{ctx["payslip"].id}/download')
     assert resp.status_code == 200
+
+
+def test_employee_cannot_access_company_payroll_workflow_or_bulk_outputs(client, ctx):
+    _as_employee(client)
+    paths = [
+        f'/payroll/runs/{ctx["run"].id}',
+        f'/payroll/runs/{ctx["run"].id}/review',
+        f'/payroll/runs/{ctx["run"].id}/download',
+        f'/payroll/{ctx["run"].id}/close',
+        f'/payslips/{ctx["payslip"].id}/download',
+    ]
+
+    for path in paths:
+        response = client.get(path)
+        assert response.status_code == 403, f'{path} allowed employee access'

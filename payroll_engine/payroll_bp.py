@@ -1345,7 +1345,8 @@ def month_end_close(run_id):
     from payroll_engine.services.month_close import build_month_end_close
 
     cid = _company_id()
-    close = build_month_end_close(db, close_models, run_id, cid)
+    PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+    close = build_month_end_close(db, close_models, run_id, cid, can_lock=current_user.role == 'owner')
 
     return render_template('payroll/month_close.html', close=close, run_id=run_id)
 
@@ -2546,6 +2547,7 @@ def batch_payslips():
 
 @payroll_bp.route('/payroll/runs/<int:run_id>')
 @login_required
+@role_required('owner', 'accountant')
 def payroll_run_detail(run_id):
     """Show payroll run details."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
@@ -2771,6 +2773,7 @@ def batch_pdf_status_json(batch_id):
 
 @payroll_bp.route('/payroll/runs/<int:run_id>/download')
 @login_required
+@role_required('owner', 'accountant')
 def download_all_payslips(run_id):
     """Download all payslips for a run as a ZIP file.
 
@@ -2837,6 +2840,7 @@ def download_all_payslips(run_id):
 
 @payroll_bp.route('/payslips/<int:payslip_id>/download')
 @login_required
+@role_required('owner', 'accountant')
 def download_payslip(payslip_id):
     """Download a single payslip PDF. Generates on-demand if not yet cached."""
     from payroll_engine.shared import get_tenant_or_404 as _gt404

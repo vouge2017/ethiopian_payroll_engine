@@ -16,6 +16,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Focused SQLite checks: `8 passed, 5 warnings in 31.18s`; route-based `test_e2e_full.py` passed with a temporary upload folder: `1 passed, 4 warnings in 18.39s`. It manually changes the run to review and calls report helpers, so it is not complete browser-journey proof. Skill source preflight script is absent from this checkout.
 - Full suite on the original review baseline: `1997 passed, 235 skipped, 3 failed, 66 warnings in 1725.61s (0:28:45)`. Three failures were in `tests/test_item_versions.py`; its module-level `TODAY = date.today()` became stale when the suite crossed midnight, while application effective-date validation evaluated the next calendar day. Rerunning the affected selection on 2026-10-31 gave `5 passed, 22 deselected, 4 warnings in 46.36s`. No item 3 production code changed.
 - Browser bank-file download after lock, retry/concurrency and duplicate approval, cross-tenant flows, other calculation paths, PostgreSQL guarantees, and full end-to-end reconciliation remain open. No deployed or practitioner acceptance is claimed.
+- 2026-11-01 item 3 slice: fixed the month-close route crash and rebuilt its checklist around observable states (approval, lock, generated PDFs, and downloadable PAYE/pension/bank outputs). Filing, employee delivery, and payment are explicitly not inferred from downloads. Added tenant scoping for the close route and staff-only guards for company payroll views and bulk downloads; corrected the employee portal PDF link to its tenant-scoped route. Focused checks: 27 passed for workflow/idempotency/concurrency/integration; after the employee-link regression fix, 19 passed for role/self-service/month-close checks. Ruff and `git diff --check` passed. Synthetic browser check confirmed the locked workflow content and no horizontal overflow; screenshot capture timed out. Full suite: 1997 passed, 235 skipped, 11 failed in 3178.64s; all 11 reproduced in isolation and are Windows CP1252 decoding failures when tests read UTF-8 JSON/Python files without an explicit encoding. No calculation, legal rule, migration, or production behavior changed. Item 3 remains in progress: calculation-path parity, PostgreSQL monthly proof, and full bank-file/end-to-end reconciliation remain open.
 
 ### Adviser pack second review (2026-10-30)
 
@@ -1051,6 +1052,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-01 — Codex — Item 3: fixed month-close workflow crash/semantics, scoped the route, added company payroll role guards, and corrected the employee payslip download link. Focused checks passed (27 then 19 after the portal fix); ruff and diff checks passed. Full suite reported 1997 passed, 235 skipped, 11 unrelated catalog failures, reproduced in isolation. Synthetic browser check passed for page content/responsive width; screenshot timed out. Item 3 remains in progress.
 
 - 2026-10-31 — Codex — Reviewed item 3 in isolated `review/monthly-workflow`; synthetic browser journey reached approval/lock and downloaded/reconciled PAYE and pension workbooks. Recorded month-close and disbursement workflow blockers above. Full suite had 3 midnight-boundary failures; rerun of the affected tests passed. No calculation or production behavior changed.
 

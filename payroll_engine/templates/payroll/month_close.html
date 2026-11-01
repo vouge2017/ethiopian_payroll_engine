@@ -1,24 +1,22 @@
 <!-- Month-End Close Workflow — Guided sequence for accountants -->
 {% extends "base.html" %}
 
-{% block title %}Month-End Close — {{ close.period }}{% endblock %}
+{% block title %}Monthly Payroll Workflow — {{ close.period }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4 py-3">
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h1 class="h3 mb-1">Month-End Close</h1>
+      <h1 class="h3 mb-1">Monthly Payroll Workflow</h1>
       <p class="text-muted mb-0">{{ close.company_name }} — {{ close.period }}</p>
     </div>
-    <div class="d-flex align-items-center gap-3">
-      <div class="progress" style="width: 200px; height: 8px;">
-        <div class="progress-bar {% if close.is_closed %}bg-success{% else %}bg-primary{% endif %}"
-             style="width: {{ close.progress_pct }}%"></div>
-      </div>
-      <span class="badge {% if close.is_closed %}bg-success{% else %}bg-secondary{% endif %}">
-        {{ close.progress_pct }}%
-      </span>
+    <div>
+      {% if close.is_closed %}
+      <span class="badge bg-success">Payroll locked</span>
+      {% elif close.current_step %}
+      <span class="badge bg-primary">Next: step {{ close.current_step }}</span>
+      {% endif %}
     </div>
   </div>
 
@@ -27,11 +25,12 @@
   <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
     <i class="bi bi-lock-fill me-2"></i>
     <div>
-      <strong>Period {{ close.period }} is closed.</strong>
+      <strong>Payroll {{ close.period }} is locked.</strong>
       {% if close.closed_at %}
-      Closed on {{ close.closed_at }}.
+      Locked on {{ close.closed_at }}.
       {% endif %}
-      To make corrections, an owner must unlock this period first.
+      Approved payroll is frozen. Payslips and reports remain available below.
+      A downloaded file does not mean it was delivered, filed, or paid.
     </div>
   </div>
   {% endif %}
@@ -75,7 +74,7 @@
           <div class="close-step-content">
             <div class="close-step-header">
               <h5 class="close-step-title">{{ step.name }}</h5>
-              <span class="close-step-name-am">{{ step.name_am }}</span>
+              {% if step.name_am %}<span class="close-step-name-am">{{ step.name_am }}</span>{% endif %}
             </div>
 
             <p class="close-step-description">{{ step.description }}</p>
@@ -99,16 +98,18 @@
             </div>
             {% endif %}
 
-            {% if step.actions and not close.is_closed %}
+            {% if step.actions %}
             <div class="close-step-actions">
               {% for action in step.actions %}
               {% if action.method == 'POST' %}
+              {% if not close.is_closed %}
               <form method="POST" action="{{ action.url }}" class="d-inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-primary">
                   {{ action.label }}
                 </button>
               </form>
+              {% endif %}
               {% else %}
               <a href="{{ action.url }}" class="btn btn-sm btn-outline-primary">
                 {{ action.label }}
@@ -124,17 +125,6 @@
     </div>
   </div>
 
-  {% if close.blocking_items %}
-  <div class="alert alert-warning mt-4" role="alert">
-    <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Cannot close yet</h6>
-    <p class="mb-1">Complete these steps first:</p>
-    <ul class="mb-0">
-      {% for item in close.blocking_items %}
-      <li>{{ item }}</li>
-      {% endfor %}
-    </ul>
-  </div>
-  {% endif %}
 </div>
 
 <style>

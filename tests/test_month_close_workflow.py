@@ -98,8 +98,20 @@ def test_completed_month_close_offers_lock_before_outputs(app):
     assert lock_step.name == 'Payroll Locked'
     assert lock_step.status == 'ready'
     assert lock_step.actions == [{'label': 'Lock Payroll', 'url': '/payroll/runs/27/lock', 'method': 'POST'}]
-    assert close.steps[2].status == 'not_ready'
-    assert close.steps[2].actions == []
+    assert close.steps[2].status == 'ready'
+    assert close.steps[2].actions == [
+        {'label': 'Generate and download payslips', 'url': '/payroll/runs/27/download', 'method': 'GET'}
+    ]
+    assert 'not locked' in close.steps[2].detail
+    for step in close.steps[3:]:
+        assert step.status == 'ready'
+        assert len(step.actions) == 1
+        assert 'not locked' in step.detail
+
+    with app.test_request_context():
+        html = render_template('payroll/month_close.html', close=close, run_id=27)
+    assert 'not locked' in html
+    assert 'Lock Payroll' in html
 
     adapter = app.url_map.bind('localhost')
     adapter.match(lock_step.actions[0]['url'], method='POST')
@@ -129,6 +141,9 @@ def test_locked_month_with_all_pdfs_does_not_claim_employee_delivery(app):
     assert payslip_step.status == 'completed'
     assert payslip_step.name == 'Payslips generated'
     assert 'delivery is not tracked' in payslip_step.detail
+    assert payslip_step.actions == [
+        {'label': 'Download payslips', 'url': '/payroll/runs/27/download', 'method': 'GET'}
+    ]
 
 
 def test_locked_month_close_route_renders_for_owner_and_rejects_foreign_company_run(app):

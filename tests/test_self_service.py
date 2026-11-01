@@ -158,6 +158,11 @@ def test_employee_payslip_download_link_uses_tenant_scoped_portal_route(app):
     assert f'/my/payslips/{payslip_id}/download'.encode() in response.data
     assert f'href="/payslips/{payslip_id}/download"'.encode() not in response.data
 
+    detail = client.get(f'/my/payslips/{payslip_id}')
+    assert detail.status_code == 200
+    assert f'/my/payslips/{payslip_id}/download'.encode() in detail.data
+    assert f'href="/payslips/{payslip_id}/download"'.encode() not in detail.data
+
 
 # ─── Acknowledge Route ───
 

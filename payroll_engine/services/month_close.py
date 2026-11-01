@@ -142,19 +142,26 @@ def build_month_end_close(db, models, run_id: int, company_id: int, *, can_lock:
         name_am='',
         description='Generate PDFs for the approved payroll run.',
         status='not_ready',
-        prerequisites=[1, 2],
+        prerequisites=[1],
     )
-    if run.status != 'locked':
-        payslip_step.blocking_reason = 'Lock payroll before generating final payslips.'
+    if not approved:
+        payslip_step.blocking_reason = 'Approve payroll before generating payslips.'
     elif total_count == 0:
         payslip_step.status = 'blocked'
         payslip_step.blocking_reason = 'No regular payslips were found for this payroll run.'
     elif generated_count == total_count:
         payslip_step.status = 'completed'
         payslip_step.detail = f'{generated_count}/{total_count} PDFs generated; employee delivery is not tracked here.'
+        if run.status != 'locked':
+            payslip_step.detail += ' Payroll is approved but not locked; lock it before treating these as final.'
+        payslip_step.actions = [
+            {'label': 'Download payslips', 'url': f'/payroll/runs/{run_id}/download', 'method': 'GET'},
+        ]
     else:
         payslip_step.status = 'in_progress' if generated_count else 'ready'
         payslip_step.detail = f'{generated_count}/{total_count} PDFs generated; employee delivery is not tracked here.'
+        if run.status != 'locked':
+            payslip_step.detail += ' Payroll is approved but not locked; lock it before treating these as final.'
         payslip_step.actions = [
             {'label': 'Generate and download payslips', 'url': f'/payroll/runs/{run_id}/download', 'method': 'GET'},
         ]
@@ -171,16 +178,18 @@ def build_month_end_close(db, models, run_id: int, company_id: int, *, can_lock:
             name=name,
             name_am='',
             description=description,
-            status='ready' if run.status == 'locked' else 'not_ready',
-            prerequisites=[1, 2],
+            status='ready' if approved else 'not_ready',
+            prerequisites=[1],
         )
-        if run.status == 'locked' and total_count == 0:
+        if approved and total_count == 0:
             step.status = 'blocked'
             step.blocking_reason = 'No regular payslips were found for this payroll run.'
-        elif run.status == 'locked':
+        elif approved:
             step.actions = [{'label': f'Download {name}', 'url': url, 'method': 'GET'}]
+            if run.status != 'locked':
+                step.detail = 'Payroll is approved but not locked; lock it before treating this download as final.'
         else:
-            step.blocking_reason = 'Lock approved payroll before downloading final outputs.'
+            step.blocking_reason = 'Approve payroll before downloading outputs.'
         close.steps.append(step)
 
     for step in close.steps:

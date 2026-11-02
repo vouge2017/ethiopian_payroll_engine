@@ -845,6 +845,11 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ---
 
+### Current product/documentation note — 2026-11-02
+
+- The dated 2026-11-01 note above says PR #47 was open at that time. Current checkout evidence is origin/main at f52330a, which contains the PR #47 merge. Keep the older statement as a historical snapshot.
+- Phase 0 North Star and D18–D25 alignment work is proposed documentation, not approved scope. Companion documents are being prepared on branch docs/phase-0-management-decisions, based on a59e730bb75985f17420ca2af32058c0dfac167d. No payroll code, schema, statutory calculation, production workflow or deployment changed. Record final verification and commit SHA after completing the documentation checks.
+
 ## 2. Now
 
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
@@ -1227,3 +1232,4 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   (actual main head) to prevent a second Alembic head. Updated test
   `test_pg_pr8_reconciliation.py` HEAD constant to `h1334c2024a1`. PR #46
   ready for CI rerun.
+- 2026-11-02 — Codex — Reconciled the dated PR #47 status with origin/main at f52330a and prepared proposed Phase 0 North Star, decision alignment and evidence documentation on docs/phase-0-management-decisions. No application or production behavior changed; final documentation checks and commit SHA pending.

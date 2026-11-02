@@ -264,17 +264,284 @@ Statuses: **OPEN** means a decision is not made; **RESEARCH REQUIRED** means ext
 - **Dependencies:** Successful controlled payroll and provider evidence.
 - **Required milestone:** Post-pilot review; defer unless customer and provider evidence is available.
 
+## Product-direction alignment — proposed, not approved
+
+The owner has proposed a long-term North Star: progressively automate controlled, repetitive work across employee/workforce records, attendance, payroll, validation, approvals, payments, statutory reporting, reconciliation and employee records. The proposed operating principle is **Human-led accountability, machine-led execution**. This proposal does not approve these capabilities for immediate delivery and does not amend the current engineering task in `PLAN.md`.
+
+The original D01–D17 questions, positions, options, recommendations and statuses above are preserved as the decision history. The following addenda specify how each question relates to the proposed North Star. They are proposals, not management decisions. Public sources and existing project documents do not prove customer demand, provider access, legal approval or implementation.
+
+### D01 — Customer segment and buyer alignment
+
+- **Original question:** Which Ethiopian employer and buyer should the first release serve?
+- **Proposed revised position:** Keep self-managed businesses and accountant-supported businesses in the long-term audience; choose one evidence-backed first-pilot profile. Do not declare the SME/employee range validated.
+- **Evidence / unknowns:** Existing project documents state the intended audience; no current interview or willingness-to-pay evidence is recorded here. Historical readiness findings need fresh verification.
+- **Research / external confirmation / approval:** Customer research required; no provider/legal confirmation for segment choice. Product owner approval required.
+- **Architecture impact:** Business-owned workspaces with optional scoped accountant membership remain proposed; portfolio access is a later capability.
+- **Dependencies / timing:** P0, before requirements approval and first-pilot recruitment.
+
+### D02 — Employee range and capacity alignment
+
+- **Original question:** What pilot size and tested capacity should be supported without imposing a permanent ceiling?
+- **Proposed revised position:** Treat headcount as an evidence-based operating envelope and test target, not a permanent limit. Workforce/attendance ambition does not place those modules in the first release.
+- **Evidence / unknowns:** Draft PRDs contain inconsistent 50, 100 and 50–200 figures; no accepted market or load evidence is established here.
+- **Research / external confirmation / approval:** Customer research and technical performance evidence; product owner approval.
+- **Architecture impact:** Avoid schema/API limits tied to pilot size; test imports, calculation, reports and exports at a representative workload.
+- **Dependencies / timing:** P0 for requirements/capacity claims; revisit before pilot size is fixed.
+
+### D03 — Business subscription and workspace ownership alignment
+
+- **Original question:** Does the business contract directly or does an accountant buy a multi-client service?
+- **Proposed revised position:** Retain business-owned workspaces as the proposed starting model; allow a customer to use the platform alone or invite a scoped accountant. Keep portfolio billing a later commercial choice.
+- **Evidence / unknowns:** Draft journeys support owner-created workspaces; payer and packaging preferences remain unvalidated.
+- **Research / external confirmation / approval:** Interview businesses/accounting firms; review contracting and data-control responsibilities; management approval required.
+- **Architecture impact:** Separate tenant ownership, membership, billing account and accountant organization; do not assume they are one identity.
+- **Dependencies / timing:** P0 before workspace, permission and subscription requirements.
+
+### D04 — Accountant access alignment
+
+- **Original question:** What may an external accountant do for a business?
+- **Proposed revised position:** Preserve optional accountant participation. Long-term multi-company operations should cross only businesses that granted and can revoke access. Defer a portfolio cockpit until need and isolation are proven.
+- **Evidence / unknowns:** Drafts describe accountant review; current demand and end-to-end isolation evidence are not established by this register.
+- **Research / external confirmation / approval:** Accountant research, authorization design review and tenant-isolation evidence; management approval required.
+- **Architecture impact:** Company-scoped membership, explicit action permissions, revocation and audit history; portfolio grouping must not grant permission.
+- **Dependencies / timing:** P0 policy; technical proof before any real data or pilot access.
+
+### D05 — Pricing alignment
+
+- **Original question:** What package and price will a target customer pay for?
+- **Proposed revised position:** Keep pricing open; test value around time saved, reduced rework, support and compliance evidence, not a list of future integrations.
+- **Evidence / unknowns:** No validated prices, recurring-use data or cost-to-serve evidence is recorded.
+- **Research / external confirmation / approval:** Customer willingness-to-pay research and commercial review; management approval before commercial release.
+- **Architecture impact:** Keep billing packaging/provider choices open; avoid billing complexity before selection.
+- **Dependencies / timing:** P2 before commercial release; not a blocker to synthetic validation or supervised shadow payroll.
+
+### D06 — Language alignment
+
+- **Original question:** Which languages and payroll artifacts must be complete for launch?
+- **Proposed revised position:** Preserve English, Amharic and existing Afaan Oromoo translations; define and validate the initial customer-facing minimum. Additional Ethiopian languages are an extensibility goal, not a readiness claim.
+- **Evidence / unknowns:** Project documents/catalogs show intent; current native-speaker and accountant acceptance evidence is not established.
+- **Research / external confirmation / approval:** Customer language research and native-speaker/payroll-practitioner review; management approval.
+- **Architecture impact:** Localization keys and reviewed payroll terminology; voice interaction cannot substitute for reviewed text and artifact translation.
+- **Dependencies / timing:** P0 boundaries; P1 for a pilot user relying on a language.
+
+### D07 — Approval workflow alignment
+
+- **Original question:** When can one person prepare and approve, and when is maker-checker required?
+- **Proposed revised position:** Keep workflow configurable to business policy and size. People authorize inputs, resolve exceptions and approve sensitive actions. Automation may prepare and validate but may not self-approve payroll.
+- **Evidence / unknowns:** Drafts propose owner approval; universal legal, bank-mandate and customer controls are not established here.
+- **Research / external confirmation / approval:** Customer research, role tests and professional review if a statutory duty is asserted; management approval.
+- **Architecture impact:** Separate preparation, payroll approval, payment authorization, submission and external status; no AI approval path.
+- **Dependencies / timing:** P0 policy; technical proof before pilot.
+
+### D08 — Payment responsibility alignment
+
+- **Original question:** Who prepares, authorizes, submits, co-signs and verifies salary transfer?
+- **Proposed revised position:** Long-term payment orchestration is proposed. Initial safe boundary remains approved payment instructions/file preparation and evidence-backed reconciliation, while employer-authorized users and licensed providers control transfer.
+- **Evidence / unknowns:** Ethio telecom documents organization bulk payments; Bank of Abyssinia documents corporate bulk transfer with configurable inputter/checker/authorizer roles. Neither establishes an EthioPayroll contract, API, mandate or successful transfer. See evidence register.
+- **Research / external confirmation / approval:** Pilot bank/provider must confirm format, eligibility, fees, limits, verification, authorization, status and settlement evidence; legal review for any intermediary role.
+- **Architecture impact:** Keep approved, initiated, processing, settled, failed and reconciled separate. Do not hold customer salary funds absent an approved legal/provider model.
+- **Dependencies / timing:** P1 payment-file handoff; P2 provider orchestration after contract and evidence.
+
+### D09 — First pilot profile alignment
+
+- **Original question:** Which willing company and accountant should complete the first supervised parallel payroll?
+- **Proposed revised position:** Select a real employer with a qualified accountant, manageable complexity, appropriate employee notice/consent and willingness to compare against its existing authoritative payroll.
+- **Evidence / unknowns:** No participating company or written accountant acceptance is established here.
+- **Research / external confirmation / approval:** Recruit and document a customer; legal/privacy/provider review before real data or movement of funds.
+- **Architecture impact:** Use manual provider handoffs until an integration is separately approved and accepted.
+- **Dependencies / timing:** P1 after synthetic gates; before real employee data.
+
+### D10 — Pilot sequence alignment
+
+- **Original question:** How do one-business validation, three-business pilot and ten-business adoption relate?
+- **Proposed revised position:** Preserve distinct gates: internal synthetic validation → one supervised parallel run → three independent controlled businesses → separate commercial-release decision → ten-business adoption milestone.
+- **Evidence / unknowns:** Existing plan/pilot docs include inconsistent historical gates; no current pilot completion is claimed here.
+- **Research / external confirmation / approval:** Evidence from each gate and recorded management go/no-go; continue customer research through each stage.
+- **Architecture impact:** Do not claim portfolio-scale maturity or build scale-only features from one pilot.
+- **Dependencies / timing:** Approve gate definitions P0; each progression requires a separate decision.
+
+### D11 — Tax and pension submission alignment
+
+- **Original question:** What does EthioPayroll prepare, submit, receive and reconcile for PAYE and pension?
+- **Proposed revised position:** Progress from filing-ready preparation and clear instructions to authorized electronic submission only where official channels and agreements permit. Report generated, submitted, accepted/rejected, paid and reconciled separately.
+- **Evidence / unknowns:** Official MoR e-tax references exist, but EthioPayroll API/authorization and current PAYE correction procedure were not verified. POESSA publishes its mandate and official laws/directives; an employer API/contract was not found in this review.
+- **Research / external confirmation / approval:** Confirm process with MoR/POESSA/revenue authority and qualified tax/pension advisers; provider/API access is required for electronic submission.
+- **Architecture impact:** Future submission adapter/status evidence; no portal-automation assumption.
+- **Dependencies / timing:** P1 manual handoff and report acceptance; P2 electronic submission integration.
+
+### D12 — Calculation authority alignment
+
+- **Original question:** Who approves statutory rules and interpretations?
+- **Proposed revised position:** Calculations remain deterministic, versioned and independently testable. AI/automation cannot determine statutory obligations or alter rule values. Each production rule needs an official source, effective date, worked tests and written professional interpretation when application is unclear.
+- **Evidence / unknowns:** Official legal sources/adviser documents exist for some topics; some interpretations, current procedures and effective dates remain unresolved.
+- **Research / external confirmation / approval:** Qualified Ethiopian tax, pension and labour review; management assigns an accountable rule owner.
+- **Architecture impact:** Versioned rules and reproducible calculation records separate from AI and providers.
+- **Dependencies / timing:** P0 governance; written professional acceptance before real reliance on each unresolved rule.
+
+### D13 — Data protection alignment
+
+- **Original question:** What personal data may be processed, where, by whom, for how long and under what controls?
+- **Proposed revised position:** Before real employee data, establish controller/processor roles, minimization, hosting/transfer map, retention/deletion, contracts, incident response and sensitive-data controls. Do not require Fayda/national ID or biometrics without verified need and legal basis.
+- **Evidence / unknowns:** Official Proclamation 1321/2024 is in force and includes processor, security, processing-record, data-sovereignty and sensitive-data transfer provisions. EthioPayroll’s hosting/subprocessors and application require counsel/infrastructure review.
+- **Research / external confirmation / approval:** Ethiopian privacy/legal review and deployment/provider evidence; management approval before real data.
+- **Architecture impact:** Data-location inventory, processor agreements, access/security controls, export/deletion and audit records.
+- **Dependencies / timing:** Reserve controls in P0 requirements; satisfy before P1 real-data pilot.
+
+### D14 — Connectivity and recovery alignment
+
+- **Original question:** What connectivity failures and offline operation must customers tolerate?
+- **Proposed revised position:** Reliable saving, synchronization, recovery and auditability are North Star outcomes. Full offline payroll is unapproved until need and conflict handling are researched.
+- **Evidence / unknowns:** Pilot connectivity/device needs and restore/sync evidence are unknown.
+- **Research / external confirmation / approval:** Customer interviews, failure/recovery tests and management scope decision.
+- **Architecture impact:** Define durable-save acknowledgement and recovery boundaries; do not queue approval or payment offline.
+- **Dependencies / timing:** P1 save/recovery evidence; P3 full offline, reopen only if pilot evidence warrants it.
+
+### D15 — Onboarding and support alignment
+
+- **Original question:** Who configures customers, supports monthly operations and handles incidents?
+- **Proposed revised position:** Guided onboarding, clear responsibility and supportable process states are part of the operating product. Automation may assist routine communication; people own exception decisions and customer commitments.
+- **Evidence / unknowns:** Service hours, response targets, onboarding effort and support cost are unverified.
+- **Research / external confirmation / approval:** Pilot support observations, customer research and operating-capacity estimate; management approval before commercial promises.
+- **Architecture impact:** Actionable errors, support evidence export and escalation records; no AI-only decisions on high-impact outcomes.
+- **Dependencies / timing:** P1 pilot support; P2 published service levels.
+
+### D16 — Data export and closure alignment
+
+- **Original question:** What records can a customer export, retain and remove at closure?
+- **Proposed revised position:** Make business records portable and closure predictable, subject to statutory retention and data-subject rights confirmed by counsel.
+- **Evidence / unknowns:** Complete export inventory, closure procedure and applicable retention schedule are not established here.
+- **Research / external confirmation / approval:** Customer/accountant export review and privacy/legal advice; management approval.
+- **Architecture impact:** Export payroll history, reports, rule/version provenance and audit evidence; deletion respects statutory retention/legal holds.
+- **Dependencies / timing:** P1 pilot exit/continuity; P2 commercial closure policy.
+
+### D17 — Provider and integration alignment
+
+- **Original question:** Which integrations are justified, supported and worth maintaining?
+- **Proposed revised position:** Keep banks/payment providers, attendance systems, accounting/business software and government systems as candidate integrations. Integration readiness is a design principle, not an approved connector or provider promise.
+- **Evidence / unknowns:** Telebirr organizational bulk payment and developer/test materials are public; salary-batch API access, permissions, fees, limits and settlement/status contract remain unverified. NBE salary API language located is in a draft strategy.
+- **Research / external confirmation / approval:** Provider docs, eligibility, sandbox/account, contract, service limits, fees, data responsibilities and test acceptance; counsel for regulated role; management prioritization.
+- **Architecture impact:** Provider adapters, secure credentials, idempotency, status evidence and reconciliation are proposed principles; defer provider-specific production integration.
+- **Dependencies / timing:** P1 manual handoff; P3 direct connector until customer demand/provider access.
+
+## Proposed additional decisions D18–D25
+
+The following proposals extend the register without changing D01–D17 identifiers or history. None is approved.
+
+### D18 — Attendance and workforce time management
+
+- **Priority / status:** P2 — PROPOSED
+- **Decision question:** Which attendance, shifts, overtime, leave and time inputs should EthioPayroll own, import or integrate, and what evidence is required before they affect pay?
+- **Existing position:** Project direction includes leave/overtime and broader workforce operations; device/mobile/third-party scope is not approved.
+- **Options and consequences:** Manual entry/import minimizes initial scope but retains work; native capture improves workflow but adds privacy, device and dispute handling; integration reuses customer systems but depends on provider access/data quality.
+- **Recommendation:** Start with reviewable, sourced payroll inputs and explicit correction; research attendance sources before selecting native capture/connectors. Missing punches must not auto-create deductions.
+- **Evidence / unknowns:** Customer/device mix, data quality, labour-law treatment and provider access; customer research and professional confirmation required.
+- **Management approval:** Required before adding attendance product scope.
+- **Architecture impact:** Provenance, approval, period, correction history and non-destructive imports; biometric capture is not compulsory.
+- **Owner / contributors:** Product owner; employers, accountants, HR practitioners, legal adviser, attendance vendors.
+- **Dependencies / timing:** D12 and payroll input model; P2 after reliable monthly payroll.
+
+### D19 — Employee bank-account verification and payment preferences
+
+- **Priority / status:** P2 — RESEARCH REQUIRED
+- **Decision question:** What payment details may employees nominate, how can each provider verify them, and who approves changes?
+- **Existing position:** Employee payment details are part of payroll preparation; no universal provider verification is established.
+- **Options and consequences:** Syntax checks are cheap but not ownership proof; employer document checks add manual work; provider confirmation may improve accuracy but requires service access, terms and privacy basis.
+- **Recommendation:** Distinguish format validation from provider-confirmed verification; never label unconfirmed details verified; review and audit changes.
+- **Evidence / unknowns:** Provider-supported account types, verification response/fees, employee preferences, consent and mismatch handling; customer/provider/legal validation required.
+- **Management approval:** Required for data collection scope.
+- **Architecture impact:** Store verification source/time/status and change history; minimize and protect sensitive fields.
+- **Owner / contributors:** Product owner; customers, bank/payment providers, privacy counsel, security reviewer.
+- **Dependencies / timing:** D08/D13; manual verification P1, provider validation P2.
+
+### D20 — Salary payment orchestration
+
+- **Priority / status:** P2 — PROPOSED
+- **Decision question:** Should EthioPayroll progress from preparing instructions/files to provider initiation and status reconciliation, and under what authorization model?
+- **Existing position:** Current materials describe external bank handoff; no provider contract or settlement integration is evidenced here.
+- **Options and consequences:** File preparation leaves money movement with the employer/provider but stays manual; initiation reduces work but adds security, licensing, duplicate, reversal and support obligations; staged delivery limits risk.
+- **Recommendation:** Stage file preparation/reconciliation first. Initiate only with provider contract, legal review, employer authorization, idempotency and independently verifiable settlement. Do not hold salary funds absent a legally approved model.
+- **Evidence / unknowns:** API/accepted file spec, eligibility, fees/limits, mandates, callbacks, status/settlement reports and reversal/support process.
+- **Management approval:** Required; provider and counsel evidence also required.
+- **Architecture impact:** Explicit batch state machine, stable identity, safe retries, audit and reconciliation evidence.
+- **Owner / contributors:** Product owner; finance, bank/provider, legal/regulatory adviser, security/operations.
+- **Dependencies / timing:** D08/D13/D19; file handoff P1, initiation P2/P3.
+
+### D21 — Electronic tax and pension submissions
+
+- **Priority / status:** P2 — RESEARCH REQUIRED
+- **Decision question:** Which statutory outputs may be prepared, electronically submitted and reconciled with authority acknowledgements?
+- **Existing position:** PAYE/pension preparation is needed; employer/authorized-agent filing remains the assumed responsibility absent an approved integration.
+- **Options and consequences:** Downloadable schedules leave manual submission; portal automation may be brittle or unauthorized; official APIs/contracts offer a stronger route only if actually available.
+- **Recommendation:** First produce reproducible filing-ready outputs. Pursue only verified official APIs or explicitly authorized flows; store submission reference, acknowledgement/rejection and payment evidence separately.
+- **Evidence / unknowns:** Current MoR/POESSA process, authority, terms, formats, access prerequisites and correction/acknowledgement behavior; current operational integration not verified.
+- **Management approval:** Required after professional/authority evidence.
+- **Architecture impact:** Submission package identity/version, external references, response evidence and safe retries; generated never means submitted/accepted.
+- **Owner / contributors:** Product owner; tax/pension professionals, MoR/POESSA/revenue authority, customer accountant.
+- **Dependencies / timing:** D11/D12; manual P1, electronic submission P2.
+
+### D22 — Accounting and business-system integrations
+
+- **Priority / status:** P2 — RESEARCH REQUIRED
+- **Decision question:** Which accounting, ERP, HR and attendance systems justify a maintained connector, and what remains export/import?
+- **Existing position:** Customers should be able to retain their existing accounting platform; no specific customer system or integration is approved.
+- **Options and consequences:** Standard exports are lower-cost but manual; generic APIs/webhooks automate but require version/support commitments; provider-specific connectors improve fit but multiply maintenance.
+- **Recommendation:** Start with reconciled standard exports and learn the pilot system mix; prioritize one connector only after repeated demand and verified provider access.
+- **Evidence / unknowns:** Pilot system inventory, account mapping, provider specs/sandbox, data ownership and reconciliation acceptance.
+- **Management approval:** Required before connector priority.
+- **Architecture impact:** Stable internal contracts, versioned exports, adapters and idempotent imports; avoid a generalized platform prematurely.
+- **Owner / contributors:** Product owner; accountants, customers, technical lead, vendors.
+- **Dependencies / timing:** D01/D11/D17; P2 after pilot evidence.
+
+### D23 — Voice and conversational interaction
+
+- **Priority / status:** P3 — DEFERRED
+- **Decision question:** Which tasks benefit from voice/conversation, in which languages, and under what confirmation controls?
+- **Existing position:** English, Amharic and existing Afaan Oromoo translations are targets; voice/conversation is proposed ambition only.
+- **Options and consequences:** No conversational layer minimizes risk; read-only assistance may improve explanations; preparing actions could reduce entry effort but adds transcription, ambiguity and privacy risks.
+- **Recommendation:** Defer until core workflows and language terminology are validated. If reopened, start read-only/draft preparation with user review and explicit confirmation before writes or high-impact actions.
+- **Evidence / unknowns:** User value, speech accuracy, language coverage, accessibility, data location/retention and threat model.
+- **Management approval:** Required before a voice/conversation feature.
+- **Architecture impact:** Authenticated, scoped tools; no privileged direct action; confirmation and audit of input/output.
+- **Owner / contributors:** Product owner; local-language users, accessibility, privacy/security and AI reviewers.
+- **Dependencies / timing:** D06/D13/D24; P3; reopen on measured workflow friction.
+
+### D24 — AI and workflow automation governance
+
+- **Priority / status:** P1 — PROPOSED
+- **Decision question:** Which administrative tasks may AI prepare/explain, and what actions must stay deterministic and human-authorized?
+- **Existing position:** Proposed ambition includes document extraction, explanations, anomaly detection and workflow support; no AI scope is approved for immediate delivery.
+- **Options and consequences:** No AI is simplest; bounded assistance can reduce clerical work but may err or expose data; action-taking AI adds high-impact control risk.
+- **Recommendation:** Allow only bounded assistive uses after privacy/security review. AI must not calculate statutory obligations, change legal parameters, approve payroll, authorize payment or submit returns. Require provenance, human review and audit.
+- **Evidence / unknowns:** Model/provider, data location/retention, threat model, accuracy/error evaluation, monitoring and fallback.
+- **Management approval:** Required before any AI feature.
+- **Architecture impact:** Separate deterministic calculator from AI; low-privilege tools, typed actions, provenance and confirmation; no unrestricted write access.
+- **Owner / contributors:** Product owner; technical/security lead, privacy counsel, payroll professionals, customers.
+- **Dependencies / timing:** D12/D13; governance P1 before any feature, AI implementation P3.
+
+### D25 — Integration and automation architecture
+
+- **Priority / status:** P1 — PROPOSED
+- **Decision question:** Which integration seams should be standardized now, and which provider connectors should wait for verified demand/access?
+- **Existing position:** Governance documents favor a narrow initial system and defer broad API/AI/multi-company scope; the proposed North Star favors integration readiness.
+- **Options and consequences:** Premature provider work risks rework; light internal contracts preserve options at modest cost; a generalized event platform/microservices add complexity before demonstrated need.
+- **Recommendation:** Propose only light seams: versioned payroll input/output contracts, idempotency, explicit external states, audit provenance and secure adapter boundaries. Defer public API, event platform and provider connectors until approved use cases.
+- **Evidence / unknowns:** Existing ADR compatibility, actual provider/customer demand, security and operating capacity; not resolved by this proposal.
+- **Management approval:** Product owner and technical lead approval; record material architecture choices in an ADR.
+- **Architecture impact:** Keep statutory calculation provider-independent; make callbacks/retries safe; never infer completion from request dispatch.
+- **Owner / contributors:** Product owner for scope; technical lead, security/operations, customers and provider representatives.
+- **Dependencies / timing:** D17/D20/D21/D22; P1 principles; implement only seams required by approved first-phase requirements.
+
 ## Decision categories and external approvals
 
 These categories clarify who can resolve an item; they do not replace the per-decision owners above.
 
 | Category | Decisions | Evidence/approval required |
 |---|---|---|
-| **A. Management decisions** | D01–D04, D06–D10, D14–D17 | Product owner records a chosen option, rationale, scope and reopening trigger. Market claims remain provisional until researched. |
-| **B. Customer research** | D01, D02, D05, D06, D09, D14, D15, D17 | Interview notes from actual business owners/accountants; distinguish stated interest from observed use and willingness to pay. |
-| **C. Legal/professional** | D08, D11–D13, D16; statutory rule approval in D12 | Written Ethiopian tax, pension, labour and privacy interpretation as applicable; current official sources/forms; bank/provider requirements. Do not infer law or authority procedure from code. |
-| **D. Technical/security evidence** | D02, D04, D07–D08, D13–D16 | Exact-SHA tenant/role tests, workflow/reconciliation evidence, safe payment-state transitions, backup/restore and data lifecycle evidence. |
-| **E. Deferrable** | D05 final price, expanded portfolio dashboard, offline processing, D17 integrations, wider language expansion | Defer only with the stated trigger. Deferral does not waive a pilot prerequisite such as safe data handling, accurate calculations or reliable recovery. |
+| **A. Management decisions** | D01–D25 for product scope, priorities, roles and gates | Record a chosen option, rationale, scope and reopening trigger. A management choice does not replace customer, professional, provider or technical proof. |
+| **B. Customer research** | D01–D02, D05–D06, D09, D14–D15, D17–D19, D22–D24 | Interview actual business owners/accountants/employees as relevant; distinguish stated interest from observed use and willingness to pay. |
+| **C. Legal/professional** | D08, D11–D13, D16, D18–D21, D24 | Obtain written Ethiopian tax, pension, labour, privacy and payment-role interpretation as applicable; current official sources/forms and provider requirements. Do not infer law or authority procedure from code. |
+| **D. Technical/security evidence** | D02, D04, D07–D08, D13–D16, D18–D25 | Exact-SHA tenant/role tests, calculation and workflow reconciliation, safe payment/submission states, backup/restore, data lifecycle and connector evidence. |
+| **E. Deferrable** | Final D05 pricing, portfolio cockpit, full offline processing, D17/D19/D20 provider connections, D21 electronic submission, D22 connectors, D23 voice, D24 AI features, generalized D25 integration platform, wider language expansion | Defer with a trigger. Deferral does not waive a pilot prerequisite such as safe data handling, accurate calculations or reliable recovery. |
 
 ## Pilot and release gates
 
@@ -324,7 +591,7 @@ Each stage requires a recorded go/no-go review. Passing a stage does not automat
 
 ## What can be decided now
 
-Management can approve the broad direction, a business-owned workspace as the proposed model, a one-business shadow followed by three businesses total, and the separation between payroll approval, payment-file preparation, actual bank execution, tax/pension submission and receipt reconciliation. These approvals still need to be recorded by the authorized product owner; this document proposes them but does not presume approval.
+Management can decide whether to endorse the proposed North Star and operating principle, choose the first segment to validate, confirm a bounded first-phase scope and approve distinct pilot gates. A business-owned workspace and staged file/manual handoff are proposals, not approved decisions. Any approval must be recorded by the authorized product owner; this document does not presume approval.
 
 ## Customer research required
 
@@ -350,6 +617,9 @@ These are recommendations for bounded engineering evidence, not authorization to
 6. Review pilot evidence before moving from one to three businesses, from three to commercial release, and from commercial release to ten-business adoption.
 
 ## Source notes
+
+- ETHIOPAYROLL_PRODUCT_NORTH_STAR.md, PROPOSED_PRODUCT_BASELINE_STRUCTURE.md, PRODUCT_INTEGRATION_ARCHITECTURE_PRINCIPLES.md, PHASE_0_EVIDENCE_AND_EXTERNAL_VALIDATION_REGISTER.md, PHASE_0_MANAGEMENT_APPROVAL_LIST.md and ETHIOPAYROLL_STAGED_DELIVERY_SEQUENCE.md are proposed companion documents created for this alignment; none records management approval or implementation.
+- The current source-control note in PLAN.md reconciles its dated 1 November PR #47 status with origin/main at f52330a; the earlier dated line is retained as history.
 
 - `PLAN.md` — current engineering priorities and parked ideas; item 3 status text requires reconciliation with the merge state recorded in Git.
 - `PRODUCT_GOVERNANCE.md`, `PRODUCT_GOVERNANCE_GUIDE.md`, `OPERATING_PRINCIPLES.md` — historical product direction and decision process; not a substitute for an approved baseline.

@@ -848,7 +848,7 @@ second review; Q1 is the PAYE-on-gross answer).
 ### Current product/documentation note — 2026-11-02
 
 - The dated 2026-11-01 note above says PR #47 was open at that time. Current checkout evidence is origin/main at f52330a, which contains the PR #47 merge. Keep the older statement as a historical snapshot.
-- Phase 0 North Star and D18–D25 alignment work is proposed documentation, not approved scope. Companion documents are being prepared on branch docs/phase-0-management-decisions, based on a59e730bb75985f17420ca2af32058c0dfac167d. No payroll code, schema, statutory calculation, production workflow or deployment changed. Record final verification and commit SHA after completing the documentation checks.
+- Phase 0 North Star and D18–D25 alignment work is proposed documentation, not approved scope. Companion documents are committed on docs/phase-0-management-decisions at 36959eaa7ac62e5249ee07a3f99694eeeb34b88b. No payroll code, schema, statutory calculation, production workflow or deployment changed. Documentation review: eight Markdown files checked for broken internal links, trailing whitespace and encoding markers; decision headings D01–D25 present; git diff --check passed. No application test suite was run because no application code changed.
 
 ## 2. Now
 
@@ -1232,4 +1232,4 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   (actual main head) to prevent a second Alembic head. Updated test
   `test_pg_pr8_reconciliation.py` HEAD constant to `h1334c2024a1`. PR #46
   ready for CI rerun.
-- 2026-11-02 — Codex — Reconciled the dated PR #47 status with origin/main at f52330a and prepared proposed Phase 0 North Star, decision alignment and evidence documentation on docs/phase-0-management-decisions. No application or production behavior changed; final documentation checks and commit SHA pending.
+- 2026-11-02 — Codex — Reconciled the dated PR #47 status with origin/main at f52330a and committed proposed Phase 0 North Star, D01–D25 alignment and evidence documentation as 36959eaa7ac62e5249ee07a3f99694eeeb34b88b on docs/phase-0-management-decisions. Documentation checks passed: eight Markdown files, all D01–D25 IDs, no broken internal links, trailing whitespace or encoding markers, and git diff --check. No application tests ran because application code did not change; no production behavior changed.

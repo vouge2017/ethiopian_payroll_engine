@@ -224,6 +224,7 @@ def create_app():
     # every call site (Phase 2), never in bulk.
     from .models import (
         ApiKey,
+        ApprovalIdempotency,
         Attendance,
         AuditLog,
         Employee,
@@ -241,6 +242,7 @@ def create_app():
         TenantQuery,
     )
 
+    TenantQuery.register_model(ApprovalIdempotency)
     TenantQuery.register_model(Employee)
     TenantQuery.register_model(PayrollRun)
     TenantQuery.register_model(AuditLog)

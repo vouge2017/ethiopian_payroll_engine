@@ -297,6 +297,131 @@ def test_concurrent_review_and_approval_have_one_effect(worksheet, monkeypatch):
         )
 
 
+def test_approval_idempotency_survives_process_cache_loss(worksheet, monkeypatch):
+    """A retry after a worker restart must recover the committed approval."""
+    from uuid import uuid4
+
+    from payroll_engine.idempotency import _LOCAL_CACHE
+
+    _app, client, _ids, engine, rid = saved_review(worksheet, monkeypatch)
+    headers = {'Idempotency-Key': str(uuid4())}
+    body = {'run_id': str(rid), 'password': 'Synthetic1!'}
+    assert client.post('/payroll/approve', data=body, headers=headers).status_code == 302
+    _LOCAL_CACHE.clear()
+    retry = client.post('/payroll/approve', data=body, headers=headers)
+    assert retry.headers.get('Idempotent-Replay') == 'true'
+    conflict = client.post('/payroll/approve', data={**body, 'run_id': str(rid + 1)}, headers=headers)
+    assert conflict.status_code == 422
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )
+
+
+def test_concurrent_same_key_approval_replays_once(worksheet, monkeypatch):
+    from threading import Barrier
+    from uuid import uuid4
+
+    add_loan(worksheet)
+    app, _, ids, engine, rid = saved_review(worksheet, monkeypatch)
+    barrier = Barrier(2)
+    key = str(uuid4())
+
+    def approve(_):
+        client = app.test_client()
+        with client.session_transaction() as session:
+            session['_user_id'] = str(ids['user'])
+            session['_fresh'] = True
+            session['active_company_id'] = ids['company']
+        barrier.wait(timeout=20)
+        return client.post(
+            '/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'}, headers={'Idempotency-Key': key}
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(approve, range(2)))
+    assert [response.status_code for response in responses] == [302, 302]
+    assert sum(response.headers.get('Idempotent-Replay') == 'true' for response in responses) == 1
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )
+        assert conn.execute(
+            text('SELECT remaining_balance FROM payroll_item_assignment WHERE company_id=:c'), {'c': ids['company']}
+        ).scalar_one() == Decimal('400')
+        assert (
+            conn.execute(
+                text('SELECT count(*) FROM approval_idempotency WHERE company_id=:c'), {'c': ids['company']}
+            ).scalar_one()
+            == 1
+        )
+
+
+def test_approval_replay_requires_current_password(worksheet, monkeypatch):
+    from uuid import uuid4
+
+    _app, client, _ids, _engine, rid = saved_review(worksheet, monkeypatch)
+    headers = {'Idempotency-Key': str(uuid4())}
+    assert (
+        client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'}, headers=headers).status_code
+        == 302
+    )
+    retry = client.post('/payroll/approve', data={'run_id': rid, 'password': 'incorrect'}, headers=headers)
+    assert retry.headers.get('Idempotent-Replay') is None
+    assert '/confirm' in retry.location
+
+
+def test_approval_key_does_not_replay_for_another_owner(worksheet, monkeypatch):
+    from uuid import uuid4
+
+    app, client, ids, _engine, rid = saved_review(worksheet, monkeypatch)
+    with app.app_context():
+        other = User(company_id=ids['company'], email=uuid4().hex + '@example.invalid', role='owner')
+        other.set_password('Synthetic1!')
+        db.session.add(other)
+        db.session.commit()
+        other_id = other.id
+    key = str(uuid4())
+    body = {'run_id': rid, 'password': 'Synthetic1!'}
+    assert client.post('/payroll/approve', data=body, headers={'Idempotency-Key': key}).status_code == 302
+    other_client = app.test_client()
+    with other_client.session_transaction() as session:
+        session['_user_id'] = str(other_id)
+        session['_fresh'] = True
+        session['active_company_id'] = ids['company']
+    assert other_client.post('/payroll/approve', data=body, headers={'Idempotency-Key': key}).status_code == 422
+
+
+def test_concurrent_same_key_different_payload_rejects_one(worksheet, monkeypatch):
+    from threading import Barrier
+    from uuid import uuid4
+
+    app, _, ids, engine, rid = saved_review(worksheet, monkeypatch)
+    barrier = Barrier(2)
+    key = str(uuid4())
+
+    def approve(note):
+        client = app.test_client()
+        with client.session_transaction() as session:
+            session['_user_id'] = str(ids['user'])
+            session['_fresh'] = True
+            session['active_company_id'] = ids['company']
+        barrier.wait(timeout=20)
+        return client.post(
+            '/payroll/approve',
+            data={'run_id': rid, 'password': 'Synthetic1!', 'reason_0': note},
+            headers={'Idempotency-Key': key},
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(approve, ('first', 'second')))
+    assert sorted(response.status_code for response in responses) == [302, 422]
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )
+
+
 def test_accountant_submits_and_owner_approves_preserved_amounts(worksheet, monkeypatch):
     app, client, ids, engine, rid = saved_review(worksheet, monkeypatch, bonus='900.50')
     with app.app_context():
@@ -386,6 +511,44 @@ def test_approval_audit_failure_rolls_back_money_and_retry_recovers(worksheet, m
         assert conn.execute(
             text('SELECT remaining_balance FROM payroll_item_assignment WHERE company_id=:c'), {'c': ids['company']}
         ).scalar_one() == Decimal('400')
+
+
+def test_approval_key_can_retry_after_transaction_failure(worksheet, monkeypatch):
+    """A failed transaction must not turn a same-key retry into a cached failure."""
+    from uuid import uuid4
+
+    from payroll_engine.services import payroll_service
+
+    add_loan(worksheet)
+    _app, client, ids, engine, rid = saved_review(worksheet, monkeypatch)
+    original = payroll_service.create_audit_log
+
+    def fail(*args, **kwargs):
+        raise RuntimeError('synthetic audit failure')
+
+    headers = {'Idempotency-Key': str(uuid4())}
+    body = {'run_id': str(rid), 'password': 'Synthetic1!'}
+    monkeypatch.setattr(payroll_service, 'create_audit_log', fail)
+    assert client.post('/payroll/approve', data=body, headers=headers).status_code == 302
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT status FROM payroll_run WHERE id=:id'), {'id': rid}).scalar_one() == 'review'
+        assert conn.execute(
+            text('SELECT remaining_balance FROM payroll_item_assignment WHERE company_id=:c'), {'c': ids['company']}
+        ).scalar_one() == Decimal('500')
+
+    monkeypatch.setattr(payroll_service, 'create_audit_log', original)
+    retry = client.post('/payroll/approve', data=body, headers=headers)
+    assert retry.status_code == 302
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT status FROM payroll_run WHERE id=:id'), {'id': rid}).scalar_one() == 'completed'
+        )
+        assert conn.execute(
+            text('SELECT remaining_balance FROM payroll_item_assignment WHERE company_id=:c'), {'c': ids['company']}
+        ).scalar_one() == Decimal('400')
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )
 
 
 def test_queue_failure_preserves_approved_money_and_retry(worksheet, monkeypatch):

@@ -968,6 +968,21 @@ class EmployeeAllowance(db.Model):
         return f'<EmployeeAllowance {self.allowance_type} {self.amount} for employee {self.employee_id}>'
 
 
+class ApprovalIdempotency(db.Model):
+    """A successful approval key, committed with the payroll effects."""
+
+    query_class = TenantQuery
+    __tablename__ = 'approval_idempotency'
+    __table_args__ = (db.UniqueConstraint('company_id', 'key_digest', name='uq_approval_idempotency_company_key'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id', ondelete='CASCADE'), nullable=False)
+    key_digest = db.Column(db.String(64), nullable=False)
+    payload_digest = db.Column(db.String(64), nullable=False)
+
+
 class PayrollRun(db.Model):
     query_class = TenantQuery
 

@@ -16,6 +16,7 @@ import pytest
 
 from payroll_engine import create_app, db
 from payroll_engine.models import (
+    ApprovalIdempotency,
     Company,
     Employee,
     EmployeeAllowance,
@@ -62,6 +63,7 @@ def two_companies(app):
 
 # Models that MUST raise on unfiltered terminal query.
 UNFILTERED_MODELS = [
+    ApprovalIdempotency,
     EmployeeAllowance,
     FinalSettlement,
     Leave,

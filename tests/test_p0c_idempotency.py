@@ -160,6 +160,27 @@ def test_same_key_different_body_returns_422(app):
     assert body['error'] == 'Idempotency-Key reuse with different payload'
 
 
+def test_reused_form_key_with_changed_payload_is_rejected_after_form_parsing(app):
+    """Middleware such as CSRF may parse a form before the decorator runs."""
+    from flask import request
+
+    @app.before_request
+    def parse_form_first():
+        if request.path == '/_test_form_idem':
+            request.form.get('csrf_token')
+
+    @app.route('/_test_form_idem', methods=['POST'])
+    @idempotent
+    def view():
+        return 'processed', 200
+
+    client = app.test_client()
+    first = client.post('/_test_form_idem', data={'idempotency_key': 'form-key', 'run_id': '1'})
+    second = client.post('/_test_form_idem', data={'idempotency_key': 'form-key', 'run_id': '2'})
+    assert first.status_code == 200
+    assert second.status_code == 422
+
+
 def test_idempotency_decorator_does_not_break_redirect(app):
     """PRG redirect responses (302) are also cached and replayed correctly."""
     from flask import redirect

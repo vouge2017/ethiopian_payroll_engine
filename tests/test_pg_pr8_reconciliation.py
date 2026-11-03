@@ -16,7 +16,7 @@ FEATURE_HEAD = 'f4a5b6c7d8f0'
 MAIN_HEAD = 'a9b8c7d6e5f4'
 COMPLIANCE_HEAD = 'zz1a2b3c4d5e'
 MERGE_HEAD = 'f4a5b6c7d8f1'
-HEAD = 'h1334c2024a1'
+HEAD = 'j20261103a01'
 
 
 @pytest.fixture
@@ -198,3 +198,27 @@ def test_downgrade_preserves_populated_support_history(database):
     with engine.connect() as conn:
         assert conn.execute(sa.text('SELECT version_num FROM alembic_version')).scalar_one() == HEAD
         assert conn.execute(sa.text('SELECT ticket_code FROM support_ticket')).scalar_one() == 'SYNTHETIC-KEEP'
+
+
+def test_approval_retry_history_blocks_downgrade(database):
+    engine, cfg = database
+    command.upgrade(cfg, 'head')
+    company = seed_payroll(engine)
+    with engine.begin() as conn:
+        user = conn.execute(
+            sa.text('INSERT INTO "user" (company_id, password_hash, role) VALUES (:c, :p, :r) RETURNING id'),
+            {'c': company, 'p': 'synthetic-hash', 'r': 'owner'},
+        ).scalar_one()
+        run = conn.execute(sa.text('SELECT id FROM payroll_run WHERE company_id=:c'), {'c': company}).scalar_one()
+        conn.execute(
+            sa.text(
+                'INSERT INTO approval_idempotency (company_id, user_id, payroll_run_id, key_digest, payload_digest) '
+                'VALUES (:c, :u, :r, :k, :p)'
+            ),
+            {'c': company, 'u': user, 'r': run, 'k': 'a' * 64, 'p': 'b' * 64},
+        )
+    with pytest.raises(RuntimeError, match='approval retry records exist'):
+        command.downgrade(cfg, 'h1334c2024a1')
+    with engine.connect() as conn:
+        assert conn.execute(sa.text('SELECT version_num FROM alembic_version')).scalar_one() == HEAD
+        assert conn.execute(sa.text('SELECT count(*) FROM approval_idempotency')).scalar_one() == 1

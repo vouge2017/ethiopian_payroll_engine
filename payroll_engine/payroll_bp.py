@@ -955,7 +955,6 @@ def reject_payroll(run_id):
 @login_required
 @role_required('owner')
 @limiter.limit('10 per minute')
-@idempotent
 def approve_payroll():
     """
     Approve a payroll run and process it.
@@ -981,8 +980,23 @@ def approve_payroll():
             flash('Invalid MFA code. Approval cancelled.', 'danger')
             return redirect(url_for('payroll.payroll_confirm', run_id=int(run_id)))
 
+    from payroll_engine.approval_idempotency import approval_identity, approval_replay, claim_approval, find_approval
+
+    try:
+        identity = approval_identity()
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Idempotency key is too long'}), 400
+    record = find_approval(identity, _company_id())
+    if record is not None:
+        return approval_replay(record, identity, current_user.id)
+
     # SELECT ... FOR UPDATE — prevents double-approval on concurrent requests
     run = PayrollRun.query.filter_by(id=int(run_id), company_id=_company_id()).with_for_update().first_or_404()
+
+    # A concurrent request may have committed while we waited for this run.
+    record = find_approval(identity, _company_id())
+    if record is not None:
+        return approval_replay(record, identity, current_user.id)
 
     if run.status not in ('review', 'pending_approval'):
         flash('This payroll run is not ready for approval.', 'danger')
@@ -1008,6 +1022,11 @@ def approve_payroll():
         db.session.commit()
         flash('Payroll submitted for owner approval.', 'success')
         return redirect(url_for('payroll.payroll_runs'))
+
+    # The unique reservation and all payroll effects commit or roll back together.
+    record = claim_approval(identity, _company_id(), current_user.id, run.id)
+    if record is not None:
+        return approval_replay(record, identity, current_user.id)
 
     # Handle FLAG overrides and check BLOCKs
     form_data = dict(request.form)

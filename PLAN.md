@@ -7,6 +7,27 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Product execution slice (2026-11-03)
+
+- On isolated branch `feat/monthly-payroll-product`, based on `origin/main`
+  `48c6f99234a43ff503e75b087964fec9d2b435e6`. Commit
+  `006eea7e012d49f60e368fd5006b445bb99c2fc8` hardens the Quick Start employee
+  import preview: pasted names and validation messages are rendered as text,
+  not executable HTML. Added a regression test and a localhost-only synthetic
+  Playwright journey; no payroll formula, schema or production workflow changed.
+- Checks: Quick Start focused tests **17 passed, 5 warnings in 51.57s**;
+  PostgreSQL monthly workflow selection **48 passed, 107 warnings in 131.49s**;
+  local browser journey passed through company setup, bulk employee import,
+  XSS preview, missing bank/TIN review, employee correction and review refresh,
+  owner approval, payslip PDF download and bank-instruction CSV generation
+  (synthetic run 47). Ruff, Node syntax and `git diff --check` passed.
+- Full suite on this code/test revision: **1,915 passed, 12 failed, 3 errors,
+  235 skipped**. Failures include unchanged Windows CP1252 decoding tests,
+  legal-catalog assertions and three runner timeouts; see session evidence.
+  PostgreSQL tests were separately run against a disposable local PG 16
+  database. This is local synthetic evidence only: no real payroll, filing,
+  payment, practitioner acceptance, hosted CI or deployment is claimed.
+
 ### Item 3: monthly workflow review (2026-10-31, review findings recorded)
 
 - Branch `review/monthly-workflow` was based on `b25931ffdaa53e6fafebcedc95ee467d3487def0` (PR #45 merge). Current `origin/main` at `7df250de03929b3bb39ed05dfad343c3923272a5` (PR #46 merge) is integrated by commit `4235487`; the only conflict was `PLAN.md`, which now retains both item 3 evidence and the merged holiday-calendar status.
@@ -1068,6 +1089,14 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-03 — Codex — On `feat/monthly-payroll-product`, fixed unsafe HTML
+  rendering in Quick Start employee import preview and added regression and
+  localhost browser coverage. Commit `006eea7e012d49f60e368fd5006b445bb99c2fc8`;
+  17 focused tests passed, 48 PostgreSQL workflow tests passed, and synthetic
+  browser flow passed through review refresh, approval and output generation.
+  Full suite remains at 1,915 passed / 12 failed / 3 errors / 235 skipped with
+  the recorded unrelated failures. No merge or deployment.
 
 - 2026-11-01 — Codex — Integrated current `origin/main` (`7df250d`) into `review/monthly-workflow` with merge commit `4235487`, resolving the sole PR #47 conflict in `PLAN.md` and retaining the merged holiday-calendar status. Post-integration focused tests: 28 passed, 4 warnings; Ruff and diff check passed. Full-suite CP1252 failures remain documented from the pre-integration run; exact-SHA hosted CI is pending.
 - 2026-11-01 — Codex — Investigated PR #47 lint failure at `27e48e4`: `ruff check` passed, `ruff format --check` identified two lines in the monthly-workflow service/test file. Formatted both; full-repository lint and format checks pass and post-integration focused tests pass (28). Push an update and verify CI at the new SHA.

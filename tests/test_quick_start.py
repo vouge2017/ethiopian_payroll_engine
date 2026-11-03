@@ -2,6 +2,7 @@
 
 import os
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -66,6 +67,17 @@ def test_quick_start_page_loads(app, company_user, client):
     resp = client.get('/quick-start')
     assert resp.status_code == 200
     assert b'Quick Start' in resp.data
+
+
+def test_preview_inserts_untrusted_employee_values_as_text():
+    """Pasted employee data must never become executable preview markup."""
+    template = Path(__file__).resolve().parents[1] / 'payroll_engine' / 'templates' / 'quick_start.html'
+    source = template.read_text(encoding='utf-8')
+
+    assert 'cell.textContent = String(value)' in source
+    assert 'item.textContent = error' in source
+    assert 'tr.innerHTML =' not in source
+    assert "document.getElementById('error-list').innerHTML" not in source
 
 
 def test_import_employees_json(app, company_user, client):

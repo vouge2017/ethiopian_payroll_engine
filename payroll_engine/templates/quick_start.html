@@ -297,11 +297,15 @@ function parseDataFromText(rawText) {
 
     // Show preview
     const tbody = document.getElementById('preview-body');
-    tbody.innerHTML = '';
+    tbody.replaceChildren();
     parsedEmployees.forEach((emp, i) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${i + 1}</td><td>${emp.name}</td><td>${emp.phone || '—'}</td><td>${emp.salary.toLocaleString()}</td>`;
-        tbody.appendChild(tr);
+        const row = document.createElement('tr');
+        [i + 1, emp.name, emp.phone || '—', emp.salary.toLocaleString()].forEach(value => {
+            const cell = document.createElement('td');
+            cell.textContent = String(value);
+            row.appendChild(cell);
+        });
+        tbody.appendChild(row);
     });
 
     // Show errors if any
@@ -309,7 +313,13 @@ function parseDataFromText(rawText) {
     if (errors.length > 0) {
         errDiv.style.display = 'block';
         document.getElementById('error-count').textContent = `${errors.length} row(s) skipped:`;
-        document.getElementById('error-list').innerHTML = errors.map(e => `<li>${e}</li>`).join('');
+        const errorList = document.getElementById('error-list');
+        errorList.replaceChildren();
+        errors.forEach(error => {
+            const item = document.createElement('li');
+            item.textContent = error;
+            errorList.appendChild(item);
+        });
     } else {
         errDiv.style.display = 'none';
     }

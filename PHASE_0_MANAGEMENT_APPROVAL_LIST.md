@@ -1,7 +1,7 @@
 # Phase 0 Management Approval List
 
 **Status:** Approval agenda — no approvals recorded
-**Prepared:** 2 November 2026
+**Prepared:** 2 November 2026; reconciled 3 November 2026
 
 This list separates founder/management choices from evidence supplied by customers, qualified professionals, providers and the technical team. A management approval cannot substitute for law, provider permission, customer validation or technical proof.
 
@@ -13,12 +13,16 @@ This list separates founder/management choices from evidence supplied by custome
 | M02 | Which initial buyer/customer segment to validate and what evidence is sufficient to select a pilot profile. | Before Product Baseline approval | OPEN |
 | M03 | Whether business-owned workspace with optional company-scoped accountant access is the proposed starting account model. | Before account/permission requirements | PROPOSED |
 | M04 | Which first-release workflows are in baseline and which are explicitly deferred: attendance capture, employee self-service depth, connectors, voice/AI, direct payment and authority submission. | Before requirements approval | OPEN |
-| M05 | Whether a one-person approval path is allowed for a business that chooses it and what evidence must be retained; define maker-checker as configurable policy. | Before approval requirements | PROPOSED |
+| M05 | Confirm first-release approval boundary. Proposed default: retain ADR-011’s single-level business-owner approval unchanged; keep configurable maker-checker as a future option requiring separate approval and an ADR if adopted. | Before approval requirements | PROPOSED — NOT APPROVED |
 | M06 | Approve distinct validation gates: synthetic → one supervised parallel business → three controlled businesses → separate commercial release → ten-business milestone. | Before pilot recruitment | PROPOSED |
 | M07 | Assign product/legal/technical rule ownership and require written qualified review for unresolved statutory interpretation. | Before real payroll reliance | OPEN |
 | M08 | Set a stop/go authority and evidence bar for real employee data, payment initiation or statutory filing. | Before any real-data pilot/external action | OPEN |
 | M09 | Decide whether and when to authorize pricing tests, customer interviews and provider discussions/spending. | Before commercial discovery commitments | OPEN |
 | M10 | Approve the proposed baseline structure and change-control rules. | Before drafting approved baseline | OPEN |
+
+## Governance hierarchy decision
+
+For current engineering task and permitted work, follow `PLAN.md` → “2. Now” and current explicit owner instructions, within `AGENTS.md`. The July 2026 governance/operating documents and `EXECUTIVE_DIRECTIVE.md` remain preserved as stated governance records; this checkout did not include a separate approval receipt sufficient to resolve their authority against `PROJECT_RULES.md`. The owner’s explicit Phase 0 request authorizes this documentation task only. It does not repeal “Nothing else until pilot is running,” amend an ADR, or approve a broader implementation scope. Management must record the effective authority and any superseding document before applying a changed rule prospectively.
 
 ## Evidence decisions cannot replace
 
@@ -33,9 +37,11 @@ For each decision record: Decision ID; selected option; rationale; approver role
 
 ## Proposed approval sequence
 
-1. M01: endorse, revise or reject the North Star and operating principle.
+1. M01: endorse, revise or reject the proposed North Star and operating principle; endorsement does not approve its listed features.
 2. M02/M03: choose the first segment to validate and provisional business/accountant operating model.
-3. M04/M05: lock bounded first-phase requirements and approval responsibility.
+3. M04/M05: select bounded first-phase scope and confirm the D07/ADR-011 boundary without amending ADR-011 silently.
 4. M06/M07/M08: approve pilot gates, legal/calculation governance and explicit real-data/transaction stop gates.
 5. Obtain customer, professional, provider and technical evidence before M08 can authorize a real-data pilot.
 6. Approve the baseline only after evidence is reflected; approve each roadmap release separately.
+
+The first baseline must resolve or explicitly constrain D01–D04, D06–D16 and the D17 manual handoff boundary. Direct connectors, electronic submission, attendance capture, voice, AI features and public APIs may remain deferred as specified in the decision register. A management choice cannot replace customer, legal, provider or technical evidence.

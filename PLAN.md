@@ -848,7 +848,7 @@ second review; Q1 is the PAYE-on-gross answer).
 ### Current product/documentation note — 2026-11-02
 
 - The dated 2026-11-01 note above says PR #47 was open at that time. Current checkout evidence is origin/main at f52330a, which contains the PR #47 merge. Keep the older statement as a historical snapshot.
-- Phase 0 North Star and D18–D25 alignment work is proposed documentation, not approved scope. Companion documents are committed on docs/phase-0-management-decisions at 36959eaa7ac62e5249ee07a3f99694eeeb34b88b. No payroll code, schema, statutory calculation, production workflow or deployment changed. Documentation review: eight Markdown files checked for broken internal links, trailing whitespace and encoding markers; decision headings D01–D25 present; git diff --check passed. No application test suite was run because no application code changed.
+- 2026-11-03 Phase 0 reconciliation: documentation-only work on `docs/phase-0-management-decisions`, starting from reviewed HEAD `071e0097a268d25d3b05c9ba40e4ae007a7dc594`. Consolidates D01–D25, preserves the prior register as history, keeps the North Star proposed, records governance/ADR dispositions, adds blank requirement traceability, improves source provenance, strengthens Gate 1 and adds a management-readiness report. No payroll code, schema, statutory calculation, production workflow, deployment or ADR changed. `git diff --check`, internal-link and decision-ID/history checks passed. Full `run_tests.py --continue` was attempted with the isolated test configuration but did not complete: the first attempt hit a console-encoding error; UTF-8 rerun timed out at `test_analytics.py` and was stopped at file 9/191. No suite-wide total is claimed. Final branch SHA is in the handoff.
 
 ## 2. Now
 
@@ -1073,6 +1073,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-03 — Codex — Reconciled Phase 0 decision register and supporting strategy/evidence documents on `docs/phase-0-management-decisions`, based on reviewed start SHA `071e0097a268d25d3b05c9ba40e4ae007a7dc594`. Preserved prior register in a dated history file. Documentation checks passed; full suite was attempted but stopped after the per-file timeout at `test_analytics.py`, file 8/191. No suite-wide result. Final branch SHA is in the handoff.
 
 - 2026-11-01 — Codex — Integrated current `origin/main` (`7df250d`) into `review/monthly-workflow` with merge commit `4235487`, resolving the sole PR #47 conflict in `PLAN.md` and retaining the merged holiday-calendar status. Post-integration focused tests: 28 passed, 4 warnings; Ruff and diff check passed. Full-suite CP1252 failures remain documented from the pre-integration run; exact-SHA hosted CI is pending.
 - 2026-11-01 — Codex — Investigated PR #47 lint failure at `27e48e4`: `ruff check` passed, `ruff format --check` identified two lines in the monthly-workflow service/test file. Formatted both; full-repository lint and format checks pass and post-integration focused tests pass (28). Push an update and verify CI at the new SHA.

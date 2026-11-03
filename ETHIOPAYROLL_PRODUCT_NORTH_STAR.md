@@ -1,7 +1,7 @@
 # EthioPayroll — Product North Star
 
 **Status:** Proposed management direction — not formally approved
-**Prepared:** 2 November 2026
+**Prepared:** 2 November 2026; reconciled 3 November 2026
 **Purpose:** Describe the long-term product ambition without changing approved engineering scope or claiming current capability.
 
 ## Proposed North Star
@@ -35,6 +35,8 @@ This horizon is an ambition inventory, not an approved requirements list or stat
 | Integration foundation | Use secure APIs, webhooks and provider adapters as useful boundaries for banks, attendance, accounting and government systems. | Do not assume any specific API is accessible or authorized. Avoid generalized integration infrastructure before validated demand. |
 | Reliability and auditability | Provide durable saving, synchronization, recovery, access control and evidence of material actions. | Define and test recovery behavior before real customer data or transactions. |
 
+The lifecycle includes employee onboarding, approved employment changes, work/time inputs, payroll, outputs, payment and filing handoffs, reconciliation, employee access and portable records. It is a direction for future product decisions; no listed integration or operational capability is implied by this statement.
+
 ## Product boundaries
 
 - EthioPayroll is intended to be an Ethiopian payroll and workforce-compliance operating platform, not a general ERP.
@@ -53,9 +55,10 @@ This horizon is an ambition inventory, not an approved requirements list or stat
 6. **Account verification clarity:** distinguish syntax/format checks from provider confirmation of account or account-holder identity.
 7. **Integration readiness without provider claims:** design small seams where requirements justify them; obtain provider documentation, access, terms and test acceptance before promising a connector.
 8. **No unsupported regulation:** do not act as a payment provider or hold customer funds without a written legal/provider assessment and required authorization.
+9. **AI governance before release:** assign accountable product, technical/security and privacy roles for model/provider selection, evaluation, error monitoring, incident handling and model/prompt/tool changes before releasing any AI feature. Each feature still needs separate product approval. AI never determines statutory rules or performs privileged approval/payment/submission actions.
 
 ## Approval and change control
 
-Management must record whether it accepts, changes or rejects this North Star and the proposed operating principle. Approval does not automatically make every listed capability part of the Product Baseline. Each capability must separately enter the baseline through customer evidence, legal/provider feasibility, technical architecture review, capacity and an explicit release decision.
+Management must record whether it accepts, changes or rejects this North Star and the proposed operating principle. No approval is recorded in this document. Approval does not automatically make every listed capability part of the Product Baseline. Each capability must separately enter the baseline through customer evidence, legal/provider feasibility, technical architecture review, capacity and an explicit release decision. The North Star does not change `PLAN.md` or the active engineering scope.
 
 **Related controlled documents:** PHASE_0_MANAGEMENT_DECISION_REGISTER.md, PROPOSED_PRODUCT_BASELINE_STRUCTURE.md, PRODUCT_INTEGRATION_ARCHITECTURE_PRINCIPLES.md, and ETHIOPAYROLL_STAGED_DELIVERY_SEQUENCE.md.

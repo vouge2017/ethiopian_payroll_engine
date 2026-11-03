@@ -1,7 +1,7 @@
 # Phase 0 Management Readiness Report
 
-**Review date:** 3 November 2026  
-**Starting revision:** `071e0097a268d25d3b05c9ba40e4ae007a7dc594` on `docs/phase-0-management-decisions`  
+**Review date:** 3 November 2026
+**Starting revision:** `071e0097a268d25d3b05c9ba40e4ae007a7dc594` on `docs/phase-0-management-decisions`
 **Scope:** Documentation governance only. No payroll code, schema, production behavior, deployment or ADR was changed.
 
 ## Executive finding

@@ -9,6 +9,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Session A: monthly journey and legacy undo (2026-11-05)
 
+- Session A stopped at the PAYE workbook download on tested code revision `94f74337415231984511f70f198cf6f2b4de4083`: the Playwright selector matched two links and strict-mode click failed. Normal browser steps completed through synthetic company and employee setup, review, approval and payslip download for run 1, November 2026. No further browser actions were substituted. PAYE/pension workbooks, accounting, bank instruction and audit review are not tested in this journey. Browser screenshots, logs, payslip, reconciliation and founder observation sheet are in `output/monthly-journey-session-a/`. Read-only diagnosis of the approved run: gross/taxable 12,000, PAYE 2,250, employee pension 700, employer pension 1,100, net 9,050 ETB; extracted payslip values match the relevant figures. PDF visual review was not completed. The full SQLite suite was not run because Session A requires the browser journey to complete first. Founder usability readiness is not established.
 - Starting revision `8b3c5799998a7338f6b9c275b1371e7850fcd25f` was independently verified on the remote feature branch. Its original checkout contained 2,198 untracked prior-evidence and disposable-database files; they were preserved. A clean local clone on `feat/monthly-payroll-product` was created for Session A.
 - A synthetic PostgreSQL regression reproduced unsafe legacy undo: after a 100 loan recovery the balance was 400, but undo reset the run to review and deleted its payslip while leaving the balance at 400. Undo is now explicitly unavailable for legacy completed runs because safe reversal cannot be reconstructed; the owner is directed to corrections and approved facts remain intact. Spreadsheet undo was already restricted. PostgreSQL focused selection: **36 passed, 90 warnings in 155.91s**; SQLite focused selection: **55 passed, 4 warnings in 13.63s**. Browser journey and final full suite are pending.
 
@@ -1118,6 +1119,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-05 — Codex — Session A: verified remote `8b3c579`, preserved the original dirty checkout and used a clean clone. Reproduced and restricted unsafe legacy undo; focused PostgreSQL and SQLite checks passed. Browser journey on `94f7433` stopped at an ambiguous PAYE download selector after successful approval and payslip download; remaining outputs and full suite not tested. No deployment or real data.
 
 - 2026-11-05 — Codex — Implemented session-stable approval keys, reviewed-version checking and migration, visible rollback/recovery outcomes, and legacy retry/post-commit notification timing. Synthetic browser interruption and one-employee output reconciliation passed; PostgreSQL selections and full SQLite suite passed as recorded in Status. Legacy undo, delivery durability and versionless clients remain open; no deployment or real data.
 

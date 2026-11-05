@@ -94,8 +94,8 @@ def _create_completed_run(app, company_id, user_id, approved_minutes_ago=30):
         return run.id
 
 
-def test_undo_within_1_hour(app, company_user, client):
-    """Can undo approval within 1 hour."""
+def test_undo_within_1_hour_is_restricted(app, company_user, client):
+    """Legacy approval remains intact until safe reversal is available."""
     cid, uid = company_user
     run_id = _create_completed_run(app, cid, uid, approved_minutes_ago=30)
 
@@ -105,9 +105,10 @@ def test_undo_within_1_hour(app, company_user, client):
 
     with app.app_context():
         run = db.session.get(PayrollRun, run_id)
-        assert run.status == 'review'
-        assert run.approved_by is None
-        assert run.approved_at is None
+        assert run.status == 'completed'
+        assert run.approved_by == uid
+        assert run.approved_at is not None
+    assert b'Undo is unavailable' in resp.data
 
 
 def test_undo_after_1_hour_blocked(app, company_user, client):
@@ -141,8 +142,8 @@ def test_undo_blocked_if_disbursed(app, company_user, client):
     assert b'Cannot undo' in resp.data or b'disbursement' in resp.data
 
 
-def test_undo_deletes_payslips(app, company_user, client):
-    """Undo deletes associated payslips."""
+def test_undo_preserves_payslips(app, company_user, client):
+    """The restricted operation preserves the approved payslip."""
     cid, uid = company_user
     run_id = _create_completed_run(app, cid, uid, approved_minutes_ago=10)
 
@@ -152,11 +153,11 @@ def test_undo_deletes_payslips(app, company_user, client):
 
     with app.app_context():
         payslips = Payslip.query.filter_by(payroll_run_id=run_id, company_id=cid).all()
-        assert len(payslips) == 0
+        assert len(payslips) == 1
 
 
-def test_undo_creates_audit_log(app, company_user, client):
-    """Undo creates an audit log entry."""
+def test_restricted_undo_does_not_record_a_false_reversal(app, company_user, client):
+    """A refused undo must not claim a reversal was performed."""
     cid, uid = company_user
     run_id = _create_completed_run(app, cid, uid, approved_minutes_ago=10)
 
@@ -166,8 +167,7 @@ def test_undo_creates_audit_log(app, company_user, client):
 
     with app.app_context():
         log = AuditLog.query.filter_by(company_id=cid, action='payroll_approval_undone').first()
-        assert log is not None
-        assert log.details['run_id'] == run_id
+        assert log is None
 
 
 def test_undo_only_completed_runs(app, company_user, client):

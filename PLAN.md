@@ -7,6 +7,11 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Session A: monthly journey and legacy undo (2026-11-05)
+
+- Starting revision `8b3c5799998a7338f6b9c275b1371e7850fcd25f` was independently verified on the remote feature branch. Its original checkout contained 2,198 untracked prior-evidence and disposable-database files; they were preserved. A clean local clone on `feat/monthly-payroll-product` was created for Session A.
+- A synthetic PostgreSQL regression reproduced unsafe legacy undo: after a 100 loan recovery the balance was 400, but undo reset the run to review and deleted its payslip while leaving the balance at 400. Undo is now explicitly unavailable for legacy completed runs because safe reversal cannot be reconstructed; the owner is directed to corrections and approved facts remain intact. Spreadsheet undo was already restricted. PostgreSQL focused selection: **36 passed, 90 warnings in 155.91s**; SQLite focused selection: **55 passed, 4 warnings in 13.63s**. Browser journey and final full suite are pending.
+
 ### Monthly approval delivery checkpoint (2026-11-04)
 
 - Status 2026-11-05: implemented and locally tested on `feat/monthly-payroll-product` in the commit containing this entry, based on `da53110b6a994d4028897ab69055438da300351d`; not hosted-tested, merged, deployed or practitioner-accepted. Full SQLite suite: **2024 passed, 250 skipped, 66 warnings in 31777.61s (8:49:37)**; date-sensitive tests ran first and the runner experienced a long interruption. Focused PostgreSQL selection: **58 passed, 137 warnings in 119.00s**; later approval/notification selection **59 passed, 64 warnings in 92.74s**; final form-key reconciliation **1 passed, 8 warnings in 6.98s**. The latter selections preceded the final visible failure-message adjustment, which was subsequently exercised in the browser. Migration head `k20261104a01`; source preflight, Ruff and diff checks passed.

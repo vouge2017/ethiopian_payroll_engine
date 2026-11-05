@@ -39,7 +39,6 @@ from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
 from payroll_engine.idempotency import idempotent
 from payroll_engine.models import (
-    AuditLog,
     Company,
     Employee,
     OvertimeEntry,
@@ -1139,7 +1138,7 @@ def approve_payroll():
 @login_required
 @role_required('owner')
 def undo_approval(run_id):
-    """Undo payroll approval within 1 hour. Only if disbursement hasn't started."""
+    """Explain why the existing approval cannot be safely undone."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).with_for_update().first_or_404()
 
     if run.source == 'spreadsheet':
@@ -1178,43 +1177,12 @@ def undo_approval(run_id):
         )
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    # Undo: delete payslips and their PDFs, revert to review
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
-    for ps in payslips:
-        if ps.pdf_file_path and os.path.exists(ps.pdf_file_path):
-            with contextlib.suppress(OSError):
-                os.remove(ps.pdf_file_path)
-        db.session.delete(ps)
-
-    # Delete draft
-    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
-    if draft:
-        db.session.delete(draft)
-
-    # Revert run
-    run.status = 'review'
-    run.approved_by = None
-    run.approved_at = None
-    run.disbursement_status = 'pending'
-    run.disbursed_at = None
-    run.disbursed_by = None
-
-    # Audit log
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='payroll_approval_undone',
-        details={
-            'run_id': run.id,
-            'reference': run.reference,
-            'payslips_deleted': len(payslips),
-        },
+    # Legacy approvals do not retain enough movement provenance or a draft to
+    # reverse deductions safely. Keep the approved facts and use corrections.
+    flash(
+        'Undo is unavailable because consumed balances cannot be restored safely. Review payroll corrections.',
+        'warning',
     )
-    db.session.add(log)
-    db.session.commit()
-    trust_cache.invalidate_trust_cache(_company_id())
-
-    flash(f'Payroll {run.reference} undone. {len(payslips)} payslips deleted. Status reverted to review.', 'success')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 

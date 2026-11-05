@@ -3,6 +3,12 @@
 {% block content %}
 
 <div class="p-4 p-md-5">
+    {% if run.status in ('completed', 'locked') and run.approved_at %}
+    <div class="alert alert-success" role="status">
+        This payroll was already approved. The amounts below are the approved results.
+        {% if run.disbursement_status == 'pending' %}Payment is still pending.{% endif %}
+    </div>
+    {% endif %}
     {% if pending_paye_notice() %}
     <div class="alert alert-warning py-2 small">{{ pending_paye_notice_text }}</div>
     {% endif %}

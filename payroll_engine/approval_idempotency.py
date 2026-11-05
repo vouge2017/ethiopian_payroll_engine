@@ -43,7 +43,7 @@ def approval_replay(record, identity, user_id):
     return response
 
 
-def claim_approval(identity, company_id, user_id, run_id):
+def claim_approval(identity, company_id, user_id, run_id, reviewed_version):
     """Reserve a key in the caller's transaction, or return the winning record."""
     if identity is None:
         return None
@@ -53,6 +53,7 @@ def claim_approval(identity, company_id, user_id, run_id):
                 company_id=company_id,
                 user_id=user_id,
                 payroll_run_id=run_id,
+                reviewed_version=reviewed_version,
                 key_digest=identity[0],
                 payload_digest=identity[1],
             )

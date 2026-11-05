@@ -979,6 +979,7 @@ class ApprovalIdempotency(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     payroll_run_id = db.Column(db.Integer, db.ForeignKey('payroll_run.id', ondelete='CASCADE'), nullable=False)
+    reviewed_version = db.Column(db.Integer, nullable=True)
     key_digest = db.Column(db.String(64), nullable=False)
     payload_digest = db.Column(db.String(64), nullable=False)
 

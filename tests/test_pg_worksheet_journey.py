@@ -297,6 +297,80 @@ def test_concurrent_review_and_approval_have_one_effect(worksheet, monkeypatch):
         )
 
 
+def test_confirmation_form_key_replays_after_cache_loss(worksheet, monkeypatch):
+    import re
+    from uuid import UUID
+
+    from payroll_engine.idempotency import _LOCAL_CACHE
+
+    _app, client, _ids, engine, rid = saved_review(worksheet, monkeypatch)
+    page = client.get(f'/payroll/{rid}/confirm').get_data(as_text=True)
+    key = re.search(r'name="idempotency_key" value="([^"]+)"', page).group(1)
+    assert str(UUID(key)) == key
+    second_page = client.get(f'/payroll/{rid}/confirm').get_data(as_text=True)
+    assert key == re.search(r'name="idempotency_key" value="([^"]+)"', second_page).group(1)
+    version = re.search(r'name="run_version" value="([^"]+)"', page).group(1)
+    body = {'run_id': str(rid), 'password': 'Synthetic1!', 'idempotency_key': key, 'run_version': version}
+    first = client.post('/payroll/approve', data=body)
+    _LOCAL_CACHE.clear()
+    replay = client.post('/payroll/approve', data=body)
+    assert first.status_code == replay.status_code == 302
+    assert replay.headers.get('Idempotent-Replay') == 'true'
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )
+        assert conn.execute(
+            text('SELECT reviewed_version FROM approval_idempotency WHERE payroll_run_id=:id'), {'id': rid}
+        ).scalar_one() == int(version)
+
+
+def test_stale_confirmation_cannot_approve_refreshed_review(worksheet, monkeypatch):
+    import re
+
+    _app, client, _ids, engine, rid = saved_review(worksheet, monkeypatch)
+    page = client.get(f'/payroll/{rid}/confirm').get_data(as_text=True)
+    key = re.search(r'name="idempotency_key" value="([^"]+)"', page).group(1)
+    version = re.search(r'name="run_version" value="([^"]+)"', page).group(1)
+    assert review(client, refresh_run_id=rid).status_code == 302
+    new_page = client.get(f'/payroll/{rid}/confirm').get_data(as_text=True)
+    assert key != re.search(r'name="idempotency_key" value="([^"]+)"', new_page).group(1)
+    response = client.post(
+        '/payroll/approve',
+        data={
+            'run_id': str(rid),
+            'password': 'Synthetic1!',
+            'idempotency_key': key,
+            'run_version': version,
+        },
+    )
+    assert '/confirm' in response.location
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT status FROM payroll_run WHERE id=:id'), {'id': rid}).scalar_one() == 'review'
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 0
+        )
+
+
+def test_new_key_and_confirmation_reload_show_existing_approval(worksheet, monkeypatch):
+    from uuid import uuid4
+
+    _app, client, _ids, engine, rid = saved_review(worksheet, monkeypatch)
+    body = {'run_id': str(rid), 'password': 'Synthetic1!'}
+    assert client.post('/payroll/approve', data=body, headers={'Idempotency-Key': str(uuid4())}).status_code == 302
+    result = client.post(
+        '/payroll/approve', data=body, headers={'Idempotency-Key': str(uuid4())}, follow_redirects=True
+    )
+    assert b'This payroll was already approved' in result.data
+    assert b'Payment pending' in result.data
+    reopened = client.get(f'/payroll/{rid}/confirm', follow_redirects=True)
+    assert b'This payroll was already approved' in reopened.data
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )
+
+
 def test_approval_idempotency_survives_process_cache_loss(worksheet, monkeypatch):
     """A retry after a worker restart must recover the committed approval."""
     from uuid import uuid4
@@ -357,6 +431,99 @@ def test_concurrent_same_key_approval_replays_once(worksheet, monkeypatch):
         )
 
 
+def test_approval_replays_across_independent_application_processes(worksheet, monkeypatch):
+    import json
+    import os
+    import subprocess
+    import sys
+    from uuid import uuid4
+
+    _app, _client, ids, engine, rid = saved_review(worksheet, monkeypatch)
+    child = r"""
+import json, os, sys
+import config
+config.TestingConfig.SQLALCHEMY_DATABASE_URI = os.environ['TEST_DATABASE_URL']
+from payroll_engine import create_app, db
+import payroll_engine.tasks, payroll_engine.webhooks, payroll_engine.notifications
+from sqlalchemy import text
+payroll_engine.tasks.enqueue_batch = lambda *args: None
+payroll_engine.webhooks.fire_webhook = lambda *args, **kwargs: None
+payroll_engine.notifications.notify_payroll_approved = lambda *args, **kwargs: None
+app = create_app()
+app.config.update(WTF_CSRF_ENABLED=False, RATELIMIT_ENABLED=False)
+app.before_request_funcs[None] = [f for f in app.before_request_funcs.get(None, []) if f.__name__ != 'daily_retention_purge']
+with app.app_context():
+    pid = db.session.execute(text('select pg_backend_pid()')).scalar_one()
+client = app.test_client()
+with client.session_transaction() as session:
+    session['_user_id'] = os.environ['SYNTHETIC_USER_ID']
+    session['_fresh'] = True
+    session['active_company_id'] = int(os.environ['SYNTHETIC_COMPANY_ID'])
+print('READY', flush=True)
+sys.stdin.readline()
+response = client.post('/payroll/approve', data={'run_id': os.environ['SYNTHETIC_RUN_ID'], 'password': 'Synthetic1!'}, headers={'Idempotency-Key': os.environ['SYNTHETIC_KEY']})
+print(json.dumps({'status': response.status_code, 'replay': response.headers.get('Idempotent-Replay'), 'pid': pid}), flush=True)
+"""
+    env = os.environ.copy()
+    env.update(
+        SYNTHETIC_USER_ID=str(ids['user']),
+        SYNTHETIC_COMPANY_ID=str(ids['company']),
+        SYNTHETIC_RUN_ID=str(rid),
+        SYNTHETIC_KEY=str(uuid4()),
+    )
+    processes = [
+        subprocess.Popen(
+            [sys.executable, '-u', '-c', child],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+        for _ in range(2)
+    ]
+    try:
+        for process in processes:
+            assert process.stdout.readline().strip() == 'READY'
+        for process in processes:
+            process.stdin.write('start\n')
+            process.stdin.flush()
+        outputs = []
+        for process in processes:
+            stdout, stderr = process.communicate(timeout=60)
+            assert process.returncode == 0, stderr
+            outputs.append(json.loads(stdout.strip().splitlines()[-1]))
+        assert [item['status'] for item in outputs] == [302, 302]
+        assert sum(item['replay'] == 'true' for item in outputs) == 1
+        assert len({item['pid'] for item in outputs}) == 2
+        # A fresh application process must replay after both workers exit.
+        restarted = subprocess.Popen(
+            [sys.executable, '-u', '-c', child],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+        processes.append(restarted)
+        assert restarted.stdout.readline().strip() == 'READY'
+        restarted.stdin.write('start\n')
+        restarted.stdin.flush()
+        stdout, stderr = restarted.communicate(timeout=60)
+        assert restarted.returncode == 0, stderr
+        assert json.loads(stdout.strip().splitlines()[-1])['replay'] == 'true'
+        with engine.connect() as conn:
+            assert (
+                conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one()
+                == 1
+            )
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
+
 def test_approval_replay_requires_current_password(worksheet, monkeypatch):
     from uuid import uuid4
 
@@ -390,6 +557,33 @@ def test_approval_key_does_not_replay_for_another_owner(worksheet, monkeypatch):
         session['_fresh'] = True
         session['active_company_id'] = ids['company']
     assert other_client.post('/payroll/approve', data=body, headers={'Idempotency-Key': key}).status_code == 422
+
+
+def test_foreign_tenant_cannot_replay_or_approve_another_company_run(worksheet, monkeypatch):
+    from uuid import uuid4
+
+    app, client, ids, engine, rid = saved_review(worksheet, monkeypatch)
+    with app.app_context():
+        foreign = User(company_id=ids['foreign'], email=uuid4().hex + '@example.invalid', role='owner')
+        foreign.set_password('Synthetic1!')
+        db.session.add(foreign)
+        db.session.commit()
+        foreign_id = foreign.id
+    key = str(uuid4())
+    body = {'run_id': str(rid), 'password': 'Synthetic1!'}
+    assert client.post('/payroll/approve', data=body, headers={'Idempotency-Key': key}).status_code == 302
+    other = app.test_client()
+    with other.session_transaction() as session:
+        session['_user_id'] = str(foreign_id)
+        session['_fresh'] = True
+        session['active_company_id'] = ids['foreign']
+    response = other.post('/payroll/approve', data=body, headers={'Idempotency-Key': key})
+    assert response.status_code == 404
+    assert response.headers.get('Idempotent-Replay') is None
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )
 
 
 def test_concurrent_same_key_different_payload_rejects_one(worksheet, monkeypatch):

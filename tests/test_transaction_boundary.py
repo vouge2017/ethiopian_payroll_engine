@@ -186,8 +186,8 @@ def test_approval_rolls_back_on_compliance_failure(app):
     with app.app_context():
         run = db.session.get(PayrollRun, run_id)
 
-        # Everything rolled back, then marked 'failed'
-        assert run.status == 'failed', f"Expected 'failed', got '{run.status}'"
+        # Everything rolled back and the run remains available for retry.
+        assert run.status == 'review', f"Expected 'review', got '{run.status}'"
         assert Payslip.query.filter_by(payroll_run_id=run_id, company_id=_company_id).count() == 0
         assert PayrollDraft.query.filter_by(payroll_run_id=run_id, company_id=_company_id).first() is not None
 

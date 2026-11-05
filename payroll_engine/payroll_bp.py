@@ -884,8 +884,20 @@ def payroll_confirm(run_id):
     """Show confirmation page before approval. Password re-auth required."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
     if run.status not in ('review', 'pending_approval'):
-        flash('This payroll run is not in review status.', 'danger')
+        if run.status in ('completed', 'locked'):
+            flash('This payroll was already approved. Review the approved results below.', 'info')
+        else:
+            flash('This payroll run is not in review status.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+    identity_scope = f'{_company_id()}:{current_user.id}:{run.id}:{run.version_id}'
+    keys = dict(session.get('approval_form_keys', {}))
+    if identity_scope not in keys:
+        run_scope = f'{_company_id()}:{current_user.id}:{run.id}:'
+        keys = {scope: key for scope, key in keys.items() if not scope.startswith(run_scope)}
+        # Keep the signed session cookie bounded when the owner reviews many runs.
+        keys = dict(list(keys.items())[-15:])
+        keys[identity_scope] = str(uuid.uuid4())
+        session['approval_form_keys'] = keys
     draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
     employees_data = draft.employee_data if draft else []
     if run.source == 'spreadsheet':
@@ -922,6 +934,7 @@ def payroll_confirm(run_id):
         total_net=round(total_net, 2),
         blocks=blocks,
         flags=flags,
+        approval_idempotency_key=keys[identity_scope],
     )
 
 
@@ -999,8 +1012,16 @@ def approve_payroll():
         return approval_replay(record, identity, current_user.id)
 
     if run.status not in ('review', 'pending_approval'):
-        flash('This payroll run is not ready for approval.', 'danger')
+        if run.status in ('completed', 'locked'):
+            flash('This payroll was already approved. Review the approved results below.', 'info')
+        else:
+            flash('This payroll run is not ready for approval.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    submitted_version = request.form.get('run_version')
+    if submitted_version is not None and submitted_version != str(run.version_id):
+        flash('Payroll review changed. Review the current amounts before approving.', 'warning')
+        return redirect(url_for('payroll.payroll_confirm', run_id=run.id))
 
     # Trust Architecture — check for blocking issues before approval
     from payroll_engine import models as trust_models
@@ -1024,7 +1045,7 @@ def approve_payroll():
         return redirect(url_for('payroll.payroll_runs'))
 
     # The unique reservation and all payroll effects commit or roll back together.
-    record = claim_approval(identity, _company_id(), current_user.id, run.id)
+    record = claim_approval(identity, _company_id(), current_user.id, run.id, run.version_id)
     if record is not None:
         return approval_replay(record, identity, current_user.id)
 
@@ -1107,6 +1128,7 @@ def approve_payroll():
             )
         else:
             flash(result.message, 'danger')
+        session['approval_failed_run_id'] = run.id
         return redirect(url_for('payroll.payroll_review_workspace', run_id=run.id))
 
 
@@ -1221,7 +1243,6 @@ def create_adjustment(run_id):
 
     cid = _company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
-
     if run.status not in ('completed', 'locked'):
         flash('Can only adjust completed or locked payroll runs.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
@@ -2588,6 +2609,10 @@ def payroll_review_workspace(run_id):
 
     cid = _company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+    approval_failed = session.pop('approval_failed_run_id', None) == run.id and run.status in (
+        'review',
+        'pending_approval',
+    )
 
     from payroll_engine import models as trust_models
 
@@ -2668,6 +2693,7 @@ def payroll_review_workspace(run_id):
         validation_results=validation_results,
         can_approve=can_approve,
         component_errors=errors,
+        approval_failed=approval_failed,
         year=date.today().year,
     )
 

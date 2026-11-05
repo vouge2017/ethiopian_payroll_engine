@@ -85,3 +85,71 @@ def test_committed_legacy_payroll_survives_pdf_queue_failure_and_retry(worksheet
             connection.execute(text('SELECT status FROM payroll_run WHERE id=:id'), {'id': rid}).scalar_one()
             == 'completed'
         )
+
+
+def test_legacy_failure_rolls_back_key_and_retry_notifies_only_after_commit(worksheet, monkeypatch):
+    from uuid import uuid4
+
+    from sqlalchemy import text
+
+    from payroll_engine.models import Employee
+    from payroll_engine.services import payroll_service
+
+    app, client, ids, engine, _cfg = worksheet
+    monkeypatch.setattr('payroll_engine.tasks.enqueue_batch', lambda *args: None)
+    monkeypatch.setattr('payroll_engine.webhooks.fire_webhook', lambda *args, **kwargs: None)
+    monkeypatch.setattr('payroll_engine.notifications.notify_payroll_approved', lambda *args: None)
+    messages = []
+
+    def send(phone, message):
+        with engine.connect() as conn:
+            status = conn.execute(text('SELECT status FROM payroll_run WHERE id=:id'), {'id': rid}).scalar_one()
+        messages.append((status, phone))
+
+    monkeypatch.setattr('payroll_engine.notifications.send_whatsapp', send)
+    with app.app_context():
+        employee = db.session.get(Employee, ids['employee'])
+        employee.user_id = ids['user']
+        employee.phone = '0911000000'
+        calculation = calculate_payroll(Decimal('10000'), Decimal('2000'))
+        run = PayrollRun(
+            company_id=ids['company'], run_date=date.today(), period='2019-02', source='upload', status='review'
+        )
+        db.session.add(run)
+        db.session.flush()
+        rid = run.id
+        row = {'id': 'SHEET1', 'name': 'Synthetic monthly', 'basic': '10000', 'allowances': '2000'}
+        row.update(
+            {key: float(calculation[key]) for key in ('gross', 'tax', 'pension_employee', 'pension_employer', 'net')}
+        )
+        db.session.add(PayrollDraft(company_id=ids['company'], payroll_run_id=rid, employee_data=[row]))
+        db.session.commit()
+
+    original_score = payroll_service.compute_compliance_score
+    monkeypatch.setattr(
+        payroll_service,
+        'compute_compliance_score',
+        lambda **kwargs: (_ for _ in ()).throw(RuntimeError('synthetic failure')),
+    )
+    key = str(uuid4())
+    body = {'run_id': str(rid), 'password': 'Synthetic1!'}
+    assert client.post('/payroll/approve', data=body, headers={'Idempotency-Key': key}).status_code == 302
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT status FROM payroll_run WHERE id=:id'), {'id': rid}).scalar_one() == 'review'
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 0
+        )
+        assert (
+            conn.execute(
+                text('SELECT count(*) FROM approval_idempotency WHERE payroll_run_id=:id'), {'id': rid}
+            ).scalar_one()
+            == 0
+        )
+    assert not messages
+    monkeypatch.setattr(payroll_service, 'compute_compliance_score', original_score)
+    assert client.post('/payroll/approve', data=body, headers={'Idempotency-Key': key}).status_code == 302
+    assert messages == [('completed', '0911000000')]
+    with engine.connect() as conn:
+        assert (
+            conn.execute(text('SELECT count(*) FROM payslip WHERE payroll_run_id=:id'), {'id': rid}).scalar_one() == 1
+        )

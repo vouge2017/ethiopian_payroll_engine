@@ -13,12 +13,11 @@ from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS, SYSTEM_ITEM_KEY
 from payroll_engine.models import (
     Employee,
     PayrollDraft,
-    PayrollRun,
     PayrollValidationResult,
     Payslip,
 )
 from payroll_engine.models_payroll_elements import PayrollItemAssignment
-from payroll_engine.shared import create_audit_log, create_notification, tenant_get
+from payroll_engine.shared import create_audit_log, create_notification
 
 
 class ApprovalResult:
@@ -656,27 +655,26 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             },
         )
 
-        # Notify each employee that their payslip is ready
-        from payroll_engine.notifications import notify
+        # Save in-app notices with the payroll. External delivery must wait
+        # until after commit, so a rollback cannot send a false notification.
+        from payroll_engine.notifications import create_in_app_notification
 
         all_payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
+        whatsapp_messages = []
         for ps in all_payslips:
             emp = ps.employee
             if emp and emp.user_id:
-                try:
-                    notify(
-                        company_id=company_id,
-                        user_id=emp.user_id,
-                        message=f'Your payslip for {run.period or "this month"} is ready. Net pay: ETB {ps.net_pay:,.2f}.',
-                        notif_type='success',
-                        link=f'/my/payslips/{ps.id}',
-                        employee_phone=emp.phone,
-                        whatsapp_message=f'Hello {emp.name}, your salary of ETB {ps.net_pay:,.2f} has been processed. Log in to view your payslip.',
+                create_in_app_notification(
+                    company_id=company_id,
+                    user_id=emp.user_id,
+                    message=f'Your payslip for {run.period or "this month"} is ready. Net pay: ETB {ps.net_pay:,.2f}.',
+                    notif_type='success',
+                    link=f'/my/payslips/{ps.id}',
+                )
+                if emp.phone:
+                    whatsapp_messages.append(
+                        (emp.phone, f'Hello {emp.name}, your payslip is ready. Log in to view it.')
                     )
-                except Exception as e:
-                    import logging
-
-                    logging.getLogger('payroll_engine').error('Failed to notify employee %s: %s', emp.id, e)
 
         # Clean up draft
         PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).delete()
@@ -692,6 +690,18 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Single commit — all or nothing
         db.session.commit()
+
+        for phone, message in whatsapp_messages:
+            try:
+                from payroll_engine.notifications import send_whatsapp
+
+                send_whatsapp(phone, message)
+            except Exception:
+                import logging
+
+                logging.getLogger('payroll_engine').exception(
+                    'Employee notification delivery failed for run %s', run.id
+                )
 
         # Trigger background PDF generation via RQ (or fall back to inline on download)
         try:
@@ -744,9 +754,8 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Log the failure in a separate transaction
         try:
-            failed_run = tenant_get(PayrollRun, run.id, company_id)
-            if failed_run:
-                failed_run.status = 'failed'
+            # Rollback restores the review/pending state and the draft. Keep
+            # that state so the owner can retry after the failure is resolved.
             create_audit_log(
                 company_id=company_id,
                 user_id=user_id,

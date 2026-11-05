@@ -11,6 +11,9 @@
 {% set changed_count = changed_ids|unique(case_sensitive=true)|list|length %}
 {% set saved_blocks = validation_results|selectattr('severity', 'equalto', 'BLOCK')|rejectattr('overridden')|list %}
 <div class="monthly-payroll monthly-review">
+  {% if approval_failed %}
+  <div class="alert alert-danger" role="alert">Approval did not complete. No payroll was approved. Review the details and try again, or contact support if the problem continues.</div>
+  {% endif %}
   <!-- Header -->
   <div class="monthly-heading">
     <div>

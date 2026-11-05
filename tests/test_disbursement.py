@@ -116,6 +116,28 @@ def _setup(app, disbursement_status='pending'):
 class TestDisbursementProgress:
     """Test the disbursement progress page."""
 
+    def test_explicit_csv_and_xlsx_downloads_keep_payment_pending(self, app):
+        cid, _oid, rid = _setup(app)
+        # The employee edit flow maintains both fields for legacy payslips.
+        with app.app_context():
+            for employee in Employee.query.filter_by(company_id=cid).all():
+                employee.bank_or_telebirr = employee.bank_account
+            db.session.commit()
+        client = app.test_client()
+        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
+        response = client.get(f'/payroll/{rid}/disbursement')
+        assert response.status_code == 200
+        assert b'Download CSV' in response.data
+        assert b'Download XLSX' in response.data
+        assert b'format=csv' in response.data
+        assert b'markFileDownloaded()' not in response.data
+        csv_file = client.get(f'/reports/bank/{rid}?bank=cbe&format=csv')
+        xlsx_file = client.get(f'/reports/bank/{rid}?bank=cbe&format=xlsx')
+        assert csv_file.status_code == 200 and csv_file.mimetype == 'text/csv'
+        assert xlsx_file.status_code == 200
+        with app.app_context():
+            assert db.session.get(PayrollRun, rid).disbursement_status == 'pending'
+
     def test_page_loads(self, app):
         _cid, _oid, rid = _setup(app)
         client = app.test_client()

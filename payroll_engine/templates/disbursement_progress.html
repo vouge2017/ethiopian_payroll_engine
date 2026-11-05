@@ -84,11 +84,12 @@
                                         <strong>{{ info.label }}</strong>
                                         <br><small class="text-muted">{{ info.count }} employee{{ 's' if info.count != 1 else '' }} · ETB {{ '{:,.2f}'.format(info.total) }}</small>
                                     </div>
-                                    <a href="{{ url_for('reports.download_bank_file', run_id=run.id) }}?bank={{ bank_key }}"
-                                       class="btn btn-outline-primary btn-sm"
-                                       onclick="markFileDownloaded()">
-                                        <i class="bi bi-download me-1"></i>Download
-                                    </a>
+                                    <div class="d-flex flex-column gap-2">
+                                        <a href="{{ url_for('reports.download_bank_file', run_id=run.id, bank=bank_key, format='csv') }}"
+                                           class="btn btn-outline-primary btn-sm">Download CSV</a>
+                                        <a href="{{ url_for('reports.download_bank_file', run_id=run.id, bank=bank_key, format='xlsx') }}"
+                                           class="btn btn-outline-primary btn-sm">Download XLSX</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

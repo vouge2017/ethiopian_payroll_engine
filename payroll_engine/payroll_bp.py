@@ -39,7 +39,6 @@ from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
 from payroll_engine.idempotency import idempotent
 from payroll_engine.models import (
-    AuditLog,
     Company,
     Employee,
     OvertimeEntry,
@@ -884,8 +883,20 @@ def payroll_confirm(run_id):
     """Show confirmation page before approval. Password re-auth required."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
     if run.status not in ('review', 'pending_approval'):
-        flash('This payroll run is not in review status.', 'danger')
+        if run.status in ('completed', 'locked'):
+            flash('This payroll was already approved. Review the approved results below.', 'info')
+        else:
+            flash('This payroll run is not in review status.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+    identity_scope = f'{_company_id()}:{current_user.id}:{run.id}:{run.version_id}'
+    keys = dict(session.get('approval_form_keys', {}))
+    if identity_scope not in keys:
+        run_scope = f'{_company_id()}:{current_user.id}:{run.id}:'
+        keys = {scope: key for scope, key in keys.items() if not scope.startswith(run_scope)}
+        # Keep the signed session cookie bounded when the owner reviews many runs.
+        keys = dict(list(keys.items())[-15:])
+        keys[identity_scope] = str(uuid.uuid4())
+        session['approval_form_keys'] = keys
     draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
     employees_data = draft.employee_data if draft else []
     if run.source == 'spreadsheet':
@@ -922,6 +933,7 @@ def payroll_confirm(run_id):
         total_net=round(total_net, 2),
         blocks=blocks,
         flags=flags,
+        approval_idempotency_key=keys[identity_scope],
     )
 
 
@@ -955,7 +967,6 @@ def reject_payroll(run_id):
 @login_required
 @role_required('owner')
 @limiter.limit('10 per minute')
-@idempotent
 def approve_payroll():
     """
     Approve a payroll run and process it.
@@ -981,12 +992,35 @@ def approve_payroll():
             flash('Invalid MFA code. Approval cancelled.', 'danger')
             return redirect(url_for('payroll.payroll_confirm', run_id=int(run_id)))
 
+    from payroll_engine.approval_idempotency import approval_identity, approval_replay, claim_approval, find_approval
+
+    try:
+        identity = approval_identity()
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Idempotency key is too long'}), 400
+    record = find_approval(identity, _company_id())
+    if record is not None:
+        return approval_replay(record, identity, current_user.id)
+
     # SELECT ... FOR UPDATE — prevents double-approval on concurrent requests
     run = PayrollRun.query.filter_by(id=int(run_id), company_id=_company_id()).with_for_update().first_or_404()
 
+    # A concurrent request may have committed while we waited for this run.
+    record = find_approval(identity, _company_id())
+    if record is not None:
+        return approval_replay(record, identity, current_user.id)
+
     if run.status not in ('review', 'pending_approval'):
-        flash('This payroll run is not ready for approval.', 'danger')
+        if run.status in ('completed', 'locked'):
+            flash('This payroll was already approved. Review the approved results below.', 'info')
+        else:
+            flash('This payroll run is not ready for approval.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+
+    submitted_version = request.form.get('run_version')
+    if submitted_version is not None and submitted_version != str(run.version_id):
+        flash('Payroll review changed. Review the current amounts before approving.', 'warning')
+        return redirect(url_for('payroll.payroll_confirm', run_id=run.id))
 
     # Trust Architecture — check for blocking issues before approval
     from payroll_engine import models as trust_models
@@ -1008,6 +1042,11 @@ def approve_payroll():
         db.session.commit()
         flash('Payroll submitted for owner approval.', 'success')
         return redirect(url_for('payroll.payroll_runs'))
+
+    # The unique reservation and all payroll effects commit or roll back together.
+    record = claim_approval(identity, _company_id(), current_user.id, run.id, run.version_id)
+    if record is not None:
+        return approval_replay(record, identity, current_user.id)
 
     # Handle FLAG overrides and check BLOCKs
     form_data = dict(request.form)
@@ -1088,6 +1127,7 @@ def approve_payroll():
             )
         else:
             flash(result.message, 'danger')
+        session['approval_failed_run_id'] = run.id
         return redirect(url_for('payroll.payroll_review_workspace', run_id=run.id))
 
 
@@ -1098,7 +1138,7 @@ def approve_payroll():
 @login_required
 @role_required('owner')
 def undo_approval(run_id):
-    """Undo payroll approval within 1 hour. Only if disbursement hasn't started."""
+    """Explain why the existing approval cannot be safely undone."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).with_for_update().first_or_404()
 
     if run.source == 'spreadsheet':
@@ -1137,43 +1177,12 @@ def undo_approval(run_id):
         )
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
-    # Undo: delete payslips and their PDFs, revert to review
-    payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
-    for ps in payslips:
-        if ps.pdf_file_path and os.path.exists(ps.pdf_file_path):
-            with contextlib.suppress(OSError):
-                os.remove(ps.pdf_file_path)
-        db.session.delete(ps)
-
-    # Delete draft
-    draft = PayrollDraft.query.filter_by(company_id=_company_id(), payroll_run_id=run.id).first()
-    if draft:
-        db.session.delete(draft)
-
-    # Revert run
-    run.status = 'review'
-    run.approved_by = None
-    run.approved_at = None
-    run.disbursement_status = 'pending'
-    run.disbursed_at = None
-    run.disbursed_by = None
-
-    # Audit log
-    log = AuditLog(
-        company_id=_company_id(),
-        user_id=current_user.id,
-        action='payroll_approval_undone',
-        details={
-            'run_id': run.id,
-            'reference': run.reference,
-            'payslips_deleted': len(payslips),
-        },
+    # Legacy approvals do not retain enough movement provenance or a draft to
+    # reverse deductions safely. Keep the approved facts and use corrections.
+    flash(
+        'Undo is unavailable because consumed balances cannot be restored safely. Review payroll corrections.',
+        'warning',
     )
-    db.session.add(log)
-    db.session.commit()
-    trust_cache.invalidate_trust_cache(_company_id())
-
-    flash(f'Payroll {run.reference} undone. {len(payslips)} payslips deleted. Status reverted to review.', 'success')
     return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
 
 
@@ -1202,7 +1211,6 @@ def create_adjustment(run_id):
 
     cid = _company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
-
     if run.status not in ('completed', 'locked'):
         flash('Can only adjust completed or locked payroll runs.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
@@ -2569,6 +2577,10 @@ def payroll_review_workspace(run_id):
 
     cid = _company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
+    approval_failed = session.pop('approval_failed_run_id', None) == run.id and run.status in (
+        'review',
+        'pending_approval',
+    )
 
     from payroll_engine import models as trust_models
 
@@ -2649,6 +2661,7 @@ def payroll_review_workspace(run_id):
         validation_results=validation_results,
         can_approve=can_approve,
         component_errors=errors,
+        approval_failed=approval_failed,
         year=date.today().year,
     )
 

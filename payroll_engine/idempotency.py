@@ -12,13 +12,15 @@ warning so we can monitor retry-prone clients.
 
 Protected routes (opt-in via decorator @idempotent):
 - payroll.calculate
-- payroll.approve_payroll
 - payroll.disburse
 - payroll.confirm_payment
 - employees.terminate
 - employees.invite
 - adjustment.create
 - filing.mark
+
+Payroll approval uses a separate database-backed implementation in
+approval_idempotency.py; it is not protected by this cache decorator.
 
 Senior-engineer hardening (2026-08-31):
 - BUGFIX: import path is now stable. The decorator was previously used in
@@ -194,7 +196,15 @@ def idempotent(view):
 
         company_id = _company_id_from_request()
         route = f'{request.method} {request.path}'
-        body_hash = _hash_payload(request.get_data(cache=True) or b'')
+        if request.mimetype == 'application/x-www-form-urlencoded':
+            # CSRF middleware or the form-key lookup may already have consumed
+            # the raw stream. Hash the parsed fields so changed form payloads
+            # cannot be mistaken for an identical retry.
+            form_fields = sorted((name, values) for name, values in request.form.lists())
+            payload = json.dumps(form_fields, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+        else:
+            payload = request.get_data(cache=True) or b''
+        body_hash = _hash_payload(payload)
         key = _cache_key(company_id, route, idem_key, body_hash)
         # A second key with no body fingerprint: catches "same key, different body" replays.
         key_nobody = _cache_key(company_id, route, idem_key, '*')

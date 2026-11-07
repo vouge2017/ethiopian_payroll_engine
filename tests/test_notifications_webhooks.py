@@ -246,6 +246,7 @@ class TestNotifyPayrollApproved:
             notif = Notification.query.filter_by(user_id=owner_id, company_id=cid).first()
             assert notif is not None
             assert 'PR-2026-07-001' in notif.message
+            assert 'Payment is still pending' in notif.message
             assert notif.type == 'success'
 
     @patch('requests.post')
@@ -266,6 +267,7 @@ class TestNotifyPayrollApproved:
             mock_post.assert_called()
             wa_body = mock_post.call_args[1]['json']['text']['body']
             assert '8,000' in wa_body
+            assert 'Payment is handled separately' in wa_body
 
         notif_mod.WHATSAPP_ENABLED = orig
 

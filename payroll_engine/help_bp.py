@@ -256,8 +256,7 @@ FAQ_DATA = [
             {
                 'anchor': 'payroll-undo',
                 'question': 'Can I undo a payroll approval?',
-                'answer': "Yes, but only within **1 hour** of approval and only if disbursement hasn't started. "
-                'After that window, you can create an **adjustment payslip** to correct errors.',
+                'answer': 'Approval cannot currently be undone safely. Use **payroll corrections** to record an evidenced change while preserving the approved payroll.',
             },
         ],
     },

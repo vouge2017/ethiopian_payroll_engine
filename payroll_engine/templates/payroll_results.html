@@ -3,6 +3,12 @@
 {% block content %}
 
 <div class="p-4 p-md-5">
+    {% if run.status in ('completed', 'locked') and run.approved_at %}
+    <div class="alert alert-success" role="status">
+        This payroll was already approved. The amounts below are the approved results.
+        {% if run.disbursement_status == 'pending' %}Payment is still pending.{% endif %}
+    </div>
+    {% endif %}
     {% if pending_paye_notice() %}
     <div class="alert alert-warning py-2 small">{{ pending_paye_notice_text }}</div>
     {% endif %}
@@ -36,13 +42,7 @@
             </a>
             {% endif %}
             {% if run.status == 'completed' and run.disbursement_status == 'pending' and run.source != 'spreadsheet' %}
-            <form method="POST" action="{{ url_for('payroll.undo_approval', run_id=run.id) }}" class="d-inline"
-                  onsubmit="return confirm('Undo this approval? This will delete all payslips and revert to review status.');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-outline-warning" title="Undo approval — reverts to review (1 hour window)">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i> Undo Approval
-                </button>
-            </form>
+            <span class="small text-muted">Undo is unavailable; use payroll corrections to preserve approved records.</span>
             {% endif %}
             {% if run.status == 'completed' %}
             <button type="button" class="btn btn-sm btn-outline-dark" title="Lock this period — prevents new runs and edits"

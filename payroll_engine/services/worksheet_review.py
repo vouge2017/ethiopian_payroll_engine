@@ -308,6 +308,9 @@ def create_review(company_id, user_id, start, refresh_run_id=None):
         run = PayrollRun.query.filter_by(id=refresh_run_id, company_id=company_id).with_for_update().first_or_404()
         if run.source != 'spreadsheet' or run.status != 'review' or run.run_date != start:
             raise ValueError('Only an unapproved worksheet review for this month can be refreshed.')
+        # Draft facts change independently of PayrollRun; advance its review
+        # version so an already-open confirmation cannot approve stale facts.
+        run.version_id += 1
     else:
         Company.query.filter_by(id=company_id).with_for_update().one()
         period = build_period_string(start)

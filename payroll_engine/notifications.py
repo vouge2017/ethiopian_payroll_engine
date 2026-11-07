@@ -121,7 +121,7 @@ def notify_payroll_approved(company_id, employees_data, run_reference):
         notify(
             company_id=company_id,
             user_id=user.id,
-            message=f'Payroll {run_reference} has been approved. {len(employees_data)} payslips generated.',
+            message=f'Payroll {run_reference} has been approved for {len(employees_data)} employees. Payment is still pending.',
             notif_type='success',
             link='/payroll/runs',  # Will be resolved by the template
         )
@@ -135,7 +135,7 @@ def notify_payroll_approved(company_id, employees_data, run_reference):
         if phone:
             wa_msg = (
                 f'Hello {name},\n\n'
-                f'Your salary of ETB {net_pay:,.2f} has been processed.\n'
+                f'Your payroll has been approved with net pay of ETB {net_pay:,.2f}. Payment is handled separately.\n'
                 f'Payslip: {run_reference}\n\n'
                 f'Log in to view your detailed payslip.'
             )

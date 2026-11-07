@@ -1,0 +1,34 @@
+.ui-deactivate-action {
+    color: #704100;
+    background-color: #fff;
+    border-color: #704100;
+}
+.ui-deactivate-action:hover,
+.ui-deactivate-action:focus-visible {
+    color: #fff;
+    background-color: #704100;
+    border-color: #704100;
+}
+.ui-filed-action {
+    color: #fff;
+    background-color: #08704c;
+    border-color: #08704c;
+}
+.ui-filed-action:hover,
+.ui-filed-action:focus-visible {
+    color: #fff;
+    background-color: #07573c;
+    border-color: #07573c;
+}
+.ui-deactivate-action:focus-visible,
+.ui-filed-action:focus-visible {
+    outline: 3px solid #004bca;
+    outline-offset: 2px;
+}
+.ui-deactivate-action:disabled,
+.ui-filed-action:disabled {
+    opacity: 1;
+    color: #505050;
+    background-color: #eee;
+    border-color: #767676;
+}

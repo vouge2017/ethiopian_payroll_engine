@@ -31,7 +31,7 @@
                   onsubmit="return confirm('Deactivate {{ employee.name }}? Their payroll history will be preserved.')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-person-dash me-1"></i>{{ _('deactivated') }}
+                    <i class="bi bi-person-dash me-1"></i>{{ _('deactivate') }}
                 </button>
             </form>
             {% else %}

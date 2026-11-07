@@ -83,7 +83,7 @@
             </a>
             {% if current_user.companies|length > 1 %}
             <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link {% if 'companies' in (request.endpoint or '') %}active{% endif %}">
-                <i class="bi bi-buildings"></i><span>My Companies</span>
+                <i class="bi bi-buildings"></i><span>{{ _('my_companies') }}</span>
             </a>
             {% endif %}
 
@@ -109,14 +109,14 @@
                         <i class="bi bi-cloud-upload"></i><span>{{ _('prepare_payroll') }}</span>
                     </a>
                     <a href="{{ url_for('attendance.attendance_list') }}" class="nav-link {% if 'attendance' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-calendar-check"></i><span>Attendance</span>
+                        <i class="bi bi-calendar-check"></i><span>{{ _('attendance') }}</span>
                     </a>
                     {% if employee_count > 5 %}
                     <a href="{{ url_for('employees.leave_management') }}" class="nav-link {% if 'leave' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-calendar-event"></i><span>Leave</span>
+                        <i class="bi bi-calendar-event"></i><span>{{ _('leave') }}</span>
                     </a>
                     <a href="{{ url_for('calendar.leave_calendar') }}" class="nav-link {% if 'calendar' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-calendar3"></i><span>Calendar</span>
+                        <i class="bi bi-calendar3"></i><span>{{ _('calendar') }}</span>
                     </a>
                     {% endif %}
                 </div>
@@ -131,12 +131,12 @@
                 <div class="nav-section-items">
                     {% if pending_profile_changes > 0 %}
                     <a href="{{ url_for('employees.profile_changes') }}" class="nav-link {% if 'profile_change' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-person-lines-fill"></i><span>Approvals</span>
+                        <i class="bi bi-person-lines-fill"></i><span>{{ _('approvals') }}</span>
                         <span class="nav-badge">{{ pending_profile_changes }}</span>
                     </a>
                     {% endif %}
                     <a href="{{ url_for('reports.payroll_comparison') }}" class="nav-link {% if 'comparison' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-bar-chart-steps"></i><span>Compare</span>
+                        <i class="bi bi-bar-chart-steps"></i><span>{{ _('compare') }}</span>
                     </a>
                 </div>
             </div>
@@ -164,14 +164,14 @@
                         <i class="bi bi-bar-chart-line"></i><span>{{ _('reports') }}</span>
                     </a>
                     <a href="{{ url_for('reports.analytics') }}" class="nav-link {% if 'analytics' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-graph-up"></i><span>Analytics</span>
+                        <i class="bi bi-graph-up"></i><span>{{ _('analytics') }}</span>
                     </a>
                     <a href="{{ url_for('accounting.accounting_home') }}" class="nav-link {% if 'accounting' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-journal-text"></i><span>Accounting</span>
+                        <i class="bi bi-journal-text"></i><span>{{ _('accounting') }}</span>
                     </a>
                     {% if employee_count > 20 %}
                     <a href="{{ url_for('reports.impact_calculator') }}" class="nav-link {% if 'impact' in (request.endpoint or '') %}active{% endif %}">
-                        <i class="bi bi-calculator"></i><span>Impact Calculator</span>
+                        <i class="bi bi-calculator"></i><span>{{ _('impact_calculator') }}</span>
                     </a>
                     {% endif %}
                 </div>
@@ -183,7 +183,7 @@
             </a>
             {% else %}
             <a href="{{ url_for('main.companies_dashboard') }}" class="nav-link">
-                <i class="bi bi-buildings"></i><span>My Companies</span>
+                <i class="bi bi-buildings"></i><span>{{ _('my_companies') }}</span>
             </a>
             <a href="{{ url_for('help.help_center') }}" class="nav-link">
                 <i class="bi bi-question-circle"></i><span>{{ _('help') }}</span>

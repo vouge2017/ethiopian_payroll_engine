@@ -13,10 +13,10 @@
         {% if not first_visit %}
         <div class="d-flex gap-2 flex-wrap">
             <button onclick="window.print()" class="btn btn-ghost no-print">
-                <i class="bi bi-printer me-1"></i>Print
+                <i class="bi bi-printer me-1"></i>{{ _('print') }}
             </button>
             <a href="{{ url_for('employees.add_employee') }}" class="btn btn-ghost no-print">
-                <i class="bi bi-person-plus me-1"></i>Add Employee
+                <i class="bi bi-person-plus me-1"></i>{{ _('add_employee') }}
             </a>
             {% if employee_count > 0 %}<a href="{{ url_for('payroll.payroll_spreadsheet') }}" class="btn btn-primary no-print">
                 <i class="bi bi-cloud-upload me-1"></i>{{ _('prepare_payroll') }}
@@ -45,7 +45,7 @@
     <div class="row g-3 mb-4">
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-label">Employees</div>
+                <div class="metric-label">{{ _('employees') }}</div>
                 <div class="metric-value">{{ employee_count }}</div>
             </div>
         </div>
@@ -63,13 +63,13 @@
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-label">Recent payroll runs</div>
+                <div class="metric-label">{{ _('recent_payroll_runs') }}</div>
                 <div class="metric-value">{{ recent_runs|length }}</div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card metric-card animate-fade-in">
-                <div class="metric-label">Overtime</div>
+                <div class="metric-label">{{ _('overtime') }}</div>
                 <div class="metric-value">{{ ot_total_hours or 0 }}h</div>
             </div>
         </div>
@@ -104,7 +104,7 @@
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="text-center p-2 rounded" style="background: var(--bg-tertiary);">
-                        <div class="text-muted small">Total Gross</div>
+                        <div class="text-muted small">{{ _('total_gross') }}</div>
                         <div class="fw-bold">ETB {{ '{:,.0f}'.format(change_summary.current.total_gross) }}</div>
                         <small class="{% if change_summary.delta_pct.total_gross > 0 %}text-success{% elif change_summary.delta_pct.total_gross < 0 %}text-danger{% else %}text-muted{% endif %}">
                             {% if change_summary.delta_pct.total_gross > 0 %}+{% endif %}{{ change_summary.delta_pct.total_gross }}%
@@ -113,7 +113,7 @@
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="text-center p-2 rounded" style="background: var(--bg-tertiary);">
-                        <div class="text-muted small">Tax Withheld</div>
+                        <div class="text-muted small">{{ _('tax_withheld') }}</div>
                         <div class="fw-bold">ETB {{ '{:,.0f}'.format(change_summary.current.total_tax) }}</div>
                         <small class="{% if change_summary.delta_pct.total_tax > 0 %}text-warning{% elif change_summary.delta_pct.total_tax < 0 %}text-success{% else %}text-muted{% endif %}">
                             {% if change_summary.delta_pct.total_tax > 0 %}+{% endif %}{{ change_summary.delta_pct.total_tax }}%
@@ -122,7 +122,7 @@
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="text-center p-2 rounded" style="background: var(--bg-tertiary);">
-                        <div class="text-muted small">Total Net</div>
+                        <div class="text-muted small">{{ _('total_net') }}</div>
                         <div class="fw-bold">ETB {{ '{:,.0f}'.format(change_summary.current.total_net) }}</div>
                         <small class="{% if change_summary.delta_pct.total_net > 0 %}text-success{% elif change_summary.delta_pct.total_net < 0 %}text-danger{% else %}text-muted{% endif %}">
                             {% if change_summary.delta_pct.total_net > 0 %}+{% endif %}{{ change_summary.delta_pct.total_net }}%
@@ -226,25 +226,25 @@
         <div class="col-md-8">
             <div class="card animate-fade-in">
                 <div class="card-header bg-transparent">
-                    <h5 class="mb-0">Payroll Summary — {{ last_month_summary.period }}</h5>
+                    <h5 class="mb-0">{{ _('payroll_summary') }} — {{ last_month_summary.period }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3 mb-3">
                         <div class="col-4">
                             <div class="text-center">
-                                <div class="text-muted small mb-1">Gross</div>
+                                <div class="text-muted small mb-1">{{ _('gross') }}</div>
                                 <div class="fw-bold">ETB {{ "{:,.0f}".format(last_month_summary.total_gross) }}</div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="text-center">
-                                <div class="text-muted small mb-1">Tax Withheld</div>
+                                <div class="text-muted small mb-1">{{ _('tax_withheld') }}</div>
                                 <div class="fw-bold text-warning">ETB {{ "{:,.0f}".format(last_month_summary.total_tax) }}</div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="text-center">
-                                <div class="text-muted small mb-1">Net pay</div>
+                                <div class="text-muted small mb-1">{{ _('net_pay') }}</div>
                                 <div class="fw-bold text-success">ETB {{ "{:,.0f}".format(last_month_summary.total_net) }}</div>
                             </div>
                         </div>
@@ -261,7 +261,7 @@
         <div class="col-md-4">
             <div class="card animate-fade-in">
                 <div class="card-header bg-transparent">
-                    <h5 class="mb-0">Deductions Breakdown</h5>
+                    <h5 class="mb-0">{{ _('deductions_breakdown') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" id="chart-deductions-skeleton">
@@ -284,7 +284,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                            <div class="text-muted small fw-semibold">ERCA Filing</div>
+                            <div class="text-muted small fw-semibold">{{ _('erca_filing') }}</div>
                             <div class="fw-bold">{{ eth_date(deadlines.erca_deadline[:10]|default(deadlines.erca_deadline, true)) if deadlines.erca_deadline else 'N/A' }}</div>
                         </div>
                         <span class="badge {{ 'badge-success' if deadlines.erca_days_left > 7 else 'badge-warning' if deadlines.erca_days_left > 0 else 'badge-danger' }}">
@@ -292,7 +292,7 @@
                         </span>
                     </div>
                     <a href="{{ url_for('reports.download_erca_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
-                        <i class="bi bi-download me-1"></i>Download ERCA
+                        <i class="bi bi-download me-1"></i>{{ _('download_erca') }}
                     </a>
                 </div>
             </div>
@@ -302,7 +302,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                            <div class="text-muted small fw-semibold">PSSA Remittance</div>
+                            <div class="text-muted small fw-semibold">{{ _('pssa_remittance') }}</div>
                             <div class="fw-bold">{{ eth_date(deadlines.pssa_deadline[:10]|default(deadlines.pssa_deadline, true)) if deadlines.pssa_deadline else 'N/A' }}</div>
                         </div>
                         <span class="badge {{ 'badge-success' if deadlines.pssa_days_left > 7 else 'badge-warning' if deadlines.pssa_days_left > 0 else 'badge-danger' }}">
@@ -310,7 +310,7 @@
                         </span>
                     </div>
                     <a href="{{ url_for('reports.download_pension_report', run_id=selected_run.id) if selected_run else '#' }}" class="btn btn-sm btn-outline-primary w-100 mt-2">
-                        <i class="bi bi-download me-1"></i>Download Pension
+                        <i class="bi bi-download me-1"></i>{{ _('download_pension') }}
                     </a>
                 </div>
             </div>
@@ -320,7 +320,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                            <div class="text-muted small fw-semibold">Disbursement</div>
+                            <div class="text-muted small fw-semibold">{{ _('disbursement') }}</div>
                             <div class="fw-bold">{{ eth_date(deadlines.pension_deadline[:10]|default(deadlines.pension_deadline, true)) if deadlines.pension_deadline else 'N/A' }}</div>
                         </div>
                         <span class="badge {{ 'badge-success' if deadlines.pension_days_left > 7 else 'badge-warning' if deadlines.pension_days_left > 0 else 'badge-danger' }}">
@@ -328,7 +328,7 @@
                         </span>
                     </div>
                     <a href="{{ url_for('reports.filing_history') }}" class="btn btn-sm btn-ghost w-100 mt-2">
-                        <i class="bi bi-clock-history me-1"></i>Filing History
+                        <i class="bi bi-clock-history me-1"></i>{{ _('filing_history') }}
                     </a>
                 </div>
             </div>
@@ -356,8 +356,8 @@
     <!-- Recent Payroll Runs -->
     <div class="card animate-fade-in">
         <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Recent Payroll Runs</h5>
-            <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-sm btn-ghost">View All</a>
+            <h5 class="mb-0">{{ _('recent_payroll_runs') }}</h5>
+            <a href="{{ url_for('payroll.payroll_runs') }}" class="btn btn-sm btn-ghost">{{ _('view_all') }}</a>
         </div>
         <div class="card-body p-0">
             {% if recent_runs %}
@@ -365,11 +365,11 @@
                 <table class="table table-hover mb-0 responsive-card">
                     <thead>
                         <tr>
-                            <th>Reference</th>
-                            <th>Period</th>
-                            <th>Status</th>
-                            <th>Payslips</th>
-                            <th>Actions</th>
+                            <th>{{ _('reference') }}</th>
+                            <th>{{ _('period') }}</th>
+                            <th>{{ _('status') }}</th>
+                            <th>{{ _('payslips') }}</th>
+                            <th>{{ _('actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -378,15 +378,15 @@
                             <td data-label="Reference"><code>{{ run.reference or 'PR-' + run.run_date.strftime('%Y-%m') + '-' + '%03d'|format(run.id) }}</code></td>
                             <td data-label="Period">{{ run.period or eth_only(run.run_date) }}</td>
                             <td data-label="Status">
-                                {% if run.status == 'completed' %}<span class="badge badge-success">Completed</span>
-                                {% elif run.status == 'locked' %}<span class="badge bg-dark">Locked</span>
-                                {% elif run.status == 'processing' %}<span class="badge badge-warning">Processing</span>
+                                {% if run.status == 'completed' %}<span class="badge badge-success">{{ _('completed') }}</span>
+                                {% elif run.status == 'locked' %}<span class="badge bg-dark">{{ _('locked') }}</span>
+                                {% elif run.status == 'processing' %}<span class="badge badge-warning">{{ _('processing') }}</span>
                                 {% else %}<span class="badge badge-info">{{ run.status|capitalize }}</span>{% endif %}
                             </td>
                             <td data-label="Payslips">{{ run.payslips|length }}</td>
                             <td data-label="Actions">
                                 <a href="{{ url_for('payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-sm btn-ghost">
-                                    <i class="bi bi-eye me-1"></i>View
+                                    <i class="bi bi-eye me-1"></i>{{ _('view') }}
                                 </a>
                             </td>
                         </tr>
@@ -428,7 +428,7 @@ if (payrollCtx) {
     new Chart(payrollCtx, {
         type: 'bar',
         data: {
-            labels: ['Gross', 'Pension', 'Tax', 'Net'],
+            labels: [{{ _('gross')|tojson }}, {{ _('employee_pension')|tojson }}, {{ _('tax')|tojson }}, {{ _('net')|tojson }}],
             datasets: [{
                 label: 'ETB',
                 data: [
@@ -476,7 +476,7 @@ if (dedCtx) {
     new Chart(dedCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Net Pay', 'Tax', 'Pension'],
+            labels: [{{ _('net_pay')|tojson }}, {{ _('tax')|tojson }}, {{ _('employee_pension')|tojson }}],
             datasets: [{
                 data: [
                     {{ last_month_summary.total_net }},

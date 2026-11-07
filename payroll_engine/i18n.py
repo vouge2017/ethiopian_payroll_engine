@@ -12,6 +12,28 @@ from payroll_engine.i18n_om import STRINGS_OM
 
 # Amharic strings — 164 keys
 STRINGS = {
+    # TODO(translation-review): Have a native speaker review dashboard terminology.
+    'tax_withheld': 'የተቀነሰ ግብር',
+    'deductions_breakdown': 'የተቀናሾች ዝርዝር',
+    'disbursement': 'ክፍያ',
+    'download_erca': 'የግብር ሪፖርት አውርድ',
+    'download_pension': 'የጡረታ ሪፖርት አውርድ',
+    'filing_history': 'የግብር ማስገቢያ ታሪክ',
+    'companies': 'ድርጅቶች',
+    'my_companies': 'ድርጅቶቼ',
+    'attendance': 'የሥራ ሰዓት መዝገብ',
+    'leave': 'ፈቃድ',
+    'calendar': 'ቀን መቁጠሪያ',
+    'approvals': 'ማጽደቆች',
+    'compare': 'አነጻጽር',
+    'analytics': 'ትንተና',
+    'accounting': 'ሂሳብ አያያዝ',
+    'impact_calculator': 'የተጽዕኖ ማስያ',
+    'reference': 'መለያ',
+    'completed': 'ተጠናቋል',
+    'processing': 'በሂደት ላይ',
+    'view': 'ይመልከቱ',
+    'print': 'አትም',
     # Navigation & Actions
     'dashboard': 'ዳሽቦርድ',
     'employees': 'ሰራተኞች',
@@ -105,11 +127,11 @@ STRINGS = {
     'compliance': 'ህግ ማክበር',
     'compliance_score': 'የህግ ማክበር ደረጃ',
     'compliance_details': 'የህግ ማክበር ዝርዝሮች',
-    'erca_filing': 'ERCA Filing',
+    'erca_filing': 'የግብር ማስገቢያ',  # TODO(translation-review)
     'tax_filing_deadline': 'የግብር ማስታወቂያ የመጨረሻ ቀን',
     'pension_deadline': 'የጡረታ ክፍያ የመጨረሻ ቀን',
     'pension_contribution_deadline': 'የጡረታ መዋጮ የመጨረሻ ቀን',
-    'pssa_remittance': 'PSSSA Remittance',
+    'pssa_remittance': 'የጡረታ መዋጮ',  # TODO(translation-review)
     'reports_compliance': 'ሪፖርቶችና ህግ ማክበር',
     'total_checks': 'ጠቅላላ ፍተሻዎች',
     'issue': 'ችግር',
@@ -220,6 +242,17 @@ def get_string(key: str, language: str = 'en') -> str:
     Returns:
         Translated string, or key itself if not found
     """
+    if language == 'om' and key in {
+        'step_prepare',
+        'step_review',
+        'step_approve',
+        'prepare_payroll',
+        'compliance_timing_label',
+        'compliance_not_assessed',
+        'compliance_evidence_help',
+        'filing_history',
+    }:
+        return STRINGS_OM[key]
     if key in FIRST_USE_COPY:
         return FIRST_USE_COPY[key][1 if language == 'am' else 0]
     if language == 'am':

@@ -7,6 +7,10 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### UI review fixes (2026-11-07, ready for owner review)
+
+- On `ui-review-fixes` at base `0995150b28678ff594b9178dbdf7d60406a67d7b`, the accessibility, contrast, sign-in and employee-label fixes are committed locally; translations remain a WIP for native-speaker review. Browser/axe checks on a synthetic in-memory database passed for Attendance, Pay Items, Reports, sign-in and the dashboard in EN, Amharic and Afaan Oromo; local evidence is under `output/ui-review-fixes/commit-prep-20261107/` and is not committed. Mobile dashboard table labels remain English in Amharic and Afaan Oromo, conditional dashboard states remain unverified, and the employee-detail axe scan has unrelated findings. The full synthetic SQLite suite completed with **2042 passed, 251 skipped, 66 warnings in 1582.19s**, exit 0 (runner elapsed 1590.22s). Skip reasons: 248 require a disposable PostgreSQL test URL; 3 skip when `/auth/accept-invite` returns 404. An earlier run had one test-order failure, corrected and separately verified. Approval submission, save/approve/file double-clicks, complete keyboard navigation, mobile axe and archived employee detail remain untested. No push, merge, deployment or production data used.
+
 ### Session A: monthly journey and legacy undo (2026-11-05)
 
 - Final continuation completed locally on code revision `ed20245e1051ac63881c6c28a3b71a70f6ac2d99`: normal browser interaction created one synthetic company/employee and completed approval, payslip, PAYE/pension reports, accounting CSV, bank CSV and audit review for November 2026 run 1. The one bank row and account mapping matched ETB 9,050; accounting debits and credits were 13,100. Reviewed version 2 became run version 3 on approval. Full reconciliation, browser screenshots and logs are in `output/monthly-journey-final/`. Bank format/content were checked locally, not accepted by a bank; legal and practitioner acceptance remain open.
@@ -1125,6 +1129,14 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-06 — Codex — Implemented the requested UI review fixes on `ui-review-fixes`; recorded focused synthetic browser and Python checks. Full-suite verification pending; changes left uncommitted for owner review.
+
+- 2026-11-07 — Codex — Full SQLite run identified a test-order dependency in the new rate-limit test; isolated the limiter state and verified the preceding-lockout sequence. Full-suite rerun pending; no commit or push.
+
+- 2026-11-07 — Codex — Full SQLite rerun passed after the test fixture fix: 2042 passed, 251 skipped, 66 warnings. Results remain uncommitted for review.
+
+- 2026-11-07 — Codex — Prepared separate local UI-fix commits, reran requested synthetic browser checks and the full SQLite suite with skip reasons; translation changes remain WIP. No push.
 
 - 2026-11-06 — Codex — Completed the fresh synthetic browser journey and reconciled all downloaded outputs on `ed20245`; recorded audit attribution/download gaps. Focused PostgreSQL and full SQLite tests passed. No push or deployment.
 

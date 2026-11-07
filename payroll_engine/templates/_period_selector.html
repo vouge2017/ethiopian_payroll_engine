@@ -6,10 +6,10 @@
 <div class="card mb-4">
     <div class="card-body py-2">
         <form method="GET" action="{{ request.path }}" id="periodForm" class="d-flex align-items-center gap-3 flex-wrap">
-            <label class="form-label fw-bold mb-0 text-nowrap">
+            <label for="report-period" class="form-label fw-bold mb-0 text-nowrap">
                 <i class="bi bi-calendar me-1"></i>Viewing period:
             </label>
-            <select name="run_id" class="form-select form-select-sm" style="max-width: 350px;"
+            <select id="report-period" name="run_id" class="form-select form-select-sm" style="max-width: 350px;"
                     onchange="this.form.submit()">
                 <option value="">Latest payroll run</option>
                 {% for run in all_completed_runs %}

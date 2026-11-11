@@ -7,6 +7,17 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### GitHub pull-request checklist progress skill (2026-11-11)
+
+- Added the workspace skill at `.github/skills/github-pr-checklist-progress/`
+  to explain and verify checked/total checklist fractions, including the 5/8
+  and 8/10 examples. It distinguishes checklist completion from CI, approvals
+  and merge status. Branch: `feat/monthly-payroll-product`, based on
+  `4f548e664d3654d3ba056b1c04050853c6c02fd2`.
+- Validation: skill structure and examples passed; `git diff --check` passed;
+  full `python3 run_tests.py --continue`: **2028 passed, 0 failed, 0 errors,
+  251 skipped in 968.7s**. No runtime behavior changed.
+
 ### Payment channel exports (2026-11-11)
 
 - Implemented on `feat/monthly-payroll-product` over the recovery/export/overtime commits. Bank downloads and the disbursement page now share snapshot-backed payment rows and channel grouping; CBE/Telebirr exports include only their matching channel. The API `get_bank_file` endpoint is retained and uses the same helper. Regression test includes one CBE and two Telebirr employees, checks approved snapshot identity/account/net, per-file totals and duplicates; it failed on the old code because the CBE file included Telebirr workers.
@@ -1137,6 +1148,10 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-11 — Copilot — Added the workspace slash skill for explaining
+  GitHub pull-request checklist progress; skill validation and full suite
+  passed. Locally tested on `feat/monthly-payroll-product`; push pending.
 
 - 2026-11-11 — Copilot — Completed recovery, bank-export and overtime fixes, committed as `356678d` on `feat/monthly-payroll-product`; regression, disposable PostgreSQL, browser and full SQLite checks passed. Updated the overtime golden snapshots; push pending.
 

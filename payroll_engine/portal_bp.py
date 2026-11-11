@@ -43,7 +43,10 @@ def employee_dashboard():
         .all()
     )
     ot_hours = sum(e.hours for e in ot_entries)
-    ot_pay = sum(calculate_overtime_pay(emp.basic_salary, e.hours, e.overtime_type) for e in ot_entries)
+    ot_pay = sum(
+        (calculate_overtime_pay(emp.basic_salary, e.hours, e.overtime_type, for_date=e.date) for e in ot_entries),
+        Decimal('0'),
+    )
     recent_payslips = (
         Payslip.query.filter_by(employee_id=emp.id, company_id=emp.company_id)
         .order_by(Payslip.generated_at.desc())
@@ -55,7 +58,7 @@ def employee_dashboard():
         employee=emp,
         latest_payslip=latest_payslip,
         ot_hours=round(ot_hours, 1),
-        ot_pay=round(ot_pay, 2),
+        ot_pay=ot_pay,
         recent_payslips=recent_payslips,
     )
 
@@ -78,14 +81,14 @@ def my_payslips():
 @portal_bp.route('/my/payslips/<int:payslip_id>')
 def my_payslip_detail(payslip_id):
     """View a specific payslip with full breakdown."""
-    from payroll_engine.overtime import DEFAULT_OVERTIME_RATES as OVERTIME_RATES
-    from payroll_engine.overtime import calculate_hourly_rate
+    from payroll_engine.frozen_payslip import frozen_figures
     from payroll_engine.tax import calculate_tax_breakdown
 
     emp = get_linked_employee()
     if not emp:
         abort(404)
     payslip = Payslip.query.filter_by(id=payslip_id, employee_id=emp.id, company_id=emp.company_id).first_or_404()
+    figures = frozen_figures(payslip)
 
     # Explain the STORED approved figures: use the taxable income frozen on the
     # payslip, never one re-derived from today's PAYE timing setting
@@ -96,33 +99,6 @@ def my_payslip_detail(payslip_id):
     else:
         taxable = payslip.gross_salary - payslip.employee_pension
     tax_breakdown = calculate_tax_breakdown(taxable)
-
-    payslip_month = payslip.generated_at.month if payslip.generated_at else None
-    payslip_year = payslip.generated_at.year if payslip.generated_at else None
-
-    ot_entries = (
-        OvertimeEntry.query.filter_by(employee_id=emp.id, company_id=emp.company_id)
-        .filter(
-            db.extract('month', OvertimeEntry.date) == payslip_month,
-            db.extract('year', OvertimeEntry.date) == payslip_year,
-        )
-        .all()
-    )
-    overtime_details = []
-    for entry in ot_entries:
-        hourly = calculate_hourly_rate(emp.basic_salary)
-        multiplier = OVERTIME_RATES.get(entry.overtime_type, Decimal('1'))
-        pay = round(hourly * entry.hours * multiplier, 2)
-        overtime_details.append(
-            {
-                'date': entry.date,
-                'hours': entry.hours,
-                'type': entry.overtime_type,
-                'hourly_rate': hourly,
-                'multiplier': multiplier,
-                'pay': pay,
-            }
-        )
 
     from payroll_engine.models import PayslipAcknowledgment
     from payroll_engine.payroll import generate_calculation_flow
@@ -147,8 +123,10 @@ def my_payslip_detail(payslip_id):
         'employee_portal/payslip_detail.html',
         employee=emp,
         payslip=payslip,
+        frozen_basic_salary=figures['basic'],
+        frozen_other_earnings=figures['other_earnings'],
+        frozen_overtime_pay=figures['overtime'],
         tax_breakdown=tax_breakdown,
-        overtime_details=overtime_details,
         calc_flow=calc_flow,
         payslip_acknowledged=payslip_acknowledged,
     )

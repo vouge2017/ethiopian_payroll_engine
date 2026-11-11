@@ -701,64 +701,15 @@ def google_register():
 @auth.route('/forgot-password', methods=['GET', 'POST'])
 @limiter.limit('3 per minute')
 def forgot_password():
-    """Step 1 of password recovery: collect phone/email, store in session."""
+    """Show the support path until secure reset-code delivery is configured."""
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
 
     if request.method == 'POST':
-        login_id = request.form.get('login_id', '').strip()
-        if not login_id:
-            flash('Please enter your phone number or email.', 'danger')
-            return redirect(url_for('auth.forgot_password'))
+        session.pop('reset_identity', None)
+        return render_template('auth/forgot_password.html', recovery_unavailable=True)
 
-        # Determine if phone or email
-        cleaned = login_id.replace(' ', '')
-        identity_type = None
-        identity_value = None
-
-        looks_like_phone = (
-            cleaned.startswith('09')
-            or cleaned.startswith('07')
-            or cleaned.startswith('+251')
-            or (cleaned.isdigit() and len(cleaned) == 9 and cleaned[0] in ('7', '9'))
-        )
-        if looks_like_phone:
-            normalized = _login_phone(login_id)
-            if normalized:
-                identity_type = 'phone'
-                identity_value = normalized
-        if identity_type is None and '@' in login_id:
-            identity_type = 'email'
-            identity_value = login_id.lower()
-
-        if identity_type is None:
-            flash('Please enter a valid Ethiopian phone or email address.', 'danger')
-            return redirect(url_for('auth.forgot_password'))
-
-        # Find user
-        if identity_type == 'phone':
-            user = _phone_user(identity_value)
-        else:
-            user = User.query.filter_by(email=identity_value).first()
-
-        # Always show the same message (no account enumeration)
-        if user:
-            token = user.generate_reset_token()
-            db.session.commit()
-            current_app.logger.debug(f'Password reset token for {login_id}: {token}')
-
-        # Preserve identity in session — the KEY improvement
-        # No re-typing phone/email after this step!
-        session['reset_identity'] = {
-            'type': identity_type,
-            'value': identity_value,
-            'code_attempts': 0,
-        }
-        session.permanent = True
-        flash('If an account exists for that phone/email, a reset code has been sent.', 'info')
-        return redirect(url_for('auth.reset_password_verify'))
-
-    return render_template('auth/forgot_password.html')
+    return render_template('auth/forgot_password.html', recovery_unavailable=False)
 
 
 @auth.route('/reset-password/verify', methods=['GET', 'POST'])

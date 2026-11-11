@@ -85,18 +85,22 @@
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0 responsive-card">
                         <tbody>
+                            {% if frozen_basic_salary is not none %}
                             <tr>
                                 <td data-label="Item">{{ _('basic_salary') }}</td>
-                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(employee.basic_salary) }}</td>
+                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(frozen_basic_salary) }}</td>
                             </tr>
+                            {% endif %}
+                            {% if frozen_other_earnings is not none %}
                             <tr>
-                                <td data-label="Item">{{ _('allowances') }}</td>
-                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(employee.allowances) }}</td>
+                                <td data-label="Item">Other earnings</td>
+                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(frozen_other_earnings) }}</td>
                             </tr>
-                            {% if overtime_details %}
+                            {% endif %}
+                            {% if frozen_overtime_pay is not none and frozen_overtime_pay > 0 %}
                             <tr>
-                                <td data-label="Item">{{ _('overtime') }} ({{ overtime_details|length }} {{ _('entries') }})</td>
-                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(total_ot_pay) }}</td>
+                                <td data-label="Item">{{ _('overtime') }} (approved amount)</td>
+                                <td data-label="Amount" class="text-end">ETB {{ '%.2f'|format(frozen_overtime_pay) }}</td>
                             </tr>
                             {% endif %}
                             <tr class="table-light">
@@ -119,13 +123,19 @@
                             <!-- Pension with breakdown -->
                             <tr>
                                 <td data-label="Deduction">
-                                    {{ _('employee_pension') }} <span class="text-muted small">(7% {{ _('of') }} {{ _('basic_salary') }})</span> <span data-bs-toggle="tooltip" title="7% of basic salary. Proclamation No. 1268/2022. Employer pays 11% separately."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
+                                    {{ _('employee_pension') }}
+                                    {% if frozen_basic_salary is not none %}
+                                    <span class="text-muted small">(7% {{ _('of') }} {{ _('basic_salary') }})</span>
+                                    {% endif %}
+                                    <span data-bs-toggle="tooltip" title="7% of the approved basic salary. Employer pays 11% separately."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
+                                    {% if frozen_basic_salary is not none %}
                                     <details class="mt-1">
                                         <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small text-muted">
-                                            7% × ETB {{ '%.2f'|format(employee.basic_salary) }} = ETB {{ '%.2f'|format(payslip.employee_pension) }}
+                                            7% × ETB {{ '%.2f'|format(frozen_basic_salary) }} = ETB {{ '%.2f'|format(payslip.employee_pension) }}
                                         </div>
                                     </details>
+                                    {% endif %}
                                 </td>
                                 <td data-label="Amount" class="text-end align-top">ETB {{ '%.2f'|format(payslip.employee_pension) }}</td>
                             </tr>
@@ -168,30 +178,6 @@
                                 </td>
                                 <td data-label="Amount" class="text-end align-top">ETB {{ '%.2f'|format(payslip.tax) }}</td>
                             </tr>
-
-                            <!-- Overtime breakdown -->
-                            {% if overtime_details %}
-                            <tr>
-                                <td>
-                                    {{ _('overtime') }}
-                                    <details class="mt-1">
-                                        <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
-                                        <div class="ms-3 small">
-                                            {% for ot in overtime_details %}
-                                            <div class="text-muted">
-                                                {{ ot.hours }}h × {{ '%.2f'|format(ot.hourly_rate) }} × {{ ot.multiplier }} = ETB {{ '%.2f'|format(ot.pay) }}
-                                                <span class="badge bg-secondary ms-1">{{ ot.type }}</span>
-                                            </div>
-                                            {% endfor %}
-                                            <div class="mt-1" style="border-top: 1px solid #dee2e6; padding-top: 4px;">
-                                                <strong>{{ _('total_overtime') }}: ETB {{ '%.2f'|format(total_ot_pay) }}</strong>
-                                            </div>
-                                        </div>
-                                    </details>
-                                </td>
-                                <td data-label="Amount" class="text-end align-top">ETB {{ '%.2f'|format(total_ot_pay) }}</td>
-                            </tr>
-                            {% endif %}
 
                             <tr class="table-light">
                                 <td data-label="Deduction"><strong>{{ _('total_deductions') }}</strong></td>

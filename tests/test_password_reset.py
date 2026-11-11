@@ -32,38 +32,32 @@ def client(app):
 
 
 def test_forgot_password_page_loads(client):
-    """GET /auth/forgot-password shows the form."""
+    """GET /auth/forgot-password clearly explains the current safe recovery path."""
     resp = client.get('/auth/forgot-password')
     assert resp.status_code == 200
-    assert b'Forgot Password' in resp.data
+    assert b'Forgot your password' in resp.data
+    assert b'codes cannot currently be delivered' in resp.data.lower()
 
 
 def test_forgot_password_with_phone(client):
-    """POST with valid phone generates reset token."""
+    """POST with a phone does not create an undeliverable reset token."""
     user = User(phone='911111111', role='owner')
     user.set_password('TestPass1!')
     db.session.add(user)
     db.session.commit()
 
-    with client.session_transaction() as _sess:
-        pass  # Ensure clean session
-
     resp = client.post(
         '/auth/forgot-password',
         data={'login_id': '911111111'},
-        follow_redirects=False,
     )
-    # Should redirect to verify page
-    assert resp.status_code == 302
-    assert '/auth/reset-password/verify' in resp.headers.get('Location', '')
-
-    # Verify token was stored
+    assert resp.status_code == 200
+    assert b'no reset code was created or sent' in resp.data.lower()
     refreshed = db.session.get(User, user.id)
-    assert refreshed.reset_token_hash is not None
+    assert refreshed.reset_token_hash is None
 
 
 def test_forgot_password_with_email(client):
-    """POST with valid email generates reset token."""
+    """Email submissions receive the same support-only recovery response."""
     user = User(email='test@example.com', phone='922222222', role='owner')
     user.set_password('TestPass1!')
     db.session.add(user)
@@ -72,22 +66,20 @@ def test_forgot_password_with_email(client):
     resp = client.post(
         '/auth/forgot-password',
         data={'login_id': 'test@example.com'},
-        follow_redirects=False,
     )
-    assert resp.status_code == 302
-    assert '/auth/reset-password/verify' in resp.headers.get('Location', '')
+    assert resp.status_code == 200
+    assert b'no reset code was created or sent' in resp.data.lower()
+    assert user.reset_token_hash is None
 
 
 def test_forgot_password_nonexistent_user(client):
-    """POST with unknown phone still shows same generic message (no user enumeration)."""
+    """Unknown identities receive the same support-only recovery response."""
     resp = client.post(
         '/auth/forgot-password',
         data={'login_id': '999999999'},
-        follow_redirects=False,
     )
-    # Should redirect to verify page (same response for security)
-    assert resp.status_code == 302
-    assert '/auth/reset-password/verify' in resp.headers.get('Location', '')
+    assert resp.status_code == 200
+    assert b'no reset code was created or sent' in resp.data.lower()
 
 
 def test_reset_password_flow_integration(client):
@@ -108,13 +100,15 @@ def test_reset_password_flow_integration(client):
     resp = client.post(
         '/auth/forgot-password',
         data={'login_id': '933333333'},
-        follow_redirects=False,
     )
-    assert resp.status_code == 302
+    assert resp.status_code == 200
 
     # Get the raw token
     token = user.generate_reset_token()
     db.session.commit()
+
+    with client.session_transaction() as sess:
+        sess['reset_identity'] = {'type': 'phone', 'value': '933333333', 'code_attempts': 0}
 
     # Step 2: Verify token
     with client.session_transaction() as sess:

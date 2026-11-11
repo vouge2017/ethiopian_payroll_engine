@@ -96,9 +96,8 @@ def test_invited_user_can_open_help_while_password_change_is_required(app):
     assert client.get('/employees').status_code == 302
 
 
-@pytest.mark.parametrize('path', ['/auth/login', '/auth/forgot-password'])
-def test_identifier_field_accepts_both_formats_without_tabs_or_digit_filter(app, path):
-    response = app.test_client().get(path)
+def test_login_identifier_field_accepts_both_formats_without_tabs_or_digit_filter(app):
+    response = app.test_client().get('/auth/login')
     soup = Page(response.data)
     field = soup.find('input', {'name': 'login_id'})
     assert field['type'] == 'text'
@@ -107,6 +106,14 @@ def test_identifier_field_accepts_both_formats_without_tabs_or_digit_filter(app,
     assert b'data-phone-tabs' not in response.data
     assert b'phone-prefix-box' not in response.data
     assert soup.find('span', id=field['aria-describedby']) is not None
+
+
+def test_recovery_page_does_not_collect_identifiers_without_code_delivery(app):
+    response = app.test_client().get('/auth/forgot-password')
+    soup = Page(response.data)
+    assert b'password reset codes cannot currently be delivered' in response.data.lower()
+    assert soup.find('a', href='/account-help') is not None
+    assert soup.find('input', {'name': 'login_id'}) is None
 
 
 def test_login_shows_create_account_next_to_sign_in_in_main_form(app):

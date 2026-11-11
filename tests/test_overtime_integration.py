@@ -20,6 +20,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from datetime import date
+from decimal import Decimal
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery
@@ -127,9 +128,9 @@ def test_overtime_delete(company_and_employee):
 
 
 def test_overtime_pay_weekday():
-    """4h weekday overtime on basic 10,000 → 288.48 (1.5x rate)"""
+    """4h weekday overtime uses the full hourly rate before cent rounding."""
     pay = calculate_overtime_pay(10000, 4, 'day')
-    assert abs(float(pay) - 288.48) < 1.0  # Allow rounding tolerance
+    assert pay == Decimal('288.46')
 
 
 def test_overtime_pay_night():
@@ -216,8 +217,8 @@ def test_verification_numbers():
     from decimal import Decimal as D
 
     result = calculate_payroll(basic_salary=10000, allowances=2000, overtime_entries=[{'hours': 4, 'type': 'day'}])
-    # Overtime pay should be approximately 288.48 (1.5x rate, 10000/208 rounded to 48.08 * 4 * 1.5)
-    assert D('288') < result['overtime_pay'] < D('289')
+    # Overtime pay uses the full 10000/208 hourly rate, rounded at the final amount.
+    assert result['overtime_pay'] == D('288.46')
     # Gross = 12000 + overtime
     assert result['gross'] > D('12200')
     # Pension = 700 (7% of basic 10,000 — NOT affected by overtime)

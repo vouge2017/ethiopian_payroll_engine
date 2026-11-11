@@ -7,6 +7,12 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Recovery, exports and overtime continuation (2026-11-11)
+
+- Implemented and locally tested on `feat/monthly-payroll-product`, based on `0995150b28678ff594b9178dbdf7d60406a67d7b`. Recovery no longer issues or logs reset codes when delivery is unavailable; the page directs users to support without claiming a code was sent. Bank CSV/XLSX money uses `Decimal` and `ROUND_HALF_UP`, with tests asserting workbook cell contents. Overtime keeps the existing multipliers, uses full hourly-rate precision, and avoids reconstructing historical payslip amounts from current salary. New regression tests reproduced the delivery, export-rounding and overtime-rounding failures before the fixes.
+- Focused affected tests: **210 passed, 1 skipped**; refreshed golden/version tests: **38 passed**; Ruff and `git diff --check` passed. Full SQLite suite: **2027 passed, 0 failed, 0 errors, 251 skipped in 923.7s**. Disposable PostgreSQL 16 selection: **246 passed, 481 warnings**. Synthetic Chromium check passed for support-only recovery and overtime display; no page errors.
+- Locally tested only; not hosted-tested, merged, deployed or practitioner-accepted. Self-service recovery remains unavailable until a delivery and identity-verification process is decided; no messaging provider was selected. Bank format acceptance and unresolved legal/practitioner payroll rules remain open.
+
 ### Session A: monthly journey and legacy undo (2026-11-05)
 
 - Final continuation completed locally on code revision `ed20245e1051ac63881c6c28a3b71a70f6ac2d99`: normal browser interaction created one synthetic company/employee and completed approval, payslip, PAYE/pension reports, accounting CSV, bank CSV and audit review for November 2026 run 1. The one bank row and account mapping matched ETB 9,050; accounting debits and credits were 13,100. Reviewed version 2 became run version 3 on approval. Full reconciliation, browser screenshots and logs are in `output/monthly-journey-final/`. Bank format/content were checked locally, not accepted by a bank; legal and practitioner acceptance remain open.
@@ -1125,6 +1131,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-11 — Copilot — Completed recovery, bank-export and overtime fixes on `feat/monthly-payroll-product`, based on `0995150`; regression, disposable PostgreSQL, browser and full SQLite checks passed. Updated the overtime golden snapshots; commit and push pending.
 
 - 2026-11-06 — Codex — Completed the fresh synthetic browser journey and reconciled all downloaded outputs on `ed20245`; recorded audit attribution/download gaps. Focused PostgreSQL and full SQLite tests passed. No push or deployment.
 

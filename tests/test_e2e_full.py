@@ -216,7 +216,7 @@ def test_full_payroll_flow(ctx, client):
     assert saved_ot.overtime_type == 'day'
 
     ot_pay = calculate_overtime_pay(10000, 4, 'day')
-    assert ot_pay == Decimal('288.48'), f'Overtime pay should be 288.48, got {ot_pay}'
+    assert ot_pay == Decimal('288.46'), f'Overtime pay should be 288.46, got {ot_pay}'
 
     # ============================================================
     # STEP 5: Run payroll calculation (unit-level verification)

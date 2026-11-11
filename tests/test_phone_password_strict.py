@@ -187,16 +187,17 @@ def test_login_loads_phone_input_script(app):
     assert 'static/js/phone-input.js' in html
 
 
-def test_forgot_password_has_identifier_field(app):
-    """Same single identifier field on the password-reset page."""
+def test_forgot_password_shows_support_path_without_collecting_identity(app):
+    """Do not collect an identifier while reset-code delivery is unavailable."""
     client = app.test_client()
     r = client.get('/auth/forgot-password', follow_redirects=True)
     if r.status_code != 200:
         pytest.skip(f'forgot-password returned {r.status_code}')
     html = r.get_data(as_text=True)
     assert 'phone-input-tabs' not in html
-    assert 'id="login_id"' in html
-    assert 'name@company.com' in html
+    assert 'password reset codes cannot currently be delivered' in html.lower()
+    assert 'id="login_id"' not in html
+    assert 'href="/account-help"' in html
 
 
 # ─────────────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ Verifies that:
 - change_password no longer requires current_password
 """
 
+import logging
 import os
 import sys
 
@@ -54,54 +55,77 @@ def _get_reset_token(app, phone='911234567'):
     in subsequent requests."""
     with app.app_context():
         user = User.query.filter_by(phone=phone).first()
-        return user.generate_reset_token()
+        token = user.generate_reset_token()
+        db.session.commit()
+        return token
 
 
-# --- Step 1: forgot-password (identity capture) ---
+# --- Step 1: recovery availability ---
 
 
 def test_forgot_password_get_renders_form(client):
     r = client.get('/auth/forgot-password')
     assert r.status_code == 200
-    assert b'phone' in r.data.lower() or b'email' in r.data.lower()
+    assert b'password reset codes cannot currently be delivered' in r.data.lower()
+    assert b'contact support' in r.data.lower()
 
 
-def test_forgot_password_post_with_phone_stores_identity(client, app):
-    """Submitting a phone should store it in session, not redirect to login."""
-    r = client.post('/auth/forgot-password', data={'login_id': '911234567'}, follow_redirects=False)
-    assert r.status_code == 302
-    # Should redirect to the new verify step, NOT to login
-    assert '/reset-password/verify' in r.headers.get('Location', '')
-
-
-def test_forgot_password_post_with_email_stores_identity(client, app):
-    """Submitting an email should store it in session."""
+def test_forgot_password_post_does_not_issue_a_code(client, app):
+    """Posting an identifier shows honest recovery guidance without issuing a token."""
+    r = client.post('/auth/forgot-password', data={'login_id': '911234567'})
+    assert r.status_code == 200
+    assert b'no reset code was created or sent' in r.data.lower()
     with app.app_context():
         user = User.query.filter_by(phone='911234567').first()
-        user.email = 'test@example.com'
-        db.session.commit()
-    r = client.post('/auth/forgot-password', data={'login_id': 'test@example.com'}, follow_redirects=False)
-    assert r.status_code == 302
-    assert '/reset-password/verify' in r.headers.get('Location', '')
+        assert user.reset_token_hash is None
 
 
-def test_forgot_password_invalid_input_rejected(client):
-    r = client.post('/auth/forgot-password', data={'login_id': 'abc'}, follow_redirects=True)
-    assert b'valid Ethiopian phone or email' in r.data
-
-
-def test_forgot_password_empty_input_rejected(client):
-    r = client.post('/auth/forgot-password', data={'login_id': ''}, follow_redirects=True)
-    assert b'Please enter your phone' in r.data
+def test_forgot_password_post_is_independent_of_identifier(client):
+    phone = client.post('/auth/forgot-password', data={'login_id': '911234567'})
+    email = client.post('/auth/forgot-password', data={'login_id': 'unknown@example.invalid'})
+    assert phone.status_code == email.status_code == 200
+    for response in (phone, email):
+        assert b'no reset code was created or sent' in response.data.lower()
+    assert b'911234567' not in phone.data and b'unknown@example.invalid' not in email.data
 
 
 def test_forgot_password_no_enumeration(client):
     """Whether the user exists or not, the response should look the same."""
     r1 = client.post('/auth/forgot-password', data={'login_id': '911234567'}, follow_redirects=True)
     r2 = client.post('/auth/forgot-password', data={'login_id': '999999999'}, follow_redirects=True)
-    # Both should land on verify step with the same flash
     assert r1.status_code == 200
     assert r2.status_code == 200
+    assert b'no reset code was created or sent' in r1.data.lower()
+    assert b'no reset code was created or sent' in r2.data.lower()
+    assert b'911234567' not in r1.data and b'999999999' not in r2.data
+
+
+def test_forgot_password_does_not_claim_undelivered_code_or_log_it(client, app, monkeypatch, caplog):
+    """Recovery must not issue or log a code while no delivery channel is configured."""
+    caplog.set_level(logging.DEBUG, logger='payroll_engine')
+    generated = []
+    original_generate = User.generate_reset_token
+
+    def track_generated_token(user):
+        token = original_generate(user)
+        generated.append(token)
+        return token
+
+    monkeypatch.setattr(User, 'generate_reset_token', track_generated_token)
+    with app.app_context():
+        user = User.query.filter_by(phone='911234567').first()
+        assert user.reset_token_hash is None
+
+    response = client.post('/auth/forgot-password', data={'login_id': '911234567'}, follow_redirects=True)
+
+    assert response.status_code == 200
+    assert all(token not in caplog.text for token in generated)
+    assert generated == []
+    assert b'no reset code was created or sent' in response.data.lower()
+    assert b'code has been sent' not in response.data.lower()
+    with app.app_context():
+        user = User.query.filter_by(phone='911234567').first()
+        assert user.reset_token_hash is None
 
 
 # --- Step 2: verify (code entry, no identity re-typing) ---
@@ -115,8 +139,10 @@ def test_verify_requires_session(client):
 
 
 def test_verify_renders_identity_chip(client, app):
-    """After forgot-password, verify page should show the masked identity chip."""
-    client.post('/auth/forgot-password', data={'login_id': '911234567'})
+    """An explicitly authorized recovery channel can still verify an issued code."""
+    client.get('/auth/forgot-password')
+    with client.session_transaction() as sess:
+        sess['reset_identity'] = {'type': 'phone', 'value': '911234567', 'code_attempts': 0}
     r = client.get('/auth/reset-password/verify')
     assert r.status_code == 200
     assert b'identity-chip' in r.data
@@ -125,36 +151,13 @@ def test_verify_renders_identity_chip(client, app):
 
 
 def test_verify_correct_code_proceeds_to_new(client, app):
-    """With the correct token, verify should redirect to the new-password step."""
-    # Use the full flow: go through forgot-password which stores identity
-    # AND generates the token as a side effect
-    r = client.post(
-        '/auth/forgot-password',
-        data={'login_id': '911234567'},
-        follow_redirects=True,
-    )
-    # Should land on verify page
-    assert r.status_code == 200
-    assert b'identity-chip' in r.data
-    # The token was logged via current_app.logger.debug — but we need to
-    # retrieve it differently. Let's generate it via the route's side effect:
-    # The forgot-password route commits the token. We can fetch it by
-    # querying the user record via a fresh app context.
-    with app.app_context():
-        u = User.query.filter_by(phone='911234567').first()
-        # The token is hashed in the DB, so we can't retrieve the raw token.
-        # Instead, we need to generate a new one for this test using the
-        # service method.
-        # Reset the user's token to a known value
-        u.reset_token_hash = None
-        u.reset_token_expires = None
-        db.session.commit()
-    # Now do the forgot-password flow again to get a real token
-    # The token is logged via logger — we need to access it via capsys or similar
-    # For test purposes, let's just verify the flow with a known invalid code
-    # and accept the test as a flow verification (not a token-match test)
-    r = client.post('/auth/reset-password/verify', data={'token': '000000'}, follow_redirects=True)
-    assert b'Invalid or expired code' in r.data
+    """A valid code from an authorized channel still completes verification."""
+    token = _get_reset_token(app)
+    with client.session_transaction() as sess:
+        sess['reset_identity'] = {'type': 'phone', 'value': '911234567', 'code_attempts': 0}
+    r = client.post('/auth/reset-password/verify', data={'token': token}, follow_redirects=False)
+    assert r.status_code == 302
+    assert '/auth/reset-password/new' in r.headers.get('Location', '')
 
 
 def test_verify_wrong_code_rejected(client, app):

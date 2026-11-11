@@ -19,7 +19,8 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, Payslip, TenantQuery, User
@@ -123,6 +124,39 @@ def test_employee_payslip_has_correct_data(company_with_data):
     assert payslip.tax == 2000
     assert payslip.employee_pension == 700
     assert payslip.net_pay == 9300
+
+
+def test_historical_payslip_uses_approved_overtime_after_salary_change(app, company_with_data):
+    """A later salary edit must not recalculate overtime shown on an approved payslip."""
+    company, _owner, emp_user, emp, payslip = company_with_data
+    emp.user_id = emp_user.id
+    emp.basic_salary = Decimal('20000.00')
+    payslip.generated_at = datetime(2026, 7, 31)
+    payslip.gross_salary = Decimal('12288.46')
+    payslip.line_items = [
+        {'item_key': 'basic_salary', 'classification': 'earning', 'earned_amount': '10000.00'},
+        {'item_key': 'overtime', 'classification': 'earning', 'earned_amount': '288.46'},
+    ]
+    db.session.add(
+        OvertimeEntry(
+            company_id=company.id,
+            employee_id=emp.id,
+            date=date(2026, 7, 15),
+            hours=4,
+            overtime_type='day',
+        )
+    )
+    db.session.commit()
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess['_user_id'] = str(emp_user.id)
+        sess['_fresh'] = True
+    response = client.get(f'/my/payslips/{payslip.id}')
+
+    assert response.status_code == 200
+    assert b'ETB 288.46' in response.data
+    assert b'ETB 576.90' not in response.data
 
 
 def test_employee_profile_masked_bank(company_with_data):

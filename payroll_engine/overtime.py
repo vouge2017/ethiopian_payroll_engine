@@ -146,13 +146,14 @@ def calculate_hourly_rate(basic_salary, for_date=None) -> Decimal:
         for_date: Optional date for rule versioning
 
     Returns:
-        Hourly rate in ETB, as Decimal
+        Unrounded hourly rate in ETB, as Decimal. The calculated overtime
+        amount is rounded after hours and the configured multiplier are applied.
     """
     basic_salary = _D(basic_salary)
     if basic_salary <= 0:
         return Decimal('0')
     rules = _get_overtime_rules(for_date)
-    return (basic_salary / rules['monthly_hours']).quantize(Q, rounding=ROUND_HALF_UP)
+    return basic_salary / rules['monthly_hours']
 
 
 def get_overtime_rates(for_date=None) -> dict[str, Decimal]:
@@ -287,7 +288,7 @@ def get_overtime_type_label(overtime_type: str, for_date=None) -> str:
     labels = {
         'day': f'Regular Day ({rates["day"]}x)',
         'night': f'Night / 10pm-6am ({rates["night"]}x)',
-        'holiday': f'Public Holiday ({rates["holiday"]}x)',
-        'rest_day_holiday': f'Rest Day + Holiday ({rates["rest_day_holiday"]}x)',
+        'holiday': f'Weekly Rest Day ({rates["holiday"]}x)',
+        'rest_day_holiday': f'Public Holiday ({rates["rest_day_holiday"]}x)',
     }
     return labels.get(overtime_type, overtime_type)

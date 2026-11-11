@@ -62,7 +62,7 @@ def test_current_saved_review_compares_prior_approved_facts(worksheet, monkeypat
     assert by_kind['salary_change'].old_value == Decimal('10000')
     assert by_kind['salary_change'].new_value == Decimal('12000')
     assert by_kind['bonus_change'].delta == Decimal('500')
-    assert by_kind['overtime'].delta == Decimal('346.14')
+    assert by_kind['overtime'].delta == Decimal('346.15')
     assert by_kind['deduction_change'].delta == Decimal('100')
     assert result.variance_threshold_pct is None
     with app.app_context():

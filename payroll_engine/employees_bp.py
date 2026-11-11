@@ -587,8 +587,7 @@ def edit_employee(emp_id):
 @role_required('owner', 'accountant')
 def employee_detail(emp_id):
     """Show employee details."""
-    from payroll_engine.overtime import DEFAULT_OVERTIME_RATES as OVERTIME_RATES
-    from payroll_engine.overtime import calculate_overtime_pay
+    from payroll_engine.overtime import calculate_overtime_pay, get_overtime_rates, get_overtime_type_label
 
     emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
     page = request.args.get('page', 1, type=int)
@@ -610,14 +609,16 @@ def employee_detail(emp_id):
     # Calculate pay for each entry
     overtime_data = []
     total_ot_hours = 0
-    total_ot_pay = 0
+    total_ot_pay = Decimal('0')
     for entry in overtime_entries:
-        pay = calculate_overtime_pay(emp.basic_salary, entry.hours, entry.overtime_type)
+        rates = get_overtime_rates(entry.date)
+        pay = calculate_overtime_pay(emp.basic_salary, entry.hours, entry.overtime_type, for_date=entry.date)
         overtime_data.append(
             {
                 'entry': entry,
                 'pay': pay,
-                'rate': OVERTIME_RATES.get(entry.overtime_type, Decimal('1')),
+                'rate': rates.get(entry.overtime_type, Decimal('1')),
+                'label': get_overtime_type_label(entry.overtime_type, entry.date),
             }
         )
         total_ot_hours += entry.hours
@@ -634,6 +635,7 @@ def employee_detail(emp_id):
     from payroll_engine.services import employee_assignments as ea
 
     _ensure_catalog(emp.company_id)
+    overtime_rates = get_overtime_rates(today)
     return render_template(
         'employee_detail.html',
         assignment_rows=ea.employee_view(emp.company_id, emp, today),
@@ -651,7 +653,8 @@ def employee_detail(emp_id):
         overtime_data=overtime_data,
         total_ot_hours=round(total_ot_hours, 2),
         total_ot_pay=round(total_ot_pay, 2),
-        overtime_types=list(OVERTIME_RATES.keys()),
+        overtime_types=[(key, get_overtime_type_label(key, today)) for key in overtime_rates],
+        overtime_rate_summary=', '.join(get_overtime_type_label(key, today) for key in overtime_rates),
         deductions=deductions,
         active_deductions=active_deductions,
         inactive_deductions=inactive_deductions,

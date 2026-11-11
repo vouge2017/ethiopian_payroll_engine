@@ -15,6 +15,7 @@ Key rules from the implementation blueprint:
 import csv
 import io
 import re
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 # Account validation patterns
@@ -88,6 +89,52 @@ ACCOUNT_PATTERNS = {
 }
 
 
+def payment_channel(payment_account: str | None) -> str:
+    """Return the channel prefix used to group an account on disbursement."""
+    account = (payment_account or '').strip()
+    return account.split(':', 1)[0].lower() if ':' in account else 'unknown'
+
+
+def payment_rows_for_payslips(payslips) -> list[dict[str, Any]]:
+    """Build disbursement rows from retained approval facts where available."""
+    from payroll_engine.services.worksheet_review import published_row
+
+    rows = []
+    for payslip in payslips:
+        employee = payslip.employee
+        if employee is None:
+            continue
+
+        snapshot = published_row(payslip)
+        if snapshot is None:
+            employee_id = employee.employee_id
+            name = employee.name
+            account = employee.bank_account or employee.bank_or_telebirr or ''
+            net = payslip.net_pay
+        else:
+            employee_id = snapshot.get('id', employee.employee_id)
+            name = snapshot.get('name', employee.name)
+            account = snapshot.get('bank', '')
+            net = snapshot.get('net', payslip.net_pay)
+
+        rows.append(
+            {
+                'id': employee_id,
+                'name': name,
+                'bank': account,
+                'net': Decimal(str(net or 0)),
+                'payslip_id': payslip.id,
+            }
+        )
+    return rows
+
+
+def bank_file_rows(payslips, bank: str) -> list[dict[str, Any]]:
+    """Select only the approved payment rows belonging to the requested channel."""
+    channel = (bank or '').strip().lower()
+    return [row for row in payment_rows_for_payslips(payslips) if payment_channel(row['bank']) == channel]
+
+
 def validate_account_number(account: str, bank: str) -> tuple:
     """
     Validate an account number against the bank's format rules.
@@ -151,7 +198,21 @@ def get_narrative(template_key: str, emp_id: str, name: str, period: str, custom
     return template.format(period=period, id=emp_id, name=name)
 
 
-def format_amount(amount: float, decimals: int = 2) -> str:
+def _rounded_amount(amount: Any, decimals: int = 2) -> Decimal:
+    """Convert a payment to Decimal and round once using payroll money rules."""
+    if decimals < 0:
+        raise ValueError('Amount decimals must be zero or greater')
+    try:
+        value = Decimal(str(amount))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ValueError(f'Invalid payment amount: {amount!r}') from exc
+    if not value.is_finite():
+        raise ValueError(f'Payment amount must be finite: {value}')
+    quantum = Decimal(1).scaleb(-decimals)
+    return value.quantize(quantum, rounding=ROUND_HALF_UP)
+
+
+def format_amount(amount: Any, decimals: int = 2) -> str:
     """
     Format amount for bank file: no commas, forced decimal places, string type.
 
@@ -162,7 +223,7 @@ def format_amount(amount: float, decimals: int = 2) -> str:
     Bad:  "12,500.50" or 12500.5
     Good: "12500.50"
     """
-    return f'{amount:.{decimals}f}'
+    return f'{_rounded_amount(amount, decimals):.{decimals}f}'
 
 
 def validate_payroll_for_bank(
@@ -388,9 +449,8 @@ def generate_xlsx(
     try:
         import openpyxl
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-    except ImportError:
-        # Fallback to CSV
-        return generate_csv(employees_data, bank, company_name, period)
+    except ImportError as exc:
+        raise RuntimeError('openpyxl is required to generate an XLSX bank file') from exc
 
     from datetime import date as _date
 
@@ -415,7 +475,7 @@ def generate_xlsx(
         bottom=Side(style='thin', color='CCCCCC'),
     )
     text_format = '@'  # Explicit text format — prevents scientific notation
-    etb_format = '#,##0.00'
+    etb_format = '#,##0' + (f'.{"0" * decimals}' if decimals else '')
 
     # --- Title block ---
     ws.merge_cells('A1:D1')
@@ -443,13 +503,13 @@ def generate_xlsx(
         ws.column_dimensions[cell.column_letter].width = width
 
     # --- Data rows ---
-    total_amount = 0
+    total_amount = Decimal('0')
     for i, emp in enumerate(employees_data, 1):
         account = emp.get('bank', '').strip()
         if ':' in account:
             account = account.split(':', 1)[1].strip()
 
-        amount = emp.get('net', 0)
+        amount = _rounded_amount(emp.get('net', 0), decimals)
         total_amount += amount
         name = emp.get('name', 'Unknown')
         emp_id = emp.get('id', '')
@@ -460,6 +520,9 @@ def generate_xlsx(
             period=period,
             custom_template=custom_narrative,
         )
+        from payroll_engine.security import prevent_csv_injection
+
+        narrative = prevent_csv_injection(narrative)
 
         row = 5 + i
 

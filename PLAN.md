@@ -7,6 +7,39 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### PR #51 Ruff formatting correction (2026-11-11)
+
+- Reformatted the chained payslip query in
+  `tests/test_disbursement.py` to Ruff's required single line; no logic changed.
+  Branch: `feat/monthly-payroll-product`.
+- Verification: `ruff format --check tests/test_disbursement.py` and
+  `ruff check tests/test_disbursement.py` passed; focused test file: **13
+  passed**; full `python3 run_tests.py --continue`: **2028 passed, 0 failed,
+  0 errors, 251 skipped in 969.3s**. Not pushed or hosted-tested.
+
+### GitHub pull-request checklist progress skill (2026-11-11)
+
+- Added the workspace skill at `.github/skills/github-pr-checklist-progress/`
+  to explain and verify checked/total checklist fractions, including the 5/8
+  and 8/10 examples. It distinguishes checklist completion from CI, approvals
+  and merge status. Branch: `feat/monthly-payroll-product`, based on
+  `4f548e664d3654d3ba056b1c04050853c6c02fd2`.
+- Validation: skill structure and examples passed; `git diff --check` passed;
+  full `python3 run_tests.py --continue`: **2028 passed, 0 failed, 0 errors,
+  251 skipped in 968.7s**. No runtime behavior changed.
+
+### Payment channel exports (2026-11-11)
+
+- Implemented on `feat/monthly-payroll-product` over the recovery/export/overtime commits. Bank downloads and the disbursement page now share snapshot-backed payment rows and channel grouping; CBE/Telebirr exports include only their matching channel. The API `get_bank_file` endpoint is retained and uses the same helper. Regression test includes one CBE and two Telebirr employees, checks approved snapshot identity/account/net, per-file totals and duplicates; it failed on the old code because the CBE file included Telebirr workers.
+- Verification: focused export/report tests **50 passed**; disposable PostgreSQL 16 suite **246 passed, 482 warnings**; final full SQLite suite **2028 passed, 0 failed, 0 errors, 251 skipped**. Ruff and diff checks passed. Payroll formula/rate files were unchanged. No merge.
+- Locally tested, not pushed or hosted-tested. The branch remains ahead of origin; publish from VS Code Source Control once the owner’s GitHub session is available.
+
+### Recovery, exports and overtime continuation (2026-11-11)
+
+- Implemented and locally tested on `feat/monthly-payroll-product` at `356678d6c595b8477c7be3141f6d62fb9a2f2d48`, based on `0995150b28678ff594b9178dbdf7d60406a67d7b`. Recovery no longer issues or logs reset codes when delivery is unavailable; the page directs users to support without claiming a code was sent. Bank CSV/XLSX money uses `Decimal` and `ROUND_HALF_UP`, with tests asserting workbook cell contents. Overtime keeps the existing multipliers, uses full hourly-rate precision, and avoids reconstructing historical payslip amounts from current salary. New regression tests reproduced the delivery, export-rounding and overtime-rounding failures before the fixes.
+- Focused affected tests: **210 passed, 1 skipped**; refreshed golden/version tests: **38 passed**; Ruff and `git diff --check` passed. Full SQLite suite: **2027 passed, 0 failed, 0 errors, 251 skipped in 923.7s**. Disposable PostgreSQL 16 selection: **246 passed, 481 warnings**. Synthetic Chromium check passed for support-only recovery and overtime display; no page errors.
+- Locally tested only; not hosted-tested, merged, deployed or practitioner-accepted. Self-service recovery remains unavailable until a delivery and identity-verification process is decided; no messaging provider was selected. Bank format acceptance and unresolved legal/practitioner payroll rules remain open.
+
 ### Session A: monthly journey and legacy undo (2026-11-05)
 
 - Final continuation completed locally on code revision `ed20245e1051ac63881c6c28a3b71a70f6ac2d99`: normal browser interaction created one synthetic company/employee and completed approval, payslip, PAYE/pension reports, accounting CSV, bank CSV and audit review for November 2026 run 1. The one bank row and account mapping matched ETB 9,050; accounting debits and credits were 13,100. Reviewed version 2 became run version 3 on approval. Full reconciliation, browser screenshots and logs are in `output/monthly-journey-final/`. Bank format/content were checked locally, not accepted by a bank; legal and practitioner acceptance remain open.
@@ -1125,6 +1158,16 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-11 — Copilot — Applied the Ruff-only formatting correction to the
+  disbursement regression test; focused and full test suites passed. Locally
+  tested on `feat/monthly-payroll-product`; push pending.
+
+- 2026-11-11 — Copilot — Added the workspace slash skill for explaining
+  GitHub pull-request checklist progress; skill validation and full suite
+  passed. Locally tested on `feat/monthly-payroll-product`; push pending.
+
+- 2026-11-11 — Copilot — Completed recovery, bank-export and overtime fixes, committed as `356678d` on `feat/monthly-payroll-product`; regression, disposable PostgreSQL, browser and full SQLite checks passed. Updated the overtime golden snapshots; push pending.
 
 - 2026-11-06 — Codex — Completed the fresh synthetic browser journey and reconciled all downloaded outputs on `ed20245`; recorded audit attribution/download gaps. Focused PostgreSQL and full SQLite tests passed. No push or deployment.
 

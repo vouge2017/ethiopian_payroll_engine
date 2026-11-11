@@ -119,7 +119,7 @@ def test_new_registration_cannot_shadow_a_legacy_phone(app):
 
 
 @pytest.mark.parametrize('entered', ['0911234567', '911234567'])
-def test_password_recovery_keeps_legacy_identity(app, monkeypatch, entered):
+def test_password_recovery_does_not_issue_undeliverable_legacy_code(app, monkeypatch, entered):
     tokens = []
     original_generate = User.generate_reset_token
 
@@ -132,20 +132,13 @@ def test_password_recovery_keeps_legacy_identity(app, monkeypatch, entered):
     with app.app_context():
         original = add_user('0911234567')
     client = app.test_client()
-    assert client.post('/auth/forgot-password', data={'login_id': entered}).status_code == 302
-    assert len(tokens) == 1
-    response = client.post('/auth/reset-password/verify', data={'token': tokens[0]})
-    assert response.status_code == 302 and '/auth/reset-password/new' in response.headers['Location']
-    response = client.post(
-        '/auth/reset-password/new',
-        data={
-            'password': 'NewSyntheticPass123!',
-            'password2': 'NewSyntheticPass123!',
-        },
-    )
-    assert response.status_code == 302
+    response = client.post('/auth/forgot-password', data={'login_id': entered})
+    assert response.status_code == 200
+    assert b'no reset code was created or sent' in response.data.lower()
+    assert tokens == []
     with client.session_transaction() as session:
-        assert session['_user_id'] == str(original)
+        assert 'reset_identity' not in session
     with app.app_context():
         user = User.query.filter_by(id=original).one()
-        assert user.phone == '0911234567' and user.check_password('NewSyntheticPass123!')
+        assert user.phone == '0911234567'
+        assert user.reset_token_hash is None

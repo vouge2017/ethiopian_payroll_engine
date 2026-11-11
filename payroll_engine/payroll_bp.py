@@ -2153,7 +2153,9 @@ def disbursement_progress(run_id):
 
     payslips = Payslip.query.filter_by(payroll_run_id=run.id, company_id=run.company_id).all()
 
-    # Build employee list grouped by bank
+    from payroll_engine.bank_file import payment_channel, payment_rows_for_payslips
+
+    # Use the same retained payment facts as the downloadable bank files.
     employees = []
     bank_summary = {}  # bank_key -> {'label': str, 'count': int, 'total': Decimal}
 
@@ -2165,21 +2167,20 @@ def disbursement_progress(run_id):
         'telebirr': 'Telebirr / Mobile Wallet',
     }
 
-    for ps in payslips:
-        emp = ps.employee
-        bank_raw = (emp.bank_account or emp.bank_or_telebirr or '').strip()
-        bank_key = bank_raw.split(':')[0].lower() if ':' in bank_raw else 'unknown'
+    for payment in payment_rows_for_payslips(payslips):
+        bank_raw = (payment['bank'] or '').strip()
+        bank_key = payment_channel(bank_raw)
         bank_display = bank_labels.get(bank_key, bank_key.title())
 
         employees.append(
             {
-                'name': emp.name if emp else 'Unknown',
-                'employee_id': emp.employee_id if emp else '?',
+                'name': payment['name'],
+                'employee_id': payment['id'],
                 'bank_raw': bank_raw,
                 'bank_key': bank_key,
                 'bank_display': bank_display,
-                'net': float(ps.net_pay),
-                'payslip_id': ps.id,
+                'net': payment['net'],
+                'payslip_id': payment['payslip_id'],
             }
         )
 
@@ -2187,12 +2188,12 @@ def disbursement_progress(run_id):
             bank_summary[bank_key] = {
                 'label': bank_display,
                 'count': 0,
-                'total': 0.0,
+                'total': Decimal('0'),
             }
         bank_summary[bank_key]['count'] += 1
-        bank_summary[bank_key]['total'] += float(ps.net_pay)
+        bank_summary[bank_key]['total'] += payment['net']
 
-    total_net = sum(e['net'] for e in employees)
+    total_net = sum((e['net'] for e in employees), Decimal('0'))
     summary_list = sorted(bank_summary.items(), key=lambda x: x[1]['total'], reverse=True)
 
     return render_template(

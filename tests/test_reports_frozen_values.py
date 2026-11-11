@@ -131,7 +131,7 @@ def locked_month(app):
                     'pension_employee': 0.0,
                     'pension_employer': 0.0,
                     'net': 13000.0,
-                    'bank': '1000123456789',
+                    'bank': 'cbe:1000123456789',
                     'overtime': [{'hours': 4, 'type': 'day'}],
                 },
                 {
@@ -145,7 +145,7 @@ def locked_month(app):
                     'pension_employee': 420.0,
                     'pension_employer': 660.0,
                     'net': 4915.0,
-                    'bank': '1000987654321',
+                    'bank': 'cbe:1000987654321',
                 },
             ],
         )
@@ -235,6 +235,9 @@ def _generate_everything(client, ctx):
         assert resp.status_code == 200, f'{url} -> {resp.status_code}'
         assert resp.mimetype.endswith('spreadsheetml.sheet'), f'{url} did not return a workbook'
         out[key] = _xlsx_rows(resp.data)
+    resp = client.get(f'/reports/bank/{ctx["run_id"]}?format=csv')
+    assert resp.status_code == 200 and resp.mimetype == 'text/csv'
+    out['route_bank_csv'] = list(csv.reader(io.StringIO(resp.data.decode())))
     resp = client.get('/payroll/payslips/export')
     assert resp.status_code == 200
     out['payslip_export'] = list(csv.reader(io.StringIO(resp.data.decode())))
@@ -347,6 +350,14 @@ def test_locked_month_reports_unchanged_after_salary_change(client, locked_month
     assert any(Decimal(str(c)) == approved['net'] for c in flat_bank if isinstance(c, (int, float, Decimal))), (
         f'bank file must pay the approved net {approved["net"]}'
     )
+    bank_xlsx_row = next(row for row in after['route_bank'] if any('Abebe Engine' in str(cell) for cell in row))
+    assert bank_xlsx_row[0] == '1000123456789'
+    assert Decimal(str(bank_xlsx_row[1])) == approved['net']
+    assert bank_xlsx_row[3] == 'ETB'
+    bank_csv_row = next(row for row in after['route_bank_csv'] if any('Abebe Engine' in str(cell) for cell in row))
+    assert bank_csv_row[0] == '1000123456789'
+    assert Decimal(bank_csv_row[1]) == approved['net']
+    assert bank_csv_row[3] == 'ETB'
 
     export_header = after['payslip_export'][0]
     export_row = dict(zip(export_header, _row_for(after['payslip_export'], 'EMP001'), strict=False))

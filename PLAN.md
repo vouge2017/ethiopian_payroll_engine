@@ -7,6 +7,16 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### PR #51 Ruff formatting correction (2026-11-11)
+
+- Reformatted the chained payslip query in
+  `tests/test_disbursement.py` to Ruff's required single line; no logic changed.
+  Branch: `feat/monthly-payroll-product`.
+- Verification: `ruff format --check tests/test_disbursement.py` and
+  `ruff check tests/test_disbursement.py` passed; focused test file: **13
+  passed**; full `python3 run_tests.py --continue`: **2028 passed, 0 failed,
+  0 errors, 251 skipped in 969.3s**. Not pushed or hosted-tested.
+
 ### GitHub pull-request checklist progress skill (2026-11-11)
 
 - Added the workspace skill at `.github/skills/github-pr-checklist-progress/`
@@ -1148,6 +1158,10 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-11 — Copilot — Applied the Ruff-only formatting correction to the
+  disbursement regression test; focused and full test suites passed. Locally
+  tested on `feat/monthly-payroll-product`; push pending.
 
 - 2026-11-11 — Copilot — Added the workspace slash skill for explaining
   GitHub pull-request checklist progress; skill validation and full suite

@@ -152,9 +152,7 @@ class TestDisbursementProgress:
                 employee.name = f'Changed {employee.employee_id}'
                 employee.bank_account = 'dashen:2000111222333'
                 net = expected_by_id[employee.employee_id][2]
-                Payslip.query.filter_by(
-                    payroll_run_id=rid, company_id=cid, employee_id=employee.id
-                ).one().net_pay = net
+                Payslip.query.filter_by(payroll_run_id=rid, company_id=cid, employee_id=employee.id).one().net_pay = net
             db.session.commit()
 
         client = app.test_client()

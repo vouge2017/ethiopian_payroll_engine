@@ -9,7 +9,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Recovery, exports and overtime continuation (2026-11-11)
 
-- Implemented and locally tested on `feat/monthly-payroll-product`, based on `0995150b28678ff594b9178dbdf7d60406a67d7b`. Recovery no longer issues or logs reset codes when delivery is unavailable; the page directs users to support without claiming a code was sent. Bank CSV/XLSX money uses `Decimal` and `ROUND_HALF_UP`, with tests asserting workbook cell contents. Overtime keeps the existing multipliers, uses full hourly-rate precision, and avoids reconstructing historical payslip amounts from current salary. New regression tests reproduced the delivery, export-rounding and overtime-rounding failures before the fixes.
+- Implemented and locally tested on `feat/monthly-payroll-product` at `356678d6c595b8477c7be3141f6d62fb9a2f2d48`, based on `0995150b28678ff594b9178dbdf7d60406a67d7b`. Recovery no longer issues or logs reset codes when delivery is unavailable; the page directs users to support without claiming a code was sent. Bank CSV/XLSX money uses `Decimal` and `ROUND_HALF_UP`, with tests asserting workbook cell contents. Overtime keeps the existing multipliers, uses full hourly-rate precision, and avoids reconstructing historical payslip amounts from current salary. New regression tests reproduced the delivery, export-rounding and overtime-rounding failures before the fixes.
 - Focused affected tests: **210 passed, 1 skipped**; refreshed golden/version tests: **38 passed**; Ruff and `git diff --check` passed. Full SQLite suite: **2027 passed, 0 failed, 0 errors, 251 skipped in 923.7s**. Disposable PostgreSQL 16 selection: **246 passed, 481 warnings**. Synthetic Chromium check passed for support-only recovery and overtime display; no page errors.
 - Locally tested only; not hosted-tested, merged, deployed or practitioner-accepted. Self-service recovery remains unavailable until a delivery and identity-verification process is decided; no messaging provider was selected. Bank format acceptance and unresolved legal/practitioner payroll rules remain open.
 
@@ -1132,7 +1132,7 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 
 ## 5. Log
 
-- 2026-11-11 — Copilot — Completed recovery, bank-export and overtime fixes on `feat/monthly-payroll-product`, based on `0995150`; regression, disposable PostgreSQL, browser and full SQLite checks passed. Updated the overtime golden snapshots; commit and push pending.
+- 2026-11-11 — Copilot — Completed recovery, bank-export and overtime fixes, committed as `356678d` on `feat/monthly-payroll-product`; regression, disposable PostgreSQL, browser and full SQLite checks passed. Updated the overtime golden snapshots; push pending.
 
 - 2026-11-06 — Codex — Completed the fresh synthetic browser journey and reconciled all downloaded outputs on `ed20245`; recorded audit attribution/download gaps. Focused PostgreSQL and full SQLite tests passed. No push or deployment.
 

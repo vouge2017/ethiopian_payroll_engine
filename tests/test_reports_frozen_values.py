@@ -131,7 +131,7 @@ def locked_month(app):
                     'pension_employee': 0.0,
                     'pension_employer': 0.0,
                     'net': 13000.0,
-                    'bank': '1000123456789',
+                    'bank': 'cbe:1000123456789',
                     'overtime': [{'hours': 4, 'type': 'day'}],
                 },
                 {
@@ -145,7 +145,7 @@ def locked_month(app):
                     'pension_employee': 420.0,
                     'pension_employer': 660.0,
                     'net': 4915.0,
-                    'bank': '1000987654321',
+                    'bank': 'cbe:1000987654321',
                 },
             ],
         )

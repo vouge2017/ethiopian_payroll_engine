@@ -7,6 +7,12 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Payment channel exports (2026-11-11)
+
+- Implemented on `feat/monthly-payroll-product` over the recovery/export/overtime commits. Bank downloads and the disbursement page now share snapshot-backed payment rows and channel grouping; CBE/Telebirr exports include only their matching channel. The API `get_bank_file` endpoint is retained and uses the same helper. Regression test includes one CBE and two Telebirr employees, checks approved snapshot identity/account/net, per-file totals and duplicates; it failed on the old code because the CBE file included Telebirr workers.
+- Verification: focused export/report tests **50 passed**; disposable PostgreSQL 16 suite **246 passed, 482 warnings**; final full SQLite suite **2028 passed, 0 failed, 0 errors, 251 skipped**. Ruff and diff checks passed. Payroll formula/rate files were unchanged. No merge.
+- Locally tested, not pushed or hosted-tested. The branch remains ahead of origin; publish from VS Code Source Control once the owner’s GitHub session is available.
+
 ### Recovery, exports and overtime continuation (2026-11-11)
 
 - Implemented and locally tested on `feat/monthly-payroll-product` at `356678d6c595b8477c7be3141f6d62fb9a2f2d48`, based on `0995150b28678ff594b9178dbdf7d60406a67d7b`. Recovery no longer issues or logs reset codes when delivery is unavailable; the page directs users to support without claiming a code was sent. Bank CSV/XLSX money uses `Decimal` and `ROUND_HALF_UP`, with tests asserting workbook cell contents. Overtime keeps the existing multipliers, uses full hourly-rate precision, and avoids reconstructing historical payslip amounts from current salary. New regression tests reproduced the delivery, export-rounding and overtime-rounding failures before the fixes.

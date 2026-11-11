@@ -5,12 +5,15 @@ Tests for Phase 5 — Disbursement Progress:
 - Status progression
 """
 
+import csv
+import io
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -21,6 +24,7 @@ from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
     Employee,
+    PayrollDraft,
     PayrollRun,
     Payslip,
     User,
@@ -115,6 +119,78 @@ def _setup(app, disbursement_status='pending'):
 
 class TestDisbursementProgress:
     """Test the disbursement progress page."""
+
+    def test_channel_exports_match_approved_snapshot_and_disbursement_totals(self, app):
+        cid, _oid, rid = _setup(app)
+        expected = {
+            'cbe': [('EMP001', 'Snapshot CBE', '1000123456789', Decimal('1000.00'))],
+            'telebirr': [
+                ('EMP002', 'Snapshot Telebirr One', '0912345678', Decimal('2000.00')),
+                ('EMP003', 'Snapshot Telebirr Two', '0712345678', Decimal('3000.00')),
+            ],
+        }
+        expected_by_id = {row[0]: row[1:] for rows in expected.values() for row in rows}
+        with app.app_context():
+            run = db.session.get(PayrollRun, rid)
+            run.source = 'spreadsheet'
+            employees = Employee.query.filter_by(company_id=cid).order_by(Employee.employee_id).all()
+            snapshots = []
+            for employee in employees:
+                name, account, net = expected_by_id[employee.employee_id]
+                channel = 'cbe' if employee.employee_id == 'EMP001' else 'telebirr'
+                snapshots.append(
+                    {
+                        'employee_pk': employee.id,
+                        'id': employee.employee_id,
+                        'name': name,
+                        'bank': f'{channel}:{account}',
+                        'net': str(net),
+                    }
+                )
+            db.session.add(PayrollDraft(payroll_run_id=rid, company_id=cid, employee_data=snapshots))
+            for employee in employees:
+                employee.name = f'Changed {employee.employee_id}'
+                employee.bank_account = 'dashen:2000111222333'
+                net = expected_by_id[employee.employee_id][2]
+                Payslip.query.filter_by(
+                    payroll_run_id=rid, company_id=cid, employee_id=employee.id
+                ).one().net_pay = net
+            db.session.commit()
+
+        client = app.test_client()
+        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
+        endpoints = (
+            '/reports/bank/{rid}?format=csv&bank={bank}',
+            '/api/v1/payroll-runs/{rid}/bank-file?format=csv&bank={bank}',
+        )
+        for endpoint in endpoints:
+            for bank, expected_rows in expected.items():
+                response = client.get(endpoint.format(rid=rid, bank=bank))
+                assert response.status_code == 200, response.get_data(as_text=True)
+                rows = list(csv.DictReader(io.StringIO(response.get_data(as_text=True))))
+                actual = [
+                    (
+                        row['narrative'].split(' salary - ')[-1].split(' ', 1)[0],
+                        row['narrative'].split(' salary - ', 1)[-1].split(' ', 1)[-1],
+                        row['account_number'],
+                        Decimal(row['amount']),
+                    )
+                    for row in rows
+                ]
+                assert actual == expected_rows
+                assert len({employee_id for employee_id, _, _, _ in actual}) == len(actual)
+                assert sum((amount for _, _, _, amount in actual), Decimal('0')) == sum(
+                    (amount for _, _, _, amount in expected_rows), Decimal('0')
+                )
+
+        disbursement = client.get(f'/payroll/{rid}/disbursement')
+        assert disbursement.status_code == 200
+        assert b'Commercial Bank of Ethiopia (CBE)' in disbursement.data
+        assert b'1 employee' in disbursement.data
+        assert b'ETB 1,000.00' in disbursement.data
+        assert b'Telebirr / Mobile Wallet' in disbursement.data
+        assert b'2 employees' in disbursement.data
+        assert b'ETB 5,000.00' in disbursement.data
 
     def test_explicit_csv_and_xlsx_downloads_keep_payment_pending(self, app):
         cid, _oid, rid = _setup(app)

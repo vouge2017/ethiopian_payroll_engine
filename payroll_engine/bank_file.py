@@ -89,6 +89,52 @@ ACCOUNT_PATTERNS = {
 }
 
 
+def payment_channel(payment_account: str | None) -> str:
+    """Return the channel prefix used to group an account on disbursement."""
+    account = (payment_account or '').strip()
+    return account.split(':', 1)[0].lower() if ':' in account else 'unknown'
+
+
+def payment_rows_for_payslips(payslips) -> list[dict[str, Any]]:
+    """Build disbursement rows from retained approval facts where available."""
+    from payroll_engine.services.worksheet_review import published_row
+
+    rows = []
+    for payslip in payslips:
+        employee = payslip.employee
+        if employee is None:
+            continue
+
+        snapshot = published_row(payslip)
+        if snapshot is None:
+            employee_id = employee.employee_id
+            name = employee.name
+            account = employee.bank_account or employee.bank_or_telebirr or ''
+            net = payslip.net_pay
+        else:
+            employee_id = snapshot.get('id', employee.employee_id)
+            name = snapshot.get('name', employee.name)
+            account = snapshot.get('bank', '')
+            net = snapshot.get('net', payslip.net_pay)
+
+        rows.append(
+            {
+                'id': employee_id,
+                'name': name,
+                'bank': account,
+                'net': Decimal(str(net or 0)),
+                'payslip_id': payslip.id,
+            }
+        )
+    return rows
+
+
+def bank_file_rows(payslips, bank: str) -> list[dict[str, Any]]:
+    """Select only the approved payment rows belonging to the requested channel."""
+    channel = (bank or '').strip().lower()
+    return [row for row in payment_rows_for_payslips(payslips) if payment_channel(row['bank']) == channel]
+
+
 def validate_account_number(account: str, bank: str) -> tuple:
     """
     Validate an account number against the bank's format rules.

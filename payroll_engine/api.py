@@ -1172,7 +1172,7 @@ def get_bank_file(run_id):
     bank: cbe, dashen, awash, boa, wegagen, nib, bunna, telebirr
     format: csv (default), xlsx
     """
-    from payroll_engine.bank_file import generate_csv, generate_xlsx, validate_payroll_for_bank
+    from payroll_engine.bank_file import bank_file_rows, generate_csv, generate_xlsx, validate_payroll_for_bank
 
     cid = _get_company_id()
     run = PayrollRun.query.filter_by(id=run_id, company_id=cid).first_or_404()
@@ -1187,21 +1187,7 @@ def get_bank_file(run_id):
     bank = request.args.get('bank', 'cbe')
     fmt = request.args.get('format', 'csv')
 
-    # Build payment data
-    payments = []
-    for ps in payslips:
-        emp = ps.employee
-        if not emp:
-            continue
-        payments.append(
-            {
-                'employee_id': emp.employee_id,
-                'employee_name': emp.name,
-                'account_number': emp.bank_or_telebirr or '',
-                'amount': float(ps.net_pay or 0),
-                'bank': bank,
-            }
-        )
+    payments = bank_file_rows(payslips, bank)
 
     # Validate
     errors = validate_payroll_for_bank(payments, bank)

@@ -1,7 +1,8 @@
-"""Worker heartbeat — proves the RQ worker is alive and processing.
+"""Recent PDF job activity in the RQ worker.
 
-The worker writes a Redis key with a short TTL after every job and on a
-periodic timer. /readyz reports worker status from that key:
+The PDF job writes a Redis key with a short TTL after successful work.
+This is evidence of recent job activity, not proof that an idle worker is down.
+/readyz reports the status of that key:
 
     up      -> key exists (heartbeat within TTL)
     stale   -> key missing but was seen since process start
@@ -19,14 +20,17 @@ import time
 logger = logging.getLogger('payroll_engine.tasks')
 
 HEARTBEAT_KEY = 'worker:heartbeat'
-HEARTBEAT_TTL_SECONDS = 180  # 3x the expected idle poll interval
+CRON_HEARTBEAT_KEY = 'cron:heartbeat'
+HEARTBEAT_TTL_SECONDS = 180
 
 
 def _redis_client():
     """Best-effort redis client from the broker URL; None if unavailable."""
-    url = os.environ.get('RQ_REDIS_URL') or os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/0'
-    if not url.startswith('redis'):
-        return None  # memory:// in tests/CI — no persistence to watch
+    # Match tasks._get_queue and the RQ worker. A health-only URL can point
+    # at a different Redis and must not produce a false worker signal.
+    url = os.environ.get('REDIS_URL') or os.environ.get('REDISTOGO_URL')
+    if not url or not url.startswith(('redis://', 'rediss://', 'unix://')):
+        return None
     try:
         import redis
 
@@ -35,14 +39,16 @@ def _redis_client():
         return None
 
 
-def beat(worker_id='worker-0'):
-    """Record liveness. Safe to call anywhere; never raises."""
+def beat(worker_id='worker-0', *, key=HEARTBEAT_KEY):
+    """Record activity; report failure without disrupting a completed job."""
     try:
         r = _redis_client()
-        if r is not None:
-            r.setex(HEARTBEAT_KEY, HEARTBEAT_TTL_SECONDS, str(time.time()))
+        if r is None:
+            return False
+        return bool(r.setex(key, HEARTBEAT_TTL_SECONDS, str(time.time())))
     except Exception:  # pragma: no cover - never break a job for a heartbeat
         logger.warning('Worker heartbeat write failed', exc_info=True)
+        return False
 
 
 def heartbeat_status():

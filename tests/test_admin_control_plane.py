@@ -110,6 +110,16 @@ class TestAdminAuthorization:
         assert res.status_code == 200
         assert b'Platform Admin Control Plane' in res.data
 
+    @pytest.mark.parametrize('status', ['up', 'stale', 'unknown'])
+    def test_system_health_displays_worker_status(self, client, app, super_admin_user, monkeypatch, status):
+        from payroll_engine import worker_health
+
+        monkeypatch.setattr(worker_health, 'heartbeat_status', lambda: status)
+        login_as(client, 'superadmin@ethiopayroll.com', 'AdminPass123!')
+        response = client.get('/admin/system-health')
+        assert response.status_code == 200
+        assert f'Recent PDF job activity: {status}'.encode() in response.data
+
 
 class TestTenantManagement:
     """Test tenant directory and management actions."""

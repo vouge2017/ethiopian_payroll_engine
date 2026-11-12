@@ -115,18 +115,18 @@ def daily():
         logger.exception('cron/daily: erca reminder failed')
         report['tasks']['erca_reminder'] = {'error': str(e)}
 
-    # 4. Worker heartbeat (force a write so /readyz reflects activity)
+    # 4. Cron heartbeat: never write the worker key from the web process.
     try:
-        from payroll_engine.worker_health import heartbeat
+        from payroll_engine.worker_health import CRON_HEARTBEAT_KEY, beat
 
-        heartbeat()
-        report['tasks']['worker_heartbeat'] = {'ok': True}
+        ok = beat('daily-cron', key=CRON_HEARTBEAT_KEY)
+        report['tasks']['cron_heartbeat'] = {'ok': ok}
     except Exception as e:  # pragma: no cover
-        logger.debug('cron/daily: worker heartbeat skipped: %s', e)
-        report['tasks']['worker_heartbeat'] = {'skipped': str(e)}
+        logger.warning('cron/daily: cron heartbeat failed (%s)', type(e).__name__)
+        report['tasks']['cron_heartbeat'] = {'ok': False}
 
     report['finished_at'] = datetime.utcnow().isoformat() + 'Z'
-    report['ok'] = True
+    report['ok'] = all('error' not in task and task.get('ok', True) for task in report['tasks'].values())
     return jsonify(report), 200
 
 

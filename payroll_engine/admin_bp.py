@@ -362,9 +362,9 @@ def audit_logs():
 @platform_admin_required
 def system_health():
     """Inspect system operations, database metrics, and background worker queues."""
-    from payroll_engine.worker_health import get_worker_health
+    from payroll_engine.worker_health import heartbeat_status
 
-    worker_status = get_worker_health()
+    worker_status = heartbeat_status()
     return render_template('admin/system_health.html', worker_status=worker_status)
 
 

@@ -59,7 +59,12 @@ def test_cron_daily_rejects_wrong_secret(app):
     assert r.status_code == 401
 
 
-def test_cron_daily_runs_with_correct_secret(app):
+def test_cron_daily_runs_with_correct_secret(app, monkeypatch):
+    from payroll_engine import retention, worker_health
+
+    # Keep this endpoint test independent of the existing login-purge wiring bug.
+    monkeypatch.setattr(retention, 'purge_old_login_attempts', lambda: 0)
+    monkeypatch.setattr(worker_health, 'beat', lambda *args, **kwargs: True)
     client = app.test_client()
     r = client.post(
         '/internal/cron/daily',
@@ -75,6 +80,28 @@ def test_cron_daily_runs_with_correct_secret(app):
     assert 'retention' in data['tasks']
     assert 'compliance' in data['tasks']
     assert 'erca_reminder' in data['tasks']
+
+
+@pytest.mark.parametrize('succeeded', [True, False])
+def test_cron_heartbeat_is_separate_and_reports_result(app, monkeypatch, succeeded):
+    from payroll_engine import retention, worker_health
+
+    calls = []
+
+    def fake_beat(worker_id='worker-0', *, key):
+        calls.append((worker_id, key))
+        return succeeded
+
+    monkeypatch.setattr(worker_health, 'beat', fake_beat)
+    monkeypatch.setattr(retention, 'purge_old_login_attempts', lambda: 0)
+    response = app.test_client().post(
+        '/internal/cron/daily', headers={'X-Cron-Secret': 'test-cron-secret-32-bytes-pad!'}
+    )
+    assert response.status_code == 200
+    assert calls == [('daily-cron', worker_health.CRON_HEARTBEAT_KEY)]
+    assert response.get_json()['tasks']['cron_heartbeat']['ok'] is succeeded
+    assert response.get_json()['ok'] is succeeded
+    assert 'worker_heartbeat' not in response.get_json()['tasks']
 
 
 def test_cron_daily_idempotent(app):

@@ -80,7 +80,7 @@ def daily():
             n_drafts = purge_expired_drafts(current_app._get_current_object())
             n_previews = purge_expired_previews(current_app._get_current_object())
             n_uploads = purge_expired_uploads(current_app._get_current_object())
-            n_attempts = purge_old_login_attempts()
+            n_attempts = purge_old_login_attempts(current_app._get_current_object())
         report['tasks']['retention'] = {
             'payslip_pdfs': n_pdfs,
             'drafts': n_drafts,
@@ -124,6 +124,10 @@ def daily():
     except Exception as e:  # pragma: no cover
         logger.warning('cron/daily: cron heartbeat failed (%s)', type(e).__name__)
         report['tasks']['cron_heartbeat'] = {'ok': False}
+
+    # Keep the historical field without presenting a web-process write as
+    # worker liveness. Cron cannot verify or create a worker heartbeat.
+    report['tasks']['worker_heartbeat'] = {'skipped': True, 'reason': 'Cron does not establish worker liveness'}
 
     report['finished_at'] = datetime.utcnow().isoformat() + 'Z'
     report['ok'] = all('error' not in task and task.get('ok', True) for task in report['tasks'].values())

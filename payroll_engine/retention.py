@@ -119,9 +119,12 @@ def purge_old_login_attempts(app, days=7):
     Default: 7 days (lockout window is 15 minutes, so 7 days is generous).
     """
     with app.app_context():
-        from payroll_engine.models import LoginAttempt
+        from payroll_engine.models import LoginAttempt, db
 
         deleted = LoginAttempt.cleanup_old(days=days)
+        # The nested application context owns this session; persist the
+        # existing cleanup before the context removes it.
+        db.session.commit()
         if deleted:
             logger.info('Purged %d login attempt records older than %d days', deleted, days)
         return deleted

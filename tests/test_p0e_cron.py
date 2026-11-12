@@ -7,16 +7,19 @@ Verifies:
 - The endpoint is idempotent (safe to call multiple times)
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from payroll_engine import create_app, db
 
 
 @pytest.fixture
-def app(monkeypatch):
+def app(monkeypatch, tmp_path):
     monkeypatch.setenv('CRON_SECRET', 'test-cron-secret-32-bytes-pad!')
     app = create_app()
     app.config['TESTING'] = True
+    app.config['UPLOAD_FOLDER'] = str(tmp_path)
     with app.app_context():
         db.create_all()
         yield app
@@ -60,11 +63,18 @@ def test_cron_daily_rejects_wrong_secret(app):
 
 
 def test_cron_daily_runs_with_correct_secret(app, monkeypatch):
-    from payroll_engine import retention, worker_health
+    from payroll_engine import worker_health
+    from payroll_engine.models import LoginAttempt
 
-    # Keep this endpoint test independent of the existing login-purge wiring bug.
-    monkeypatch.setattr(retention, 'purge_old_login_attempts', lambda: 0)
     monkeypatch.setattr(worker_health, 'beat', lambda *args, **kwargs: True)
+    now = datetime.now(UTC).replace(tzinfo=None)
+    db.session.add_all(
+        [
+            LoginAttempt(identifier='expired@example.test', success=False, created_at=now - timedelta(days=8)),
+            LoginAttempt(identifier='recent@example.test', success=False, created_at=now - timedelta(days=1)),
+        ]
+    )
+    db.session.commit()
     client = app.test_client()
     r = client.post(
         '/internal/cron/daily',
@@ -78,13 +88,18 @@ def test_cron_daily_runs_with_correct_secret(app, monkeypatch):
     assert 'tasks' in data
     # Retention task is always present
     assert 'retention' in data['tasks']
+    assert 'error' not in data['tasks']['retention']
     assert 'compliance' in data['tasks']
     assert 'erca_reminder' in data['tasks']
+    # A new session must see the deletion, not an uncommitted DELETE.
+    db.session.remove()
+    assert LoginAttempt.query.filter_by(identifier='expired@example.test').count() == 0
+    assert LoginAttempt.query.filter_by(identifier='recent@example.test').count() == 1
 
 
 @pytest.mark.parametrize('succeeded', [True, False])
 def test_cron_heartbeat_is_separate_and_reports_result(app, monkeypatch, succeeded):
-    from payroll_engine import retention, worker_health
+    from payroll_engine import worker_health
 
     calls = []
 
@@ -93,7 +108,6 @@ def test_cron_heartbeat_is_separate_and_reports_result(app, monkeypatch, succeed
         return succeeded
 
     monkeypatch.setattr(worker_health, 'beat', fake_beat)
-    monkeypatch.setattr(retention, 'purge_old_login_attempts', lambda: 0)
     response = app.test_client().post(
         '/internal/cron/daily', headers={'X-Cron-Secret': 'test-cron-secret-32-bytes-pad!'}
     )
@@ -101,7 +115,27 @@ def test_cron_heartbeat_is_separate_and_reports_result(app, monkeypatch, succeed
     assert calls == [('daily-cron', worker_health.CRON_HEARTBEAT_KEY)]
     assert response.get_json()['tasks']['cron_heartbeat']['ok'] is succeeded
     assert response.get_json()['ok'] is succeeded
-    assert 'worker_heartbeat' not in response.get_json()['tasks']
+    assert response.get_json()['tasks']['worker_heartbeat'] == {
+        'skipped': True,
+        'reason': 'Cron does not establish worker liveness',
+    }
+
+
+def test_cron_retention_error_makes_overall_result_false(app, monkeypatch):
+    from payroll_engine import retention, worker_health
+
+    def fail_retention(_app):
+        raise RuntimeError('synthetic retention failure')
+
+    monkeypatch.setattr(retention, 'purge_old_login_attempts', fail_retention)
+    monkeypatch.setattr(worker_health, 'beat', lambda *args, **kwargs: True)
+    response = app.test_client().post(
+        '/internal/cron/daily', headers={'X-Cron-Secret': 'test-cron-secret-32-bytes-pad!'}
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data['ok'] is False
+    assert data['tasks']['retention']['error'] == 'synthetic retention failure'
 
 
 def test_cron_daily_idempotent(app):

@@ -7,6 +7,17 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### PR #50 CSS lint fix (2026-11-12)
+
+- Replaced literal action colors in `ui-review-actions.css` with existing
+  semantic design tokens to comply with Stylelint without changing its
+  color-literal policy. Branch: `ui-review-fixes`, based on
+  `443fcf637d3053e9479f5b05dbbdce8e832c7e64`.
+- Validation before commit: the PR Stylelint command passed; full
+  `python3 run_tests.py --continue`: **2027 passed, 0 failed, 0 errors,
+  251 skipped in 941.9s**. Light/dark action contrast pairs were checked and
+  exceed 6.3:1. Not pushed or hosted-tested.
+
 ### Session A: monthly journey and legacy undo (2026-11-05)
 
 - Final continuation completed locally on code revision `ed20245e1051ac63881c6c28a3b71a70f6ac2d99`: normal browser interaction created one synthetic company/employee and completed approval, payslip, PAYE/pension reports, accounting CSV, bank CSV and audit review for November 2026 run 1. The one bank row and account mapping matched ETB 9,050; accounting debits and credits were 13,100. Reviewed version 2 became run version 3 on approval. Full reconciliation, browser screenshots and logs are in `output/monthly-journey-final/`. Bank format/content were checked locally, not accepted by a bank; legal and practitioner acceptance remain open.
@@ -1125,6 +1136,10 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-12 — Copilot — Fixed the PR #50 Stylelint errors by using semantic
+  theme tokens for action colors; local Stylelint and full suite passed.
+  Push and hosted CI pending.
 
 - 2026-11-06 — Codex — Completed the fresh synthetic browser journey and reconciled all downloaded outputs on `ed20245`; recorded audit attribution/download gaps. Focused PostgreSQL and full SQLite tests passed. No push or deployment.
 

@@ -7,6 +7,23 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### PR #50 CSS lint fix and main sync (2026-11-13)
+
+- Replaced literal action colors in `ui-review-actions.css` with existing
+  semantic design tokens to comply with Stylelint without changing its
+  color-literal policy. Branch: `ui-review-fixes`, based on
+  `443fcf637d3053e9479f5b05dbbdce8e832c7e64`.
+- The CSS fix was committed as `f6d74dc` and pushed to `ui-review-fixes`.
+  Stylelint passed locally and in GitHub Actions; light/dark action contrast
+  pairs exceeded 6.3:1.
+- Synced `ui-review-fixes` with `origin/main` at `108ebef`. Resolved the sole
+  text conflict in this plan by retaining both branches' status and log
+  entries. On the combined merge candidate, Stylelint passed and the full
+  `python3 run_tests.py --continue` suite reported **2030 passed, 0 failed,
+  0 errors, 251 skipped in 1192.2s**. Merge commit `44c432b` is pushed to
+  `origin/ui-review-fixes`. GitHub checks were pending at handoff; PR remains
+  draft and is not merged.
+
 ### PR #51 Ruff formatting correction (2026-11-11)
 
 - Reformatted the chained payslip query in
@@ -1158,6 +1175,16 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-13 — Copilot — Synced PR #50 branch `ui-review-fixes` with
+  `origin/main` at `108ebef`, kept both `PLAN.md` histories, and verified
+  Stylelint plus the full suite (**2030 passed, 0 failed, 0 errors,
+  251 skipped**). Pushed merge commit `44c432b`; GitHub checks pending, PR
+  remains draft.
+
+- 2026-11-12 — Copilot — Fixed the PR #50 Stylelint errors with semantic
+  theme tokens, committed as `f6d74dc` and pushed to `ui-review-fixes`.
+  Local and hosted Stylelint passed.
 
 - 2026-11-11 — Copilot — Applied the Ruff-only formatting correction to the
   disbursement regression test; focused and full test suites passed. Locally

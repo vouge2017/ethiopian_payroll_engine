@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ _('pay_items') }} - Settings{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/ui-review-actions.css') }}?v={{ static_version }}">{% endblock %}
 {% block breadcrumb %}
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb breadcrumb-sm mb-0">
-        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('main.companies_dashboard') }}" class="text-decoration-none" aria-label="{{ _('companies') }}"><i class="bi bi-house" aria-hidden="true"></i></a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('settings.company_profile') }}" class="text-decoration-none">Settings</a></li>
         <li class="breadcrumb-item active">{{ _('pay_items') }}</li>
     </ol>
@@ -105,7 +106,7 @@
                                     {% if perms.can_deactivate %}
                                     <form method="POST" action="{{ url_for('settings.pay_item_deactivate', item_id=item.id) }}" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-warning">{{ _('deactivate') }}</button>
+                                        <button type="submit" class="btn btn-sm ui-deactivate-action">{{ _('deactivate') }}</button>
                                     </form>
                                     {% endif %}
                                     {% if perms.can_reactivate %}

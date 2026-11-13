@@ -1013,6 +1013,23 @@ def create_app():
     # ----------------------------------------------------------------
     # Error Handlers
     # ----------------------------------------------------------------
+    @app.errorhandler(429)
+    def too_many_requests(e):
+        """Provide a retry time for sign-in while preserving other 429 responses."""
+        import math
+        import time
+
+        from flask import render_template
+
+        response = e.get_response()
+        if request.endpoint != 'auth.login':
+            return response
+        current_limit = limiter.current_limit
+        retry_seconds = max(1, math.ceil(current_limit.reset_at - time.time())) if current_limit else 60
+        response.set_data(render_template('errors/429.html', retry_seconds=retry_seconds))
+        response.content_type = 'text/html; charset=utf-8'
+        return response
+
     @app.errorhandler(403)
     def forbidden(e):
         from flask import render_template

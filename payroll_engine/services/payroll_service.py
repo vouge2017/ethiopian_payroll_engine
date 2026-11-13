@@ -5,7 +5,7 @@ The route handler handles auth/flash/redirects; this service handles the data.
 """
 
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from payroll_engine import db
 from payroll_engine.compliance import compute_compliance_score
@@ -32,6 +32,10 @@ class ApprovalResult:
         self.redirect_to = redirect_to  # 'detail', 'runs', or 'upload'
 
 
+class ReviewedPayrollMismatchError(ValueError):
+    """Raised when approval recalculation differs from the uploaded review."""
+
+
 def _deduction_is_backfilled(employee_id, company_id, deduction):
     """True if this legacy deduction already has a backfilled assignment.
 
@@ -46,9 +50,11 @@ def _deduction_is_backfilled(employee_id, company_id, deduction):
     return PayrollItemAssignment.query.filter_by(company_id=company_id, legacy_source=tag).first() is not None
 
 
-def _ensure_basic_assignment(employee, company_id, basic_amount):
+def _ensure_basic_assignment(employee, company_id):
     """Guarantee the employee has an active basic_salary assignment.
 
+    Employee.basic_salary is authoritative; the assignment mirrors it because
+    the elements engine uses assignments to include basic salary in gross.
     Gross is assembled ENTIRELY from assignments, so an employee that reaches
     the engine path with any assignment but no basic_salary row is paid their
     allowances and nothing else. Creating the employee (CSV import) or the
@@ -61,7 +67,7 @@ def _ensure_basic_assignment(employee, company_id, basic_amount):
 
     from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
 
-    amount = Decimal(str(basic_amount or 0))
+    amount = Decimal(str(employee.basic_salary or 0))
     if amount <= 0:
         return None
 
@@ -76,9 +82,16 @@ def _ensure_basic_assignment(employee, company_id, basic_amount):
         employee_id=employee.id,
         pay_item_type_id=item.id,
         is_active=True,
-    ).first()
-    if existing is not None:
-        return existing
+    ).all()
+    if len(existing) > 1:
+        raise ReviewedPayrollMismatchError(
+            f'{employee.employee_id}: multiple active basic salary assignments exist. '
+            'Reconcile them before approving payroll; no changes were saved.'
+        )
+    if existing:
+        existing[0].fixed_amount = amount
+        db.session.flush()
+        return existing[0]
 
     a = PayrollItemAssignment(
         company_id=company_id,
@@ -90,6 +103,41 @@ def _ensure_basic_assignment(employee, company_id, basic_amount):
     db.session.add(a)
     db.session.flush()
     return a
+
+
+def _assert_review_matches_calculation(employee_data, gross, tax, employee_pension, employer_pension, net):
+    """Reject CSV approval if recalculated money differs from what was reviewed."""
+    # CSV parser output always includes tax_breakdown; older hand-built drafts
+    # without it keep their established compatibility path.
+    if 'tax_breakdown' not in employee_data:
+        return
+    totals = {
+        'gross': gross,
+        'tax': tax,
+        'pension_employee': employee_pension,
+        'pension_employer': employer_pension,
+        'net': net,
+    }
+    for key, actual in totals.items():
+        reviewed = employee_data.get(key)
+        if reviewed is None:
+            raise ReviewedPayrollMismatchError(
+                f'{employee_data.get("id", "Employee")}: the reviewed {key.replace("_", " ")} is missing. '
+                'Refresh the payroll review before approving; no changes were saved.'
+            )
+        try:
+            reviewed_amount = Decimal(str(reviewed))
+        except (InvalidOperation, TypeError, ValueError) as error:
+            raise ReviewedPayrollMismatchError(
+                f'{employee_data.get("id", "Employee")}: the reviewed {key.replace("_", " ")} is invalid. '
+                'Refresh the payroll review before approving; no changes were saved.'
+            ) from error
+        if not reviewed_amount.is_finite() or reviewed_amount != actual:
+            raise ReviewedPayrollMismatchError(
+                f'{employee_data.get("id", "Employee")}: recalculated {key.replace("_", " ")} '
+                f'ETB {actual:.2f} does not match the reviewed amount ETB {reviewed_amount:.2f}. '
+                'Refresh the payroll review before approving; no changes were saved.'
+            )
 
 
 def _ensure_general_allowance(employee, company_id, amount):
@@ -503,7 +551,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 # Basic salary must be represented as an assignment for gross to
                 # include it. Without this an employee carrying only a General
                 # Allowance row is paid 2,500 instead of 12,500.
-                _ensure_basic_assignment(emp, company_id, emp_data.get('basic'))
+                _ensure_basic_assignment(emp, company_id)
 
                 # Legacy bridge: EmployeeDeduction rows are still honoured. But a
                 # row the BACKFILL already converted is now represented by a
@@ -597,6 +645,15 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 exempt_allowances = None
                 taxable_income = None
                 calculation_context = None  # Do not invent context for precomputed legacy amounts.
+
+            _assert_review_matches_calculation(
+                emp_data,
+                gross,
+                tax,
+                pension_employee,
+                pension_employer,
+                final_net.quantize(Decimal('0.01')),
+            )
 
             payslip = Payslip(
                 payroll_run_id=run.id,
@@ -748,6 +805,9 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             redirect_to='detail',
         )
 
+    except ReviewedPayrollMismatchError as error:
+        db.session.rollback()
+        return ApprovalResult(success=False, message=str(error), redirect_to='detail')
     except Exception as e:
         # Roll back the entire approval attempt
         db.session.rollback()

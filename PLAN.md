@@ -24,6 +24,26 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   `origin/ui-review-fixes`. GitHub checks were pending at handoff; PR remains
   draft and is not merged.
 
+### CSV import review/approval parity (2026-11-13)
+
+- Implemented on `fix/import-review-approval-mismatch`, based on `origin/main`
+  `108ebef0e06a3d6f871a348dbb803d436c9871c5`; code and regression tests are
+  commit `1722ba877393641729376f8524d6a6dec7eb9729`. `Employee.basic_salary`
+  is authoritative; approval synchronizes its single active basic assignment
+  and refuses duplicate active basic assignments. CSV approval now rolls back
+  if recalculated gross, tax, employee/employer pension, or net differs from
+  the reviewed values.
+- Regression was failing before the fix: reviewed gross ETB 14,500 vs approved
+  ETB 12,500 for basic ETB 12,000 plus allowance ETB 2,500. The focused
+  changed-salary, first-import, unchanged-salary and no-save-on-mismatch tests
+  pass; focused suites: **29 passed** and **59 passed**. Ruff and diff checks
+  pass. Full `python3 run_tests.py --continue`: **2032 passed, 0 failed,
+  0 errors, 251 skipped in 1027.3s**.
+- Hosted checks passed on PR #52 head
+  `91a50e5a323208747cf959e405173c3856955763`: lint, migration tests on Python
+  3.11/3.12, full tests on Python 3.11/3.12, PostgreSQL tests, and GitGuardian.
+  PR remains open and unmerged; not deployed or practitioner-accepted.
+
 ### PR #51 Ruff formatting correction (2026-11-11)
 
 - Reformatted the chained payslip query in
@@ -954,6 +974,10 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ## 2. Now
 
+**Current owner-directed slice (2026-11-13):** Fix the CSV import
+review/approval mismatch on one dedicated branch and PR; do not merge. This
+explicit task supersedes the older six-point order for this session.
+
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
 order** (owner pasted an independent review and asked to adopt it; I concur).
 No merge or deployment without the owner's explicit go-ahead. Reconciled: the
@@ -1185,6 +1209,11 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 - 2026-11-12 — Copilot — Fixed the PR #50 Stylelint errors with semantic
   theme tokens, committed as `f6d74dc` and pushed to `ui-review-fixes`.
   Local and hosted Stylelint passed.
+
+- 2026-11-13 — Copilot — Fixed CSV import review/approval parity on
+  `fix/import-review-approval-mismatch` (`1722ba877393641729376f8524d6a6dec7eb9729`).
+  Full suite: 2032 passed, 0 failed, 0 errors, 251 skipped; PostgreSQL
+  proof passed in hosted CI on PR #52 head `91a50e5`; no merge.
 
 - 2026-11-11 — Copilot — Applied the Ruff-only formatting correction to the
   disbursement regression test; focused and full test suites passed. Locally

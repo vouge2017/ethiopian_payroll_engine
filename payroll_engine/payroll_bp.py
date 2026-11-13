@@ -58,6 +58,7 @@ from payroll_engine.services.payroll_workflow import (
     check_csv_row_limit,
     check_duplicate_period,
     create_payroll_run,
+    csv_review_unsupported_reason,
     get_previous_payslips,
     parse_and_calculate_payroll,
 )
@@ -246,6 +247,10 @@ def api_preview():
 
         if not employees_data:
             return jsonify({'ok': False, 'error': 'No valid data rows found in file.'}), 400
+
+        unsupported_reason = csv_review_unsupported_reason(_company_id(), employees_data)
+        if unsupported_reason:
+            return jsonify({'ok': False, 'error': unsupported_reason}), 400
 
         # Build preview (strip heavy fields)
         preview = []
@@ -821,6 +826,11 @@ def payroll_upload():
 
             if not employees_data:
                 raise ValueError('No valid data rows in CSV')
+
+            unsupported_reason = csv_review_unsupported_reason(_company_id(), employees_data)
+            if unsupported_reason:
+                flash(unsupported_reason, 'danger')
+                return redirect(request.url)
 
             # Legacy CSV format is (basic_salary, allowances) -- one
             # undifferentiated allowance column. Under the elements model that

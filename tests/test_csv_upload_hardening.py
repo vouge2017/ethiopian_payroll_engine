@@ -3,6 +3,8 @@
 import io
 import os
 import sys
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -14,8 +16,8 @@ os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from payroll_engine import create_app, db
 from payroll_engine.catalog import seed_company_templates
-from payroll_engine.models import AuditLog, Company, Employee, OvertimeEntry, TenantQuery, User
-from payroll_engine.models_payroll_elements import PayrollItemAssignment
+from payroll_engine.models import AuditLog, Company, Employee, Leave, OvertimeEntry, PayrollRun, TenantQuery, User
+from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
 from payroll_engine.security import prevent_csv_injection
 
 # ================================================================
@@ -118,6 +120,87 @@ def test_upload_valid_csv(ctx, client, company_user):
     data = {'file': (io.BytesIO(_GOOD_CSV.encode('utf-8')), 'payroll.csv')}
     resp = client.post('/payroll', data=data, content_type='multipart/form-data', follow_redirects=True)
     assert resp.status_code == 200
+
+
+def test_csv_upload_with_active_loan_requires_worksheet_review(ctx, client, company_user):
+    login(client)
+    company, _user = company_user
+    employee = Employee(
+        employee_id='EMP001',
+        name='Dawit Mekonnen',
+        basic_salary=Decimal('10000'),
+        allowances=Decimal('0'),
+        company_id=company.id,
+    )
+    db.session.add(employee)
+    db.session.flush()
+    loan = PayItemType.query.filter_by(company_id=company.id, key='loan').one()
+    db.session.add(
+        PayrollItemAssignment(
+            company_id=company.id,
+            employee_id=employee.id,
+            pay_item_type_id=loan.id,
+            fixed_amount=Decimal('500'),
+            remaining_balance=Decimal('1000'),
+            tracking_mode='declining',
+            is_active=True,
+        )
+    )
+    db.session.commit()
+
+    csv_content = 'employee_id,name,basic_salary,allowances\nEMP001,Dawit Mekonnen,10000,0\n'
+    response = client.post(
+        '/payroll',
+        data={'file': (io.BytesIO(csv_content.encode('utf-8')), 'payroll.csv')},
+        content_type='multipart/form-data',
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b'active deductions' in response.data.lower()
+    assert b'monthly worksheet review' in response.data.lower()
+    assert PayrollRun.query.filter_by(company_id=company.id, status='review').count() == 0
+
+
+def test_csv_upload_with_three_unpaid_leave_days_requires_worksheet_review(ctx, client, company_user):
+    login(client)
+    company, user = company_user
+    employee = Employee(
+        employee_id='EMP001',
+        name='Dawit Mekonnen',
+        basic_salary=Decimal('10000'),
+        allowances=Decimal('0'),
+        company_id=company.id,
+    )
+    db.session.add(employee)
+    db.session.flush()
+    month_start = date.today().replace(day=1)
+    db.session.add(
+        Leave(
+            company_id=company.id,
+            employee_id=employee.id,
+            leave_type='unpaid',
+            start_date=month_start,
+            end_date=month_start.replace(day=3),
+            days_requested=3,
+            status='approved',
+            approved_by=user.id,
+        )
+    )
+    db.session.commit()
+
+    csv_content = 'employee_id,name,basic_salary,allowances\nEMP001,Dawit Mekonnen,10000,0\n'
+    response = client.post(
+        '/payroll',
+        data={'file': (io.BytesIO(csv_content.encode('utf-8')), 'payroll.csv')},
+        content_type='multipart/form-data',
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert b'unpaid leave' in response.data.lower()
+    assert b'monthly worksheet review' in response.data.lower()
+    assert PayrollRun.query.filter_by(company_id=company.id, status='review').count() == 0
 
 
 def test_upload_non_csv_extension_rejected(ctx, client, company_user):

@@ -140,22 +140,20 @@ def _assert_review_matches_calculation(employee_data, gross, tax, employee_pensi
             )
 
 
-def _ensure_general_allowance(employee, company_id, amount):
+def _ensure_general_allowance(employee, company_id):
     """Create a General Allowance assignment for a legacy CSV import row.
 
     The CSV carries one undifferentiated `allowances` number. Under the elements
-    model gross is assembled from assignments, so that number would silently
-    vanish from the payslip. This materialises it as a single assignment against
-    the company's General Allowance item (created from the catalog if missing).
+    model gross is assembled from assignments. Employee.allowances is
+    authoritative; its active General Allowance assignment mirrors that value.
 
-    Idempotent: an existing active assignment for that item is left alone.
+    A zero allowance updates an existing assignment to zero but does not create
+    a new assignment.
     """
 
     from payroll_engine.models_payroll_elements import PayItemType, PayrollItemAssignment
 
-    amount = Decimal(str(amount or 0))
-    if amount <= 0:
-        return None
+    amount = Decimal(str(employee.allowances or 0))
 
     item = PayItemType.query.filter_by(
         company_id=company_id, key=COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value
@@ -168,9 +166,18 @@ def _ensure_general_allowance(employee, company_id, amount):
         employee_id=employee.id,
         pay_item_type_id=item.id,
         is_active=True,
-    ).first()
-    if existing is not None:
-        return existing
+    ).all()
+    if len(existing) > 1:
+        raise ReviewedPayrollMismatchError(
+            f'{employee.employee_id}: multiple active General Allowance assignments exist. '
+            'Reconcile them before approving payroll; no changes were saved.'
+        )
+    if existing:
+        existing[0].fixed_amount = amount
+        db.session.flush()
+        return existing[0]
+    if amount <= 0:
+        return None
 
     a = PayrollItemAssignment(
         company_id=company_id,
@@ -543,9 +550,9 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             # annotated by the upload path. Materialise it as an assignment
             # BEFORE the bridge check, so an imported employee is not silently
             # treated as un-backfilled and dropped to the legacy path.
-            if emp_data.get('general_allowance'):
-                _ensure_general_allowance(emp, company_id, emp_data.get('general_allowance'))
-                has_assignments = True
+            if 'general_allowance' in emp_data:
+                general_allowance = _ensure_general_allowance(emp, company_id)
+                has_assignments = has_assignments or general_allowance is not None
 
             if has_assignments:
                 # Basic salary must be represented as an assignment for gross to

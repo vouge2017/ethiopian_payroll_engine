@@ -42,7 +42,9 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Hosted checks passed on PR #52 head
   `91a50e5a323208747cf959e405173c3856955763`: lint, migration tests on Python
   3.11/3.12, full tests on Python 3.11/3.12, PostgreSQL tests, and GitGuardian.
-  PR remains open and unmerged; not deployed or practitioner-accepted.
+  Local PostgreSQL was unavailable; hosted PostgreSQL proof was tied to that
+  exact pre-rebase PR head. CI must be rerun on the rebased branch. PR remains
+  open and unmerged; not deployed or practitioner-accepted.
 
 ### PR #51 Ruff formatting correction (2026-11-11)
 
@@ -1213,7 +1215,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 - 2026-11-13 — Copilot — Fixed CSV import review/approval parity on
   `fix/import-review-approval-mismatch` (`1722ba877393641729376f8524d6a6dec7eb9729`).
   Full suite: 2032 passed, 0 failed, 0 errors, 251 skipped; PostgreSQL
-  proof passed in hosted CI on PR #52 head `91a50e5`; no merge.
+  proof and all other CI checks passed on the pre-rebase PR #52 head
+  `91a50e5`; rerun on the rebased branch. No merge.
 
 - 2026-11-11 — Copilot — Applied the Ruff-only formatting correction to the
   disbursement regression test; focused and full test suites passed. Locally

@@ -132,7 +132,7 @@
     <!-- Overtime Section -->
     <div class="card mb-4">
         <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="Overtime rates: Day=1.5×, Night=1.75×, Holiday=2×, Rest+Holiday=2.5× hourly rate. Hourly rate = basic salary ÷ 208. Max 4 hrs/day, 12 hrs/week. Proclamation No. 1156/2019, Art. 67-68."><i class="bi bi-info-circle text-muted" style="font-size:0.8em;cursor:help"></i></span></h5>
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('overtime_this_month') }} <span data-bs-toggle="tooltip" data-bs-placement="top" title="Configured overtime rates: {{ overtime_rate_summary }}. Entry amounts use the applicable rule for each entry date."><i class="bi bi-info-circle text-muted" style="font-size:0.8em;cursor:help"></i></span></h5>
             {% if total_ot_hours > 0 %}
             <span class="badge bg-light text-dark">{{ total_ot_hours }}h / ETB {{ '%.2f'|format(total_ot_pay) }}</span>
             {% endif %}
@@ -149,8 +149,8 @@
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="overtime_type">
-                        {% for ot_type in overtime_types %}
-                        <option value="{{ ot_type }}">{{ ot_type }}</option>
+                        {% for ot_type, ot_label in overtime_types %}
+                        <option value="{{ ot_type }}">{{ ot_label }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -178,7 +178,7 @@
                         <tr>
                             <td data-label="Date">{{ item.entry.date }}</td>
                             <td data-label="Hours">{{ item.entry.hours }}</td>
-                            <td data-label="Type">{{ item.entry.overtime_type }}</td>
+                            <td data-label="Type">{{ item.label }}</td>
                             <td data-label="Rate">{{ item.rate }}x</td>
                             <td data-label="Pay (ETB)">{{ '%.2f'|format(item.pay) }}</td>
                             <td data-label="">

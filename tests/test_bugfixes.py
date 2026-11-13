@@ -69,8 +69,8 @@ def employee(app, company_user):
         return emp.id
 
 
-def test_employee_detail_with_overtime_renders(app, company_user, employee):
-    """A saved overtime entry must not crash the employee detail page."""
+def test_employee_detail_overtime_uses_current_rate_labels_and_full_precision(app, company_user, employee):
+    """The displayed overtime category and rounded pay must match the calculation."""
     from payroll_engine.models import OvertimeEntry
 
     company_id, user_id = company_user
@@ -94,8 +94,10 @@ def test_employee_detail_with_overtime_renders(app, company_user, employee):
     assert response.status_code == 200
     assert b'Abebe Kebede' in response.data
     assert f'<td data-label="Date">{date.today().isoformat()}</td>'.encode() in response.data
-    assert b'<td data-label="Type">day</td>' in response.data
-    assert b'<td data-label="Pay (ETB)">144.24</td>' in response.data
+    assert b'<td data-label="Type">Regular Day (1.50x)</td>' in response.data
+    assert b'<option value="holiday">Weekly Rest Day (2.00x)</option>' in response.data
+    assert b'<option value="rest_day_holiday">Public Holiday (2.50x)</option>' in response.data
+    assert b'<td data-label="Pay (ETB)">144.23</td>' in response.data
 
 
 class TestBug1AdvancesViaSpreadsheet:

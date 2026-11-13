@@ -5,14 +5,19 @@ Tests the pre-validation engine, CSV generation, and Excel generation
 for Ethiopian bank bulk payment files.
 """
 
+import io
 import os
 import sys
+from decimal import Decimal
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+import openpyxl
 
 from payroll_engine.bank_file import (
     format_amount,
     generate_csv,
+    generate_xlsx,
     validate_account_number,
     validate_payroll_for_bank,
 )
@@ -301,3 +306,22 @@ def test_csv_multiple_employees():
     csv_bytes = generate_csv(employees, period='July 2025')
     lines = csv_bytes.decode('utf-8').strip().split('\n')
     assert len(lines) == 3  # header + 2 data rows
+
+
+def test_payment_exports_round_amounts_half_up_and_preserve_workbook_values():
+    """CSV and XLSX must contain the same exact, cent-rounded payment amounts."""
+    employees = [
+        {'id': 'E001', 'name': 'Abebe Kebede', 'bank': 'cbe:1000123456789', 'net': Decimal('12500.125')},
+    ]
+
+    csv_rows = generate_csv(employees, bank='cbe', period='October 2026').decode('utf-8').splitlines()
+    assert csv_rows[1].split(',') == ['1000123456789', '12500.13', 'October 2026 salary - E001 Abebe Kebede', 'ETB']
+
+    workbook = openpyxl.load_workbook(io.BytesIO(generate_xlsx(employees, bank='cbe', period='October 2026')))
+    sheet = workbook.active
+    assert sheet['A6'].value == '1000123456789'
+    assert sheet['A6'].number_format == '@'
+    assert Decimal(str(sheet['B6'].value)) == Decimal('12500.13')
+    assert sheet['C6'].value == 'October 2026 salary - E001 Abebe Kebede'
+    assert sheet['D6'].value == 'ETB'
+    assert Decimal(str(sheet['B7'].value)) == Decimal('12500.13')

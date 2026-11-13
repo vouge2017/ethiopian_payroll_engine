@@ -184,11 +184,7 @@ def download_yearly_summary(year):
 @role_required('owner', 'accountant')
 def download_bank_file(run_id):
     """Download bank transfer file for a payroll run."""
-    from payroll_engine.bank_file import (
-        generate_csv,
-        generate_xlsx,
-        validate_payroll_for_bank,
-    )
+    from payroll_engine.bank_file import bank_file_rows, generate_csv, generate_xlsx, validate_payroll_for_bank
 
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
     if run.status not in ('completed', 'locked'):
@@ -204,20 +200,7 @@ def download_bank_file(run_id):
     custom_narrative = request.args.get('custom_narrative', None)
     decimals = int(request.args.get('decimals', '2'))
 
-    employees_data = []
-    for p in run.payslips:
-        emp = p.employee
-        from payroll_engine.services.worksheet_review import published_row
-
-        snapshot = published_row(p)
-        employees_data.append(
-            {
-                'id': snapshot['id'] if snapshot else emp.employee_id,
-                'name': snapshot['name'] if snapshot else emp.name,
-                'bank': snapshot['bank'] if snapshot else (emp.bank_or_telebirr or ''),
-                'net': p.net_pay,
-            }
-        )
+    employees_data = bank_file_rows(run.payslips, bank)
 
     previous_payslips = {}
     last_run = (

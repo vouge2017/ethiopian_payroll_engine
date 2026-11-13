@@ -20,7 +20,9 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   text conflict in this plan by retaining both branches' status and log
   entries. On the combined merge candidate, Stylelint passed and the full
   `python3 run_tests.py --continue` suite reported **2030 passed, 0 failed,
-  0 errors, 251 skipped in 1192.2s**. Merge commit and push are next.
+  0 errors, 251 skipped in 1192.2s**. Merge commit `44c432b` is pushed to
+  `origin/ui-review-fixes`. GitHub checks were pending at handoff; PR remains
+  draft and is not merged.
 
 ### PR #51 Ruff formatting correction (2026-11-11)
 
@@ -1177,7 +1179,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 - 2026-11-13 — Copilot — Synced PR #50 branch `ui-review-fixes` with
   `origin/main` at `108ebef`, kept both `PLAN.md` histories, and verified
   Stylelint plus the full suite (**2030 passed, 0 failed, 0 errors,
-  251 skipped**). Merge commit and push pending.
+  251 skipped**). Pushed merge commit `44c432b`; GitHub checks pending, PR
+  remains draft.
 
 - 2026-11-12 — Copilot — Fixed the PR #50 Stylelint errors with semantic
   theme tokens, committed as `f6d74dc` and pushed to `ui-review-fixes`.

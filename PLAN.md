@@ -46,6 +46,27 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   exact pre-rebase PR head. CI must be rerun on the rebased branch. PR remains
   open and unmerged; not deployed or practitioner-accepted.
 
+### PR #52 follow-up: allowance and review parity (2026-11-13)
+
+- Rebased `fix/import-review-approval-mismatch` on `origin/main`
+  `57e2f385e084a9d30d1ec71c229d431cf5c9632f`; retained the resolved
+  `PLAN.md` history. Commit `2d351c98e9024b2a808e281369453257a2ff9bed`
+  updates the active General Allowance assignment from authoritative
+  `Employee.allowances` on approval, including lowered and zero amounts.
+- CSV upload and API preview now stop before review/draft creation when
+  effective deductions or approved unpaid leave overlap the current payroll
+  month; the error directs users to monthly worksheet review. The unsupported
+  review cases are deliberately routed to that flow rather than recalculated
+  with incomplete CSV inputs.
+- Regression baseline before implementation: **5 failed** (allowance changes,
+  active loan, and unpaid leave). Final focused suites:
+  **35 passed, 4 warnings in 11.96s**. Full
+  `python3 run_tests.py --continue`: **2039 passed, 0 failed, 0 errors,
+  251 skipped**, runner time **870.5s**. Ruff and `git diff --check` pass.
+  PostgreSQL-dependent tests were skipped locally; hosted CI must rerun on
+  this rebased PR head for PostgreSQL proof. PR #52 remains open and unmerged;
+  not deployed or practitioner-accepted.
+
 ### PR #51 Ruff formatting correction (2026-11-11)
 
 - Reformatted the chained payslip query in
@@ -1217,6 +1238,13 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   Full suite: 2032 passed, 0 failed, 0 errors, 251 skipped; PostgreSQL
   proof and all other CI checks passed on the pre-rebase PR #52 head
   `91a50e5`; rerun on the rebased branch. No merge.
+
+- 2026-11-13 — Copilot — Rebased PR #52 on `57e2f38`, synchronized General
+  Allowance assignments on approval, and rejected CSV review when active
+  deductions or approved unpaid leave would change approval results.
+  Committed as `2d351c9`; full suite 2039 passed, 0 failed, 0 errors,
+  251 skipped. Local PostgreSQL tests skipped; hosted CI rerun pending.
+  PR remains open and unmerged.
 
 - 2026-11-11 — Copilot — Applied the Ruff-only formatting correction to the
   disbursement regression test; focused and full test suites passed. Locally

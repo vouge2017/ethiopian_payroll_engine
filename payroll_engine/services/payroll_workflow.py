@@ -219,8 +219,10 @@ def csv_review_unsupported_reason(company_id: int, employees_data: list[dict], f
         .all()
     )
     for assignment in assignment_deductions:
-        if assignment.tracking_mode == 'declining' and assignment.remaining_balance is not None and (
-            assignment.remaining_balance <= 0
+        if (
+            assignment.tracking_mode == 'declining'
+            and assignment.remaining_balance is not None
+            and (assignment.remaining_balance <= 0)
         ):
             continue
         unsupported.setdefault(assignment.employee_id, set()).add('active deductions')

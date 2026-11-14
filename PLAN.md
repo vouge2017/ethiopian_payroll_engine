@@ -7,6 +7,14 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### PR #52 formatting follow-up (2026-11-14)
+
+- Branch `fix/import-review-approval-mismatch`, based on PR head `b012ea9`.
+  Reformatted one condition to satisfy hosted Ruff; payroll logic is unchanged.
+- Focused CSV tests: **35 passed, 4 warnings in 64.81s**; local Ruff check and
+  format checks passed. Full local suite is running; exact-head hosted CI is pending.
+- Not merged or deployed; prior backup and recovery checks are separate from this PR.
+
 ### PR #50 CSS lint fix and main sync (2026-11-13)
 
 - Replaced literal action colors in `ui-review-actions.css` with existing
@@ -1222,6 +1230,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-14 — Codex — Corrected the PR #52 Ruff formatting failure; focused CSV tests 35 passed. Full local suite and hosted checks pending.
 
 - 2026-11-13 — Copilot — Synced PR #50 branch `ui-review-fixes` with
   `origin/main` at `108ebef`, kept both `PLAN.md` histories, and verified

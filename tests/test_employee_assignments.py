@@ -514,7 +514,7 @@ def test_basic_salary_row_is_shown_but_managed(app, world):
     from payroll_engine.services.payroll_service import _ensure_basic_assignment
 
     cid = world['a']
-    _ensure_basic_assignment(world['e1'], cid, Decimal('10000'))
+    _ensure_basic_assignment(world['e1'], cid)
     db.session.commit()
     [row] = ea.employee_view(cid, world['e1'])
     assert row.managed and not row.can_delete

@@ -7,6 +7,17 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### PR #52 formatting follow-up (2026-11-14)
+
+- Branch `fix/import-review-approval-mismatch`, based on PR head `b012ea9`.
+  Reformatted one condition to satisfy hosted Ruff; payroll logic is unchanged.
+- Focused CSV tests: **35 passed, 4 warnings in 64.81s**; local Ruff check and
+  format checks passed. On pushed revision `abdfa4f275aeba0e6518e262753295e37f7ce555`,
+  hosted full suite: **2039 passed, 0 failed, 0 errors, 251 skipped**; Python
+  3.11/3.12, lint, both migration jobs and PostgreSQL CI passed. The local full
+  run was stopped after a per-file timeout and is not a passing local receipt.
+- Not merged or deployed; prior backup and recovery checks are separate from this PR.
+
 ### PR #50 CSS lint fix and main sync (2026-11-13)
 
 - Replaced literal action colors in `ui-review-actions.css` with existing
@@ -23,6 +34,49 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   0 errors, 251 skipped in 1192.2s**. Merge commit `44c432b` is pushed to
   `origin/ui-review-fixes`. GitHub checks were pending at handoff; PR remains
   draft and is not merged.
+
+### CSV import review/approval parity (2026-11-13)
+
+- Implemented on `fix/import-review-approval-mismatch`, based on `origin/main`
+  `108ebef0e06a3d6f871a348dbb803d436c9871c5`; code and regression tests are
+  commit `1722ba877393641729376f8524d6a6dec7eb9729`. `Employee.basic_salary`
+  is authoritative; approval synchronizes its single active basic assignment
+  and refuses duplicate active basic assignments. CSV approval now rolls back
+  if recalculated gross, tax, employee/employer pension, or net differs from
+  the reviewed values.
+- Regression was failing before the fix: reviewed gross ETB 14,500 vs approved
+  ETB 12,500 for basic ETB 12,000 plus allowance ETB 2,500. The focused
+  changed-salary, first-import, unchanged-salary and no-save-on-mismatch tests
+  pass; focused suites: **29 passed** and **59 passed**. Ruff and diff checks
+  pass. Full `python3 run_tests.py --continue`: **2032 passed, 0 failed,
+  0 errors, 251 skipped in 1027.3s**.
+- Hosted checks passed on PR #52 head
+  `91a50e5a323208747cf959e405173c3856955763`: lint, migration tests on Python
+  3.11/3.12, full tests on Python 3.11/3.12, PostgreSQL tests, and GitGuardian.
+  Local PostgreSQL was unavailable; hosted PostgreSQL proof was tied to that
+  exact pre-rebase PR head. CI must be rerun on the rebased branch. PR remains
+  open and unmerged; not deployed or practitioner-accepted.
+
+### PR #52 follow-up: allowance and review parity (2026-11-13)
+
+- Rebased `fix/import-review-approval-mismatch` on `origin/main`
+  `57e2f385e084a9d30d1ec71c229d431cf5c9632f`; retained the resolved
+  `PLAN.md` history. Commit `2d351c98e9024b2a808e281369453257a2ff9bed`
+  updates the active General Allowance assignment from authoritative
+  `Employee.allowances` on approval, including lowered and zero amounts.
+- CSV upload and API preview now stop before review/draft creation when
+  effective deductions or approved unpaid leave overlap the current payroll
+  month; the error directs users to monthly worksheet review. The unsupported
+  review cases are deliberately routed to that flow rather than recalculated
+  with incomplete CSV inputs.
+- Regression baseline before implementation: **5 failed** (allowance changes,
+  active loan, and unpaid leave). Final focused suites:
+  **35 passed, 4 warnings in 11.96s**. Full
+  `python3 run_tests.py --continue`: **2039 passed, 0 failed, 0 errors,
+  251 skipped**, runner time **870.5s**. Ruff and `git diff --check` pass.
+  PostgreSQL-dependent tests were skipped locally; hosted CI must rerun on
+  this rebased PR head for PostgreSQL proof. PR #52 remains open and unmerged;
+  not deployed or practitioner-accepted.
 
 ### PR #51 Ruff formatting correction (2026-11-11)
 
@@ -954,6 +1008,10 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ## 2. Now
 
+**Current owner-directed slice (2026-11-13):** Fix the CSV import
+review/approval mismatch on one dedicated branch and PR; do not merge. This
+explicit task supersedes the older six-point order for this session.
+
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
 order** (owner pasted an independent review and asked to adopt it; I concur).
 No merge or deployment without the owner's explicit go-ahead. Reconciled: the
@@ -1176,6 +1234,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 
 ## 5. Log
 
+- 2026-11-14 — Codex — Corrected PR #52 Ruff formatting; focused CSV tests 35 passed. Hosted full suite on `abdfa4f` 2039 passed, 0 failed, 0 errors, 251 skipped; PostgreSQL CI passed. Local full run stopped after a per-file timeout.
+
 - 2026-11-13 — Copilot — Synced PR #50 branch `ui-review-fixes` with
   `origin/main` at `108ebef`, kept both `PLAN.md` histories, and verified
   Stylelint plus the full suite (**2030 passed, 0 failed, 0 errors,
@@ -1185,6 +1245,19 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 - 2026-11-12 — Copilot — Fixed the PR #50 Stylelint errors with semantic
   theme tokens, committed as `f6d74dc` and pushed to `ui-review-fixes`.
   Local and hosted Stylelint passed.
+
+- 2026-11-13 — Copilot — Fixed CSV import review/approval parity on
+  `fix/import-review-approval-mismatch` (`1722ba877393641729376f8524d6a6dec7eb9729`).
+  Full suite: 2032 passed, 0 failed, 0 errors, 251 skipped; PostgreSQL
+  proof and all other CI checks passed on the pre-rebase PR #52 head
+  `91a50e5`; rerun on the rebased branch. No merge.
+
+- 2026-11-13 — Copilot — Rebased PR #52 on `57e2f38`, synchronized General
+  Allowance assignments on approval, and rejected CSV review when active
+  deductions or approved unpaid leave would change approval results.
+  Committed as `2d351c9`; full suite 2039 passed, 0 failed, 0 errors,
+  251 skipped. Local PostgreSQL tests skipped; hosted CI rerun pending.
+  PR remains open and unmerged.
 
 - 2026-11-11 — Copilot — Applied the Ruff-only formatting correction to the
   disbursement regression test; focused and full test suites passed. Locally

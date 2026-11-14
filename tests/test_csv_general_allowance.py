@@ -146,6 +146,250 @@ def test_csv_allowance_becomes_assignment_and_reaches_gross(ctx, company):
     assert COMPANY_TEMPLATE_ITEM_KEYS.GENERAL_ALLOWANCE.value in keys
 
 
+def _reviewed_csv_row(tmp_path, basic, allowances):
+    from payroll_engine.services.payroll_workflow import parse_and_calculate_payroll
+
+    csv_path = tmp_path / 'payroll.csv'
+    csv_path.write_text(
+        f'employee_id,name,basic_salary,allowances\nEMP001,Dawit,{basic},{allowances}\n',
+        encoding='utf-8',
+    )
+    rows, errors = parse_and_calculate_payroll(str(csv_path))
+    assert errors == []
+    assert len(rows) == 1
+    return rows[0]
+
+
+@pytest.mark.parametrize(
+    ('existing_basic', 'imported_basic'),
+    [
+        (None, 10000),
+        (10000, 12000),
+        (12000, 12000),
+    ],
+    ids=['first-import', 'changed-salary', 'unchanged-salary'],
+)
+def test_csv_import_approval_matches_reviewed_totals(ctx, company, tmp_path, existing_basic, imported_basic):
+    from payroll_engine.models import Payslip
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+    from payroll_engine.payroll_bp import _annotate_general_allowance
+    from payroll_engine.services.payroll_service import (
+        _ensure_basic_assignment,
+        _ensure_general_allowance,
+        process_payroll,
+    )
+
+    user = User(phone='0911000002', company_id=company.id, role='owner')
+    user.set_password('Test1234!')
+    db.session.add(user)
+
+    existing_employee = None
+    if existing_basic is not None:
+        existing_employee = Employee(
+            employee_id='EMP001',
+            name='Dawit',
+            basic_salary=Decimal(existing_basic),
+            allowances=Decimal('2500'),
+            company_id=company.id,
+        )
+        db.session.add(existing_employee)
+        db.session.flush()
+        _ensure_basic_assignment(existing_employee, company.id)
+        _ensure_general_allowance(existing_employee, company.id)
+    db.session.commit()
+
+    row = _reviewed_csv_row(tmp_path, imported_basic, 2500)
+    _annotate_general_allowance(company.id, [row])
+    run = PayrollRun(
+        company_id=company.id,
+        period='2026-09',
+        status='review',
+        run_date=date(2026, 9, 1),
+        approved_by=user.id,
+    )
+    db.session.add(run)
+    db.session.flush()
+    db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=[row]))
+    db.session.commit()
+
+    result = process_payroll(
+        run=run,
+        company_id=company.id,
+        user_id=user.id,
+        user_email=user.email or 'owner@test.com',
+        request_ip='127.0.0.1',
+    )
+    assert result.success, result.message or result.error
+
+    payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).one()
+    for key, actual in (
+        ('gross', payslip.gross_salary),
+        ('tax', payslip.tax),
+        ('pension_employee', payslip.employee_pension),
+        ('pension_employer', payslip.employer_pension),
+        ('net', payslip.net_pay),
+    ):
+        assert actual == Decimal(str(row[key]))
+
+    employee = Employee.query.filter_by(company_id=company.id, employee_id='EMP001').one()
+    assert employee.basic_salary == Decimal(imported_basic)
+    basics = [
+        assignment
+        for assignment in PayrollItemAssignment.query.filter_by(
+            company_id=company.id, employee_id=employee.id, is_active=True
+        ).all()
+        if assignment.item_type and assignment.item_type.key == 'basic_salary'
+    ]
+    assert len(basics) == 1
+    assert basics[0].fixed_amount == Decimal(imported_basic)
+
+
+@pytest.mark.parametrize(
+    ('existing_allowance', 'imported_allowance'),
+    [(2500, 3000), (2500, 1500), (2500, 0)],
+    ids=['raised', 'lowered', 'removed'],
+)
+def test_csv_import_syncs_general_allowance_to_review(ctx, company, tmp_path, existing_allowance, imported_allowance):
+    from payroll_engine.models import Payslip
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+    from payroll_engine.payroll_bp import _annotate_general_allowance
+    from payroll_engine.services.payroll_service import (
+        _ensure_basic_assignment,
+        _ensure_general_allowance,
+        process_payroll,
+    )
+
+    user = User(phone='0911000004', company_id=company.id, role='owner')
+    user.set_password('Test1234!')
+    employee = Employee(
+        employee_id='EMP001',
+        name='Dawit',
+        basic_salary=Decimal('12000'),
+        allowances=Decimal(existing_allowance),
+        company_id=company.id,
+    )
+    db.session.add_all([user, employee])
+    db.session.flush()
+    _ensure_basic_assignment(employee, company.id)
+    _ensure_general_allowance(employee, company.id)
+    db.session.commit()
+
+    row = _reviewed_csv_row(tmp_path, 12000, imported_allowance)
+    _annotate_general_allowance(company.id, [row])
+    run = PayrollRun(
+        company_id=company.id,
+        period='2026-09',
+        status='review',
+        run_date=date(2026, 9, 1),
+        approved_by=user.id,
+    )
+    db.session.add(run)
+    db.session.flush()
+    db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=[row]))
+    db.session.commit()
+
+    result = process_payroll(
+        run=run,
+        company_id=company.id,
+        user_id=user.id,
+        user_email=user.email or 'owner@test.com',
+        request_ip='127.0.0.1',
+    )
+    assert result.success, result.message or result.error
+
+    payslip = Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).one()
+    for key, actual in (
+        ('gross', payslip.gross_salary),
+        ('tax', payslip.tax),
+        ('pension_employee', payslip.employee_pension),
+        ('pension_employer', payslip.employer_pension),
+        ('net', payslip.net_pay),
+    ):
+        assert actual == Decimal(str(row[key]))
+
+    employee = Employee.query.filter_by(company_id=company.id, employee_id='EMP001').one()
+    assert employee.allowances == Decimal(imported_allowance)
+    [allowance] = (
+        PayrollItemAssignment.query.filter_by(
+            company_id=company.id,
+            employee_id=employee.id,
+            is_active=True,
+        )
+        .join(PayrollItemAssignment.item_type)
+        .filter_by(key='general_allowance')
+        .all()
+    )
+    assert allowance.fixed_amount == Decimal(imported_allowance)
+
+
+def test_csv_import_review_mismatch_saves_no_payroll_changes(ctx, company, tmp_path):
+    from payroll_engine.models import Payslip
+    from payroll_engine.models_payroll_elements import PayrollItemAssignment
+    from payroll_engine.payroll_bp import _annotate_general_allowance
+    from payroll_engine.services.payroll_service import (
+        _ensure_basic_assignment,
+        _ensure_general_allowance,
+        process_payroll,
+    )
+
+    user = User(phone='0911000003', company_id=company.id, role='owner')
+    user.set_password('Test1234!')
+    employee = Employee(
+        employee_id='EMP001',
+        name='Dawit',
+        basic_salary=Decimal('10000'),
+        allowances=Decimal('2500'),
+        company_id=company.id,
+    )
+    db.session.add_all([user, employee])
+    db.session.flush()
+    _ensure_basic_assignment(employee, company.id)
+    _ensure_general_allowance(employee, company.id)
+
+    row = _reviewed_csv_row(tmp_path, 12000, 2500)
+    row['net'] += Decimal('0.01')
+    _annotate_general_allowance(company.id, [row])
+    run = PayrollRun(
+        company_id=company.id,
+        period='2026-09',
+        status='review',
+        run_date=date(2026, 9, 1),
+        approved_by=user.id,
+    )
+    db.session.add(run)
+    db.session.flush()
+    db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=[row]))
+    db.session.commit()
+
+    result = process_payroll(
+        run=run,
+        company_id=company.id,
+        user_id=user.id,
+        user_email=user.email or 'owner@test.com',
+        request_ip='127.0.0.1',
+    )
+
+    assert not result.success
+    assert 'does not match the reviewed amount' in (result.message or result.error or '').lower()
+    assert 'no changes were saved' in (result.message or result.error or '').lower()
+    assert Payslip.query.filter_by(payroll_run_id=run.id, company_id=company.id).count() == 0
+    assert PayrollDraft.query.filter_by(payroll_run_id=run.id, company_id=company.id).one()
+    assert db.session.get(PayrollRun, run.id).status == 'review'
+    db.session.refresh(employee)
+    assert employee.basic_salary == Decimal('10000')
+    [basic] = (
+        PayrollItemAssignment.query.filter_by(
+            company_id=company.id,
+            employee_id=employee.id,
+            is_active=True,
+        )
+        .join(PayrollItemAssignment.item_type)
+        .filter_by(key='basic_salary')
+        .all()
+    )
+    assert basic.fixed_amount == Decimal('10000')
+
+
 def _ga_item(company_id):
     from payroll_engine.constants import COMPANY_TEMPLATE_ITEM_KEYS
     from payroll_engine.models_payroll_elements import PayItemType
@@ -169,8 +413,7 @@ def test_zero_allowance_creates_no_assignment(ctx, company):
     db.session.add(emp)
     db.session.commit()
 
-    assert _ensure_general_allowance(emp, company.id, 0) is None
-    assert _ensure_general_allowance(emp, company.id, None) is None
+    assert _ensure_general_allowance(emp, company.id) is None
 
 
 def test_ensure_general_allowance_is_idempotent(ctx, company):
@@ -181,13 +424,14 @@ def test_ensure_general_allowance_is_idempotent(ctx, company):
         employee_id='EMP003',
         name='Idem',
         basic_salary=10000,
+        allowances=2500,
         company_id=company.id,
     )
     db.session.add(emp)
     db.session.commit()
 
-    first = _ensure_general_allowance(emp, company.id, 2500)
-    second = _ensure_general_allowance(emp, company.id, 9999)
+    first = _ensure_general_allowance(emp, company.id)
+    second = _ensure_general_allowance(emp, company.id)
 
     assert first is not None and second is not None
     assert first.id == second.id, 'must not create a second assignment'
@@ -228,7 +472,8 @@ def test_no_basic_salary_creates_no_basic_assignment(ctx, company, amount):
 
     before = PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).count()
 
-    assert _ensure_basic_assignment(emp, company.id, amount) is None
+    emp.basic_salary = amount or 0
+    assert _ensure_basic_assignment(emp, company.id) is None
 
     after = PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=emp.id).count()
     assert after == before, 'no assignment may be created for a zero basic salary'

@@ -158,6 +158,97 @@ def parse_and_calculate_payroll(filepath: str) -> tuple[list[dict], list[str]]:
     return employees_data, row_errors
 
 
+def csv_review_unsupported_reason(company_id: int, employees_data: list[dict], for_date=None) -> str | None:
+    """Explain when the simple CSV review cannot include existing payroll facts."""
+    if not employees_data:
+        return None
+
+    from sqlalchemy import or_
+
+    from payroll_engine.leave import LeaveType
+    from payroll_engine.models import Employee, EmployeeDeduction, Leave
+    from payroll_engine.models_payroll_elements import (
+        PayItemClassification,
+        PayItemType,
+        PayrollItemAssignment,
+    )
+
+    payroll_date = for_date or date.today()
+    month_start = payroll_date.replace(day=1)
+    employee_codes = {str(row.get('id', '')).strip() for row in employees_data}
+    employees = Employee.query.filter(
+        Employee.company_id == company_id,
+        Employee.employee_id.in_(employee_codes),
+        Employee.is_deleted.is_(False),
+    ).all()
+    employees_by_id = {employee.id: employee for employee in employees}
+    if not employees_by_id:
+        return None
+
+    unsupported: dict[int, set[str]] = {}
+    employee_ids = set(employees_by_id)
+    legacy_deductions = EmployeeDeduction.query.filter(
+        EmployeeDeduction.company_id == company_id,
+        EmployeeDeduction.employee_id.in_(employee_ids),
+        EmployeeDeduction.is_active.is_(True),
+    ).all()
+    for deduction in legacy_deductions:
+        if deduction.tracking_mode == 'date_bounded' and deduction.end_date and deduction.end_date < payroll_date:
+            continue
+        if (
+            deduction.tracking_mode == 'declining'
+            and deduction.remaining_balance is not None
+            and deduction.remaining_balance <= 0
+        ):
+            continue
+        unsupported.setdefault(deduction.employee_id, set()).add('active deductions')
+
+    assignment_deductions = (
+        PayrollItemAssignment.query.join(PayItemType, PayrollItemAssignment.pay_item_type_id == PayItemType.id)
+        .filter(
+            PayrollItemAssignment.company_id == company_id,
+            PayrollItemAssignment.employee_id.in_(employee_ids),
+            PayrollItemAssignment.is_active.is_(True),
+            PayItemType.classification == PayItemClassification.DEDUCTION,
+            or_(
+                PayrollItemAssignment.effective_date.is_(None),
+                PayrollItemAssignment.effective_date <= payroll_date,
+            ),
+            or_(PayrollItemAssignment.end_date.is_(None), PayrollItemAssignment.end_date >= payroll_date),
+        )
+        .all()
+    )
+    for assignment in assignment_deductions:
+        if (
+            assignment.tracking_mode == 'declining'
+            and assignment.remaining_balance is not None
+            and (assignment.remaining_balance <= 0)
+        ):
+            continue
+        unsupported.setdefault(assignment.employee_id, set()).add('active deductions')
+
+    unpaid_leave = Leave.query.filter(
+        Leave.company_id == company_id,
+        Leave.employee_id.in_(employee_ids),
+        Leave.leave_type == LeaveType.UNPAID,
+        Leave.status == 'approved',
+        Leave.start_date <= payroll_date,
+        Leave.end_date >= month_start,
+    ).all()
+    for leave in unpaid_leave:
+        if max(leave.start_date, month_start) <= min(leave.end_date, payroll_date):
+            unsupported.setdefault(leave.employee_id, set()).add('approved unpaid leave')
+
+    if not unsupported:
+        return None
+    employee = min((employees_by_id[employee_id] for employee_id in unsupported), key=lambda row: row.employee_id)
+    facts = ' and '.join(sorted(unsupported[employee.id]))
+    return (
+        f'CSV payroll review does not include {facts} for {employee.employee_id}. '
+        'Use the monthly worksheet review instead; no CSV payroll draft was created.'
+    )
+
+
 def check_csv_row_limit(employees_data: list, max_rows: int = 5000) -> str | None:
     """Return an error message if row limit is exceeded, else None."""
     if len(employees_data) > max_rows:

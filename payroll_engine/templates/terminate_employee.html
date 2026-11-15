@@ -84,6 +84,12 @@
                             {% for warning in settlement_preview.warnings %}
                             <div class="alert alert-warning py-1 mb-2"><i class="bi bi-exclamation-triangle me-1"></i>{{ warning }}</div>
                             {% endfor %}
+                            {% if settlement_preview.net_final_payment < 0 %}
+                            <div class="alert alert-danger py-1 mb-2" data-testid="negative-net-preview-warning">
+                                <i class="bi bi-exclamation-octagon me-1"></i><strong>Negative final payment.</strong>
+                                Pending deductions exceed this settlement's earnings. Confirm below that the company will recover the shortfall.
+                            </div>
+                            {% endif %}
                             <table class="table table-sm mb-2">
                                 <tbody>
                                     <tr><td>Outstanding salary</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.outstanding_salary) }}</td></tr>
@@ -142,6 +148,21 @@
                                    min="0" step="0.01" inputmode="decimal" placeholder="0.00" value="{{ form_values.get('notice_pay', '') }}">
                             <div class="form-text">Only if notice pay is owed. It is taxed with the final month's pay, together with severance and leave encashment.</div>
                         </div>
+
+                        {% if settlement_preview and settlement_preview.net_final_payment < 0 %}
+                        <div class="alert alert-danger" data-testid="negative-net-confirm">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirm_negative_net"
+                                       name="confirm_negative_net" value="on" {% if block_message %}required{% endif %}
+                                       {% if form_values.get('confirm_negative_net') == 'on' %}checked{% endif %}>
+                                <label class="form-check-label" for="confirm_negative_net">
+                                    I confirm the settlement pays a negative final amount of
+                                    ETB {{ '%.2f'|format(settlement_preview.net_final_payment) }}.
+                                    The company will recover this shortfall from {{ employee.name }}.
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Confirm Password *</label>

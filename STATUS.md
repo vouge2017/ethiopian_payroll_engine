@@ -1,5 +1,55 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT SETTLEMENT NEGATIVE-NET OWNER CONFIRMATION — 2026-11-15
+
+- Owner decision recorded (see `docs/policy_decisions_2026-11-15.md`,
+  decided Q1=A warn + explicit owner confirmation; Q2=C early warning):
+  of the four policy questions from the launch-hardening review, **two were
+  already fixed by merged work** (bonus additions are taxed marginally on the
+  month via frozen brackets, commit `90779cb`; overtime hourly rate is
+  unrounded with rounding applied after hours × multiplier, commit
+  `356678d`), and **Q2 was already covered**: the worksheet review
+  calculation (`services/worksheet_review.py:222`) raises
+  "deductions exceed available pay. Resolve this before review." whenever any
+  employee's net < 0, and that error renders as a warning banner on the
+  preparation page (`payroll_spreadsheet.html` `review_error`), in addition to
+  the approval-time `NEGATIVE_NET_PAY` BLOCK and the preparation-time
+  `DEDUCTIONS_EXCEED_NET` BLOCK. Q1 needed code and is implemented here.
+- **Implementation (Q1=A)**: `employees_bp.py` terminate flow now pre-checks
+  the settlement before creating it; when `net_final_payment < 0` and the
+  form does not carry `confirm_negative_net=on`, the finalize is refused
+  (HTTP 409, `data-testid="settlement-finalize-blocked"` shows the exact
+  negative amount) and the employee/records are untouched. The terminate form
+  shows a red preview warning plus a required confirmation checkbox
+  ("I confirm the settlement pays a negative final amount of ETB …; the
+  company will recover this shortfall"), and the confirmation is audited as
+  `negative_net_confirmed: true` on `employee_terminated`
+  (false for positive settlements). `settlement_detail.html` shows a standing
+  red warning (`data-testid="negative-settlement-warning"`) for any negative
+  settlement. Positive settlements need no confirmation; preview flows are
+  unchanged; the leave-rule block continues to take precedence via its
+  existing handler.
+- **Receipts**: new `tests/test_settlement_negative_confirm.py` (6 tests:
+  preview shows warning + checkbox; finalize without confirm blocked with
+  employee not terminated and no settlement row; finalize with confirm
+  creates the settlement, soft-deletes the employee, and audits
+  `negative_net_confirmed: true`; positive settlement needs no checkbox and
+  audits false; detail page shows/clears the warning correctly) → `6 passed
+  in 17.25s`; neighboring suites `test_settlement_leave_rule_confirmation.py
+  test_settlement_edges.py test_settlement_leave_rate.py
+  test_settlement_taxation.py test_calculation_context.py` → `59 passed in
+  79.12s`. ruff check/format clean; edited templates verified BOM-free
+  (first bytes `7B 25 20`). Limits: the confirm requirement is UI-enforced
+  via the form (API-level settlement creation has no other caller); nightly
+ /offsite backup upgrades and the Neon manual snapshot remain parked owner
+  decisions. Self-review of the PR (2026-11-15, commit `3644980`): verified
+  `calculate_settlement` is pure read (no session mutation) so the
+  precheck-then-create double compute is safe; `create_settlement_record` has
+  exactly one caller (the terminate route, no bypass); non-leave-rule
+  exceptions behave as before (500, no partial state); fixed the one finding —
+  the confirmation checkbox was `required` even on preview-only re-renders,
+  now required only when the finalize is actually blocked (6 tests re-passed).
+
 ## CURRENT NEON AUTOMATED WEEKLY BACKUP — 2026-11-15
 
 - The "automated dumps remain the backup story" limit from the Neon cutover

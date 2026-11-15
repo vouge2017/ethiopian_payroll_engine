@@ -18,8 +18,7 @@
 - **Implementation (Q1=A)**: `employees_bp.py` terminate flow now pre-checks
   the settlement before creating it; when `net_final_payment < 0` and the
   form does not carry `confirm_negative_net=on`, the finalize is refused
-  (HTTP 409, `data-testid="settlement-finalize-blocked"` shows the exact
-  negative amount) and the employee/records are untouched. The terminate form
+  blocked with the exact negative amount) and the employee/records are untouched. The terminate form
   shows a red preview warning plus a required confirmation checkbox
   ("I confirm the settlement pays a negative final amount of ETB …; the
   company will recover this shortfall"), and the confirmation is audited as
@@ -42,7 +41,13 @@
   (first bytes `7B 25 20`). Limits: the confirm requirement is UI-enforced
   via the form (API-level settlement creation has no other caller); nightly
  /offsite backup upgrades and the Neon manual snapshot remain parked owner
-  decisions.
+  decisions. Self-review of the PR (2026-11-15, commit `3644980`): verified
+  `calculate_settlement` is pure read (no session mutation) so the
+  precheck-then-create double compute is safe; `create_settlement_record` has
+  exactly one caller (the terminate route, no bypass); non-leave-rule
+  exceptions behave as before (500, no partial state); fixed the one finding —
+  the confirmation checkbox was `required` even on preview-only re-renders,
+  now required only when the finalize is actually blocked (6 tests re-passed).
 
 ## CURRENT NEON AUTOMATED WEEKLY BACKUP — 2026-11-15
 

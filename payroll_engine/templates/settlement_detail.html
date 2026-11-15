@@ -2,6 +2,13 @@
 {% block title %}Final Settlement - {{ employee.name }}{% endblock %}
 {% block content %}
 <div class="p-4 p-md-5">
+    {% if settlement.net_final_payment < 0 %}
+    <div class="alert alert-danger" data-testid="negative-settlement-warning">
+        <i class="bi bi-exclamation-octagon me-1"></i><strong>Negative final payment.</strong>
+        Pending deductions exceed this settlement's earnings: ETB {{ '%.2f'|format(settlement.net_final_payment) }}
+        is owed back to the company. Verify the advance and deduction records before paying.
+    </div>
+    {% endif %}
     {% if pending_paye_notice() %}
     <div class="alert alert-warning py-2 small">{{ pending_paye_notice_text }}</div>
     {% endif %}

@@ -1380,12 +1380,44 @@ def terminate_employee(emp_id):
             flash(err, 'danger')
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
+        confirm_negative_net = request.form.get('confirm_negative_net', '').strip()
         form_values = {
             'termination_reason': reason,
             'end_date': end_date.isoformat(),
             'unused_leave_days': '' if unused_leave_days is None else str(unused_leave_days),
             'notice_pay': '' if notice_pay is None else str(notice_pay),
+            'confirm_negative_net': confirm_negative_net,
         }
+        # Owner decision 2026-11-15 (docs/policy_decisions_2026-11-15.md, Q1=A):
+        # a settlement whose pending deductions exceed its earnings records a
+        # negative net final payment. Nothing is finalized until the user
+        # explicitly confirms the recovery; the confirmation is audited.
+        if not is_preview:
+            try:
+                precheck = calculate_settlement(
+                    emp,
+                    reason,
+                    end_date,
+                    _company_id(),
+                    db.session,
+                    unused_leave_days=unused_leave_days,
+                    notice_pay=notice_pay,
+                )
+            except LeaveRuleNotConfirmedError:
+                # finalize falls through to create_settlement_record, which
+                # raises the same error into the existing blocked handler.
+                precheck = None
+            else:
+                if precheck['net_final_payment'] < 0 and confirm_negative_net != 'on':
+                    message = (
+                        f'This settlement pays a NEGATIVE final amount of ETB '
+                        f'{precheck["net_final_payment"]:,.2f} because pending deductions exceed the final pay. '
+                        'The employee has not been terminated and nothing was saved. '
+                        'Tick the confirmation below to continue.'
+                    )
+                    return _render_terminate_form(
+                        emp, preview=precheck, form_values=form_values, block_message=message, status=409
+                    )
         if is_preview:
             preview = calculate_settlement(
                 emp,
@@ -1463,6 +1495,7 @@ def terminate_employee(emp_id):
                 'taxable_income': str(settlement.taxable_income),
                 'income_tax': str(settlement.tax_on_salary),
                 'net_final_payment': str(settlement.net_final_payment),
+                'negative_net_confirmed': settlement.net_final_payment < 0,
             },
         )
         db.session.commit()

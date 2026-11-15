@@ -18,7 +18,8 @@
 - **Implementation (Q1=A)**: `employees_bp.py` terminate flow now pre-checks
   the settlement before creating it; when `net_final_payment < 0` and the
   form does not carry `confirm_negative_net=on`, the finalize is refused
-  blocked with the exact negative amount) and the employee/records are untouched. The terminate form
+  (HTTP 409, `data-testid="settlement-finalize-blocked"` shows the exact
+  negative amount) and the employee/records are untouched. The terminate form
   shows a red preview warning plus a required confirmation checkbox
   ("I confirm the settlement pays a negative final amount of ETB …; the
   company will recover this shortfall"), and the confirmation is audited as

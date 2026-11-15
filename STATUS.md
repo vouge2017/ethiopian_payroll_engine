@@ -1,5 +1,43 @@
 # STATUS.md — Command-Verified State
 
+## CURRENT NEON AUTOMATED WEEKLY BACKUP — 2026-11-15
+
+- The "automated dumps remain the backup story" limit from the Neon cutover
+  is now closed for the weekly half. Automation lives outside the repository
+  (protected secrets dir, never committed) as
+  `C:\Users\25191\.ethiopayroll-secrets\neon_backup_weekly.py`, driven by
+  Windows scheduled task `NeonPayrollBackup-Weekly` (Sundays 04:00 EAT,
+  `StartWhenAvailable` so a powered-off machine catches up on boot,
+  1-hour execution limit). It dumps the LIVE Neon production database over
+  the direct (non-pooled) DSN from the escrow file — deliberately not the
+  stale Render `db_url.txt` still referenced by the older drill scripts —
+  using the proven FK-topological COPY order + `setval` replay so a restore
+  needs no superuser, writing dated `neon_backup_YYYYMMDD_HHMM.sql` + JSON
+  report to `C:\Users\25191\.ethiopayroll-secrets\backups\`, rotating to keep
+  the newest 8 dumps, and logging to `backups\neon_backup.log`. Secrets are
+  read from files and never printed.
+- Live receipts, 2026-11-15: manual run → `backup_ok tables=39 rows=496
+  bytes=222708 file=neon_backup_20261115_0555.sql`; `check` mode (counts +
+  alembic vs live + ciphertext sanity on the dump's employee rows) →
+  `ok: true, mismatches: 0`, alembic `f4a5b6c7d8f3` both sides. Scheduled
+  task fired via `schtasks /run` → `backup_ok ... file=
+  neon_backup_20261115_0600.sql` at 06:00:37 EAT, so the registered task
+  works end-to-end.
+- Restore proof on local disposable PG16 (127.0.0.1:55439, UTF-8 database
+  `neon_restore_check`): Alembic from zero to head `f4a5b6c7d8f3`, alembic
+  table truncated, dump loaded with `psql ON_ERROR_STOP=1` (exit 0), then
+  verified: 39/39 tables with 0 row-count mismatches against the backup
+  report, `alembic_version` matches, and the employee `bank_account` rows in
+  the restored copy are ciphertext (not plaintext) — the dump is restorable,
+  not just readable. Test database dropped afterwards.
+- Limits / next decisions: nightly frequency is the later step (weekly
+  registered now, per the cutover plan); local dumps are the only copies —
+  no offsite/second-media copy yet (Neon Free gives 6-hour instant-restore
+  history and 1 manual snapshot; a manual snapshot + offsite copy decision
+  is parked for the owner); if the Neon password is rotated again the
+  escrowed `neon_direct_url.txt` must be updated or backups will fail
+  (failure is loud: task exit code + `neon_backup.log`).
+
 ## CURRENT BULK-IMPORT ID HARDENING (WORK ORDER 30) — 2026-10-25
 
 - Parked-idea investigation: "employee import may turn ID 0001 into 1 and let duplicate IDs through". Disproven for the Quick Start wizard (it discards supplied IDs and generates `EMP###` skipping every ID ever used including soft-deleted rows, `wizard_bp.py:34-60`) and for silent duplicate persistence anywhere (`uq_employee_company_empid`, `models.py:721-726`; single create already returns 409, `tests/test_input_validation.py:254`). Two real defects confirmed on `POST /api/v1/employees/bulk`: a JSON-numeric `employee_id` raised AttributeError (unhandled 500), and any duplicate — within the payload, against an active employee, or against a soft-deleted employee — hit IntegrityError on commit (unhandled 500, whole batch rolled back); the fallback generator counted only active rows and could regenerate a soft-deleted employee's ID. `excel_import.read_xlsx` passed numeric cells through as raw ints (IDs/TINs reaching VARCHAR columns as numerics).

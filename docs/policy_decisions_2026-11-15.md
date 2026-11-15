@@ -1,7 +1,9 @@
 # Payroll policy decision sheet — 2026-11-15
 
-Two questions need a decision from the owner (+ accountant if possible).
-Per project rules, the engine does not choose money/legal thresholds silently.
+**DECIDED by the owner, 2026-11-15: Q1 → A, Q2 → C.**
+Implementation tracked separately; this sheet stays as the record of options
+and rationale. Per project rules, the engine does not choose money/legal
+thresholds silently.
 
 ## Already resolved by merged work — no decision needed
 

@@ -153,7 +153,7 @@
                         <div class="alert alert-danger" data-testid="negative-net-confirm">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="confirm_negative_net"
-                                       name="confirm_negative_net" value="on" required
+                                       name="confirm_negative_net" value="on" {% if block_message %}required{% endif %}
                                        {% if form_values.get('confirm_negative_net') == 'on' %}checked{% endif %}>
                                 <label class="form-check-label" for="confirm_negative_net">
                                     I confirm the settlement pays a negative final amount of

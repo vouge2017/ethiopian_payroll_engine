@@ -441,7 +441,7 @@ def get_adjustment_summary(db, models, run_id, company_id):
 
 
 def generate_adjustment_bank_file(db, models, run_id, company_id):
-    from payroll_engine.bank_file import generate_csv, validate_account_number
+    from payroll_engine.bank_file import MISSING_CORRECTION_MESSAGE, generate_csv, validate_account_number
 
     run = models.PayrollRun.query.filter_by(id=run_id, company_id=company_id).first()
     if not run:
@@ -451,6 +451,12 @@ def generate_adjustment_bank_file(db, models, run_id, company_id):
         .order_by(models.PayrollCorrection.id)
         .all()
     )
+    approved_ids = {c.approved_payslip_id for c in corrections}
+    adjustments = models.Payslip.query.filter_by(
+        company_id=company_id, payroll_run_id=run_id, payslip_type='adjustment'
+    ).all()
+    if any(ps.id not in approved_ids for ps in adjustments):
+        raise ValueError(MISSING_CORRECTION_MESSAGE)
     rows = {}
     for c in corrections:
         ps = models.Payslip.query.filter_by(

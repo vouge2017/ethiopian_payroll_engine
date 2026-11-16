@@ -2177,7 +2177,13 @@ def disbursement_progress(run_id):
         'telebirr': 'Telebirr / Mobile Wallet',
     }
 
-    for payment in payment_rows_for_payslips(payslips):
+    try:
+        payments = payment_rows_for_payslips(payslips)
+    except ValueError as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
+
+    for payment in payments:
         bank_raw = (payment['bank'] or '').strip()
         bank_key = payment_channel(bank_raw)
         bank_display = bank_labels.get(bank_key, bank_key.title())

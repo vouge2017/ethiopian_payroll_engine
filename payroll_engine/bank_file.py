@@ -95,27 +95,41 @@ def payment_channel(payment_account: str | None) -> str:
     return account.split(':', 1)[0].lower() if ':' in account else 'unknown'
 
 
+class MissingPaymentSnapshotError(ValueError):
+    """An approved payment cannot be reconstructed safely."""
+
+
+MISSING_CORRECTION_MESSAGE = 'Approved correction is missing for an adjustment. Contact support before exporting.'
+
+
 def payment_rows_for_payslips(payslips) -> list[dict[str, Any]]:
-    """Build disbursement rows from retained approval facts where available."""
+    """Build disbursement rows only from retained approval facts."""
     from payroll_engine.services.worksheet_review import published_row
 
     rows = []
     for payslip in payslips:
-        employee = payslip.employee
-        if employee is None:
-            continue
-
         snapshot = published_row(payslip)
+        if snapshot is None and payslip.payslip_type == 'adjustment':
+            raise MissingPaymentSnapshotError(MISSING_CORRECTION_MESSAGE)
         if snapshot is None:
-            employee_id = employee.employee_id
-            name = employee.name
-            account = employee.bank_account or employee.bank_or_telebirr or ''
-            net = payslip.net_pay
-        else:
-            employee_id = snapshot.get('id', employee.employee_id)
-            name = snapshot.get('name', employee.name)
-            account = snapshot.get('bank', '')
-            net = snapshot.get('net', payslip.net_pay)
+            context = payslip.calculation_context or {}
+            snapshot = context.get('payment_snapshot') or context.get('employee') or {}
+        employee_id = snapshot.get('id')
+        name = snapshot.get('name')
+        account = snapshot.get('bank')
+        net = snapshot.get('net', payslip.net_pay)
+        if (
+            not employee_id
+            or not name
+            or not isinstance(account, str)
+            or ':' not in account
+            or not all(part.strip() for part in account.split(':', 1))
+            or payment_channel(account) not in ACCOUNT_PATTERNS
+            or net is None
+        ):
+            raise MissingPaymentSnapshotError(
+                'Approved payment details are missing. Contact support for an audited correction before exporting.'
+            )
 
         rows.append(
             {

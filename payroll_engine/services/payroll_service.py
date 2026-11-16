@@ -610,7 +610,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                     today,
                     employee_id=emp.employee_id,
                     name=emp_data.get('name') or emp.name,
-                    bank=emp_data.get('bank') or emp.bank_account or emp.bank_or_telebirr,
+                    bank=emp_data.get('bank') or '',
                     tin=emp_data.get('tin') or emp.tin,
                     department=emp.department,
                     position=emp.position,
@@ -651,7 +651,14 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
                 line_items = None  # legacy path has no engine breakdown
                 exempt_allowances = None
                 taxable_income = None
-                calculation_context = None  # Do not invent context for precomputed legacy amounts.
+                # Retain only the approved payment identity, not invented tax inputs.
+                calculation_context = {
+                    'payment_snapshot': {
+                        'id': emp_data['id'],
+                        'name': emp_data.get('name') or emp.name,
+                        'bank': emp_data.get('bank') or '',
+                    }
+                }
 
             _assert_review_matches_calculation(
                 emp_data,

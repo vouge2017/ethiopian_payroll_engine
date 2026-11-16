@@ -7,11 +7,36 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
-### Holiday calendar corrected to Proc. 1334/2024 (branch `fix/holiday-calendar-1334-2024`)
+### Payslip design direction reviewed; four ideas parked (2026-11-16)
 
-- State: implemented, 13/13 tests pass, PR #46 open. CI: lint ✅,
-  Migration Tests ✅, GitGuardian ✅, test-postgres passing (fixed `down_revision`
-  from `d1e2f3a4b5c6` to `a4b5c6d7e8f9` — main head).
+- Built a standalone payslip design mock (HTML, "security document" direction,
+  synthetic but arithmetically correct figures: basic 10,000 → gross 12,921.20,
+  PAYE 1,866.36 on gross taxable income, pension 700 / 1,100, net 10,354.84 —
+  all per the confirmed rules) outside the repo at
+  `C:\Users\25191\AppData\Local\Temp\opencode\payslip-specimen.html`
+  (temp file — Windows may clean it).
+- Owner verdict: good direction, not production. Gap review against
+  ADP / Gusto / Workday / greytHR patterns identified the real gaps (YTD
+  figures, data density beyond a one-allowance employee, verification against
+  forgery for bank loans, grayscale/photocopy legibility, accessibility,
+  tenant branding, mobile data cost, artifact split between screen and print).
+- Four owner-confirmed ideas parked in "4. Parked ideas" (payslip v2
+  redesign, per-recipient watermark, tenant branding, split deposits); four
+  weaker candidates reviewed and dropped (frozen-snapshot rendering is
+  already implemented behaviour in PRs #31/#44 and catalog 4a, not a
+  feature; a11y and Amharic gates fold into the v2 spec).
+- No payroll code, calculations, rates, thresholds, migrations or production
+  behavior changed. Documentation only; no tests run. Next step when the
+  owner agrees: a payslip v2 design spec (portal screen + print PDF) as a
+  bounded slice.
+
+### Holiday calendar corrected to Proc. 1334/2024 (branch `fix/holiday-calendar-1334-2024`, PR #46)
+
+- State: **merged** to `origin/main` as `7df250d` (Merge pull request #46),
+  2026-11-01. Branch `fix/holiday-calendar-1334-2024` @ `a31b007` is an ancestor
+  of `origin/main` (safe to delete locally). CI: lint ✅, Migration Tests ✅,
+  GitGuardian ✅, test-postgres passing (fixed `down_revision` from
+  `d1e2f3a4b5c6` to `a4b5c6d7e8f9` — main head).
 - What: Patriots' Victory Day → May 5 (Art. 4); May 28 "Downfall of the Dergue" abolished;
   Dec 9 & Feb 20 are memorial days only (Art. 5). Old seed wrongly put Patriots' Victory Day
   AND Downfall of the Dergue both on May 28 of 2025 and 2026.
@@ -890,9 +915,12 @@ merged on main @ `c65aaa0`.
   remove the duty to address an error (Q4; see point 2); do not overwrite
   them. Drafts and worksheet reviews still open at deploy hold pre-R1
   figures; refresh or re-upload them after deploy.
+- Holiday calendar correction (Proc. 1334/2024) is **done and merged** (PR #46,
+  `7df250d`). No live payroll data was affected; the migration is idempotent.
 - Checkout note 2026-10-26: main @ `ba54f90`; PLAN.md modified (this file);
   untracked webhook migration and deprecated mobile files preserved, touched
-  by no one.
+  by no one. Checkout note 2026-11-01: `origin/main` @ `7df250d` (PR #46
+  merged); the holiday branch is merged and can be deleted.
 
 ---
 
@@ -1053,9 +1081,35 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 - Unused i18n key `pension_before_tax` (am/om) still describes the old rule.
   Parked: not shown anywhere, so fix it with the Amharic label work (Next item 7).
 
+- Payslip v2 redesign — rework the existing portal payslip page and the
+  bilingual PDF into a production payslip: print-safe (legible after mono
+  printing and photocopying), WCAG AA with `lang` attributes, tenant
+  logo/name, run type + pay period in both calendars, overflow rules for
+  many earnings/deduction lines, YTD figures, self-hosted subset fonts;
+  rendered only from frozen payslip figures and the approval-time
+  item-settings snapshot. Parked: needs a design spec and owner go-ahead
+  before any code; Amharic copy rides Next item 7's native-speaker review.
+- Per-recipient watermark on payslip PDFs ("Issued to <name> · <ID>") so a
+  forwarded or screenshotted payslip used as loan proof is traceable.
+  Parked: small, but only meaningful once the payslip v2 template exists.
+- Tenant branding on payslips (logo upload, bilingual company name).
+  Parked: depends on durable file storage (Next item 6 — payslip PDFs
+  currently die on a Render redeploy); no new uploads until that lands.
+- Split deposits (net pay across two or more accounts/banks) in the engine,
+  bank files and payslip display. Parked: the engine stores one encrypted
+  bank account per employee; not needed for one accountant's month.
+
 ---
 
 ## 5. Log
+
+- 2026-11-16 — AI session (OpenCode) — Parked four owner-confirmed payslip
+  ideas (payslip v2 redesign, per-recipient watermark, tenant branding,
+  split deposits) in "4. Parked ideas" after a reviewed gap analysis;
+  four weaker candidates dropped. Payslip design mock built outside the
+  repo (direction only). No payroll code changed; no tests run. This commit
+  also carries the still-uncommitted 2026-11-01 PLAN.md status update by
+  Codex (PR #46 merged).
 
 - 2026-10-30 — Codex — Second review corrected the source register's Regulation 410/2017 and Pension Proclamation 1268/2022 links and distinguished the directive's actual Justice record date from a separately dated explanatory-note record. Directive dates are consistent at month level; Article 74 effective date remains unverified. No payroll code changed; documentation checks only, no tests run.
 
@@ -1196,6 +1250,15 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
    changes (golden generated on main first). Tests: SQLite 1995 passed, 0
    failed, 231 skipped (189 files); PostgreSQL 204 passed (28 files, local
    PG 17). ruff clean.
+- 2026-11-01 — Codex — PR #46 merged to `origin/main` as `7df250d`: holiday
+  calendar corrected to Proc. 1334/2024 (Patriots' Victory Day → May 5; May 28
+  "Downfall of the Dergue" abolished; Dec 9 & Feb 20 memorial days only).
+  Migration `h1334c2024a1` (`down_revision = a4b5c6d7e8f9`) deletes the wrong
+  May 28 rows and seeds 2025-2027. 13/13 tests green; CI lint, Migration
+  Tests, GitGuardian and test-postgres all passing. Branch is fully merged and
+  safe to delete locally. Deployment and practitioner acceptance remain
+  pending; the holiday calendar is a code change with no live payroll data
+  affected.
 - 2026-10-31 — Hark — Fixed holiday calendar migration chain. Changed
   `down_revision` from `d1e2f3a4b5c6` (not a main head) to `a4b5c6d7e8f9`
   (actual main head) to prevent a second Alembic head. Updated test

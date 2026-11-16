@@ -9,6 +9,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Issue #56 payment snapshot (2026-11-16)
 
+- Follow-up on `fix/issue-56-payment-snapshot` at parent `7434f1a7dd6d97da497893a6f522e7241fc15fe2`: a real run approval and correction approval regression checks the retained CBE destination after employee edits, and blocks adjustment exports without an approved correction. Focused adjustment/disbursement tests: **22 passed, 4 warnings in 30.83s**. Full suite: **1983 passed, 0 failed, 3 errors, 238 skipped** in 6523.1s; three test files timed out at the runner's 120s limit (employee assignments, pay item settings, PostgreSQL deduction identity). PostgreSQL proof remains unavailable; hosted CI pending.
 - Branch `fix/issue-56-payment-snapshot`, based on main `a65741c5cfacebf32479b0fda147aaa06bd37d84`: payment outputs use retained approval facts and block missing destinations; precomputed draft approvals retain payment identity separately from tax inputs. Implemented and locally tested; not merged, deployed or practitioner accepted.
 - Regression failed before the fix (historical CBE row disappeared after employee changes) and passed after. Focused tests: 5 passed. Full SQLite runner: **1992 passed, 6 failed, 1 errors, 251 skipped** in 1977.6s; shell restrictions caused six failures and one file timed out after 120s. Those three files reran outside the sandbox with a longer allowance: **58 passed, 4 warnings in 209.03s**. PostgreSQL tests were skipped; hosted CI and browser checks remain pending.
 - Review risk: the existing JSON calculation context stores payment identity without column encryption; this change also retains precomputed payment identity there. Review data protection before merge.
@@ -1240,6 +1241,7 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 
 ## 5. Log
 
+- 2026-11-16 — Codex — Added adjustment approval/export regression and blocked orphan adjustments; focused tests passed, full suite recorded three timeouts as above.
 - 2026-11-16 — Codex — Issue #56 payment snapshot fix and regression coverage; full local runner nonzero as recorded above; draft PR for review.
 
 - 2026-11-14 — Codex — Corrected PR #52 Ruff formatting; focused CSV tests 35 passed. Hosted full suite on `abdfa4f` 2039 passed, 0 failed, 0 errors, 251 skipped; PostgreSQL CI passed. Local full run stopped after a per-file timeout.

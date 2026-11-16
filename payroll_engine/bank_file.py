@@ -99,6 +99,9 @@ class MissingPaymentSnapshotError(ValueError):
     """An approved payment cannot be reconstructed safely."""
 
 
+MISSING_CORRECTION_MESSAGE = 'Approved correction is missing for an adjustment. Contact support before exporting.'
+
+
 def payment_rows_for_payslips(payslips) -> list[dict[str, Any]]:
     """Build disbursement rows only from retained approval facts."""
     from payroll_engine.services.worksheet_review import published_row
@@ -106,6 +109,8 @@ def payment_rows_for_payslips(payslips) -> list[dict[str, Any]]:
     rows = []
     for payslip in payslips:
         snapshot = published_row(payslip)
+        if snapshot is None and payslip.payslip_type == 'adjustment':
+            raise MissingPaymentSnapshotError(MISSING_CORRECTION_MESSAGE)
         if snapshot is None:
             context = payslip.calculation_context or {}
             snapshot = context.get('payment_snapshot') or context.get('employee') or {}

@@ -1187,7 +1187,10 @@ def get_bank_file(run_id):
     bank = request.args.get('bank', 'cbe')
     fmt = request.args.get('format', 'csv')
 
-    payments = bank_file_rows(payslips, bank)
+    try:
+        payments = bank_file_rows(payslips, bank)
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
 
     # Validate
     errors = validate_payroll_for_bank(payments, bank)

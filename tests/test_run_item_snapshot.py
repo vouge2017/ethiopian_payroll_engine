@@ -90,7 +90,7 @@ def setup(app, monkeypatch):
     return _company('Snapshot PLC', '0911000101')
 
 
-def _approve_draft(company, user, emp, run_date=RUN_DATE, period='2018-13'):
+def _approve_draft(company, user, emp, run_date=RUN_DATE, period='2018-13', bank=''):
     from payroll_engine.services.payroll_service import process_payroll
 
     run = PayrollRun(company_id=company.id, period=period, status='review', run_date=run_date)
@@ -104,6 +104,7 @@ def _approve_draft(company, user, emp, run_date=RUN_DATE, period='2018-13'):
                 {
                     'id': emp.employee_id,
                     'name': emp.name,
+                    'bank': bank,
                     'basic': 10000.0,
                     'allowances': 0.0,
                     'gross': 10000.0,
@@ -147,6 +148,43 @@ def _stored(ps):
 # ---------------------------------------------------------------------------
 # Written at approval (both paths)
 # ---------------------------------------------------------------------------
+
+
+def test_precomputed_draft_retains_payment_without_inventing_tax_context(setup):
+    from payroll_engine.bank_file import payment_rows_for_payslips
+
+    company, user, employee = setup
+    PayrollItemAssignment.query.filter_by(company_id=company.id, employee_id=employee.id).delete()
+    db.session.commit()
+    run = _approve_draft(company, user, employee, bank='cbe:1000123456789')
+    slip = _payslip(company.id, run.id)
+    assert slip.calculation_context == {
+        'payment_snapshot': {'id': 'E1', 'name': 'Abebe Kebede', 'bank': 'cbe:1000123456789'}
+    }
+    employee.name = 'Changed Name'
+    employee.bank_account = 'telebirr:0912345678'
+    employee.basic_salary = Decimal('50000')
+    db.session.commit()
+    row = payment_rows_for_payslips([slip])[0]
+    assert (row['id'], row['name'], row['bank'], row['net']) == (
+        'E1',
+        'Abebe Kebede',
+        'cbe:1000123456789',
+        Decimal('10000.00'),
+    )
+
+
+def test_draft_without_destination_does_not_copy_current_employee_account(setup):
+    from payroll_engine.bank_file import MissingPaymentSnapshotError, payment_rows_for_payslips
+
+    company, user, employee = setup
+    employee.bank_account = 'cbe:1000123456789'
+    db.session.commit()
+    run = _approve_draft(company, user, employee)
+    slip = _payslip(company.id, run.id)
+    assert slip.calculation_context['employee']['bank'] == ''
+    with pytest.raises(MissingPaymentSnapshotError, match='Approved payment details are missing'):
+        payment_rows_for_payslips([slip])
 
 
 def test_draft_approval_writes_snapshot(setup):

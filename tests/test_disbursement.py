@@ -107,6 +107,9 @@ def _setup(app, disbursement_status='pending'):
                 employee_pension=700,
                 employer_pension=1100,
                 net_pay=emp.basic_salary + emp.allowances - 1500 - 700,
+                calculation_context={
+                    'payment_snapshot': {'id': emp.employee_id, 'name': emp.name, 'bank': emp.bank_account}
+                },
             )
             db.session.add(payslip)
 
@@ -119,6 +122,74 @@ def _setup(app, disbursement_status='pending'):
 
 class TestDisbursementProgress:
     """Test the disbursement progress page."""
+
+    def test_non_spreadsheet_exports_keep_approved_destination(self, app):
+        from payroll_engine.services.correction_context import freeze_context
+
+        cid, _oid, rid = _setup(app)
+        with app.app_context():
+            employees = Employee.query.filter_by(company_id=cid).order_by(Employee.employee_id).all()
+            for employee in employees:
+                slip = Payslip.query.filter_by(company_id=cid, payroll_run_id=rid, employee_id=employee.id).one()
+                slip.calculation_context = freeze_context(
+                    date.today(), employee_id=employee.employee_id, name=employee.name, bank=employee.bank_account
+                )
+            db.session.commit()
+
+        client = app.test_client()
+        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
+        endpoints = (
+            '/reports/bank/{rid}?format=csv&bank={bank}',
+            '/api/v1/payroll-runs/{rid}/bank-file?format=csv&bank={bank}',
+        )
+        before = []
+        for endpoint in endpoints:
+            response = client.get(endpoint.format(rid=rid, bank='cbe'))
+            assert response.status_code == 200
+            before.append(list(csv.DictReader(io.StringIO(response.get_data(as_text=True)))))
+        assert len(before[0]) == len(before[1]) == 2
+        assert before[0][0]['account_number'] == '1000123456789'
+        assert 'Abebe Kebede' in before[0][0]['narrative']
+        assert Decimal(before[0][0]['amount']) == Decimal('9800.00')
+        with app.app_context():
+            employee = Employee.query.filter_by(company_id=cid, employee_id='EMP001').one()
+            employee.name = 'Changed Name'
+            employee.bank_account = employee.bank_or_telebirr = 'telebirr:0912345678'
+            employee.basic_salary = Decimal('50000.00')
+            db.session.commit()
+        for endpoint, expected in zip(endpoints, before, strict=True):
+            response = client.get(endpoint.format(rid=rid, bank='cbe'))
+            assert list(csv.DictReader(io.StringIO(response.get_data(as_text=True)))) == expected
+            response = client.get(endpoint.format(rid=rid, bank='telebirr'))
+            assert list(csv.DictReader(io.StringIO(response.get_data(as_text=True)))) == []
+            from openpyxl import load_workbook
+
+            response = client.get(endpoint.format(rid=rid, bank='cbe').replace('format=csv', 'format=xlsx'))
+            sheet = load_workbook(io.BytesIO(response.data), data_only=True).active
+            assert sheet['A6'].value == '1000123456789'
+            assert Decimal(str(sheet['B6'].value)) == Decimal('9800.00')
+            assert 'Abebe Kebede' in sheet['C6'].value
+        response = client.get(f'/payroll/{rid}/disbursement')
+        assert b'Abebe Kebede' in response.data
+        assert b'Changed Name' not in response.data
+
+    @pytest.mark.parametrize(
+        'context', [None, {'payment_snapshot': {'id': 'EMP001', 'name': 'Abebe Kebede', 'bank': '1000123456789'}}]
+    )
+    def test_missing_approved_destination_blocks_payment_outputs(self, app, context):
+        cid, _oid, rid = _setup(app)
+        with app.app_context():
+            slip = Payslip.query.filter_by(company_id=cid, payroll_run_id=rid).first()
+            slip.calculation_context = context
+            db.session.commit()
+        client = app.test_client()
+        client.post('/auth/login', data={'login_id': '0910000000', 'password': 'OwnerPass1!'})
+        for url in (f'/reports/bank/{rid}?bank=cbe', f'/payroll/{rid}/disbursement'):
+            response = client.get(url, follow_redirects=True)
+            assert b'Approved payment details are missing' in response.data
+        response = client.get(f'/api/v1/payroll-runs/{rid}/bank-file?bank=cbe')
+        assert response.status_code == 400
+        assert 'Approved payment details are missing' in response.get_json()['error']
 
     def test_channel_exports_match_approved_snapshot_and_disbursement_totals(self, app):
         cid, _oid, rid = _setup(app)

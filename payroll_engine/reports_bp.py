@@ -200,7 +200,11 @@ def download_bank_file(run_id):
     custom_narrative = request.args.get('custom_narrative', None)
     decimals = int(request.args.get('decimals', '2'))
 
-    employees_data = bank_file_rows(run.payslips, bank)
+    try:
+        employees_data = bank_file_rows(run.payslips, bank)
+    except ValueError as exc:
+        flash(str(exc), 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     previous_payslips = {}
     last_run = (

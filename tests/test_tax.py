@@ -18,7 +18,10 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'payroll_engine'))
 from decimal import Decimal
 
+import pytest
 from tax import calculate_tax
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')
 
 D = Decimal
 PERSONAL_RELIEF = D('0')  # Removed — not in Proclamation 1395/2025

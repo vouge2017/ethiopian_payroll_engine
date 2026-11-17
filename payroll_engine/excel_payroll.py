@@ -215,38 +215,27 @@ class ExcelPayrollEngine:
         self._load_rules()
 
     def _load_rules(self):
-        """Load tax rules from database or use defaults."""
-        try:
-            from payroll_engine.models import TaxRule
+        """Load the applicable rules without substituting a default."""
+        from payroll_engine.pension import _get_rates
+        from payroll_engine.rule_errors import active_rule
+        from payroll_engine.tax import _get_brackets_and_relief
 
-            self._tax_rule = TaxRule.get_active_rule(self.for_date)
-        except Exception:
-            self._tax_rule = None
+        self._tax_rule = active_rule(self.for_date, 'tax')
+        _get_brackets_and_relief(self.for_date)
+        _get_rates(self.for_date)
 
     @property
     def tax_brackets(self):
         """Get tax brackets."""
-        if self._tax_rule and self._tax_rule.brackets:
-            return self._tax_rule.brackets
-        return [
-            {'min': 0, 'max': 2000, 'rate': 0},
-            {'min': 2000, 'max': 4000, 'rate': 0.15},
-            {'min': 4000, 'max': 7000, 'rate': 0.20},
-            {'min': 7000, 'max': 10000, 'rate': 0.25},
-            {'min': 10000, 'max': 14000, 'rate': 0.30},
-            {'min': 14000, 'max': None, 'rate': 0.35},
-        ]
+        return self._tax_rule.brackets
 
     @property
     def pension_rates(self):
         """Get pension rates."""
-        if self._tax_rule:
-            return {
-                'employee': self._tax_rule.pension_employee_rate,
-                'employer': self._tax_rule.pension_employer_rate,
-                'ceiling': self._tax_rule.pension_ceiling,
-            }
-        return {'employee': Decimal('0.07'), 'employer': Decimal('0.11'), 'ceiling': None}
+        from payroll_engine.pension import _get_rates
+
+        employee, employer, ceiling = _get_rates(self.for_date)
+        return {'employee': employee, 'employer': employer, 'ceiling': ceiling}
 
     # ------------------------------------------------------------------
     # Calculation

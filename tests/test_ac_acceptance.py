@@ -21,6 +21,9 @@ def app():
     app.config['WTF_CSRF_ENABLED'] = False
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         from payroll_engine.catalog import seed_system_items
 
         seed_system_items()

@@ -15,10 +15,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from payroll_engine.payroll import calculate_payroll
 from payroll_engine.tax import calculate_tax
 
 D = Decimal
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')
 
 
 # ---------------------------------------------------------------

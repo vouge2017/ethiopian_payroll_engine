@@ -3,6 +3,8 @@
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
@@ -165,3 +167,6 @@ def test_calc_flow_no_savings_when_zero_pension():
 
     savings_steps = [s for s in flow['steps'] if 'Savings' in s['label']]
     assert len(savings_steps) == 0
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

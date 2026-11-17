@@ -27,8 +27,7 @@ taxable base is set by constants.PENSION_DEDUCTED_BEFORE_TAX (default False:
 PAYE on gross taxable pay before the 7% pension, Income Tax Proc. 979/2016;
 RC-38000-01 closed).
 
-Rules are configurable via the TaxRule database model.
-When no database rule exists, falls back to hardcoded defaults.
+Rules are configured via the TaxRule database model; missing rules block calculation.
 """
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
@@ -53,9 +52,7 @@ DEFAULT_BRACKETS: list[tuple[Decimal, Decimal]] = [
 
 DEFAULT_PERSONAL_RELIEF = Decimal('0')  # Removed — not in Proclamation 1395/2025
 
-# Cache for tax brackets with TTL (5 minutes)
-# Rules can change via admin UI — cache must not persist stale data forever
-# Call invalidate_tax_cache() after updating TaxRule in the database
+# Kept for compatibility with callers that invalidate old cache state.
 _brackets_cache = {}
 _brackets_cache_ttl = 300  # seconds
 _brackets_cache_timestamps = {}
@@ -87,44 +84,37 @@ def _D(value) -> Decimal:
 def _get_brackets_and_relief(for_date=None):
     """
     Fetch tax brackets and personal relief from the database.
-    Falls back to hardcoded defaults if no TaxRule exists.
-    Caches result to avoid repeated DB queries during payroll calculation.
+    Missing or invalid rules stop calculation.
+    Reads the rule for every lookup so deletion and database failures are visible.
 
     Returns:
         (brackets: list of (Decimal, Decimal), personal_relief: Decimal)
     """
-    cache_key = str(for_date) if for_date else 'default'
-    import time
+    from payroll_engine.rule_errors import MissingPayrollRuleError, active_rule
 
-    now = time.time()
-    if cache_key in _brackets_cache:
-        cached_time = _brackets_cache_timestamps.get(cache_key, 0)
-        if now - cached_time < _brackets_cache_ttl:
-            return _brackets_cache[cache_key]
-        # Cache expired — invalidate
-        del _brackets_cache[cache_key]
-        del _brackets_cache_timestamps[cache_key]
-
+    rule = active_rule(for_date, 'tax')
     try:
-        from payroll_engine.models import TaxRule
-
-        rule = TaxRule.get_active_rule(for_date)
-        if rule and rule.brackets:
-            brackets = []
-            for b in rule.brackets:
-                upper = Decimal('Infinity') if b['max'] is None else _D(b['max'])
-                brackets.append((upper, _D(b['rate'])))
-            result = (brackets, _D(rule.personal_relief))
-            _brackets_cache[cache_key] = result
-            _brackets_cache_timestamps[cache_key] = now
-            return result
-    except Exception:
-        # Database not available (e.g., during tests without app context)
-        pass
-
-    result = (DEFAULT_BRACKETS, DEFAULT_PERSONAL_RELIEF)
-    _brackets_cache[cache_key] = result
-    _brackets_cache_timestamps[cache_key] = now
+        raw = rule.brackets
+        if not isinstance(raw, list) or not raw:
+            raise ValueError
+        brackets = []
+        previous = Decimal('0')
+        for index, bracket in enumerate(raw):
+            upper = Decimal('Infinity') if bracket['max'] is None else Decimal(str(bracket['max']))
+            rate = Decimal(str(bracket['rate']))
+            if upper.is_nan() or upper <= previous or not rate.is_finite() or not 0 <= rate <= 1:
+                raise ValueError
+            if upper.is_infinite() and index != len(raw) - 1:
+                raise ValueError
+            brackets.append((upper, rate))
+            previous = upper
+        if not previous.is_infinite():
+            raise ValueError
+        result = (brackets, _D(rule.personal_relief))
+    except (TypeError, KeyError, ValueError, InvalidOperation, AttributeError) as exc:
+        raise MissingPayrollRuleError(
+            'The tax rule for the payroll date is incomplete or invalid. Fix the rule before continuing.'
+        ) from exc
     return result
 
 

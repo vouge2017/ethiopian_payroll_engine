@@ -144,6 +144,7 @@
                             <tr>
                                 <td>
                                     {{ _('income_tax') }} <span class="text-muted small">({{ _('per') }} current income-tax schedule)</span> <span data-bs-toggle="tooltip" title="PAYE tax on taxable income (gross minus exempt allowances; the 7% pension does not reduce it). Brackets: 0%, 15%, 20%, 25%, 30%, 35%. Income Tax Proclamation No. 979/2016."><i class="bi bi-info-circle text-primary" style="font-size:0.7em;cursor:help"></i></span>
+                                    {% if tax_breakdown %}
                                     <details class="mt-1">
                                         <summary class="text-muted small" style="cursor:pointer">{{ _('show_calculation') }}</summary>
                                         <div class="ms-3 small">
@@ -175,6 +176,9 @@
                                             </table>
                                         </div>
                                     </details>
+                                    {% else %}
+                                    <p class="small text-muted">Tax breakdown is unavailable because the applicable rule could not be loaded. The approved tax amount remains shown.</p>
+                                    {% endif %}
                                 </td>
                                 <td data-label="Amount" class="text-end align-top">ETB {{ '%.2f'|format(payslip.tax) }}</td>
                             </tr>

@@ -121,7 +121,12 @@ def _ensure_pdf(payslip, emp, company_info=None):
         if snapshot:
             emp_data.update(snapshot)
             emp_data['period'] = format_ethiopian_period(date.fromisoformat(snapshot['worksheet_period_start']))
-        emp_data['calc_flow'] = None if emp_data.get('correction_note') else generate_calculation_flow(emp_data)
+        from payroll_engine.rule_errors import MissingPayrollRuleError, PayrollRuleLookupError
+
+        try:
+            emp_data['calc_flow'] = None if emp_data.get('correction_note') else generate_calculation_flow(emp_data)
+        except (MissingPayrollRuleError, PayrollRuleLookupError):
+            emp_data['calc_flow'] = None
 
         # Get period from the payroll run
         from payroll_engine.models import PayrollRun

@@ -8,6 +8,38 @@ from datetime import date
 from unittest.mock import MagicMock
 
 
+def synthetic_payroll_rules():
+    """Return explicit synthetic rates for test fixtures."""
+    return {
+        'brackets': [
+            {'max': 2000, 'rate': '0'},
+            {'max': 4000, 'rate': '0.15'},
+            {'max': 7000, 'rate': '0.20'},
+            {'max': 10000, 'rate': '0.25'},
+            {'max': 14000, 'rate': '0.30'},
+            {'max': None, 'rate': '0.35'},
+        ],
+        'personal_relief': 0,
+        'pension': {'employee_rate': '0.07', 'employer_rate': '0.11'},
+    }
+
+
+def seed_synthetic_payroll_rule():
+    """Give integration fixtures explicit dated tax and pension inputs."""
+    from payroll_engine import db
+    from payroll_engine.models import TaxRule
+
+    db.session.add(
+        TaxRule(
+            version_name='synthetic-test-rule',
+            effective_date=date(1900, 1, 1),
+            status='active',
+            rules_json=synthetic_payroll_rules(),
+        )
+    )
+    db.session.commit()
+
+
 def register_company(client, data, follow_redirects=True):
     """Use both real onboarding steps for fixtures that need a company."""
     values = dict(data)

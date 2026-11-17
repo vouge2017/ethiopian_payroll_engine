@@ -69,6 +69,9 @@ def app():
 
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         for model in [Employee, EmployeeDeduction, LeaveBalance, FinalSettlement, AuditLog]:
             TenantQuery.register_model(model)
         yield app

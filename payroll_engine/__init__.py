@@ -1013,6 +1013,17 @@ def create_app():
     # ----------------------------------------------------------------
     # Error Handlers
     # ----------------------------------------------------------------
+    from payroll_engine.rule_errors import PayrollRuleError
+
+    @app.errorhandler(PayrollRuleError)
+    def payroll_rule_unavailable(error):
+        from flask import jsonify, render_template
+
+        db.session.rollback()
+        if request.path.startswith('/api/') or request.is_json:
+            return jsonify({'error': str(error)}), 400
+        return render_template('errors/payroll_rule.html', message=str(error)), 400
+
     @app.errorhandler(429)
     def too_many_requests(e):
         """Provide a retry time for sign-in while preserving other 429 responses."""

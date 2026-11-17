@@ -99,7 +99,7 @@ def calculate_prorated_salary(monthly_salary, start_date, end_date=None) -> Deci
     return prorated.quantize(Q, rounding=ROUND_HALF_UP)
 
 
-def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
+def calculate_daily_worker_payroll(daily_rate, days_worked, for_date=None) -> dict:
     """
     Calculate payroll for a daily-paid worker.
 
@@ -124,6 +124,12 @@ def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
     if days_worked < 0:
         days_worked = Decimal('0')
 
+    from payroll_engine.pension import _get_rates
+    from payroll_engine.tax import _get_brackets_and_relief
+
+    _get_brackets_and_relief(for_date)
+    _get_rates(for_date)
+
     gross = (daily_rate * days_worked).quantize(Q, rounding=ROUND_HALF_UP)
 
     # No pension for daily workers
@@ -134,7 +140,7 @@ def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
     # PENSION_DEDUCTED_BEFORE_TAX: daily workers have no pension deduction,
     # so there is nothing to subtract (this is not the RC-38000-01 rule).
     taxable = gross
-    tax = calculate_tax(taxable)
+    tax = calculate_tax(taxable, for_date)
 
     net = gross - tax
 
@@ -149,7 +155,7 @@ def calculate_daily_worker_payroll(daily_rate, days_worked) -> dict:
         'total_deductions': Decimal('0'),
         'deduction_details': [],
         'net': net.quantize(Q, rounding=ROUND_HALF_UP),
-        'tax_explanation': explain_tax_amharic(taxable),
+        'tax_explanation': explain_tax_amharic(taxable, for_date),
         'overtime_pay': Decimal('0'),
         'overtime_total_hours': Decimal('0'),
         'overtime_result': None,
@@ -207,6 +213,12 @@ def calculate_payroll(
         raise ValueError(f'basic_salary cannot be negative: {basic_salary}')
     if allowances < 0:
         raise ValueError(f'allowances cannot be negative: {allowances}')
+
+    from payroll_engine.pension import _get_rates
+    from payroll_engine.tax import _get_brackets_and_relief
+
+    _get_brackets_and_relief(for_date)
+    _get_rates(for_date)
 
     # Step 1: Calculate allowance breakdown with exemptions
     exempt_allowances = Decimal('0')

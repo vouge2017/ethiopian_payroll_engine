@@ -7,6 +7,11 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #57 missing payroll rules (2026-11-17)
+
+- Branch `fix/issue-57-missing-rules`, based on main `a94b035d2d78ba08400c1061410d34553ffd1b6e`: tax and pension lookups block on missing/incomplete rules and on database errors rather than substituting rates. Approval, Excel and historical import use configured dated rules; the worksheet and other UI paths show errors. Existing stored payslips remain accessible when an explanatory rule is unavailable. Implemented and locally tested; not merged, deployed or practitioner accepted.
+- Regression on main: **1 failed, 4 warnings in 5.63s** (missing rule did not raise). Focused missing-rule and money-guard tests: **55 passed, 4 warnings in 17.77s**. Final full local runner: **1947 passed, 0 failed, 6 errors, 250 skipped**, 8091.6s; the six errors were 120-second file timeouts. Separate reruns passed: cash compliance 11, pay item settings 52, phone auth 8, phone password strict 29 (1 skipped), validation phase 2 19, verification 12. PostgreSQL tests were skipped; hosted CI and browser verification remain open. Rule lookups now query the database rather than use the previous five-minute caches; production performance remains unmeasured.
+
 ### Issue #56 payment snapshot (2026-11-16)
 
 - Follow-up on `fix/issue-56-payment-snapshot` at parent `7434f1a7dd6d97da497893a6f522e7241fc15fe2`: a real run approval and correction approval regression checks the retained CBE destination after employee edits, and blocks adjustment exports without an approved correction. Focused adjustment/disbursement tests: **22 passed, 4 warnings in 30.83s**. Full suite: **1983 passed, 0 failed, 3 errors, 238 skipped** in 6523.1s; three test files timed out at the runner's 120s limit (employee assignments, pay item settings, PostgreSQL deduction identity). PostgreSQL proof remains unavailable; hosted CI pending.
@@ -1240,6 +1245,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-17 — Codex — Implemented fail-closed dated tax/pension lookups for issue #57; added explicit rule fixtures and regression coverage; recorded local runner timeout and passing isolated rerun above.
 
 - 2026-11-16 — Codex — Added adjustment approval/export regression and blocked orphan adjustments; focused tests passed, full suite recorded three timeouts as above.
 - 2026-11-16 — Codex — Issue #56 payment snapshot fix and regression coverage; full local runner nonzero as recorded above; draft PR for review.

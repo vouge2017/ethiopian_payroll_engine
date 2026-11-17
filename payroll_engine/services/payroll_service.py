@@ -341,6 +341,21 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
     employees_data = draft.employee_data
 
+    from payroll_engine.pension import _get_rates
+    from payroll_engine.tax import _get_brackets_and_relief
+
+    try:
+        rule_date = run.run_date
+        if run.source == 'spreadsheet':
+            from payroll_engine.services.worksheet_review import month_end
+
+            rule_date = month_end(rule_date)
+        _get_brackets_and_relief(rule_date)
+        _get_rates(rule_date)
+    except ValueError as error:
+        db.session.rollback()
+        return ApprovalResult(success=False, message=str(error), redirect_to='detail')
+
     if run.source == 'spreadsheet':
         from payroll_engine.services.worksheet_review import apply_approved_rows
 

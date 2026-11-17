@@ -23,6 +23,9 @@ def app():
     app.config['WTF_CSRF_ENABLED'] = False
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         # basic_salary and friends live in the SYSTEM catalog (company_id NULL).
         from payroll_engine.catalog import seed_system_items
 

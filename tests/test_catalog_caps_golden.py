@@ -82,6 +82,9 @@ def app():
     app.config['WTF_CSRF_ENABLED'] = False
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         for model in [Employee, EmployeeAllowance, EmployeeDeduction, LeaveBalance, FinalSettlement, AuditLog]:
             TenantQuery.register_model(model)
         company = Company(name='Golden Caps Co', leave_rate_confirmed_at=datetime(2026, 10, 25, 9, 0))

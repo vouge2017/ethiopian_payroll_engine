@@ -53,6 +53,12 @@ def worksheet(monkeypatch, tmp_path):
     cfg.set_main_option('sqlalchemy.url', PG_URL)
     with app.app_context():
         command.upgrade(cfg, 'head')
+        from helpers import seed_synthetic_payroll_rule
+
+        from payroll_engine.models import TaxRule
+
+        if not TaxRule.query.filter_by(version_name='synthetic-test-rule').first():
+            seed_synthetic_payroll_rule()
         company = Company(name='Worksheet ' + uuid4().hex)
         foreign = Company(name='Foreign worksheet ' + uuid4().hex)
         db.session.add_all([company, foreign])

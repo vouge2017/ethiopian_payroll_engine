@@ -9,6 +9,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ### Issue #57 missing payroll rules (2026-11-17)
 
+- PR #62 PostgreSQL follow-up on `fix/issue-57-missing-rules`: shared PostgreSQL fixtures seed the synthetic tax/pension rule; product code and asserted values are unchanged. Local PostgreSQL and full-suite checks are running; hosted checks must be confirmed on the pushed revision. The Neon branch named production has no tax-rule rows; the live app's database mapping and an approved complete rule remain to be verified before deployment.
 - Branch `fix/issue-57-missing-rules`, based on main `a94b035d2d78ba08400c1061410d34553ffd1b6e`: tax and pension lookups block on missing/incomplete rules and on database errors rather than substituting rates. Approval, Excel and historical import use configured dated rules; the worksheet and other UI paths show errors. Existing stored payslips remain accessible when an explanatory rule is unavailable. Implemented and locally tested; not merged, deployed or practitioner accepted.
 - Regression on main: **1 failed, 4 warnings in 5.63s** (missing rule did not raise). Focused missing-rule and money-guard tests: **55 passed, 4 warnings in 17.77s**. Final full local runner: **1947 passed, 0 failed, 6 errors, 250 skipped**, 8091.6s; the six errors were 120-second file timeouts. Separate reruns passed: cash compliance 11, pay item settings 52, phone auth 8, phone password strict 29 (1 skipped), validation phase 2 19, verification 12. PostgreSQL tests were skipped; hosted CI and browser verification remain open. Rule lookups now query the database rather than use the previous five-minute caches; production performance remains unmeasured.
 
@@ -1246,6 +1247,7 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 
 ## 5. Log
 
+- 2026-11-17 — Codex — Seeded synthetic payroll rules in PR #62 PostgreSQL test fixtures; began local PostgreSQL and full-suite validation.
 - 2026-11-17 — Codex — Implemented fail-closed dated tax/pension lookups for issue #57; added explicit rule fixtures and regression coverage; recorded local runner timeout and passing isolated rerun above.
 
 - 2026-11-16 — Codex — Added adjustment approval/export regression and blocked orphan adjustments; focused tests passed, full suite recorded three timeouts as above.

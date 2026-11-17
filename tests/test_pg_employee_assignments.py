@@ -160,6 +160,12 @@ def pg():
     Migrate(app, db)
     with app.test_request_context('/'):
         command.upgrade(_cfg(PG_URL), 'head')
+        from helpers import seed_synthetic_payroll_rule
+
+        from payroll_engine.models import TaxRule
+
+        if not TaxRule.query.filter_by(version_name='synthetic-test-rule').first():
+            seed_synthetic_payroll_rule()
         ids = []
         for tag in ('A', 'B'):
             company = Company(name=f'PG assignments {tag} ' + uuid4().hex)

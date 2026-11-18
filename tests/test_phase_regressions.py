@@ -23,6 +23,8 @@ os.environ.setdefault('CELERY_BROKER_URL', 'memory://')
 
 from datetime import UTC, datetime
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Attendance,
@@ -172,7 +174,14 @@ def test_finished_run_cannot_be_reprocessed(ctx, two_companies, status):
 
     from payroll_engine.services.payroll_service import process_payroll
 
-    result = process_payroll(run, alpha['company'].id, alpha['user'].id, 'a@x.y', '127.0.0.1')
+    result = process_payroll(
+        run,
+        alpha['company'].id,
+        alpha['user'].id,
+        'a@x.y',
+        '127.0.0.1',
+        salary_credentials=salary_change_credentials('testpass123'),
+    )
 
     assert result.success is False
     assert 'already' in (result.message or '')

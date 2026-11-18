@@ -11,6 +11,8 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
@@ -86,10 +88,11 @@ def test_import_employees_json(app, company_user, client):
     resp = client.post(
         '/quick-start/import',
         json={
+            **salary_change_credentials('Test1234!'),
             'employees': [
                 {'name': 'Abebe Kebede', 'phone': '911234567', 'salary': 8000},
                 {'name': 'Tigist Hailu', 'phone': '922345678', 'salary': 12000},
-            ]
+            ],
         },
         headers={'Content-Type': 'application/json'},
     )
@@ -111,10 +114,11 @@ def test_import_validates_missing_name(app, company_user, client):
     resp = client.post(
         '/quick-start/import',
         json={
+            **salary_change_credentials('Test1234!'),
             'employees': [
                 {'name': '', 'phone': '911234567', 'salary': 8000},
                 {'name': 'Valid Name', 'phone': '922345678', 'salary': 5000},
-            ]
+            ],
         },
         headers={'Content-Type': 'application/json'},
     )
@@ -130,9 +134,10 @@ def test_import_validates_negative_salary(app, company_user, client):
     resp = client.post(
         '/quick-start/import',
         json={
+            **salary_change_credentials('Test1234!'),
             'employees': [
                 {'name': 'Bad Salary', 'phone': '911234567', 'salary': -1000},
-            ]
+            ],
         },
         headers={'Content-Type': 'application/json'},
     )
@@ -147,9 +152,10 @@ def test_import_validates_invalid_salary(app, company_user, client):
     resp = client.post(
         '/quick-start/import',
         json={
+            **salary_change_credentials('Test1234!'),
             'employees': [
                 {'name': 'Bad Input', 'phone': '911234567', 'salary': 'abc'},
-            ]
+            ],
         },
         headers={'Content-Type': 'application/json'},
     )
@@ -175,11 +181,12 @@ def test_import_generates_employee_ids(app, company_user, client):
     resp = client.post(
         '/quick-start/import',
         json={
+            **salary_change_credentials('Test1234!'),
             'employees': [
                 {'name': 'First', 'phone': '911000001', 'salary': 5000},
                 {'name': 'Second', 'phone': '911000002', 'salary': 6000},
                 {'name': 'Third', 'phone': '911000003', 'salary': 7000},
-            ]
+            ],
         },
         headers={'Content-Type': 'application/json'},
     )

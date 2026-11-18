@@ -20,6 +20,8 @@ import pytest
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
@@ -121,6 +123,7 @@ def _setup(app, num_employees=2):
             user_id=owner.id,
             user_email='test@test.com',
             request_ip='127.0.0.1',
+            salary_credentials=salary_change_credentials('OwnerPass1!'),
         )
         assert result.success is True
 

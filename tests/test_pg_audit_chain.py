@@ -24,9 +24,14 @@ def test_legacy_and_concurrent_audit_writes(database):
         session.flush()
         cid, foreign = [company.id for company in companies]
         legacy = AuditLog(company_id=cid, action='legacy', details={'amount': '50.00'})
-        session.execute(insert(AuditLog.__table__).values(
-            company_id=cid, action=legacy.action, details=legacy.details, hash=legacy.compute_hash(),
-        ))
+        session.execute(
+            insert(AuditLog.__table__).values(
+                company_id=cid,
+                action=legacy.action,
+                details=legacy.details,
+                hash=legacy.compute_hash(),
+            )
+        )
     barrier = Barrier(2)
 
     def append(company_ids):
@@ -45,5 +50,38 @@ def test_legacy_and_concurrent_audit_writes(database):
                 assert len(rows) == expected
                 assert [r.previous_hash for r in rows] == [None, *(r.hash for r in rows[:-1])]
                 assert all(r.hash == r.compute_hash() for r in rows)
+    finally:
+        engine.dispose()
+
+
+def test_postgres_prevents_rewriting_salary_evidence(database):
+    from sqlalchemy import delete, update
+    from sqlalchemy.exc import DBAPIError
+
+    url, _ = database
+    engine = create_engine(url)
+    try:
+        with Session(engine) as session, session.begin():
+            company = Company(name=uuid4().hex)
+            session.add(company)
+            session.flush()
+            row = AuditLog(company_id=company.id, action='salary_changed', details={'reason': {'note': 'Original'}})
+            session.add(row)
+            session.flush()
+            row_id = row.id
+
+        for change in (
+            update(AuditLog).where(AuditLog.id == row_id).values(details={'reason': {'note': 'Rewritten'}}),
+            delete(AuditLog).where(AuditLog.id == row_id),
+        ):
+            with (
+                pytest.raises(DBAPIError, match='Salary audit records cannot be modified or deleted'),
+                engine.begin() as connection,
+            ):
+                connection.execute(change)
+        with Session(engine) as session:
+            row = session.get(AuditLog, row_id)
+            assert row.details['reason']['note'] == 'Original'
+            assert row.hash == row.compute_hash()
     finally:
         engine.dispose()

@@ -13,6 +13,8 @@ os.environ['CELERY_BROKER_URL'] = 'memory://'
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
@@ -174,7 +176,12 @@ class TestBug1AdvancesViaSpreadsheet:
             from payroll_engine.services.payroll_service import process_payroll
 
             result = process_payroll(
-                run=run, company_id=cid, user_id=uid, user_email='test@test.com', request_ip='127.0.0.1'
+                run=run,
+                company_id=cid,
+                user_id=uid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('Test1234!'),
             )
             assert result.success is True
 
@@ -315,7 +322,12 @@ class TestBug2AbsenceMarking:
             from payroll_engine.services.payroll_service import process_payroll
 
             result = process_payroll(
-                run=run, company_id=cid, user_id=uid, user_email='test@test.com', request_ip='127.0.0.1'
+                run=run,
+                company_id=cid,
+                user_id=uid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('Test1234!'),
             )
             assert result.success is True
 
@@ -378,7 +390,12 @@ class TestBug2AbsenceMarking:
             from payroll_engine.services.payroll_service import process_payroll
 
             result = process_payroll(
-                run=run, company_id=cid, user_id=uid, user_email='test@test.com', request_ip='127.0.0.1'
+                run=run,
+                company_id=cid,
+                user_id=uid,
+                user_email='test@test.com',
+                request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('Test1234!'),
             )
             assert result.success is True
 

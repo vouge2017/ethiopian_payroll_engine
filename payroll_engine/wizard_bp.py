@@ -3,10 +3,19 @@
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, jsonify, render_template, request
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from payroll_engine import db, limiter
 from payroll_engine.models import Company, Employee
+from payroll_engine.services.salary_changes import (
+    SALARY_REASONS,
+    SalaryChangeRefusedError,
+    authorize_salary_change,
+    record_salary_refusal,
+    salary_amount,
+    salary_values,
+    stage_salary_change,
+)
 from payroll_engine.shared import _company_id, role_required
 
 wizard_bp = Blueprint('wizard', __name__)
@@ -19,7 +28,9 @@ def quick_start():
     """Show the Quick Start wizard page."""
     company = db.session.get(Company, _company_id())
     employee_count = Employee.query.filter_by(company_id=_company_id(), is_deleted=False).count()
-    return render_template('quick_start.html', company=company, employee_count=employee_count)
+    return render_template(
+        'quick_start.html', company=company, employee_count=employee_count, salary_reasons=SALARY_REASONS
+    )
 
 
 @wizard_bp.route('/quick-start/import', methods=['POST'])
@@ -42,6 +53,7 @@ def quick_import():
     imported = 0
     errors = []
     warnings = []
+    salary_reason = None
 
     # Collect ALL employee IDs ever used for this company (including
     # soft-deleted) once before the loop — generated IDs must never collide
@@ -90,6 +102,19 @@ def quick_import():
             errors.append(f'Row {i + 1}: invalid salary "{salary_raw}"')
             continue
 
+        try:
+            salary = salary_amount(salary)
+        except ValueError:
+            errors.append(f'Row {i + 1}: invalid salary "{salary_raw}"')
+            continue
+        old_values, new_values = salary_values(None, salary, Decimal('0'))
+        if old_values and salary_reason is None:
+            try:
+                salary_reason = authorize_salary_change(company_id, current_user, None, data)
+            except SalaryChangeRefusedError as refusal:
+                record_salary_refusal(company_id, current_user.id, refusal)
+                return jsonify({'status': 'error', 'message': str(refusal)}), refusal.status
+
         # Generate next unused employee ID (skips soft-deleted employees too)
         while f'EMP{next_num:03d}' in used_ids:
             next_num += 1
@@ -110,6 +135,10 @@ def quick_import():
             employee_type='monthly',
         )
         db.session.add(emp)
+        if old_values:
+            stage_salary_change(
+                company_id, current_user, emp, salary_reason, old_values, new_values, action='employee_salary_changed'
+            )
         imported += 1
 
     db.session.commit()

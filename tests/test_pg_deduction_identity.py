@@ -18,6 +18,7 @@ from alembic import command
 from alembic.config import Config
 from flask import Flask
 from flask_migrate import Migrate
+from helpers import salary_change_credentials
 from sqlalchemy import text
 
 from payroll_engine import _json_serializer, db
@@ -185,7 +186,12 @@ def approve(app, ids):
         # Same lock contract as the approval route; no mocked Query/session.
         run = PayrollRun.query.filter_by(id=ids['run'], company_id=ids['company']).with_for_update().one()
         return payroll_service.process_payroll(
-            run, ids['company'], ids['user'], 'synthetic@example.invalid', '127.0.0.1'
+            run,
+            ids['company'],
+            ids['user'],
+            'synthetic@example.invalid',
+            '127.0.0.1',
+            salary_credentials=salary_change_credentials('Synthetic1!'),
         )
 
 

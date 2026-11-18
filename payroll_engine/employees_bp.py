@@ -27,6 +27,15 @@ from payroll_engine.models_payroll_elements import (
     PayItemType,
     PayrollItemAssignment,
 )
+from payroll_engine.services.salary_changes import (
+    SALARY_REASONS,
+    SalaryChangeRefusedError,
+    authorize_salary_change,
+    record_salary_refusal,
+    salary_amount,
+    salary_values,
+    stage_salary_change,
+)
 from payroll_engine.shared import _company_id, create_audit_log, create_notification, role_required
 
 employees_bp = Blueprint('employees', __name__)
@@ -414,7 +423,16 @@ def add_employee():
 @role_required('owner', 'accountant')
 def edit_employee(emp_id):
     """Edit an employee. Logs salary and bank account changes to audit trail."""
-    emp = Employee.query.filter_by(id=emp_id, company_id=_company_id(), is_deleted=False).first_or_404()
+    company_id = _company_id()
+    query = Employee.query.filter_by(id=emp_id, company_id=company_id, is_deleted=False)
+    if request.method == 'POST':
+        query = query.with_for_update()
+    emp = query.first_or_404()
+
+    def render_edit(status=200):
+        return render_template(
+            'edit_employee.html', employee=emp, year=date.today().year, salary_reasons=SALARY_REASONS
+        ), status
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
@@ -426,16 +444,14 @@ def edit_employee(emp_id):
             parts = [first_name, father_name, grandfather_name]
             name = ' '.join(p for p in parts if p)
         phone_raw = request.form.get('phone', '').strip()
-        from decimal import Decimal, InvalidOperation
+        from decimal import InvalidOperation
 
         try:
-            basic = Decimal(request.form.get('basic_salary', '0') or '0')
+            basic = salary_amount(request.form.get('basic_salary', emp.basic_salary))
+            allow = salary_amount(request.form.get('allowances', emp.allowances))
         except (InvalidOperation, ValueError):
-            basic = Decimal('0')
-        try:
-            allow = Decimal(request.form.get('allowances', '0') or '0')
-        except (InvalidOperation, ValueError):
-            allow = Decimal('0')
+            flash('Salary and allowances must be valid non-negative amounts.', 'danger')
+            return render_edit(422)
         department = request.form.get('department', '').strip() or None
         position = request.form.get('position', '').strip() or None
         tin = request.form.get('tin', '').strip() or None
@@ -457,13 +473,13 @@ def edit_employee(emp_id):
                     phone = cleaned
                 else:
                     flash('Employee phone: invalid format. Enter 7-20 digits.', 'danger')
-                    return render_template('edit_employee.html', employee=emp, year=date.today().year), 400
+                    return render_edit(400)
         else:
             phone = None
 
         if not name:
             flash('Employee name is required.', 'danger')
-            return render_template('edit_employee.html', employee=emp, year=date.today().year), 400
+            return render_edit(400)
 
         # Track changes for audit log
         changes = {}
@@ -471,7 +487,15 @@ def edit_employee(emp_id):
         # Salary change
         old_basic = emp.basic_salary
         old_allow = emp.allowances
-        if basic != old_basic or allow != old_allow:
+        old_values, new_values = salary_values(emp, basic, allow)
+        reason = None
+        if old_values:
+            try:
+                reason = authorize_salary_change(company_id, current_user, emp, request.form)
+            except SalaryChangeRefusedError as refusal:
+                record_salary_refusal(company_id, current_user.id, refusal)
+                flash(str(refusal), 'danger')
+                return render_edit(refusal.status)
             changes['salary_changed'] = {
                 'old_basic': old_basic,
                 'new_basic': basic,
@@ -508,7 +532,7 @@ def edit_employee(emp_id):
                 is_valid_fin, normalized_fin, fin_error = validate_fayda_fin(fayda_fin)
                 if not is_valid_fin:
                     flash(f'Fayda FIN: {fin_error}', 'danger')
-                    return render_template('edit_employee.html', employee=emp, year=date.today().year), 400
+                    return render_edit(400)
                 fayda_fin = normalized_fin
                 new_fin = fayda_fin
             changes['fayda_fin_changed'] = {
@@ -539,20 +563,36 @@ def edit_employee(emp_id):
         emp.bank_account = bank_account
         emp.bank_or_telebirr = bank_account or ''
 
-        # Log to audit trail (one entry per changed field)
-        for change_type, details in changes.items():
-            create_audit_log(
-                company_id=_company_id(),
-                user_id=current_user.id,
-                action=change_type,
-                details={
-                    'employee_id': emp.employee_id,
-                    'employee_name': name,
-                    **details,
-                },
-            )
+        try:
+            # Log to audit trail (one entry per changed field)
+            for change_type, details in changes.items():
+                if change_type == 'salary_changed':
+                    stage_salary_change(
+                        company_id,
+                        current_user,
+                        emp,
+                        reason,
+                        old_values,
+                        new_values,
+                        action=change_type,
+                        details=details,
+                    )
+                    continue
+                create_audit_log(
+                    company_id=_company_id(),
+                    user_id=current_user.id,
+                    action=change_type,
+                    details={
+                        'employee_id': emp.employee_id,
+                        'employee_name': name,
+                        **details,
+                    },
+                )
 
-        db.session.commit()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
         from payroll_engine import trust_cache
 
         trust_cache.invalidate_trust_cache(_company_id())
@@ -580,7 +620,7 @@ def edit_employee(emp_id):
             flash(f'No changes for {name}.', 'info')
         return redirect(url_for('employees.employee_detail', emp_id=emp_id))
 
-    return render_template('edit_employee.html', employee=emp, year=date.today().year)
+    return render_edit()
 
 
 @employees_bp.route('/employees/<int:emp_id>')

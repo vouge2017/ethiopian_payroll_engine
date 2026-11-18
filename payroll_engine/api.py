@@ -12,6 +12,14 @@ from .evidence import collect_evidence
 from .exceptions import classify_exceptions
 from .models import ApiKey, AuditLog, Company, Employee, PayrollRun, Payslip
 from .narrative import generate_narrative
+from .services.salary_changes import (
+    SalaryChangeRefusedError,
+    authorize_salary_change,
+    record_salary_refusal,
+    salary_amount,
+    salary_values,
+    stage_salary_change,
+)
 
 api = Blueprint('api', __name__)
 
@@ -206,7 +214,7 @@ def company_required(f):
     return decorated
 
 
-def api_role_required(*roles):
+def api_role_required(*roles, audit_denial=False):
     """Restrict API access to specific roles. Supports API tokens."""
 
     def decorator(f):
@@ -216,6 +224,16 @@ def api_role_required(*roles):
             company_id = _get_company_id()
             effective_role = user.get_role_for_company(company_id)
             if effective_role not in roles:
+                if audit_denial and effective_role is not None:
+                    from payroll_engine.shared import create_audit_log
+
+                    create_audit_log(
+                        company_id=company_id,
+                        user_id=user.id,
+                        action='permission_denied',
+                        details={'route': request.endpoint, 'required_roles': list(roles), 'user_role': effective_role},
+                    )
+                    db.session.commit()
                 return jsonify({'error': 'Forbidden', 'required_roles': list(roles), 'your_role': effective_role}), 403
             return f(*args, **kwargs)
 
@@ -359,60 +377,74 @@ def get_employee(emp_id):
 @api.route('/employees/<int:emp_id>', methods=['PUT'])
 @api_token_or_login_required
 @company_required
-@api_role_required('owner', 'accountant')
+@api_role_required('owner', 'accountant', audit_denial=True)
 @limiter.limit('30 per minute')
 def update_employee(emp_id):
-    emp = Employee.query.filter_by(id=emp_id, company_id=_get_company_id(), is_deleted=False).first_or_404()
+    from payroll_engine.shared import create_audit_log
+
+    company_id, actor = _get_company_id(), _get_current_user()
+    emp = Employee.query.filter_by(id=emp_id, company_id=company_id, is_deleted=False).with_for_update().first_or_404()
     data = request.get_json()
     errors = _validate_employee_data(data, partial=True)
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 422
-    # Capture old values for audit trail before any mutation
-    old_values = {}
-    if 'basic_salary' in data and data['basic_salary'] != emp.basic_salary:
-        old_values['basic_salary'] = str(emp.basic_salary)
-    if 'allowances' in data and data['allowances'] != emp.allowances:
-        old_values['allowances'] = str(emp.allowances)
+    try:
+        basic = salary_amount(data.get('basic_salary', emp.basic_salary))
+        allowances = salary_amount(data.get('allowances', emp.allowances))
+    except (InvalidOperation, ValueError):
+        return jsonify({'error': 'Salary and allowances must be valid non-negative amounts.'}), 422
+
+    old_values, new_values = salary_values(emp, basic, allowances)
+    reason = None
+    if old_values:
+        try:
+            reason = authorize_salary_change(company_id, actor, emp, data)
+        except SalaryChangeRefusedError as refusal:
+            record_salary_refusal(company_id, actor.id, refusal)
+            return jsonify({'error': str(refusal)}), refusal.status
+
     if 'bank_or_telebirr' in data and data['bank_or_telebirr'] != emp.bank_or_telebirr:
         old_values['bank_or_telebirr'] = emp.bank_or_telebirr
-    if 'name' in data:
-        emp.name = data['name']
-    if 'basic_salary' in data:
-        emp.basic_salary = data['basic_salary']
-    if 'allowances' in data:
-        emp.allowances = data['allowances']
-    if 'bank_or_telebirr' in data:
-        emp.bank_or_telebirr = data['bank_or_telebirr']
-    if 'tin' in data:
-        emp.tin = data['tin']
-    if 'fayda_fin' in data:
-        fin = data['fayda_fin']
-        if fin:
-            from payroll_engine.models import validate_fayda_fin
+        new_values['bank_or_telebirr'] = str(data['bank_or_telebirr'])
+    if data.get('fayda_fin'):
+        from payroll_engine.models import validate_fayda_fin
 
-            is_valid, normalized, error = validate_fayda_fin(str(fin))
-            if not is_valid:
-                return jsonify({'error': f'Fayda FIN: {error}'}), 422
-            emp.fayda_fin = normalized
-        else:
-            emp.fayda_fin = None
-    db.session.commit()
-    # Audit log: salary/allowance/bank changes with old vs new values
-    if old_values:
-        from payroll_engine.shared import create_audit_log
+        is_valid, normalized, error = validate_fayda_fin(str(data['fayda_fin']))
+        if not is_valid:
+            return jsonify({'error': f'Fayda FIN: {error}'}), 422
+        data['fayda_fin'] = normalized
 
-        create_audit_log(
-            company_id=_get_company_id(),
-            user_id=_get_current_user().id,
-            action='employee_salary_changed',
-            details={
-                'employee_id': emp.employee_id,
-                'employee_name': emp.name,
-                'old_values': old_values,
-                'new_values': {k: str(data[k]) for k in old_values if k in data},
-            },
-        )
+    try:
+        for field in ('name', 'bank_or_telebirr', 'tin'):
+            if field in data:
+                setattr(emp, field, data[field])
+        if 'fayda_fin' in data:
+            emp.fayda_fin = data['fayda_fin'] or None
+        if 'basic_salary' in old_values:
+            emp.basic_salary = basic
+        if 'allowances' in old_values:
+            emp.allowances = allowances
+        if reason:
+            stage_salary_change(
+                company_id, actor, emp, reason, old_values, new_values, action='employee_salary_changed'
+            )
+        elif old_values:
+            create_audit_log(
+                company_id=company_id,
+                user_id=actor.id,
+                action='employee_salary_changed',
+                details={
+                    'employee_id': emp.employee_id,
+                    'employee_name': emp.name,
+                    'old_values': old_values,
+                    'new_values': new_values,
+                },
+            )
         db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
     from payroll_engine import trust_cache
 
     trust_cache.invalidate_trust_cache(_get_company_id())
@@ -729,7 +761,7 @@ def revoke_api_key(key_id):
 @api.route('/employees/bulk', methods=['POST'])
 @api_token_or_login_required
 @company_required
-@api_role_required('owner', 'accountant')
+@api_role_required('owner', 'accountant', audit_denial=True)
 @limiter.limit('5 per minute')
 def bulk_import_employees():
     """Bulk import employees from JSON array.
@@ -754,7 +786,8 @@ def bulk_import_employees():
         return jsonify({'error': 'Maximum 500 employees per import'}), 400
 
     cid = _get_company_id()
-    _get_current_user()
+    actor = _get_current_user()
+    salary_reason = None
 
     # Billing tier cap: reject imports exceeding remaining plan headroom.
     from payroll_engine.billing import employee_count, get_plan
@@ -849,12 +882,26 @@ def bulk_import_employees():
             errors.append({'row': i + 1, 'error': 'pay_items must be a list of objects'})
             continue
 
+        try:
+            salary = salary_amount(salary)
+            allowances = salary_amount(emp_data.get('allowances', 0))
+        except (InvalidOperation, ValueError):
+            errors.append({'row': i + 1, 'error': 'invalid salary or allowances'})
+            continue
+        old_values, new_values = salary_values(None, salary, allowances)
+        if old_values and salary_reason is None:
+            try:
+                salary_reason = authorize_salary_change(cid, actor, None, data)
+            except SalaryChangeRefusedError as refusal:
+                record_salary_refusal(cid, actor.id, refusal)
+                return jsonify({'error': str(refusal)}), refusal.status
+
         emp = Employee(
             employee_id=emp_id_str,
             name=name,
             phone=phone,
             basic_salary=salary,
-            allowances=Decimal(str(emp_data.get('allowances', 0))),
+            allowances=allowances,
             bank_or_telebirr=emp_data.get('bank_or_telebirr', ''),
             tin=emp_data.get('tin'),
             fayda_fin=emp_data.get('fayda_fin'),
@@ -871,6 +918,10 @@ def bulk_import_employees():
                 continue
         else:
             db.session.add(emp)
+        if old_values:
+            stage_salary_change(
+                cid, actor, emp, salary_reason, old_values, new_values, action='employee_salary_changed'
+            )
         used_ids.add(emp_id_str)
         imported += 1
 

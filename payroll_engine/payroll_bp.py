@@ -62,6 +62,7 @@ from payroll_engine.services.payroll_workflow import (
     get_previous_payslips,
     parse_and_calculate_payroll,
 )
+from payroll_engine.services.salary_changes import SALARY_REASONS
 from payroll_engine.validation import get_summary, validate_payroll_data
 
 payroll_bp = Blueprint('payroll', __name__)
@@ -950,6 +951,7 @@ def payroll_confirm(run_id):
 
     return render_template(
         'payroll_confirm.html',
+        salary_reasons=SALARY_REASONS,
         run=run,
         employees=employees_data,
         employee_count=len(employees_data),
@@ -1093,6 +1095,7 @@ def approve_payroll():
             user_id=current_user.id,
             user_email=current_user.email,
             request_ip=request.remote_addr,
+            salary_credentials=request.form,
         )
     except StaleDataError:
         db.session.rollback()
@@ -1153,6 +1156,8 @@ def approve_payroll():
             )
         else:
             flash(result.message, 'danger')
+        if result.redirect_to == 'confirm':
+            return redirect(url_for('payroll.payroll_confirm', run_id=run.id))
         session['approval_failed_run_id'] = run.id
         return redirect(url_for('payroll.payroll_review_workspace', run_id=run.id))
 

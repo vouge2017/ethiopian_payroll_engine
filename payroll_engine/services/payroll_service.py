@@ -17,6 +17,15 @@ from payroll_engine.models import (
     Payslip,
 )
 from payroll_engine.models_payroll_elements import PayrollItemAssignment
+from payroll_engine.services.salary_changes import (
+    SalaryChangeRefusedError,
+    authorize_salary_change,
+    check_salary_target,
+    record_salary_refusal,
+    salary_amount,
+    salary_values,
+    stage_salary_change,
+)
 from payroll_engine.shared import create_audit_log, create_notification
 
 
@@ -305,7 +314,7 @@ def apply_flag_overrides(run_id, form_data):
     return blocks
 
 
-def process_payroll(run, company_id, user_id, user_email, request_ip):
+def process_payroll(run, company_id, user_id, user_email, request_ip, *, salary_credentials=None):
     """
     Process an approved payroll run. Single transaction — all or nothing.
 
@@ -315,6 +324,7 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
         user_id: User ID of approver
         user_email: User email (for audit log)
         request_ip: Request IP (for audit log)
+        salary_credentials: Reason, note and password when the import changes salary
 
     Returns:
         ApprovalResult
@@ -418,11 +428,17 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Batch-fetch existing employees to avoid N+1 queries
         emp_ids = [emp_data['id'] for emp_data in employees_data]
-        existing_emps = Employee.query.filter(
-            Employee.company_id == company_id,
-            Employee.employee_id.in_(emp_ids),
-            Employee.is_deleted == False,
-        ).all()
+        existing_emps = (
+            Employee.query.filter(
+                Employee.company_id == company_id,
+                Employee.employee_id.in_(emp_ids),
+                Employee.is_deleted == False,
+            )
+            .order_by(Employee.id)
+            .with_for_update()
+            .populate_existing()
+            .all()
+        )
         emp_by_eid = {e.employee_id: e for e in existing_emps}
 
         # --- BUG FIX: Compute leave reductions from actual Leave records ---
@@ -519,30 +535,53 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
 
         # Create/update employees and payslips
         # PDFs are generated lazily on download (not at approval time)
+        from payroll_engine.models import User
         from payroll_engine.payroll_elements import calculate_payroll_from_assignments
 
+        salary_reason = None
+        actor = db.session.get(User, user_id)
         for emp_data in employees_data:
             emp = emp_by_eid.get(emp_data['id'])
+            basic = salary_amount(emp_data['basic'])
+            allowances = salary_amount(emp_data['allowances'])
+            old_values, new_values = salary_values(emp, basic, allowances)
+            if old_values:
+                if actor is None:
+                    raise SalaryChangeRefusedError('A user account is required to change salaries.', 403)
+                if salary_reason is None:
+                    salary_reason = authorize_salary_change(company_id, actor, emp, salary_credentials or {})
+                else:
+                    check_salary_target(actor, emp)
             if not emp:
                 emp = Employee(
                     employee_id=emp_data['id'],
                     name=emp_data['name'],
-                    basic_salary=emp_data['basic'],
-                    allowances=emp_data['allowances'],
+                    basic_salary=basic,
+                    allowances=allowances,
                     bank_or_telebirr=emp_data.get('bank', ''),
                     tin=emp_data.get('tin') or None,
                     company_id=company_id,
                 )
                 db.session.add(emp)
-                db.session.flush()
                 emp_by_eid[emp_data['id']] = emp
             else:
-                emp.basic_salary = emp_data['basic']
-                emp.allowances = emp_data['allowances']
+                emp.basic_salary = basic
+                emp.allowances = allowances
                 emp.bank_or_telebirr = emp_data.get('bank', '')
                 if emp_data.get('tin'):
                     emp.tin = emp_data['tin']
-                db.session.flush()
+            if old_values:
+                stage_salary_change(
+                    company_id,
+                    actor,
+                    emp,
+                    salary_reason,
+                    old_values,
+                    new_values,
+                    action='employee_salary_changed',
+                    effective_date=run.run_date,
+                )
+            db.session.flush()
 
             # --- BUG FIX: Apply leave reductions and deductions ---
             sick_red, unpaid_red = leave_reductions.get(emp.id, (Decimal('0'), Decimal('0')))
@@ -834,6 +873,9 @@ def process_payroll(run, company_id, user_id, user_email, request_ip):
             redirect_to='detail',
         )
 
+    except SalaryChangeRefusedError as refusal:
+        record_salary_refusal(company_id, user_id, refusal)
+        return ApprovalResult(success=False, message=str(refusal), redirect_to='confirm')
     except ReviewedPayrollMismatchError as error:
         db.session.rollback()
         return ApprovalResult(success=False, message=str(error), redirect_to='detail')

@@ -17,6 +17,7 @@ Three things this test asserts:
 from datetime import date
 
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, PayrollDraft, PayrollRun, Payslip, User
@@ -94,6 +95,7 @@ def test_approval_guard_rejects_terminal_run(app):
             user_id=user_id,
             user_email='owner@pilot.test',
             request_ip='127.0.0.1',
+            salary_credentials=salary_change_credentials('pilot-pass-1234'),
         )
         assert result.success is False
         assert 'completed' in result.message or 'locked' in result.message or 'processing' in result.message

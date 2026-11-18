@@ -10,6 +10,8 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, OvertimeEntry, TenantQuery, User
 
@@ -157,7 +159,7 @@ def test_update_employee_valid_partial(client, company_user):
     resp = client.post('/api/v1/employees', json={'employee_id': 'E001', 'name': 'Dawit', 'basic_salary': 5000})
     emp_id = resp.get_json()['id']
 
-    resp = client.put(f'/api/v1/employees/{emp_id}', json={'allowances': 500})
+    resp = client.put(f'/api/v1/employees/{emp_id}', json={'allowances': 500, **salary_change_credentials('Test1234!')})
     assert resp.status_code == 200
 
 

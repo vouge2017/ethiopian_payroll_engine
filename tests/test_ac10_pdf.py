@@ -9,6 +9,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 
@@ -124,7 +125,14 @@ def test_ac10_pdf_shows_each_item_separately(ctx):
     )
     db.session.commit()
 
-    res = process_payroll(run=run, company_id=co.id, user_id=user.id, user_email='o@t.com', request_ip='127.0.0.1')
+    res = process_payroll(
+        run=run,
+        company_id=co.id,
+        user_id=user.id,
+        user_email='o@t.com',
+        request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
+    )
     assert res.success is True, getattr(res, 'error', None)
 
     from payroll_engine.models import Payslip

@@ -14,6 +14,8 @@ os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from datetime import UTC, datetime
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     AuditLog,
@@ -138,7 +140,14 @@ def test_approved_correction_export_and_orphan_adjustment_block(app, company_use
         start = datetime.now(UTC).date().replace(day=1)
         run = create_review(cid, uid, start)
         db.session.commit()
-        result = process_payroll(run, cid, uid, 'owner@example.invalid', '127.0.0.1')
+        result = process_payroll(
+            run,
+            cid,
+            uid,
+            'owner@example.invalid',
+            '127.0.0.1',
+            salary_credentials=salary_change_credentials('Test1234!'),
+        )
         assert result.success, result.message or result.error
         run_id, employee_id = run.id, employee.id
 

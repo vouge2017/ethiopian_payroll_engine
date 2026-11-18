@@ -205,3 +205,8 @@ def copy_system_items_to_company(company_id):
             )
         )
     db.session.flush()
+
+
+def salary_change_credentials(password):
+    """Authorize a test fixture's salary write using its existing test password."""
+    return {'salary_reason': 'correction', 'salary_note': 'Synthetic payroll fixture.', 'password': password}

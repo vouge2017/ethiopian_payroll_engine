@@ -1,0 +1,13 @@
+<fieldset class="mb-3">
+    <legend class="fs-6 fw-bold">Reason for salary changes</legend>
+    <p class="form-text">Complete these fields when saving a salary change.</p>
+    <label for="salary_reason" class="form-label">Reason</label>
+    <select id="salary_reason" name="salary_reason" class="form-select mb-2">
+        <option value="">Choose a reason</option>
+        {% for value, label in salary_reasons.items() %}
+        <option value="{{ value }}"{% if request.form.get('salary_reason') == value %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <label for="salary_note" class="form-label">Note</label>
+    <textarea id="salary_note" name="salary_note" class="form-control" rows="2" maxlength="1000">{{ request.form.get('salary_note', '') }}</textarea>
+</fieldset>

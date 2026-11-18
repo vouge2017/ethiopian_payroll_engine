@@ -22,6 +22,7 @@ import pytest
 import sqlalchemy as sa
 from alembic.operations import Operations
 from alembic.runtime.migration import MigrationContext
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.catalog import seed_company_catalog
@@ -120,7 +121,14 @@ def _approve_draft(company, user, emp, run_date=RUN_DATE, period='2018-13', bank
         )
     )
     db.session.commit()
-    result = process_payroll(run, company.id, user.id, 'owner@test.example', '127.0.0.1')
+    result = process_payroll(
+        run,
+        company.id,
+        user.id,
+        'owner@test.example',
+        '127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
+    )
     assert result.success, result.message or result.error
     return run
 
@@ -131,7 +139,14 @@ def _approve_worksheet(company, user):
 
     run = create_review(company.id, user.id, RUN_DATE)
     db.session.commit()
-    result = process_payroll(run, company.id, user.id, 'owner@test.example', '127.0.0.1')
+    result = process_payroll(
+        run,
+        company.id,
+        user.id,
+        'owner@test.example',
+        '127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
+    )
     assert result.success, result.message or result.error
     return run
 
@@ -274,7 +289,14 @@ def test_failed_approval_leaves_no_snapshot(setup, monkeypatch):
     )
     db.session.commit()
     run_id = run.id
-    result = process_payroll(run, company.id, user.id, 'owner@test.example', '127.0.0.1')
+    result = process_payroll(
+        run,
+        company.id,
+        user.id,
+        'owner@test.example',
+        '127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
+    )
     assert not result.success
     assert PayrollRunItemSnapshot.query.filter_by(company_id=company.id, payroll_run_id=run_id).first() is None
     assert Payslip.query.filter_by(company_id=company.id, payroll_run_id=run_id).first() is None

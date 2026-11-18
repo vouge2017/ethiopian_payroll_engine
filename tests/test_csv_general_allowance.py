@@ -12,6 +12,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, PayrollDraft, PayrollRun, User
@@ -127,6 +128,7 @@ def test_csv_allowance_becomes_assignment_and_reaches_gross(ctx, company):
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
     assert result.success is True
 
@@ -173,7 +175,7 @@ def _reviewed_csv_row(tmp_path, basic, allowances):
     ids=['first-import', 'changed-salary', 'unchanged-salary'],
 )
 def test_csv_import_approval_matches_reviewed_totals(ctx, company, tmp_path, existing_basic, imported_basic):
-    from payroll_engine.models import Payslip
+    from payroll_engine.models import AuditLog, Notification, Payslip
     from payroll_engine.models_payroll_elements import PayrollItemAssignment
     from payroll_engine.payroll_bp import _annotate_general_allowance
     from payroll_engine.services.payroll_service import (
@@ -221,6 +223,7 @@ def test_csv_import_approval_matches_reviewed_totals(ctx, company, tmp_path, exi
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!') if existing_basic != imported_basic else None,
     )
     assert result.success, result.message or result.error
 
@@ -236,6 +239,20 @@ def test_csv_import_approval_matches_reviewed_totals(ctx, company, tmp_path, exi
 
     employee = Employee.query.filter_by(company_id=company.id, employee_id='EMP001').one()
     assert employee.basic_salary == Decimal(imported_basic)
+    audit = AuditLog.query.filter_by(company_id=company.id, action='employee_salary_changed').one_or_none()
+    if existing_basic == imported_basic:
+        assert audit is None
+    else:
+        assert audit.user_id == user.id
+        assert audit.details['old_values']['basic_salary'] == f'{(existing_basic or 0):.2f}'
+        assert audit.details['new_values']['basic_salary'] == f'{imported_basic:.2f}'
+        assert audit.details['reason']['choice'] == 'correction'
+        assert all(valid for _, valid, _ in AuditLog.verify_chain(company.id))
+        notices = Notification.query.filter_by(company_id=company.id, user_id=user.id).all()
+        assert any(
+            'changed salary for Dawit' in notice.message and '2026-09-01' in notice.message for notice in notices
+        )
+
     basics = [
         assignment
         for assignment in PayrollItemAssignment.query.filter_by(
@@ -297,6 +314,7 @@ def test_csv_import_syncs_general_allowance_to_review(ctx, company, tmp_path, ex
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
     assert result.success, result.message or result.error
 
@@ -370,6 +388,7 @@ def test_csv_import_review_mismatch_saves_no_payroll_changes(ctx, company, tmp_p
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
 
     assert not result.success
@@ -523,6 +542,7 @@ def test_employee_with_only_non_basic_assignment_gets_full_basic(ctx, company):
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
     assert result.success is True
 

@@ -18,6 +18,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import constants as _constants
 from payroll_engine import create_app, db
@@ -262,6 +263,7 @@ def _run(co, user, emps, period, label):
         user_id=user.id,
         user_email=user.email or 'o@t.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
     assert result.success is True, f'{label}: {getattr(result, "error", None)}'
 

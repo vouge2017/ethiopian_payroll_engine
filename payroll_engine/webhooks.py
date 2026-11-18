@@ -27,8 +27,8 @@ from payroll_engine import db
 
 logger = logging.getLogger('payroll_engine.webhooks')
 
-# Webhook delivery can be disabled entirely
-WEBHOOKS_ENABLED = os.environ.get('WEBHOOKS_ENABLED', 'true').lower() == 'true'
+# Webhook delivery is opt-in during the pilot
+WEBHOOKS_ENABLED = os.environ.get('WEBHOOKS_ENABLED', 'false').lower() == 'true'
 
 # Retry configuration
 MAX_RETRIES = 3

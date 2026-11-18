@@ -10,6 +10,7 @@ from payroll_engine import db
 from payroll_engine.compliance import compute_compliance_score, get_status_message
 from payroll_engine.ethiopian_calendar import format_ethiopian_period
 from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, Payslip, User
+from payroll_engine.payroll_periods import payroll_date_for_run, select_completed_payroll_run
 
 main = Blueprint('main', __name__)
 
@@ -100,7 +101,6 @@ def companies_dashboard():
     Shows all companies with payroll status, deadlines, and quick actions.
     """
     from payroll_engine.compliance import get_upcoming_deadlines
-    from payroll_engine.models import PayrollRun
 
     user_companies = current_user.companies
     company_cards = []
@@ -109,8 +109,8 @@ def companies_dashboard():
         if company is None:
             continue
 
-        # Latest payroll run
-        latest_run = PayrollRun.query.filter_by(company_id=company.id).order_by(PayrollRun.created_at.desc()).first()
+        selected_run_id = request.args.get('run_id', type=int)
+        latest_run = select_completed_payroll_run(company.id, selected_run_id)
 
         # Employee count
         emp_count = Employee.query.filter_by(company_id=company.id, is_deleted=False).count()
@@ -126,7 +126,7 @@ def companies_dashboard():
             last_net = sum(p.net_pay for p in payslips)
 
         # Upcoming deadlines
-        payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
+        payroll_date = payroll_date_for_run(latest_run)
         deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
 
         # Role for this company
@@ -209,25 +209,23 @@ def index():
 
     # All completed runs for the period selector
     all_completed_runs = (
-        PayrollRun.query.filter_by(company_id=company.id, status='completed').order_by(PayrollRun.run_date.desc()).all()
+        PayrollRun.query.filter_by(company_id=company.id, status='completed')
+        .order_by(PayrollRun.run_date.desc(), PayrollRun.created_at.desc(), PayrollRun.id.desc())
+        .all()
     )
 
     # Period selection: use ?run_id=X or default to latest
     selected_run_id = request.args.get('run_id', type=int)
-    if selected_run_id:
-        selected_run = PayrollRun.query.filter_by(id=selected_run_id, company_id=company.id, status='completed').first()
-        if not selected_run:
-            flash('Payroll run not found.', 'warning')
-            selected_run = all_completed_runs[0] if all_completed_runs else None
-    else:
-        selected_run = all_completed_runs[0] if all_completed_runs else None
+    selected_run = select_completed_payroll_run(company.id, selected_run_id)
+    if selected_run_id and (selected_run is None or selected_run.id != selected_run_id):
+        flash('Payroll run not found.', 'warning')
 
     recent_runs = (
         PayrollRun.query.filter_by(company_id=company.id).order_by(PayrollRun.created_at.desc()).limit(5).all()
     )
 
     # Use selected run for compliance scoring
-    payroll_date_str = selected_run.run_date.isoformat() if selected_run else date.today().isoformat()
+    payroll_date_str = payroll_date_for_run(selected_run)
     score, status = compute_compliance_score(company=company, payroll_date=payroll_date_str)
     status_msg = get_status_message(status)
 

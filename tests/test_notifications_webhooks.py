@@ -10,6 +10,7 @@ Covers:
 - WhatsApp send skipped when not configured
 """
 
+import importlib
 import os
 import sys
 
@@ -447,6 +448,51 @@ class TestFireWebhook:
         with app.app_context():
             fire_webhook(cid, 'payroll.approved', {'run_id': 1})
             mock_thread.assert_not_called()
+
+    @patch('requests.post')
+    def test_delivery_is_off_by_default_even_with_configured_destination(self, mock_post, app, monkeypatch):
+        import payroll_engine.webhooks as wh_mod
+
+        monkeypatch.delenv('WEBHOOKS_ENABLED', raising=False)
+        importlib.reload(wh_mod)
+
+        class InlineThread:
+            def __init__(self, target, args, daemon):
+                self.target = target
+                self.args = args
+
+            def start(self):
+                self.target(*self.args)
+
+        monkeypatch.setattr(wh_mod.threading, 'Thread', InlineThread)
+        cid, _owner_id, _emp_uid, _emp_id = _setup(app)
+        with app.app_context():
+            wh_mod.fire_webhook(cid, 'payroll.approved', {'run_id': 1})
+
+        mock_post.assert_not_called()
+        assert wh_mod.WEBHOOKS_ENABLED is False
+
+    @patch('requests.post')
+    def test_explicitly_enabled_webhook_delivers(self, mock_post, app, monkeypatch):
+        import payroll_engine.webhooks as wh_mod
+
+        mock_post.return_value.status_code = 200
+
+        class InlineThread:
+            def __init__(self, target, args, daemon):
+                self.target = target
+                self.args = args
+
+            def start(self):
+                self.target(*self.args)
+
+        monkeypatch.setattr(wh_mod, 'WEBHOOKS_ENABLED', True)
+        monkeypatch.setattr(wh_mod.threading, 'Thread', InlineThread)
+        cid, _owner_id, _emp_uid, _emp_id = _setup(app)
+        with app.app_context():
+            wh_mod.fire_webhook(cid, 'payroll.approved', {'run_id': 1})
+
+        mock_post.assert_called_once()
 
 
 class TestWebhookDelivery:

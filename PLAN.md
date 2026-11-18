@@ -7,6 +7,13 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #59 pilot hardening (2026-11-18)
+
+- Implemented on `fix/issue-59-webhooks-deadlines`, based on `953f488`; code and regression tests are at `5da18418b3427d08cef5cd08215fd465bb986410`. Draft PR #67 is open and unmerged, awaiting review.
+- Webhook delivery now defaults off and requires explicit `WEBHOOKS_ENABLED=true`. Deadline banner and both dashboard card views share completed-run selection: explicit completed run, otherwise latest by payroll date, otherwise today. Added mocked delivery and rendered dashboard acceptance tests; no production settings or live delivery changed.
+- Focused tests: **35 passed**. Full `python3 run_tests.py --continue`: **TOTAL: 2133 passed, 0 failed, 0 errors, 255 skipped**. Ruff check/format and `git diff --check` passed. Manual browser review was unavailable; dashboard routes were rendered in Flask tests.
+- No migration or unrelated refactoring. Not merged, deployed, or practitioner accepted.
+
 ### Issue #65: starting-salary authorization and audit (2026-11-18)
 
 - Implemented on `fix/issue-65-starting-salary` at `82ab79a`, based on `26f8329` after PR #64 (issue #58) merged. PR #66 is draft and unmerged.
@@ -1260,6 +1267,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-18 — Codex — Issue #59: added fail-before/pass-after webhook and deadline-period coverage; defaulted webhooks off and unified completed-run selection. Focused 35 passed; full suite **2133 passed, 0 failed, 0 errors, 255 skipped**; Ruff and diff checks passed. Draft PR #67 on `fix/issue-59-webhooks-deadlines` at code SHA `5da1841`; no merge, deployment, or live webhook delivery.
 
 - 2026-11-18 — Codex — Issue #65: verified fail-before/pass-after acceptance tests and hosted full/PostgreSQL suites, added the shared starting-pay permission and audit transaction, and left PR #66 draft and unmerged for review (code and tests `c0f0736`).
 

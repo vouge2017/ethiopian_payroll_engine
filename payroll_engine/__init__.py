@@ -945,13 +945,13 @@ def create_app():
                 return {'deadline_alerts': []}
             company_id = flask_session.get('active_company_id', current_user.company_id)
             from payroll_engine.compliance import get_upcoming_deadlines
-            from payroll_engine.models import Company, PayrollRun
+            from payroll_engine.models import Company
+            from payroll_engine.payroll_periods import payroll_date_for_run, select_completed_payroll_run
 
             company = db.session.get(Company, company_id)
-            latest_run = (
-                PayrollRun.query.filter_by(company_id=company_id).order_by(PayrollRun.created_at.desc()).first()
-            )
-            payroll_date = latest_run.run_date.isoformat() if latest_run else date.today().isoformat()
+            selected_run_id = request.args.get('run_id', type=int)
+            selected_run = select_completed_payroll_run(company_id, selected_run_id)
+            payroll_date = payroll_date_for_run(selected_run)
             deadlines = get_upcoming_deadlines(company=company, payroll_date=payroll_date)
             alerts = []
             for key in deadlines:

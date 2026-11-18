@@ -7,6 +7,13 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #65: starting-salary authorization and audit (2026-11-18)
+
+- Implemented on `fix/issue-65-starting-salary` at `82ab79a`, based on `26f8329` after PR #64 (issue #58) merged. PR #66 is draft and unmerged.
+- Web add and API POST require salary-edit permission (owners exempt from the flag) and `new_hire` for nonzero starting pay. Both commit the employee and immutable chained salary/allowance evidence together. Zero-pay hires also receive a creation audit; no new migration or payroll-rule changes.
+- Fail-before commit `9d8dfe9`: `18 failed, 2 passed, 4 warnings in 61.51s (0:01:01)`. After the fix: `20 passed, 4 warnings in 60.50s (0:01:00)`. Focused migrated PostgreSQL: `41 passed, 31 warnings in 157.26s (0:02:37)`. Browser verified HTTP 422 without a reason and the saved employee with New hire selected. Ruff and diff checks passed.
+- Hosted at `82ab79a`: PostgreSQL `232 passed, 459 warnings in 140.39s (0:02:20)`; migration jobs (3.11/3.12), lint and secret scan passed. Hosted 3.12 full suite: `TOTAL: 2123 passed, 5 failed, 0 errors, 255 skipped`; 3.11 was canceled. All five failures were stale employee-service expectations; updated those tests only, then verified `33 passed, 4 warnings in 76.36s (0:01:16)` locally. Hosted rerun pending. The broad Windows PostgreSQL run was not green (`13 failed, 219 passed, 443 warnings in 1168.59s (0:19:28)`); hosted PostgreSQL passed. No merge, deployment, or practitioner acceptance.
+
 ### Issue #58 salary permissions and audit integrity (2026-11-18)
 
 - Branch `fix/issue-58-salary-audit`, verified product commit `aac548b12429abb4ecf9ef729b1fbdcbb9b63f3b`. Salary changes, audit entries and owner notices commit together. Company membership controls salary editing, and web, API, bulk and CSV writes require a reason, note and password and block edits to a linked employee's own salary.
@@ -1252,6 +1259,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-18 — Codex — Issue #65: verified fail-before/pass-after acceptance tests, added the shared starting-pay permission and audit transaction, and opened draft PR #66 for review (`82ab79a`).
 
 - 2026-11-18 — Codex — Implemented and verified issue #58 on its dedicated branch for draft review.
 

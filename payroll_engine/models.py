@@ -485,6 +485,7 @@ class UserCompany(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='RESTRICT'), nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='employee')  # owner, accountant, employee
+    can_edit_salary = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
 
     user = db.relationship('User', backref=db.backref('user_companies', lazy=True))
@@ -1564,6 +1565,9 @@ class EmployeeDeduction(db.Model):
 class AuditLog(db.Model):
     query_class = TenantQuery
 
+    # Insert each audit row before resolving the next row's predecessor.
+    __mapper_args__ = {'batch': False}
+
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id', ondelete='RESTRICT'), nullable=False)
     user_id = db.Column(
@@ -1578,23 +1582,45 @@ class AuditLog(db.Model):
     # Relationship to User
     user = db.relationship('User', backref=db.backref('audit_logs', lazy=True))
 
-    def compute_hash(self):
-        """SHA-256 of (previous_hash + company_id + user_id + action + sorted JSON details).
-
-        Does NOT include timestamp because the column default fires after before_insert,
-        so the value isn't yet available at hash-computation time.
-        """
+    def compute_hash(self, *, version=None):
+        """Verify historical v1 hashes and timestamp-bound v2 hashes."""
+        import base64
         import hashlib
         import json
 
-        raw = (
-            str(self.previous_hash or '')
-            + str(self.company_id)
-            + str(self.user_id or '')
-            + str(self.action)
-            + json.dumps(self.details or {}, sort_keys=True, default=str)
-        )
-        return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+        if version is None:
+            version = 2 if (self.hash or '').startswith('v2:') else 1
+        if version == 2:
+            timestamp = self.timestamp
+            if timestamp is not None and timestamp.tzinfo is not None:
+                timestamp = timestamp.astimezone(UTC).replace(tzinfo=None)
+            raw = json.dumps(
+                [
+                    'v2',
+                    self.previous_hash,
+                    self.company_id,
+                    self.user_id,
+                    self.action,
+                    self.details,
+                    timestamp.isoformat(timespec='microseconds') if timestamp else None,
+                ],
+                sort_keys=True,
+                separators=(',', ':'),
+            )
+            digest = hashlib.sha256(raw.encode('utf-8')).digest()
+            # Store the marker with the full digest so it survives schema
+            # rollbacks and fits the existing 64-character hash columns.
+            return 'v2:' + base64.urlsafe_b64encode(digest).decode('ascii').rstrip('=')
+        if version == 1:
+            raw = (
+                str(self.previous_hash or '')
+                + str(self.company_id)
+                + str(self.user_id or '')
+                + str(self.action)
+                + json.dumps(self.details or {}, sort_keys=True, default=str)
+            )
+            return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+        raise ValueError('Unsupported audit hash version.')
 
     @classmethod
     def verify_chain(cls, company_id: int) -> list:
@@ -1627,21 +1653,68 @@ class AuditLog(db.Model):
         return f'<AuditLog {self.action} at {self.timestamp}>'
 
 
+@db.event.listens_for(db.Session, 'before_flush')
+def _lock_audit_chains(session, flush_context, instances):
+    """Serialize appends to the same company through commit or rollback."""
+    from sqlalchemy import text, update
+
+    company_ids = {row.company_id for row in session.new if isinstance(row, AuditLog)}
+    if not company_ids:
+        return
+    connection = session.connection()
+    if connection.dialect.name == 'postgresql':
+        # Use a dedicated advisory-lock namespace so FK checks are unaffected.
+        for company_id in sorted(company_ids):
+            connection.execute(text('SELECT pg_advisory_xact_lock(58458, :cid)'), {'cid': company_id})
+    elif connection.dialect.name == 'sqlite':
+        # Acquire SQLite's writer lock before reading the chain tail.
+        connection.execute(update(Company).where(db.false()).values(id=Company.id))
+
+
 @db.event.listens_for(AuditLog, 'before_insert')
 def _audit_log_before_insert(mapper, connection, target):
-    """Auto-compute hash chain on insert.
+    import json
 
-    Uses the raw connection so it works even before the session is flushed.
-    """
     from sqlalchemy import select
 
-    if target.previous_hash is None:
-        stmt = (
-            select(AuditLog.hash).where(AuditLog.company_id == target.company_id).order_by(AuditLog.id.desc()).limit(1)
-        )
-        result = connection.execute(stmt).scalar()
-        target.previous_hash = result
-    target.hash = target.compute_hash()
+    from payroll_engine import _json_serializer
+
+    # Hash the JSON values that will actually be stored, including decimals
+    # in older audit payloads that use the shared database serializer.
+    target.details = json.loads(json.dumps(target.details, default=_json_serializer))
+    stmt = select(AuditLog.hash).where(AuditLog.company_id == target.company_id).order_by(AuditLog.id.desc()).limit(1)
+    target.previous_hash = connection.execute(stmt).scalar()
+    timestamp = target.timestamp or datetime.now(UTC)
+    if timestamp.tzinfo is not None:
+        timestamp = timestamp.astimezone(UTC).replace(tzinfo=None)
+    target.timestamp = timestamp
+    target.hash = target.compute_hash(version=2)
+
+
+def _protect_salary_audit(mapper, connection, target):
+    if _is_protected_salary_audit(target.action, target.hash):
+        raise ValueError('Salary audit records cannot be modified or deleted.')
+
+
+def _is_protected_salary_audit(action, row_hash):
+    return (row_hash or '').startswith('v2:') and action in (
+        'salary_changed',
+        'employee_salary_changed',
+        'salary_permission_changed',
+    )
+
+
+@db.event.listens_for(AuditLog, 'before_update')
+def _protect_salary_audit_update(mapper, connection, target):
+    old_action = db.inspect(target).attrs.action.history.deleted
+    old_hash = db.inspect(target).attrs.hash.history.deleted
+    if _is_protected_salary_audit(
+        old_action[0] if old_action else target.action, old_hash[0] if old_hash else target.hash
+    ):
+        raise ValueError('Salary audit records cannot be modified.')
+
+
+db.event.listen(AuditLog, 'before_delete', _protect_salary_audit)
 
 
 @db.event.listens_for(db.Session, 'before_flush')

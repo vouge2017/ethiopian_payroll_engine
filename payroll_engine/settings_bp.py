@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
 
 from payroll_engine import db
-from payroll_engine.models import Company, Employee, User
+from payroll_engine.models import Company, Employee, User, UserCompany
 from payroll_engine.shared import _company_id, create_audit_log, role_required
 
 settings_bp = Blueprint('settings', __name__)
@@ -144,11 +144,48 @@ def company_profile():
 @role_required('owner')
 def team_settings():
     """Show team members and invite form."""
-    from payroll_engine.models import UserCompany
+    cid = _company_id()
+    members = User.query.filter_by(company_id=cid).all()
+    memberships = {row.user_id: row for row in UserCompany.query.filter_by(company_id=cid).all()}
+    extra_users = [row.user for row in memberships.values() if row.user.company_id != cid]
+    return render_template(
+        'team_settings.html',
+        members=members,
+        extra_users=extra_users,
+        memberships=memberships,
+        year=date.today().year,
+    )
 
-    members = User.query.filter_by(company_id=_company_id()).all()
-    linked = UserCompany.query.filter_by(company_id=_company_id()).all()
-    return render_template('team_settings.html', members=members, linked=linked, year=date.today().year)
+
+@settings_bp.route('/settings/team/<int:user_id>/salary-permission', methods=['POST'])
+@role_required('owner')
+def set_salary_permission(user_id):
+    cid = _company_id()
+    enabled = request.form.get('enabled')
+    if enabled not in ('0', '1'):
+        abort(400)
+    member = UserCompany.query.filter_by(company_id=cid, user_id=user_id).with_for_update().first()
+    if member is None:
+        user = User.query.filter_by(company_id=cid, id=user_id).first_or_404()
+        member = UserCompany(company_id=cid, user_id=user_id, role=user.role)
+        db.session.add(member)
+    if member.role != 'accountant':
+        abort(400, description='Salary edit permission applies to accountants.')
+    previous = bool(member.can_edit_salary)
+    member.can_edit_salary = enabled == '1'
+    create_audit_log(
+        company_id=cid,
+        user_id=current_user.id,
+        action='salary_permission_changed',
+        details={
+            'target_user_id': user_id,
+            'previous_can_edit_salary': previous,
+            'can_edit_salary': member.can_edit_salary,
+        },
+    )
+    db.session.commit()
+    flash('Salary edit permission updated.', 'success')
+    return redirect(url_for('settings.team_settings'))
 
 
 @settings_bp.route('/settings/team/invite', methods=['POST'])
@@ -157,7 +194,7 @@ def invite_team_member():
     """Invite a team member by phone. Creates user with temporary password."""
     import secrets as _secrets
 
-    from payroll_engine.models import UserCompany, validate_ethiopian_phone
+    from payroll_engine.models import validate_ethiopian_phone
 
     phone = request.form.get('phone', '').strip()
     name = request.form.get('name', '').strip()
@@ -212,8 +249,6 @@ def invite_team_member():
 @role_required('owner')
 def remove_team_member(user_id):
     """Remove a team member by unlinking them from the company."""
-    from payroll_engine.models import UserCompany
-
     target = User.query.get_or_404(user_id)
     if target.id == current_user.id:
         flash('You cannot remove yourself.', 'danger')

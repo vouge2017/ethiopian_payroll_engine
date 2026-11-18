@@ -141,6 +141,12 @@ Fatima Mohamed	0944567890	15000"
                 </div>
             </div>
 
+            {% include 'partials/salary_change_reason.html' %}
+            <div class="mb-3">
+                <label for="salary_password" class="form-label">Password for salary changes</label>
+                <input type="password" id="salary_password" class="form-control" autocomplete="current-password">
+            </div>
+
             <div class="onboarding-actions">
                 <button type="button" class="onboarding-btn-back" onclick="goBack()">
                     <i class="bi bi-arrow-left"></i> Back
@@ -368,6 +374,15 @@ function updateStepper(activeStep) {
 
 async function importEmployees() {
     const btn = document.getElementById('import-btn');
+    const passwordInput = document.getElementById('salary_password');
+    const salary_reason = document.getElementById('salary_reason').value;
+    const salary_note = document.getElementById('salary_note').value.trim();
+    if (!salary_reason || !salary_note || !passwordInput.value) {
+        alert('Choose a salary change reason, add a note and enter your password.');
+        return;
+    }
+    const password = passwordInput.value;
+    passwordInput.value = '';
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Importing...';
 
@@ -375,7 +390,7 @@ async function importEmployees() {
         const resp = await fetch('{{ url_for("wizard.quick_import") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-            body: JSON.stringify({ employees: parsedEmployees }),
+            body: JSON.stringify({ employees: parsedEmployees, salary_reason, salary_note, password }),
         });
         const data = await resp.json();
 

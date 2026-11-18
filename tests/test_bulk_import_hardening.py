@@ -17,6 +17,8 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, TenantQuery, User, UserCompany
 
@@ -66,7 +68,9 @@ def _login(client):
 
 
 def _bulk(client, employees):
-    return client.post('/api/v1/employees/bulk', json={'employees': employees})
+    return client.post(
+        '/api/v1/employees/bulk', json={'employees': employees, **salary_change_credentials('Test1234!')}
+    )
 
 
 # --- Bad employee_id values are per-row errors, not crashes ---

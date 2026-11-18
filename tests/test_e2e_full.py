@@ -25,6 +25,8 @@ os.environ['CELERY_BROKER_URL'] = 'memory://'
 
 from datetime import date
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.bank_file import generate_csv as generate_bank_csv
 from payroll_engine.models import (
@@ -290,7 +292,7 @@ def test_full_payroll_flow(ctx, client):
         '/payroll/approve',
         data={
             'run_id': str(run.id),
-            'password': 'SecurePass123!',
+            **salary_change_credentials('SecurePass123!'),
         },
         follow_redirects=True,
     )

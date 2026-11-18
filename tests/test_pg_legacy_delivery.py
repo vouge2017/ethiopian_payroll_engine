@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from helpers import salary_change_credentials
 from test_pg_spreadsheet_inputs import PG_URL
 
 from payroll_engine import db
@@ -64,7 +65,14 @@ def test_committed_legacy_payroll_survives_pdf_queue_failure_and_retry(worksheet
         deduction_id = deduction.id
     with app.app_context():
         run = PayrollRun.query.filter_by(company_id=ids['company'], id=rid).with_for_update().one()
-        result = process_payroll(run, ids['company'], ids['user'], 'synthetic@example.invalid', '127.0.0.1')
+        result = process_payroll(
+            run,
+            ids['company'],
+            ids['user'],
+            'synthetic@example.invalid',
+            '127.0.0.1',
+            salary_credentials=salary_change_credentials('Synthetic1!'),
+        )
         assert result.success, result.error or result.message
         assert db.session.get(PayrollRun, rid).status == 'completed'
         assert db.session.get(PayrollRun, rid).disbursement_status == 'pending'
@@ -73,7 +81,10 @@ def test_committed_legacy_payroll_survives_pdf_queue_failure_and_retry(worksheet
         assert db.session.get(EmployeeDeduction, deduction_id).remaining_balance == Decimal('400')
         assert AuditLog.query.filter_by(company_id=ids['company'], action='payroll_run_completed').count() == 1
         assert AuditLog.query.filter_by(company_id=ids['company'], action='payroll_run_failed').count() == 0
-    assert client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'}).status_code == 302
+    assert (
+        client.post('/payroll/approve', data={'run_id': rid, **salary_change_credentials('Synthetic1!')}).status_code
+        == 302
+    )
     with app.app_context():
         assert Payslip.query.filter_by(company_id=ids['company'], payroll_run_id=rid).count() == 1
         assert db.session.get(EmployeeDeduction, deduction_id).remaining_balance == Decimal('400')
@@ -132,7 +143,7 @@ def test_legacy_failure_rolls_back_key_and_retry_notifies_only_after_commit(work
         lambda **kwargs: (_ for _ in ()).throw(RuntimeError('synthetic failure')),
     )
     key = str(uuid4())
-    body = {'run_id': str(rid), 'password': 'Synthetic1!'}
+    body = {'run_id': str(rid), **salary_change_credentials('Synthetic1!')}
     assert client.post('/payroll/approve', data=body, headers={'Idempotency-Key': key}).status_code == 302
     with engine.connect() as conn:
         assert conn.execute(text('SELECT status FROM payroll_run WHERE id=:id'), {'id': rid}).scalar_one() == 'review'
@@ -190,7 +201,10 @@ def test_legacy_undo_preserves_approved_facts_and_consumed_balance(worksheet, mo
         db.session.add(loan)
         db.session.commit()
         loan_id = loan.id
-    assert client.post('/payroll/approve', data={'run_id': rid, 'password': 'Synthetic1!'}).status_code == 302
+    assert (
+        client.post('/payroll/approve', data={'run_id': rid, **salary_change_credentials('Synthetic1!')}).status_code
+        == 302
+    )
     with engine.connect() as conn:
         assert conn.execute(
             text('SELECT remaining_balance FROM employee_deduction WHERE id=:id'), {'id': loan_id}

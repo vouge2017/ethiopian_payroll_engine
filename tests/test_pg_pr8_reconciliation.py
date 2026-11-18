@@ -16,7 +16,7 @@ FEATURE_HEAD = 'f4a5b6c7d8f0'
 MAIN_HEAD = 'a9b8c7d6e5f4'
 COMPLIANCE_HEAD = 'zz1a2b3c4d5e'
 MERGE_HEAD = 'f4a5b6c7d8f1'
-HEAD = 'k20261104a01'
+HEAD = 'k20261118a01'
 
 
 @pytest.fixture

@@ -15,6 +15,7 @@ from decimal import Decimal
 
 import pytest
 from flask import g
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.catalog import seed_company_catalog
@@ -144,7 +145,14 @@ def _approve_month(company_id, user_id, start=RUN_DATE):
 
     run = create_review(company_id, user_id, start)
     db.session.commit()
-    result = process_payroll(run, company_id, user_id, 'owner@test.example', '127.0.0.1')
+    result = process_payroll(
+        run,
+        company_id,
+        user_id,
+        'owner@test.example',
+        '127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
+    )
     assert result.success, result.message or result.error
     return run
 

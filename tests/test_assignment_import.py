@@ -14,6 +14,7 @@ from decimal import Decimal
 
 import pytest
 from flask import g
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.catalog import seed_company_catalog
@@ -349,6 +350,7 @@ def test_tampered_payload_is_revalidated(app, world):
 def test_api_bulk_import_maps_pay_items_to_assignments(app, world):
     client = _login(app, world['owner'])
     body = {
+        **salary_change_credentials('Test1234!'),
         'employees': [
             {
                 'employee_id': 'NEW1',
@@ -373,7 +375,7 @@ def test_api_bulk_import_maps_pay_items_to_assignments(app, world):
                 'pay_items': [{'item_key': 'housing', 'amount': '500'}],
             },
             {'employee_id': 'NEW4', 'name': 'Plain', 'basic_salary': 9000},
-        ]
+        ],
     }
     resp = client.post('/api/v1/employees/bulk', json=body)
     assert resp.status_code == 200, resp.data

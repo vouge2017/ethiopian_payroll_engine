@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.models import AuditLog, Company, Employee, TenantQuery, User
@@ -112,6 +113,7 @@ def test_salary_change_logged(app, client, owner_and_company):
         f'/employees/{emp_id}/edit',
         data={
             'name': 'Tigist Alemu',
+            **salary_change_credentials('test123'),
             'basic_salary': 15000,
             'allowances': 2000,
         },

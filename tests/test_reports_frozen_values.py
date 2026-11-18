@@ -21,6 +21,7 @@ from decimal import Decimal
 
 import openpyxl
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, PayrollDraft, PayrollRun, Payslip, User
@@ -156,7 +157,12 @@ def locked_month(app):
     db.session.commit()
 
     result = process_payroll(
-        run=run, company_id=company.id, user_id=owner.id, user_email=owner.email, request_ip='127.0.0.1'
+        run=run,
+        company_id=company.id,
+        user_id=owner.id,
+        user_email=owner.email,
+        request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
     assert result.success is True
     run = db.session.get(PayrollRun, run.id)

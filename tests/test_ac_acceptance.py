@@ -9,6 +9,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 
@@ -399,7 +400,14 @@ def test_ac9_legacy_csv_keeps_working(ctx):
     db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=a.id, employee_data=rows))
     db.session.commit()
 
-    res = process_payroll(run=run, company_id=a.id, user_id=user.id, user_email='o@t.com', request_ip='127.0.0.1')
+    res = process_payroll(
+        run=run,
+        company_id=a.id,
+        user_id=user.id,
+        user_email='o@t.com',
+        request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
+    )
     assert res.success is True, getattr(res, 'error', None)
 
     ps = Payslip.query.filter_by(payroll_run_id=run.id, company_id=a.id).first()

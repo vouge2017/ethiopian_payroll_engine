@@ -1,7 +1,14 @@
 """OpenAPI v3 specification for EthioPayroll API."""
 
+from payroll_engine.services.salary_changes import SALARY_REASONS
+
 
 def get_openapi_spec():
+    salary_credentials = {
+        'salary_reason': {'type': 'string', 'enum': list(SALARY_REASONS)},
+        'salary_note': {'type': 'string', 'minLength': 1, 'maxLength': 1000},
+        'password': {'type': 'string', 'format': 'password', 'writeOnly': True},
+    }
     return {
         'openapi': '3.0.3',
         'info': {
@@ -104,10 +111,47 @@ def get_openapi_spec():
                     },
                 },
             },
+            '/employees/{emp_id}': {
+                'put': {
+                    'summary': 'Update employee',
+                    'description': (
+                        'A change to basic salary or allowances requires salary edit permission, a reason, '
+                        'a note, and your password. You cannot change your own linked salary.'
+                    ),
+                    'parameters': [{'name': 'emp_id', 'in': 'path', 'required': True, 'schema': {'type': 'integer'}}],
+                    'requestBody': {
+                        'required': True,
+                        'content': {
+                            'application/json': {
+                                'schema': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'name': {'type': 'string'},
+                                        'basic_salary': {'type': 'number'},
+                                        'allowances': {'type': 'number'},
+                                        'bank_or_telebirr': {'type': 'string'},
+                                        'tin': {'type': 'string'},
+                                        'fayda_fin': {'type': 'string'},
+                                        **salary_credentials,
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    'responses': {
+                        '200': {'description': 'Updated'},
+                        '403': {'description': 'Salary change forbidden'},
+                        '422': {'description': 'Invalid change or credentials'},
+                    },
+                },
+            },
             '/employees/bulk': {
                 'post': {
                     'summary': 'Bulk import employees',
-                    'description': 'Import up to 500 employees in a single JSON array payload.',
+                    'description': (
+                        'Import up to 500 employees. An import that sets salary or allowances requires '
+                        'salary edit permission and the top-level reason, note, and password.'
+                    ),
                     'requestBody': {
                         'required': True,
                         'content': {
@@ -116,6 +160,7 @@ def get_openapi_spec():
                                     'type': 'object',
                                     'required': ['employees'],
                                     'properties': {
+                                        **salary_credentials,
                                         'employees': {
                                             'type': 'array',
                                             'items': {
@@ -132,7 +177,7 @@ def get_openapi_spec():
                                                     'fayda_fin': {'type': 'string'},
                                                 },
                                             },
-                                        }
+                                        },
                                     },
                                 }
                             }

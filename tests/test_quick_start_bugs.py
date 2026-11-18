@@ -11,6 +11,8 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
@@ -62,7 +64,11 @@ def login(client):
 
 
 def _import(client, rows):
-    return client.post('/quick-start/import', json={'employees': rows}, headers={'Content-Type': 'application/json'})
+    return client.post(
+        '/quick-start/import',
+        json={'employees': rows, **salary_change_credentials('Test1234!')},
+        headers={'Content-Type': 'application/json'},
+    )
 
 
 def test_import_non_dict_row_is_row_error(app, company_user, client):

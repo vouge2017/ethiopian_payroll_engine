@@ -17,6 +17,8 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     AuditLog,
@@ -135,7 +137,7 @@ def test_approval_succeeds_without_pdf_generation(app):
             '/payroll/approve',
             data={
                 'run_id': run_id,
-                'password': 'TestPass1!',
+                **salary_change_credentials('TestPass1!'),
             },
             follow_redirects=False,
         )
@@ -181,7 +183,7 @@ def test_approval_rolls_back_on_compliance_failure(app):
                 '/payroll/approve',
                 data={
                     'run_id': run_id,
-                    'password': 'TestPass1!',
+                    **salary_change_credentials('TestPass1!'),
                 },
                 follow_redirects=False,
             )
@@ -213,7 +215,7 @@ def test_approval_commits_atomically_on_success(app):
             '/payroll/approve',
             data={
                 'run_id': run_id,
-                'password': 'TestPass1!',
+                **salary_change_credentials('TestPass1!'),
             },
             follow_redirects=False,
         )

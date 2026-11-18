@@ -212,6 +212,10 @@
                             <div class="form-text">Re-authentication required for security.</div>
                         </div>
 
+                        {% if run.source != 'spreadsheet' %}
+                        {% include 'partials/salary_change_reason.html' %}
+                        {% endif %}
+
                         {% if current_user.mfa_enabled %}
                         <div class="mb-4">
                             <label for="totp_code" class="form-label fw-bold">MFA Code / የማረጋገጫ ቁጥር</label>

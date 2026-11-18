@@ -20,6 +20,8 @@ os.environ.setdefault('CELERY_BROKER_URL', 'memory://')
 
 from datetime import date
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
@@ -119,6 +121,7 @@ def test_full_money_path_smoke(app):
         user_id=owner.id,
         user_email='owner@smokeco.et',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('smoketest123'),
     )
     assert approval.success is True, approval.message
     assert run.status == 'completed'
@@ -163,6 +166,8 @@ def test_reprocessing_smoke_run_is_rejected(app):
     db.session.add(PayrollDraft(payroll_run_id=run.id, company_id=company.id, employee_data=employees_data))
     db.session.commit()
 
-    result = process_payroll(run, company.id, owner.id, 'o@s.et', '127.0.0.1')
+    result = process_payroll(
+        run, company.id, owner.id, 'o@s.et', '127.0.0.1', salary_credentials=salary_change_credentials('smoketest123')
+    )
     assert result.success is False
     assert 'already' in (result.message or '')

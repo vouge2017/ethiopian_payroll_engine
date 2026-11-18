@@ -15,6 +15,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from helpers import salary_change_credentials
 
 from payroll_engine import create_app, db
 from payroll_engine.models import Company, Employee, PayrollDraft, PayrollRun, User
@@ -163,6 +164,7 @@ def test_approval_snapshots_line_items(ctx, company_user_employee):
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
     assert result.success is True
 
@@ -246,6 +248,7 @@ def test_legacy_employee_has_no_line_items(ctx, company_user_employee):
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
     assert result.success is True
 
@@ -347,6 +350,7 @@ def test_total_deductions_equals_sum_of_deduction_lines(ctx, company_user_employ
         user_id=user.id,
         user_email=user.email,
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
 
     assert result.success, f'payroll must succeed: {result.message}'
@@ -467,6 +471,7 @@ def test_two_percent_of_net_deductions_lock_base(ctx, company_user_employee):
         user_id=user.id,
         user_email=user.email or 'owner@test.com',
         request_ip='127.0.0.1',
+        salary_credentials=salary_change_credentials('Test1234!'),
     )
 
     # Reload to get fresh data from the DB

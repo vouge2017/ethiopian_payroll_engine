@@ -16,6 +16,8 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['CELERY_BROKER_URL'] = 'memory://'
 
+from helpers import salary_change_credentials
+
 from payroll_engine import create_app, db
 from payroll_engine.models import (
     Company,
@@ -155,6 +157,7 @@ class TestLazyPdfGeneration:
                 user_id=oid,
                 user_email='test@test.com',
                 request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('OwnerPass1!'),
             )
 
             assert result.success is True
@@ -175,6 +178,7 @@ class TestLazyPdfGeneration:
                 user_id=oid,
                 user_email='test@test.com',
                 request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('OwnerPass1!'),
             )
 
             payslips = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).all()
@@ -197,6 +201,7 @@ class TestLazyPdfGeneration:
                 user_id=oid,
                 user_email='test@test.com',
                 request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('OwnerPass1!'),
             )
 
             assert result.success is True
@@ -224,6 +229,7 @@ class TestRetryPdf:
                 user_id=oid,
                 user_email='test@test.com',
                 request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('OwnerPass1!'),
             )
 
             payslip = Payslip.query.filter_by(payroll_run_id=rid, company_id=cid).first()
@@ -259,6 +265,7 @@ class TestRetryPdf:
                 user_id=oid,
                 user_email='test@test.com',
                 request_ip='127.0.0.1',
+                salary_credentials=salary_change_credentials('OwnerPass1!'),
             )
 
             # Simulate a previously generated PDF (file must exist on disk)

@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import pytest
 from alembic import command
 from alembic.config import Config
+from helpers import salary_change_credentials
 
 import config
 from payroll_engine import create_app, db
@@ -59,7 +60,9 @@ def pg_session(monkeypatch):
 
 
 def _bulk(client, employees):
-    return client.post('/api/v1/employees/bulk', json={'employees': employees})
+    return client.post(
+        '/api/v1/employees/bulk', json={'employees': employees, **salary_change_credentials('Synthetic1!')}
+    )
 
 
 def test_pg_bulk_duplicate_within_payload_is_row_error(pg_session):

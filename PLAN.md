@@ -7,6 +7,12 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #58 salary permissions and audit integrity (2026-11-18)
+
+- Branch `fix/issue-58-salary-audit`, verified product commit `aac548b12429abb4ecf9ef729b1fbdcbb9b63f3b`. Salary changes, audit entries and owner notices commit together. Company membership controls salary editing, and web, API, bulk and CSV writes require a reason, note and password and block edits to a linked employee's own salary.
+- New audit hashes bind timestamps and carry a version marker. Existing hashes verify with the original format. PostgreSQL serializes appends per company and protects new salary audit records against updates and deletes.
+- Test-first baseline: **24 failed** on SQLite and the PostgreSQL concurrency regression failed. Final isolated suite: **2108 passed, 0 failed, 0 errors, 253 skipped**. PostgreSQL CI test set on PostgreSQL 16: **230 passed**, including migration upgrade/rollback and concurrent appends. Ruff lint, formatting and diff checks passed. Flask form checks passed; Chromium could not launch locally. Draft review only.
+
 ### Issue #57 missing payroll rules (2026-11-17)
 
 - PR #62 PostgreSQL follow-up on `fix/issue-57-missing-rules` at `2906e630b61f29fd17993d245a09770be8955ba8`: shared PostgreSQL fixtures seed the synthetic tax/pension rule; a worksheet test calculates its expected value within the app context. Product code and asserted values are unchanged. Hosted PostgreSQL on `77a024d`: **1 failed, 222 passed** (missing app context); corrected PostgreSQL run on `2906e63`: **223 passed, 448 warnings in 101.52s**, with rollback/rollforward verified. Local PostgreSQL with CI's psycopg2: **223 passed, 449 warnings in 386.41s**. The first local run used psycopg3 and had five tenancy-test failures due to its different error interface; the file passed with psycopg2 (**8 passed**). Hosted full suites on `2906e63`: **2078 passed, 0 failed, 0 errors, 251 skipped** on both Python versions; all checks passed. Local full runner: **2026 passed, 0 failed, 1 errors, 251 skipped**, 2295.6s; the settings file timed out at 120s and passed alone: **52 passed, 4 warnings in 160.23s**. The Neon branch named production has no tax-rule rows; the live app's database mapping and an approved complete rule remain to be verified before deployment. Not merged, deployed or practitioner accepted.
@@ -1246,6 +1252,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-18 — Codex — Implemented and verified issue #58 on its dedicated branch for draft review.
 
 - 2026-11-17 — Codex — Seeded synthetic payroll rules in PR #62 PostgreSQL fixtures, corrected test app context, and recorded PostgreSQL, full-suite and hosted results.
 - 2026-11-17 — Codex — Implemented fail-closed dated tax/pension lookups for issue #57; added explicit rule fixtures and regression coverage; recorded local runner timeout and passing isolated rerun above.

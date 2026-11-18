@@ -246,6 +246,7 @@ class TestEmployeeInputValidation:
                     'employee_id': 'EMP-002',
                     'name': 'Valid Employee',
                     'basic_salary': 10000,
+                    'salary_reason': 'new_hire',
                     'bank_or_telebirr': '1000123456789',
                 },
             )

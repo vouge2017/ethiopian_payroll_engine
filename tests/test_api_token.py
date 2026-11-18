@@ -164,6 +164,7 @@ def test_create_employee_with_bearer_token(app):
                 'employee_id': 'API001',
                 'name': 'API Worker',
                 'basic_salary': 5000,
+                'salary_reason': 'new_hire',
             },
         )
         assert resp.status_code == 201

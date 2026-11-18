@@ -301,7 +301,8 @@ def test_language_follows_first_workspace_to_saved_employee_next_step(workspace,
     assert empty in html and f'<html lang="{language}"' in html
     assert (
         client.post(
-            '/employees/add', data={'first_name': 'Synthetic', 'basic_salary': '10000', 'allowances': '0'}
+            '/employees/add',
+            data={'first_name': 'Synthetic', 'basic_salary': '10000', 'allowances': '0', 'salary_reason': 'new_hire'},
         ).status_code
         == 302
     )

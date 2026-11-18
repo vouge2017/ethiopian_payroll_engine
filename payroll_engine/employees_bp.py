@@ -381,18 +381,27 @@ def accept_invite(token):
 @role_required('owner', 'accountant')
 def add_employee():
     """Add a new employee manually."""
-    from payroll_engine.services.employee_service import create_employee, parse_employee_form
+    from payroll_engine.services.employee_service import NEW_HIRE_REASON, create_employee, parse_employee_form
+
+    def render_add(status=200):
+        return render_template('add_employee.html', year=date.today().year, new_hire_reason=NEW_HIRE_REASON), status
 
     if request.method == 'POST':
+        company_id = _company_id()
         data, error = parse_employee_form(request.form)
         if error:
             flash(error, 'danger')
-            return render_template('add_employee.html', year=date.today().year), 400
+            return render_add(400)
 
-        result = create_employee(data, _company_id(), current_user.id)
+        try:
+            result = create_employee(data, company_id, current_user, request.form.get('salary_reason'))
+        except SalaryChangeRefusedError as refusal:
+            record_salary_refusal(company_id, current_user.id, refusal)
+            flash(str(refusal), 'danger')
+            return render_add(refusal.status)
         if not result.success:
             flash(result.error, 'danger')
-            return render_template('add_employee.html', year=date.today().year), 400
+            return render_add(400)
 
         name = data['name']
 
@@ -416,7 +425,7 @@ def add_employee():
         flash(f'{name} added to your team! You can now include them in payroll runs.', 'success')
         return redirect(url_for('employees.list_employees'))
 
-    return render_template('add_employee.html', year=date.today().year)
+    return render_add()
 
 
 @employees_bp.route('/employees/<int:emp_id>/edit', methods=['GET', 'POST'])

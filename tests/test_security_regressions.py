@@ -380,6 +380,7 @@ class TestApiValidationAbuse:
                 'employee_id': '',
                 'name': 'Test',
                 'basic_salary': 5000,
+                'salary_reason': 'new_hire',
             },
         )
         assert resp.status_code == 201

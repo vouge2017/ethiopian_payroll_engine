@@ -7,6 +7,14 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #65: starting-salary authorization and audit (2026-11-18)
+
+- Implemented on `fix/issue-65-starting-salary` at `82ab79a`, based on `26f8329` after PR #64 (issue #58) merged. PR #66 is draft and unmerged.
+- Web add and API POST require salary-edit permission (owners exempt from the flag) and `new_hire` for nonzero starting pay. Both commit the employee and immutable chained salary/allowance evidence together. Zero-pay hires also receive a creation audit; no new migration or payroll-rule changes.
+- Fail-before commit `9d8dfe9`: `18 failed, 2 passed, 4 warnings in 61.51s (0:01:01)`. After the fix: `20 passed, 4 warnings in 60.50s (0:01:00)`. Focused migrated PostgreSQL: `41 passed, 31 warnings in 157.26s (0:02:37)`. Browser verified HTTP 422 without a reason and the saved employee with New hire selected. Ruff and diff checks passed.
+- Final code-and-test SHA `c0f0736`: hosted full suites on Python 3.11 and 3.12 each report `TOTAL: 2128 passed, 0 failed, 0 errors, 255 skipped` after updating five stale service-test expectations. Hosted migrated PostgreSQL: `232 passed, 459 warnings in 173.96s (0:02:53)`; migration/rollback, strict security/tenancy, Ruff and GitGuardian jobs passed. Separate non-gating 3.12 coverage collection still errors on `scripts/e2e_test.py` (`4 warnings, 1 error in 11.39s`).
+- Windows full run: `TOTAL: 2076 passed, 0 failed, 1 errors, 255 skipped` (360s timeout in `test_pay_item_settings.py`, which passed in hosted CI). Broad Windows PostgreSQL: `13 failed, 219 passed, 443 warnings in 1168.59s (0:19:28)`; use the hosted PostgreSQL receipt above. No merge, deployment, or practitioner acceptance.
+
 ### Issue #58 salary permissions and audit integrity (2026-11-18)
 
 - Branch `fix/issue-58-salary-audit`, verified product commit `aac548b12429abb4ecf9ef729b1fbdcbb9b63f3b`. Salary changes, audit entries and owner notices commit together. Company membership controls salary editing, and web, API, bulk and CSV writes require a reason, note and password and block edits to a linked employee's own salary.
@@ -1252,6 +1260,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-18 — Codex — Issue #65: verified fail-before/pass-after acceptance tests and hosted full/PostgreSQL suites, added the shared starting-pay permission and audit transaction, and left PR #66 draft and unmerged for review (code and tests `c0f0736`).
 
 - 2026-11-18 — Codex — Implemented and verified issue #58 on its dedicated branch for draft review.
 

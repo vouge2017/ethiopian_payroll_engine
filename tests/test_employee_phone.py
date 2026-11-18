@@ -78,6 +78,7 @@ def test_employee_accepts_ethiopian_phone(app):
                     'phone': phone,
                     'basic_salary': '10000',
                     'allowances': '0',
+                    'salary_reason': 'new_hire',
                 },
                 follow_redirects=True,
             )
@@ -110,6 +111,7 @@ def test_employee_accepts_international_phone(app):
                     'phone': phone_input,
                     'basic_salary': '10000',
                     'allowances': '0',
+                    'salary_reason': 'new_hire',
                 },
                 follow_redirects=True,
             )
@@ -138,6 +140,7 @@ def test_employee_phone_stored_as_is(app):
                 'phone': '+251911234567',
                 'basic_salary': '10000',
                 'allowances': '0',
+                'salary_reason': 'new_hire',
             },
             follow_redirects=True,
         )
@@ -151,6 +154,7 @@ def test_employee_phone_stored_as_is(app):
                 'phone': '+254712345678',
                 'basic_salary': '10000',
                 'allowances': '0',
+                'salary_reason': 'new_hire',
             },
             follow_redirects=True,
         )

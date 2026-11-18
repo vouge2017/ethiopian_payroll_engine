@@ -329,8 +329,8 @@ def test_parse_employee_form_bad_numbers(app):
         data, err = parse_employee_form(
             {'employee_id': 'EMP001', 'name': 'Test', 'basic_salary': 'abc', 'allowances': 'xyz'}
         )
-        assert err is None  # falls back to Decimal('0')
-        assert data['basic'] == Decimal('0')
+        assert data is None
+        assert err == 'Salary and allowances must be valid non-negative amounts.'
 
 
 def test_parse_employee_form_defaults(app):
@@ -363,7 +363,7 @@ def test_create_employee_basic(app, ids):
             'employee_type': 'monthly',
             'daily_rate': Decimal('0'),
         }
-        r = create_employee(data, cid, uid)
+        r = create_employee(data, cid, db.session.get(User, uid), salary_reason='new_hire')
         assert r.success is True
         assert r.employee.employee_id == 'EMP002'
         assert r.employee.basic_salary == Decimal('8000')
@@ -388,7 +388,7 @@ def test_create_employee_auto_id(app, ids):
             'employee_type': 'monthly',
             'daily_rate': Decimal('0'),
         }
-        r = create_employee(data, cid, uid)
+        r = create_employee(data, cid, db.session.get(User, uid), salary_reason='new_hire')
         assert r.success is True
         assert r.employee.employee_id == 'EMP002'  # next after EMP001
 
@@ -412,7 +412,7 @@ def test_create_employee_duplicate(app, ids):
             'employee_type': 'monthly',
             'daily_rate': Decimal('0'),
         }
-        r = create_employee(data, cid, uid)
+        r = create_employee(data, cid, db.session.get(User, uid), salary_reason='new_hire')
         assert r.success is False
         assert 'already exists' in r.error
 
@@ -436,7 +436,7 @@ def test_create_employee_daily(app, ids):
             'employee_type': 'daily',
             'daily_rate': Decimal('500'),
         }
-        r = create_employee(data, cid, uid)
+        r = create_employee(data, cid, db.session.get(User, uid), salary_reason=None)
         assert r.success is True
         assert r.employee.employee_type == 'daily'
         assert r.employee.daily_rate == Decimal('500')

@@ -65,7 +65,7 @@ def _login(client):
 
 
 def _create(client, payload):
-    return client.post('/api/v1/employees', json=payload)
+    return client.post('/api/v1/employees', json={'salary_reason': 'new_hire', **payload})
 
 
 def test_create_without_employee_id_autogenerates(client, owner_session):

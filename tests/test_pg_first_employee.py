@@ -20,12 +20,21 @@ class FormValues(HTMLParser):
     def __init__(self, html):
         super().__init__()
         self.values = {}
+        self.select_name = None
         self.feed(html)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         if tag == 'input' and attrs.get('name'):
             self.values[attrs['name']] = attrs.get('value', '')
+        elif tag == 'select':
+            self.select_name = attrs.get('name')
+        elif tag == 'option' and self.select_name and 'selected' in attrs:
+            self.values[self.select_name] = attrs.get('value', '')
+
+    def handle_endtag(self, tag):
+        if tag == 'select':
+            self.select_name = None
 
 
 @pytest.fixture(scope='module')
@@ -73,6 +82,7 @@ def details(**changes):
         grandfather_name='Sample',
         basic_salary='12345.67',
         allowances='234.56',
+        salary_reason='new_hire',
         phone='911234567',
         department='Operations',
         position='Coordinator',

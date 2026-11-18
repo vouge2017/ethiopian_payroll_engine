@@ -132,6 +132,7 @@ def test_create_employee_valid_succeeds(client, company_user):
             'employee_id': 'E001',
             'name': 'Dawit Mekonnen',
             'basic_salary': 10000,
+            'salary_reason': 'new_hire',
             'allowances': 2000,
             'tin': '1234567890',
         },
@@ -145,7 +146,10 @@ def test_create_employee_valid_succeeds(client, company_user):
 def test_update_employee_invalid_salary(client, company_user):
     login(client)
     # Create employee first
-    resp = client.post('/api/v1/employees', json={'employee_id': 'E001', 'name': 'Dawit', 'basic_salary': 5000})
+    resp = client.post(
+        '/api/v1/employees',
+        json={'employee_id': 'E001', 'name': 'Dawit', 'basic_salary': 5000, 'salary_reason': 'new_hire'},
+    )
     emp_id = resp.get_json()['id']
 
     resp = client.put(f'/api/v1/employees/{emp_id}', json={'basic_salary': -1000})
@@ -156,7 +160,10 @@ def test_update_employee_invalid_salary(client, company_user):
 
 def test_update_employee_valid_partial(client, company_user):
     login(client)
-    resp = client.post('/api/v1/employees', json={'employee_id': 'E001', 'name': 'Dawit', 'basic_salary': 5000})
+    resp = client.post(
+        '/api/v1/employees',
+        json={'employee_id': 'E001', 'name': 'Dawit', 'basic_salary': 5000, 'salary_reason': 'new_hire'},
+    )
     emp_id = resp.get_json()['id']
 
     resp = client.put(f'/api/v1/employees/{emp_id}', json={'allowances': 500, **salary_change_credentials('Test1234!')})

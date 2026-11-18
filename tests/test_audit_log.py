@@ -77,13 +77,14 @@ def test_employee_creation_logged(app, client, owner_and_company):
             'name': 'Dawit Mekonnen',
             'phone': '0911223344',
             'basic_salary': 15000,
+            'salary_reason': 'new_hire',
             'allowances': 3000,
         },
         follow_redirects=True,
     )
 
     with app.app_context():
-        logs = AuditLog.query.filter_by(company_id=cid, action='employee_added').all()
+        logs = AuditLog.query.filter_by(company_id=cid, action='employee_salary_changed').all()
         assert len(logs) == 1
         assert logs[0].details['name'] == 'Dawit Mekonnen'
 
@@ -99,6 +100,7 @@ def test_salary_change_logged(app, client, owner_and_company):
         data={
             'name': 'Tigist Alemu',
             'basic_salary': 10000,
+            'salary_reason': 'new_hire',
             'allowances': 2000,
         },
         follow_redirects=True,
@@ -140,6 +142,7 @@ def test_bank_account_change_logged(app, client, owner_and_company):
             'name': 'Abebe Kebede',
             'basic_salary': 12000,
             'bank_account': 'cbe:1000123456789',
+            'salary_reason': 'new_hire',
         },
         follow_redirects=True,
     )
@@ -176,6 +179,7 @@ def test_no_change_no_log(app, client, owner_and_company):
         data={
             'name': 'Hana Tesfaye',
             'basic_salary': 8000,
+            'salary_reason': 'new_hire',
         },
         follow_redirects=True,
     )
@@ -183,9 +187,7 @@ def test_no_change_no_log(app, client, owner_and_company):
     with app.app_context():
         emp = Employee.query.filter_by(company_id=cid).first()
         emp_id = emp.id
-        # Clear the employee_added log
-        AuditLog.query.filter_by(company_id=cid).delete()
-        db.session.commit()
+        original_log_ids = [row.id for row in AuditLog.query.filter_by(company_id=cid).order_by(AuditLog.id).all()]
 
     # Edit with same data
     client.post(
@@ -198,8 +200,8 @@ def test_no_change_no_log(app, client, owner_and_company):
     )
 
     with app.app_context():
-        logs = AuditLog.query.filter_by(company_id=cid).all()
-        assert len(logs) == 0
+        logs = AuditLog.query.filter_by(company_id=cid).order_by(AuditLog.id).all()
+        assert [row.id for row in logs] == original_log_ids
 
 
 def test_audit_log_page_renders(app, client, owner_and_company):
@@ -213,6 +215,7 @@ def test_audit_log_page_renders(app, client, owner_and_company):
         data={
             'name': 'Test User',
             'basic_salary': 5000,
+            'salary_reason': 'new_hire',
         },
         follow_redirects=True,
     )
@@ -221,7 +224,7 @@ def test_audit_log_page_renders(app, client, owner_and_company):
     assert resp.status_code == 200
     assert b'Audit Log' in resp.data
     # Template replaces underscores with spaces
-    assert b'employee added' in resp.data
+    assert b'employee salary changed' in resp.data
 
 
 def test_audit_log_no_edit_delete_routes(app):

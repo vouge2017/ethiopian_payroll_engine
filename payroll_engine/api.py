@@ -290,7 +290,10 @@ def list_employees():
 @api_role_required('owner', 'accountant')
 @limiter.limit('30 per minute')
 def create_employee():
+    from .services.employee_service import save_new_employee
+
     data = request.get_json()
+    company_id = _get_company_id()
     if isinstance(data, dict):
         raw_id = data.get('employee_id')
         if isinstance(raw_id, str):
@@ -306,7 +309,7 @@ def create_employee():
             used_ids = {
                 row[0]
                 for row in Employee.with_deleted()
-                .filter_by(company_id=_get_company_id())
+                .filter_by(company_id=company_id)
                 .with_entities(Employee.employee_id)
                 .all()
             }
@@ -317,15 +320,8 @@ def create_employee():
     errors = _validate_employee_data(data)
     if errors:
         return jsonify({'error': 'Validation failed', 'details': errors}), 422
-    existing = (
-        Employee.with_deleted()
-        .filter_by(
-            company_id=_get_company_id(),
-            employee_id=data['employee_id'],
-        )
-        .first()
-    )
-    if existing:
+    existing = Employee.with_deleted().filter_by(company_id=company_id, employee_id=data['employee_id'])
+    if existing.first():
         return jsonify({'error': 'Employee ID already exists (including deleted employees)'}), 409
     emp = Employee(
         employee_id=data['employee_id'],
@@ -335,22 +331,22 @@ def create_employee():
         bank_or_telebirr=data.get('bank_or_telebirr', ''),
         tin=data.get('tin'),
         fayda_fin=data.get('fayda_fin'),
-        company_id=_get_company_id(),
+        company_id=company_id,
     )
-    db.session.add(emp)
-    from sqlalchemy.exc import IntegrityError
-
+    actor = _get_current_user()
     try:
-        db.session.commit()
+        save_new_employee(emp, actor, data.get('salary_reason'))
+    except SalaryChangeRefusedError as refusal:
+        record_salary_refusal(company_id, actor.id, refusal)
+        return jsonify({'error': str(refusal)}), refusal.status
     except IntegrityError:
-        # Defensive: a concurrent create can pass the pre-check and race on
-        # the unique constraint. Roll back cleanly.
-        db.session.rollback()
-        return jsonify({'error': 'Employee ID already exists (concurrent create)'}), 409
+        if existing.first():
+            return jsonify({'error': 'Employee ID already exists (concurrent create)'}), 409
+        raise
 
     from payroll_engine import trust_cache
 
-    trust_cache.invalidate_trust_cache(_get_company_id())
+    trust_cache.invalidate_trust_cache(company_id)
     return jsonify({'id': emp.id, 'employee_id': emp.employee_id}), 201
 
 

@@ -139,7 +139,7 @@ def test_auto_employee_id_does_not_reuse_archived_id(worksheet):
         )
         db.session.commit()
     response = client.post(
-        '/employees/add', data={'first_name': 'Next employee', 'basic_salary': '10000', 'allowances': '0'}
+        '/employees/add', data={'first_name': 'Next employee', 'basic_salary': '0', 'allowances': '0'}
     )
     assert response.status_code == 302
     with app.app_context():

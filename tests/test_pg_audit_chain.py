@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy import create_engine, delete, insert, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
+from test_issue_58_salary_audit import PASSWORD
 from test_issue_65_starting_salary import hire_state, send_create
 from test_pg_corrections import PG_URL
 
@@ -105,6 +106,7 @@ def test_postgres_new_hire_audit_is_immutable(database, monkeypatch, tmp_path, c
         db.session.add(company)
         db.session.flush()
         owner = User(company_id=company.id, role='owner', email=f'{uuid4().hex}@example.invalid')
+        owner.set_password(PASSWORD)
         db.session.add(owner)
         db.session.flush()
         db.session.add(UserCompany(company_id=company.id, user_id=owner.id, role='owner'))

@@ -78,6 +78,7 @@ Configuration locations:
 - Upload via `/employees` → "Import from CSV"
 - Or paste manually via `/employees/add` form
 - Or via API: `POST /api/v1/employees` with `Authorization: Bearer ep_<token>`
+- For a nonzero starting salary or allowance, use an owner or an accountant with salary-edit permission. Select **New hire** on the web form or send `"salary_reason": "new_hire"` in the API request.
 
 ### Validation
 

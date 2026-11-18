@@ -187,7 +187,7 @@ def test_full_payroll_flow(ctx, client):
     ]
 
     for emp_data in employees_data:
-        resp = client.post('/employees/add', data=emp_data, follow_redirects=True)
+        resp = client.post('/employees/add', data={**emp_data, 'salary_reason': 'new_hire'}, follow_redirects=True)
         assert resp.status_code == 200
 
     emps = Employee.query.filter_by(company_id=company.id, is_deleted=False).all()

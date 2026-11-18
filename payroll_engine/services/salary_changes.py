@@ -46,9 +46,7 @@ def check_salary_target(actor, employee):
         raise SalaryChangeRefusedError('You cannot change your own salary.', 403, employee.employee_id)
 
 
-def authorize_salary_change(company_id, actor, employee, fields):
-    check_salary_target(actor, employee)
-    employee_id = employee.employee_id if employee is not None else None
+def require_salary_permission(company_id, actor, employee_id=None):
     membership = (
         UserCompany.query.filter_by(company_id=company_id, user_id=actor.id)
         .populate_existing()
@@ -58,6 +56,12 @@ def authorize_salary_change(company_id, actor, employee, fields):
     role = membership.role if membership else (actor.role if actor.company_id == company_id else None)
     if role != 'owner' and not (role == 'accountant' and membership and membership.can_edit_salary):
         raise SalaryChangeRefusedError('You do not have permission to edit salaries in this company.', 403, employee_id)
+
+
+def authorize_salary_change(company_id, actor, employee, fields):
+    check_salary_target(actor, employee)
+    employee_id = employee.employee_id if employee is not None else None
+    require_salary_permission(company_id, actor, employee_id)
 
     choice = fields.get('salary_reason')
     note = fields.get('salary_note')

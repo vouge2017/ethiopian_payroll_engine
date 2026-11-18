@@ -5,10 +5,18 @@ Extracted from employees_bp.py to separate business logic from HTTP handling.
 
 from datetime import datetime as dt
 from decimal import Decimal, InvalidOperation
+from zoneinfo import ZoneInfo
 
-from payroll_engine import db
+from payroll_engine import db, shared
 from payroll_engine.models import Company, Employee
-from payroll_engine.shared import create_audit_log
+from payroll_engine.services.salary_changes import (
+    SALARY_FIELDS,
+    SalaryChangeRefusedError,
+    require_salary_permission,
+    salary_amount,
+)
+
+NEW_HIRE_REASON = 'new_hire'
 
 
 class EmployeeResult:
@@ -43,12 +51,9 @@ def parse_employee_form(form_data):
 
     try:
         basic = Decimal(form_data.get('basic_salary', '0') or '0')
-    except (InvalidOperation, ValueError):
-        basic = Decimal('0')
-    try:
         allow = Decimal(form_data.get('allowances', '0') or '0')
     except (InvalidOperation, ValueError):
-        allow = Decimal('0')
+        return None, 'Salary and allowances must be valid non-negative amounts.'
     try:
         daily_rate = Decimal(form_data.get('daily_rate', '0') or '0')
     except (InvalidOperation, ValueError):
@@ -110,7 +115,46 @@ def parse_employee_form(form_data):
     }, None
 
 
-def create_employee(data, company_id, user_id):
+def save_new_employee(employee, actor, salary_reason):
+    """Save a hire and its audit evidence together for both entry points."""
+    try:
+        amounts = {}
+        for field in SALARY_FIELDS:
+            value = getattr(employee, field)
+            amounts[field] = salary_amount(value if value is not None else 0)
+            setattr(employee, field, amounts[field])
+    except (InvalidOperation, ValueError) as exc:
+        raise SalaryChangeRefusedError(
+            'Salary and allowances must be valid non-negative amounts.', 422, employee.employee_id
+        ) from exc
+
+    company_id = employee.company_id
+    action = 'employee_added'
+    details = {'employee_id': employee.employee_id, 'name': employee.name}
+    try:
+        if any(amounts.values()):
+            require_salary_permission(company_id, actor, employee.employee_id)
+            if salary_reason != NEW_HIRE_REASON:
+                raise SalaryChangeRefusedError(
+                    'Select New hire as the starting salary reason.', 422, employee.employee_id
+                )
+            action = 'employee_salary_changed'
+            details.update(
+                employee_name=employee.name,
+                reason={'choice': NEW_HIRE_REASON},
+                old_values=dict.fromkeys(SALARY_FIELDS),
+                new_values={field: format(value, '.2f') for field, value in amounts.items()},
+                effective_date=(employee.start_date or dt.now(ZoneInfo('Africa/Addis_Ababa')).date()).isoformat(),
+            )
+        db.session.add(employee)
+        shared.create_audit_log(company_id=company_id, user_id=actor.id, action=action, details=details)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def create_employee(data, company_id, actor, salary_reason):
     """Create a new employee. Returns EmployeeResult."""
     # Billing tier cap (2026-08): plan limits employee count.
     from payroll_engine.billing import check_employee_slot
@@ -160,14 +204,6 @@ def create_employee(data, company_id, user_id):
         daily_rate=data['daily_rate'] if data['employee_type'] == 'daily' else None,
         company_id=company_id,
     )
-    db.session.add(emp)
-
-    create_audit_log(
-        company_id=company_id,
-        user_id=user_id,
-        action='employee_added',
-        details={'employee_id': emp_id, 'name': data['name']},
-    )
-    db.session.commit()
+    save_new_employee(emp, actor, salary_reason)
 
     return EmployeeResult(True, employee=emp)

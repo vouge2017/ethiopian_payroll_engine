@@ -1579,17 +1579,18 @@ class AuditLog(db.Model):
     previous_hash = db.Column(db.String(64), nullable=True)
     hash = db.Column(db.String(64), nullable=True)
 
-    hash_version = db.Column(db.Integer, nullable=False, server_default='1')
-
     # Relationship to User
     user = db.relationship('User', backref=db.backref('audit_logs', lazy=True))
 
-    def compute_hash(self):
+    def compute_hash(self, *, version=None):
         """Verify historical v1 hashes and timestamp-bound v2 hashes."""
+        import base64
         import hashlib
         import json
 
-        if self.hash_version == 2:
+        if version is None:
+            version = 2 if (self.hash or '').startswith('v2:') else 1
+        if version == 2:
             timestamp = self.timestamp
             if timestamp is not None and timestamp.tzinfo is not None:
                 timestamp = timestamp.astimezone(UTC).replace(tzinfo=None)
@@ -1606,7 +1607,11 @@ class AuditLog(db.Model):
                 sort_keys=True,
                 separators=(',', ':'),
             )
-        elif self.hash_version in (None, 1):
+            digest = hashlib.sha256(raw.encode('utf-8')).digest()
+            # Store the marker with the full digest so it survives schema
+            # rollbacks and fits the existing 64-character hash columns.
+            return 'v2:' + base64.urlsafe_b64encode(digest).decode('ascii').rstrip('=')
+        if version == 1:
             raw = (
                 str(self.previous_hash or '')
                 + str(self.company_id)
@@ -1614,9 +1619,8 @@ class AuditLog(db.Model):
                 + str(self.action)
                 + json.dumps(self.details or {}, sort_keys=True, default=str)
             )
-        else:
-            return None
-        return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+            return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+        raise ValueError('Unsupported audit hash version.')
 
     @classmethod
     def verify_chain(cls, company_id: int) -> list:
@@ -1628,7 +1632,7 @@ class AuditLog(db.Model):
         results = []
         for i, entry in enumerate(entries):
             expected_hash = entry.compute_hash()
-            ok = expected_hash is not None and entry.hash == expected_hash
+            ok = entry.hash == expected_hash
             if i == 0:
                 chain_ok = entry.previous_hash is None
                 if not chain_ok:
@@ -1684,25 +1688,28 @@ def _audit_log_before_insert(mapper, connection, target):
     if timestamp.tzinfo is not None:
         timestamp = timestamp.astimezone(UTC).replace(tzinfo=None)
     target.timestamp = timestamp
-    target.hash_version = 2
-    target.hash = target.compute_hash()
+    target.hash = target.compute_hash(version=2)
 
 
 def _protect_salary_audit(mapper, connection, target):
-    if _is_protected_salary_audit(target.action, target.hash_version):
+    if _is_protected_salary_audit(target.action, target.hash):
         raise ValueError('Salary audit records cannot be modified or deleted.')
 
 
-def _is_protected_salary_audit(action, version):
-    return version == 2 and action in ('salary_changed', 'employee_salary_changed', 'salary_permission_changed')
+def _is_protected_salary_audit(action, row_hash):
+    return (row_hash or '').startswith('v2:') and action in (
+        'salary_changed',
+        'employee_salary_changed',
+        'salary_permission_changed',
+    )
 
 
 @db.event.listens_for(AuditLog, 'before_update')
 def _protect_salary_audit_update(mapper, connection, target):
     old_action = db.inspect(target).attrs.action.history.deleted
-    old_version = db.inspect(target).attrs.hash_version.history.deleted
+    old_hash = db.inspect(target).attrs.hash.history.deleted
     if _is_protected_salary_audit(
-        old_action[0] if old_action else target.action, old_version[0] if old_version else target.hash_version
+        old_action[0] if old_action else target.action, old_hash[0] if old_hash else target.hash
     ):
         raise ValueError('Salary audit records cannot be modified.')
 

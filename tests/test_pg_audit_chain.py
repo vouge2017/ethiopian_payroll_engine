@@ -55,10 +55,11 @@ def test_legacy_and_concurrent_audit_writes(database):
 
 
 def test_postgres_prevents_rewriting_salary_evidence(database):
+    from alembic import command
     from sqlalchemy import delete, update
     from sqlalchemy.exc import DBAPIError
 
-    url, _ = database
+    url, cfg = database
     engine = create_engine(url)
     try:
         with Session(engine) as session, session.begin():
@@ -79,6 +80,9 @@ def test_postgres_prevents_rewriting_salary_evidence(database):
                 engine.begin() as connection,
             ):
                 connection.execute(change)
+        # A schema rollback must preserve the version marker and audit evidence.
+        command.downgrade(cfg, 'k20261104a01')
+        command.upgrade(cfg, 'head')
         with Session(engine) as session:
             row = session.get(AuditLog, row_id)
             assert row.details['reason']['note'] == 'Original'

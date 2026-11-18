@@ -70,3 +70,6 @@ def test_read_xlsx_normalizes_numeric_cells(tmp_path):
     assert rows[1]['tin'] == '1234567890'
     assert rows[1]['basic_salary'] == '8000'
     assert parse_salary(rows[1]['basic_salary']) == Decimal('8000')
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

@@ -170,6 +170,12 @@ def calculate_payroll_from_assignments(
     if basic_salary < 0:
         raise ValueError(f'basic_salary cannot be negative: {basic_salary}')
 
+    from payroll_engine.pension import _get_rates
+    from payroll_engine.tax import _get_brackets_and_relief
+
+    _get_brackets_and_relief(for_date)
+    _get_rates(for_date)
+
     # ------------------------------------------------------------------
     # 1. Load active, effective assignments for this employee + company.
     #    Excludes system catalog items (company_id IS NULL) because those are

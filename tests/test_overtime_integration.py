@@ -35,6 +35,9 @@ def app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         TenantQuery.register_model(OvertimeEntry)
         yield app
         db.drop_all()
@@ -258,3 +261,6 @@ def test_overtime_no_entries():
     assert result['total_hours'] == 0
     assert result['total_pay'] == 0
     assert not result['exceeds_monthly_limit']
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

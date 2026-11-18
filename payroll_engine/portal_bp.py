@@ -98,21 +98,38 @@ def my_payslip_detail(payslip_id):
         taxable = payslip.taxable_income
     else:
         taxable = payslip.gross_salary - payslip.employee_pension
-    tax_breakdown = calculate_tax_breakdown(taxable)
+    from payroll_engine.models import PayrollRun
+    from payroll_engine.rule_errors import MissingPayrollRuleError, PayrollRuleLookupError
+
+    run = PayrollRun.query.filter_by(id=payslip.payroll_run_id, company_id=emp.company_id).first()
+    calculation_date = (payslip.calculation_context or {}).get('calculation_date') or (run.run_date if run else None)
+
+    try:
+        if not calculation_date:
+            raise MissingPayrollRuleError('The historical calculation date is missing.')
+        tax_breakdown = calculate_tax_breakdown(taxable, calculation_date)
+    except (MissingPayrollRuleError, PayrollRuleLookupError):
+        tax_breakdown = None
 
     from payroll_engine.models import PayslipAcknowledgment
     from payroll_engine.payroll import generate_calculation_flow
 
-    calc_flow = generate_calculation_flow(
-        {
-            'gross': payslip.gross_salary,
-            'pension_employee': payslip.employee_pension,
-            'exempt_allowances': payslip.exempt_allowances or 0,
-            'taxable': taxable,
-            'tax': payslip.tax,
-            'net': payslip.net_pay,
-        }
-    )
+    try:
+        if not calculation_date:
+            raise MissingPayrollRuleError('The historical calculation date is missing.')
+        calc_flow = generate_calculation_flow(
+            {
+                'gross': payslip.gross_salary,
+                'pension_employee': payslip.employee_pension,
+                'exempt_allowances': payslip.exempt_allowances or 0,
+                'taxable': taxable,
+                'tax': payslip.tax,
+                'net': payslip.net_pay,
+                'calculation_date': str(calculation_date),
+            }
+        )
+    except (MissingPayrollRuleError, PayrollRuleLookupError):
+        calc_flow = None
 
     # Check acknowledgment status
     payslip_acknowledged = PayslipAcknowledgment.query.filter_by(

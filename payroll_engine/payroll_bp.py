@@ -875,11 +875,20 @@ def payroll_upload():
                 year=date.today().year,
             )
 
-        except Exception as e:
+        except ValueError as e:
+            from payroll_engine.rule_errors import MissingPayrollRuleError, PayrollRuleLookupError
+
+            if isinstance(e, (MissingPayrollRuleError, PayrollRuleLookupError)):
+                db.session.rollback()
+                flash(str(e), 'danger')
+                return redirect(request.url)
             log_and_flash_error(
                 'Could not process the payroll file. Please check the CSV and try again.',
                 e,
             )
+            return redirect(request.url)
+        except Exception as e:
+            log_and_flash_error('Could not process the payroll file. Please check the CSV and try again.', e)
             return redirect(request.url)
 
     has_completed_run = PayrollRun.query.filter_by(company_id=_company_id(), status='completed').first() is not None
@@ -925,12 +934,19 @@ def payroll_confirm(run_id):
     flags = PayrollValidationResult.query.filter_by(payroll_run_id=run.id, severity='FLAG').all()
     # Add tax breakdown and calculation flow for each employee
     from payroll_engine.payroll import generate_calculation_flow
+    from payroll_engine.rule_errors import MissingPayrollRuleError, PayrollRuleLookupError
     from payroll_engine.tax import calculate_tax_breakdown
 
-    for emp in employees_data:
-        taxable = emp.get('taxable', emp.get('gross', 0) - emp.get('pension_employee', 0))
-        emp['tax_breakdown'] = calculate_tax_breakdown(taxable)
-        emp['calc_flow'] = generate_calculation_flow(emp)
+    try:
+        for emp in employees_data:
+            taxable = emp.get('taxable', emp.get('gross', 0) - emp.get('pension_employee', 0))
+            calculation_date = emp.get('calculation_date') or run.run_date.isoformat()
+            emp['tax_breakdown'] = calculate_tax_breakdown(taxable, calculation_date)
+            emp['calc_flow'] = generate_calculation_flow(dict(emp, calculation_date=calculation_date))
+    except (MissingPayrollRuleError, PayrollRuleLookupError) as error:
+        db.session.rollback()
+        flash(str(error), 'danger')
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run_id))
 
     return render_template(
         'payroll_confirm.html',
@@ -1513,11 +1529,13 @@ def historical_import():
             # Employer pension is 11% of salary (Proclamation 1268/2022).
             # The CSV carries the employee share only; derive the employer
             # share instead of writing 0 (which corrupted pension filings).
-            from payroll_engine.pension import DEFAULT_EMPLOYER_RATE
+            from payroll_engine.pension import _get_rates, employer_pension
 
             def _employer_share(buf):
                 base = buf['basic'] if buf['basic'] > 0 else buf['gross']
-                return (base * DEFAULT_EMPLOYER_RATE).quantize(Decimal('0.01'))
+                rule_date = date(buf['year'], buf['month'], 1)
+                _get_rates(rule_date)
+                return employer_pension(base, rule_date)
 
             # Apply buffered rows
             for buf in rows_buffer:
@@ -1591,6 +1609,15 @@ def historical_import():
 
             return redirect(url_for('payroll.historical_import'))
 
+        except ValueError as e:
+            from payroll_engine.rule_errors import MissingPayrollRuleError, PayrollRuleLookupError
+
+            db.session.rollback()
+            if isinstance(e, (MissingPayrollRuleError, PayrollRuleLookupError)):
+                flash(str(e), 'danger')
+            else:
+                log_and_flash_error('Could not process the import file.', e)
+            return redirect(request.url)
         except Exception as e:
             db.session.rollback()
             log_and_flash_error('Could not process the import file.', e)

@@ -249,6 +249,9 @@ def app_for_elements():
     flask_app.config['WTF_CSRF_ENABLED'] = False
     with flask_app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         yield flask_app
         db.session.remove()
         db.drop_all()
@@ -325,3 +328,6 @@ def _render_elements_result(company):
     company_id = company.id
     employee = db.session.query(Employee).filter_by(company_id=company_id, employee_id='RC38').one()
     return calculate_payroll_from_assignments(employee, company_id, date(2025, 9, 25))
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

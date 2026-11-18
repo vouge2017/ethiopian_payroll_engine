@@ -24,6 +24,8 @@ from payroll_engine.excel_payroll import (
     ExcelPayrollEngine,
 )
 
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

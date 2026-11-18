@@ -69,6 +69,9 @@ def app():
     app.config.update(TESTING=True, SQLALCHEMY_DATABASE_URI='sqlite:///:memory:', WTF_CSRF_ENABLED=False)
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         _invalidate()
         yield app
         _invalidate()
@@ -366,13 +369,15 @@ def _overtime_cases(tag):
 
 
 def _with_tax_rule_override():
+    from helpers import synthetic_payroll_rules
+
     db.session.add(
         TaxRule(
             version_name='golden-ot',
             effective_date=date(2025, 7, 8),
             country='ET',
             status='active',
-            rules_json={'overtime': TAX_RULE_OVERTIME},
+            rules_json={**synthetic_payroll_rules(), 'overtime': TAX_RULE_OVERTIME},
         )
     )
     db.session.commit()

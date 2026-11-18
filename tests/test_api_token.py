@@ -30,6 +30,9 @@ def app():
     app.config['WTF_CSRF_ENABLED'] = False
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         TenantQuery.register_model(Employee)
         TenantQuery.register_model(OvertimeEntry)
         yield app

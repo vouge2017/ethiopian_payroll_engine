@@ -316,3 +316,6 @@ class TestAdjustmentEdgeCases:
     def test_deduction_larger_than_net(self):
         with pytest.raises(ValueError, match='policy review'):
             _addition('10000', adjustment_type='deduction')
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

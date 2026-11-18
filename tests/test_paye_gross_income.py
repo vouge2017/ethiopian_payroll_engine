@@ -144,6 +144,9 @@ def elements_app():
     flask_app.config['WTF_CSRF_ENABLED'] = False
     with flask_app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         yield flask_app
         db.session.remove()
         db.drop_all()
@@ -425,3 +428,6 @@ def test_run_results_screen_shows_stored_taxable(elements_app, values, shown_tax
     page = resp.get_data(as_text=True)
     assert shown_taxable in page
     assert note in page
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

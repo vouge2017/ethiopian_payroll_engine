@@ -218,3 +218,6 @@ def test_prorata_end_before_start_is_zero():
 
 def test_prorata_zero_salary_is_zero():
     assert calculate_prorated_salary(0, date(2026, 7, 16)) == Decimal('0')
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

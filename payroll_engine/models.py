@@ -1731,11 +1731,21 @@ class TaxRule(db.Model):
 
     @property
     def pension_employee_rate(self):
-        return self.rules_json.get('pension', {}).get('employee_rate', 0.07)
+        from payroll_engine.rule_errors import MissingPayrollRuleError
+
+        try:
+            return self.rules_json['pension']['employee_rate']
+        except (KeyError, TypeError) as exc:
+            raise MissingPayrollRuleError('The pension rule is incomplete. Fix it before continuing.') from exc
 
     @property
     def pension_employer_rate(self):
-        return self.rules_json.get('pension', {}).get('employer_rate', 0.11)
+        from payroll_engine.rule_errors import MissingPayrollRuleError
+
+        try:
+            return self.rules_json['pension']['employer_rate']
+        except (KeyError, TypeError) as exc:
+            raise MissingPayrollRuleError('The pension rule is incomplete. Fix it before continuing.') from exc
 
     @property
     def pension_deduction_order(self):

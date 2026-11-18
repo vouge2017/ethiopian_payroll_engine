@@ -334,6 +334,12 @@ def calculate_settlement(
     if SETTLEMENT_LUMP_SUM_TAX_METHOD != 'final_month_aggregate':
         raise ValueError(f'Unsupported settlement tax method: {SETTLEMENT_LUMP_SUM_TAX_METHOD!r}')
 
+    from payroll_engine.pension import _get_rates
+    from payroll_engine.tax import _get_brackets_and_relief
+
+    _get_brackets_and_relief(end_date)
+    _get_rates(end_date)
+
     start = employee.start_date or employee.created_at.date()
     notice_amount = _money(notice_pay, 'Notice pay')
 
@@ -364,15 +370,15 @@ def calculate_settlement(
 
     # 4. Pension deduction on the prorated basic share of the final month
     # (pension is on basic salary only; lump sums carry none).
-    pension_ded = employee_pension(breakdown['basic'])
+    pension_ded = employee_pension(breakdown['basic'], end_date)
     pension_off_base = pension_ded if _constants.PENSION_DEDUCTED_BEFORE_TAX else Decimal('0')
 
     # 5. Tax: salary + severance + notice pay + leave encashment, one month.
     lump_sums = severance_amount + notice_amount + leave_encashment
     salary_base = max(Decimal('0'), outstanding_salary - pension_off_base)
     taxable_income = max(Decimal('0'), outstanding_salary + lump_sums - pension_off_base)
-    tax_salary_only = calculate_tax(salary_base)
-    income_tax = calculate_tax(taxable_income)
+    tax_salary_only = calculate_tax(salary_base, end_date)
+    income_tax = calculate_tax(taxable_income, end_date)
     tax_on_termination_payments = income_tax - tax_salary_only
 
     # 6. Pending deductions (active loans, cost-sharing, etc.)

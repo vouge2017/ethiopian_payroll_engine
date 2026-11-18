@@ -49,3 +49,6 @@ def test_missing_or_non_reconciling_history_rejected():
         frozen_tax(9300, None)
     with pytest.raises(ValueError, match='reconcile'):
         calculate_adjustment(10000, 1, 700, 7825, 2000, taxable_income=9300, tax_context=context())
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

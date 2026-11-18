@@ -53,6 +53,12 @@ def worksheet(monkeypatch, tmp_path):
     cfg.set_main_option('sqlalchemy.url', PG_URL)
     with app.app_context():
         command.upgrade(cfg, 'head')
+        from helpers import seed_synthetic_payroll_rule
+
+        from payroll_engine.models import TaxRule
+
+        if not TaxRule.query.filter_by(version_name='synthetic-test-rule').first():
+            seed_synthetic_payroll_rule()
         company = Company(name='Worksheet ' + uuid4().hex)
         foreign = Company(name='Foreign worksheet ' + uuid4().hex)
         db.session.add_all([company, foreign])
@@ -141,14 +147,15 @@ def form(ids, **changes):
 
 
 def test_save_recalculate_applies_bonus_absences_and_survives_reload(worksheet):
-    _, client, ids, engine, _ = worksheet
+    app, client, ids, engine, _ = worksheet
     response = client.post('/payroll/spreadsheet', data=form(ids, bonus='900.50', absences='2'), follow_redirects=True)
     assert response.status_code == 200
     html = response.get_data(as_text=True)
     inputs = Inputs(html).values
     assert Decimal(inputs[f'emp_{ids["employee"]}_bonus']) == Decimal('900.50')
     assert Decimal(inputs[f'emp_{ids["employee"]}_absences']) == 2
-    expected = calculate_payroll(10000, Decimal('2900.50'), sick_leave_reduction=Decimal('800'))
+    with app.app_context():
+        expected = calculate_payroll(10000, Decimal('2900.50'), sick_leave_reduction=Decimal('800'))
     # The same canonical employee inputs now live in a responsive ledger card.
     cards = re.findall(r'<section class="monthly-employee"[^>]*>(.*?)</section>', html, re.S)
     row = next(card for card in cards if 'Synthetic monthly' in card)

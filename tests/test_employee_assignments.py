@@ -48,6 +48,9 @@ def app():
 
     with app.app_context():
         db.create_all()
+        from helpers import seed_synthetic_payroll_rule
+
+        seed_synthetic_payroll_rule()
         yield app
         db.session.remove()
         db.drop_all()

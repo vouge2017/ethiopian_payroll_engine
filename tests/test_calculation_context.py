@@ -94,3 +94,6 @@ def test_elements_overtime_receives_payroll_rule_date(app, system_catalog, monke
         employee, cid, historical_date, overtime_entries=[{'hours': 2, 'type': 'day'}], consume_balances=False
     )
     assert seen == [historical_date]
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

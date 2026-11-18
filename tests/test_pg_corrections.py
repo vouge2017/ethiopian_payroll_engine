@@ -54,6 +54,10 @@ def payroll(database, monkeypatch, tmp_path):
         f for f in app.before_request_funcs.get(None, []) if f.__name__ != 'daily_retention_purge'
     ]
     with app.app_context():
+        from helpers import seed_synthetic_payroll_rule
+
+        if not models.TaxRule.query.filter_by(version_name='synthetic-test-rule').first():
+            seed_synthetic_payroll_rule()
         company, foreign = models.Company(name='Synthetic correction'), models.Company(name='Foreign correction')
         db.session.add_all([company, foreign])
         db.session.flush()

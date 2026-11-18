@@ -6,6 +6,8 @@ and that the breakdown total matches the tax amount.
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from decimal import Decimal
@@ -96,3 +98,6 @@ def test_kebede_taxable_16950():
     bd = calculate_tax_breakdown(16950)
     assert bd['total_tax'] == 3882.5
     assert len(bd['brackets']) == 6
+
+
+pytestmark = pytest.mark.usefixtures('synthetic_calculation_rule')

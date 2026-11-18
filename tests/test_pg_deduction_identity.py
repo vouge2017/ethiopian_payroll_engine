@@ -62,6 +62,12 @@ def dataset(monkeypatch):
         cfg.set_main_option('script_location', str(repo / 'migrations'))
         cfg.set_main_option('sqlalchemy.url', PG_URL)
         command.upgrade(cfg, 'head')
+        from helpers import seed_synthetic_payroll_rule
+
+        from payroll_engine.models import TaxRule
+
+        if not TaxRule.query.filter_by(version_name='synthetic-test-rule').first():
+            seed_synthetic_payroll_rule()
         company = Company(name='PG identity ' + uuid4().hex)
         foreign = Company(name='PG foreign ' + uuid4().hex)
         db.session.add_all([company, foreign])

@@ -10,7 +10,7 @@ Extracted from main.py to enable:
 
 import calendar
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from payroll_engine import constants as _constants
 from payroll_engine.leave import LeaveType
@@ -51,6 +51,17 @@ class LeaveRuleNotConfirmedError(ValueError):
 
     def __init__(self, message: str = LEAVE_RULE_BLOCK_MESSAGE):
         super().__init__(message)
+
+
+class NegativeSettlementConfirmationError(ValueError):
+    """The exact negative settlement value was not explicitly confirmed."""
+
+    def __init__(self, amount: Decimal):
+        self.amount = amount.quantize(Q)
+        super().__init__(
+            f'This settlement pays a NEGATIVE final amount of ETB {self.amount:,.2f}. '
+            'Explicit confirmation for this exact amount is required.'
+        )
 
 
 def _outstanding_breakdown(employee: Employee, end_date: date) -> dict:
@@ -491,6 +502,8 @@ def create_settlement_record(
     db_session,
     unused_leave_days=None,
     notice_pay=None,
+    confirm_negative_net=False,
+    confirmed_negative_net=None,
 ) -> FinalSettlement:
     """Calculate and persist a FinalSettlement record.
 
@@ -506,6 +519,8 @@ def create_settlement_record(
         db_session: SQLAlchemy session
         unused_leave_days: Optional manual unused annual-leave days
         notice_pay: Optional pay in lieu of notice (ETB)
+        confirm_negative_net: Explicit human confirmation for a negative net
+        confirmed_negative_net: Exact negative net amount being confirmed
 
     Returns:
         FinalSettlement record (already added to session, not committed)
@@ -523,9 +538,26 @@ def create_settlement_record(
         unused_leave_days=unused_leave_days,
         notice_pay=notice_pay,
     )
+    net_final = Decimal(str(calc['net_final_payment'])).quantize(Q)
+    negative_confirmed = False
+    if net_final < 0:
+        try:
+            confirmed_amount = (
+                Decimal(str(confirmed_negative_net)).quantize(Q) if confirmed_negative_net is not None else None
+            )
+        except (InvalidOperation, ValueError):
+            confirmed_amount = None
+        if confirm_negative_net is not True or confirmed_amount != net_final:
+            raise NegativeSettlementConfirmationError(net_final)
+        negative_confirmed = True
+
     block = settlement_finalize_block(calc)
     if block:
         raise LeaveRuleNotConfirmedError(block)
+
+    calculation_details = dict(calc['calculation_details'] or {})
+    calculation_details['negative_net_confirmed'] = negative_confirmed
+    calculation_details['negative_net_confirmed_amount'] = str(net_final) if negative_confirmed else None
 
     settlement = FinalSettlement(
         company_id=company_id,
@@ -544,7 +576,7 @@ def create_settlement_record(
         tax_on_salary=calc['income_tax'],
         pending_deductions=calc['pending_deductions'],
         deduction_details=calc['deduction_details'],
-        calculation_details=calc['calculation_details'],
+        calculation_details=calculation_details,
         total_deductions=calc['total_deductions'],
         net_final_payment=calc['net_final_payment'],
         payment_method=employee.bank_account or employee.bank_or_telebirr or 'Cash',

@@ -1374,6 +1374,7 @@ def terminate_employee(emp_id):
     """Terminate an employee with severance calculation and final settlement."""
     from payroll_engine.services.settlement_service import (
         LeaveRuleNotConfirmedError,
+        NegativeSettlementConfirmationError,
         calculate_settlement,
         create_settlement_record,
     )
@@ -1430,34 +1431,40 @@ def terminate_employee(emp_id):
             return redirect(url_for('employees.terminate_employee', emp_id=emp.id))
 
         confirm_negative_net = request.form.get('confirm_negative_net', '').strip()
+        confirmed_negative_net = request.form.get('confirmed_negative_net', '').strip()
         form_values = {
             'termination_reason': reason,
             'end_date': end_date.isoformat(),
             'unused_leave_days': '' if unused_leave_days is None else str(unused_leave_days),
             'notice_pay': '' if notice_pay is None else str(notice_pay),
             'confirm_negative_net': confirm_negative_net,
+            'confirmed_negative_net': confirmed_negative_net,
         }
         # Owner decision 2026-11-15 (docs/policy_decisions_2026-11-15.md, Q1=A):
         # a settlement whose pending deductions exceed its earnings records a
         # negative net final payment. Nothing is finalized until the user
         # explicitly confirms the recovery; the confirmation is audited.
         if not is_preview:
-            try:
-                precheck = calculate_settlement(
-                    emp,
-                    reason,
-                    end_date,
-                    _company_id(),
-                    db.session,
-                    unused_leave_days=unused_leave_days,
-                    notice_pay=notice_pay,
-                )
-            except LeaveRuleNotConfirmedError:
-                # finalize falls through to create_settlement_record, which
-                # raises the same error into the existing blocked handler.
-                precheck = None
-            else:
-                if precheck['net_final_payment'] < 0 and confirm_negative_net != 'on':
+            precheck = calculate_settlement(
+                emp,
+                reason,
+                end_date,
+                _company_id(),
+                db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+            if precheck['net_final_payment'] < 0:
+                try:
+                    from decimal import Decimal as _Decimal
+
+                    confirmed_amount = _Decimal(confirmed_negative_net).quantize(Decimal('0.01'))
+                except Exception:
+                    confirmed_amount = None
+                confirmation_valid = confirm_negative_net == 'on' and confirmed_amount == precheck[
+                    'net_final_payment'
+                ].quantize(Decimal('0.01'))
+                if not confirmation_valid:
                     message = (
                         f'This settlement pays a NEGATIVE final amount of ETB '
                         f'{precheck["net_final_payment"]:,.2f} because pending deductions exceed the final pay. '
@@ -1492,6 +1499,24 @@ def terminate_employee(emp_id):
                 db_session=db.session,
                 unused_leave_days=unused_leave_days,
                 notice_pay=notice_pay,
+                confirm_negative_net=confirm_negative_net == 'on',
+                confirmed_negative_net=confirmed_negative_net,
+            )
+        except NegativeSettlementConfirmationError as exc:
+            db.session.rollback()
+            preview = calculate_settlement(
+                emp,
+                reason,
+                end_date,
+                _company_id(),
+                db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+            preview = dict(preview)
+            preview['net_final_payment'] = exc.amount
+            return _render_terminate_form(
+                emp, preview=preview, form_values=form_values, block_message=str(exc), status=409
             )
         except LeaveRuleNotConfirmedError as exc:
             db.session.rollback()
@@ -1544,7 +1569,7 @@ def terminate_employee(emp_id):
                 'taxable_income': str(settlement.taxable_income),
                 'income_tax': str(settlement.tax_on_salary),
                 'net_final_payment': str(settlement.net_final_payment),
-                'negative_net_confirmed': settlement.net_final_payment < 0,
+                'negative_net_confirmed': (settlement.calculation_details or {}).get('negative_net_confirmed') is True,
             },
         )
         db.session.commit()

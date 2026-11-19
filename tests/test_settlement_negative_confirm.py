@@ -100,6 +100,24 @@ def _finalize_data(**extra):
     return data
 
 
+def _confirmed_negative_data(setup):
+    company, _user, emp = setup
+    from payroll_engine.services.settlement_service import calculate_settlement
+
+    calc = calculate_settlement(
+        emp,
+        'resignation',
+        END,
+        company.id,
+        db.session,
+        unused_leave_days=Decimal('10'),
+    )
+    return _finalize_data(
+        confirm_negative_net='on',
+        confirmed_negative_net=str(calc['net_final_payment'].quantize(Decimal('0.01'))),
+    )
+
+
 def test_preview_shows_negative_warning_and_confirm_checkbox(app, setup):
     company, user, emp = setup
     client = app.test_client()
@@ -142,7 +160,7 @@ def test_finalize_negative_with_confirm_creates_settlement_and_audit(app, setup)
     company, user, emp = setup
     client = app.test_client()
     _login(client, user)
-    resp = client.post(f'/employees/{emp.id}/terminate', data=_finalize_data(confirm_negative_net='on'))
+    resp = client.post(f'/employees/{emp.id}/terminate', data=_confirmed_negative_data(setup))
     assert resp.status_code == 302
     db.session.expire_all()
     settlement = FinalSettlement.query.filter_by(company_id=company.id).one()
@@ -169,11 +187,130 @@ def test_positive_settlement_needs_no_confirm(app, setup):
     assert log.details['negative_net_confirmed'] is False
 
 
+def test_direct_service_rejects_negative_without_confirm(app, setup):
+    from payroll_engine.services import settlement_service
+
+    company, user, emp = setup
+    with pytest.raises(settlement_service.NegativeSettlementConfirmationError):
+        settlement_service.create_settlement_record(
+            emp,
+            'resignation',
+            END,
+            company.id,
+            user.id,
+            db.session,
+            unused_leave_days=10,
+        )
+    db.session.rollback()
+    assert FinalSettlement.query.filter_by(company_id=company.id).count() == 0
+    assert db.session.get(Employee, emp.id).is_deleted is False
+
+
+def test_direct_service_rejects_wrong_confirmation_amount(app, setup):
+    from payroll_engine.services import settlement_service
+
+    company, user, emp = setup
+    with pytest.raises(settlement_service.NegativeSettlementConfirmationError):
+        settlement_service.create_settlement_record(
+            emp,
+            'resignation',
+            END,
+            company.id,
+            user.id,
+            db.session,
+            unused_leave_days=10,
+            confirm_negative_net=True,
+            confirmed_negative_net=Decimal('-0.01'),
+        )
+    db.session.rollback()
+    assert FinalSettlement.query.filter_by(company_id=company.id).count() == 0
+    assert db.session.get(Employee, emp.id).is_deleted is False
+
+
+def test_direct_service_accepts_exact_confirmed_negative(app, setup):
+    from payroll_engine.services import settlement_service
+
+    company, user, emp = setup
+    calc = settlement_service.calculate_settlement(
+        emp,
+        'resignation',
+        END,
+        company.id,
+        db.session,
+        unused_leave_days=Decimal('10'),
+    )
+    settlement = settlement_service.create_settlement_record(
+        emp,
+        'resignation',
+        END,
+        company.id,
+        user.id,
+        db.session,
+        unused_leave_days=Decimal('10'),
+        confirm_negative_net=True,
+        confirmed_negative_net=calc['net_final_payment'],
+    )
+    db.session.commit()
+
+    assert settlement.net_final_payment < 0
+    assert settlement.calculation_details['negative_net_confirmed'] is True
+    assert settlement.calculation_details['negative_net_confirmed_amount'] == str(settlement.net_final_payment)
+
+
+def test_route_rejects_tampered_confirmation_amount(app, setup):
+    company, user, emp = setup
+    client = app.test_client()
+    _login(client, user)
+    resp = client.post(
+        f'/employees/{emp.id}/terminate',
+        data=_finalize_data(
+            confirm_negative_net='on',
+            confirmed_negative_net='-0.01',
+        ),
+    )
+
+    assert resp.status_code == 409
+    db.session.expire_all()
+    assert FinalSettlement.query.filter_by(company_id=company.id).count() == 0
+    assert db.session.get(Employee, emp.id).is_deleted is False
+
+
+def test_changed_between_precheck_and_save_is_blocked(app, setup, monkeypatch):
+    from payroll_engine.services import settlement_service
+
+    company, user, emp = setup
+    original = settlement_service.calculate_settlement
+    calls = {'count': 0}
+
+    def changed_calc(*args, **kwargs):
+        calls['count'] += 1
+        result = original(*args, **kwargs)
+        if calls['count'] == 1:
+            result = dict(result)
+            result['net_final_payment'] = Decimal('125.00')
+        elif calls['count'] == 2:
+            result = dict(result)
+            result['net_final_payment'] = Decimal('-275.00')
+        return result
+
+    monkeypatch.setattr(settlement_service, 'calculate_settlement', changed_calc)
+
+    client = app.test_client()
+    _login(client, user)
+    resp = client.post(f'/employees/{emp.id}/terminate', data=_finalize_data())
+
+    assert resp.status_code == 409
+    db.session.expire_all()
+    assert FinalSettlement.query.filter_by(company_id=company.id).count() == 0
+    assert db.session.get(Employee, emp.id).is_deleted is False
+    assert EmployeeDeduction.query.filter_by(employee_id=emp.id, company_id=company.id, is_active=True).count() == 1
+
+
 def test_settlement_detail_shows_negative_warning(app, setup):
     company, user, emp = setup
     client = app.test_client()
     _login(client, user)
-    client.post(f'/employees/{emp.id}/terminate', data=_finalize_data(confirm_negative_net='on'))
+    client.post(f'/employees/{emp.id}/terminate', data=_confirmed_negative_data(setup))
     db.session.expire_all()
     settlement = FinalSettlement.query.filter_by(company_id=company.id).one()
     resp = client.get(f'/settlements/{settlement.id}')

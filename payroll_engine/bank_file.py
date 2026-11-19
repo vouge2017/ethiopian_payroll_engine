@@ -240,6 +240,14 @@ def format_amount(amount: Any, decimals: int = 2) -> str:
     return f'{_rounded_amount(amount, decimals):.{decimals}f}'
 
 
+def _require_positive_payment_amounts(employees_data: list[dict[str, Any]], decimals: int) -> None:
+    for emp in employees_data:
+        amount = _rounded_amount(emp.get('net', 0), decimals)
+        if amount <= 0:
+            name = emp.get('name', 'Unknown')
+            raise ValueError(f'Payment amount for employee {name} must be positive; got {amount:.{decimals}f}')
+
+
 def validate_payroll_for_bank(
     employees_data: list[dict[str, Any]], bank: str = 'cbe', previous_payslips: dict[str, dict] | None = None
 ) -> list[dict[str, Any]]:
@@ -397,6 +405,8 @@ def generate_csv(
     Returns:
         CSV file as bytes
     """
+    _require_positive_payment_amounts(employees_data, decimals)
+
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -460,6 +470,8 @@ def generate_xlsx(
     Returns:
         XLSX file as bytes
     """
+    _require_positive_payment_amounts(employees_data, decimals)
+
     try:
         import openpyxl
         from openpyxl.styles import Alignment, Border, Font, PatternFill, Side

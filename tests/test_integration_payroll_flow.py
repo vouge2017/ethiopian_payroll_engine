@@ -199,11 +199,10 @@ class TestIntegrationPayrollFlow:
             for emp, _gross, _tax, _pension, net in payslip_data:
                 payments.append(
                     {
-                        'employee_id': emp.employee_id,
-                        'employee_name': emp.name,
-                        'account_number': emp.bank_or_telebirr,
-                        'amount': net,
-                        'bank': 'cbe',
+                        'id': emp.employee_id,
+                        'name': emp.name,
+                        'bank': emp.bank_or_telebirr,
+                        'net': net,
                     }
                 )
 

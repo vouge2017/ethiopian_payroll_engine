@@ -10,6 +10,8 @@ import os
 import sys
 from decimal import Decimal
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import openpyxl
@@ -325,3 +327,14 @@ def test_payment_exports_round_amounts_half_up_and_preserve_workbook_values():
     assert sheet['C6'].value == 'October 2026 salary - E001 Abebe Kebede'
     assert sheet['D6'].value == 'ETB'
     assert Decimal(str(sheet['B7'].value)) == Decimal('12500.13')
+
+
+@pytest.mark.parametrize('generator', [generate_csv, generate_xlsx])
+@pytest.mark.parametrize('amount', [Decimal('-100.00'), Decimal('0.00')])
+def test_payment_generators_refuse_nonpositive_amounts(generator, amount):
+    employees = [
+        {'id': 'E001', 'name': 'Alice Example', 'bank': 'cbe:1000123456789', 'net': amount},
+    ]
+
+    with pytest.raises(ValueError, match=rf'Alice Example.*{amount}'):
+        generator(employees, bank='cbe', period='October 2026')

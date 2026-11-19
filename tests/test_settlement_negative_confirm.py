@@ -75,6 +75,10 @@ def setup(app):
         label='Salary advance',
         amount=Decimal('30000'),
         remaining_balance=Decimal('30000'),
+        written_consent_recorded=True,
+        written_consent_date=START,
+        written_consent_reference='Synthetic signed consent TEST-NEG',
+        written_consent_recorded_by=user.id,
         start_date=START,
         is_active=True,
     )

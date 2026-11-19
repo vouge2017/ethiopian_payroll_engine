@@ -64,6 +64,10 @@ class NegativeSettlementConfirmationError(ValueError):
         )
 
 
+class SettlementDeductionChangedError(ValueError):
+    """A pending deduction changed between settlement calculation and finalization."""
+
+
 def _outstanding_breakdown(employee: Employee, end_date: date) -> dict:
     """Split the last working month's pay into basic and allowance components.
 
@@ -396,24 +400,57 @@ def calculate_settlement(
     pending_deductions = Decimal('0')
     deduction_details = []
 
+    # PENDING ADVISER CONFIRMATION: settlement cap wage basis follows the
+    # basic-plus-regular-allowances leave-rate basis.
+    cap_base = leave_daily_rate_details(employee, basis=_constants.LEAVE_RATE_BASIS_BASIC_PLUS_REGULAR_ALLOWANCES)[
+        'monthly_base'
+    ]
+    cap_amount = (cap_base / Decimal('3')).quantize(Q, rounding=ROUND_HALF_UP)
+    cap_room = cap_amount
+    total_earnings = outstanding_salary + severance_amount + notice_amount + leave_encashment
+
     if db_session:
-        active_deductions = EmployeeDeduction.query.filter_by(
-            employee_id=employee.id, company_id=company_id, is_active=True
-        ).all()
+        active_deductions = (
+            EmployeeDeduction.query.filter_by(employee_id=employee.id, company_id=company_id, is_active=True)
+            .order_by(EmployeeDeduction.id.asc())
+            .all()
+        )
 
         for ded in active_deductions:
-            remaining = ded.remaining_balance or ded.amount
-            pending_deductions += remaining
+            previous_balance = Decimal(str(ded.remaining_balance if ded.remaining_balance is not None else ded.amount))
+            consent_exempt = bool(ded.written_consent_recorded)
+            consent_limit = ded.written_consent_amount
+            consent_collected = Decimal('0')
+            if consent_exempt:
+                consent_collected = (
+                    previous_balance if consent_limit is None else min(previous_balance, Decimal(str(consent_limit)))
+                )
+            cap_eligible = previous_balance - consent_collected
+            available_net = max(
+                Decimal('0'),
+                total_earnings - pension_ded - income_tax - pending_deductions - consent_collected,
+            )
+            collected_under_cap = min(cap_eligible, cap_room, available_net)
+            cap_room -= collected_under_cap
+            collected = consent_collected + collected_under_cap
+            still_owed = previous_balance - collected
+            pending_deductions += collected
             deduction_details.append(
                 {
+                    'deduction_id': ded.id,
                     'type': ded.deduction_type,
                     'label': ded.label,
-                    'amount': str(remaining),
+                    'amount': _s(collected),
+                    'previous_remaining_balance': _s(previous_balance),
+                    'collected': _s(collected),
+                    'still_owed': _s(still_owed),
+                    'consent_exempt': consent_exempt,
+                    'consent_collected': _s(consent_collected),
+                    'collected_under_cap': _s(collected_under_cap),
                 }
             )
 
     # 7. Calculate totals
-    total_earnings = outstanding_salary + severance_amount + notice_amount + leave_encashment
     total_deductions = pension_ded + income_tax + pending_deductions
     net_final = total_earnings - total_deductions
 
@@ -465,6 +502,19 @@ def calculate_settlement(
         },
         'warnings': warnings,
     }
+    if deduction_details:
+        calculation_details['deduction_recovery'] = {
+            'cap_base': _s(cap_base),
+            'cap_amount': _s(cap_amount),
+            'previous_remaining_balance_total': _s(
+                sum((Decimal(detail['previous_remaining_balance']) for detail in deduction_details), Decimal('0'))
+            ),
+            'collected_total': _s(pending_deductions),
+            'still_owed_total': _s(sum((Decimal(detail['still_owed']) for detail in deduction_details), Decimal('0'))),
+            'collected_under_cap': _s(
+                sum((Decimal(detail['collected_under_cap']) for detail in deduction_details), Decimal('0'))
+            ),
+        }
 
     return {
         'severance': sev_result,
@@ -582,5 +632,31 @@ def create_settlement_record(
         payment_method=employee.bank_account or employee.bank_or_telebirr or 'Cash',
         created_by=created_by,
     )
+    deductions_to_update = []
+    for detail in calc['deduction_details']:
+        deduction = (
+            EmployeeDeduction.query.filter_by(
+                id=detail['deduction_id'],
+                employee_id=employee.id,
+                company_id=company_id,
+            )
+            .with_for_update()
+            .one_or_none()
+        )
+        if deduction is None:
+            raise SettlementDeductionChangedError(
+                'A pending deduction changed while the settlement was being finalized.'
+            )
+        current_balance = Decimal(
+            str(deduction.remaining_balance if deduction.remaining_balance is not None else deduction.amount)
+        )
+        if _s(current_balance) != detail['previous_remaining_balance']:
+            raise SettlementDeductionChangedError(
+                'A pending deduction balance changed while the settlement was being finalized.'
+            )
+        deductions_to_update.append((deduction, Decimal(detail['still_owed'])))
+
+    for deduction, remaining_balance in deductions_to_update:
+        deduction.remaining_balance = remaining_balance
     db_session.add(settlement)
     return settlement

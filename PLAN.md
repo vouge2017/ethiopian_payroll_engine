@@ -23,14 +23,18 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Fail-before against the merged-main baseline: **8 failed, 4 warnings**.
   Focused settlement/migration regressions: **39 passed, 3 skipped**.
   `python3 run_tests.py --continue`: **TOTAL: 2156 passed, 0 failed,
-  0 errors, 256 skipped** (TIME: 1109.5s). Changed-file Ruff check/format
-  and `git diff --check` passed.
+  0 errors, 256 skipped** (TIME: 977.3s) after updating the PostgreSQL
+  reconciliation test's expected migration head. Changed-file Ruff
+  check/format and `git diff --check` passed. The PostgreSQL written-consent
+  migration test passed in hosted CI; the first PostgreSQL job otherwise
+  failed because the PR8 reconciliation test expected the old migration head.
+  That expectation is updated, and the hosted rerun is pending.
 - SQLite migration upgrade/downgrade: **1 passed**. PostgreSQL migration
-  round-trip is wired into the CI PostgreSQL job but was not run locally
+  upgrade/downgrade round-trip passed in hosted CI; it was not run locally
   (`TEST_DATABASE_URL` and a local PostgreSQL service are unavailable).
   Browser tooling was unavailable; employee consent UI was verified with the
-  Flask test client. Draft PR and hosted checks pending; not merged, deployed,
-  or practitioner accepted.
+  Flask test client. Draft PR #77 remains open; hosted rerun pending. Not
+  merged, deployed, or practitioner accepted.
 
 ### Issue #72 payment file nonpositive guard (2026-11-19)
 
@@ -1341,9 +1345,14 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   deduction recovery, recorded written-consent fields and audit/editor,
   preserved uncollected balances, and left monthly payroll handling unchanged.
   Fail-before **8 failed**; focused **39 passed, 3 skipped**; full suite
-  **2156 passed, 0 failed, 0 errors, 256 skipped**. SQLite migration
-  up/down passed; PostgreSQL CI and draft PR pending. Ruff check/format passed.
-  Code/test SHA `84671b7` on `fix/issue-73-settlement-deduction-cap`.
+  **2156 passed, 0 failed, 0 errors, 256 skipped**. SQLite migration up/down
+  and hosted PostgreSQL written-consent migration up/down passed. The first
+  PostgreSQL run also exposed a stale PR8 reconciliation expected-head
+  constant, now updated to `l20261119a01`.
+  Full-suite rerun **2156 passed, 0 failed, 0 errors, 256 skipped**; hosted CI
+  rerun pending. Draft PR #77 remains open and in draft. Code/test SHA
+  `84671b7` plus PostgreSQL expectation follow-up on
+  `fix/issue-73-settlement-deduction-cap`.
 
 - 2026-11-19 — Copilot — Issue #72: added pre-output positive-amount guards to
   both bank file generators, left validation CHECK 6 unchanged, and corrected

@@ -7,6 +7,24 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #72 payment file nonpositive guard (2026-11-19)
+
+- Implemented on `fix/issue-72-payment-file-nonpositive-guard`, based on
+  `19f9aeb`; implementation and tests are at
+  `ff7b6ec7d5b47b8bc58999777fc5a26fdbcf0b52`. Draft PR #76 is open for
+  Instinct review.
+- CSV and XLSX generators now reject any amount that rounds to zero or less
+  before creating output, with an error naming the employee and amount.
+  `validate_payroll_for_bank()` CHECK 6 is unchanged. The full-flow test now
+  passes the generator's documented row shape.
+- Fail-before on the unchanged main baseline: **4 failed** (each direct
+  generator/amount case failed because no `ValueError` was raised). Focused
+  bank-file tests: **37 passed**; integration flow: **2 passed**. Full
+  `python3 run_tests.py --continue`: **2143 passed, 0 failed, 0 errors,
+  255 skipped**. Changed-file Ruff check/format and `git diff --check` passed.
+- Locally tested and draft PR open; not hosted tested, merged, deployed, or
+  practitioner accepted.
+
 ### Issue #70 negative settlement summary (2026-11-19)
 
 - Implemented on `fix/issue-70-settlement-negative-label`, based on
@@ -1293,6 +1311,15 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-19 — Copilot — Issue #72: added pre-output positive-amount guards to
+  both bank file generators, left validation CHECK 6 unchanged, and corrected
+  the full-flow generator fixture to the documented row shape. Fail-before
+  **4 failed**; focused bank-file **37 passed**; integration **2 passed**;
+  full suite **2143 passed, 0 failed, 0 errors, 255 skipped**. Ruff and diff
+  checks passed. Draft PR #76 on
+  `fix/issue-72-payment-file-nonpositive-guard`, code/test SHA `ff7b6ec`;
+  hosted tests and merge remain pending.
 
 - 2026-11-19 — Copilot — Issue #70: added negative-net summary wording and
   danger styling, preserving positive/zero payable display; no calculation or

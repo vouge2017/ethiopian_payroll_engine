@@ -1288,6 +1288,87 @@ def stop_deduction(ded_id):
     return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
 
 
+@employees_bp.route('/deductions/<int:ded_id>/consent', methods=['POST'])
+@role_required('owner', 'accountant')
+def update_deduction_consent(ded_id):
+    """Record or update written consent for settlement recovery."""
+    from decimal import InvalidOperation
+
+    ded = EmployeeDeduction.query.filter_by(id=ded_id, company_id=_company_id()).first_or_404()
+    recorded = request.form.get('written_consent_recorded') == 'on'
+    consent_date = None
+    consent_reference = None
+    consent_amount = None
+
+    if recorded:
+        date_text = request.form.get('written_consent_date', '').strip()
+        if date_text:
+            try:
+                consent_date = datetime.strptime(date_text, '%Y-%m-%d').date()
+            except ValueError:
+                flash('Invalid written-consent date. Use YYYY-MM-DD.', 'danger')
+                return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+
+        consent_reference = request.form.get('written_consent_reference', '').strip() or None
+        if consent_reference and len(consent_reference) > 200:
+            flash('Written-consent reference must be 200 characters or fewer.', 'danger')
+            return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+
+        amount_text = request.form.get('written_consent_amount', '').strip()
+        if amount_text:
+            try:
+                consent_amount = Decimal(amount_text)
+            except InvalidOperation:
+                flash('Written-consent amount must be a number.', 'danger')
+                return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+            if (
+                not consent_amount.is_finite()
+                or consent_amount < 0
+                or consent_amount > Decimal('9999999999.99')
+                or consent_amount != consent_amount.quantize(Decimal('0.01'))
+            ):
+                flash(
+                    'Written-consent amount must be between 0 and 9,999,999,999.99 with at most 2 decimals.', 'danger'
+                )
+                return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+
+    previous = {
+        'recorded': ded.written_consent_recorded,
+        'date': ded.written_consent_date.isoformat() if ded.written_consent_date else None,
+        'reference': ded.written_consent_reference,
+        'amount': str(ded.written_consent_amount) if ded.written_consent_amount is not None else None,
+        'recorded_by': ded.written_consent_recorded_by,
+    }
+    ded.written_consent_recorded = recorded
+    ded.written_consent_date = consent_date
+    ded.written_consent_reference = consent_reference
+    ded.written_consent_amount = consent_amount
+    ded.written_consent_recorded_by = current_user.id if recorded else None
+    create_audit_log(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='deduction_written_consent_updated',
+        details={
+            'deduction_id': ded.id,
+            'employee_id': ded.employee_id,
+            'previous': previous,
+            'current': {
+                'recorded': ded.written_consent_recorded,
+                'date': consent_date.isoformat() if consent_date else None,
+                'reference': consent_reference,
+                'amount': str(consent_amount) if consent_amount is not None else None,
+                'recorded_by': ded.written_consent_recorded_by,
+            },
+        },
+    )
+    db.session.commit()
+    from payroll_engine import trust_cache
+
+    trust_cache.invalidate_trust_cache(_company_id())
+    flash('Written-consent record updated.', 'success')
+    return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+
+
 @employees_bp.route('/deductions/<int:ded_id>/delete', methods=['POST'])
 @role_required('owner')
 def delete_deduction(ded_id):
@@ -1375,6 +1456,7 @@ def terminate_employee(emp_id):
     from payroll_engine.services.settlement_service import (
         LeaveRuleNotConfirmedError,
         NegativeSettlementConfirmationError,
+        SettlementDeductionChangedError,
         calculate_settlement,
         create_settlement_record,
     )
@@ -1519,6 +1601,20 @@ def terminate_employee(emp_id):
                 emp, preview=preview, form_values=form_values, block_message=str(exc), status=409
             )
         except LeaveRuleNotConfirmedError as exc:
+            db.session.rollback()
+            preview = calculate_settlement(
+                emp,
+                reason,
+                end_date,
+                _company_id(),
+                db.session,
+                unused_leave_days=unused_leave_days,
+                notice_pay=notice_pay,
+            )
+            return _render_terminate_form(
+                emp, preview=preview, form_values=form_values, block_message=str(exc), status=409
+            )
+        except SettlementDeductionChangedError as exc:
             db.session.rollback()
             preview = calculate_settlement(
                 emp,

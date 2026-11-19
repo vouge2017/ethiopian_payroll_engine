@@ -1464,6 +1464,13 @@ class EmployeeDeduction(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     stopped_reason = db.Column(db.String(200), nullable=True)  # Why was it stopped?
 
+    # Written consent for settlement recovery above the statutory cap
+    written_consent_recorded = db.Column(db.Boolean, default=False, server_default=db.false(), nullable=False)
+    written_consent_date = db.Column(db.Date, nullable=True)
+    written_consent_reference = db.Column(db.String(200), nullable=True)
+    written_consent_amount = db.Column(db.Numeric(12, 2), nullable=True)
+    written_consent_recorded_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
     # Audit
     created_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(UTC))
@@ -1471,7 +1478,7 @@ class EmployeeDeduction(db.Model):
 
     # Relationships
     employee = db.relationship('Employee', backref=db.backref('deductions', lazy=True))
-    creator = db.relationship('User', backref=db.backref('created_deductions', lazy=True))
+    creator = db.relationship('User', foreign_keys=[created_by], backref=db.backref('created_deductions', lazy=True))
 
     @property
     def type_label(self):

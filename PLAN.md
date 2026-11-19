@@ -7,6 +7,35 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #73 settlement deduction recovery cap (2026-11-19)
+
+- Implemented on `fix/issue-73-settlement-deduction-cap`, based on merged
+  `origin/main` `f2a2085`; code and tests are at
+  `84671b726724de30bf67af715b73f3dda764dcb1`. Settlement recovery caps
+  unconsented collections at one-third of basic salary plus regular
+  allowances (basis pending adviser confirmation); recorded consent can
+  exempt all or a specified amount. Finalization stores the remaining
+  uncollected balance and the settlement records per-deduction and total
+  reconciliation. Monthly payroll deduction handling is unchanged.
+- EmployeeDeduction consent fields and audit/editor/status are included. The
+  current PayrollItemAssignment add flow remains unchanged; no duplicate
+  legacy deduction is created.
+- Fail-before against the merged-main baseline: **8 failed, 4 warnings**.
+  Focused settlement/migration regressions: **39 passed, 3 skipped**.
+  `python3 run_tests.py --continue`: **TOTAL: 2156 passed, 0 failed,
+  0 errors, 256 skipped** (TIME: 977.3s) after updating the PostgreSQL
+  reconciliation test's expected migration head. Changed-file Ruff
+  check/format and `git diff --check` passed. The PostgreSQL written-consent
+  migration test passed in hosted CI; the first PostgreSQL job otherwise
+  failed because the PR8 reconciliation test expected the old migration head.
+  That expectation is updated, and the hosted rerun is pending.
+- SQLite migration upgrade/downgrade: **1 passed**. PostgreSQL migration
+  upgrade/downgrade round-trip passed in hosted CI; it was not run locally
+  (`TEST_DATABASE_URL` and a local PostgreSQL service are unavailable).
+  Browser tooling was unavailable; employee consent UI was verified with the
+  Flask test client. Draft PR #77 remains open; hosted rerun pending. Not
+  merged, deployed, or practitioner accepted.
+
 ### Issue #72 payment file nonpositive guard (2026-11-19)
 
 - Implemented on `fix/issue-72-payment-file-nonpositive-guard`, based on
@@ -1311,6 +1340,19 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-19 — Copilot — Issue #73: added a one-third wage cap for settlement
+  deduction recovery, recorded written-consent fields and audit/editor,
+  preserved uncollected balances, and left monthly payroll handling unchanged.
+  Fail-before **8 failed**; focused **39 passed, 3 skipped**; full suite
+  **2156 passed, 0 failed, 0 errors, 256 skipped**. SQLite migration up/down
+  and hosted PostgreSQL written-consent migration up/down passed. The first
+  PostgreSQL run also exposed a stale PR8 reconciliation expected-head
+  constant, now updated to `l20261119a01`.
+  Full-suite rerun **2156 passed, 0 failed, 0 errors, 256 skipped**; hosted CI
+  rerun pending. Draft PR #77 remains open and in draft. Code/test SHA
+  `84671b7` plus PostgreSQL expectation follow-up on
+  `fix/issue-73-settlement-deduction-cap`.
 
 - 2026-11-19 — Copilot — Issue #72: added pre-output positive-amount guards to
   both bank file generators, left validation CHECK 6 unchanged, and corrected

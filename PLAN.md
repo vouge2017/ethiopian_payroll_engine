@@ -7,6 +7,13 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #60 negative settlement confirmation (2026-11-18)
+
+- Implemented on `fix/issue-60-negative-settlement-confirmation`, based on `f37e408` (issue #59 merged into main for this session). `create_settlement_record` now recalculates the exact settlement, rejects missing/tampered confirmation for a negative result, and records actual confirmation in frozen calculation details and the termination audit.
+- The route passes the confirmed exact amount to the service. Changed-between-calculation, direct-service, tampering, rollback, audit-truth, non-negative and confirmed-negative paths are covered. The leave-rule contract remains separate and the dead route precheck exception behavior was replaced with the real service contract.
+- Fail-before: the negative-confirm suite had **3 failures**: missing direct-service guard, wrong confirmation amount, and route changed-between-calculations. Focused settlement suites: **80 passed**; final issue 60 file: **11 passed**. Full `python3 run_tests.py --continue`: **2138 passed, 0 failed, 0 errors, 255 skipped**. Ruff check/format and `git diff --check` passed.
+- No migration or unrelated refactoring; no live payroll or production action performed. Not merged, deployed, or practitioner accepted.
+
 ### Issue #59 pilot hardening (2026-11-18)
 
 - Implemented on `fix/issue-59-webhooks-deadlines`, based on `953f488`; code and regression tests are at `5da18418b3427d08cef5cd08215fd465bb986410`. Draft PR #67 is open and unmerged, awaiting review.
@@ -1042,9 +1049,9 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ## 2. Now
 
-**Current owner-directed slice (2026-11-13):** Fix the CSV import
-review/approval mismatch on one dedicated branch and PR; do not merge. This
-explicit task supersedes the older six-point order for this session.
+**Current owner-directed slice (2026-11-18):** Fix GitHub issue #60 on one
+dedicated branch and draft PR. Issue #68 is the separate two-company follow-up
+and remains out of scope. Do not merge before review.
 
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
 order** (owner pasted an independent review and asked to adopt it; I concur).
@@ -1267,6 +1274,8 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-18 — Codex — Issue #60: added exact negative-net confirmation enforcement inside `create_settlement_record`, explicit confirmation amount and audit truth, and direct/changed-between-calculations/tampering/rollback tests. Focused 80 passed and 11 passed in final file; full suite **2138 passed, 0 failed, 0 errors, 255 skipped**; Ruff and diff checks passed.
 
 - 2026-11-18 — Codex — Issue #59: added fail-before/pass-after webhook and deadline-period coverage; defaulted webhooks off and unified completed-run selection. Focused 35 passed; full suite **2133 passed, 0 failed, 0 errors, 255 skipped**; Ruff and diff checks passed. Draft PR #67 on `fix/issue-59-webhooks-deadlines` at code SHA `5da1841`; no merge, deployment, or live webhook delivery.
 

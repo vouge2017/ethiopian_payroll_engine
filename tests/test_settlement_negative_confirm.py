@@ -315,8 +315,17 @@ def test_settlement_detail_shows_negative_warning(app, setup):
     settlement = FinalSettlement.query.filter_by(company_id=company.id).one()
     resp = client.get(f'/settlements/{settlement.id}')
     html = resp.get_data(as_text=True)
+    assert resp.status_code == 200
     assert 'data-testid="negative-settlement-warning"' in html
     assert 'Negative final payment' in html
+    assert 'data-testid="net-final-payment-summary"' in html
+    assert f'Amount owed by the employee: ETB {abs(settlement.net_final_payment):.2f}' in html
+    summary = html.split('data-testid="net-final-payment-summary"', 1)[1].split('<!-- Legal Reference -->', 1)[0]
+    summary_tag = html.split('data-testid="net-final-payment-summary"', 1)[0].rsplit('<div', 1)[1]
+    assert 'alert-danger' in summary_tag
+    assert 'alert-success' not in summary_tag
+    assert 'text-success' not in summary
+    assert f'Amount payable to {emp.name}' not in summary
 
 
 def test_settlement_detail_no_warning_when_positive(app, setup):
@@ -329,4 +338,38 @@ def test_settlement_detail_no_warning_when_positive(app, setup):
     db.session.expire_all()
     settlement = FinalSettlement.query.filter_by(company_id=company.id).one()
     resp = client.get(f'/settlements/{settlement.id}')
-    assert 'data-testid="negative-settlement-warning"' not in resp.get_data(as_text=True)
+    html = resp.get_data(as_text=True)
+    assert resp.status_code == 200
+    assert 'data-testid="negative-settlement-warning"' not in html
+    assert 'data-testid="net-final-payment-summary"' in html
+    assert f'Amount payable to {emp.name}' in html
+    assert f'ETB {settlement.net_final_payment:.2f}' in html
+    summary = html.split('data-testid="net-final-payment-summary"', 1)[1].split('<!-- Legal Reference -->', 1)[0]
+    summary_tag = html.split('data-testid="net-final-payment-summary"', 1)[0].rsplit('<div', 1)[1]
+    assert 'alert-success' in summary_tag
+    assert 'text-success' in summary
+
+
+def test_settlement_detail_zero_keeps_payable_display(app, setup):
+    company, user, emp = setup
+    db.session.query(EmployeeDeduction).filter_by(employee_id=emp.id).update({'is_active': False})
+    db.session.commit()
+    client = app.test_client()
+    _login(client, user)
+    client.post(f'/employees/{emp.id}/terminate', data=_finalize_data())
+    db.session.expire_all()
+    settlement = FinalSettlement.query.filter_by(company_id=company.id).one()
+    settlement.net_final_payment = Decimal('0.00')
+    db.session.commit()
+
+    resp = client.get(f'/settlements/{settlement.id}')
+    html = resp.get_data(as_text=True)
+    assert resp.status_code == 200
+    assert 'data-testid="negative-settlement-warning"' not in html
+    assert 'data-testid="net-final-payment-summary"' in html
+    assert f'Amount payable to {emp.name}' in html
+    assert 'ETB 0.00' in html
+    summary = html.split('data-testid="net-final-payment-summary"', 1)[1].split('<!-- Legal Reference -->', 1)[0]
+    summary_tag = html.split('data-testid="net-final-payment-summary"', 1)[0].rsplit('<div', 1)[1]
+    assert 'alert-success' in summary_tag
+    assert 'text-success' in summary

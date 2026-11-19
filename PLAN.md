@@ -7,6 +7,25 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #70 negative settlement summary (2026-11-19)
+
+- Implemented on `fix/issue-70-settlement-negative-label`, based on
+  `abece64`; code and tests are at
+  `0f5f54447935f80ac229167d49c6facd3ff668d4`. Draft PR #71 is open and
+  unmerged.
+- Negative final payments now say the amount is owed by the employee, show
+  the absolute ETB amount, and use danger styling. Positive and zero displays
+  are unchanged. Presentation only; no calculation, storage,
+  receivable/carry-forward, or deduction-cap changes.
+- Fail-before rendering tests: **3 failed** on the unchanged base; after the
+  fix: **3 passed**. Full `python3 run_tests.py --continue`: **2139 passed,
+  0 failed, 0 errors, 255 skipped**. Changed test Ruff check/format and
+  `git diff --check` passed. Repository-wide Ruff reports 39 lint findings
+  and pre-existing formatting issues outside this slice.
+- No browser screenshot: this environment has no browser executable or usable
+  browser automation; GET rendering was verified through the Flask test
+  client. Not merged, deployed, or practitioner accepted.
+
 ### Issue #60 negative settlement confirmation (2026-11-18)
 
 - Implemented on `fix/issue-60-negative-settlement-confirmation`, based on `f37e408` (issue #59 merged into main for this session). Code and tests are at `a9ca4576966d7843b00c8c4849a7fa38bd60e94e`; draft PR #69 is open and unmerged. `create_settlement_record` now recalculates the exact settlement, rejects missing/tampered confirmation for a negative result, and records actual confirmation in frozen calculation details and the termination audit.
@@ -1274,6 +1293,14 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-19 — Copilot — Issue #70: added negative-net summary wording and
+  danger styling, preserving positive/zero payable display; no calculation or
+  storage changes. Fail-before **3 failed**, focused after **3 passed**, full
+  suite **2139 passed, 0 failed, 0 errors, 255 skipped**. Changed test Ruff
+  and diff checks passed; repository-wide Ruff has existing findings. Draft
+  PR #71 is open on `fix/issue-70-settlement-negative-label` at code/test SHA
+  `0f5f544`; no browser screenshot, merge, or deployment.
 
 - 2026-11-18 — Codex — Issue #60: added exact negative-net confirmation enforcement inside `create_settlement_record`, explicit confirmation amount and audit truth, and direct/changed-between-calculations/tampering/rollback tests. Focused 80 passed and 11 passed in final file; full suite **2138 passed, 0 failed, 0 errors, 255 skipped**; Ruff and diff checks passed. Draft PR #69 is open on `fix/issue-60-negative-settlement-confirmation` at `a9ca457`; issue #68 remains separate.
 

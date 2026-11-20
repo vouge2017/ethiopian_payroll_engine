@@ -5,7 +5,7 @@ import io
 import os
 import uuid
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
@@ -680,6 +680,20 @@ def employee_detail(emp_id):
     )
     active_deductions = [d for d in deductions if d.is_active]
     inactive_deductions = [d for d in deductions if not d.is_active]
+    active_assignment_deductions = (
+        db.session.query(PayrollItemAssignment)
+        .join(PayItemType, PayrollItemAssignment.pay_item_type_id == PayItemType.id)
+        .filter(
+            PayrollItemAssignment.company_id == _company_id(),
+            PayrollItemAssignment.employee_id == emp.id,
+            PayrollItemAssignment.is_active.is_(True),
+            PayrollItemAssignment.tracking_mode == 'declining',
+            PayrollItemAssignment.remaining_balance > 0,
+            PayItemType.classification == PayItemClassification.DEDUCTION,
+        )
+        .order_by(PayrollItemAssignment.id.asc())
+        .all()
+    )
     years = today.year
     from payroll_engine.services import employee_assignments as ea
 
@@ -707,6 +721,7 @@ def employee_detail(emp_id):
         deductions=deductions,
         active_deductions=active_deductions,
         inactive_deductions=inactive_deductions,
+        active_assignment_deductions=active_assignment_deductions,
         deduction_types=[(i.key, i.name_en) for i in company_pay_items(PayItemClassification.DEDUCTION)],
         allowance_records=emp.allowance_records,
         # Per-company catalog drives the dropdowns. The legacy
@@ -1288,13 +1303,8 @@ def stop_deduction(ded_id):
     return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
 
 
-@employees_bp.route('/deductions/<int:ded_id>/consent', methods=['POST'])
-@role_required('owner', 'accountant')
-def update_deduction_consent(ded_id):
-    """Record or update written consent for settlement recovery."""
-    from decimal import InvalidOperation
-
-    ded = EmployeeDeduction.query.filter_by(id=ded_id, company_id=_company_id()).first_or_404()
+def _parse_written_consent_form():
+    """Validate shared written-consent fields for legacy and assignment deductions."""
     recorded = request.form.get('written_consent_recorded') == 'on'
     consent_date = None
     consent_reference = None
@@ -1307,12 +1317,12 @@ def update_deduction_consent(ded_id):
                 consent_date = datetime.strptime(date_text, '%Y-%m-%d').date()
             except ValueError:
                 flash('Invalid written-consent date. Use YYYY-MM-DD.', 'danger')
-                return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+                return None
 
         consent_reference = request.form.get('written_consent_reference', '').strip() or None
         if consent_reference and len(consent_reference) > 200:
             flash('Written-consent reference must be 200 characters or fewer.', 'danger')
-            return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+            return None
 
         amount_text = request.form.get('written_consent_amount', '').strip()
         if amount_text:
@@ -1320,7 +1330,7 @@ def update_deduction_consent(ded_id):
                 consent_amount = Decimal(amount_text)
             except InvalidOperation:
                 flash('Written-consent amount must be a number.', 'danger')
-                return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+                return None
             if (
                 not consent_amount.is_finite()
                 or consent_amount < 0
@@ -1330,20 +1340,44 @@ def update_deduction_consent(ded_id):
                 flash(
                     'Written-consent amount must be between 0 and 9,999,999,999.99 with at most 2 decimals.', 'danger'
                 )
-                return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
-
-    previous = {
-        'recorded': ded.written_consent_recorded,
-        'date': ded.written_consent_date.isoformat() if ded.written_consent_date else None,
-        'reference': ded.written_consent_reference,
-        'amount': str(ded.written_consent_amount) if ded.written_consent_amount is not None else None,
-        'recorded_by': ded.written_consent_recorded_by,
+                return None
+    return {
+        'recorded': recorded,
+        'date': consent_date,
+        'reference': consent_reference,
+        'amount': consent_amount,
     }
-    ded.written_consent_recorded = recorded
-    ded.written_consent_date = consent_date
-    ded.written_consent_reference = consent_reference
-    ded.written_consent_amount = consent_amount
-    ded.written_consent_recorded_by = current_user.id if recorded else None
+
+
+def _written_consent_snapshot(deduction):
+    return {
+        'recorded': deduction.written_consent_recorded,
+        'date': deduction.written_consent_date.isoformat() if deduction.written_consent_date else None,
+        'reference': deduction.written_consent_reference,
+        'amount': str(deduction.written_consent_amount) if deduction.written_consent_amount is not None else None,
+        'recorded_by': deduction.written_consent_recorded_by,
+    }
+
+
+def _apply_written_consent(deduction, consent):
+    deduction.written_consent_recorded = consent['recorded']
+    deduction.written_consent_date = consent['date']
+    deduction.written_consent_reference = consent['reference']
+    deduction.written_consent_amount = consent['amount']
+    deduction.written_consent_recorded_by = current_user.id if consent['recorded'] else None
+
+
+@employees_bp.route('/deductions/<int:ded_id>/consent', methods=['POST'])
+@role_required('owner', 'accountant')
+def update_deduction_consent(ded_id):
+    """Record or update written consent for settlement recovery."""
+    ded = EmployeeDeduction.query.filter_by(id=ded_id, company_id=_company_id()).first_or_404()
+    consent = _parse_written_consent_form()
+    if consent is None:
+        return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+
+    previous = _written_consent_snapshot(ded)
+    _apply_written_consent(ded, consent)
     create_audit_log(
         company_id=_company_id(),
         user_id=current_user.id,
@@ -1352,13 +1386,7 @@ def update_deduction_consent(ded_id):
             'deduction_id': ded.id,
             'employee_id': ded.employee_id,
             'previous': previous,
-            'current': {
-                'recorded': ded.written_consent_recorded,
-                'date': consent_date.isoformat() if consent_date else None,
-                'reference': consent_reference,
-                'amount': str(consent_amount) if consent_amount is not None else None,
-                'recorded_by': ded.written_consent_recorded_by,
-            },
+            'current': _written_consent_snapshot(ded),
         },
     )
     db.session.commit()
@@ -1367,6 +1395,44 @@ def update_deduction_consent(ded_id):
     trust_cache.invalidate_trust_cache(_company_id())
     flash('Written-consent record updated.', 'success')
     return redirect(url_for('employees.employee_detail', emp_id=ded.employee_id))
+
+
+@employees_bp.route('/assignments/<int:assignment_id>/deduction-consent', methods=['POST'])
+@role_required('owner', 'accountant')
+def update_assignment_deduction_consent(assignment_id):
+    """Record or update written consent for an assigned deduction."""
+    assignment = (
+        PayrollItemAssignment.query.join(PayItemType, PayrollItemAssignment.pay_item_type_id == PayItemType.id)
+        .filter(
+            PayrollItemAssignment.id == assignment_id,
+            PayrollItemAssignment.company_id == _company_id(),
+            PayItemType.classification == PayItemClassification.DEDUCTION,
+        )
+        .first_or_404()
+    )
+    consent = _parse_written_consent_form()
+    if consent is None:
+        return redirect(url_for('employees.employee_detail', emp_id=assignment.employee_id))
+
+    previous = _written_consent_snapshot(assignment)
+    _apply_written_consent(assignment, consent)
+    create_audit_log(
+        company_id=_company_id(),
+        user_id=current_user.id,
+        action='assignment_deduction_written_consent_updated',
+        details={
+            'assignment_id': assignment.id,
+            'employee_id': assignment.employee_id,
+            'previous': previous,
+            'current': _written_consent_snapshot(assignment),
+        },
+    )
+    db.session.commit()
+    from payroll_engine import trust_cache
+
+    trust_cache.invalidate_trust_cache(_company_id())
+    flash('Written-consent record updated.', 'success')
+    return redirect(url_for('employees.employee_detail', emp_id=assignment.employee_id))
 
 
 @employees_bp.route('/deductions/<int:ded_id>/delete', methods=['POST'])

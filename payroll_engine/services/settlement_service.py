@@ -15,6 +15,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from payroll_engine import constants as _constants
 from payroll_engine.leave import LeaveType
 from payroll_engine.models import Company, Employee, EmployeeDeduction, FinalSettlement, LeaveBalance
+from payroll_engine.models_payroll_elements import PayItemClassification, PayItemType, PayrollItemAssignment
 from payroll_engine.pension import employee_pension
 from payroll_engine.severance import calculate_severance
 from payroll_engine.tax import calculate_tax
@@ -410,13 +411,46 @@ def calculate_settlement(
     total_earnings = outstanding_salary + severance_amount + notice_amount + leave_encashment
 
     if db_session:
-        active_deductions = (
+        active_legacy_deductions = (
             EmployeeDeduction.query.filter_by(employee_id=employee.id, company_id=company_id, is_active=True)
             .order_by(EmployeeDeduction.id.asc())
             .all()
         )
+        legacy_tags = {f'legacy_deduction:{ded.id}' for ded in active_legacy_deductions}
+        backfilled_tags = set()
+        if legacy_tags:
+            backfilled_tags = {
+                tag
+                for (tag,) in db_session.query(PayrollItemAssignment.legacy_source)
+                .filter(
+                    PayrollItemAssignment.company_id == company_id,
+                    PayrollItemAssignment.legacy_source.in_(legacy_tags),
+                )
+                .all()
+            }
+        legacy_deductions = [
+            ded for ded in active_legacy_deductions if f'legacy_deduction:{ded.id}' not in backfilled_tags
+        ]
+        assignment_deductions = (
+            db_session.query(PayrollItemAssignment)
+            .join(PayItemType, PayrollItemAssignment.pay_item_type_id == PayItemType.id)
+            .filter(
+                PayrollItemAssignment.company_id == company_id,
+                PayrollItemAssignment.employee_id == employee.id,
+                PayrollItemAssignment.is_active.is_(True),
+                PayrollItemAssignment.tracking_mode == 'declining',
+                PayrollItemAssignment.remaining_balance > 0,
+                PayItemType.classification == PayItemClassification.DEDUCTION,
+            )
+            .order_by(PayrollItemAssignment.id.asc())
+            .all()
+        )
 
-        for ded in active_deductions:
+        # Preserve the legacy #73 order, then process assignments by id. This
+        # makes the shared cap allocation deterministic across both sources.
+        for source, ded in [('legacy', row) for row in legacy_deductions] + [
+            ('assignment', row) for row in assignment_deductions
+        ]:
             previous_balance = Decimal(str(ded.remaining_balance if ded.remaining_balance is not None else ded.amount))
             consent_exempt = bool(ded.written_consent_recorded)
             consent_limit = ded.written_consent_amount
@@ -435,11 +469,17 @@ def calculate_settlement(
             collected = consent_collected + collected_under_cap
             still_owed = previous_balance - collected
             pending_deductions += collected
+            deduction_type = ded.deduction_type if source == 'legacy' else ded.item_type.key
+            label = (
+                ded.label if source == 'legacy' else (ded.custom_label or ded.item_type.name_en or ded.item_type.key)
+            )
             deduction_details.append(
                 {
+                    'source': source,
+                    'id': ded.id,
                     'deduction_id': ded.id,
-                    'type': ded.deduction_type,
-                    'label': ded.label,
+                    'type': deduction_type,
+                    'label': label,
                     'amount': _s(collected),
                     'previous_remaining_balance': _s(previous_balance),
                     'collected': _s(collected),
@@ -506,6 +546,8 @@ def calculate_settlement(
         calculation_details['deduction_recovery'] = {
             'cap_base': _s(cap_base),
             'cap_amount': _s(cap_amount),
+            'cap_basis_status': 'pending_adviser_confirmation',
+            'cap_basis_note': 'Settlement cap wage basis is pending adviser confirmation.',
             'previous_remaining_balance_total': _s(
                 sum((Decimal(detail['previous_remaining_balance']) for detail in deduction_details), Decimal('0'))
             ),
@@ -634,9 +676,17 @@ def create_settlement_record(
     )
     deductions_to_update = []
     for detail in calc['deduction_details']:
+        if detail.get('source') == 'legacy':
+            model = EmployeeDeduction
+        elif detail.get('source') == 'assignment':
+            model = PayrollItemAssignment
+        else:
+            raise SettlementDeductionChangedError(
+                'A pending deduction changed while the settlement was being finalized.'
+            )
         deduction = (
-            EmployeeDeduction.query.filter_by(
-                id=detail['deduction_id'],
+            model.query.filter_by(
+                id=detail['id'],
                 employee_id=employee.id,
                 company_id=company_id,
             )

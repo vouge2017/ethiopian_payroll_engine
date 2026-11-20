@@ -192,6 +192,7 @@
                                             <small class="text-muted d-block">
                                                 {% for ded in settlement.deduction_details %}
                                                 {{ ded.label }}:
+                                                <span class="text-muted">({{ ded.source }} #{{ ded.id }})</span>
                                                 {% if ded.get('previous_remaining_balance') is not none %}previous ETB {{ ded.previous_remaining_balance }}, {% endif %}
                                                 collected ETB {{ ded.get('collected', ded.amount) }}
                                                 {% if ded.get('still_owed') is not none %}, still owed ETB {{ ded.still_owed }}{% endif %}
@@ -203,7 +204,8 @@
                                             {% set recovery = details.get('deduction_recovery') or {} %}
                                             {% if recovery %}
                                             <small class="text-muted d-block">
-                                                One-third cap: ETB {{ recovery.cap_amount }} on monthly wage base ETB {{ recovery.cap_base }};
+                                                One-third cap: ETB {{ recovery.cap_amount }} on monthly wage base ETB {{ recovery.cap_base }}
+                                                (wage basis pending adviser confirmation);
                                                 collected under cap ETB {{ recovery.collected_under_cap }}.
                                             </small>
                                             {% endif %}

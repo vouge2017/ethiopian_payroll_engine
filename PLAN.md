@@ -7,6 +7,36 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #78 settlement and consent use PayrollItemAssignment deductions (2026-11-19)
+
+- Implemented on `fix/issue-78-settlement-assignment-deductions`, based on
+  `main` `f2a2085`, at implementation SHA `4aabd85`. Settlement now reads
+  active declining-balance deductions from `PayrollItemAssignment`, skips
+  legacy `EmployeeDeduction` rows already backfilled to avoid double counting,
+  and keeps legacy rows that are not backfilled. The fixed deterministic
+  source order is legacy rows by id, followed by assignments by id; this
+  preserves the existing legacy #73 allocation order before assignment rows.
+- Assignment rows now carry written-consent fields, assignment and legacy
+  consent routes share validation, backfill copies legacy consent, and
+  settlement preview/detail plus employee deduction pages display assignment
+  collected/owed and cap facts. Finalization resolves `(source, id)`, locks
+  the correct model, re-checks balances, and updates assignment
+  `remaining_balance` without changing active status or other fields.
+- Fail-before: **4 failed** on the unchanged #73 implementation. Focused
+  assignment/backfill/settlement/migration regressions: **31 passed, 1
+  skipped**. `python3 run_tests.py --continue`: **2164 passed, 0 failed,
+  0 errors, 257 skipped** (TIME: 1021.2s). Changed-file Ruff check/format and
+  `git diff --check` passed. Repository-wide Ruff check/format found
+  pre-existing migration/Markdown formatting debt outside this slice; no
+  unrelated files were changed.
+- SQLite migration upgrade/downgrade and legacy-consent copy:
+  **1 passed** in the focused suite. Assignment/legacy migration PostgreSQL
+  upgrade/downgrade test is present but skipped locally because
+  `TEST_DATABASE_URL` is unavailable; hosted CI evidence is pending.
+  Employee consent UI and settlement preview are verified with Flask
+  rendered-HTML tests, not browser automation. Not merged, deployed, or
+  practitioner accepted.
+
 ### Issue #73 settlement deduction recovery cap (2026-11-19)
 
 - Implemented on `fix/issue-73-settlement-deduction-cap`, based on merged
@@ -1340,6 +1370,18 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-19 — Copilot — Issue #78: settlement and consent now include
+  UI-created `PayrollItemAssignment` declining deductions, with legacy
+  backfill de-duplication, source-aware finalization, consent fields/routes,
+  backfill consent copy, and assignment/legacy preview/detail reconciliation.
+  Fixed order: legacy rows by id, then assignments by id. Fail-before
+  **4 failed**; focused **31 passed, 1 skipped**; full suite
+  **2164 passed, 0 failed, 0 errors, 257 skipped**. Changed-file Ruff and
+  `git diff --check` passed; single Alembic head `l20261119a02`.
+  SQLite migration copy round-trip passed; PostgreSQL and browser checks
+  remain hosted/local-unavailable limits. Implementation SHA `4aabd85`;
+  branch `fix/issue-78-settlement-assignment-deductions`; draft PR pending.
 
 - 2026-11-19 — Copilot — Issue #73: added a one-third wage cap for settlement
   deduction recovery, recorded written-consent fields and audit/editor,

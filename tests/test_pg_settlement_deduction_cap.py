@@ -13,8 +13,8 @@ PG_URL = os.environ.get('TEST_DATABASE_URL', '')
 pytestmark = pytest.mark.skipif(not PG_URL.startswith('postgresql'), reason='Requires disposable TEST_DATABASE_URL')
 
 REPO = Path(__file__).resolve().parents[1]
-PREVIOUS = 'k20261118a01'
-REVISION = 'l20261119a01'
+PREVIOUS = 'l20261119a01'
+REVISION = 'l20261119a02'
 
 
 def _cfg(url):
@@ -46,13 +46,13 @@ def test_written_consent_migration_up_down_round_trips_on_postgresql(isolated_da
     command.upgrade(cfg, PREVIOUS)
 
     with engine.connect() as connection:
-        before = {column['name'] for column in sa.inspect(connection).get_columns('employee_deduction')}
+        before_assignment = {column['name'] for column in sa.inspect(connection).get_columns('payroll_item_assignment')}
 
     command.upgrade(cfg, REVISION)
     with engine.connect() as connection:
-        columns = {column['name']: column for column in sa.inspect(connection).get_columns('employee_deduction')}
-        foreign_keys = sa.inspect(connection).get_foreign_keys('employee_deduction')
-    assert set(columns) == before | {
+        columns = {column['name']: column for column in sa.inspect(connection).get_columns('payroll_item_assignment')}
+        foreign_keys = sa.inspect(connection).get_foreign_keys('payroll_item_assignment')
+    assert set(columns) == before_assignment | {
         'written_consent_recorded',
         'written_consent_date',
         'written_consent_reference',
@@ -72,10 +72,10 @@ def test_written_consent_migration_up_down_round_trips_on_postgresql(isolated_da
 
     command.downgrade(cfg, PREVIOUS)
     with engine.connect() as connection:
-        after = {column['name'] for column in sa.inspect(connection).get_columns('employee_deduction')}
-    assert after == before
+        after = {column['name'] for column in sa.inspect(connection).get_columns('payroll_item_assignment')}
+    assert after == before_assignment
 
     command.upgrade(cfg, REVISION)
     with engine.connect() as connection:
-        after_upgrade = {column['name'] for column in sa.inspect(connection).get_columns('employee_deduction')}
-    assert after_upgrade == before | set(columns.keys() - before)
+        after_upgrade = {column['name'] for column in sa.inspect(connection).get_columns('payroll_item_assignment')}
+    assert after_upgrade == before_assignment | set(columns.keys() - before_assignment)

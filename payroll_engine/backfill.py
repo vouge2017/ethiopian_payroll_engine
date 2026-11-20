@@ -252,6 +252,11 @@ def _convert_deduction(deduction, emp, company_id, effective, conflicts):
     # Preserve the court-order / MoE document trail verbatim.
     a.reference_number = deduction.reference_number
     a.document_path = deduction.document_path
+    a.written_consent_recorded = deduction.written_consent_recorded
+    a.written_consent_date = deduction.written_consent_date
+    a.written_consent_reference = deduction.written_consent_reference
+    a.written_consent_amount = deduction.written_consent_amount
+    a.written_consent_recorded_by = deduction.written_consent_recorded_by
 
     mode = (deduction.amount_mode or 'fixed').strip().lower()
     if mode == 'percentage':

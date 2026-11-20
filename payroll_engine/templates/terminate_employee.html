@@ -97,6 +97,31 @@
                                     <tr><td>Pay in lieu of notice</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.notice_pay) }}</td></tr>
                                     <tr><td>Leave encashment ({{ d.leave.unused_days }} days × ETB {{ d.leave.daily_rate }}/day; {{ d.leave.rate_basis_label }} ÷ {{ d.leave.rate_divisor }})</td><td class="text-end" data-testid="preview-leave-encashment">ETB {{ '%.2f'|format(settlement_preview.leave_encashment) }}</td></tr>
                                     <tr><td>Income tax (final month)</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.income_tax) }}</td></tr>
+                                    {% if settlement_preview.deduction_details %}
+                                    <tr>
+                                        <td>
+                                            Pending deductions
+                                            <small class="text-muted d-block">
+                                                {% for ded in settlement_preview.deduction_details %}
+                                                {{ ded.label }} <span class="text-muted">({{ ded.source }} #{{ ded.id }})</span>:
+                                                previous ETB {{ ded.previous_remaining_balance }},
+                                                collected ETB {{ ded.collected }},
+                                                still owed ETB {{ ded.still_owed }}
+                                                {% if ded.consent_exempt %}(written-consent exempt){% endif %}
+                                                {% if not loop.last %}<br>{% endif %}
+                                                {% endfor %}
+                                            </small>
+                                            {% set recovery = d.get('deduction_recovery') or {} %}
+                                            {% if recovery %}
+                                            <small class="text-muted d-block">
+                                                One-third cap ETB {{ recovery.cap_amount }} on monthly wage base ETB {{ recovery.cap_base }}
+                                                (wage basis pending adviser confirmation); collected under cap ETB {{ recovery.collected_under_cap }}.
+                                            </small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">ETB {{ '%.2f'|format(settlement_preview.pending_deductions) }}</td>
+                                    </tr>
+                                    {% endif %}
                                     <tr><td>Total deductions</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.total_deductions) }}</td></tr>
                                     <tr class="fw-bold"><td>Net final payment</td><td class="text-end">ETB {{ '%.2f'|format(settlement_preview.net_final_payment) }}</td></tr>
                                 </tbody>

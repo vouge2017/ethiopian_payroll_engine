@@ -533,6 +533,61 @@
                 </div>
             </form>
 
+            {% if active_assignment_deductions %}
+            <h6 class="text-muted mb-2">Active Assignment Deductions</h6>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-hover mb-0 responsive-card">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Label</th>
+                            <th>Balance</th>
+                            <th>Written consent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in active_assignment_deductions %}
+                        <tr>
+                            <td data-label="Type">{{ d.item_type.name_en }}</td>
+                            <td data-label="Label">{{ d.label }}</td>
+                            <td data-label="Balance">ETB {{ '%.2f'|format(d.remaining_balance) }}</td>
+                            <td data-label="Written consent">
+                                {% if d.written_consent_recorded %}
+                                    <span class="badge bg-success">Recorded</span>
+                                    <small class="d-block text-muted">
+                                        {{ d.written_consent_date or 'Date not recorded' }}
+                                        {% if d.written_consent_amount is not none %}
+                                            · Up to ETB {{ '%.2f'|format(d.written_consent_amount) }}
+                                        {% else %}
+                                            · Full remaining balance
+                                        {% endif %}
+                                        {% if d.written_consent_reference %} · {{ d.written_consent_reference }}{% endif %}
+                                    </small>
+                                {% else %}
+                                    <span class="badge bg-secondary">Not recorded</span>
+                                {% endif %}
+                                <details class="mt-1">
+                                    <summary class="small" style="cursor:pointer">Record/edit</summary>
+                                    <form method="POST" action="{{ url_for('employees.update_assignment_deduction_consent', assignment_id=d.id) }}" class="mt-2">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="written_consent_recorded" id="assignment-consent-{{ d.id }}" {% if d.written_consent_recorded %}checked{% endif %}>
+                                            <label class="form-check-label small" for="assignment-consent-{{ d.id }}">Written consent recorded</label>
+                                        </div>
+                                        <input type="date" class="form-control form-control-sm mt-1" name="written_consent_date" aria-label="Written-consent date" value="{{ d.written_consent_date.isoformat() if d.written_consent_date else '' }}">
+                                        <input type="text" class="form-control form-control-sm mt-1" name="written_consent_reference" maxlength="200" placeholder="Signed document reference" value="{{ d.written_consent_reference or '' }}">
+                                        <input type="number" class="form-control form-control-sm mt-1" name="written_consent_amount" min="0" step="0.01" placeholder="Amount (blank = full balance)" value="{{ d.written_consent_amount if d.written_consent_amount is not none else '' }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary mt-1">Save consent</button>
+                                    </form>
+                                </details>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
             <!-- Active Deductions -->
             {% if active_deductions %}
             <h6 class="text-muted mb-2">Active Deductions</h6>

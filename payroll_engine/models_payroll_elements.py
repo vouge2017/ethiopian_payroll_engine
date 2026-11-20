@@ -286,6 +286,13 @@ class PayrollItemAssignment(db.Model):
     total_to_recover = db.Column(db.Numeric(12, 2), nullable=True)
     remaining_balance = db.Column(db.Numeric(12, 2), nullable=True)
 
+    # Written consent for settlement recovery above the cap.
+    written_consent_recorded = db.Column(db.Boolean, default=False, server_default=db.false(), nullable=False)
+    written_consent_date = db.Column(db.Date, nullable=True)
+    written_consent_reference = db.Column(db.String(200), nullable=True)
+    written_consent_amount = db.Column(db.Numeric(12, 2), nullable=True)
+    written_consent_recorded_by = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+
     # Audit
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(UTC))
     # Who created this assignment. Nullable FK with SET NULL: an actor may be

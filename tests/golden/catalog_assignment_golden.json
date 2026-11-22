@@ -5692,7 +5692,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "24f99287098fa89a10c95667a2d9b889fddde07060f4df11d6a17b83bec4d57f",
+   "sha256": "3452d168237fc1fe8be7c4ee3b509ebbce400624a40cae6bfdd4e9165fa253dd",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -5713,7 +5713,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "3c6d2385623b456fd2fc36717cd1afec05fa313eebf1ccc40ea905848c4884d9",
+   "sha256": "a1e822dd6efee40f92d9b31ee95bd2333211010a5d3f3d28c4d3ad9576db4e64",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -5734,7 +5734,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "740d78c336d5cdac151e7868894ce595678e8a65e49a30ef9259501ba995ce7c",
+   "sha256": "bbb58e1d81896f4994fde0bf580ed0d8570bb7c6aedbcd034b43c20a9adf79ff",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -5755,7 +5755,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "eb5a78accce4933f2ba4539c0af1c5cfec4c0c1eeef4ef4fc1e2b482b430c396",
+   "sha256": "4234f8c3d7549c6f41bcc66589850e013cf5df740cc595f75afb7ce303f36389",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -5860,7 +5860,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "c5d73e055f263773a4428d01b44e6eaf6532a0ad857ba13faacddb5d664e2e0d",
+   "sha256": "a26e9a4ed9f7101a549fb7b83b080a36e1bebcb5f509390619bbab01d8ad7980",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -5881,7 +5881,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "1faa5247124df943027868a15ca9283868bf6bf783d4c5756cd72ddbbdeae148",
+   "sha256": "da378f4fe0ef4c4149cb242ad9b9fa8f2495e8419044835d2c2713afcca60338",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -5902,7 +5902,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "ecc3f4b98b31ceeaad515b682a2353cd47ea561a2a0bbbf958ec4ef30ff8efe2",
+   "sha256": "b24f5e669f75bd0ab9c463f419ed0e3e86220837d429d0f44238d298b16172ad",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -5923,7 +5923,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "e840f19be36193d37af6f8b89e164c6474fa85768762045d61d1f11c008ab2f6",
+   "sha256": "de88083c24ed05f242083aa53fe3498fc3607b30a2dcc795f65b9dd105458e32",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -6017,96 +6017,96 @@
   "elements|taxrule|b=100000|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100300.48",
+   "gross": "100360.58",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=33055.17",
-    "overtime=300.48"
+    "income_tax=33076.20",
+    "overtime=360.58"
    ],
-   "net": "60245.31",
-   "net_before_deductions": "60245.31",
-   "overtime_pay": "300.48",
+   "net": "60284.38",
+   "net_before_deductions": "60284.38",
+   "overtime_pay": "360.58",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "8aa47571d80ca112e304e42d442aa986e70b21b8d0c837a15ec8a4f2651eb9a3",
+   "sha256": "bce73ec32ac2f67eda65382f782ecca8747aa5f433b42f5a6794ac7d80201051",
    "sick_leave_reduction": "0.00",
-   "tax": "33055.17",
-   "taxable": "100300.48",
+   "tax": "33076.20",
+   "taxable": "100360.58",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=100000|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100600.96",
+   "gross": "100721.15",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=33160.34",
-    "overtime=600.96"
+    "income_tax=33202.40",
+    "overtime=721.15"
    ],
-   "net": "60440.62",
-   "net_before_deductions": "60440.62",
-   "overtime_pay": "600.96",
+   "net": "60518.75",
+   "net_before_deductions": "60518.75",
+   "overtime_pay": "721.15",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "3d00a8305607e605c354ef674510023be969887b06449f1dfbe36eef79a5ab13",
+   "sha256": "69b0db6e9b3502990f8e47621c67b22cca1508bac8f24d2cb8ca4e4203e84f0e",
    "sick_leave_reduction": "0.00",
-   "tax": "33160.34",
-   "taxable": "100600.96",
+   "tax": "33202.40",
+   "taxable": "100721.15",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=100000|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "102403.85",
+   "gross": "102884.62",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=33791.35",
-    "overtime=2403.85"
+    "income_tax=33959.62",
+    "overtime=2884.62"
    ],
-   "net": "61612.50",
-   "net_before_deductions": "61612.50",
-   "overtime_pay": "2403.85",
+   "net": "61925.00",
+   "net_before_deductions": "61925.00",
+   "overtime_pay": "2884.62",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "bf6b1eb866a453719b3f3e547117127238ac9690ebf4f1197a197c25ec402d5a",
+   "sha256": "a4903debde6a0e6bfb6c7c41079e1dbbec12979f3c4dec3d37cb1ed0368b0d3d",
    "sick_leave_reduction": "0.00",
-   "tax": "33791.35",
-   "taxable": "102403.85",
+   "tax": "33959.62",
+   "taxable": "102884.62",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=100000|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "104356.97",
+   "gross": "105228.37",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=34474.94",
-    "overtime=4356.97"
+    "income_tax=34779.93",
+    "overtime=5228.37"
    ],
-   "net": "62882.03",
-   "net_before_deductions": "62882.03",
-   "overtime_pay": "4356.97",
+   "net": "63448.44",
+   "net_before_deductions": "63448.44",
+   "overtime_pay": "5228.37",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "c647fcdfdf4d53b91b2e8df734ed2148fa53c21cc6e2fb44df8281fa3323e1c8",
+   "sha256": "b5156c0968e235ba7740f4ff9f141a74a5f44e48f22a232ad11ad1ed777e8e5c",
    "sick_leave_reduction": "0.00",
-   "tax": "34474.94",
-   "taxable": "104356.97",
+   "tax": "34779.93",
+   "taxable": "105228.37",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
@@ -6209,96 +6209,96 @@
   "elements|taxrule|b=100000|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100360.58",
+   "gross": "100420.67",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=33076.20",
-    "overtime=360.58"
+    "income_tax=33097.23",
+    "overtime=420.67"
    ],
-   "net": "60284.38",
-   "net_before_deductions": "60284.38",
-   "overtime_pay": "360.58",
+   "net": "60323.44",
+   "net_before_deductions": "60323.44",
+   "overtime_pay": "420.67",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "21e9bbd2205ff791051572fdba58dceb3491bef61cd78bccd786564fface84c3",
+   "sha256": "669eb5118aeb73d71092693f2876ab39c42d08b4274d28147c26d3c805c29d97",
    "sick_leave_reduction": "0.00",
-   "tax": "33076.20",
-   "taxable": "100360.58",
+   "tax": "33097.23",
+   "taxable": "100420.67",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=100000|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100721.15",
+   "gross": "100841.35",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=33202.40",
-    "overtime=721.15"
+    "income_tax=33244.47",
+    "overtime=841.35"
    ],
-   "net": "60518.75",
-   "net_before_deductions": "60518.75",
-   "overtime_pay": "721.15",
+   "net": "60596.88",
+   "net_before_deductions": "60596.88",
+   "overtime_pay": "841.35",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "a670a9be20b90bb1701a52913183be4c264ed65847bfacc31db96f65a1159c4a",
+   "sha256": "ac0f7996558bb04bf3aa78630365671f01a3ae0102baf3d8c0e407d9372a52ba",
    "sick_leave_reduction": "0.00",
-   "tax": "33202.40",
-   "taxable": "100721.15",
+   "tax": "33244.47",
+   "taxable": "100841.35",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=100000|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "102884.62",
+   "gross": "103365.38",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=33959.62",
-    "overtime=2884.62"
+    "income_tax=34127.88",
+    "overtime=3365.38"
    ],
-   "net": "61925.00",
-   "net_before_deductions": "61925.00",
-   "overtime_pay": "2884.62",
+   "net": "62237.50",
+   "net_before_deductions": "62237.50",
+   "overtime_pay": "3365.38",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "f353db03346c5dfae9e1c80db7408df26a603cb319abf9c8f71433c36049a498",
+   "sha256": "0b3cf251b4931832d6ddd06b695f0532ee3e2bb4736334aea81b5698711e5714",
    "sick_leave_reduction": "0.00",
-   "tax": "33959.62",
-   "taxable": "102884.62",
+   "tax": "34127.88",
+   "taxable": "103365.38",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=100000|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "105228.37",
+   "gross": "106099.76",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=100000.00",
     "employee_pension=7000.00",
     "employer_pension=11000.00",
-    "income_tax=34779.93",
-    "overtime=5228.37"
+    "income_tax=35084.92",
+    "overtime=6099.76"
    ],
-   "net": "63448.44",
-   "net_before_deductions": "63448.44",
-   "overtime_pay": "5228.37",
+   "net": "64014.84",
+   "net_before_deductions": "64014.84",
+   "overtime_pay": "6099.76",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "974f88b17c7334fb856f3e8716d8a677a7a29edb610caad7feca93c2a01eef07",
+   "sha256": "df0346796daef850644e2e6affa7e095f9df99aa72c6accf66b214751f32f7d8",
    "sick_leave_reduction": "0.00",
-   "tax": "34779.93",
-   "taxable": "105228.37",
+   "tax": "35084.92",
+   "taxable": "106099.76",
    "taxable_allowances": "100000.00",
    "total_deductions": "0.00"
   },
@@ -6401,96 +6401,96 @@
   "elements|taxrule|b=10000|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10030.05",
+   "gross": "10036.06",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1659.02",
-    "overtime=30.05"
+    "income_tax=1660.82",
+    "overtime=36.06"
    ],
-   "net": "7671.03",
-   "net_before_deductions": "7671.03",
-   "overtime_pay": "30.05",
+   "net": "7675.24",
+   "net_before_deductions": "7675.24",
+   "overtime_pay": "36.06",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "223aa9575f526644d0b7d5e837b0be33f969ac8f65e9ef285a681d34de5828a3",
+   "sha256": "99ef2a98ff9932ab5b40b380e284a2369c58b2a4e338d6d9528b665aad55352c",
    "sick_leave_reduction": "0.00",
-   "tax": "1659.02",
-   "taxable": "10030.05",
+   "tax": "1660.82",
+   "taxable": "10036.06",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=10000|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10060.10",
+   "gross": "10072.12",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1668.03",
-    "overtime=60.10"
+    "income_tax=1671.64",
+    "overtime=72.12"
    ],
-   "net": "7692.07",
-   "net_before_deductions": "7692.07",
-   "overtime_pay": "60.10",
+   "net": "7700.48",
+   "net_before_deductions": "7700.48",
+   "overtime_pay": "72.12",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "1b288fefb6be9789ac4bcb5a45dd6acfaddcbca7272647caa037fed14fa54d17",
+   "sha256": "3e9f1c49114501cc76ec724ebdbd92e21d036cd4751dc0107c8d054aacccd49e",
    "sick_leave_reduction": "0.00",
-   "tax": "1668.03",
-   "taxable": "10060.10",
+   "tax": "1671.64",
+   "taxable": "10072.12",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=10000|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10240.38",
+   "gross": "10288.46",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1722.11",
-    "overtime=240.38"
+    "income_tax=1736.54",
+    "overtime=288.46"
    ],
-   "net": "7818.27",
-   "net_before_deductions": "7818.27",
-   "overtime_pay": "240.38",
+   "net": "7851.92",
+   "net_before_deductions": "7851.92",
+   "overtime_pay": "288.46",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "4c19550bccef2ef3146590fb723cfe8c0e4f0b00591fe726a830e944139557ad",
+   "sha256": "6ad0440fd557521c15ce17f042c34d50a2b43dd69b8d1f452b715568e3b51d61",
    "sick_leave_reduction": "0.00",
-   "tax": "1722.11",
-   "taxable": "10240.38",
+   "tax": "1736.54",
+   "taxable": "10288.46",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=10000|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10435.70",
+   "gross": "10522.84",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1780.71",
-    "overtime=435.70"
+    "income_tax=1806.85",
+    "overtime=522.84"
    ],
-   "net": "7954.99",
-   "net_before_deductions": "7954.99",
-   "overtime_pay": "435.70",
+   "net": "8015.99",
+   "net_before_deductions": "8015.99",
+   "overtime_pay": "522.84",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "3565725ee5c2166481f26ab11f2d43e7cf6010bdf1bcb6b4b05d4b5f525abd2a",
+   "sha256": "b65432ae04d75af73b8547b5a0e60b222aab1891be8484d4edf0aa31d8c995c0",
    "sick_leave_reduction": "0.00",
-   "tax": "1780.71",
-   "taxable": "10435.70",
+   "tax": "1806.85",
+   "taxable": "10522.84",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
@@ -6593,96 +6593,96 @@
   "elements|taxrule|b=10000|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10036.06",
+   "gross": "10042.07",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1660.82",
-    "overtime=36.06"
+    "income_tax=1662.62",
+    "overtime=42.07"
    ],
-   "net": "7675.24",
-   "net_before_deductions": "7675.24",
-   "overtime_pay": "36.06",
+   "net": "7679.45",
+   "net_before_deductions": "7679.45",
+   "overtime_pay": "42.07",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "bd951c283f486910d2b2c50fcf4ac4f32831ce11477e7decc8743d5b1cb8c716",
+   "sha256": "d83b24d989fb0e0d925428b7e8f00d2e778c0b54cd42425304005f14633fe301",
    "sick_leave_reduction": "0.00",
-   "tax": "1660.82",
-   "taxable": "10036.06",
+   "tax": "1662.62",
+   "taxable": "10042.07",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=10000|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10072.12",
+   "gross": "10084.13",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1671.64",
-    "overtime=72.12"
+    "income_tax=1675.24",
+    "overtime=84.13"
    ],
-   "net": "7700.48",
-   "net_before_deductions": "7700.48",
-   "overtime_pay": "72.12",
+   "net": "7708.89",
+   "net_before_deductions": "7708.89",
+   "overtime_pay": "84.13",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "41dd4eabbdacc69de911eef3cb0da46eafc9c01c384135eb411f480149fdf3a2",
+   "sha256": "384eddb3b1bf70ae744462e4f51de74803c2538fd6e411199e1adedf29b0a6e0",
    "sick_leave_reduction": "0.00",
-   "tax": "1671.64",
-   "taxable": "10072.12",
+   "tax": "1675.24",
+   "taxable": "10084.13",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=10000|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10288.46",
+   "gross": "10336.54",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1736.54",
-    "overtime=288.46"
+    "income_tax=1750.96",
+    "overtime=336.54"
    ],
-   "net": "7851.92",
-   "net_before_deductions": "7851.92",
-   "overtime_pay": "288.46",
+   "net": "7885.58",
+   "net_before_deductions": "7885.58",
+   "overtime_pay": "336.54",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "b7e14f945b3c022e1a92f2595154b0bda9c352c93595f470c82b58d4cadac34a",
+   "sha256": "82ca8f3966842d9f6a637478a44c506f82adad275102de36030070fc3f8ae3e3",
    "sick_leave_reduction": "0.00",
-   "tax": "1736.54",
-   "taxable": "10288.46",
+   "tax": "1750.96",
+   "taxable": "10336.54",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=10000|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10522.84",
+   "gross": "10609.98",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=10000.00",
     "employee_pension=700.00",
     "employer_pension=1100.00",
-    "income_tax=1806.85",
-    "overtime=522.84"
+    "income_tax=1832.99",
+    "overtime=609.98"
    ],
-   "net": "8015.99",
-   "net_before_deductions": "8015.99",
-   "overtime_pay": "522.84",
+   "net": "8076.99",
+   "net_before_deductions": "8076.99",
+   "overtime_pay": "609.98",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "6ccf89781eda3b112bad49cfb6eae424cd9bef48b5b35336f2cb1c666a7835d6",
+   "sha256": "bf0ddd94431bd331e3b3b7784d70bee5f7e315245d1c2356b1717e1add3e6dbe",
    "sick_leave_reduction": "0.00",
-   "tax": "1806.85",
-   "taxable": "10522.84",
+   "tax": "1832.99",
+   "taxable": "10609.98",
    "taxable_allowances": "10000.00",
    "total_deductions": "0.00"
   },
@@ -6785,96 +6785,96 @@
   "elements|taxrule|b=2080|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2086.25",
+   "gross": "2087.50",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=12.94",
-    "overtime=6.25"
+    "income_tax=13.13",
+    "overtime=7.50"
    ],
-   "net": "1927.71",
-   "net_before_deductions": "1927.71",
-   "overtime_pay": "6.25",
+   "net": "1928.77",
+   "net_before_deductions": "1928.77",
+   "overtime_pay": "7.50",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "cb1ab2a1e20804a6f91eabdefb5880a27bc3a97bda01ab407a7e2c10a16f16ab",
+   "sha256": "e0fa87e19b59954618ab6f4932021de483edfc9b54a1028115c03c87cd2cb051",
    "sick_leave_reduction": "0.00",
-   "tax": "12.94",
-   "taxable": "2086.25",
+   "tax": "13.13",
+   "taxable": "2087.50",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=2080|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2092.50",
+   "gross": "2095.00",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=13.88",
-    "overtime=12.50"
+    "income_tax=14.25",
+    "overtime=15.00"
    ],
-   "net": "1933.02",
-   "net_before_deductions": "1933.02",
-   "overtime_pay": "12.50",
+   "net": "1935.15",
+   "net_before_deductions": "1935.15",
+   "overtime_pay": "15.00",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "e8fd864dc86a3f40c47528e4d5f3a22f2f40a13eb828351463d0295424085cac",
+   "sha256": "56281172e4f2d3f9983d1a75028762331e5624e36c91c1195b4c0c5b7d9e168b",
    "sick_leave_reduction": "0.00",
-   "tax": "13.88",
-   "taxable": "2092.50",
+   "tax": "14.25",
+   "taxable": "2095.00",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=2080|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2130.00",
+   "gross": "2140.00",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=19.50",
-    "overtime=50.00"
+    "income_tax=21.00",
+    "overtime=60.00"
    ],
-   "net": "1964.90",
-   "net_before_deductions": "1964.90",
-   "overtime_pay": "50.00",
+   "net": "1973.40",
+   "net_before_deductions": "1973.40",
+   "overtime_pay": "60.00",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "e746fac2de5447c1fbcad80a0e536dc5b690f06264532b17572bc52f964df591",
+   "sha256": "be6b1af341a0362dfae8ee556fbfb04405b9b198c4bf8e2418dbe5517bd1057a",
    "sick_leave_reduction": "0.00",
-   "tax": "19.50",
-   "taxable": "2130.00",
+   "tax": "21.00",
+   "taxable": "2140.00",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=2080|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2170.63",
+   "gross": "2188.75",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=25.59",
-    "overtime=90.63"
+    "income_tax=28.31",
+    "overtime=108.75"
    ],
-   "net": "1999.44",
-   "net_before_deductions": "1999.44",
-   "overtime_pay": "90.63",
+   "net": "2014.84",
+   "net_before_deductions": "2014.84",
+   "overtime_pay": "108.75",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "311844b47a2d883cc2014e7e32cfbe3e9f96d32f7889cfd08455080a9ed383dd",
+   "sha256": "f9785d70693c99032f1aa14e5ccdc807215877c0dc2bfa2a85f445b9f3a6eae4",
    "sick_leave_reduction": "0.00",
-   "tax": "25.59",
-   "taxable": "2170.63",
+   "tax": "28.31",
+   "taxable": "2188.75",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
@@ -6977,96 +6977,96 @@
   "elements|taxrule|b=2080|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2087.50",
+   "gross": "2088.75",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=13.13",
-    "overtime=7.50"
+    "income_tax=13.31",
+    "overtime=8.75"
    ],
-   "net": "1928.77",
-   "net_before_deductions": "1928.77",
-   "overtime_pay": "7.50",
+   "net": "1929.84",
+   "net_before_deductions": "1929.84",
+   "overtime_pay": "8.75",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "108ff703b75157ef313227b9969348c4c43b1d5027b48b6f716e02262df29fdf",
+   "sha256": "2c3c12c40d4fae7db0b79b6cfb710d960230cff88bb4371a4909598c5c0f8d0e",
    "sick_leave_reduction": "0.00",
-   "tax": "13.13",
-   "taxable": "2087.50",
+   "tax": "13.31",
+   "taxable": "2088.75",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=2080|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2095.00",
+   "gross": "2097.50",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=14.25",
-    "overtime=15.00"
+    "income_tax=14.63",
+    "overtime=17.50"
    ],
-   "net": "1935.15",
-   "net_before_deductions": "1935.15",
-   "overtime_pay": "15.00",
+   "net": "1937.27",
+   "net_before_deductions": "1937.27",
+   "overtime_pay": "17.50",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "9c9975caa40c333ac6347fc9426d6def692bd91af3f4c564b0c1c01c14976d51",
+   "sha256": "0b5aeb8fa74b1a151f71bd242d01c9d67324af3a8198d38cf4a10a5e06d6de4a",
    "sick_leave_reduction": "0.00",
-   "tax": "14.25",
-   "taxable": "2095.00",
+   "tax": "14.63",
+   "taxable": "2097.50",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=2080|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2140.00",
+   "gross": "2150.00",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=21.00",
-    "overtime=60.00"
+    "income_tax=22.50",
+    "overtime=70.00"
    ],
-   "net": "1973.40",
-   "net_before_deductions": "1973.40",
-   "overtime_pay": "60.00",
+   "net": "1981.90",
+   "net_before_deductions": "1981.90",
+   "overtime_pay": "70.00",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "d0a103f9a808ec9dc7102df34a65f031182a931a3f924f0335faad03eec5ce1b",
+   "sha256": "77b43c798062c015042ae481594c6cebcd2019dd6adb21e50e3828b5f348174e",
    "sick_leave_reduction": "0.00",
-   "tax": "21.00",
-   "taxable": "2140.00",
+   "tax": "22.50",
+   "taxable": "2150.00",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=2080|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2188.75",
+   "gross": "2206.88",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=2080.00",
     "employee_pension=145.60",
     "employer_pension=228.80",
-    "income_tax=28.31",
-    "overtime=108.75"
+    "income_tax=31.03",
+    "overtime=126.88"
    ],
-   "net": "2014.84",
-   "net_before_deductions": "2014.84",
-   "overtime_pay": "108.75",
+   "net": "2030.25",
+   "net_before_deductions": "2030.25",
+   "overtime_pay": "126.88",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "262f5a7880acf647a780716163208d374b110fb381387a0c65a860fb130da4a7",
+   "sha256": "51058fbbad5bada3a35bcf2713320f108d65af2e45058149cb3c68ce31f02a61",
    "sick_leave_reduction": "0.00",
-   "tax": "28.31",
-   "taxable": "2188.75",
+   "tax": "31.03",
+   "taxable": "2206.88",
    "taxable_allowances": "2080.00",
    "total_deductions": "0.00"
   },
@@ -7169,96 +7169,96 @@
   "elements|taxrule|b=33333.33|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33433.49",
+   "gross": "33453.52",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=9651.72",
-    "overtime=100.16"
+    "income_tax=9658.73",
+    "overtime=120.19"
    ],
-   "net": "21448.44",
-   "net_before_deductions": "21448.44",
-   "overtime_pay": "100.16",
+   "net": "21461.46",
+   "net_before_deductions": "21461.46",
+   "overtime_pay": "120.19",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "f1a5716dd0b3c683835351c69b6be9c352e9fbae7c9187d804ef7e17ed73d546",
+   "sha256": "97c5557cf6c32197b93d246e34e40ef129b32059360b0c615ec1f3107cc7c44c",
    "sick_leave_reduction": "0.00",
-   "tax": "9651.72",
-   "taxable": "33433.49",
+   "tax": "9658.73",
+   "taxable": "33453.52",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=33333.33|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33533.65",
+   "gross": "33573.71",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=9686.78",
-    "overtime=200.32"
+    "income_tax=9700.80",
+    "overtime=240.38"
    ],
-   "net": "21513.54",
-   "net_before_deductions": "21513.54",
-   "overtime_pay": "200.32",
+   "net": "21539.58",
+   "net_before_deductions": "21539.58",
+   "overtime_pay": "240.38",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "4b4ddd4738ffa92d0ba3a38a604bf350f357d649d4515e9c7bbb496908561092",
+   "sha256": "d0d4ff89015b733bc1ddda640e75e2df0461625016de47e9de991ae5043a0207",
    "sick_leave_reduction": "0.00",
-   "tax": "9686.78",
-   "taxable": "33533.65",
+   "tax": "9700.80",
+   "taxable": "33573.71",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=33333.33|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "34134.61",
+   "gross": "34294.87",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=9897.11",
-    "overtime=801.28"
+    "income_tax=9953.20",
+    "overtime=961.54"
    ],
-   "net": "21904.17",
-   "net_before_deductions": "21904.17",
-   "overtime_pay": "801.28",
+   "net": "22008.34",
+   "net_before_deductions": "22008.34",
+   "overtime_pay": "961.54",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "8214d5d2438c19ebbb1cc454cfbb60962643ee2cd788cd717d49ee219e383e3b",
+   "sha256": "302a4de963312c146e87524672bdada7251e1d493971a9f256c432f56a48df7c",
    "sick_leave_reduction": "0.00",
-   "tax": "9897.11",
-   "taxable": "34134.61",
+   "tax": "9953.20",
+   "taxable": "34294.87",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=33333.33|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "34785.65",
+   "gross": "35076.12",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=10124.98",
-    "overtime=1452.32"
+    "income_tax=10226.64",
+    "overtime=1742.79"
    ],
-   "net": "22327.34",
-   "net_before_deductions": "22327.34",
-   "overtime_pay": "1452.32",
+   "net": "22516.15",
+   "net_before_deductions": "22516.15",
+   "overtime_pay": "1742.79",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "fd698558d224743d3d93552779fdae248e7b2928cecf2f518cc03127c1ba2eb0",
+   "sha256": "d5f04d1d9168b673c3364409f03cf9700edec65f836955f00d3d4a4dbf641ae3",
    "sick_leave_reduction": "0.00",
-   "tax": "10124.98",
-   "taxable": "34785.65",
+   "tax": "10226.64",
+   "taxable": "35076.12",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
@@ -7361,96 +7361,96 @@
   "elements|taxrule|b=33333.33|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33453.52",
+   "gross": "33473.55",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=9658.73",
-    "overtime=120.19"
+    "income_tax=9665.74",
+    "overtime=140.22"
    ],
-   "net": "21461.46",
-   "net_before_deductions": "21461.46",
-   "overtime_pay": "120.19",
+   "net": "21474.48",
+   "net_before_deductions": "21474.48",
+   "overtime_pay": "140.22",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "caf9b5347d5c6a7dad511084bea723632332c4f41d0cc663afabf372d8d7df3f",
+   "sha256": "c33c9ff0b5dd655d77509fc3cf528ab3f68b9bf4411e180db156fd35d64b8fe3",
    "sick_leave_reduction": "0.00",
-   "tax": "9658.73",
-   "taxable": "33453.52",
+   "tax": "9665.74",
+   "taxable": "33473.55",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=33333.33|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33573.71",
+   "gross": "33613.78",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=9700.80",
-    "overtime=240.38"
+    "income_tax=9714.82",
+    "overtime=280.45"
    ],
-   "net": "21539.58",
-   "net_before_deductions": "21539.58",
-   "overtime_pay": "240.38",
+   "net": "21565.63",
+   "net_before_deductions": "21565.63",
+   "overtime_pay": "280.45",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "15e30e6d6452f91bf7f2f3672d0c9706f82946d9e2318ae96320637c4378f48e",
+   "sha256": "0e85674b3207fc1c5db4cbe32b703da40540a5e7a1f4c0dc62221a97473090f7",
    "sick_leave_reduction": "0.00",
-   "tax": "9700.80",
-   "taxable": "33573.71",
+   "tax": "9714.82",
+   "taxable": "33613.78",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=33333.33|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "34294.87",
+   "gross": "34455.12",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=9953.20",
-    "overtime=961.54"
+    "income_tax=10009.29",
+    "overtime=1121.79"
    ],
-   "net": "22008.34",
-   "net_before_deductions": "22008.34",
-   "overtime_pay": "961.54",
+   "net": "22112.50",
+   "net_before_deductions": "22112.50",
+   "overtime_pay": "1121.79",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "55c6fed712bf32f618ccbf0b4cc3d0556b8fd800d1f1e01b9b4e36b505a5d290",
+   "sha256": "72f68d8029ea7e62a371fb98d55df72e2f92f88dd67d914d084f35408c1d4090",
    "sick_leave_reduction": "0.00",
-   "tax": "9953.20",
-   "taxable": "34294.87",
+   "tax": "10009.29",
+   "taxable": "34455.12",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=33333.33|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "35076.12",
+   "gross": "35366.58",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=33333.33",
     "employee_pension=2333.33",
     "employer_pension=3666.67",
-    "income_tax=10226.64",
-    "overtime=1742.79"
+    "income_tax=10328.30",
+    "overtime=2033.25"
    ],
-   "net": "22516.15",
-   "net_before_deductions": "22516.15",
-   "overtime_pay": "1742.79",
+   "net": "22704.95",
+   "net_before_deductions": "22704.95",
+   "overtime_pay": "2033.25",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "9b086805376cf711a50d270414bbf8b05de63c3c8c84ac33353243280f5625c7",
+   "sha256": "7b997a3152c2a5ba19b4662b78d8b3beebc014a93ef7d636da78c967b26ab09e",
    "sick_leave_reduction": "0.00",
-   "tax": "10226.64",
-   "taxable": "35076.12",
+   "tax": "10328.30",
+   "taxable": "35366.58",
    "taxable_allowances": "33333.33",
    "total_deductions": "0.00"
   },
@@ -7553,96 +7553,96 @@
   "elements|taxrule|b=5000|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5015.02",
+   "gross": "5018.03",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=503.00",
-    "overtime=15.02"
+    "income_tax=503.61",
+    "overtime=18.03"
    ],
-   "net": "4162.02",
-   "net_before_deductions": "4162.02",
-   "overtime_pay": "15.02",
+   "net": "4164.42",
+   "net_before_deductions": "4164.42",
+   "overtime_pay": "18.03",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "f61b299b9e2cdbf90d17b96f13cdb9d37e050c92b66ca260e94c42015f6d8d7b",
+   "sha256": "0e414586fc3a890e0af1095f2f4e5be8a7e056a794f57d396d01ea4df65421f5",
    "sick_leave_reduction": "0.00",
-   "tax": "503.00",
-   "taxable": "5015.02",
+   "tax": "503.61",
+   "taxable": "5018.03",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=5000|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5030.05",
+   "gross": "5036.06",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=506.01",
-    "overtime=30.05"
+    "income_tax=507.21",
+    "overtime=36.06"
    ],
-   "net": "4174.04",
-   "net_before_deductions": "4174.04",
-   "overtime_pay": "30.05",
+   "net": "4178.85",
+   "net_before_deductions": "4178.85",
+   "overtime_pay": "36.06",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "e821be1e37be9699624fd0bfb25c03c275b9b986e852a00b8ff6a1863e86c8da",
+   "sha256": "5d71cd33be5d2bd2d10302c727c5da475c341686ad994cca36b18cd8cb549b20",
    "sick_leave_reduction": "0.00",
-   "tax": "506.01",
-   "taxable": "5030.05",
+   "tax": "507.21",
+   "taxable": "5036.06",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=5000|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5120.19",
+   "gross": "5144.23",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=524.04",
-    "overtime=120.19"
+    "income_tax=528.85",
+    "overtime=144.23"
    ],
-   "net": "4246.15",
-   "net_before_deductions": "4246.15",
-   "overtime_pay": "120.19",
+   "net": "4265.38",
+   "net_before_deductions": "4265.38",
+   "overtime_pay": "144.23",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "a3dc76b3735a80727046319ea887582d49b04b7615a31e8739efd6c46358509b",
+   "sha256": "9a931e0ae5ffbf87fea5f8d15a5262aee99280c00d715db6c0a293d547997067",
    "sick_leave_reduction": "0.00",
-   "tax": "524.04",
-   "taxable": "5120.19",
+   "tax": "528.85",
+   "taxable": "5144.23",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=5000|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5217.85",
+   "gross": "5261.42",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=543.57",
-    "overtime=217.85"
+    "income_tax=552.28",
+    "overtime=261.42"
    ],
-   "net": "4324.28",
-   "net_before_deductions": "4324.28",
-   "overtime_pay": "217.85",
+   "net": "4359.14",
+   "net_before_deductions": "4359.14",
+   "overtime_pay": "261.42",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "f1f5e67c9cf569b3baa3430097531bf85f749db1295a72b77b6900e845ba8536",
+   "sha256": "71ab0f6b8e4f5d44f1b5e25ce52fc6bb97a8f5b5812bedb7a9d995263b64c583",
    "sick_leave_reduction": "0.00",
-   "tax": "543.57",
-   "taxable": "5217.85",
+   "tax": "552.28",
+   "taxable": "5261.42",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
@@ -7745,96 +7745,96 @@
   "elements|taxrule|b=5000|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5018.03",
+   "gross": "5021.03",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=503.61",
-    "overtime=18.03"
+    "income_tax=504.21",
+    "overtime=21.03"
    ],
-   "net": "4164.42",
-   "net_before_deductions": "4164.42",
-   "overtime_pay": "18.03",
+   "net": "4166.82",
+   "net_before_deductions": "4166.82",
+   "overtime_pay": "21.03",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "9cd2fc2ce4674af2302da723a9312e624b31f33552d86d172f7dd4d2a0b7c3c3",
+   "sha256": "260d15d1fdd53c29ff9c4f5f4d8db7e2188eb0e75039fb1d26eb9cec79739ea2",
    "sick_leave_reduction": "0.00",
-   "tax": "503.61",
-   "taxable": "5018.03",
+   "tax": "504.21",
+   "taxable": "5021.03",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=5000|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5036.06",
+   "gross": "5042.07",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=507.21",
-    "overtime=36.06"
+    "income_tax=508.41",
+    "overtime=42.07"
    ],
-   "net": "4178.85",
-   "net_before_deductions": "4178.85",
-   "overtime_pay": "36.06",
+   "net": "4183.66",
+   "net_before_deductions": "4183.66",
+   "overtime_pay": "42.07",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "752662c5d2e17b07d7231878d50877f7c27213af27c0a2076a3777377473a1ec",
+   "sha256": "cedbd231c7858b566bad220be846d2fba0b12d5ac28ed3bb2183ffbdea573e5f",
    "sick_leave_reduction": "0.00",
-   "tax": "507.21",
-   "taxable": "5036.06",
+   "tax": "508.41",
+   "taxable": "5042.07",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=5000|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5144.23",
+   "gross": "5168.27",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=528.85",
-    "overtime=144.23"
+    "income_tax=533.65",
+    "overtime=168.27"
    ],
-   "net": "4265.38",
-   "net_before_deductions": "4265.38",
-   "overtime_pay": "144.23",
+   "net": "4284.62",
+   "net_before_deductions": "4284.62",
+   "overtime_pay": "168.27",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "edbf589ba3fb71693031155e584126b60738c437a84cfc67a24e49b56cc08ca6",
+   "sha256": "e4d77594cef70000895dfd837a3873faef6f1d33113c059efe8c47df642ff6ac",
    "sick_leave_reduction": "0.00",
-   "tax": "528.85",
-   "taxable": "5144.23",
+   "tax": "533.65",
+   "taxable": "5168.27",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
   "elements|taxrule|b=5000|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5261.42",
+   "gross": "5304.99",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=5000.00",
     "employee_pension=350.00",
     "employer_pension=550.00",
-    "income_tax=552.28",
-    "overtime=261.42"
+    "income_tax=561.00",
+    "overtime=304.99"
    ],
-   "net": "4359.14",
-   "net_before_deductions": "4359.14",
-   "overtime_pay": "261.42",
+   "net": "4393.99",
+   "net_before_deductions": "4393.99",
+   "overtime_pay": "304.99",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "2ce4c9a094b3fe05272c4e91edd8823c1f629e9d69c724fc09ad793cab7554b7",
+   "sha256": "ddf491067ead9c7af5f463b003365dc7746bb2aacfb68739e8b8caa9596319bb",
    "sick_leave_reduction": "0.00",
-   "tax": "552.28",
-   "taxable": "5261.42",
+   "tax": "561.00",
+   "taxable": "5304.99",
    "taxable_allowances": "5000.00",
    "total_deductions": "0.00"
   },
@@ -7944,7 +7944,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "8b075837a9e24a8caf01dca5be6279f46542fc9a83440eb100f650a4dc2a857e",
+   "sha256": "b6aa729d2e29aa9c92557fe172df0aa76366bf5656fc2ec134f9c0f83e485af3",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -7961,7 +7961,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "d507fb33321f8824b47c110576ec9fc9a4bdc8b0c1bae58690dd770393a864db",
+   "sha256": "ef56443e8c9bc169e47e1842dfaffa11d1ab53fe5274f7cbd571686ab61ec3ad",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -7978,7 +7978,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "48ab7a9be3d651cf9aea925f52c50f06bc67cf231a9465a96934eb38d4bcd2c2",
+   "sha256": "5e1ca2065cace674e503190e5a1897aa74fe37b6a08b6864897095d97ac3aa2c",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -7995,7 +7995,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "566d825deb5790ced222019505ec783276b2a02073734d1674ba8afe4ea0fbb5",
+   "sha256": "fbdd9bc013baa934723e33c118f2939471593c5dfbbbed4a24e5346801b3247a",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -8080,7 +8080,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "6297f778445b1007112293ad17a163dea3784bdd29a8b322a4540d13f526a520",
+   "sha256": "b2304879901d7f2a5f16884a2100950075b805d9bc0b50c6fcc085d84cc087d1",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -8097,7 +8097,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "ec18e1986468c5451148286de309825584a08e3b78eb8c0e1a60f3494cb35fff",
+   "sha256": "2cd390c7bb576cce0bc3132b2eb7bff0317824235778a93090e1ec6e360ec295",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -8114,7 +8114,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "90be6b6ce868a6361dd460161624ff16e488faa213c90b80c2236dfe47334655",
+   "sha256": "6fb3660007e1acc104b4c881c096fcfbeee96194bf13e5829da64e47edcf9c0c",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -8131,7 +8131,7 @@
    "overtime_pay": "0.00",
    "pension_employee": "0.00",
    "pension_employer": "0.00",
-   "sha256": "ce9cc18d3474a3d59a2ce6f6dd3f60333dfd43daf59412c46f6c0cb1439f2e65",
+   "sha256": "c57ba539dbd7f751adeca63e55ca9abc4e076f5398e8776a218e31b1ae501e94",
    "sick_leave_reduction": "0.00",
    "tax": "0",
    "taxable": "0.01",
@@ -8209,68 +8209,68 @@
   "legacy|taxrule|b=100000|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100300.48",
+   "gross": "100360.58",
    "lines": [],
-   "net": "60245.31",
-   "net_before_deductions": "60245.31",
-   "overtime_pay": "300.48",
+   "net": "60284.38",
+   "net_before_deductions": "60284.38",
+   "overtime_pay": "360.58",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "4b61a070312876702c9d8129ef6bca1aa9b18dd7a2e3d013c7b124b884db5495",
+   "sha256": "27556ee6768d3c46ae71383df6b33fcd01fa3d638ea2216be8fdeb044cf50eb7",
    "sick_leave_reduction": "0.00",
-   "tax": "33055.17",
-   "taxable": "100300.48",
+   "tax": "33076.20",
+   "taxable": "100360.58",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=100000|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100600.96",
+   "gross": "100721.15",
    "lines": [],
-   "net": "60440.62",
-   "net_before_deductions": "60440.62",
-   "overtime_pay": "600.96",
+   "net": "60518.75",
+   "net_before_deductions": "60518.75",
+   "overtime_pay": "721.15",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "b728c7d600fa0783f90e1d0002fd50e9b81388bfe20ce1d9b6cf884ecbdfe6c2",
+   "sha256": "b3572a1a96e213095a1293896fac9bc5b0b04bb249a41addafe20ff5af14e787",
    "sick_leave_reduction": "0.00",
-   "tax": "33160.34",
-   "taxable": "100600.96",
+   "tax": "33202.40",
+   "taxable": "100721.15",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=100000|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "102403.85",
+   "gross": "102884.62",
    "lines": [],
-   "net": "61612.50",
-   "net_before_deductions": "61612.50",
-   "overtime_pay": "2403.85",
+   "net": "61925.00",
+   "net_before_deductions": "61925.00",
+   "overtime_pay": "2884.62",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "599399cd615b8b5ce16357963090fa7eef6f8697a6a96f382cd2c045beb3b3c1",
+   "sha256": "6f2a7cbd215e62b2f14f6d8f5a7f41428f1f80781e5ac3abe837cfa963a810cf",
    "sick_leave_reduction": "0.00",
-   "tax": "33791.35",
-   "taxable": "102403.85",
+   "tax": "33959.62",
+   "taxable": "102884.62",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=100000|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "104356.97",
+   "gross": "105228.37",
    "lines": [],
-   "net": "62882.03",
-   "net_before_deductions": "62882.03",
-   "overtime_pay": "4356.97",
+   "net": "63448.44",
+   "net_before_deductions": "63448.44",
+   "overtime_pay": "5228.37",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "8ac0bd3e7247fef14e8a37ca7af80a42af350ecbf4bae0ac9b234e8d7a0e302e",
+   "sha256": "1fa83c649f2194101135492de4cefff9b5a9df9f3e90ce81c6e36b341805d777",
    "sick_leave_reduction": "0.00",
-   "tax": "34474.94",
-   "taxable": "104356.97",
+   "tax": "34779.93",
+   "taxable": "105228.37",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -8345,68 +8345,68 @@
   "legacy|taxrule|b=100000|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100360.58",
+   "gross": "100420.67",
    "lines": [],
-   "net": "60284.38",
-   "net_before_deductions": "60284.38",
-   "overtime_pay": "360.58",
+   "net": "60323.44",
+   "net_before_deductions": "60323.44",
+   "overtime_pay": "420.67",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "c3985beb3764f059b227271da7515cffd2310865df4dfc27a390298506b7c066",
+   "sha256": "c0a52a94765631395d79de7dbf6c4fbb562d68554638398afcff2e4b4736bac8",
    "sick_leave_reduction": "0.00",
-   "tax": "33076.20",
-   "taxable": "100360.58",
+   "tax": "33097.23",
+   "taxable": "100420.67",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=100000|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "100721.15",
+   "gross": "100841.35",
    "lines": [],
-   "net": "60518.75",
-   "net_before_deductions": "60518.75",
-   "overtime_pay": "721.15",
+   "net": "60596.88",
+   "net_before_deductions": "60596.88",
+   "overtime_pay": "841.35",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "ec3f57b76ec01cb94e5ec71a08c595dcf28225cceabcc608eb8d033575466642",
+   "sha256": "67041f4bf1a93d795a13664e558fce1b7dd671845995f91f7c12efa24b5ae342",
    "sick_leave_reduction": "0.00",
-   "tax": "33202.40",
-   "taxable": "100721.15",
+   "tax": "33244.47",
+   "taxable": "100841.35",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=100000|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "102884.62",
+   "gross": "103365.38",
    "lines": [],
-   "net": "61925.00",
-   "net_before_deductions": "61925.00",
-   "overtime_pay": "2884.62",
+   "net": "62237.50",
+   "net_before_deductions": "62237.50",
+   "overtime_pay": "3365.38",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "cf289db97783c8bdf025b1e4e027bfd919a02deaf9ec417a2077c81c376a0882",
+   "sha256": "89ae578002313735d365965ed15e97e3d9716dda70b814d393c33c4f6c606cfe",
    "sick_leave_reduction": "0.00",
-   "tax": "33959.62",
-   "taxable": "102884.62",
+   "tax": "34127.88",
+   "taxable": "103365.38",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=100000|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "105228.37",
+   "gross": "106099.76",
    "lines": [],
-   "net": "63448.44",
-   "net_before_deductions": "63448.44",
-   "overtime_pay": "5228.37",
+   "net": "64014.84",
+   "net_before_deductions": "64014.84",
+   "overtime_pay": "6099.76",
    "pension_employee": "7000.00",
    "pension_employer": "11000.00",
-   "sha256": "c92a750c67f82e390b784250da3e9712f5ac1c3708eefed331018e577bcae529",
+   "sha256": "51da4be376e7f7b75acc40eaa7fb8135b438ecb3dbc4d4ef1be1dd8b132e5a35",
    "sick_leave_reduction": "0.00",
-   "tax": "34779.93",
-   "taxable": "105228.37",
+   "tax": "35084.92",
+   "taxable": "106099.76",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -8481,68 +8481,68 @@
   "legacy|taxrule|b=10000|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10030.05",
+   "gross": "10036.06",
    "lines": [],
-   "net": "7671.03",
-   "net_before_deductions": "7671.03",
-   "overtime_pay": "30.05",
+   "net": "7675.24",
+   "net_before_deductions": "7675.24",
+   "overtime_pay": "36.06",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "e001960dff2697395084b37c8ab75df763ebd203c966c8bbff8832ad51edb06d",
+   "sha256": "b8ab0b5815936a0095a2541724bbd952b6132f2b7c32e1b89791cce41f90bd62",
    "sick_leave_reduction": "0.00",
-   "tax": "1659.02",
-   "taxable": "10030.05",
+   "tax": "1660.82",
+   "taxable": "10036.06",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=10000|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10060.10",
+   "gross": "10072.12",
    "lines": [],
-   "net": "7692.07",
-   "net_before_deductions": "7692.07",
-   "overtime_pay": "60.10",
+   "net": "7700.48",
+   "net_before_deductions": "7700.48",
+   "overtime_pay": "72.12",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "3432fddd55ef63d2e26d70e97da95547096f2f941f15e52349cf2ef09a6803d3",
+   "sha256": "69e08bbbc48e62a5514f1f0827e5ba0f127b4aa3d0ea00b52d8001fb2dc0d944",
    "sick_leave_reduction": "0.00",
-   "tax": "1668.03",
-   "taxable": "10060.10",
+   "tax": "1671.64",
+   "taxable": "10072.12",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=10000|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10240.38",
+   "gross": "10288.46",
    "lines": [],
-   "net": "7818.27",
-   "net_before_deductions": "7818.27",
-   "overtime_pay": "240.38",
+   "net": "7851.92",
+   "net_before_deductions": "7851.92",
+   "overtime_pay": "288.46",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "194f93d64d4744ad853cdab6ce93104809cfec37da6dd5e90ce62fad526b6bc1",
+   "sha256": "15618dd8b1a96cb38cc11d2e115c81b8ea598511fa23aea01004c9c05f95cf30",
    "sick_leave_reduction": "0.00",
-   "tax": "1722.11",
-   "taxable": "10240.38",
+   "tax": "1736.54",
+   "taxable": "10288.46",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=10000|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10435.70",
+   "gross": "10522.84",
    "lines": [],
-   "net": "7954.99",
-   "net_before_deductions": "7954.99",
-   "overtime_pay": "435.70",
+   "net": "8015.99",
+   "net_before_deductions": "8015.99",
+   "overtime_pay": "522.84",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "fa04eaaba213c6f256993f8dca56a2fca13174db113cebc604374649122e2419",
+   "sha256": "a1e3e0b666ab5868f547cdd067948357777c36fe254f39d309de064b46645e87",
    "sick_leave_reduction": "0.00",
-   "tax": "1780.71",
-   "taxable": "10435.70",
+   "tax": "1806.85",
+   "taxable": "10522.84",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -8617,68 +8617,68 @@
   "legacy|taxrule|b=10000|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10036.06",
+   "gross": "10042.07",
    "lines": [],
-   "net": "7675.24",
-   "net_before_deductions": "7675.24",
-   "overtime_pay": "36.06",
+   "net": "7679.45",
+   "net_before_deductions": "7679.45",
+   "overtime_pay": "42.07",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "f2dde24aefdabbccf9c3e6926c7ba5d731eb72057d653ffc32536663b04e7d61",
+   "sha256": "4989f0aa7fe8078f288a4a0c7b45052b9199cae387f7c50876ddcff3d6f1af34",
    "sick_leave_reduction": "0.00",
-   "tax": "1660.82",
-   "taxable": "10036.06",
+   "tax": "1662.62",
+   "taxable": "10042.07",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=10000|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10072.12",
+   "gross": "10084.13",
    "lines": [],
-   "net": "7700.48",
-   "net_before_deductions": "7700.48",
-   "overtime_pay": "72.12",
+   "net": "7708.89",
+   "net_before_deductions": "7708.89",
+   "overtime_pay": "84.13",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "6761412065e7c9747d9eef9f8f90f033e9fdd8db1dbf987f869a3c92f963d91d",
+   "sha256": "60dd3f9324a67531ab6ee7efc223a815fad2a8903f42400e1f3fc60644372459",
    "sick_leave_reduction": "0.00",
-   "tax": "1671.64",
-   "taxable": "10072.12",
+   "tax": "1675.24",
+   "taxable": "10084.13",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=10000|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10288.46",
+   "gross": "10336.54",
    "lines": [],
-   "net": "7851.92",
-   "net_before_deductions": "7851.92",
-   "overtime_pay": "288.46",
+   "net": "7885.58",
+   "net_before_deductions": "7885.58",
+   "overtime_pay": "336.54",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "eb3117d8ac9416b0f77f5d7fc0830c96859d57ea718005090dafbb51a222cccb",
+   "sha256": "504563b2c41bf9e5846a3c4aa4a0deefd1cf06bf324e9c64191ec4f0d3cfbbd3",
    "sick_leave_reduction": "0.00",
-   "tax": "1736.54",
-   "taxable": "10288.46",
+   "tax": "1750.96",
+   "taxable": "10336.54",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=10000|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "10522.84",
+   "gross": "10609.98",
    "lines": [],
-   "net": "8015.99",
-   "net_before_deductions": "8015.99",
-   "overtime_pay": "522.84",
+   "net": "8076.99",
+   "net_before_deductions": "8076.99",
+   "overtime_pay": "609.98",
    "pension_employee": "700.00",
    "pension_employer": "1100.00",
-   "sha256": "6cf844d191391a8c5a28feabb37f80f0d4ef211c15c331ca57992d1c97b46ef3",
+   "sha256": "a20be3975d1ae11352e5e6fc1bf50d2902281ffe802f5f4e95c1d2e67f7e6919",
    "sick_leave_reduction": "0.00",
-   "tax": "1806.85",
-   "taxable": "10522.84",
+   "tax": "1832.99",
+   "taxable": "10609.98",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -8753,68 +8753,68 @@
   "legacy|taxrule|b=2080|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2086.25",
+   "gross": "2087.50",
    "lines": [],
-   "net": "1927.71",
-   "net_before_deductions": "1927.71",
-   "overtime_pay": "6.25",
+   "net": "1928.77",
+   "net_before_deductions": "1928.77",
+   "overtime_pay": "7.50",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "1e26d1bba6791c65c51f7269011d444c05f427d2f6662a147dcbc1aa6d935927",
+   "sha256": "d3503d276127b9a37aefd56f6b1ecf0421ec3276e9fb7d162178564080439e23",
    "sick_leave_reduction": "0.00",
-   "tax": "12.94",
-   "taxable": "2086.25",
+   "tax": "13.13",
+   "taxable": "2087.50",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=2080|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2092.50",
+   "gross": "2095.00",
    "lines": [],
-   "net": "1933.02",
-   "net_before_deductions": "1933.02",
-   "overtime_pay": "12.50",
+   "net": "1935.15",
+   "net_before_deductions": "1935.15",
+   "overtime_pay": "15.00",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "fd070f2c239db4aea0fe3b071739b956bd75c28f4cf0616738e3569b81cf12ba",
+   "sha256": "915dbc22b843b0ad0ccafa7b916d24d44883dd891513d50cab0cf8a4474d5944",
    "sick_leave_reduction": "0.00",
-   "tax": "13.88",
-   "taxable": "2092.50",
+   "tax": "14.25",
+   "taxable": "2095.00",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=2080|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2130.00",
+   "gross": "2140.00",
    "lines": [],
-   "net": "1964.90",
-   "net_before_deductions": "1964.90",
-   "overtime_pay": "50.00",
+   "net": "1973.40",
+   "net_before_deductions": "1973.40",
+   "overtime_pay": "60.00",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "9d11a847ed321367b4040bbc180dcb350af12725f462c4c5c0ac78c7a57ddfae",
+   "sha256": "9d59d454ab26bd16ed17b08b7df12ea46ceff7c690b5a84e2535dff7cc17119b",
    "sick_leave_reduction": "0.00",
-   "tax": "19.50",
-   "taxable": "2130.00",
+   "tax": "21.00",
+   "taxable": "2140.00",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=2080|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2170.63",
+   "gross": "2188.75",
    "lines": [],
-   "net": "1999.44",
-   "net_before_deductions": "1999.44",
-   "overtime_pay": "90.63",
+   "net": "2014.84",
+   "net_before_deductions": "2014.84",
+   "overtime_pay": "108.75",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "5ecb240e59654d7895c836b6557d171793fd9c344d3c59a089b3d9554ec53211",
+   "sha256": "96fdf95e763a45e54756cfccd28060d8eb7f2589113a35363917b8279feec940",
    "sick_leave_reduction": "0.00",
-   "tax": "25.59",
-   "taxable": "2170.63",
+   "tax": "28.31",
+   "taxable": "2188.75",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -8889,68 +8889,68 @@
   "legacy|taxrule|b=2080|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2087.50",
+   "gross": "2088.75",
    "lines": [],
-   "net": "1928.77",
-   "net_before_deductions": "1928.77",
-   "overtime_pay": "7.50",
+   "net": "1929.84",
+   "net_before_deductions": "1929.84",
+   "overtime_pay": "8.75",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "e4995f85baea3bf01a1eb9668aa49b5a9afd58ed184c15e7f0d8cb28afc96ed6",
+   "sha256": "2985bea95aa1da98ee2c2136ed6105ed965c4d93913d477969d77f0364dad1e2",
    "sick_leave_reduction": "0.00",
-   "tax": "13.13",
-   "taxable": "2087.50",
+   "tax": "13.31",
+   "taxable": "2088.75",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=2080|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2095.00",
+   "gross": "2097.50",
    "lines": [],
-   "net": "1935.15",
-   "net_before_deductions": "1935.15",
-   "overtime_pay": "15.00",
+   "net": "1937.27",
+   "net_before_deductions": "1937.27",
+   "overtime_pay": "17.50",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "b0fe8de613aee8e6711015a1ba0ff955716148960b2bdc219c37106207bc93dc",
+   "sha256": "625f5f0e3546ae68b899d243b61ecc4cd11aa5d6a7e0dcb93c577605d558636f",
    "sick_leave_reduction": "0.00",
-   "tax": "14.25",
-   "taxable": "2095.00",
+   "tax": "14.63",
+   "taxable": "2097.50",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=2080|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2140.00",
+   "gross": "2150.00",
    "lines": [],
-   "net": "1973.40",
-   "net_before_deductions": "1973.40",
-   "overtime_pay": "60.00",
+   "net": "1981.90",
+   "net_before_deductions": "1981.90",
+   "overtime_pay": "70.00",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "6afc601baa701e9de09cb72f3a7733fdce9addb5356ea5363f8a3cda4fe08a30",
+   "sha256": "af0a4680fe66860c4181caaf059ae1a178807818e5f5edbda4ba91fa6cdb971b",
    "sick_leave_reduction": "0.00",
-   "tax": "21.00",
-   "taxable": "2140.00",
+   "tax": "22.50",
+   "taxable": "2150.00",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=2080|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "2188.75",
+   "gross": "2206.88",
    "lines": [],
-   "net": "2014.84",
-   "net_before_deductions": "2014.84",
-   "overtime_pay": "108.75",
+   "net": "2030.25",
+   "net_before_deductions": "2030.25",
+   "overtime_pay": "126.88",
    "pension_employee": "145.60",
    "pension_employer": "228.80",
-   "sha256": "8946cc7030e5d13593920b05f1d79c827a167fa2ff2488aac419686583c2c812",
+   "sha256": "a90a759d9ca41083edc10af0bcc9e03ab851587942ee077b87515234e5c70065",
    "sick_leave_reduction": "0.00",
-   "tax": "28.31",
-   "taxable": "2188.75",
+   "tax": "31.03",
+   "taxable": "2206.88",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -9025,68 +9025,68 @@
   "legacy|taxrule|b=33333.33|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33433.49",
+   "gross": "33453.52",
    "lines": [],
-   "net": "21448.44",
-   "net_before_deductions": "21448.44",
-   "overtime_pay": "100.16",
+   "net": "21461.46",
+   "net_before_deductions": "21461.46",
+   "overtime_pay": "120.19",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "4bd7383c0d4fbd179aac3c12a417fe050ebed170470d4a57d5a327b459bc9b9a",
+   "sha256": "ce48ecbe5104d64feaaf70e0bb49b7434e0487907a107547e53c56e03788fd9e",
    "sick_leave_reduction": "0.00",
-   "tax": "9651.72",
-   "taxable": "33433.49",
+   "tax": "9658.73",
+   "taxable": "33453.52",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=33333.33|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33533.65",
+   "gross": "33573.71",
    "lines": [],
-   "net": "21513.54",
-   "net_before_deductions": "21513.54",
-   "overtime_pay": "200.32",
+   "net": "21539.58",
+   "net_before_deductions": "21539.58",
+   "overtime_pay": "240.38",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "855df0c6ccb30f16e560a299093381b1c4e7713f2a313762cf83d700a7dbf7e8",
+   "sha256": "a34cc876a89bbfd5e8e5d2cbc7a243d412258e28330d927056594fc93f09cd73",
    "sick_leave_reduction": "0.00",
-   "tax": "9686.78",
-   "taxable": "33533.65",
+   "tax": "9700.80",
+   "taxable": "33573.71",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=33333.33|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "34134.61",
+   "gross": "34294.87",
    "lines": [],
-   "net": "21904.17",
-   "net_before_deductions": "21904.17",
-   "overtime_pay": "801.28",
+   "net": "22008.34",
+   "net_before_deductions": "22008.34",
+   "overtime_pay": "961.54",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "e14a456a190b6e922f3c1308fe3963e33ef06d936193a7b6cf26846125b876a4",
+   "sha256": "afd97988c30b4cf081f85dfc55634098331df52c7367b0287b7f59e4feb12944",
    "sick_leave_reduction": "0.00",
-   "tax": "9897.11",
-   "taxable": "34134.61",
+   "tax": "9953.20",
+   "taxable": "34294.87",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=33333.33|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "34785.65",
+   "gross": "35076.12",
    "lines": [],
-   "net": "22327.34",
-   "net_before_deductions": "22327.34",
-   "overtime_pay": "1452.32",
+   "net": "22516.15",
+   "net_before_deductions": "22516.15",
+   "overtime_pay": "1742.79",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "9c45e614407272bacb30692a5bbe73e08a7223ddf85a65fa0f6a5b18ca3f8c5f",
+   "sha256": "5f68998a5fb57a0e1d9b3040cf67cf975ee464a48f9b3eeffa67198a9efaecc0",
    "sick_leave_reduction": "0.00",
-   "tax": "10124.98",
-   "taxable": "34785.65",
+   "tax": "10226.64",
+   "taxable": "35076.12",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -9161,68 +9161,68 @@
   "legacy|taxrule|b=33333.33|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33453.52",
+   "gross": "33473.55",
    "lines": [],
-   "net": "21461.46",
-   "net_before_deductions": "21461.46",
-   "overtime_pay": "120.19",
+   "net": "21474.48",
+   "net_before_deductions": "21474.48",
+   "overtime_pay": "140.22",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "be99ecda6a142ca34e361e0c21a39a9e1dd63325bb3e4b79cb24fddb2234389c",
+   "sha256": "d5e0827370f11f86f0313e05f63765fe9defd82565494771b7b861d80c18c8e3",
    "sick_leave_reduction": "0.00",
-   "tax": "9658.73",
-   "taxable": "33453.52",
+   "tax": "9665.74",
+   "taxable": "33473.55",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=33333.33|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "33573.71",
+   "gross": "33613.78",
    "lines": [],
-   "net": "21539.58",
-   "net_before_deductions": "21539.58",
-   "overtime_pay": "240.38",
+   "net": "21565.63",
+   "net_before_deductions": "21565.63",
+   "overtime_pay": "280.45",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "b280bab52ea0598c5680d7176c5b43b66cda71c49232a12ef0300b63843d4f45",
+   "sha256": "27dbcad63c0272c52ea9203a21430c0a9e1345470ddb35e10aab1ea91131af41",
    "sick_leave_reduction": "0.00",
-   "tax": "9700.80",
-   "taxable": "33573.71",
+   "tax": "9714.82",
+   "taxable": "33613.78",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=33333.33|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "34294.87",
+   "gross": "34455.12",
    "lines": [],
-   "net": "22008.34",
-   "net_before_deductions": "22008.34",
-   "overtime_pay": "961.54",
+   "net": "22112.50",
+   "net_before_deductions": "22112.50",
+   "overtime_pay": "1121.79",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "b2e92d37a45efbbafc9a82cf8d1aac15281e1f460abe4a7f7d02a49d679cba0a",
+   "sha256": "3c14b1fffc2c35dcb28b3c32a1acfc94aabb44353cf1059386317c55aedd411c",
    "sick_leave_reduction": "0.00",
-   "tax": "9953.20",
-   "taxable": "34294.87",
+   "tax": "10009.29",
+   "taxable": "34455.12",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=33333.33|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "35076.12",
+   "gross": "35366.58",
    "lines": [],
-   "net": "22516.15",
-   "net_before_deductions": "22516.15",
-   "overtime_pay": "1742.79",
+   "net": "22704.95",
+   "net_before_deductions": "22704.95",
+   "overtime_pay": "2033.25",
    "pension_employee": "2333.33",
    "pension_employer": "3666.67",
-   "sha256": "79e7a15c3cb9648e0784c956177d8b2785cdf13b6acc6f27f688cb3bb626ce58",
+   "sha256": "6a3cbbf7711161061ff9f3a286ec31f6c9b1ef1e4da870de4e96ab91ebcf63bf",
    "sick_leave_reduction": "0.00",
-   "tax": "10226.64",
-   "taxable": "35076.12",
+   "tax": "10328.30",
+   "taxable": "35366.58",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -9297,68 +9297,68 @@
   "legacy|taxrule|b=5000|day|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5015.02",
+   "gross": "5018.03",
    "lines": [],
-   "net": "4162.02",
-   "net_before_deductions": "4162.02",
-   "overtime_pay": "15.02",
+   "net": "4164.42",
+   "net_before_deductions": "4164.42",
+   "overtime_pay": "18.03",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "0439a1e8799201ef7a05be42441d95dc872ba1bada4dcb8c3c6af3f4670fbfa8",
+   "sha256": "00f46a1184b4f845ef2b43e49ab681cd6bdc6441f172c48b92db08584b6eb05e",
    "sick_leave_reduction": "0.00",
-   "tax": "503.00",
-   "taxable": "5015.02",
+   "tax": "503.61",
+   "taxable": "5018.03",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=5000|day|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5030.05",
+   "gross": "5036.06",
    "lines": [],
-   "net": "4174.04",
-   "net_before_deductions": "4174.04",
-   "overtime_pay": "30.05",
+   "net": "4178.85",
+   "net_before_deductions": "4178.85",
+   "overtime_pay": "36.06",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "9ec00935c32f5ac22c63b25e87bb768c4b975cbdf1cf474748a9c5728179a803",
+   "sha256": "e987579407c0e287b5c885eae7ee2ac808e75e2d2bb91c1fce5009e884e6bd94",
    "sick_leave_reduction": "0.00",
-   "tax": "506.01",
-   "taxable": "5030.05",
+   "tax": "507.21",
+   "taxable": "5036.06",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=5000|day|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5120.19",
+   "gross": "5144.23",
    "lines": [],
-   "net": "4246.15",
-   "net_before_deductions": "4246.15",
-   "overtime_pay": "120.19",
+   "net": "4265.38",
+   "net_before_deductions": "4265.38",
+   "overtime_pay": "144.23",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "378548f66db7281c8f8bcb21247683c55bda50f10108500d368364024b999de0",
+   "sha256": "f84e64d5a3cf39bdfdeeb4df6d7d62adfe841b1b9f3d00a08aa4606db6d920b2",
    "sick_leave_reduction": "0.00",
-   "tax": "524.04",
-   "taxable": "5120.19",
+   "tax": "528.85",
+   "taxable": "5144.23",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=5000|day|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5217.85",
+   "gross": "5261.42",
    "lines": [],
-   "net": "4324.28",
-   "net_before_deductions": "4324.28",
-   "overtime_pay": "217.85",
+   "net": "4359.14",
+   "net_before_deductions": "4359.14",
+   "overtime_pay": "261.42",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "f8135a89c1b2ee6093e6885f48c9da341edf5838ae31dc9fe84d67303eec6d5e",
+   "sha256": "6aef9e916df18142e5f3c30b898c676bd3eaea005eeb9f855b26eb12a6c09bfe",
    "sick_leave_reduction": "0.00",
-   "tax": "543.57",
-   "taxable": "5217.85",
+   "tax": "552.28",
+   "taxable": "5261.42",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -9433,68 +9433,68 @@
   "legacy|taxrule|b=5000|night|h=0.5": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5018.03",
+   "gross": "5021.03",
    "lines": [],
-   "net": "4164.42",
-   "net_before_deductions": "4164.42",
-   "overtime_pay": "18.03",
+   "net": "4166.82",
+   "net_before_deductions": "4166.82",
+   "overtime_pay": "21.03",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "85950b9c18111a850afe9192ce3f341255374956027b525ffa3d4c60d4eede8b",
+   "sha256": "11e840b0c3661e43435647df0ffb05d6252c981ce8d5ced7ff966c2138025f9f",
    "sick_leave_reduction": "0.00",
-   "tax": "503.61",
-   "taxable": "5018.03",
+   "tax": "504.21",
+   "taxable": "5021.03",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=5000|night|h=1": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5036.06",
+   "gross": "5042.07",
    "lines": [],
-   "net": "4178.85",
-   "net_before_deductions": "4178.85",
-   "overtime_pay": "36.06",
+   "net": "4183.66",
+   "net_before_deductions": "4183.66",
+   "overtime_pay": "42.07",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "55a1b994159c4a8826da353a43c4b9ebc6fc43adfc496a301b5ba1dbe0a203f4",
+   "sha256": "9c946e3d6c2f7b332acffa94ccabfe851f0e31244ffa1b74a71475054fc6da05",
    "sick_leave_reduction": "0.00",
-   "tax": "507.21",
-   "taxable": "5036.06",
+   "tax": "508.41",
+   "taxable": "5042.07",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=5000|night|h=4": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5144.23",
+   "gross": "5168.27",
    "lines": [],
-   "net": "4265.38",
-   "net_before_deductions": "4265.38",
-   "overtime_pay": "144.23",
+   "net": "4284.62",
+   "net_before_deductions": "4284.62",
+   "overtime_pay": "168.27",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "b3bb9e58a602899a756316aa5736b39a81a296e40ca4d741a3e760de2152c9dd",
+   "sha256": "f92c03978bdcd48285be314e1cc44cf6931fb340965359ea0dff0723d79443fa",
    "sick_leave_reduction": "0.00",
-   "tax": "528.85",
-   "taxable": "5144.23",
+   "tax": "533.65",
+   "taxable": "5168.27",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
   "legacy|taxrule|b=5000|night|h=7.25": {
    "deductions": [],
    "exempt_allowances": "0.00",
-   "gross": "5261.42",
+   "gross": "5304.99",
    "lines": [],
-   "net": "4359.14",
-   "net_before_deductions": "4359.14",
-   "overtime_pay": "261.42",
+   "net": "4393.99",
+   "net_before_deductions": "4393.99",
+   "overtime_pay": "304.99",
    "pension_employee": "350.00",
    "pension_employer": "550.00",
-   "sha256": "3a9a203b28fef0cbaf0aa393c43b799ac27bcfd1bd11992c77092228adbad92b",
+   "sha256": "a7c79d690940c339fb7336b67030c0d6c3f8721edcca6c0bc34dfb2d3cb4f9d9",
    "sick_leave_reduction": "0.00",
-   "tax": "552.28",
-   "taxable": "5261.42",
+   "tax": "561.00",
+   "taxable": "5304.99",
    "taxable_allowances": "0.00",
    "total_deductions": "0.00"
   },
@@ -9571,13 +9571,13 @@
     {
      "hours": "2",
      "pay": "0.00",
-     "rate": "1.25",
+     "rate": "1.5",
      "type": "day"
     },
     {
      "hours": "2",
      "pay": "0.00",
-     "rate": "1.5",
+     "rate": "1.75",
      "type": "night"
     },
     {
@@ -9605,7 +9605,7 @@
     {
      "hours": "0.5",
      "pay": "0.00",
-     "rate": "1.25",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9621,7 +9621,7 @@
     {
      "hours": "1",
      "pay": "0.00",
-     "rate": "1.25",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9637,7 +9637,7 @@
     {
      "hours": "4",
      "pay": "0.00",
-     "rate": "1.25",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9653,7 +9653,7 @@
     {
      "hours": "7.25",
      "pay": "0.00",
-     "rate": "1.25",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9737,7 +9737,7 @@
     {
      "hours": "0.5",
      "pay": "0.00",
-     "rate": "1.5",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -9753,7 +9753,7 @@
     {
      "hours": "1",
      "pay": "0.00",
-     "rate": "1.5",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -9769,7 +9769,7 @@
     {
      "hours": "4",
      "pay": "0.00",
-     "rate": "1.5",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -9785,7 +9785,7 @@
     {
      "hours": "7.25",
      "pay": "0.00",
-     "rate": "1.5",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -9868,14 +9868,14 @@
    "entries": [
     {
      "hours": "2",
-     "pay": "1201.92",
-     "rate": "1.25",
+     "pay": "1442.31",
+     "rate": "1.5",
      "type": "day"
     },
     {
      "hours": "2",
-     "pay": "1442.31",
-     "rate": "1.5",
+     "pay": "1682.69",
+     "rate": "1.75",
      "type": "night"
     },
     {
@@ -9895,15 +9895,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "8.00",
-   "total_pay": "6971.16",
+   "total_pay": "7451.93",
    "warnings": []
   },
   "module|taxrule|b=100000|day|h=0.5": {
    "entries": [
     {
      "hours": "0.5",
-     "pay": "300.48",
-     "rate": "1.25",
+     "pay": "360.58",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9911,15 +9911,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "300.48",
+   "total_pay": "360.58",
    "warnings": []
   },
   "module|taxrule|b=100000|day|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "600.96",
-     "rate": "1.25",
+     "pay": "721.15",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9927,15 +9927,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "600.96",
+   "total_pay": "721.15",
    "warnings": []
   },
   "module|taxrule|b=100000|day|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "2403.85",
-     "rate": "1.25",
+     "pay": "2884.62",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9943,15 +9943,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "2403.85",
+   "total_pay": "2884.62",
    "warnings": []
   },
   "module|taxrule|b=100000|day|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "4356.97",
-     "rate": "1.25",
+     "pay": "5228.37",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -9959,7 +9959,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "4356.97",
+   "total_pay": "5228.37",
    "warnings": [
     "day overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -10034,8 +10034,8 @@
    "entries": [
     {
      "hours": "0.5",
-     "pay": "360.58",
-     "rate": "1.5",
+     "pay": "420.67",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10043,15 +10043,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "360.58",
+   "total_pay": "420.67",
    "warnings": []
   },
   "module|taxrule|b=100000|night|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "721.15",
-     "rate": "1.5",
+     "pay": "841.35",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10059,15 +10059,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "721.15",
+   "total_pay": "841.35",
    "warnings": []
   },
   "module|taxrule|b=100000|night|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "2884.62",
-     "rate": "1.5",
+     "pay": "3365.38",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10075,15 +10075,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "2884.62",
+   "total_pay": "3365.38",
    "warnings": []
   },
   "module|taxrule|b=100000|night|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "5228.37",
-     "rate": "1.5",
+     "pay": "6099.76",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10091,7 +10091,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "5228.37",
+   "total_pay": "6099.76",
    "warnings": [
     "night overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -10166,14 +10166,14 @@
    "entries": [
     {
      "hours": "2",
-     "pay": "120.19",
-     "rate": "1.25",
+     "pay": "144.23",
+     "rate": "1.5",
      "type": "day"
     },
     {
      "hours": "2",
-     "pay": "144.23",
-     "rate": "1.5",
+     "pay": "168.27",
+     "rate": "1.75",
      "type": "night"
     },
     {
@@ -10193,15 +10193,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "8.00",
-   "total_pay": "697.11",
+   "total_pay": "745.19",
    "warnings": []
   },
   "module|taxrule|b=10000|day|h=0.5": {
    "entries": [
     {
      "hours": "0.5",
-     "pay": "30.05",
-     "rate": "1.25",
+     "pay": "36.06",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10209,15 +10209,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "30.05",
+   "total_pay": "36.06",
    "warnings": []
   },
   "module|taxrule|b=10000|day|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "60.10",
-     "rate": "1.25",
+     "pay": "72.12",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10225,15 +10225,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "60.10",
+   "total_pay": "72.12",
    "warnings": []
   },
   "module|taxrule|b=10000|day|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "240.38",
-     "rate": "1.25",
+     "pay": "288.46",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10241,15 +10241,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "240.38",
+   "total_pay": "288.46",
    "warnings": []
   },
   "module|taxrule|b=10000|day|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "435.70",
-     "rate": "1.25",
+     "pay": "522.84",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10257,7 +10257,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "435.70",
+   "total_pay": "522.84",
    "warnings": [
     "day overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -10332,8 +10332,8 @@
    "entries": [
     {
      "hours": "0.5",
-     "pay": "36.06",
-     "rate": "1.5",
+     "pay": "42.07",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10341,15 +10341,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "36.06",
+   "total_pay": "42.07",
    "warnings": []
   },
   "module|taxrule|b=10000|night|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "72.12",
-     "rate": "1.5",
+     "pay": "84.13",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10357,15 +10357,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "72.12",
+   "total_pay": "84.13",
    "warnings": []
   },
   "module|taxrule|b=10000|night|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "288.46",
-     "rate": "1.5",
+     "pay": "336.54",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10373,15 +10373,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "288.46",
+   "total_pay": "336.54",
    "warnings": []
   },
   "module|taxrule|b=10000|night|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "522.84",
-     "rate": "1.5",
+     "pay": "609.98",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10389,7 +10389,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "522.84",
+   "total_pay": "609.98",
    "warnings": [
     "night overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -10464,14 +10464,14 @@
    "entries": [
     {
      "hours": "2",
-     "pay": "25.00",
-     "rate": "1.25",
+     "pay": "30.00",
+     "rate": "1.5",
      "type": "day"
     },
     {
      "hours": "2",
-     "pay": "30.00",
-     "rate": "1.5",
+     "pay": "35.00",
+     "rate": "1.75",
      "type": "night"
     },
     {
@@ -10491,15 +10491,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "8.00",
-   "total_pay": "145.00",
+   "total_pay": "155.00",
    "warnings": []
   },
   "module|taxrule|b=2080|day|h=0.5": {
    "entries": [
     {
      "hours": "0.5",
-     "pay": "6.25",
-     "rate": "1.25",
+     "pay": "7.50",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10507,15 +10507,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "6.25",
+   "total_pay": "7.50",
    "warnings": []
   },
   "module|taxrule|b=2080|day|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "12.50",
-     "rate": "1.25",
+     "pay": "15.00",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10523,15 +10523,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "12.50",
+   "total_pay": "15.00",
    "warnings": []
   },
   "module|taxrule|b=2080|day|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "50.00",
-     "rate": "1.25",
+     "pay": "60.00",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10539,15 +10539,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "50.00",
+   "total_pay": "60.00",
    "warnings": []
   },
   "module|taxrule|b=2080|day|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "90.63",
-     "rate": "1.25",
+     "pay": "108.75",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10555,7 +10555,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "90.63",
+   "total_pay": "108.75",
    "warnings": [
     "day overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -10630,8 +10630,8 @@
    "entries": [
     {
      "hours": "0.5",
-     "pay": "7.50",
-     "rate": "1.5",
+     "pay": "8.75",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10639,15 +10639,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "7.50",
+   "total_pay": "8.75",
    "warnings": []
   },
   "module|taxrule|b=2080|night|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "15.00",
-     "rate": "1.5",
+     "pay": "17.50",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10655,15 +10655,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "15.00",
+   "total_pay": "17.50",
    "warnings": []
   },
   "module|taxrule|b=2080|night|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "60.00",
-     "rate": "1.5",
+     "pay": "70.00",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10671,15 +10671,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "60.00",
+   "total_pay": "70.00",
    "warnings": []
   },
   "module|taxrule|b=2080|night|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "108.75",
-     "rate": "1.5",
+     "pay": "126.88",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10687,7 +10687,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "108.75",
+   "total_pay": "126.88",
    "warnings": [
     "night overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -10762,14 +10762,14 @@
    "entries": [
     {
      "hours": "2",
-     "pay": "400.64",
-     "rate": "1.25",
+     "pay": "480.77",
+     "rate": "1.5",
      "type": "day"
     },
     {
      "hours": "2",
-     "pay": "480.77",
-     "rate": "1.5",
+     "pay": "560.90",
+     "rate": "1.75",
      "type": "night"
     },
     {
@@ -10789,15 +10789,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "8.00",
-   "total_pay": "2323.72",
+   "total_pay": "2483.98",
    "warnings": []
   },
   "module|taxrule|b=33333.33|day|h=0.5": {
    "entries": [
     {
      "hours": "0.5",
-     "pay": "100.16",
-     "rate": "1.25",
+     "pay": "120.19",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10805,15 +10805,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "100.16",
+   "total_pay": "120.19",
    "warnings": []
   },
   "module|taxrule|b=33333.33|day|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "200.32",
-     "rate": "1.25",
+     "pay": "240.38",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10821,15 +10821,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "200.32",
+   "total_pay": "240.38",
    "warnings": []
   },
   "module|taxrule|b=33333.33|day|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "801.28",
-     "rate": "1.25",
+     "pay": "961.54",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10837,15 +10837,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "801.28",
+   "total_pay": "961.54",
    "warnings": []
   },
   "module|taxrule|b=33333.33|day|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "1452.32",
-     "rate": "1.25",
+     "pay": "1742.79",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -10853,7 +10853,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "1452.32",
+   "total_pay": "1742.79",
    "warnings": [
     "day overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -10928,8 +10928,8 @@
    "entries": [
     {
      "hours": "0.5",
-     "pay": "120.19",
-     "rate": "1.5",
+     "pay": "140.22",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10937,15 +10937,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "120.19",
+   "total_pay": "140.22",
    "warnings": []
   },
   "module|taxrule|b=33333.33|night|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "240.38",
-     "rate": "1.5",
+     "pay": "280.45",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10953,15 +10953,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "240.38",
+   "total_pay": "280.45",
    "warnings": []
   },
   "module|taxrule|b=33333.33|night|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "961.54",
-     "rate": "1.5",
+     "pay": "1121.79",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10969,15 +10969,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "961.54",
+   "total_pay": "1121.79",
    "warnings": []
   },
   "module|taxrule|b=33333.33|night|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "1742.79",
-     "rate": "1.5",
+     "pay": "2033.25",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -10985,7 +10985,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "1742.79",
+   "total_pay": "2033.25",
    "warnings": [
     "night overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -11060,14 +11060,14 @@
    "entries": [
     {
      "hours": "2",
-     "pay": "60.10",
-     "rate": "1.25",
+     "pay": "72.12",
+     "rate": "1.5",
      "type": "day"
     },
     {
      "hours": "2",
-     "pay": "72.12",
-     "rate": "1.5",
+     "pay": "84.13",
+     "rate": "1.75",
      "type": "night"
     },
     {
@@ -11087,15 +11087,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "8.00",
-   "total_pay": "348.56",
+   "total_pay": "372.59",
    "warnings": []
   },
   "module|taxrule|b=5000|day|h=0.5": {
    "entries": [
     {
      "hours": "0.5",
-     "pay": "15.02",
-     "rate": "1.25",
+     "pay": "18.03",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -11103,15 +11103,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "15.02",
+   "total_pay": "18.03",
    "warnings": []
   },
   "module|taxrule|b=5000|day|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "30.05",
-     "rate": "1.25",
+     "pay": "36.06",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -11119,15 +11119,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "30.05",
+   "total_pay": "36.06",
    "warnings": []
   },
   "module|taxrule|b=5000|day|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "120.19",
-     "rate": "1.25",
+     "pay": "144.23",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -11135,15 +11135,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "120.19",
+   "total_pay": "144.23",
    "warnings": []
   },
   "module|taxrule|b=5000|day|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "217.85",
-     "rate": "1.25",
+     "pay": "261.42",
+     "rate": "1.5",
      "type": "day"
     }
    ],
@@ -11151,7 +11151,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "217.85",
+   "total_pay": "261.42",
    "warnings": [
     "day overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -11226,8 +11226,8 @@
    "entries": [
     {
      "hours": "0.5",
-     "pay": "18.03",
-     "rate": "1.5",
+     "pay": "21.03",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -11235,15 +11235,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "0.50",
-   "total_pay": "18.03",
+   "total_pay": "21.03",
    "warnings": []
   },
   "module|taxrule|b=5000|night|h=1": {
    "entries": [
     {
      "hours": "1",
-     "pay": "36.06",
-     "rate": "1.5",
+     "pay": "42.07",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -11251,15 +11251,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "1.00",
-   "total_pay": "36.06",
+   "total_pay": "42.07",
    "warnings": []
   },
   "module|taxrule|b=5000|night|h=4": {
    "entries": [
     {
      "hours": "4",
-     "pay": "144.23",
-     "rate": "1.5",
+     "pay": "168.27",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -11267,15 +11267,15 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "4.00",
-   "total_pay": "144.23",
+   "total_pay": "168.27",
    "warnings": []
   },
   "module|taxrule|b=5000|night|h=7.25": {
    "entries": [
     {
      "hours": "7.25",
-     "pay": "261.42",
-     "rate": "1.5",
+     "pay": "304.99",
+     "rate": "1.75",
      "type": "night"
     }
    ],
@@ -11283,7 +11283,7 @@
    "exceeds_monthly_limit": false,
    "exceeds_weekly_limit": false,
    "total_hours": "7.25",
-   "total_pay": "261.42",
+   "total_pay": "304.99",
    "warnings": [
     "night overtime (7.25h) exceeds 4-hour daily limit (Labor Proclamation 1156/2019, Art. 67(2))."
    ]
@@ -12276,24 +12276,24 @@
   "engine|2026-09|G06": {
    "deductions": [],
    "exempt_allowances": "2200.00",
-   "gross": "4287.50",
+   "gross": "4425.00",
    "lines": [
     "basic_salary=0.00",
     "employee_pension=1456.00",
     "employer_pension=2288.00",
-    "income_tax=13.13",
-    "overtime=1887.50",
+    "income_tax=33.75",
+    "overtime=2025.00",
     "transport=2400.00"
    ],
-   "net": "2818.37",
-   "net_before_deductions": "2818.37",
-   "overtime_pay": "1887.50",
+   "net": "2935.25",
+   "net_before_deductions": "2935.25",
+   "overtime_pay": "2025.00",
    "pension_employee": "1456.00",
    "pension_employer": "2288.00",
-   "sha256": "ae32bf9927e604c5e7d89b516f9f9d85a6dc9e99d09cdeb16fec684411d4afc5",
+   "sha256": "98e4d5f4bcd459ae52c84c83bf5db55630510359170f701e363603ed728a44df",
    "sick_leave_reduction": "0.00",
-   "tax": "13.13",
-   "taxable": "2087.50",
+   "tax": "33.75",
+   "taxable": "2225.00",
    "taxable_allowances": "200.00",
    "total_deductions": "0.00"
   },
@@ -12475,25 +12475,25 @@
   "engine|2026-10|G06": {
    "deductions": [],
    "exempt_allowances": "2200.00",
-   "gross": "5187.50",
+   "gross": "5325.00",
    "lines": [
     "basic_salary=0.00",
     "education=900.00",
     "employee_pension=1456.00",
     "employer_pension=2288.00",
-    "income_tax=148.13",
-    "overtime=1887.50",
+    "income_tax=168.75",
+    "overtime=2025.00",
     "transport=2400.00"
    ],
-   "net": "3583.37",
-   "net_before_deductions": "3583.37",
-   "overtime_pay": "1887.50",
+   "net": "3700.25",
+   "net_before_deductions": "3700.25",
+   "overtime_pay": "2025.00",
    "pension_employee": "1456.00",
    "pension_employer": "2288.00",
-   "sha256": "b13ed154e4541cb8845180d69888fce4cdb91e499fb24e79109aca8e11d32c3c",
+   "sha256": "73da2bbf3ce428d9bff37b9b77c1ab2872b7e58500a2c97a2e06136afce740d4",
    "sick_leave_reduction": "0.00",
-   "tax": "148.13",
-   "taxable": "2987.50",
+   "tax": "168.75",
+   "taxable": "3125.00",
    "taxable_allowances": "1100.00",
    "total_deductions": "0.00"
   },
@@ -12679,23 +12679,23 @@
   "worksheet|2026-09|G06": {
    "deductions": [],
    "exempt_allowances": "2200.00",
-   "gross": "25087.50",
+   "gross": "25225.00",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=20800.00",
     "employee_pension=1456.00",
     "employer_pension=2288.00",
-    "income_tax=5960.63",
-    "overtime=1887.50",
+    "income_tax=6008.75",
+    "overtime=2025.00",
     "transport=2400.00"
    ],
-   "net": "17670.87",
+   "net": "17760.25",
    "pension_employee": "1456.00",
    "pension_employer": "2288.00",
-   "sha256": "ad2cd60ea0288333ea9eaaffdb40feab473d0e876b9e4de66d814f8f4866ae20",
+   "sha256": "f0fb5262dc16a489696da4ef8681993016db9f1d06a3e597fcd2acff10529e0a",
    "sick_leave_reduction": "0.00",
-   "tax": "5960.63",
-   "taxable": "22887.50",
+   "tax": "6008.75",
+   "taxable": "23025.00",
    "total_deductions": "0.00",
    "unpaid_leave_reduction": "0.00"
   },
@@ -12877,24 +12877,24 @@
   "worksheet|2026-10|G06": {
    "deductions": [],
    "exempt_allowances": "2200.00",
-   "gross": "25987.50",
+   "gross": "26125.00",
    "lines": [
     "basic_salary=0.00",
     "basic_salary=20800.00",
     "education=900.00",
     "employee_pension=1456.00",
     "employer_pension=2288.00",
-    "income_tax=6275.63",
-    "overtime=1887.50",
+    "income_tax=6323.75",
+    "overtime=2025.00",
     "transport=2400.00"
    ],
-   "net": "18255.87",
+   "net": "18345.25",
    "pension_employee": "1456.00",
    "pension_employer": "2288.00",
-   "sha256": "24c5977944aa0b0a0c23f319260dfb40e82672723b49d6d34c94fd94484d03c4",
+   "sha256": "2fcaa5436442101d5f99280a24a0d0bb2c1f5fa8ebc1934134e2be505e21e6ea",
    "sick_leave_reduction": "0.00",
-   "tax": "6275.63",
-   "taxable": "23787.50",
+   "tax": "6323.75",
+   "taxable": "23925.00",
    "total_deductions": "0.00",
    "unpaid_leave_reduction": "0.00"
   },

@@ -10,7 +10,8 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 ### Issue #80 pension review checks use the dated pension rule (2026-11-22)
 
 - Implemented on `fix-80-pension-rate-review-checks`, based on `main`
-  `b0b876b`, at implementation SHA `4a53dc6`. Added
+  `b0b876b`, at implementation SHA `4a53dc6`, with verification SHA
+  `e6ca681`. Added
   `pension_rates_for_date()` as the public dated-rate helper and threaded
   payroll dates through spreadsheet diff, Excel validation, and the pre-process
   validation callers. Review labels, explanations, hints, and mismatches now
@@ -22,6 +23,7 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   Full SQLite suite: **2176 passed, 0 failed, 0 errors, 256 skipped**.
   Changed-file Ruff and `git diff --check` passed. Repository-wide Ruff remains
   blocked by pre-existing migration/script findings outside this slice.
+  Pushed branch; draft PR **#92** is open. Not merged or deployed.
 
 ### Issue #78 settlement and consent use PayrollItemAssignment deductions (2026-11-19)
 
@@ -1419,8 +1421,9 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   coverage **3 passed**; related coverage **88 passed**; full SQLite suite
   **2176 passed, 0 failed, 0 errors, 256 skipped**. Changed-file Ruff and
   `git diff --check` passed; repository-wide Ruff has pre-existing migration/
-  script findings outside this slice. Implementation SHA `4a53dc6`; branch
-  `fix-80-pension-rate-review-checks`; draft PR pending.
+  script findings outside this slice. Implementation SHA `4a53dc6`;
+  verification SHA `e6ca681`; branch `fix-80-pension-rate-review-checks`;
+  draft PR **#92** open. Not merged or deployed.
 
 - 2026-11-19 — Copilot — Issue #78: settlement and consent now include
   UI-created `PayrollItemAssignment` declining deductions, with legacy

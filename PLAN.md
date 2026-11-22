@@ -154,6 +154,20 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   3.11/3.12, lint, both migration jobs and PostgreSQL CI passed. The local full
   run was stopped after a per-file timeout and is not a passing local receipt.
 - Not merged or deployed; prior backup and recovery checks are separate from this PR.
+### Issue #79 seed and existing-row repair (2026-11-22)
+
+- Implemented on branch `fix-79-seed-overtime-leave` at code commit
+  `892b05a638315c0b0647c56f7a36a6b9d18c0904`: corrected the 2025 seed
+  overtime day/night rates and annual leave base, pinned the misleading
+  overtime key meanings and source citations, added an idempotent manual
+  `2025-v1` repair script, and added focused repair/money/PAYE regression tests.
+- Regenerated `tests/golden/catalog_assignment_golden.json` with the fixed
+  overtime override and retired the verify-50 exact rounded-pay Q4 assertion
+  in favor of legal multiplier checks.
+- Full SQLite suite: **2039 passed, 0 failed, 0 errors, 251 skipped**
+  (900.6s). PostgreSQL-only tests remain CI-skipped locally.
+- No live/staging database was accessed. `payroll_engine/services/leave_service.py`
+  was untouched. Draft PR only; no merge or deployment.
 
 ### PR #50 CSS lint fix and main sync (2026-11-13)
 
@@ -1644,3 +1658,10 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   (actual main head) to prevent a second Alembic head. Updated test
   `test_pg_pr8_reconciliation.py` HEAD constant to `h1334c2024a1`. PR #46
   ready for CI rerun.
+
+- 2026-11-22 — Copilot — Implemented issue #79 on
+  `fix-79-seed-overtime-leave` at `892b05a638315c0b0647c56f7a36a6b9d18c0904`.
+  Full SQLite suite: 2039 passed, 0 failed, 0 errors, 251 skipped.
+  Added the manual throwaway/test-only repair script and no live/staging
+  database was touched. Leave service and public-holiday 2.5/Art.75 handling
+  remain unchanged. Draft PR/push pending.

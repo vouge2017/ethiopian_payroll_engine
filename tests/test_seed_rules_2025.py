@@ -183,10 +183,14 @@ def test_repaired_row_matches_fresh_seed_values(app):
     assert old_row.rules_json['leave']['annual_base'] == fresh_row.rules_json['leave']['annual_base']
 
 
-def test_paye_pension_regression_guard():
+def test_paye_pension_regression_guard(app):
+    from helpers import seed_synthetic_payroll_rule
     from payroll_engine.payroll import calculate_payroll
 
-    result = calculate_payroll(basic_salary=Decimal('10000'), allowances=Decimal('0'))
+    with app.app_context():
+        seed_synthetic_payroll_rule()
+        result = calculate_payroll(basic_salary=Decimal('10000'), allowances=Decimal('0'))
+
     assert result['pension_employee'] == Decimal('700')
     assert result['pension_employer'] == Decimal('1100')
     assert result['tax'] == Decimal('1650')

@@ -35,18 +35,23 @@ RULES_2025 = {
     },
     "overtime": {
         "rates": {
-            "day": 1.25,
-            "night": 1.50,
+            # Key meanings are pinned to Proclamation 1156/2019, Art. 68:
+            # day = 6am-10pm, Art. 68(1)(a)
+            # night = 10pm-6am, Art. 68(1)(b)
+            # holiday = weekly rest day, Art. 68(1)(c)
+            # rest_day_holiday = public holiday, Art. 68(1)(d)
+            "day": 1.50,
+            "night": 1.75,
             "holiday": 2.00,
             "rest_day_holiday": 2.50
         },
         "max_hours_month": 20,
         "max_hours_year": 100,
         "monthly_hours": 208,
-        "source": "Labor Proclamation No. 1156/2019, Articles 68, 89"
+        "source": "Labor Proclamation No. 1156/2019, Article 68(1)(a)-(d)"
     },
     "leave": {
-        "annual_base": 14,
+        "annual_base": 16,
         "annual_increment": 1,
         "annual_max": 30,
         "sick_max_days": 180,
@@ -55,7 +60,11 @@ RULES_2025 = {
         "maternity_days": 120,
         "paternity_days": 3,
         "special_days": 3,
-        "source": "Labor Proclamation No. 1156/2019, Articles 81-87"
+        "source": (
+            "Labor Proclamation No. 1156/2019: annual leave Art. 77(1); "
+            "sick leave Art. 85-86; maternity leave Art. 88; "
+            "paternity leave Art. 81(2)"
+        )
     },
     "severance": {
         "max_months": 12,

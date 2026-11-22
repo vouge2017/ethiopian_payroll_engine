@@ -54,9 +54,9 @@ OT_TYPES = ('day', 'night', 'holiday', 'rest_day_holiday')
 OT_HOURS = ('0.5', '1', '4', '7.25')
 OT_BASICS = ('0.01', '2080', '5000', '10000', '33333.33', '100000')
 
-#: The overtime override seed_tax_rules.py writes (day 1.25 / night 1.50).
+#: The overtime override seed_tax_rules.py writes (day 1.50 / night 1.75).
 TAX_RULE_OVERTIME = {
-    'rates': {'day': 1.25, 'night': 1.50, 'holiday': 2.00, 'rest_day_holiday': 2.50},
+    'rates': {'day': 1.50, 'night': 1.75, 'holiday': 2.00, 'rest_day_holiday': 2.50},
     'max_hours_month': 20,
     'max_hours_year': 100,
     'monthly_hours': 208,

@@ -154,6 +154,31 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   3.11/3.12, lint, both migration jobs and PostgreSQL CI passed. The local full
   run was stopped after a per-file timeout and is not a passing local receipt.
 - Not merged or deployed; prior backup and recovery checks are separate from this PR.
+### Issue #79 seed and existing-row repair (2026-11-22)
+
+- Implemented on branch `fix-79-seed-overtime-leave`, rebased onto
+  `origin/main` `1cd24da7be13048e53e49e39494a5d0449d7bbb2`, at code commit
+  `a21ecea`: corrected the 2025 seed
+  overtime day/night rates and annual leave base, pinned the misleading
+  overtime key meanings and source citations, added an idempotent manual
+  `2025-v1` repair script, and added focused repair/money/PAYE regression tests.
+- Regenerated `tests/golden/catalog_assignment_golden.json` with the fixed
+  overtime override and retired the verify-50 exact rounded-pay Q4 assertion
+  in favor of legal multiplier checks.
+- Full SQLite suite: **2039 passed, 0 failed, 0 errors, 251 skipped**
+  (900.6s). PostgreSQL-only tests remain CI-skipped locally.
+- After rebasing, `tests/test_seed_rules_2025.py`: **9 passed, 4 warnings in
+  3.22s**; `tests/test_catalog_assignment_golden.py`: **5 passed, 6 warnings
+  in 5.81s**. PAYE/pension/net guard before and after the test setup change:
+  employee pension **700**, employer pension **1,100**, PAYE **1,650**, net
+  **7,650**; the post-#62 test now obtains these with the explicit synthetic
+  rule inside app context.
+- CI lint follow-up: Ruff fixed the unused import and formatted only
+  `tests/test_seed_rules_2025.py`; that file passes `ruff check` and its tests
+  pass (**9 passed, 4 warnings in 12.23s**). Repository-wide `ruff check .`
+  still reports 39 pre-existing findings in other files, left untouched.
+- No live/staging database was accessed. `payroll_engine/services/leave_service.py`
+  was untouched. Draft PR only; no merge or deployment.
 
 ### PR #50 CSS lint fix and main sync (2026-11-13)
 
@@ -1644,3 +1669,14 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   (actual main head) to prevent a second Alembic head. Updated test
   `test_pg_pr8_reconciliation.py` HEAD constant to `h1334c2024a1`. PR #46
   ready for CI rerun.
+
+- 2026-11-22 — Copilot — Implemented issue #79 on
+  `fix-79-seed-overtime-leave` at `892b05a638315c0b0647c56f7a36a6b9d18c0904`.
+  Full SQLite suite: 2039 passed, 0 failed, 0 errors, 251 skipped.
+  Added the manual throwaway/test-only repair script and no live/staging
+  database was touched. Leave service and public-holiday 2.5/Art.75 handling
+  remain unchanged. Draft PR/push pending.
+- 2026-11-22 — Copilot — Fixed the requested CI lint issue in
+  `tests/test_seed_rules_2025.py` only; targeted Ruff and tests pass. The
+  repository-wide Ruff check reports 39 unrelated existing findings; they
+  were not changed.

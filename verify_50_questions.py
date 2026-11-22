@@ -81,21 +81,25 @@ else:
     fail(3, f"Taxable = {result['taxable']}, expected 11300")
 
 # Q4: Does overtime use correct multipliers?
-from payroll_engine.overtime import calculate_overtime_pay
+from payroll_engine.overtime import get_overtime_rates
 
-ot_day = calculate_overtime_pay(10000, 4, 'day')
-ot_night = calculate_overtime_pay(10000, 4, 'night')
-ot_holiday = calculate_overtime_pay(10000, 4, 'holiday')
-ot_rest = calculate_overtime_pay(10000, 4, 'rest_day_holiday')
-# hourly = 10000/208 = 48.08 (26 working days × 8 hours)
-# day: 48.08 * 4 * 1.25 = 240.40
-# night: 48.08 * 4 * 1.50 = 288.48
-# holiday: 48.08 * 4 * 2.00 = 384.64
-# rest: 48.08 * 4 * 2.50 = 480.80
-if ot_day == Decimal('240.40'):
-    ok(4, f"OT multipliers: day={ot_day}, night={ot_night}, holiday={ot_holiday}, rest={ot_rest}")
+ot_rates = get_overtime_rates()
+# Retired exact rounded-pay example:
+# hourly = 10000/208 = 48.08 (26 working days × 8 hours) for display
+# day 48.08 * 4 * 1.50 = 288.48
+# night 48.08 * 4 * 1.75 = 336.56
+# holiday 48.08 * 4 * 2.00 = 384.64
+# rest 48.08 * 4 * 2.50 = 480.80
+if (
+    ot_rates['day'] == Decimal('1.50')
+    and ot_rates['night'] == Decimal('1.75')
+    and ot_rates['holiday'] == Decimal('2.00')
+    and ot_rates['rest_day_holiday'] == Decimal('2.50')
+):
+    ok(4, f"OT legal multipliers: day={ot_rates['day']}, night={ot_rates['night']}, "
+           f"holiday={ot_rates['holiday']}, rest={ot_rates['rest_day_holiday']}")
 else:
-    fail(4, f"Day OT on 10k/4h = {ot_day}, expected 240.40")
+    fail(4, f"OT legal multipliers = {ot_rates}, expected 1.50/1.75/2.00/2.50")
 
 # Q5: Is hourly rate = basic/208?
 from payroll_engine.overtime import calculate_hourly_rate

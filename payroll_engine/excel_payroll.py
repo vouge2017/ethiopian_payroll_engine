@@ -646,6 +646,17 @@ class ExcelPayrollEngine:
             period=period,
             run_date=date.today().isoformat(),
         )
+        payroll_date = date.today()
+        if period:
+            try:
+                if len(period) == 10:
+                    payroll_date = date.fromisoformat(period)
+                elif len(period) == 7:
+                    payroll_date = datetime.strptime(period, '%Y-%m').date()
+            except ValueError:
+                payroll_date = date.today()
+        else:
+            payroll_date = date.fromisoformat(run.run_date)
 
         # Determinism: hash the input data
         input_str = json.dumps(employees_data, sort_keys=True, default=str)
@@ -684,7 +695,7 @@ class ExcelPayrollEngine:
                 run.exceptions.append(exc)
 
         # Run validation
-        exceptions = self._run_validation(run.employees, previous_payslips)
+        exceptions = self._run_validation(run.employees, previous_payslips, payroll_date=payroll_date)
         run.exceptions.extend(exceptions)
 
         # Attach exceptions to individual employees
@@ -783,9 +794,15 @@ class ExcelPayrollEngine:
         self,
         employees: list[EmployeePayrollResult],
         previous_payslips: dict | None,
+        payroll_date: date | None = None,
     ) -> list[ExceptionItem]:
         """Run validation checks on calculated results."""
         exceptions = []
+        payroll_date = payroll_date or date.today()
+        from payroll_engine.pension import employee_pension, pension_rates_for_date
+
+        employee_pension_rate, _employer_pension_rate = pension_rates_for_date(payroll_date)
+        pension_rate_label = f'{employee_pension_rate * 100:.2f}'.rstrip('0').rstrip('.') + '%'
 
         # Check for duplicate IDs
         seen_ids = {}
@@ -834,7 +851,7 @@ class ExcelPayrollEngine:
         # Check pension calculation
         for emp in employees:
             if emp.basic_salary > 0:
-                expected = (emp.basic_salary * Decimal('0.07')).quantize(Q, rounding=ROUND_HALF_UP)
+                expected = employee_pension(emp.basic_salary, payroll_date)
                 if abs(emp.pension_employee - expected) > Decimal('0.01'):
                     exceptions.append(
                         ExceptionItem(
@@ -843,7 +860,7 @@ class ExcelPayrollEngine:
                             rule_code='PENSION_MISMATCH',
                             severity='FLAG',
                             message=f'Pension mismatch: expected ETB {expected:,.2f}, got ETB {emp.pension_employee:,.2f}',
-                            hint='Pension should be 7% of basic salary.',
+                            hint=f'Pension should be {pension_rate_label} of basic salary.',
                         )
                     )
 

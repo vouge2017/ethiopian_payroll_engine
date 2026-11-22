@@ -337,7 +337,7 @@ def create_review(company_id, user_id, start, refresh_run_id=None):
     PayrollValidationResult.query.filter_by(payroll_run_id=run.id).delete()
     from payroll_engine.validation import validate_payroll_data
 
-    for result in validate_payroll_data(display_rows(rows), company_id=company_id):
+    for result in validate_payroll_data(display_rows(rows), company_id=company_id, payroll_date=start):
         db.session.add(
             PayrollValidationResult(
                 payroll_run_id=run.id,

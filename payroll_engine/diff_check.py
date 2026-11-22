@@ -16,7 +16,7 @@ import re
 import uuid
 from contextlib import suppress
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import openpyxl
@@ -320,6 +320,10 @@ def compare_spreadsheet(
             if idx < len(keys):
                 col_map[keys[idx]] = field
     today = period or date.today()
+    from payroll_engine.pension import pension_rates_for_date
+
+    employee_pension_rate, _employer_pension_rate = pension_rates_for_date(today)
+    pension_rate_label = f'{employee_pension_rate * 100:.2f}'.rstrip('0').rstrip('.') + '%'
     out_rows: list[dict[str, Any]] = []
 
     for i, row in enumerate(rows):
@@ -442,7 +446,7 @@ def compare_spreadsheet(
             for label, val in [
                 ('Gross salary', their_gross),
                 ('Tax (PAYE)', their_tax),
-                ('Employee pension (7%)', their_pension),
+                (f'Employee pension ({pension_rate_label})', their_pension),
                 ('Net pay', their_net),
             ]:
                 if val is not None:
@@ -475,10 +479,10 @@ def compare_spreadsheet(
                 ),
             )
             _diff(
-                'Employee pension (7%)',
+                f'Employee pension ({pension_rate_label})',
                 their_pension,
                 e_pension,
-                _explain_pension(theirs=their_pension, ours=e_pension, basic=basic),
+                _explain_pension(theirs=their_pension, ours=e_pension, basic=basic, payroll_date=today),
                 law='Proclamation 1268/2022, Art. 12',
             )
             _diff(
@@ -625,29 +629,45 @@ def _explain_tax(theirs: Decimal | None, ours: Decimal | None, engine: dict[str,
     return f'Tax matches: {theirs:,.2f}'
 
 
-def _explain_pension(theirs: Decimal | None, ours: Decimal | None, basic: Decimal) -> str:
+def _explain_pension(
+    theirs: Decimal | None,
+    ours: Decimal | None,
+    basic: Decimal,
+    payroll_date: date | None = None,
+) -> str:
+    from payroll_engine.pension import employee_pension, pension_rates_for_date
+
+    payroll_date = payroll_date or date.today()
+    employee_rate, _employer_rate = pension_rates_for_date(payroll_date)
+    rate_label = f'{employee_rate * 100:.2f}'.rstrip('0').rstrip('.') + '%'
     if theirs is None:
-        return 'Your spreadsheet does not include an Employee Pension column. Our engine computed 7% of basic salary (Proclamation 1268/2022).'
+        return (
+            f'Your spreadsheet does not include an Employee Pension column. '
+            f'Our engine computed {rate_label} of basic salary '
+            '(Proclamation 1268/2022, Article 12).'
+        )
     if ours is None:
         return 'Value missing on one side — cannot compare.'
-    expected = (basic * Decimal('0.07')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    expected = employee_pension(basic, payroll_date)
     if abs(theirs - expected) <= Decimal('0.01') and abs(ours - expected) > Decimal('0.01'):
         return (
-            f'Their pension ({theirs:,.2f}) = 7% of basic ({basic:,.2f} × 7% = {expected:,.2f}), '
+            f'Their pension ({theirs:,.2f}) = {rate_label} of basic '
+            f'({basic:,.2f} × {rate_label} = {expected:,.2f}), '
             f'but our engine returned {ours:,.2f}. Check basic inputs.'
         )
     if abs(ours - expected) <= Decimal('0.01') and abs(theirs - expected) > Decimal('0.01'):
         return (
-            f'Their pension ({theirs:,.2f}) ≠ 7% of basic ({basic:,.2f} × 7% = {expected:,.2f}). '
-            f'Proclamation 1268/2022, Article 12: 7% of basic, no ceiling. '
+            f'Their pension ({theirs:,.2f}) ≠ {rate_label} of basic '
+            f'({basic:,.2f} × {rate_label} = {expected:,.2f}). '
+            f'Proclamation 1268/2022, Article 12: {rate_label} of basic, no ceiling. '
             f'They may apply pension to gross instead of basic.'
         )
     if theirs != ours:
         return (
-            f'Both differ from expected 7% of basic ({expected:,.2f}): '
+            f'Both differ from expected {rate_label} of basic ({expected:,.2f}): '
             f'theirs {theirs:,.2f}, ours {ours:,.2f}. Check basic salary match.'
         )
-    return f'Pension matches at 7% of basic: {theirs:,.2f}'
+    return f'Pension matches at {rate_label} of basic: {theirs:,.2f}'
 
 
 def _explain_net(theirs: Decimal | None, ours: Decimal | None, engine: dict[str, Any]) -> str:

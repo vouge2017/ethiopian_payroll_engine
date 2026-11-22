@@ -89,6 +89,16 @@ def _get_rates(for_date=None) -> tuple[Decimal, Decimal, Decimal | None]:
     return result
 
 
+def pension_rates_for_date(for_date=None) -> tuple[Decimal, Decimal]:
+    """Return the dated employee and employer pension rates.
+
+    Missing or invalid pension rules propagate from _get_rates; review and
+    validation code must not silently substitute a default rate.
+    """
+    employee_rate, employer_rate, _ceiling = _get_rates(for_date)
+    return employee_rate, employer_rate
+
+
 def _insurable_salary(basic_salary: Decimal, ceiling: Decimal | None) -> Decimal:
     """Return the salary amount on which pension is calculated.
 

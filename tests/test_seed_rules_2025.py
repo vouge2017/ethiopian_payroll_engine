@@ -7,18 +7,18 @@ import pytest
 @pytest.fixture
 def app(tmp_path):
     from payroll_engine import create_app, db
-    from payroll_engine.models import TaxRule
 
     app = create_app()
     app.config.update(
         TESTING=True,
-        SQLALCHEMY_DATABASE_URI=f"sqlite:///{tmp_path / 'issue79.db'}",
+        SQLALCHEMY_DATABASE_URI=f'sqlite:///{tmp_path / "issue79.db"}',
         WTF_CSRF_ENABLED=False,
     )
     with app.app_context():
         db.drop_all()
         db.create_all()
         from sqlalchemy import inspect
+
         assert inspect(db.engine).has_table('tax_rule')
         yield app
         db.session.remove()
@@ -185,6 +185,7 @@ def test_repaired_row_matches_fresh_seed_values(app):
 
 def test_paye_pension_regression_guard(app):
     from helpers import seed_synthetic_payroll_rule
+
     from payroll_engine.payroll import calculate_payroll
 
     with app.app_context():

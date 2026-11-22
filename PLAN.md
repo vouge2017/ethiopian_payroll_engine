@@ -173,6 +173,10 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   employee pension **700**, employer pension **1,100**, PAYE **1,650**, net
   **7,650**; the post-#62 test now obtains these with the explicit synthetic
   rule inside app context.
+- CI lint follow-up: Ruff fixed the unused import and formatted only
+  `tests/test_seed_rules_2025.py`; that file passes `ruff check` and its tests
+  pass (**9 passed, 4 warnings in 12.23s**). Repository-wide `ruff check .`
+  still reports 39 pre-existing findings in other files, left untouched.
 - No live/staging database was accessed. `payroll_engine/services/leave_service.py`
   was untouched. Draft PR only; no merge or deployment.
 
@@ -1672,3 +1676,7 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   Added the manual throwaway/test-only repair script and no live/staging
   database was touched. Leave service and public-holiday 2.5/Art.75 handling
   remain unchanged. Draft PR/push pending.
+- 2026-11-22 — Copilot — Fixed the requested CI lint issue in
+  `tests/test_seed_rules_2025.py` only; targeted Ruff and tests pass. The
+  repository-wide Ruff check reports 39 unrelated existing findings; they
+  were not changed.

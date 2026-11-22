@@ -156,8 +156,9 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 - Not merged or deployed; prior backup and recovery checks are separate from this PR.
 ### Issue #79 seed and existing-row repair (2026-11-22)
 
-- Implemented on branch `fix-79-seed-overtime-leave` at code commit
-  `892b05a638315c0b0647c56f7a36a6b9d18c0904`: corrected the 2025 seed
+- Implemented on branch `fix-79-seed-overtime-leave`, rebased onto
+  `origin/main` `1cd24da7be13048e53e49e39494a5d0449d7bbb2`, at code commit
+  `a21ecea`: corrected the 2025 seed
   overtime day/night rates and annual leave base, pinned the misleading
   overtime key meanings and source citations, added an idempotent manual
   `2025-v1` repair script, and added focused repair/money/PAYE regression tests.
@@ -166,6 +167,12 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   in favor of legal multiplier checks.
 - Full SQLite suite: **2039 passed, 0 failed, 0 errors, 251 skipped**
   (900.6s). PostgreSQL-only tests remain CI-skipped locally.
+- After rebasing, `tests/test_seed_rules_2025.py`: **9 passed, 4 warnings in
+  3.22s**; `tests/test_catalog_assignment_golden.py`: **5 passed, 6 warnings
+  in 5.81s**. PAYE/pension/net guard before and after the test setup change:
+  employee pension **700**, employer pension **1,100**, PAYE **1,650**, net
+  **7,650**; the post-#62 test now obtains these with the explicit synthetic
+  rule inside app context.
 - No live/staging database was accessed. `payroll_engine/services/leave_service.py`
   was untouched. Draft PR only; no merge or deployment.
 

@@ -7,6 +7,22 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #80 pension review checks use the dated pension rule (2026-11-22)
+
+- Implemented on `fix-80-pension-rate-review-checks`, based on `main`
+  `b0b876b`, at implementation SHA `4a53dc6`. Added
+  `pension_rates_for_date()` as the public dated-rate helper and threaded
+  payroll dates through spreadsheet diff, Excel validation, and the pre-process
+  validation callers. Review labels, explanations, hints, and mismatches now
+  use the active dated employee pension rate and missing/invalid rules stop
+  loudly. Catalog, employer-charge, tax bands, rule-admin UI, and pension
+  default constants were untouched.
+- Focused issue coverage: **3 passed**.
+  Related diff/Excel/validation coverage: **88 passed**.
+  Full SQLite suite: **2176 passed, 0 failed, 0 errors, 256 skipped**.
+  Changed-file Ruff and `git diff --check` passed. Repository-wide Ruff remains
+  blocked by pre-existing migration/script findings outside this slice.
+
 ### Issue #78 settlement and consent use PayrollItemAssignment deductions (2026-11-19)
 
 - Implemented on `fix/issue-78-settlement-assignment-deductions`, based on
@@ -1170,9 +1186,9 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ## 2. Now
 
-**Current owner-directed slice (2026-11-18):** Fix GitHub issue #60 on one
-dedicated branch and draft PR. Issue #68 is the separate two-company follow-up
-and remains out of scope. Do not merge before review.
+**Current owner-directed slice (2026-11-22):** Fix GitHub issue #80 on one
+dedicated branch and draft PR. Do not merge or deploy; no live database or
+`DATABASE_URL` use.
 
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
 order** (owner pasted an independent review and asked to adopt it; I concur).
@@ -1395,6 +1411,16 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-22 — Copilot — Issue #80: added the public dated pension-rate helper
+  and updated diff, Excel, and pre-process pension mismatch reviews to calculate
+  against the effective rule and show the actual employee rate. Added dated
+  7%/10% regressions and updated existing rule-seeded fixtures. Focused issue
+  coverage **3 passed**; related coverage **88 passed**; full SQLite suite
+  **2176 passed, 0 failed, 0 errors, 256 skipped**. Changed-file Ruff and
+  `git diff --check` passed; repository-wide Ruff has pre-existing migration/
+  script findings outside this slice. Implementation SHA `4a53dc6`; branch
+  `fix-80-pension-rate-review-checks`; draft PR pending.
 
 - 2026-11-19 — Copilot — Issue #78: settlement and consent now include
   UI-created `PayrollItemAssignment` declining deductions, with legacy

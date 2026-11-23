@@ -67,6 +67,7 @@ def validate_payroll_data(
     employees_data: list[dict[str, Any]],
     company_id: int | None = None,
     previous_payslips: dict[str, dict] | None = None,
+    payroll_date: date | None = None,
 ) -> list[ValidationResult]:
     """
     Run all pre-processing validation checks on payroll data.
@@ -101,7 +102,7 @@ def validate_payroll_data(
 
     _check_salary_typos(employees_data, previous_payslips, results)
     _check_salary_change_significant(employees_data, previous_payslips, results)
-    _check_pension_mismatch(employees_data, results)
+    _check_pension_mismatch(employees_data, results, payroll_date)
     _check_tax_mismatch(employees_data, results)
     _check_cash_compliance(employees_data, results)
     _check_payroll_variance(employees_data, company_id, results)
@@ -455,12 +456,21 @@ def _check_pending_leave_impact(data: list[dict], company_id: int, results: list
         logging.getLogger('payroll_engine.validation').warning('Unpaid leave check skipped: %s', e)
 
 
-def _check_pension_mismatch(data: list[dict], results: list[ValidationResult]):
-    """FLAG: Pension should be 7% of basic salary."""
+def _check_pension_mismatch(
+    data: list[dict],
+    results: list[ValidationResult],
+    payroll_date: date | None = None,
+):
+    """FLAG: Pension should match the dated employee pension rate."""
+    from payroll_engine.pension import employee_pension, pension_rates_for_date
+
+    payroll_date = payroll_date or date.today()
+    employee_rate, _employer_rate = pension_rates_for_date(payroll_date)
+    rate_label = f'{employee_rate * 100:.2f}'.rstrip('0').rstrip('.') + '%'
     for emp in data:
         basic = _D(emp.get('basic', 0))
         pension = _D(emp.get('pension_employee', 0))
-        expected = (basic * Decimal('0.07')).quantize(Decimal('0.01'))
+        expected = employee_pension(basic, payroll_date)
         emp_name = emp.get('name', '')
 
         if basic > 0 and abs(pension - expected) > Decimal('0.01'):
@@ -469,11 +479,11 @@ def _check_pension_mismatch(data: list[dict], results: list[ValidationResult]):
                     rule_code='PENSION_MISMATCH',
                     severity='FLAG',
                     message=f"{emp_name}'s pension doesn't match: "
-                    f'expected ETB {expected:,.2f} (7% of {basic:,.2f}), '
+                    f'expected ETB {expected:,.2f} ({rate_label} of {basic:,.2f}), '
                     f'got ETB {pension:,.2f}',
                     employee_id=emp.get('id'),
                     employee_name=emp_name,
-                    hint='Pension should be 7% of basic salary. Check the calculation.',
+                    hint=f'Pension should be {rate_label} of basic salary. Check the calculation.',
                     details={'expected': expected, 'actual': pension, 'basic': basic},
                 )
             )

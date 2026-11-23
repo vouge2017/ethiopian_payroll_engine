@@ -9,9 +9,16 @@ payment for salaries above ETB 50,000. The system flags this as a FLAG
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from payroll_engine.validation import validate_payroll_data
+
+
+@pytest.fixture(autouse=True)
+def pension_rule(synthetic_calculation_rule):
+    yield
 
 
 def _base_row():

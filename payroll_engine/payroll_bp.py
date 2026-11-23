@@ -352,6 +352,7 @@ def api_validate():
         employees_data,
         company_id=_company_id(),
         previous_payslips=previous_payslips,
+        payroll_date=date.today(),
     )
     summary = get_summary(validation_results)
 
@@ -846,6 +847,7 @@ def payroll_upload():
                 employees_data,
                 company_id=_company_id(),
                 previous_payslips=previous_payslips,
+                payroll_date=date.today(),
             )
             summary = get_summary(validation_results)
 

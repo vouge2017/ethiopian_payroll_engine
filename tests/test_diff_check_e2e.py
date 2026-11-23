@@ -12,6 +12,7 @@ Tests:
 import io
 import os
 import sys
+from datetime import date
 
 sys.path.insert(0, os.getcwd())
 
@@ -182,7 +183,7 @@ class FakeFileStorage:
         return self._buf
 
 
-def test_compare_spreadsheet_detects_differences():
+def test_compare_spreadsheet_detects_differences(synthetic_calculation_rule):
     """compare_spreadsheet finds differences between manual and engine values."""
     setup_mocks()
     buf = build_spreadsheet()
@@ -194,15 +195,15 @@ def test_compare_spreadsheet_detects_differences():
     assert 'differences' in dawit
 
 
-def test_explain_functions():
+def test_explain_functions(synthetic_calculation_rule):
     """Plain-language explanations are generated for each field."""
     # _explain_tax(theirs, ours, engine_dict, basic)
     result = _explain_tax(
         3000, 2500, {'gross': 17000, 'pension_employee': 1050, 'taxable': 15950, 'pension_savings': 100}, 15000
     )
     assert 'tax' in result.lower()
-    # _explain_pension(theirs, ours, basic)
-    result = _explain_pension(1050, 1000, 15000)
+    # _explain_pension(theirs, ours, basic, payroll_date)
+    result = _explain_pension(1050, 1000, 15000, date(2025, 6, 1))
     assert 'pension' in result.lower()
     # _explain_net(theirs, ours, engine_dict)
     result = _explain_net(8000, 7500, {'gross': 17000, 'pension_employee': 1050, 'tax': 3300})

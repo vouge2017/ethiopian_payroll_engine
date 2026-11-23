@@ -7,6 +7,40 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #80 pension review checks use the dated pension rule (2026-11-22, updated 2026-11-23)
+
+- Implemented on `fix-80-pension-rate-review-checks`, based on `main`
+  `b0b876b`. The first slice (implementation `4a53dc6`, verification
+  `e6ca681`, handoff `b0b113c`) added `pension_rates_for_date()` and threaded
+  dated pension rates through spreadsheet diff, Excel validation and the
+  pre-process validation callers.
+- Date-consistency fix at `6cd66ec`: `ExcelPayrollEngine.run_from_data()`
+  resolves one rule date from the engine's explicit `for_date` and passes that
+  same date to the pension review. A `period` string is display/audit only and
+  is never parsed as a Gregorian or Ethiopian rule date. `for_date=None` keeps
+  the previous behaviour (today's rule); invalid `for_date` still fails at
+  engine construction; calculation amounts are unchanged. The review check no
+  longer falls back to `date.today()` on its own.
+- Known limit (follow-up, not fixed): a run with a `period` label but no
+  `for_date` uses today's rule, so a late run for an older month must pass
+  `for_date` explicitly.
+- Tests: `tests/test_pension_rate_checks.py` **11 passed** (3 existing helper
+  tests + 8 new `run_from_data` cases: historical `for_date` without a period;
+  matching date and period; conflicting and invalid periods; Ethiopian
+  `2018-10` label; `for_date=None`; existing `for_date` types; invalid
+  `for_date`). Related Excel/diff/validation files: **135 passed**.
+  `run_tests.py --continue` full SQLite suite (DATABASE_URL unset): **2041
+  passed, 0 failed, 6 errors, 256 skipped** in **25,993.9s**. The 6 errors are
+  the runner's 120s per-file timeout, not assertion failures. All six
+  timed-out files were verified separately: four standalone reruns passed
+  (30 + 20 + 27 + 52 = **129 passed**); `test_employee_portal.py` and
+  `test_tenant_bypass_guards.py` completed in the runner log with **7 passed**
+  each (21,240.19s and 937.44s). Effective total: **2184 passed, 0 failed,
+  0 errors, 256 skipped**. `test_employee_portal.py` is pathologically slow
+  (pre-existing, unrelated). Changed-file Ruff check and format: clean;
+  `git diff --check` passed.
+- Pushed branch; draft PR **#92** is open. Not merged or deployed.
+
 ### Issue #78 settlement and consent use PayrollItemAssignment deductions (2026-11-19)
 
 - Implemented on `fix/issue-78-settlement-assignment-deductions`, based on
@@ -1170,9 +1204,9 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ## 2. Now
 
-**Current owner-directed slice (2026-11-18):** Fix GitHub issue #60 on one
-dedicated branch and draft PR. Issue #68 is the separate two-company follow-up
-and remains out of scope. Do not merge before review.
+**Current owner-directed slice (2026-11-22):** Fix GitHub issue #80 on one
+dedicated branch and draft PR. Do not merge or deploy; no live database or
+`DATABASE_URL` use.
 
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
 order** (owner pasted an independent review and asked to adopt it; I concur).
@@ -1391,10 +1425,35 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
   now confirmed (tax on gross). Parked: needs native-speaker wording.
 - Unused i18n key `pension_before_tax` (am/om) still describes the old rule.
   Parked: not shown anywhere, so fix it with the Amharic label work (Next item 7).
+- Infer a rule date from a payroll `period` label when `for_date` is absent.
+  Parked: `period` can be an Ethiopian-calendar label and is display-only
+  today; callers must pass `for_date` explicitly for historical runs
+  (issue #80 follow-up).
 
 ---
 
 ## 5. Log
+
+- 2026-11-23 — AI session (OpenCode) — Issue #80 date-consistency follow-up at
+  `6cd66ec`: `ExcelPayrollEngine.run_from_data()` now resolves one payroll date
+  from `for_date` and uses it for calculation and the pension review; `period`
+  labels are display-only and invalid `for_date` still fails as before. Focused
+  **11 passed**; related Excel/diff/validation **135 passed**; full runner
+  **2041 passed, 0 failed, 6 timeout errors, 256 skipped**, all six timed-out
+  files verified separately (effective **2184 passed, 0 failed, 0 errors, 256
+  skipped**). Ruff check/format and `git diff --check` clean. Draft PR #92
+  updated; not merged or deployed.
+
+- 2026-11-22 — Copilot — Issue #80: added the public dated pension-rate helper
+  and updated diff, Excel, and pre-process pension mismatch reviews to calculate
+  against the effective rule and show the actual employee rate. Added dated
+  7%/10% regressions and updated existing rule-seeded fixtures. Focused issue
+  coverage **3 passed**; related coverage **88 passed**; full SQLite suite
+  **2176 passed, 0 failed, 0 errors, 256 skipped**. Changed-file Ruff and
+  `git diff --check` passed; repository-wide Ruff has pre-existing migration/
+  script findings outside this slice. Implementation SHA `4a53dc6`;
+  verification SHA `e6ca681`; branch `fix-80-pension-rate-review-checks`;
+  draft PR **#92** open. Not merged or deployed.
 
 - 2026-11-19 — Copilot — Issue #78: settlement and consent now include
   UI-created `PayrollItemAssignment` declining deductions, with legacy

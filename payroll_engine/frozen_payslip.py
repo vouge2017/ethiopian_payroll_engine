@@ -87,6 +87,44 @@ def frozen_basic(payslip):
     return frozen_figures(payslip)['basic']
 
 
+def employer_charge_total(payslip):
+    """Employer-side charges approved for this payslip's month, as a Decimal.
+
+    Every employer charge the engine evaluated for that run is in the
+    ``line_items`` snapshot with classification ``employer_charge`` — assigned
+    charges and the engine-managed employer pension alike — so the total is
+    their sum with no figure repeated. Legacy-path payslips carry no snapshot;
+    their only stored employer charge is ``employer_pension``, which is what
+    is reported for them (0.00 when even that was not stored).
+    """
+    line_items = getattr(payslip, 'line_items', None) or []
+    total = Decimal('0')
+    found = False
+    for item in line_items:
+        if not isinstance(item, dict) or item.get('classification') != 'employer_charge':
+            continue
+        amount = _money(item.get('earned_amount'))
+        if amount is None:
+            continue
+        found = True
+        total += amount
+    if found:
+        return total.quantize(Q, rounding=ROUND_HALF_UP)
+    return _money(getattr(payslip, 'employer_pension', None)) or Decimal('0.00')
+
+
+def employer_cost(payslip):
+    """What this payslip's month cost the company: gross + employer charges.
+
+    None when the gross was not stored (legacy-path payslip), so callers show
+    "unknown" instead of a made-up figure.
+    """
+    gross = frozen_figures(payslip)['gross']
+    if gross is None:
+        return None
+    return (gross + employer_charge_total(payslip)).quantize(Q, rounding=ROUND_HALF_UP)
+
+
 def unfrozen_basic_count(payslips):
     """How many payslips have no stored basic salary (legacy gap)."""
     return sum(1 for p in payslips if frozen_basic(p) is None)

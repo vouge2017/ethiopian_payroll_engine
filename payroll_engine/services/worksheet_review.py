@@ -3,7 +3,7 @@
 import calendar
 import json
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from flask import abort
 
@@ -40,6 +40,8 @@ MONEY_KEYS = (
     'unpaid_leave_reduction',
     'exempt_allowances',
     'total_deductions',
+    'total_employer_charges',
+    'employer_cost',
 )
 
 
@@ -53,6 +55,44 @@ def _encoded(value):
     )
 
 
+def employer_charges_of(row):
+    """Employer-side charges recorded for one stored review row.
+
+    New snapshots store ``total_employer_charges``. Older ones carry only the
+    engine's line-item snapshot, where every employer charge (at minimum the
+    employer pension) already appears as an EMPLOYER_CHARGE line, so the
+    figure is recomputed from those lines rather than guessed as zero. A row
+    with neither holds no employer-charge facts and returns None so callers
+    can say so instead of inventing a total.
+    """
+    stored = row.get('total_employer_charges')
+    if stored is not None:
+        return Decimal(str(stored))
+    line_items = row.get('line_items')
+    if not line_items:
+        return None
+    total = Decimal('0')
+    found = False
+    for item in line_items:
+        if not isinstance(item, dict) or item.get('classification') != 'employer_charge':
+            continue
+        if item.get('earned_amount') is None:
+            continue
+        found = True
+        total += Decimal(str(item['earned_amount']))
+    if not found:
+        return None
+    return total.quantize(Q, rounding=ROUND_HALF_UP)
+
+
+def employer_cost_of(row):
+    """Gross plus employer-side charges for one stored review row, or None."""
+    charges = employer_charges_of(row)
+    if charges is None or row.get('gross') is None:
+        return None
+    return (Decimal(str(row['gross'])) + charges).quantize(Q, rounding=ROUND_HALF_UP)
+
+
 def display_rows(rows):
     """Copy JSON snapshots for numeric template/calculation helpers."""
     result = []
@@ -61,6 +101,14 @@ def display_rows(rows):
         copied['line_items'] = [
             dict(item, earned_amount=Decimal(str(item['earned_amount']))) for item in row.get('line_items', [])
         ]
+        # Rows saved before issue #81 have no stored employer totals; derive
+        # them from the same facts so older reviews still show a real figure.
+        # The keys are always set (None when no facts exist) so templates can
+        # test `is not none` without tripping over a missing key.
+        if copied.get('total_employer_charges') is None:
+            copied['total_employer_charges'] = employer_charges_of(copied)
+        if copied.get('employer_cost') is None:
+            copied['employer_cost'] = employer_cost_of(copied)
         result.append(copied)
     return result
 
@@ -274,6 +322,8 @@ def calculate_rows(company_id, start, *, lock=False):
                             'net',
                             'exempt_allowances',
                             'total_deductions',
+                            'total_employer_charges',
+                            'employer_cost',
                             'deduction_details',
                             'line_items',
                         )

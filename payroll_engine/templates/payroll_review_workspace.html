@@ -47,7 +47,7 @@
 
 {% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
 {{ monthly.steps(3 if run.status in ('pending_approval', 'completed', 'locked') else 2) }}
-{% if worksheet_rows %}{{ monthly.totals(worksheet_rows|length, worksheet_rows|sum(attribute='gross'), worksheet_rows|sum(attribute='tax'), worksheet_rows|sum(attribute='net'), 'Saved net pay', comparison=change_summary) }}{% endif %}
+{% if worksheet_rows %}{{ monthly.totals(worksheet_rows|length, worksheet_rows|sum(attribute='gross'), worksheet_rows|sum(attribute='tax'), worksheet_rows|sum(attribute='net'), 'Saved net pay', comparison=change_summary, employer_cost=total_employer_cost) }}{% endif %}
   {% if component_errors and component_errors.change_summary %}
     {% set component_name = 'Change Summary' %}
     {% set error_message = component_errors.change_summary %}
@@ -143,7 +143,7 @@
       {% set employee_changes = change_summary.changes|selectattr('employee_id', 'equalto', row.id)|list if change_summary and change_summary.retained_comparison else [] %}
       {% if employee_changes %}<div class="monthly-row-changes"><h3>Why this pay changed</h3><ul>{% for change in employee_changes %}<li>{{ change.description }}</li>{% endfor %}</ul></div>{% endif %}
       <p class="small text-muted">Bonus ETB {{ row.worksheet_inputs.bonus }} · Extra unpaid days {{ row.worksheet_inputs.absence_days }}</p>
-      <dl class="monthly-amounts"><div><dt>Gross</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>Income tax</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>Pension</dt><dd>{{ '{:,.2f}'.format(row.pension_employee) }}</dd></div><div><dt>Leave deductions</dt><dd>{{ '{:,.2f}'.format(row.unpaid_leave_reduction + row.sick_leave_reduction) }}</dd></div><div><dt>Other deductions</dt><dd>{{ '{:,.2f}'.format(row.total_deductions) }}</dd></div><div class="monthly-net"><dt>Net pay</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
+      <dl class="monthly-amounts"><div><dt>Gross</dt><dd>{{ '{:,.2f}'.format(row.gross) }}</dd></div><div><dt>Income tax</dt><dd>{{ '{:,.2f}'.format(row.tax) }}</dd></div><div><dt>Pension</dt><dd>{{ '{:,.2f}'.format(row.pension_employee) }}</dd></div>{% if row.employer_cost is not none %}<div><dt>Employer cost</dt><dd>{{ '{:,.2f}'.format(row.employer_cost) }}</dd></div>{% endif %}<div><dt>Leave deductions</dt><dd>{{ '{:,.2f}'.format(row.unpaid_leave_reduction + row.sick_leave_reduction) }}</dd></div><div><dt>Other deductions</dt><dd>{{ '{:,.2f}'.format(row.total_deductions) }}</dd></div><div class="monthly-net"><dt>Net pay</dt><dd>{{ '{:,.2f}'.format(row.net) }}</dd></div></dl>
       </div></details>{% endfor %}</div>
     <div class="monthly-no-match" id="review-no-match" hidden><p>No employees match these filters. All preserved payroll amounts remain included.</p><button type="button" class="btn btn-outline-secondary" id="review-clear-filters">Clear employee filters</button></div>
     {% if run.status == 'review' %}

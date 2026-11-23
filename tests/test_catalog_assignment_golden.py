@@ -91,12 +91,22 @@ def _invalidate():
 
 _VOLATILE = {'effective_date', 'item_id', 'assignment_id', 'id', 'employee_pk', 'calculation_context'}
 
+#: Issue #81 added these keys to the elements ENGINE result (which always
+#: carries ``line_items``): assigned employer charges and the employer-cost
+#: total. Their amounts are asserted in tests/test_employer_charges.py;
+#: stripping them from engine-result dicts keeps this file a byte-for-byte
+#: baseline of the pre-#81 payload. The gate on ``line_items`` means no
+#: other payload shape is touched. The golden file is only regenerated for
+#: reviewed AMOUNT changes (see module docstring).
+_ISSUE81_RESULT_KEYS = {'employer_charge_items', 'total_employer_charges', 'employer_cost'}
+
 
 def _plain(value):
     if isinstance(value, Decimal):
         return str(value)
     if isinstance(value, dict):
-        return {str(k): _plain(v) for k, v in sorted(value.items(), key=lambda kv: str(kv[0])) if k not in _VOLATILE}
+        exclude = _VOLATILE | (_ISSUE81_RESULT_KEYS if 'line_items' in value else set())
+        return {str(k): _plain(v) for k, v in sorted(value.items(), key=lambda kv: str(kv[0])) if k not in exclude}
     if isinstance(value, (list, tuple)):
         return [_plain(v) for v in value]
     if isinstance(value, (date, datetime)):

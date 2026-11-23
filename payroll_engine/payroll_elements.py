@@ -84,6 +84,31 @@ def _item_sort_key(item):
     return it.sort_order if it else 999
 
 
+def _item_key(item):
+    """Catalog key for a PayItemType, an assignment, or a resolved-version view."""
+    item_type = item if _is_item_type(item) else getattr(item, 'item_type', None)
+    return getattr(item_type, 'key', None) or getattr(item, 'key', None) or 'unknown'
+
+
+def _bucket_for(classification, buckets, item):
+    """Route one pay item into its classification bucket, or stop payroll.
+
+    An unknown or unsupported classification used to fall through to the
+    earnings bucket (``.get(classification, earnings)``), so a misclassified
+    employer charge was silently counted as employee earnings and understated
+    employer cost with no sign anything was skipped (issue #81). Payroll must
+    refuse the item instead of guessing where it belongs.
+    """
+    bucket = buckets.get(classification)
+    if bucket is None:
+        raise ValueError(
+            f'Pay item "{_item_key(item)}" has unsupported classification '
+            f'"{classification}". Supported classifications: '
+            f'{", ".join(sorted(buckets))}. Payroll cannot be calculated.'
+        )
+    return bucket
+
+
 def _D(value) -> Decimal:
     if isinstance(value, Decimal):
         return value
@@ -163,6 +188,13 @@ def calculate_payroll_from_assignments(
                     'item_key', 'item_label', 'classification',
                     'calculation_method', 'earned_amount', 'is_deduction',
                     'effective_date', 'is_system'.
+            'employer_charge_items': the employer-charge line items above for
+                ASSIGNED charges only. The engine-managed employer pension is
+                in 'line_items' but not here (it is never assigned).
+            'total_employer_charges': Decimal — assigned employer charges plus
+                the engine-managed employer pension, each counted once.
+            'employer_cost': Decimal — gross + total_employer_charges: what
+                this employee's pay costs the company.
         calculate_payroll() is kept for bare-number callers and marked LEGACY.
     """
     for_date = _normalize_date(for_date)
@@ -195,13 +227,17 @@ def calculate_payroll_from_assignments(
             continue
         if not getattr(item_type, 'is_active', True):
             continue
-        extra_bucket = {
-            PayItemClassification.EARNING: employee_items['earnings'],
-            PayItemClassification.DEDUCTION: employee_items['deductions'],
-            PayItemClassification.EMPLOYER_CHARGE: employee_items['employer_charges'],
-            PayItemClassification.TAX: employee_items['tax'],
-            PayItemClassification.INFORMATIONAL: employee_items['tax'],
-        }.get(item_type.classification, employee_items['earnings'])
+        extra_bucket = _bucket_for(
+            item_type.classification,
+            {
+                PayItemClassification.EARNING: employee_items['earnings'],
+                PayItemClassification.DEDUCTION: employee_items['deductions'],
+                PayItemClassification.EMPLOYER_CHARGE: employee_items['employer_charges'],
+                PayItemClassification.TAX: employee_items['tax'],
+                PayItemClassification.INFORMATIONAL: employee_items['tax'],
+            },
+            extra,
+        )
         extra_bucket.append(extra)
 
     # ------------------------------------------------------------------
@@ -314,6 +350,29 @@ def calculate_payroll_from_assignments(
                 )
             )
 
+    # ------------------------------------------------------------------
+    # 2b. Assigned employer-side charges (issue #81).
+    #     These are cost the COMPANY pays on top of gross, so they never
+    #     enter gross, taxable, tax or net. Only the employee's own
+    #     assignments are evaluated here: the system employer_pension
+    #     catalog row is engine-managed and was appended by name above, so
+    #     walking the system bucket as well would double-count it.
+    # ------------------------------------------------------------------
+    employer_charge_items = []
+    assigned_employer_charges = Decimal('0')
+    for item in sorted(employee_items['employer_charges'], key=_item_sort_key):
+        amount = _calculate_employer_charge_amount(item, employee, for_date, units_input)
+        entry = _line_item_dict(item, amount, PayItemClassification.EMPLOYER_CHARGE, False)
+        line_items.append(entry)
+        employer_charge_items.append(entry)
+        assigned_employer_charges += amount
+
+    # Employer cost = gross + every employer-side charge, engine-managed
+    # pension included, counted exactly once (it is already one of the
+    # line items above).
+    total_employer_charges = (assigned_employer_charges + empr_pen).quantize(Q, rounding=ROUND_HALF_UP)
+    employer_cost = (gross + total_employer_charges).quantize(Q, rounding=ROUND_HALF_UP)
+
     net_before_deductions = gross - tax - emp_pen
     # percent_of_net base (line 589-607 of payroll_elements.py):
     #   base = gross - income_tax - employee_pension_contribution
@@ -365,6 +424,11 @@ def calculate_payroll_from_assignments(
         'exempt_allowances': exempt_allowances.quantize(Q, rounding=ROUND_HALF_UP),
         'taxable_allowances': taxable_allowances.quantize(Q, rounding=ROUND_HALF_UP),
         'allowance_details': allowance_details,
+        # Employer-side totals (issue #81): assigned charges only, then the
+        # employer-cost figure the review screens and payslip summary show.
+        'employer_charge_items': employer_charge_items,
+        'total_employer_charges': total_employer_charges,
+        'employer_cost': employer_cost,
         'line_items': line_items,
     }
     return result
@@ -411,13 +475,17 @@ def _load_system_items(company_id, for_date):
     rows = [row for row in resolve_rows(rows, for_date) if row.is_active]
 
     for row in rows:
-        bucket = {
-            PayItemClassification.EARNING: earnings,
-            PayItemClassification.DEDUCTION: deductions,
-            PayItemClassification.EMPLOYER_CHARGE: employer_charges,
-            PayItemClassification.TAX: tax_items,
-            PayItemClassification.INFORMATIONAL: tax_items,  # informational treated as tax-ish
-        }.get(row.classification, earnings)
+        bucket = _bucket_for(
+            row.classification,
+            {
+                PayItemClassification.EARNING: earnings,
+                PayItemClassification.DEDUCTION: deductions,
+                PayItemClassification.EMPLOYER_CHARGE: employer_charges,
+                PayItemClassification.TAX: tax_items,
+                PayItemClassification.INFORMATIONAL: tax_items,  # informational treated as tax-ish
+            },
+            row,
+        )
         bucket.append(row)
 
     return {
@@ -468,13 +536,17 @@ def _load_employee_items(employee_id, company_id, for_date):
         # engine-managed system item. The route layer rejects it, but a
         # hand-built ORM row could still exist; refuse to evaluate it.
         assert_not_system_item(row.item_type)
-        bucket = {
-            PayItemClassification.EARNING: earnings,
-            PayItemClassification.DEDUCTION: deductions,
-            PayItemClassification.EMPLOYER_CHARGE: employer_charges,
-            PayItemClassification.TAX: tax_items,
-            PayItemClassification.INFORMATIONAL: tax_items,
-        }.get(row.item_type.classification, earnings)
+        bucket = _bucket_for(
+            row.item_type.classification,
+            {
+                PayItemClassification.EARNING: earnings,
+                PayItemClassification.DEDUCTION: deductions,
+                PayItemClassification.EMPLOYER_CHARGE: employer_charges,
+                PayItemClassification.TAX: tax_items,
+                PayItemClassification.INFORMATIONAL: tax_items,
+            },
+            row,
+        )
         bucket.append(row)
 
     return {
@@ -632,10 +704,39 @@ def _calculate_item_amount(item, employee, for_date, units_input, running_total)
         return (base * pct / Decimal('100')).quantize(Q, rounding=ROUND_HALF_UP)
     elif method == PayItemCalcMethod.PERCENT_OF_ITEM:
         raise NotImplementedError(
-            'percent_of_item calculation not implemented in this phase. '
-            'Set calculation_method to fixed, rate_x_units, percent_of_basic, or percent_of_net.'
+            f'percent_of_item calculation for pay item "{_item_key(item)}" is not implemented '
+            f'in this phase. Set calculation_method to fixed, rate_x_units, percent_of_basic, '
+            f'or percent_of_net.'
         )
-    return Decimal('0')
+    # No method matched. Returning 0 here would re-create the silent-zero
+    # bug this function exists to prevent (issue #81): the item would vanish
+    # from the calculation with no sign anything was skipped.
+    raise ValueError(
+        f'Pay item "{_item_key(item)}" uses calculation method "{method}", which this '
+        f'engine cannot evaluate. Payroll cannot be calculated.'
+    )
+
+
+def _calculate_employer_charge_amount(item, employee, for_date, units_input):
+    """Evaluate one assigned employer-side charge (issue #81).
+
+    Employer charges are company cost, never employee pay, so an employee
+    net-pay method has no meaningful base here: percent_of_net would be
+    measured against zero and silently produce nothing. Refuse it instead.
+    Everything else goes through the same _calculate_item_amount used for
+    earnings and deductions, so percent_of_item still raises its
+    NotImplementedError and an unknown method still raises ValueError.
+    """
+    if _is_assignment(item):
+        method = _effective_method(item, item.item_type)
+    else:
+        method = item.calculation_method
+    if method == PayItemCalcMethod.PERCENT_OF_NET:
+        raise ValueError(
+            f'Employer charge "{_item_key(item)}" uses percent_of_net, which is an employee '
+            f'deduction method. Use fixed, rate_x_units or percent_of_basic instead.'
+        )
+    return _calculate_item_amount(item, employee, for_date, units_input, Decimal('0'))
 
 
 def _apply_exempt_cap(item, amount, basic_salary):

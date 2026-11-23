@@ -13,11 +13,12 @@
 </dl>
 {%- endmacro %}
 
-{% macro totals(count, gross, tax, net, net_label='Net pay', identifier='', comparison=none) -%}
+{% macro totals(count, gross, tax, net, net_label='Net pay', identifier='', comparison=none, employer_cost=none) -%}
 <section class="monthly-totals" aria-label="{{ net_label }} and payroll totals in ETB"{% if identifier %} id="{{ identifier }}"{% endif %}>
   <div><span>Employees</span><strong>{{ count }}</strong></div>
   <div><span>Gross · ETB</span><strong>{{ '{:,.2f}'.format(gross) }}</strong>{% if comparison and comparison.retained_comparison and comparison.previous_period %}<small>{{ '{:+,.2f}'.format(comparison.gross_delta) }} vs previous approval</small>{% endif %}</div>
   <div><span>Income tax · ETB</span><strong>{{ '{:,.2f}'.format(tax) }}</strong></div>
+  {% if employer_cost is not none %}<div><span>Employer cost · ETB</span><strong>{{ '{:,.2f}'.format(employer_cost) }}</strong><small>gross plus all employer charges</small></div>{% endif %}
   <div class="monthly-net"><span>{{ net_label }} · ETB</span><strong>{{ '{:,.2f}'.format(net) }}</strong>{% if comparison and comparison.retained_comparison and comparison.previous_period %}<small>{{ '{:+,.2f}'.format(comparison.net_delta) }} vs previous approval</small>{% endif %}</div>
 </section>
 {%- endmacro %}

@@ -929,6 +929,18 @@ def payroll_confirm(run_id):
     total_tax = sum(e.get('tax', 0) for e in employees_data)
     total_pension = sum(e.get('pension_employee', 0) for e in employees_data)
     total_net = sum(e.get('net', 0) for e in employees_data)
+    # Employer cost (issue #81): gross plus every employer-side charge the
+    # engine evaluated for the row. Rows carrying no employer-charge detail
+    # (older itemised drafts) report None, so the screen shows a total only
+    # when every employee's figure can be substantiated from stored facts.
+    from payroll_engine.services.worksheet_review import employer_cost_of
+
+    employer_costs = [employer_cost_of(e) for e in employees_data]
+    total_employer_cost = (
+        round(sum(employer_costs), 2) if employees_data and all(cost is not None for cost in employer_costs) else None
+    )
+    for employee_row, cost in zip(employees_data, employer_costs, strict=True):
+        employee_row['employer_cost'] = cost
     blocks = (
         PayrollValidationResult.query.filter_by(payroll_run_id=run.id, severity='BLOCK')
         .filter(PayrollValidationResult.overridden.is_(False) | PayrollValidationResult.overridden.is_(None))
@@ -961,6 +973,7 @@ def payroll_confirm(run_id):
         total_tax=round(total_tax, 2),
         total_pension=round(total_pension, 2),
         total_net=round(total_net, 2),
+        total_employer_cost=total_employer_cost,
         blocks=blocks,
         flags=flags,
         approval_idempotency_key=keys[identity_scope],
@@ -2610,7 +2623,19 @@ def batch_payslips():
 def payroll_run_detail(run_id):
     """Show payroll run details."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
-    return render_template('payroll_results.html', run=run, year=date.today().year)
+    # Employer cost (issue #81): sum what each payslip's month actually cost
+    # the company. A payslip whose stored gross is missing (legacy path)
+    # reports None, so no total is shown rather than a partial one.
+    from payroll_engine.frozen_payslip import employer_cost
+
+    costs = [employer_cost(payslip) for payslip in run.payslips]
+    total_employer_cost = round(sum(costs), 2) if costs and all(cost is not None for cost in costs) else None
+    return render_template(
+        'payroll_results.html',
+        run=run,
+        total_employer_cost=total_employer_cost,
+        year=date.today().year,
+    )
 
 
 @payroll_bp.route('/payroll/runs/<int:run_id>/review')
@@ -2680,6 +2705,7 @@ def payroll_review_workspace(run_id):
         can_approve = False  # Cannot approve if we can't verify issues
 
     worksheet_rows = []
+    total_employer_cost = None
     if run.source == 'spreadsheet':
         from payroll_engine.services.worksheet_review import display_rows
 
@@ -2689,6 +2715,16 @@ def payroll_review_workspace(run_id):
 
         evidence = review_evidence(run, worksheet_rows)
         total_net = sum((row['net'] for row in worksheet_rows), Decimal('0'))
+        # Employer cost (issue #81) — only shown when every row carries the
+        # stored figure, so the screen never mixes real and missing amounts.
+        from payroll_engine.services.worksheet_review import employer_cost_of
+
+        employer_costs = [employer_cost_of(row) for row in worksheet_rows]
+        total_employer_cost = (
+            round(sum(employer_costs), 2)
+            if worksheet_rows and all(cost is not None for cost in employer_costs)
+            else None
+        )
         from payroll_engine.ethiopian_calendar import format_ethiopian_period
 
         narrative = f'Saved payroll for {format_ethiopian_period(run.run_date)} includes {len(worksheet_rows)} employees with total net pay ETB {total_net:,.2f}. Approval preserves these amounts; no payment is sent.'
@@ -2703,6 +2739,7 @@ def payroll_review_workspace(run_id):
     return render_template(
         'payroll_review_workspace.html',
         worksheet_rows=worksheet_rows,
+        total_employer_cost=total_employer_cost,
         run=run,
         narrative=narrative,
         evidence=evidence,

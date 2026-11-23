@@ -7,6 +7,85 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #85 annual leave accrual uses the shared dated rule (2026-11-23)
+
+- State: implemented on `fix-85-annual-leave-accrual`, based on `origin/main`
+  `6d6d2d34ab5c2697a3cf0268ea77fac3bda8a654` (PR #94). Locally tested on SQLite
+  and on a disposable PostgreSQL 16 database. **Not merged, not deployed**;
+  draft PR only — Instinct reviews before any merge. No live database touched.
+- What changed (code): `services/leave_service.py::accrue_annual_leave` now
+  calls `leave.calculate_annual_entitlement(years_of_service,
+  balance.company_policy_days, date(year, 12, 31))`. Removed the duplicate
+  formula (`16 + years`, hardcoded `min(..., 30)`), the two annual-only imports
+  and the stale "Statutory: 14 days + 1 per year" comment; the code now cites
+  Labour Proc. 1156/2019 Art. 77(1) and describes `annual_max` as a configured
+  cap, not a statutory requirement. Service-year counting (to 31 December of
+  the accrual year), first-year handling and the no-reduce-on-read guard are
+  unchanged. `calculate_annual_entitlement`, statutory rates, seed rows,
+  rule-admin UI, company benefit policy, sick/maternity/paternity/special leave
+  (#84), ERCA/bank exports and report formats are untouched.
+- Rule-date convention (documented in the service docstring): `LeaveBalance.year`
+  is a Gregorian calendar year; the leave rule effective on 31 December of that
+  accrual year governs it. An older accrual year never uses today's rule, and a
+  rule effective later *within* the accrual year governs that year. Proven with
+  dated-rule tests (2024 base 20 vs 2026 base 16 vs a 2027 rule that must not
+  apply to 2026).
+- Stored balances (data): new `services/leave_balance_repair.py` plus
+  `flask repair-annual-leave`. Dry-run by default; scoped by company, optional
+  year and explicit balance IDs; annual leave only. Every mismatch is treated
+  as **ambiguous** (the schema has no provenance marker), so it is flagged for
+  human review and never silently reduced or raised. Writing requires
+  `--apply` **and** an explicit `--balance-id` selection **and** `--reviewed`;
+  only `entitled` is written — taken days, carry-forward, `company_policy_days`,
+  `last_accrual_date` and every other field/row are preserved; re-running is a
+  no-op. The repair writes no AuditLog row (limit; the printed report is the
+  record). It was run only against synthetic test data.
+- Where values flow: new accruals store 16 / 16 / 17 / 19 days for 1 / 2 / 3 / 7
+  complete service years. `get_leave_balance`, leave-request validation,
+  dashboard/cockpit reads and leave-balance exports read the stored balance.
+  Settlement reads `balance.remaining` (`entitled + carried_forward − taken`),
+  so a deliberately corrected balance changes a **future preview only**;
+  recorded `FinalSettlement` rows, approved/locked payrolls and leave approvals
+  are unchanged (tested). A manual unused-days override keeps its precedence.
+- Tests: new `tests/test_issue_85_annual_leave_accrual.py` (56) and
+  `tests/test_pg_issue_85_annual_leave.py` (18). Fail-before on clean
+  `origin/main` `6d6d2d3` in a separate detached worktree: SQLite **44 failed,
+  12 passed**; PostgreSQL **12 failed, 6 passed**. Pass-after: SQLite **56
+  passed**; PostgreSQL **18 passed**. The pre-fix passes are safety/regression
+  cases (first-year, mid-year joiner, cap boundary, generous policy, manual
+  balance not reduced on read, manual unused-days precedence) and are counted
+  separately from the fail-before failures. Existing leave/settlement/golden/
+  seed suites (13 files): **160 passed**. Existing PG settlement + corrections:
+  **18 passed**. No obsolete expectation was rewritten; no golden file changed.
+- Full SQLite suite (`DATABASE_URL` unset, `run_tests.py --continue`, 207 files,
+  one process each): raw **TOTAL: 2175 passed, 0 failed, 2 errors, 274 skipped**
+  in **3390.2s**, exit 1. The 2 errors are the runner's 120s per-file timeout on
+  `test_assignment_import.py` and `test_pay_item_settings.py`. Standalone
+  reruns: **28 passed, 4 warnings in 82.62s** and **52 passed, 4 warnings in
+  228.20s** → effective **2255 passed, 0 failed, 0 errors, 274 skipped**.
+  `test_pay_item_settings.py` also exceeds 120s on clean main here
+  (pre-existing/environmental, see the #81 entry).
+- PostgreSQL proof: local disposable PostgreSQL 16.15 cluster; the test module
+  creates a randomly named database, migrates to Alembic head and drops it.
+  Never the live database. The hosted CI PostgreSQL job on the exact pushed SHA
+  is still required before a merge verdict.
+- `ruff check` and `ruff format --check` clean on all 5 changed files;
+  `git diff --check` clean. Changed files: `payroll_engine/services/leave_service.py`,
+  `payroll_engine/services/leave_balance_repair.py` (new),
+  `payroll_engine/__init__.py` (CLI command only),
+  `tests/test_issue_85_annual_leave_accrual.py` (new),
+  `tests/test_pg_issue_85_annual_leave.py` (new), plus this PLAN.md update.
+- Repair limits / records still needing review: **every** pre-existing annual
+  balance whose stored `entitled` differs from the dated rule (higher *or*
+  lower) needs human review before any correction; the pilot cannot use
+  unreviewed old balances. A manually set balance with `last_accrual_date`
+  NULL is still re-accrued by the existing guard (unchanged here, parked).
+- Legal: the Art. 77(1) arithmetic is what the shared calculator already
+  implements; passing tests is **not** legal verification. Pilot-accountant
+  confirmation remains routine diligence. The shared calculator's silent
+  fallback to hardcoded defaults and its configured 30-day cap are separate
+  concerns, flagged and parked, not changed here.
+
 ### Issue #81 employer charges calculate or fail loudly (2026-11-23)
 
 - Implemented on `fix-81-employer-charges`, based on `origin/main` `783561c`,
@@ -1255,9 +1334,11 @@ second review; Q1 is the PAYE-on-gross answer).
 
 ## 2. Now
 
-**Current owner-directed slice (2026-11-22):** Fix GitHub issue #80 on one
-dedicated branch and draft PR. Do not merge or deploy; no live database or
-`DATABASE_URL` use.
+**Current owner-directed slice (2026-11-23):** Fix GitHub issue #85 on one
+dedicated branch and draft PR (`fix-85-annual-leave-accrual`, worktree
+`D:\ethiopian_payroll_engine-issue85`). Do not merge or deploy; no live
+database or `DATABASE_URL` use. Instinct reviews the PR before any merge.
+(#80 merged as PR #92, #81 as PR #94; their fixes are preserved.)
 
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
 order** (owner pasted an independent review and asked to adopt it; I concur).
@@ -1428,6 +1509,19 @@ Each item still needs the owner to confirm it before it moves to Now.
 
 AI sessions put new ideas here, one line each, with the reason they are parked.
 
+- Annual-leave accrual guard re-accrues a manually set balance when
+  `last_accrual_date` is NULL (`entitled > 0` alone is not enough). Parked:
+  beyond #85's narrow fix; needs an owner decision on manual-grant provenance.
+- Shared leave calculator silently falls back to hardcoded defaults when no
+  `TaxRule` row exists, and `annual_max = 30` is a configured cap, not statute.
+  Parked: separate concerns flagged by #85, deliberately not changed there.
+- `get_leave_balance` reports `years_of_service` from today while accrual counts
+  to 31 December of the accrual year. Parked: display-only inconsistency, out
+  of #85 scope.
+- Write an AuditLog row when the annual-leave repair applies a correction.
+  Parked: a CLI run has no operator identity; #85's repair prints its report
+  instead and needs an owner decision on audit attribution.
+
 - Use the per-pay-item "Art. 53 wage" flag (`counts_as_art53_wage`, added
   informational-only in catalog PR 3) so the leave base sums only qualifying
   components instead of `Employee.allowances`. Parked: Q3 is PARTIAL
@@ -1484,6 +1578,22 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-23 — AI session (OpenCode) — Issue #85: stored annual-leave accrual
+  now uses the shared dated calculator (`calculate_annual_entitlement` with the
+  accrual year's 31 December rule date and company policy days); duplicate
+  formula, hardcoded 30-day cap, annual-only imports and the stale "14 days"
+  comment removed; added an explicit dry-run-by-default repair service and
+  `flask repair-annual-leave` CLI that flags ambiguous old balances for human
+  review. Branch `fix-85-annual-leave-accrual` from `origin/main` `6d6d2d3`.
+  Fail-before (clean main, separate worktree): SQLite 44 failed / 12 passed,
+  PG 12 failed / 6 passed. Pass-after: SQLite 56 passed, PG 18 passed; existing
+  leave/settlement/golden suites 160 passed; PG settlement/corrections 18
+  passed. Full SQLite suite raw: 2175 passed, 0 failed, 2 errors, 274 skipped
+  (3390.2s); both 120s timeouts rerun standalone (28 and 52 passed) → effective
+  2255 passed, 0 failed, 0 errors, 274 skipped. PostgreSQL proof on a disposable
+  local PG 16.15 database only. ruff and `git diff --check` clean. Draft PR
+  only; no merge, no deployment, no live database, no production repair.
 
 - 2026-11-23 — AI session (OpenCode) — Issue #81: assigned employer-charge pay
   items now calculate through the elements engine and appear as

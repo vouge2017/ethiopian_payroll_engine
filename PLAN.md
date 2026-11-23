@@ -7,6 +7,57 @@ this file, this file wins. Keep it short. Update it at the end of every session.
 
 ## 1. Status
 
+### Issue #81 employer charges calculate or fail loudly (2026-11-23)
+
+- Implemented on `fix-81-employer-charges`, based on `origin/main` `783561c`,
+  implementation commit `41887dd`. Not merged, not deployed.
+- Engine (`payroll_elements.py`): assigned `employer_charge` pay items now
+  calculate through the elements engine and are appended as line items with
+  `EMPLOYER_CHARGE` classification; result dict gains `employer_charge_items`
+  (assigned only), `total_employer_charges` (assigned + engine-managed
+  `empr_pen`) and `employer_cost` (`gross + total_employer_charges`, matching
+  `impact.py`). Unknown classification in any bucketing step (system loader,
+  employee loader, what-if `extra_items`) raises a named `ValueError` instead
+  of defaulting to earnings; `percent_of_item` on an employer charge reaches
+  the existing `NotImplementedError`; `percent_of_net` on an employer charge is
+  a new clear `ValueError`; the final silent `return Decimal('0')` in
+  `_calculate_item_amount` is now a clear error for an unrecognized method.
+  Engine-managed employer pension is untouched (dated `TaxRule`, appended by
+  name).
+- Presentation (minimal, no redesign): employer-cost total on the payroll
+  review workspace (per row + totals), confirm screen and results screen;
+  `frozen_payslip.py` gains `employer_charge_total()`/`employer_cost()`;
+  worksheet rows store the two new money keys and `display_rows` derives them
+  for older snapshots (returns `None` when underivable, never invents 0).
+  `impact.py` unchanged; no ERCA/bank export, PDF payslip or report-format
+  changes; no new statutory charges or rate changes.
+- Golden tests: `tests/golden/*.json` NOT regenerated (regeneration is
+  reserved for reviewed AMOUNT changes). `_plain` in
+  `test_catalog_assignment_golden.py` / `test_catalog_caps_golden.py` strips
+  the three new result keys from engine-result dicts only (gated on the
+  `line_items` marker, so impact previews' own pre-existing `employer_cost` is
+  untouched). Money fields verified byte-identical; only `sha256` digests
+  differed pre-exclusion.
+- Tests: new `tests/test_employer_charges.py` (15 tests: fixed-amount and
+  `percent_of_basic` end to end, effective-dated 6→7 band proof, fail-loudly
+  for unknown classification and `percent_of_item` on an employer charge).
+  Fail-before on clean `origin/main`: **14 failed, 1 passed**. Pass-after:
+  focused **15 passed**; golden regression files **38 passed**.
+- Full SQLite suite (`DATABASE_URL` unset): **2030 passed, 1 failed, 7 errors,
+  256 skipped, 9199.1s**. The 7 errors are `run_tests.py`'s 120s per-file
+  timeout on this loaded machine and the 1 failure is flaky
+  `test_employee_portal::test_multiple_payslips_ordered` (identical
+  `generated_at`). All 8 flagged files rerun standalone: **175 passed** →
+  effective **2157 passed, 0 failed, 0 errors, 256 skipped**.
+  `test_pay_item_settings` alone takes 240s on clean main here, so its
+  full-suite timeout is pre-existing/environmental (52/52 on this branch).
+- `ruff check` / `ruff format` clean on all 9 changed files;
+  `git diff --check` clean. PostgreSQL proof not run locally (CI/hosted only).
+- Risks / open limits: PG path untested locally; `percent_of_net` on an
+  employer charge is now a hard error where it previously computed silently
+  (intended); waiting on founder/practitioner acceptance and Instinct's review
+  before any merge.
+
 ### Issue #80 pension review checks use the dated pension rule (2026-11-22, updated 2026-11-23)
 
 - Implemented on `fix-80-pension-rate-review-checks`, based on `main`
@@ -1433,6 +1484,19 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 ---
 
 ## 5. Log
+
+- 2026-11-23 — AI session (OpenCode) — Issue #81: assigned employer-charge pay
+  items now calculate through the elements engine and appear as
+  `EMPLOYER_CHARGE` line items plus `total_employer_charges` / `employer_cost`
+  in the result, shown on review workspace, confirm and results; unknown
+  classifications, `percent_of_net` on employer charges and unrecognized
+  calculation methods fail loudly instead of computing zero. Branch
+  `fix-81-employer-charges` @ `41887dd` (base `783561c`). Fail-before
+  **14 failed, 1 passed**; focused **15 passed**; golden files **38 passed**;
+  full runner **2030 passed, 1 failed, 7 timeout errors, 256 skipped**
+  (9199.1s), all 8 flagged files rerun standalone **175 passed** → effective
+  **2157 passed, 0 failed, 0 errors, 256 skipped**. Ruff check/format and
+  `git diff --check` clean. Draft PR opened; not merged or deployed.
 
 - 2026-11-23 — AI session (OpenCode) — Issue #80 date-consistency follow-up at
   `6cd66ec`: `ExcelPayrollEngine.run_from_data()` now resolves one payroll date

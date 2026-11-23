@@ -9,7 +9,7 @@
 <header class="monthly-heading"><div><p class="monthly-eyebrow">{{ workspace_company.name if workspace_company else 'Monthly payroll' }}</p><h1>{{ _('approve_payroll') }}</h1><p>Confirm the reviewed amounts. Approval does not send payment.</p></div><a href="{{ url_for('payroll.payroll_review_workspace' if run.source == 'spreadsheet' else 'payroll.payroll_run_detail', run_id=run.id) }}" class="btn btn-outline-secondary">Back to review</a></header>
 {{ monthly.steps(3) }}
 {% if run.source == 'spreadsheet' %}{{ monthly.period(run.run_date) }}{% else %}<p class="small text-muted">Run date · {{ eth_date(run.run_date) }}</p>{% endif %}
-{{ monthly.totals(employee_count, total_gross, total_tax, total_net, 'Preserved net pay') }}
+{{ monthly.totals(employee_count, total_gross, total_tax, total_net, 'Preserved net pay', employer_cost=total_employer_cost) }}
 <p class="monthly-pension">Employee pension · ETB {{ '{:,.2f}'.format(total_pension) }} · already included in deductions</p>
 {% if pending_paye_notice() %}
 <div class="alert alert-warning py-2 small mb-3">{{ pending_paye_notice_text }}</div>
@@ -112,6 +112,19 @@
 </div>
                                 </div>
                             </div>
+                            {% if emp.employer_cost is not none %}
+                            {% set employer_lines = emp.line_items|selectattr('classification', 'equalto', 'employer_charge')|list if emp.line_items else [] %}
+                            <div class="mt-2 pt-2 border-top small" data-employer-cost>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted"><i class="bi bi-building me-1"></i>Employer cost (gross + employer charges)</span>
+                                    <strong>ETB {{ '{:,.2f}'.format(emp.employer_cost) }}</strong>
+                                </div>
+                                {% for li in employer_lines %}
+                                <div class="d-flex justify-content-between text-muted"><span>{{ li.item_label }}</span><span>ETB {{ '{:,.2f}'.format(li.earned_amount) }}</span></div>
+                                {% endfor %}
+                                <span class="text-muted">Paid by the company; not deducted from employee pay.</span>
+                            </div>
+                            {% endif %}
                             <!-- Calculation Flow -->
                             {% include '_calculation_flow.html' ignore missing %}
                             <div class="text-center mt-2 pt-2 border-top">

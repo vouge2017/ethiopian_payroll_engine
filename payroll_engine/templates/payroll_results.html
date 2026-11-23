@@ -132,6 +132,17 @@
                 </div>
             </div>
         </div>
+        {% if total_employer_cost is not none %}
+        <div class="col-md-3">
+            <div class="card" data-employer-cost>
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Employer cost</h6>
+                    <h4>ETB {{ '%.2f'|format(total_employer_cost) }}</h4>
+                    <small class="text-muted">gross + employer charges</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 

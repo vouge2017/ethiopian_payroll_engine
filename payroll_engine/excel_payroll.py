@@ -237,6 +237,25 @@ class ExcelPayrollEngine:
         employee, employer, ceiling = _get_rates(self.for_date)
         return {'employee': employee, 'employer': employer, 'ceiling': ceiling}
 
+    def _resolve_payroll_date(self):
+        """Return the one rule date shared by calculation and review checks.
+
+        ``for_date`` is authoritative. ``None`` resolves to today, which is the
+        same date ``TaxRule.get_active_rule(None)`` uses for the calculation.
+        ``period`` is only a display label and is never parsed here.
+        """
+        value = self.for_date
+        if value is None:
+            return date.today()
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        # Keep any other value that already survived _load_rules unchanged.
+        return value
+
     # ------------------------------------------------------------------
     # Calculation
     # ------------------------------------------------------------------
@@ -633,7 +652,8 @@ class ExcelPayrollEngine:
         Args:
             employees_data: List of dicts with employee data
             company_name: Company name for reports
-            period: Pay period string
+            period: Pay period label for display/audit only (never used to
+                select the rule date; it may be an Ethiopian-calendar label)
             previous_payslips: Previous period data for change detection
 
         Returns:
@@ -646,17 +666,10 @@ class ExcelPayrollEngine:
             period=period,
             run_date=date.today().isoformat(),
         )
-        payroll_date = date.today()
-        if period:
-            try:
-                if len(period) == 10:
-                    payroll_date = date.fromisoformat(period)
-                elif len(period) == 7:
-                    payroll_date = datetime.strptime(period, '%Y-%m').date()
-            except ValueError:
-                payroll_date = date.today()
-        else:
-            payroll_date = date.fromisoformat(run.run_date)
+        # One rule date for calculation and review. ``period`` is a display
+        # label only (it may be an Ethiopian-calendar 'YYYY-MM' string), so it
+        # never selects the legal rule date.
+        payroll_date = self._resolve_payroll_date()
 
         # Determinism: hash the input data
         input_str = json.dumps(employees_data, sort_keys=True, default=str)
@@ -798,7 +811,7 @@ class ExcelPayrollEngine:
     ) -> list[ExceptionItem]:
         """Run validation checks on calculated results."""
         exceptions = []
-        payroll_date = payroll_date or date.today()
+        payroll_date = payroll_date or self._resolve_payroll_date()
         from payroll_engine.pension import employee_pension, pension_rates_for_date
 
         employee_pension_rate, _employer_pension_rate = pension_rates_for_date(payroll_date)

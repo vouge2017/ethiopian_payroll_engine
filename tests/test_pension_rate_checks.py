@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
@@ -128,3 +128,106 @@ def test_diff_explanation_uses_dated_pension_rate(app):
 
     explanation_2025_match = _explain_pension(seven_percent, seven_percent, basic, date(2025, 6, 1))
     assert '7%' in explanation_2025_match
+
+
+def _employee_rows():
+    """One synthetic employee with obviously fake bank and TIN values."""
+    return [
+        {
+            'employee_id': 'E1',
+            'name': 'Synthetic Employee',
+            'basic_salary': Decimal('10000'),
+            'bank_account': 'bank:cbe:1000123456789',
+            'tin': '0012345678',
+        }
+    ]
+
+
+def _pension_mismatches(result):
+    return [e for e in result.exceptions if e.rule_code == 'PENSION_MISMATCH']
+
+
+def test_run_from_data_historical_for_date_without_period(app):
+    """Regression: review must use for_date, not today, when period is absent."""
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    result = ExcelPayrollEngine(for_date=date(2025, 6, 1)).run_from_data(_employee_rows(), period='')
+
+    assert result.employees[0].pension_employee == Decimal('700.00')
+    assert _pension_mismatches(result) == []
+
+
+def test_run_from_data_matching_date_and_period(app):
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    historical = ExcelPayrollEngine(for_date=date(2025, 6, 1)).run_from_data(_employee_rows(), period='2025-06-01')
+    assert historical.employees[0].pension_employee == Decimal('700.00')
+    assert _pension_mismatches(historical) == []
+
+    current = ExcelPayrollEngine(for_date=date(2026, 6, 1)).run_from_data(_employee_rows(), period='2026-06-01')
+    assert current.employees[0].pension_employee == Decimal('1000.00')
+    assert _pension_mismatches(current) == []
+
+
+def test_run_from_data_conflicting_period_keeps_for_date_rule(app):
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    result = ExcelPayrollEngine(for_date=date(2025, 6, 1)).run_from_data(_employee_rows(), period='2026-06-01')
+
+    assert result.employees[0].pension_employee == Decimal('700.00')
+    assert _pension_mismatches(result) == []
+    assert result.period == '2026-06-01'
+
+
+def test_run_from_data_invalid_period_does_not_fall_back_to_today(app):
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    for period in ('not-a-date', '2025-13-01'):
+        result = ExcelPayrollEngine(for_date=date(2025, 6, 1)).run_from_data(_employee_rows(), period=period)
+        assert result.employees[0].pension_employee == Decimal('700.00')
+        assert _pension_mismatches(result) == []
+
+
+def test_run_from_data_ethiopian_period_label_is_display_only(app):
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    # Ethiopian 2018-10 is a label, not Gregorian 2018-10-01.
+    historical = ExcelPayrollEngine(for_date=date(2025, 6, 1)).run_from_data(_employee_rows(), period='2018-10')
+    assert historical.employees[0].pension_employee == Decimal('700.00')
+    assert _pension_mismatches(historical) == []
+    assert historical.period == '2018-10'
+
+    current = ExcelPayrollEngine(for_date=date(2026, 6, 1)).run_from_data(_employee_rows(), period='2018-10')
+    assert current.employees[0].pension_employee == Decimal('1000.00')
+    assert _pension_mismatches(current) == []
+
+
+def test_run_from_data_without_for_date_still_uses_today_rule(app):
+    """for_date=None must keep the previous behaviour: today's rule, same amounts."""
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    result = ExcelPayrollEngine().run_from_data(_employee_rows(), period='2018-10')
+
+    # The 2026 rule (10%) is the latest active rule today; the label is ignored.
+    assert result.employees[0].pension_employee == Decimal('1000.00')
+    assert _pension_mismatches(result) == []
+
+    explicit_today = ExcelPayrollEngine(for_date=date.today()).run_from_data(_employee_rows())
+    assert result.employees[0].pension_employee == explicit_today.employees[0].pension_employee
+    assert _pension_mismatches(explicit_today) == []
+
+
+def test_run_from_data_keeps_existing_for_date_types(app):
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    for for_date in (date(2025, 6, 1), '2025-06-01', datetime(2025, 6, 1, 12, 0)):
+        result = ExcelPayrollEngine(for_date=for_date).run_from_data(_employee_rows(), period='2026-06-01')
+        assert result.employees[0].pension_employee == Decimal('700.00')
+        assert _pension_mismatches(result) == []
+
+
+def test_invalid_for_date_still_fails_at_construction(app):
+    from payroll_engine.excel_payroll import ExcelPayrollEngine
+
+    with pytest.raises(ValueError):
+        ExcelPayrollEngine(for_date='not-a-date')

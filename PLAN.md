@@ -35,9 +35,11 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   year and explicit balance IDs; annual leave only. Every mismatch is treated
   as **ambiguous** (the schema has no provenance marker), so it is flagged for
   human review and never silently reduced or raised. Writing requires
-  `--apply` **and** an explicit `--balance-id` selection **and** `--reviewed`;
-  only `entitled` is written — taken days, carry-forward, `company_policy_days`,
-  `last_accrual_date` and every other field/row are preserved; re-running is a
+  `--apply` **and** an explicit `--balance-id` selection **and** `--reviewed`.
+  The only field the repair sets is `entitled`; taken days, carry-forward,
+  `company_policy_days`, `last_accrual_date` and all other columns and rows are
+  left as they were, except that the model's `updated_at` audit timestamp also
+  advances automatically on an applied write (ORM `onupdate`). Re-running is a
   no-op. The repair writes no AuditLog row (limit; the printed report is the
   record). It was run only against synthetic test data.
 - Where values flow: new accruals store 16 / 16 / 17 / 19 days for 1 / 2 / 3 / 7
@@ -67,14 +69,20 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   (pre-existing/environmental, see the #81 entry).
 - PostgreSQL proof: local disposable PostgreSQL 16.15 cluster; the test module
   creates a randomly named database, migrates to Alembic head and drops it.
-  Never the live database. The hosted CI PostgreSQL job on the exact pushed SHA
-  is still required before a merge verdict.
-- `ruff check` and `ruff format --check` clean on all 5 changed files;
+  Never the live database. `tests/test_pg_issue_85_annual_leave.py` is now in
+  the CI PostgreSQL job's explicit pytest list (`.github/workflows/ci.yml`,
+  "Run explicit PostgreSQL migration and money regressions"), so its 18 tests
+  run in CI rather than being skipped; before that addition the green
+  `test-postgres` tick did not cover them. The hosted CI result on the exact
+  pushed SHA is still required before a merge verdict.
+- `ruff check` and `ruff format --check` clean on all 5 changed Python files;
   `git diff --check` clean. Changed files: `payroll_engine/services/leave_service.py`,
   `payroll_engine/services/leave_balance_repair.py` (new),
   `payroll_engine/__init__.py` (CLI command only),
   `tests/test_issue_85_annual_leave_accrual.py` (new),
-  `tests/test_pg_issue_85_annual_leave.py` (new), plus this PLAN.md update.
+  `tests/test_pg_issue_85_annual_leave.py` (new),
+  `.github/workflows/ci.yml` (one added filename in the existing PostgreSQL
+  pytest list; no other workflow change), plus this PLAN.md update.
 - Repair limits / records still needing review: **every** pre-existing annual
   balance whose stored `entitled` differs from the dated rule (higher *or*
   lower) needs human review before any correction; the pilot cannot use

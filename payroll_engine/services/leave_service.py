@@ -13,12 +13,11 @@ from decimal import Decimal
 
 from payroll_engine import db
 from payroll_engine.leave import (
-    DEFAULT_ANNUAL_BASE,
-    DEFAULT_ANNUAL_INCREMENT,
     DEFAULT_SICK_MAX_DAYS,
     DEFAULT_SICK_TIER_1_DAYS,
     DEFAULT_SICK_TIER_2_DAYS,
     LeaveType,
+    calculate_annual_entitlement,
     calculate_sick_leave_pay,
     validate_leave_request,
 )
@@ -65,6 +64,19 @@ def accrue_annual_leave(employee: Employee, company_id: int, year: int, db_sessi
 
     Called once per year (or on first access) to set the entitled days.
 
+    Year convention: ``LeaveBalance.year`` is a Gregorian calendar year (see
+    ``models.LeaveBalance``). Complete years of service are counted to
+    31 December of that accrual year, and the leave rule used is the one
+    effective on that same date — never today's rule for an older accrual
+    year. A rule that takes effect later within the accrual year therefore
+    governs that year's accrual.
+
+    The entitlement itself comes from the shared, rule-driven calculator
+    (``leave.calculate_annual_entitlement``): base, increment, increment
+    interval and cap are read from the dated ``TaxRule`` leave rules, and a
+    more generous company policy is kept while a lower one cannot reduce the
+    statutory minimum.
+
     Args:
         employee: Employee record
         company_id: Company ID
@@ -76,20 +88,21 @@ def accrue_annual_leave(employee: Employee, company_id: int, year: int, db_sessi
     """
     balance = get_or_create_balance(company_id, employee.id, LeaveType.ANNUAL, year, db_session)
 
-    # Only accrue if not already done for this year
+    # Only accrue if not already done for this year. A stored balance is never
+    # reduced on a routine read; correcting an old snapshot is the explicit,
+    # dry-run-by-default repair in services/leave_balance_repair.py (issue #85).
     if balance.entitled > 0 and balance.last_accrual_date:
         return balance
 
     start = employee.start_date or employee.created_at.date()
-    years_of_service = (date(year, 12, 31) - start).days // 365
+    accrual_date = date(year, 12, 31)
+    years_of_service = (accrual_date - start).days // 365
 
-    # Statutory: 14 days + 1 per year, capped at 30
-    entitled = DEFAULT_ANNUAL_BASE + (years_of_service * DEFAULT_ANNUAL_INCREMENT)
-    entitled = min(entitled, 30)
-
-    # Company policy override
-    if balance.company_policy_days and balance.company_policy_days > entitled:
-        entitled = balance.company_policy_days
+    # Labour Proclamation 1156/2019 Art. 77(1): 16 working days for the first
+    # year of service, plus one working day for every additional two years.
+    # The configured annual_max cap is a rule setting, not a statutory
+    # requirement; both come from the shared dated rule source.
+    entitled = calculate_annual_entitlement(years_of_service, balance.company_policy_days, accrual_date)
 
     balance.entitled = entitled
     balance.last_accrual_date = date.today()

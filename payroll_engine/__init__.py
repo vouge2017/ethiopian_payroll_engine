@@ -735,6 +735,65 @@ def create_app():
             else:
                 print('Invariant OK: every employee with assignments has a basic_salary row.')
 
+    @app.cli.command('repair-annual-leave')
+    @click.option('--company-id', type=int, required=True, help='Company whose annual leave balances to inspect.')
+    @click.option('--year', type=int, default=None, help='Only this accrual year (default: every year).')
+    @click.option(
+        '--balance-id',
+        'balance_ids',
+        type=int,
+        multiple=True,
+        help='Explicit LeaveBalance ID to consider. Repeatable; required to apply.',
+    )
+    @click.option('--apply', is_flag=True, default=False, help='Write corrections (default is a dry run).')
+    @click.option(
+        '--reviewed',
+        is_flag=True,
+        default=False,
+        help='Acknowledge that the selected records were reviewed by a human.',
+    )
+    def repair_annual_leave_cmd(company_id: int, year, balance_ids, apply: bool, reviewed: bool) -> None:
+        """Report stored annual-leave entitlements against the dated leave rule (issue #85).
+
+        Dry run by default: prints old/new entitlement and the reason for every
+        in-scope annual balance and writes nothing. A mismatch is ambiguous
+        (the schema does not record how the entitlement was granted), so it is
+        flagged for human review rather than corrected.
+
+        Correcting requires --apply, an explicit --balance-id selection and
+        --reviewed. Only LeaveBalance.entitled is written; taken days,
+        carry-forward, company policy days and all other fields are preserved,
+        and re-running is a no-op. Never run this against a live database
+        without that review.
+        """
+        from payroll_engine.services.leave_balance_repair import repair_annual_leave_balances
+
+        try:
+            result = repair_annual_leave_balances(
+                company_id=company_id,
+                year=year,
+                balance_ids=list(balance_ids),
+                apply=apply,
+                reviewed=reviewed,
+            )
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
+
+        mode = 'DRY RUN (no writes)' if result['dry_run'] else 'APPLY'
+        scope = f'company {company_id}' + (f', year {year}' if year is not None else ', all years')
+        print(f'Annual leave repair — {mode} — {scope}')
+        for row in result['rows']:
+            print(
+                f'  balance {row["balance_id"]} employee {row["employee_id"]} year {row["year"]}: '
+                f'entitled {row["old_entitled"]} -> {row["new_entitled"]} '
+                f'(taken {row["taken"]}, carried_forward {row["carried_forward"]}, '
+                f'company_policy_days {row["company_policy_days"]}) [{row["status"]}] {row["reason"]}'
+            )
+        counts = ', '.join(f'{status}={count}' for status, count in result['counts'].items())
+        print(f'Totals: {counts}')
+        if result['counts']['review'] or result['counts']['skipped_needs_review']:
+            print('Records needing human review are listed above; they were NOT changed.')
+
     # Push notification endpoints
     @app.route('/api/vapid-key')
     def vapid_key():

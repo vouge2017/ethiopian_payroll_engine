@@ -1122,6 +1122,10 @@ pre {
 }
 
 /* --- Utilities --- */
+.money {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
 .text-muted { color: var(--text-secondary) !important; }
 .text-primary { color: var(--brand-primary) !important; }
 .text-success { color: var(--color-success) !important; }

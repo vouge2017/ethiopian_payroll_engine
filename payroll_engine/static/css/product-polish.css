@@ -1,10 +1,6 @@
 /* Shared product finish: familiar blue identity, legible states, quiet motion. */
 :root {
   scroll-behavior: auto;
-  --bg-secondary: #f8f7f4;
-  --bg-tertiary: #f0efec;
-  --border-light: #dedfdc;
-  --text-tertiary: #626c7c;
   --ui-feedback-duration: 150ms;
   --ui-feedback-easing: cubic-bezier(.16, 1, .3, 1);
   --ledger-net-bg: #1d2734;
@@ -13,10 +9,6 @@
 }
 
 [data-theme="dark"] {
-  --bg-secondary: #202834;
-  --bg-tertiary: #2a3545;
-  --border-light: #3b495e;
-  --text-tertiary: #a3afc2;
   --bs-body-color: var(--text-primary);
   --bs-body-color-rgb: 239, 240, 253;
   --bs-emphasis-color: var(--text-primary);

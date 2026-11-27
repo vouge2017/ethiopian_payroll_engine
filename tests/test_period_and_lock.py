@@ -245,9 +245,15 @@ def test_unlock_requires_reason_and_records_audit_history(app, ctx, company_user
     with client.session_transaction() as session:
         session['_user_id'] = str(user.id)
         session['_fresh'] = True
-    response = client.post(f'/payroll/runs/{run.id}/unlock', data={'reason': '  Correcting a payroll entry.  '})
+    response = client.post(
+        f'/payroll/runs/{run.id}/unlock',
+        data='reason=Correcting+a+payroll+entry.',
+        content_type='application/x-www-form-urlencoded',
+        headers={'X-Requested-With': 'XMLHttpRequest'},
+    )
 
-    assert response.status_code == 302
+    assert response.status_code == 200
+    assert response.json['success'] is True
     refreshed = db.session.get(PayrollRun, run.id)
     assert refreshed.status == 'completed'
     assert refreshed.locked_at is None

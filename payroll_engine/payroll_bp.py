@@ -39,6 +39,7 @@ from payroll_engine.exceptions import classify_exceptions
 from payroll_engine.filing_workspace import build_filing_workspace
 from payroll_engine.idempotency import idempotent
 from payroll_engine.models import (
+    AuditLog,
     Company,
     Employee,
     OvertimeEntry,
@@ -2101,6 +2102,12 @@ def unlock_payroll(run_id):
     if run.status != 'locked':
         flash('This run is not locked.', 'danger')
         return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
+    reason = (request.form.get('reason') or '').strip()
+    if not reason:
+        flash('Enter a reason before unlocking this payroll run.', 'danger')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Enter a reason before unlocking this payroll run.'}), 400
+        return redirect(url_for('payroll.payroll_run_detail', run_id=run.id))
     run.status = 'completed'
     run.locked_at = None
     run.locked_by = None
@@ -2108,7 +2115,7 @@ def unlock_payroll(run_id):
         company_id=_company_id(),
         user_id=current_user.id,
         action='payroll_unlocked',
-        details={'run_id': run.id, 'period': run.period, 'reference': run.reference},
+        details={'run_id': run.id, 'period': run.period, 'reference': run.reference, 'reason': reason},
     )
     db.session.commit()
     trust_cache.invalidate_trust_cache(_company_id())
@@ -2623,6 +2630,13 @@ def batch_payslips():
 def payroll_run_detail(run_id):
     """Show payroll run details."""
     run = PayrollRun.query.filter_by(id=run_id, company_id=_company_id()).first_or_404()
+    unlock_history = [
+        entry
+        for entry in AuditLog.query.filter_by(company_id=_company_id(), action='payroll_unlocked')
+        .order_by(AuditLog.timestamp.desc())
+        .all()
+        if isinstance(entry.details, dict) and entry.details.get('run_id') == run.id
+    ]
     # Employer cost (issue #81): sum what each payslip's month actually cost
     # the company. A payslip whose stored gross is missing (legacy path)
     # reports None, so no total is shown rather than a partial one.
@@ -2633,6 +2647,7 @@ def payroll_run_detail(run_id):
     return render_template(
         'payroll_results.html',
         run=run,
+        unlock_history=unlock_history,
         total_employer_cost=total_employer_cost,
         year=date.today().year,
     )

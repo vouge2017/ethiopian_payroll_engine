@@ -51,10 +51,15 @@
             </button>
             {% endif %}
             {% if run.status == 'locked' %}
-            <button type="button" class="btn btn-sm btn-outline-warning" title="Unlock — allows corrections"
-                    onclick="unlockPayroll({{ run.id }})">
-                <i class="bi bi-unlock me-1"></i> Unlock
-            </button>
+            <div class="d-inline-flex align-items-center gap-2 flex-wrap">
+                <label class="visually-hidden" for="unlock-reason">Reason for unlocking</label>
+                <input type="text" class="form-control form-control-sm" id="unlock-reason" maxlength="500"
+                       placeholder="Reason for unlocking" aria-label="Reason for unlocking" required>
+                <button type="button" class="btn btn-sm btn-outline-warning" title="Unlock — allows corrections"
+                        onclick="unlockPayroll({{ run.id }})">
+                    <i class="bi bi-unlock me-1"></i> Unlock
+                </button>
+            </div>
             {% endif %}
 
             <!-- Month-End Close & Adjustments -->
@@ -285,6 +290,31 @@
         </div>
     </div>
     {% endif %}
+
+    {% if unlock_history %}
+    <section class="card mt-4" aria-labelledby="unlock-history-title">
+        <div class="card-header bg-transparent">
+            <h2 class="h6 mb-0" id="unlock-history-title"><i class="bi bi-clock-history me-2"></i>Unlock history</h2>
+        </div>
+        <div class="list-group list-group-flush">
+            {% for entry in unlock_history %}
+            <div class="list-group-item">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <span>{{ eth_date(entry.timestamp) }} {{ entry.timestamp.strftime('%H:%M') }}</span>
+                    <span class="text-muted">
+                        {% if entry.user %}
+                            {% if entry.user.phone %}+251 {{ entry.user.phone }}{% elif entry.user.email %}{{ entry.user.email }}{% else %}User #{{ entry.user_id }}{% endif %}
+                        {% else %}System{% endif %}
+                    </span>
+                </div>
+                {% if entry.details.get('reason') %}
+                <p class="mb-0 mt-1"><strong>Reason:</strong> {{ entry.details.get('reason') }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
 {% block extra_js %}
@@ -323,9 +353,21 @@ async function lockPayroll(runId) {
 }
 
 async function unlockPayroll(runId) {
+    const reasonField = document.getElementById('unlock-reason');
+    const reason = reasonField.value.trim();
+    if (!reason) {
+        reasonField.focus();
+        EthioPayroll.toast('Enter a reason before unlocking this payroll run.', 'error');
+        return;
+    }
     if (!confirm('Unlock this period? This allows corrections.')) return;
     try {
-        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/unlock`, { method: 'POST' });
+        const body = new URLSearchParams({ reason });
+        const data = await EthioPayroll.ajax(`/payroll/runs/${runId}/unlock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body,
+        });
         EthioPayroll.toast(data.message, 'warning');
         setTimeout(() => window.location.reload(), 500);
     } catch (err) { EthioPayroll.toast(err.message, 'error'); }

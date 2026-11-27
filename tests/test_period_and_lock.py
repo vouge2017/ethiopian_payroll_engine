@@ -25,7 +25,7 @@ from datetime import UTC, date, datetime
 
 from payroll_engine import create_app, db
 from payroll_engine.ethiopian_calendar import gregorian_to_ethiopian
-from payroll_engine.models import Company, Employee, OvertimeEntry, PayrollRun, TenantQuery, User
+from payroll_engine.models import AuditLog, Company, Employee, OvertimeEntry, PayrollRun, TenantQuery, User
 
 
 @pytest.fixture
@@ -228,8 +228,7 @@ def test_locked_run_prevents_new_run(ctx, company_user):
     assert existing.status == 'locked'
 
 
-def test_unlock_restores_to_completed(ctx, company_user):
-    """Unlocking a run should restore it to completed status."""
+def test_unlock_requires_reason_and_records_audit_history(app, ctx, company_user):
     company, user = company_user
     run = PayrollRun(
         company_id=company.id,
@@ -242,14 +241,71 @@ def test_unlock_restores_to_completed(ctx, company_user):
     db.session.add(run)
     db.session.commit()
 
-    run.status = 'completed'
-    run.locked_at = None
-    run.locked_by = None
-    db.session.commit()
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session['_user_id'] = str(user.id)
+        session['_fresh'] = True
+    response = client.post(f'/payroll/runs/{run.id}/unlock', data={'reason': '  Correcting a payroll entry.  '})
 
+    assert response.status_code == 302
     refreshed = db.session.get(PayrollRun, run.id)
     assert refreshed.status == 'completed'
     assert refreshed.locked_at is None
+    log = AuditLog.query.filter_by(company_id=company.id, action='payroll_unlocked').one()
+    assert log.details['reason'] == 'Correcting a payroll entry.'
+    assert log.user_id == user.id
+    assert log.timestamp is not None
+
+    legacy_log = AuditLog(
+        company_id=company.id,
+        user_id=user.id,
+        action='payroll_unlocked',
+        details={'run_id': run.id, 'period': run.period, 'reference': run.reference},
+    )
+    db.session.add(legacy_log)
+    db.session.commit()
+
+    history = client.get(f'/payroll/runs/{run.id}')
+    assert history.status_code == 200
+    assert b'Correcting a payroll entry.' in history.data
+    assert b'+251 0911000001' in history.data
+    audit_history = client.get('/audit-log')
+    assert audit_history.status_code == 200
+    assert b'Correcting a payroll entry.' in audit_history.data
+
+
+@pytest.mark.parametrize('reason', [None, '   \t  '])
+@pytest.mark.parametrize('xhr', [False, True])
+def test_unlock_rejects_empty_reason_without_changes(app, ctx, company_user, reason, xhr):
+    company, user = company_user
+    run = PayrollRun(
+        company_id=company.id,
+        run_date=date(2026, 7, 10),
+        status='locked',
+        locked_at=datetime.now(UTC),
+        locked_by=user.id,
+    )
+    run.generate_period()
+    db.session.add(run)
+    db.session.commit()
+
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session['_user_id'] = str(user.id)
+        session['_fresh'] = True
+    headers = {'X-Requested-With': 'XMLHttpRequest'} if xhr else {}
+    response = client.post(f'/payroll/runs/{run.id}/unlock', data={'reason': reason or ''}, headers=headers)
+
+    refreshed = db.session.get(PayrollRun, run.id)
+    assert refreshed.status == 'locked'
+    assert refreshed.locked_at is not None
+    assert refreshed.locked_by == user.id
+    assert AuditLog.query.filter_by(company_id=company.id, action='payroll_unlocked').count() == 0
+    if xhr:
+        assert response.status_code == 400
+        assert response.json['success'] is False
+    else:
+        assert response.status_code == 302
 
 
 def test_locked_fields_default_null(ctx, company_user):

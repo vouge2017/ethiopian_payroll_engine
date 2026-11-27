@@ -65,7 +65,7 @@
                                 {% if log.details %}
                                 <small class="text-muted">
                                     {% for key, val in log.details.items() %}
-                                    <strong>{{ key }}:</strong> {{ val }}{% if not loop.last %} · {% endif %}
+                                    <strong>{{ 'Unlock reason' if log.action == 'payroll_unlocked' and key == 'reason' else key }}:</strong> {{ val }}{% if not loop.last %} · {% endif %}
                                     {% endfor %}
                                 </small>
                                 {% else %}

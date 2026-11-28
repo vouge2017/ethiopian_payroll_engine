@@ -26,11 +26,11 @@ RULES_2025 = {
         {"min": 10001, "max": 14000, "rate": 0.30},
         {"min": 14001, "max": None, "rate": 0.35}
     ],
-    "personal_relief": 150,
+    "personal_relief": 0,
     "pension": {
         "employee_rate": 0.07,
         "employer_rate": 0.11,
-        "deduction_order": "before_tax",
+        "deduction_order": "after_tax",
         "expat_exemption": True
     },
     "overtime": {
@@ -90,10 +90,9 @@ def seed():
             effective_date=date(2025, 7, 7),
             rules_json=RULES_2025,
             status='active',
-            notes='Initial 2025 tax brackets per Proclamation No. 1395/2025, '
-                  'Article 11 (Employment Income Tax Rates). Bracket '
-                  'schedule only; the pension-before-PAYE timing is current '
-                  'practice pending accountant confirmation (RC-38000-01).'
+            notes='PAYE on gross per adviser decision 2026-10-25 '
+                  '(Proclamation 979/2016 Arts 10-12, as amended by 1395/2025); '
+                  'final licensed-accountant sign-off pending before real payroll.'
         )
         db.session.add(rule)
         db.session.commit()

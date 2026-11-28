@@ -22,7 +22,8 @@ this file, this file wins. Keep it short. Update it at the end of every session.
   payroll run now requires a reason, stored in the audit log. GitHub issue
   #97 is closed — the code merged via PR #100 (closed 2026-11-27).
 - Issue #93 (design cleanup, 10 small steps): step 1 done via PR #99;
-  9 steps remaining; step 2 in progress on branch `ui/issue-93-step-2`.
+  9 steps remaining; step 2 is assigned, run pending, branch not yet created
+  — the step-2 run on Josef's machine creates `ui/issue-93-step-2`.
 - Issue #96 (Nehassie/Pagumen PAYE aggregation, Income Tax Procl. 979/2016
   Art. 10(4)) is parked by owner decision — see "4. Parked ideas". Not
   started. No code changed by this entry; documentation only.
@@ -1364,13 +1365,14 @@ second review; Q1 is the PAYE-on-gross answer).
 
 **Current owner-directed slice (issue #93 step 2):** "The status chip
 component, and finished stages look finished" — looks only, the second of
-the 10 design steps, recorded as in progress in "1. Status" above. Step 1 is
-merged as PR #99; 9 steps remain including this one. One step at a time, its
-own branch from freshly fetched main, one draft PR; no merge before
-Instinct's review. (The 2026-11-23 slice, issue #85, is complete: merged as
-PR #95 on 2026-11-23, issue #85 closed. #80 merged as PR #92, #81 as PR
-#94, #85 as PR #95; their fixes are preserved. Do not merge or deploy
-without the owner's explicit go-ahead; Instinct reviews before any merge.)
+the 10 design steps, recorded as assigned, run pending, in "1. Status"
+above. Step 1 is merged as PR #99; 9 steps remain including this one. One
+step at a time, its own branch from freshly fetched main, one draft PR; no
+merge before Instinct's review. (The 2026-11-23 slice, issue #85, is
+complete: merged as PR #95 on 2026-11-23, issue #85 closed. #80 merged as
+PR #92, #81 as PR #94, #85 as PR #95; their fixes are preserved. Do not
+merge or deploy without the owner's explicit go-ahead; Instinct reviews
+before any merge.)
 
 **Owner-agreed working agreement, 2026-10-26 — six bounded points, in this
 order** (owner pasted an independent review and asked to adopt it; I concur).
@@ -1618,18 +1620,21 @@ AI sessions put new ideas here, one line each, with the reason they are parked.
 
 - 2026-11-28 — AI session (OpenCode) — PLAN.md correction, documentation
   only, no code changes: issue #97 is closed (code merged via PR #100 on
-  2026-11-27), correcting the two lines that still said it was open; and
-  "2. Now" now names issue #93 step 2 (status chip component) as the current
-  owner-directed slice instead of "none". Branch `docs/plan-md-truth-up`.
+  2026-11-27), correcting the two lines that still said it was open; "2. Now"
+  now names issue #93 step 2 (status chip component) as the current
+  owner-directed slice instead of "none"; and the two lines that said step 2
+  was "in progress on `ui/issue-93-step-2`" now say step 2 is assigned, run
+  pending, branch not yet created (that branch is created by the step-2 run
+  on Josef's machine, not here). Branch `docs/plan-md-truth-up`.
   No tests run (documentation only).
 
 - 2026-11-27 — AI session (OpenCode) — PLAN.md truth-up, documentation only,
   no code changes: corrected the stale issue #85 state (merged as PR #95 on
   2026-11-23, issue closed), recorded merged PRs #98 (synthetic month +
   restore rehearsal), #99 (issue #93 step 1) and #100 (unlock reason,
-  issue #97 closed), recorded issue #93 (step 1 done, 9 remaining,
-  step 2 in progress on `ui/issue-93-step-2`) and parked issue #96 by owner
-  decision (licensed-adviser answers, post-pilot). Branch
+  issue #97 closed), recorded issue #93 (step 1 done, 9 remaining, step 2
+  assigned, run pending, branch not yet created) and parked issue #96 by
+  owner decision (licensed-adviser answers, post-pilot). Branch
   `docs/plan-md-truth-up`. No tests run (documentation only).
 
 - 2026-11-23 — AI session (OpenCode) — Issue #85: stored annual-leave accrual
